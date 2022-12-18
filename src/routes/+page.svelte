@@ -9,7 +9,7 @@
 
 <p>X is {x}</p>
 
-<Button>
+<Button on:click={() => x++}>
     <Label>Yo!</Label>
 </Button>
 
