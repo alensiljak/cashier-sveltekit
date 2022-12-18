@@ -12,3 +12,5 @@
 <Button>
     <Label>Yo!</Label>
 </Button>
+
+<p>Do you need <a href="/help">help</a>?</p>
