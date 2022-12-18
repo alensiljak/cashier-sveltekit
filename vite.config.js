@@ -2,7 +2,10 @@ import { sveltekit } from '@sveltejs/kit/vite';
 
 /** @type {import('vite').UserConfig} */
 const config = {
-	plugins: [sveltekit()],
+	plugins: [
+		sveltekit()
+		// SvelteKitPWA({ /* pwa options */ })
+	],
 	test: {
 		include: ['src/**/*.{test,spec}.{js,ts}']
 	}
