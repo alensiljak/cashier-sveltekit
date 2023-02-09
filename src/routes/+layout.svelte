@@ -2,7 +2,8 @@
 
 <!-- Drawer / Sidebark -->
 <nav class="drawer-container">
-    <Drawer variant="dismissible" bind:is_drawer_open>
+    <!-- bind:is_drawer_open -->
+    <Drawer variant="dismissible">
         <Header>
             <Title>Super Drawer</Title>
             <Subtitle>It's the best drawer.</Subtitle>
