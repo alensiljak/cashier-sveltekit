@@ -10,7 +10,7 @@
 <p>X is {x}</p>
 
 <Button on:click={() => x++}>
-    <Label>Yo!</Label>
+	<Label>Yo!</Label>
 </Button>
 
 <p>Do you need <a href="/help">help</a>?</p>

@@ -25,6 +25,12 @@ npm run dev
 npm run dev -- --open
 ```
 
+Running 
+```
+npm run prepare
+```
+should create any missing references.
+
 ## Building
 
 To create a production version of your app:
