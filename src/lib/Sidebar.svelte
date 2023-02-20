@@ -1,16 +1,21 @@
+<!-- Drawer / Sidebar -->
+
 <script lang="ts">
 	import Drawer, { Header, Title, Subtitle } from '@smui/drawer';
+	import { drawerVisible } from '$lib/store';
+	import { onDestroy } from 'svelte';
+
+	let open = $drawerVisible;
+
+	const unsubscribe = drawerVisible.subscribe(value => {
+		open = value;
+	});
+	onDestroy(unsubscribe);
 </script>
 
-<div>Sidebar!</div>
-
-<!-- Drawer / Sidebar -->
-<nav class="drawer-container">
-	<!-- bind:is_drawer_open -->
-	<Drawer variant="dismissible">
-		<Header>
-			<Title>Super Drawer</Title>
-			<Subtitle>It's the best drawer.</Subtitle>
-		</Header>
-	</Drawer>
-</nav>
+<Drawer variant="dismissible" bind:open>
+	<Header>
+		<Title>Super Drawer</Title>
+		<Subtitle>It's the best drawer.</Subtitle>
+	</Header>
+</Drawer>
