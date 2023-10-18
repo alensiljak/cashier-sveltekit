@@ -33,5 +33,7 @@
 	},
 	"type": "module",
 	"dependencies": {
+		"framework7": "^8.3.0",
+		"framework7-svelte": "^8.3.0"
 	}
 }
