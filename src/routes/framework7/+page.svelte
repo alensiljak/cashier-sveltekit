@@ -8,10 +8,10 @@
 
 <script>
 // import Framework7, {getDevice} from 'framework7';
-import Framework7, {getDevice} from 'framework7/lite';
+// import Framework7, {getDevice} from 'framework7/lite';
 
 // var app = new Framework7({/*...*/});
-var device = getDevice();
-console.log('device:', device);
+// var device = getDevice();
+// console.log('device:', device);
 
 </script>
