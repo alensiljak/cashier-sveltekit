@@ -1,11 +1,5 @@
 <script lang="ts">
 	import '../app.css';
-	import { AppBar } from '@skeletonlabs/skeleton-svelte';
-	import ArrowLeft from 'lucide-svelte/icons/arrow-left';
-	import Paperclip from 'lucide-svelte/icons/paperclip';
-	import Calendar from 'lucide-svelte/icons/calendar';
-	import CircleUser from 'lucide-svelte/icons/circle-user';
-	import Menu from 'lucide-svelte/icons/menu';
 	import Navigation from '../components/navigation.svelte';
 	// import { initializeStores, Drawer } from '@skeletonlabs/skeleton';
 	// import { getDrawerStore } from '@skeletonlabs/skeleton';
@@ -27,30 +21,7 @@
 		<Navigation />
 	</aside>
 	<article class="col-span-1">
-		<header>
-			<!-- Header -->
-			<AppBar headlineClasses="sm:hidden" centerClasses="hidden sm:block">
-				{#snippet lead()}
-					<!-- <ArrowLeft size={24} /> -->
-					<Menu size={24} />
-				{/snippet}
-				{#snippet trail()}
-					<Paperclip size={20} />
-					<Calendar size={20} />
-					<CircleUser size={20} />
-				{/snippet}
-				{#snippet headline()}
-					<h2 class="h2">Headline</h2>
-				{/snippet}
-				<span>Cashier</span>
-			</AppBar>
-		</header>
-		<!-- Main -->
-		<main class="space-y-4 bg-green-500 p-4">
-			Main
-			<slot></slot>
-		</main>
-		<!-- Footer -->
-		<!-- <footer class="bg-yellow">Footer</footer> -->
+
+		<slot></slot>
 	</article>
 </div>
