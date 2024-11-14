@@ -1,8 +1,10 @@
+import { join } from 'path';
 import type { Config } from 'tailwindcss';
 
 // 1. Import the Skeleton plugin
-import { skeleton, contentPath } from '@skeletonlabs/skeleton/plugin';
-import * as themes from '@skeletonlabs/skeleton/themes';
+import { skeleton } from '@skeletonlabs/tw-plugin';
+// import { skeleton, contentPath } from '@skeletonlabs/skeleton/plugin';
+// import * as themes from '@skeletonlabs/skeleton/themes';
 
 const config = {
 	// 2. Opt for dark mode to be handled via the class method
@@ -10,7 +12,11 @@ const config = {
 	content: [
 		'./src/**/*.{html,js,svelte,ts}',
 		// 3. Append the path to the Skeleton package
-		contentPath(import.meta.url, 'svelte')
+		join(require.resolve(
+			'@skeletonlabs/skeleton'),
+			'../**/*.{html,js,svelte,ts}'
+		)
+		// contentPath(import.meta.url, 'svelte')
 	],
 	theme: {
 		extend: {}
@@ -20,10 +26,11 @@ const config = {
 		// 4. Append the Skeleton plugin (after other plugins)
 		skeleton({
 			// NOTE: each theme included will be added to your CSS bundle
-            themes: [ 
-				themes.nouveau,
-				//themes.cerberus, themes.rose 
-				]
+			themes: { preset: ['gold-nouveau'] }
+			//[ 
+			// themes.nouveau,
+			//themes.cerberus, themes.rose 
+			//	]
 		})
 	]
 } satisfies Config;

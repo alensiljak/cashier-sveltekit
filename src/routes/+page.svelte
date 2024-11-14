@@ -1,5 +1,5 @@
 <script>
-	import Toolbar from '../components/toolbar.svelte';
+	import Toolbar from '../lib/toolbar.svelte';
 </script>
 
 <Toolbar />
