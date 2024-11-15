@@ -12,6 +12,7 @@
 		<div class="flex items-center">
 			<button class="btn btn-sm mr-4 lg:hidden" on:click={drawerOpen} aria-label="menu">
 				<span>
+					<!-- use menu icon here -->
 					<svg viewBox="0 0 100 80" class="fill-token h-4 w-4">
 						<rect width="100" height="20" />
 						<rect y="30" width="100" height="20" />
