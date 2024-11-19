@@ -1,4 +1,5 @@
 <script>
+	import GlossToolbar from '$lib/gloss-toolbar.svelte';
 	import JournalCard from '$lib/journal-card.svelte';
 	import Toolbar from '../lib/toolbar.svelte';
 </script>
