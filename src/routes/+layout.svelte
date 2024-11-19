@@ -13,8 +13,14 @@
 	$: classesSidebar = $page.url.pathname === '/' ? 'w-0' : 'w-0 lg:w-64';
 
 	initializeStores();
+
+	// set the site title
+
 </script>
 
+<svelte:head>
+  <title>Cashier</title>
+</svelte:head>
 
 <!-- sample from the repo -->
 
