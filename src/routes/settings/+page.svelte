@@ -5,6 +5,7 @@
 </script>
 
 <GlossToolbar />
+ 
+<Toolbar title="Settings" />
 
-<!-- <Toolbar title="Settings" /> -->
 <h1>Settings</h1>
