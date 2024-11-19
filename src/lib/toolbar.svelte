@@ -37,9 +37,9 @@
 			<EllipsisVertical size={20} />
 		</button>
 		{/snippet}
-		{#snippet headline()}
+		<!-- {#snippet headline()}
 			<h2 class="h2">Headline</h2>
-		{/snippet}
+		{/snippet} -->
 
 		<span>Cashier</span>
 	</AppBar>

@@ -25,7 +25,10 @@
 <!-- This is the navigation component. -->
 
 <div class="w-100 flex items-center justify-center p-4">
-	<img src="https://cashier-ii.alensiljak.eu.org/icon-192.png" class="w-40" alt="logo" />
+	<img src="icon-192.png" class="w-1/2" alt="logo" />
+</div>
+<div class="text-center">
+	<h3 class="h3">Cashier</h3>
 </div>
 
 <nav class="list-nav p-4">
