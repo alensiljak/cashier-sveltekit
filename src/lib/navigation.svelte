@@ -24,11 +24,13 @@
 
 <!-- This is the navigation component. -->
 
-<div class="w-100 flex items-center justify-center p-4">
-	<img src="icon-192.png" class="w-1/2" alt="logo" />
-</div>
-<div class="text-center">
-	<h3 class="h3">Cashier</h3>
+<div class="bg-primary-500 p-4">
+	<div class="w-100 flex items-center justify-center">
+		<img src="icon-192.png" class="w-1/3 lg:w-1/2" alt="logo" />
+	</div>
+	<div class="text-center pt-2">
+		<h3 class="h3">Cashier</h3>
+	</div>
 </div>
 
 <nav class="list-nav p-4">
@@ -46,7 +48,11 @@
 			</a>
 		</li>
 		<li>
-			<a href="/favourites" on:click={drawerClose} class:active={$page.url.pathname === '/favourites'}>
+			<a
+				href="/favourites"
+				on:click={drawerClose}
+				class:active={$page.url.pathname === '/favourites'}
+			>
 				<span><StarIcon /></span>
 				<span>Favourites</span>
 			</a>
@@ -64,20 +70,32 @@
 			</a>
 		</li>
 		<li>
-			<a href="/asset-allocation" on:click={drawerClose} class:active={$page.url.pathname === '/asset-allocation'}>
+			<a
+				href="/asset-allocation"
+				on:click={drawerClose}
+				class:active={$page.url.pathname === '/asset-allocation'}
+			>
 				<span><ChartPieIcon /></span>
 				<span>Asset Allocation</span>
 			</a>
 		</li>
 		<li>
-			<a href="/scheduled-xacts" on:click={drawerClose} class:active={$page.url.pathname === '/scheduled-xacts'}>
+			<a
+				href="/scheduled-xacts"
+				on:click={drawerClose}
+				class:active={$page.url.pathname === '/scheduled-xacts'}
+			>
 				<span><CalendarClockIcon /></span>
 				<span>Scheduled Transactions</span>
 			</a>
 		</li>
 		<hr />
 		<li>
-			<a href="/cloud-backup" on:click={drawerClose} class:active={$page.url.pathname === '/cloud-backup'}>
+			<a
+				href="/cloud-backup"
+				on:click={drawerClose}
+				class:active={$page.url.pathname === '/cloud-backup'}
+			>
 				<span><UploadCloudIcon /></span>
 				<span>Cloud Backup</span>
 			</a>
