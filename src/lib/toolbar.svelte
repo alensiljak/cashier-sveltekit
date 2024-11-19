@@ -20,12 +20,14 @@
 </script>
 
 <!-- Toolbar for pages -->
- <!-- centerClasses="sm:block lg:hidden" -->
+<!-- centerClasses="sm:block lg:hidden" -->
 <AppBar
 	headlineClasses="sm:hidden"
+	centerClasses=""
 	toolbarClasses=""
 	padding="p-2"
 	background="bg-primary-500"
+	classes=""
 >
 	{#snippet lead()}
 		<!-- <ArrowLeft size={24} /> -->
@@ -38,7 +40,7 @@
 		<!-- <strong class="text-xl uppercase">Skeleton</strong> -->
 	{/snippet}
 	{#snippet children()}
-		<h4 class="h4">{title}</h4>
+		<h4 class="h4 leading-9">{title}</h4>
 	{/snippet}
 	{#snippet trail()}
 		<button class="btn" on:click={onMenuClicked}>
@@ -49,17 +51,3 @@
 			<h2 class="h2">Headline</h2>
 		{/snippet} -->
 </AppBar>
-<!-- <div class="gloss-effect absolute inset-0"></div> -->
-
-<style>
-.gloss-effect {
-      background: linear-gradient(to bottom, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0));
-      pointer-events: none; /* Allows interaction with underlying elements */
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-    }
-
-</style>

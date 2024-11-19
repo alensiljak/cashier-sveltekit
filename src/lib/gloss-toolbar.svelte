@@ -6,11 +6,18 @@
 	<button class="btn btn-sm ">
 		<MenuIcon />
 	</button>
-	<h4 class="text-primary ml-3 h4 leading-8">
+	<h4 class="ml-3 h4 leading-8">
     My Toolbar
   </h4>
 	<div class="gloss-effect absolute inset-0"></div>
 </div>
+
+<!-- <div class="bg-gradient-to-r from-purple-500 to-pink-500 min-h-screen flex items-center justify-center p-8">
+  <div class="bg-white/30 backdrop-blur-md rounded-xl border border-white/20 shadow-lg p-6 max-w-sm">
+    <h2 class="text-2xl font-bold mb-4 text-white">Glossy Card</h2>
+    <p class="text-white/80">This card demonstrates the gloss effect using Tailwind CSS.</p>
+  </div>
+</div> -->
 
 <style>
 	.gloss-effect {
