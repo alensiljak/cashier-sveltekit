@@ -27,6 +27,7 @@
 		"@typescript-eslint/parser": "^8.15.0",
 		"@vite-pwa/sveltekit": "^0.6.6",
 		"autoprefixer": "^10.4.20",
+		"dexie": "^4.0.10",
 		"esbuild-wasm": "^0.24.0",
 		"eslint": "^9.15.0",
 		"eslint-config-prettier": "^9.1.0",
