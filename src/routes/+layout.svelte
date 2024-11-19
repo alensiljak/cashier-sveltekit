@@ -22,7 +22,7 @@
 <!-- sample from the repo -->
 
  <!-- Drawer -->
-<Drawer>
+<Drawer width="w-72">
 	<!-- <h2 class="p-4">Navigation</h2>
 	<hr /> -->
 	<Navigation />

@@ -6,7 +6,8 @@
 
 <Toolbar />
 
-<div class="container space-y-4 p-1 lg:p-10">
+<!-- Main -->
+<main class="container space-y-4 p-1 lg:p-10">
 	<h1>Homepage</h1>
 	<hr />
 	<p>
@@ -26,12 +27,10 @@
 		</ul>
 	</div>
 
-	<!-- Main -->
-	<main class="space-y-4 bg-green-500 p-4">Main</main>
 	<!-- Footer -->
 	<!-- <footer class="bg-yellow">Footer</footer> -->
 
 	Cards:
 
 	<JournalCard />
-</div>
+</main>
