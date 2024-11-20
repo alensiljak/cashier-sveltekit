@@ -89,7 +89,7 @@
 				<span>Scheduled Transactions</span>
 			</a>
 		</li>
-		<hr />
+		<hr class="bg-primary-500 h-1 border-none" />
 		<li>
 			<a
 				href="/cloud-backup"
