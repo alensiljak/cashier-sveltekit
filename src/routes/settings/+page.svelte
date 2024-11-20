@@ -1,6 +1,21 @@
-<script>
+<script lang="ts">
+	import { onMount } from 'svelte';
 	import GlossToolbar from '$lib/gloss-toolbar.svelte';
 	import Toolbar from '$lib/toolbar.svelte';
+
+	onMount(() => {
+		console.log('the component has mounted');
+		loadSettings();
+	});
+
+	function loadSettings() {
+		console.log('loading settings')
+
+		// currency
+		// root investment account
+		// remember last transaction
+	}
+
 </script>
 
 <!-- <GlossToolbar /> -->
@@ -21,7 +36,7 @@
 
 	<!-- last transaction -->
 	<label class="flex items-center space-x-2">
-		<input class="checkbox" type="checkbox" checked />
+		<input class="checkbox" type="checkbox" />
 		<p>Remember last transaction for payees.</p>
 	</label>
 
