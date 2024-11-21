@@ -3,8 +3,7 @@
 	import { getDrawerStore } from '@skeletonlabs/skeleton';
 	import Navigation from '$lib/navigation.svelte';
 	import { page } from '$app/stores';
-	import { AppShell, Drawer, initializeStores, setToastDuration ,
-		 Toast } from '@skeletonlabs/skeleton';
+	import { AppShell, Drawer, initializeStores, Toast } from '@skeletonlabs/skeleton';
 	// Stylesheets
 	import '../app.css';
 
@@ -15,7 +14,7 @@
 	const drawerStore = getDrawerStore();
 
 	// Default toast duration.
-	setToastDuration(3000);
+	// setToastDuration(3000);
 
 	function handleSwipe(e: SwipeCustomEvent) {
 		if (e.detail.direction == 'right') {

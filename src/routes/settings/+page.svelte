@@ -3,10 +3,7 @@
 	import GlossToolbar from '$lib/gloss-toolbar.svelte';
 	import Toolbar from '$lib/toolbar.svelte';
 	import { SettingKeys, settings } from '$lib/settings';
-	import { Toast, getToastStore } from '@skeletonlabs/skeleton';
-	import type { ToastSettings, ToastStore } from '@skeletonlabs/skeleton';
-
-	const toastStore = getToastStore();
+	import Notify from '$lib/notify';
 
 	let currency: string = '';
 	let rootInvestmentAccount: string = '';
@@ -31,11 +28,7 @@
 		await settings.set(SettingKeys.rememberLastTransaction, rememberLastTransaction);
 
 		//   $q.notify({ message: 'Settings saved', color: 'positive' })
-		const t: ToastSettings = {
-			message: 'Settings saved',
-			background: 'variant-filled-primary',
-		};
-		toastStore.trigger(t);
+		Notify.notify('Settings saved', 'variant-filled-primary')
 	}
 </script>
 
