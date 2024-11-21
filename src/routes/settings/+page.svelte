@@ -51,7 +51,7 @@
 		await settings.set(SettingKeys.rootInvestmentAccount, rootInvestmentAccount);
 		await settings.set(SettingKeys.rememberLastTransaction, rememberLastTransaction);
 
-		Notify.notify('Settings saved', 'variant-filled-primary');
+		Notifier.notify('Settings saved', 'variant-filled-primary');
 	}
 </script>
 
