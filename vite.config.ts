@@ -8,7 +8,7 @@ const config = {
 		// SvelteKitPWA({ /* pwa options */ }),
 		VitePWA({
 			registerType: 'prompt',
-			injectRegister: 'auto',
+			injectRegister: null,
 			manifest: {
 				"name": "Cashier",
 				"short_name": "cashier",
