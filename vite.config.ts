@@ -1,18 +1,22 @@
 import { sveltekit } from '@sveltejs/kit/vite';
-import { VitePWA } from 'vite-plugin-pwa'
+//import { VitePWA } from 'vite-plugin-pwa'
+import { SvelteKitPWA } from '@vite-pwa/sveltekit';
 
 /** @type {import('vite').UserConfig} */
 const config = {
 	plugins: [
 		sveltekit(),
 		// SvelteKitPWA({ /* pwa options */ }),
-		VitePWA({
+		// VitePWA({
+		SvelteKitPWA({
 			registerType: 'prompt',
 			injectRegister: null,
 			manifest: {
 				"name": "Cashier",
 				"short_name": "cashier",
-				"theme_color": "#4DBA87",
+				"theme_color": "#076461",
+				"background_color": "#000000",
+				display: 'standalone',
 				"icons": [
 					{
 						"src": "icons/icon-16.png",
@@ -57,7 +61,8 @@ const config = {
 					{
 						"src": "icons/icon-512.png",
 						"sizes": "512x512",
-						"type": "image/png"
+						"type": "image/png",
+						purpose: 'any maskable',
 					}
 				]
 			}
