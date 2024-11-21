@@ -38,7 +38,7 @@
 		<li>
 			<a href="/" on:click={drawerClose} class:active={$page.url.pathname === '/'}>
 				<span><HomeIcon /></span>
-				<span class="flex-auto">Home</span>
+				<span>Home</span>
 			</a>
 		</li>
 		<li>
