@@ -92,6 +92,9 @@ const config = defineConfig({
 					'prerendered/**/*.html'
 				]
 			},
+			kit: {
+				includeVersionFile: true
+			}
 		}),
 		//VitePWA({ registerType: 'autoUpdate' })
 	],
