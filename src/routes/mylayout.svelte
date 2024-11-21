@@ -11,8 +11,6 @@
 	let alertVisible: boolean = false;
 
 	function handleSwipe(e: SwipeCustomEvent) {
-		// alert('yo!')
-		// console.log(e.detail.direction);
 		if (e.detail.direction == 'right') {
 			alertVisible = true;
 			drawerStore.open();

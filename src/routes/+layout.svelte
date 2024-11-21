@@ -1,11 +1,9 @@
 <script lang="ts">
+	import { swipe, type SwipeCustomEvent } from 'svelte-gestures';
+	import { getDrawerStore } from '@skeletonlabs/skeleton';
 	import Navigation from '$lib/navigation.svelte';
 	import { page } from '$app/stores';
-	import {
-		AppShell,
-		Drawer,
-		initializeStores
-	} from '@skeletonlabs/skeleton';
+	import { AppShell, Drawer, initializeStores } from '@skeletonlabs/skeleton';
 	// Stylesheets
 	import '../app.css';
 
@@ -13,28 +11,41 @@
 	// $: classesSidebar = $page.url.pathname === '/' ? 'w-0' : 'w-0 lg:w-60';
 
 	initializeStores();
+
+	const drawerStore = getDrawerStore();
+
+	function handleSwipe(e: SwipeCustomEvent) {
+		if (e.detail.direction == 'right') {
+			// alertVisible = true;
+			drawerStore.open();
+		}
+		if (e.detail.direction == 'left') {
+			// alertVisible = false;
+			drawerStore.close();
+		}
+	}
 </script>
 
 <svelte:head>
-  <title>Cashier</title>
+	<title>Cashier</title>
 </svelte:head>
 
-<!-- sample from the repo -->
-
- <!-- Drawer -->
-<Drawer width="w-72">
-	<!-- <h2 class="p-4">Navigation</h2>
+<div use:swipe on:swipe={handleSwipe}>
+	<!-- Drawer -->
+	<Drawer width="w-72">
+		<!-- <h2 class="p-4">Navigation</h2>
 	<hr /> -->
-	<Navigation />
-</Drawer>
-<AppShell slotSidebarLeft="bg-surface-500/5 w-0 lg:w-72">
-	<!-- <svelte:fragment slot="header">
+		<Navigation />
+	</Drawer>
+	<AppShell slotSidebarLeft="bg-surface-500/5 w-0 lg:w-72">
+		<!-- <svelte:fragment slot="header">
 		<Applicationbar />
 	</svelte:fragment> -->
-	<!-- Left Sidebar Slot -->
-	<svelte:fragment slot="sidebarLeft">
-		<Navigation />
-	</svelte:fragment>
-	<!-- Page Route Content -->
-	<slot />
-</AppShell>
+		<!-- Left Sidebar Slot -->
+		<svelte:fragment slot="sidebarLeft">
+			<Navigation />
+		</svelte:fragment>
+		<!-- Page Route Content -->
+		<slot />
+	</AppShell>
+</div>

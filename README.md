@@ -36,3 +36,7 @@ npm run build
 You can preview the production build with `npm run preview`.
 
 > To deploy your app, you may need to install an [adapter](https://kit.svelte.dev/docs/adapters) for your target environment.
+
+# PWA
+
+PWA is set up using `vite-plugin-pwa`. It auto-generates the service worker. 
