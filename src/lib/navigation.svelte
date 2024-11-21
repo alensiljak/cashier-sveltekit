@@ -103,13 +103,13 @@
 		<li>
 			<a href="/settings" on:click={drawerClose} class:active={$page.url.pathname === '/settings'}>
 				<span><SettingsIcon /></span>
-				<span>Settings</span>
+				<span class="flex-auto">Settings</span>
 			</a>
 		</li>
 		<li>
 			<a href="/help" on:click={drawerClose} class:active={$page.url.pathname === '/help'}>
 				<span><HelpCircleIcon /></span>
-				<span>Help</span>
+				<span class="flex-auto">Help</span>
 			</a>
 		</li>
 		<li>

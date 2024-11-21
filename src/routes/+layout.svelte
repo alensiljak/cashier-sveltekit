@@ -6,6 +6,9 @@
 	import { AppShell, Drawer, initializeStores, Toast } from '@skeletonlabs/skeleton';
 	// Stylesheets
 	import '../app.css';
+	// Popups
+	import { computePosition, autoUpdate, offset, shift, flip, arrow } from '@floating-ui/dom';
+	import { storePopup } from '@skeletonlabs/skeleton';
 
 	// Reactive Properties
 	// $: classesSidebar = $page.url.pathname === '/' ? 'w-0' : 'w-0 lg:w-60';
@@ -13,8 +16,8 @@
 	initializeStores();
 	const drawerStore = getDrawerStore();
 
-	// Default toast duration.
-	// setToastDuration(3000);
+	// set up popups
+	storePopup.set({ computePosition, autoUpdate, offset, shift, flip, arrow });
 
 	function handleSwipe(e: SwipeCustomEvent) {
 		if (e.detail.direction == 'right') {
@@ -39,7 +42,7 @@
 	<hr /> -->
 		<Navigation />
 	</Drawer>
-	
+
 	<Toast />
 
 	<AppShell slotSidebarLeft="bg-surface-500/5 w-0 lg:w-72">

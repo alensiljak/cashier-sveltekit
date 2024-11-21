@@ -9,6 +9,8 @@
 	let rootInvestmentAccount: string = '';
 	let rememberLastTransaction: boolean | undefined = undefined;
 
+	Notify.init()
+
 	onMount(async () => {
 		// console.log('the component has mounted');
 		await loadSettings();

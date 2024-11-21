@@ -4,9 +4,12 @@
 import { Toast, getToastStore } from '@skeletonlabs/skeleton';
 import type { ToastSettings, ToastStore } from '@skeletonlabs/skeleton';
 
-const toastStore = getToastStore();
+let toastStore: ToastStore;
 
 var Notify = {
+    init() {
+        toastStore = getToastStore();
+    },
     notify(message: string, background: string | undefined = undefined) {
 		const t: ToastSettings = {
 			message: message,
