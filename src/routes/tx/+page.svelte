@@ -1,0 +1,3 @@
+<p>
+    Transaction editor
+</p>

@@ -1,8 +1,19 @@
-<script>
+<script lang="ts">
 	import GlossToolbar from '$lib/gloss-toolbar.svelte';
 	import JournalCard from '$lib/journal-card.svelte';
 	import { PlusIcon } from 'lucide-svelte';
 	import Toolbar from '../lib/toolbar.svelte';
+	import { goto } from '$app/navigation';
+
+	function onFab() {
+		console.log('fab clicked')
+
+        // create new transaction in the app store
+		// var xact = AppService.CreateNewXact();
+        // State.Xact = xact;
+		
+		goto('/tx')
+	}
 </script>
 
 <Toolbar />
@@ -36,7 +47,8 @@
 	<JournalCard />
 
 	<!-- FAB -->
-	<button class="absolute bottom-7 right-7 bg-tertiary-500 hover:bg-tertiary-500/75 text-secondary-500 rounded-full p-4 shadow-lg transition duration-200">
+	<button class="absolute bottom-7 right-7 bg-tertiary-500 hover:bg-tertiary-500/75 text-secondary-500 rounded-full p-4 shadow-lg transition duration-200"
+	on:click={onFab}>
 		<PlusIcon />
 	</button>
 </main>
