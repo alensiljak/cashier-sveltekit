@@ -3,13 +3,19 @@
 	import '../app.css';
 	// libs
 	import { swipe, type SwipeCustomEvent } from 'svelte-gestures';
-	import { getDrawerStore } from '@skeletonlabs/skeleton';
 	import Navigation from '$lib/navigation.svelte';
 	import { page } from '$app/stores';
-	import { AppShell, Drawer, initializeStores, Toast } from '@skeletonlabs/skeleton';
 	// Popups
 	import { computePosition, autoUpdate, offset, shift, flip, arrow } from '@floating-ui/dom';
-	import { storePopup } from '@skeletonlabs/skeleton';
+	import {
+		AppShell,
+		Drawer,
+		initializeStores,
+		Modal,
+		getDrawerStore,
+		storePopup,
+		Toast,
+	} from '@skeletonlabs/skeleton';
 	// PWA
 	import { pwaInfo } from 'virtual:pwa-info';
 	import { pwaAssetsHead } from 'virtual:pwa-assets/head';
@@ -17,12 +23,13 @@
 
 	let { children } = $props();
 
+	initializeStores();
+
 	// Reactive Properties
 	// $: classesSidebar = $page.url.pathname === '/' ? 'w-0' : 'w-0 lg:w-60';
 	// $: webManifest = pwaInfo ? pwaInfo.webManifest.linkTag : ''
-	let webManifest = $derived(pwaInfo ? pwaInfo.webManifest.linkTag : '')
+	let webManifest = $derived(pwaInfo ? pwaInfo.webManifest.linkTag : '');
 
-	initializeStores();
 	const drawerStore = getDrawerStore();
 
 	// set up popups
@@ -32,7 +39,7 @@
 		if (pwaInfo) {
 			//const { registerSW } = await import('virtual:pwa-register');
 			// import { useRegisterSW } from 'virtual:pwa-register/svelte';
-			const { useRegisterSW } = await import('virtual:pwa-register/svelte')
+			const { useRegisterSW } = await import('virtual:pwa-register/svelte');
 			useRegisterSW({
 				immediate: true,
 				onRegistered(r: any) {
@@ -65,12 +72,12 @@
 <svelte:head>
 	<title>Cashier</title>
 	{@html webManifest}
-	
+
 	{#if pwaAssetsHead.themeColor}
-	<meta name="theme-color" content={pwaAssetsHead.themeColor.content} />
+		<meta name="theme-color" content={pwaAssetsHead.themeColor.content} />
 	{/if}
 	{#each pwaAssetsHead.links as link}
-	<link {...link} />
+		<link {...link} />
 	{/each}
 </svelte:head>
 
@@ -83,6 +90,7 @@
 	</Drawer>
 
 	<Toast />
+	<Modal buttonPositive="variant-filled-primary" />
 
 	<AppShell slotSidebarLeft="bg-surface-500/5 w-0 lg:w-72">
 		<!-- <svelte:fragment slot="header">
@@ -98,6 +106,6 @@
 	</AppShell>
 </main>
 
-{#await import('$lib/ReloadPrompt.svelte') then { default: ReloadPrompt}}
-  <ReloadPrompt />
+{#await import('$lib/ReloadPrompt.svelte') then { default: ReloadPrompt }}
+	<ReloadPrompt />
 {/await}
