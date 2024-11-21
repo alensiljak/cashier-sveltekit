@@ -26,7 +26,7 @@
 
 <div class="bg-primary-500 p-4">
 	<div class="w-100 flex items-center justify-center">
-		<img src="icon-192.png" class="w-1/3 lg:w-1/2" alt="logo" />
+		<img src="/icons/icon-192.png" class="w-1/3 lg:w-1/2" alt="logo" />
 	</div>
 	<div class="text-center pt-2">
 		<h3 class="h3">Cashier</h3>

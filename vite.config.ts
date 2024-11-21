@@ -1,12 +1,13 @@
 import { sveltekit } from '@sveltejs/kit/vite';
-// import { VitePWA } from 'vite-plugin-pwa'
+import { VitePWA } from 'vite-plugin-pwa'
 
 /** @type {import('vite').UserConfig} */
 const config = {
 	plugins: [
 		sveltekit(),
 		// SvelteKitPWA({ /* pwa options */ }),
-		// VitePWA({ registerType: 'prompt'})
+		VitePWA({ registerType: 'prompt'}),
+		//VitePWA({ registerType: 'autoUpdate' })
 	],
 	test: {
 		include: ['src/**/*.{test,spec}.{js,ts}']

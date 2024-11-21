@@ -1,0 +1,14 @@
+[build]
+  # publish = "/"
+  publish = "build"
+  # Default build command.
+  command = "npm run build"
+
+#[context.production]
+
+[[headers]]
+  for = "/service-worker.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+    #X-Frame-Options = "DENY"
+    #X-XSS-Protection = "1; mode=block"
