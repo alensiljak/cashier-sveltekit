@@ -4,12 +4,14 @@
 	import Toolbar from '$lib/toolbar.svelte';
 	import { SettingKeys, settings } from '$lib/settings';
 	import Notify from '$lib/notify';
+	import { FileButton } from '@skeletonlabs/skeleton';
 
 	let currency: string = '';
 	let rootInvestmentAccount: string = '';
 	let rememberLastTransaction: boolean | undefined = undefined;
+	let settings_files: FileList;
 
-	Notify.init()
+	Notify.init();
 
 	onMount(async () => {
 		// console.log('the component has mounted');
@@ -20,8 +22,24 @@
 		console.log('loading settings');
 
 		currency = await settings.get(SettingKeys.currency);
-		// root investment account
-		// remember last transaction
+		rootInvestmentAccount = await settings.get(SettingKeys.rootInvestmentAccount)
+		rememberLastTransaction = await settings.get(SettingKeys.rememberLastTransaction)
+	}
+
+	/**
+	 * Handles the change of the settings file selection. When the file is selected, automatically 
+	 * offer to import it.
+	 */
+	async function onSettingsFileChangeHandler() {
+		console.log('prompt for import confirmation')
+	}
+
+	/**
+	 * The settings file has been selected.
+	 */
+	async function onSettingsSelectedHandler() {
+		// todo: prompt for confirmation with a dialog
+		// restore settings
 	}
 
 	async function saveSettings() {
@@ -29,8 +47,7 @@
 		await settings.set(SettingKeys.rootInvestmentAccount, rootInvestmentAccount);
 		await settings.set(SettingKeys.rememberLastTransaction, rememberLastTransaction);
 
-		//   $q.notify({ message: 'Settings saved', color: 'positive' })
-		Notify.notify('Settings saved', 'variant-filled-primary')
+		Notify.notify('Settings saved', 'variant-filled-primary');
 	}
 </script>
 
@@ -47,12 +64,12 @@
 	<!-- investment account -->
 	<label class="label">
 		<span>Investment account root</span>
-		<input class="input" type="text" placeholder="Investment account root" />
+		<input class="input" type="text" placeholder="Investment account root" bind:value={rootInvestmentAccount} />
 	</label>
 
 	<!-- last transaction -->
 	<label class="flex items-center space-x-2">
-		<input class="checkbox" type="checkbox" />
+		<input class="checkbox" type="checkbox" bind:checked={rememberLastTransaction} />
 		<p>Remember last transaction for payees.</p>
 	</label>
 
@@ -62,14 +79,21 @@
 	</label> -->
 
 	<center>
-		<button class="variant-filled-error btn uppercase !text-warning-500" on:click={saveSettings}>
+		<button class="variant-filled-error btn uppercase !text-warning-500" 
+		on:click={saveSettings} on:change={onSettingsSelectedHandler}>
 			Save
 		</button>
 	</center>
 
 	<section>Import Asset Allocation file</section>
 
-	<section>Restore Settings from file</section>
+	<section>
+		<h3 class="h3">Restore Settings</h3>
+		<center>
+			<FileButton name="settings_file" button="btn variant-soft-primary" bind:files={settings_files}
+			on:change={onSettingsFileChangeHandler} />
+		</center>
+	</section>
 
 	<section>Reload App</section>
 </main>
