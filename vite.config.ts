@@ -87,6 +87,10 @@ const config = defineConfig({
 				]
 			},
 			workbox: {
+				globPatterns: [
+					'client/**/*.{js,css,ico,png,svg,txt,webp,webmanifest}', 
+					'prerendered/**/*.html'
+				]
 			},
 		}),
 		//VitePWA({ registerType: 'autoUpdate' })

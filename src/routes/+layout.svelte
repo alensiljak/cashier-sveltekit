@@ -74,7 +74,7 @@
 	{/each}
 </svelte:head>
 
-<main use:swipe on:swipe={handleSwipe}>
+<main use:swipe onswipe={handleSwipe}>
 	<!-- Drawer -->
 	<Drawer width="w-72">
 		<!-- <h2 class="p-4">Navigation</h2>

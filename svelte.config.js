@@ -9,9 +9,11 @@ const config = {
 
 	kit: {
 		adapter: adapter({
-			fallback: 'index.html'
+			fallback: 'index.html',
+			pages: 'build',
+			assets: 'build',
 		}),
-		prerender: { entries: [] },
+		prerender: { entries: ['*'] },
 	},
 	runes: true,
 };
