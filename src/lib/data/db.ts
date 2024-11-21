@@ -7,7 +7,7 @@ import {
     LastTransaction,
     Transaction,
     Payee,
-    Posting,
+    // Posting,
     ScheduledTransaction,
     Setting,
 } from '../model'

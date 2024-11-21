@@ -2,20 +2,41 @@
 	import { onMount } from 'svelte';
 	import GlossToolbar from '$lib/gloss-toolbar.svelte';
 	import Toolbar from '$lib/toolbar.svelte';
+	import { SettingKeys, settings } from '$lib/settings';
+	import { Toast, getToastStore } from '@skeletonlabs/skeleton';
+	import type { ToastSettings, ToastStore } from '@skeletonlabs/skeleton';
 
-	onMount(() => {
-		console.log('the component has mounted');
-		loadSettings();
+	const toastStore = getToastStore();
+
+	let currency: string = '';
+	let rootInvestmentAccount: string = '';
+	let rememberLastTransaction: boolean | undefined = undefined;
+
+	onMount(async () => {
+		// console.log('the component has mounted');
+		await loadSettings();
 	});
 
-	function loadSettings() {
-		console.log('loading settings')
+	async function loadSettings() {
+		console.log('loading settings');
 
-		// currency
+		currency = await settings.get(SettingKeys.currency);
 		// root investment account
 		// remember last transaction
 	}
 
+	async function saveSettings() {
+		await settings.set(SettingKeys.currency, currency);
+		await settings.set(SettingKeys.rootInvestmentAccount, rootInvestmentAccount);
+		await settings.set(SettingKeys.rememberLastTransaction, rememberLastTransaction);
+
+		//   $q.notify({ message: 'Settings saved', color: 'positive' })
+		const t: ToastSettings = {
+			message: 'Settings saved',
+			background: 'variant-filled-primary',
+		};
+		toastStore.trigger(t);
+	}
 </script>
 
 <!-- <GlossToolbar /> -->
@@ -26,7 +47,7 @@
 	<!-- currency -->
 	<label class="label">
 		<span>Main Currency</span>
-		<input class="input" type="text" placeholder="Main Currency" />
+		<input class="input" type="text" placeholder="Main Currency" bind:value={currency} />
 	</label>
 	<!-- investment account -->
 	<label class="label">
@@ -46,18 +67,14 @@
 	</label> -->
 
 	<center>
-		<button class="btn variant-filled-error !text-warning-500 uppercase ">Save</button>
+		<button class="variant-filled-error btn uppercase !text-warning-500" on:click={saveSettings}>
+			Save
+		</button>
 	</center>
 
-	<section>
-		Import Asset Allocation file
-	</section>
+	<section>Import Asset Allocation file</section>
 
-	<section>
-		Restore Settings from file
-	</section>
+	<section>Restore Settings from file</section>
 
-	<section>
-		Reload App
-	</section>
+	<section>Reload App</section>
 </main>
