@@ -5,6 +5,8 @@
 	import { SettingKeys, settings } from '$lib/settings';
 	import Notify from '$lib/notify';
 	import { FileButton } from '@skeletonlabs/skeleton';
+	import { xact } from '$lib/data/mainStore'
+	import { get } from 'svelte/store';
 
 	let currency: string = '';
 	let rootInvestmentAccount: string = '';
@@ -16,6 +18,8 @@
 	onMount(async () => {
 		// console.log('the component has mounted');
 		await loadSettings();
+
+		console.log('xact is', get(xact))
 	});
 
 	async function loadSettings() {

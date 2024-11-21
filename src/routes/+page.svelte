@@ -4,6 +4,7 @@
 	import { PlusIcon } from 'lucide-svelte';
 	import Toolbar from '../lib/toolbar.svelte';
 	import { goto } from '$app/navigation';
+	import { xact } from '$lib/data/mainStore'
 
 	function onFab() {
 		console.log('fab clicked')
@@ -11,6 +12,7 @@
         // create new transaction in the app store
 		// var xact = AppService.CreateNewXact();
         // State.Xact = xact;
+		xact.set({ name: 'yo '})
 
 		goto('/tx')
 	}
