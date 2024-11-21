@@ -6,7 +6,7 @@ import type { ToastSettings, ToastStore } from '@skeletonlabs/skeleton';
 
 let toastStore: ToastStore;
 
-var Notify = {
+var Notifier = {
     init() {
         toastStore = getToastStore();
     },

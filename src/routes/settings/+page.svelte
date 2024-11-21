@@ -3,7 +3,7 @@
 	import GlossToolbar from '$lib/gloss-toolbar.svelte';
 	import Toolbar from '$lib/toolbar.svelte';
 	import { SettingKeys, settings } from '$lib/settings';
-	import Notify from '$lib/notify';
+	import Notifier from '$lib/notify';
 	import { FileButton } from '@skeletonlabs/skeleton';
 	import { xact } from '$lib/data/mainStore'
 	import { get } from 'svelte/store';
@@ -13,7 +13,7 @@
 	let rememberLastTransaction: boolean | undefined = undefined;
 	let settings_files: FileList;
 
-	Notify.init();
+	Notifier.init();
 
 	onMount(async () => {
 		// console.log('the component has mounted');
