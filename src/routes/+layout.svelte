@@ -26,8 +26,10 @@
 
 	onMount(async () => {
 		if (pwaInfo) {
-			const { registerSW } = await import('virtual:pwa-register');
-			registerSW({
+			//const { registerSW } = await import('virtual:pwa-register');
+			// import { useRegisterSW } from 'virtual:pwa-register/svelte';
+			const { useRegisterSW } = await import('virtual:pwa-register/svelte')
+			useRegisterSW({
 				immediate: true,
 				onRegistered(r: any) {
 					// uncomment following code if you want check for updates

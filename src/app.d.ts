@@ -2,6 +2,8 @@
 // for information about these interfaces
 // and what to do when importing types
 
+import 'vite-plugin-pwa/info';
+import 'vite-plugin-pwa/svelte';
 import 'vite-plugin-pwa/pwa-assets';
 
 declare namespace App {
