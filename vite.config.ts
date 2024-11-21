@@ -7,13 +7,13 @@ const config = {
 	plugins: [
 		sveltekit(),
 		// SvelteKitPWA({ /* pwa options */ }),
-		// VitePWA({
 		SvelteKitPWA({
-			registerType: 'prompt',
-			injectRegister: null,
+			// registerType: 'prompt',  // this is the default.
+			injectRegister: false,
 			manifest: {
 				"name": "Cashier",
 				"short_name": "cashier",
+				start_url: '/index.html',
 				"theme_color": "#076461",
 				"background_color": "#000000",
 				display: 'standalone',
@@ -65,6 +65,9 @@ const config = {
 						purpose: 'any maskable',
 					}
 				]
+			},
+			workbox: {
+				globPatterns: ['**/*.{js,css,html,png,jpg,jpeg,gif,svg}'],
 			}
 		}),
 		//VitePWA({ registerType: 'autoUpdate' })
