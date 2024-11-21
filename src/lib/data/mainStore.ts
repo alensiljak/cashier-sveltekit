@@ -18,6 +18,6 @@ export const state: Writable<Partial<MainStore>>
         xact: undefined
     });
 
-export const alert = writable("Welcome to the to-do list app!")
+// Real items
 
 export const xact: Writable<undefined | object> = writable(undefined)

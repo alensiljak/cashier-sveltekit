@@ -19,7 +19,7 @@
 		// console.log('the component has mounted');
 		await loadSettings();
 
-		console.log('xact is', get(xact))
+		console.debug('xact is', get(xact))
 	});
 
 	async function loadSettings() {

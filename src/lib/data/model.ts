@@ -96,8 +96,10 @@ export class Transaction {
 
   static create() {
     const tx = new Transaction()
+    // Set the date to today.
     tx.date = new Date().toISOString().substring(0, 10)
 
+    // add two Posting records by default.
     tx.postings.push(new Posting())
     tx.postings.push(new Posting())
 

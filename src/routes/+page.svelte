@@ -5,14 +5,14 @@
 	import Toolbar from '../lib/toolbar.svelte';
 	import { goto } from '$app/navigation';
 	import { xact } from '$lib/data/mainStore'
+	import { Transaction } from '$lib/data/model';
 
 	function onFab() {
 		console.log('fab clicked')
 
-        // create new transaction in the app store
-		// var xact = AppService.CreateNewXact();
-        // State.Xact = xact;
-		xact.set({ name: 'yo '})
+        // create a new transaction in the app store
+		var tx = Transaction.create()
+		xact.set(tx)
 
 		goto('/tx')
 	}
