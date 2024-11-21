@@ -33,4 +33,7 @@
 	Cards:
 
 	<JournalCard />
+
+	<!-- FAB -->
+	 
 </main>
