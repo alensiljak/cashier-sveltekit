@@ -11,6 +11,7 @@
 	import { storePopup } from '@skeletonlabs/skeleton';
 	// PWA
 	import { pwaInfo } from 'virtual:pwa-info';
+	import { pwaAssetsHead } from 'virtual:pwa-assets/head';
 	import { onMount } from 'svelte';
 
 	// Reactive Properties
@@ -56,8 +57,15 @@
 </script>
 
 <svelte:head>
-	<title>Cashier-2</title>
+	<title>Cashier</title>
 	{@html webManifest}
+	
+	{#if pwaAssetsHead.themeColor}
+	<meta name="theme-color" content={pwaAssetsHead.themeColor.content} />
+	{/if}
+	{#each pwaAssetsHead.links as link}
+	<link {...link} />
+	{/each}
 </svelte:head>
 
 <main use:swipe on:swipe={handleSwipe}>
@@ -72,8 +80,8 @@
 
 	<AppShell slotSidebarLeft="bg-surface-500/5 w-0 lg:w-72">
 		<!-- <svelte:fragment slot="header">
-		<Applicationbar />
-	</svelte:fragment> -->
+			<Applicationbar />
+		</svelte:fragment> -->
 		<!-- Left Sidebar Slot -->
 		<svelte:fragment slot="sidebarLeft">
 			<Navigation />

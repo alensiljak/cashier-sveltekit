@@ -39,8 +39,28 @@ const config = {
 						"type": "image/png"
 					},
 					{
+						"src": "icons/apple-icon-120x120.png",
+						"sizes": "120x120",
+						"type": "image/png"
+					},
+					{
 						"src": "icons/favicon-128x128.png",
 						"sizes": "128x128",
+						"type": "image/png"
+					},
+					{
+						"src": "icons/apple-icon-152x152.png",
+						"sizes": "152x152",
+						"type": "image/png"
+					},
+					{
+						"src": "icons/apple-icon-167x167.png",
+						"sizes": "167x167",
+						"type": "image/png"
+					},
+					{
+						"src": "icons/apple-icon-180x180.png",
+						"sizes": "180x180",
 						"type": "image/png"
 					},
 					{
