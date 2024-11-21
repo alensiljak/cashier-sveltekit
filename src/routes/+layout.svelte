@@ -17,7 +17,7 @@
 	function handleSwipe(e: SwipeCustomEvent) {
 		if (e.detail.direction == 'right') {
 			// alertVisible = true;
-			drawerStore.open();
+			drawerStore.open({ duration: 350 });
 		}
 		if (e.detail.direction == 'left') {
 			// alertVisible = false;
