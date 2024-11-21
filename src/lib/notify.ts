@@ -20,4 +20,4 @@ var Notifier = {
     }
 }
 
-export default Notify
+export default Notifier
