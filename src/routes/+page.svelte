@@ -11,7 +11,7 @@
         // create new transaction in the app store
 		// var xact = AppService.CreateNewXact();
         // State.Xact = xact;
-		
+
 		goto('/tx')
 	}
 </script>
@@ -27,22 +27,6 @@
 		sunt ipsum asperiores. Molestias nostrum mollitia cumque veniam eum error atque, dolores
 		nesciunt voluptas ea consectetur sed delectus.
 	</p>
-
-	<h1>Welcome to SvelteKit</h1>
-	<p>Visit <a href="https://kit.svelte.dev">kit.svelte.dev</a> to read the documentation</p>
-
-	<div>
-		Sub pages:
-
-		<ul>
-			<li><a href="framework7">Framework7</a></li>
-		</ul>
-	</div>
-
-	<!-- Footer -->
-	<!-- <footer class="bg-yellow">Footer</footer> -->
-
-	Cards:
 
 	<JournalCard />
 
