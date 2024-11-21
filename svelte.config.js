@@ -11,8 +11,9 @@ const config = {
 		adapter: adapter({
 			fallback: 'index.html'
 		}),
-		prerender: { entries: [] }
-	}
+		prerender: { entries: [] },
+	},
+	runes: true,
 };
 
 export default config;

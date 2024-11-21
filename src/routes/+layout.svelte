@@ -9,15 +9,39 @@
 	// Popups
 	import { computePosition, autoUpdate, offset, shift, flip, arrow } from '@floating-ui/dom';
 	import { storePopup } from '@skeletonlabs/skeleton';
+	// PWA
+	import { pwaInfo } from 'virtual:pwa-info';
+	import { onMount } from 'svelte';
 
 	// Reactive Properties
 	// $: classesSidebar = $page.url.pathname === '/' ? 'w-0' : 'w-0 lg:w-60';
+	$: webManifest = pwaInfo ? pwaInfo.webManifest.linkTag : ''
 
 	initializeStores();
 	const drawerStore = getDrawerStore();
 
 	// set up popups
 	storePopup.set({ computePosition, autoUpdate, offset, shift, flip, arrow });
+
+	onMount(async () => {
+		if (pwaInfo) {
+			const { registerSW } = await import('virtual:pwa-register');
+			registerSW({
+				immediate: true,
+				onRegistered(r: any) {
+					// uncomment following code if you want check for updates
+					// r && setInterval(() => {
+					//    console.log('Checking for sw update')
+					//    r.update()
+					// }, 20000 /* 20s for testing purposes */)
+					console.log(`SW Registered: ${r}`);
+				},
+				onRegisterError(error: any) {
+					console.log('SW registration error', error);
+				}
+			});
+		}
+	});
 
 	function handleSwipe(e: SwipeCustomEvent) {
 		if (e.detail.direction == 'right') {
@@ -32,10 +56,11 @@
 </script>
 
 <svelte:head>
-	<title>Cashier</title>
+	<title>Cashier-2</title>
+	{@html webManifest}
 </svelte:head>
 
-<div use:swipe on:swipe={handleSwipe}>
+<main use:swipe on:swipe={handleSwipe}>
 	<!-- Drawer -->
 	<Drawer width="w-72">
 		<!-- <h2 class="p-4">Navigation</h2>
@@ -56,4 +81,8 @@
 		<!-- Page Route Content -->
 		<slot />
 	</AppShell>
-</div>
+</main>
+
+{#await import('$lib/ReloadPrompt.svelte') then { default: ReloadPrompt}}
+  <ReloadPrompt />
+{/await}

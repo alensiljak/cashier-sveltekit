@@ -67,8 +67,7 @@ const config = {
 				]
 			},
 			workbox: {
-				globPatterns: ['**/*.{js,css,html,png,jpg,jpeg,gif,svg}'],
-			}
+			},
 		}),
 		//VitePWA({ registerType: 'autoUpdate' })
 	],
