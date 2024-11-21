@@ -1,12 +1,12 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 //import { VitePWA } from 'vite-plugin-pwa'
 import { SvelteKitPWA } from '@vite-pwa/sveltekit';
+import { defineConfig } from 'vite';
 
 /** @type {import('vite').UserConfig} */
-const config = {
+const config = defineConfig({
 	plugins: [
 		sveltekit(),
-		// SvelteKitPWA({ /* pwa options */ }),
 		SvelteKitPWA({
 			// registerType: 'prompt',  // this is the default.
 			injectRegister: false,
@@ -94,6 +94,6 @@ const config = {
 	test: {
 		include: ['src/**/*.{test,spec}.{js,ts}']
 	}
-};
+});
 
 export default config;

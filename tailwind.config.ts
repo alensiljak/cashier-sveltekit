@@ -1,6 +1,7 @@
 import { join } from 'path';
 import type { Config } from 'tailwindcss';
 import forms from '@tailwindcss/forms';
+import typography from '@tailwindcss/typography';
 import { myCustomTheme } from './cashier-theme.ts'
 
 // 1. Import the Skeleton plugin
@@ -24,7 +25,8 @@ const config = {
 		extend: {}
 	},
 	plugins: [
-		require('@tailwindcss/typography'),
+		// require('@tailwindcss/typography'),
+		typography,
 		forms,
 		// 4. Append the Skeleton plugin (after other plugins)
 		skeleton({

@@ -1,11 +1,12 @@
 <script lang="ts">
+	// Stylesheets
+	import '../app.css';
+	// libs
 	import { swipe, type SwipeCustomEvent } from 'svelte-gestures';
 	import { getDrawerStore } from '@skeletonlabs/skeleton';
 	import Navigation from '$lib/navigation.svelte';
 	import { page } from '$app/stores';
 	import { AppShell, Drawer, initializeStores, Toast } from '@skeletonlabs/skeleton';
-	// Stylesheets
-	import '../app.css';
 	// Popups
 	import { computePosition, autoUpdate, offset, shift, flip, arrow } from '@floating-ui/dom';
 	import { storePopup } from '@skeletonlabs/skeleton';
@@ -14,9 +15,12 @@
 	import { pwaAssetsHead } from 'virtual:pwa-assets/head';
 	import { onMount } from 'svelte';
 
+	let { children } = $props();
+
 	// Reactive Properties
 	// $: classesSidebar = $page.url.pathname === '/' ? 'w-0' : 'w-0 lg:w-60';
-	$: webManifest = pwaInfo ? pwaInfo.webManifest.linkTag : ''
+	// $: webManifest = pwaInfo ? pwaInfo.webManifest.linkTag : ''
+	let webManifest = $derived(pwaInfo ? pwaInfo.webManifest.linkTag : '')
 
 	initializeStores();
 	const drawerStore = getDrawerStore();
@@ -89,7 +93,8 @@
 			<Navigation />
 		</svelte:fragment>
 		<!-- Page Route Content -->
-		<slot />
+		<!-- <slot /> -->
+		{@render children()}
 	</AppShell>
 </main>
 
