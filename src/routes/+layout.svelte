@@ -3,7 +3,7 @@
 	import '../app.css';
 	// libs
 	import { swipe, type SwipeCustomEvent } from 'svelte-gestures';
-	import Navigation from '$lib/navigation.svelte';
+	import Navigation from '$lib/components/navigation.svelte';
 	import { page } from '$app/stores';
 	// Popups
 	import { computePosition, autoUpdate, offset, shift, flip, arrow } from '@floating-ui/dom';
@@ -106,6 +106,6 @@
 	</AppShell>
 </main>
 
-{#await import('$lib/ReloadPrompt.svelte') then { default: ReloadPrompt }}
+{#await import('$lib/components/ReloadPrompt.svelte') then { default: ReloadPrompt }}
 	<ReloadPrompt />
 {/await}

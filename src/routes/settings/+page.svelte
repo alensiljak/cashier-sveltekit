@@ -1,12 +1,14 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import GlossToolbar from '$lib/gloss-toolbar.svelte';
-	import Toolbar from '$lib/toolbar.svelte';
+	import GlossToolbar from '$lib/components/gloss-toolbar.svelte';
+	import Toolbar from '$lib/components/toolbar.svelte';
 	import { SettingKeys, settings } from '$lib/settings';
-	import Notifier from '$lib/notify';
+	import Notifier from '$lib/utils/notifier';
 	import { FileButton, getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
 	import { xact } from '$lib/data/mainStore';
 	import { get } from 'svelte/store';
+	import db from '$lib/data/db'
+	import appService from '$lib/services/appService'
 
 	const modalStore = getModalStore();
 	Notifier.init();
@@ -24,39 +26,50 @@
 	});
 
 	async function loadSettings() {
-		console.log('loading settings');
-
 		currency = await settings.get(SettingKeys.currency);
 		rootInvestmentAccount = await settings.get(SettingKeys.rootInvestmentAccount);
 		rememberLastTransaction = await settings.get(SettingKeys.rememberLastTransaction);
 	}
 
 	/**
-	 * Handles the change of the settings file selection. When the file is selected, automatically
-	 * offer to import it.
+	 * Handles the change of the settings file selection.
+	 * When the file is selected, automatically offer to import it.
 	 */
 	async function onSettingsFileChangeHandler() {
-		console.log('prompt for import confirmation');
-
+		// prompt for confirmation with a dialog
 		const modal: ModalSettings = {
 			type: 'confirm',
 			// Data
 			title: 'Confirm Restore',
 			body: 'Do you want to restore the selected settings file?',
-			response: (r: boolean) => {
-				console.log(r)
-			},
-			
+			response: async (r: boolean) => {
+				if (r) await restoreSettings();
+			}
 		};
 		modalStore.trigger(modal);
 	}
 
 	/**
-	 * The settings file has been selected.
+	 * Restore the selected settings file.
 	 */
-	async function onSettingsSelectedHandler() {
-		// todo: prompt for confirmation with a dialog
-		// restore settings
+	async function restoreSettings() {
+		if(settings_files.length === 0) {
+			console.error('no files selected!')
+			return
+		}
+		let file = settings_files[0]
+		const contents: any = await appService.readFileAsync(file as Blob);
+
+		// clear settings table
+		await db.settings.clear();
+
+		// store the new settings from json
+		const records = JSON.parse(contents);
+		await db.settings.bulkAdd(records);
+
+		Notifier.notify('Settings imported', 'bg-primary-500')
+
+		await loadSettings();
 	}
 
 	async function saveSettings() {
@@ -101,11 +114,7 @@
 	</label> -->
 
 	<center>
-		<button
-			class="variant-filled-error btn uppercase !text-warning-500"
-			on:click={saveSettings}
-			on:change={onSettingsSelectedHandler}
-		>
+		<button class="variant-filled-error btn uppercase !text-warning-500" on:click={saveSettings}>
 			Save
 		</button>
 	</center>

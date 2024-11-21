@@ -3,7 +3,7 @@
     import { 
         getDrawerStore,
 	} from '@skeletonlabs/skeleton';
-	import Navigation from '$lib/navigation.svelte';
+	import Navigation from '$lib/components/navigation.svelte';
 	import { fade } from 'svelte/transition';
 
 	const drawerStore = getDrawerStore();

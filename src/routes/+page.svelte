@@ -1,8 +1,8 @@
 <script lang="ts">
-	import GlossToolbar from '$lib/gloss-toolbar.svelte';
-	import JournalCard from '$lib/journal-card.svelte';
+	import GlossToolbar from '$lib/components/gloss-toolbar.svelte';
+	import JournalCard from '$lib/components/journal-card.svelte';
 	import { PlusIcon } from 'lucide-svelte';
-	import Toolbar from '../lib/toolbar.svelte';
+	import Toolbar from '../lib/components/toolbar.svelte';
 	import { goto } from '$app/navigation';
 	import { xact } from '$lib/data/mainStore'
 	import { Transaction } from '$lib/data/model';
