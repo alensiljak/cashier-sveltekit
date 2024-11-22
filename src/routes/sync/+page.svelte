@@ -76,7 +76,7 @@
 
 		const report = await sync.readAccounts();
 		if (!report || report.length == 0) {
-			Notifier.error('Invalid response received: ' + report);
+			Notifier.error('No accounts received: ' + report);
 			return;
 		}
 
