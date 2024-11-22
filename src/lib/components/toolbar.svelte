@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { AppBar } from '@skeletonlabs/skeleton-svelte';
-	import { ArrowBigUpIcon, ArrowDownIcon, CircleCheckIcon, EllipsisVertical, Menu } from 'lucide-svelte';
+	import { EllipsisVertical, Menu } from 'lucide-svelte';
 	import { getDrawerStore, popup, type PopupSettings } from '@skeletonlabs/skeleton';
 	import ToolbarMenu from './ToolbarMenu.svelte';
 	import type { Snippet } from 'svelte';
@@ -14,16 +14,16 @@
 
 	// Props
 	type Props = {
-		title?: string,
-		children?: Snippet
-	}
-	// export let title: string = 'Cashier'
-	let { title = 'Cashier', children }: Props = $props()
+		title?: string;
+		menuItems?: Snippet;
+		children?: Snippet;
+	};
+	let { title = 'Cashier', menuItems, children }: Props = $props();
 
 	// methods
 
 	function onMenuClicked() {
-		console.log('menu clicked');
+		// console.log('menu clicked');
 	}
 
 	function toggleSidebar() {
@@ -32,7 +32,6 @@
 </script>
 
 <!-- Toolbar for pages -->
-<!-- centerClasses="sm:block lg:hidden" -->
 <AppBar
 	headlineClasses="sm:hidden"
 	centerClasses=""
@@ -55,16 +54,16 @@
 		<h4 class="h4 leading-9">{title}</h4>
 	{/snippet}
 	{#snippet trail()}
-		<button class="btn" onclick={onMenuClicked} use:popup={popupClick}>
-			<EllipsisVertical size={20} class="" />
-		</button>
+		{#if menuItems}
+			<button class="btn" onclick={onMenuClicked} use:popup={popupClick}>
+				<EllipsisVertical size={20} class="" />
+			</button>
+			<ToolbarMenu>
+				{@render menuItems()}
+			</ToolbarMenu>
+		{/if}
 	{/snippet}
 	<!-- {#snippet headline()}
 			<h2 class="h2">Headline</h2>
 		{/snippet} -->
 </AppBar>
-
-<!-- Menu -->
-<ToolbarMenu>
-
-</ToolbarMenu>

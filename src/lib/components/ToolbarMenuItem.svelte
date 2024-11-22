@@ -1,18 +1,19 @@
 <script lang="ts">
-	import type { Snippet } from "svelte";
+	import type { Component, Snippet } from "svelte";
 
     // Props
     type Props = {
         targetNav?: string,
         text?: string,
-        icon?: Snippet
+        Icon?: Component
     }
-    let { targetNav = '/', text, icon } = $props()
+    let { targetNav = '/', text, Icon } = $props()
 
 </script>
 <a href="{targetNav}">
     <span class="flex-auto">{text}</span>
     <span class="badge">
-        {@render icon()}
+        <!-- {@render icon()} -->
+        <Icon />
     </span>
 </a>

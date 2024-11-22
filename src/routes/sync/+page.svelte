@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Toolbar from '$lib/components/toolbar.svelte';
-	import { RefreshCcw } from 'lucide-svelte';
+	import { RefreshCcw, SettingsIcon } from 'lucide-svelte';
 	import { onMount } from 'svelte';
 	import { SettingKeys, settings } from '$lib/settings';
 	import Notifier from '$lib/utils/notifier';
@@ -8,6 +8,7 @@
 	import { CashierSync } from '$lib/cashier-sync';
 	import appService from '$lib/services/appService';
 	import CashierDAL from '$lib/data/dal';
+	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 
 	Notifier.init();
 
@@ -120,7 +121,15 @@
 	}
 </script>
 
-<Toolbar title="Cashier Sync" />
+<Toolbar title="Cashier Sync">
+    {#snippet menuItems()}
+	<ToolbarMenuItem text="Backup Settings">
+		{#snippet icon()}
+		<SettingsIcon />
+		{/snippet}
+	</ToolbarMenuItem>
+    {/snippet}
+</Toolbar>
 
 <main class="container space-y-4 p-1 lg:p-10">
 	<p>To update data from Ledger, the Cashier Server must be running and accessible.</p>
