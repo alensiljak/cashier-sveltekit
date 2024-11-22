@@ -12,7 +12,7 @@
 	import ScheduledXactsCard from '$lib/components/ScheduledXactsCard.svelte';
 	import { onMount } from 'svelte';
 
-	let cards: any[] = []
+	let cards: Array<any> = []
 	// let sortedCards = $derived(cards.sort((a, b) => a.order - b.order))
 
 	onMount(() => {
@@ -41,12 +41,10 @@
 <Toolbar />
 
 <!-- Main -->
-<main class="container space-y-4 p-1 lg:p-10">
+<main class="container space-y-2 py-1 px-1 lg:px-32">
 	<!-- Cards are displayed dynamically, in the selected order. -->
 	{#each cards as { card } }
-		<!-- <span>{card}</span> -->
 		{@render card()}
-		<!-- <svelte:element this={card} /> -->
 		<!-- {@const SvelteComponent = card}
 		<SvelteComponent /> -->
 		<!-- <svelte:component this={card} /> -->
