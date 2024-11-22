@@ -1,34 +1,39 @@
 <script lang="ts">
-	import Toolbar from '$lib/components/toolbar.svelte'
-	import { RefreshCcw } from 'lucide-svelte'
-	import { onMount } from 'svelte'
-    import {SettingKeys, settings} from '$lib/settings'
+	import Toolbar from '$lib/components/toolbar.svelte';
+	import { RefreshCcw } from 'lucide-svelte';
+	import { onMount } from 'svelte';
+	import { SettingKeys, settings } from '$lib/settings';
+	import Notifier from '$lib/utils/notifier';
 
-	let serverUrl = 'http://localhost:3000'
-    let syncAccounts = false
-    let syncAaValues = false
-    let syncPayees = false
+	Notifier.init();
 
-    let rotationClass = ''
+	let serverUrl = 'http://localhost:3000';
+	let syncAccounts = false;
+	let syncAaValues = false;
+	let syncPayees = false;
+
+	let rotationClass = '';
 
 	onMount(async () => {
 		// load sync settings
-        await loadSettings()
+		await loadSettings();
 	});
 
-    async function loadSettings() {
-        serverUrl = await settings.get(SettingKeys.syncServerUrl)
+	async function loadSettings() {
+		serverUrl = await settings.get(SettingKeys.syncServerUrl);
 
-        syncAccounts = await settings.get(SettingKeys.syncAccounts)
-        syncAaValues = await settings.get(SettingKeys.syncAaValues)
-        syncPayees = await settings.get(SettingKeys.syncPayees)
-    }
+		syncAccounts = await settings.get(SettingKeys.syncAccounts);
+		syncAaValues = await settings.get(SettingKeys.syncAaValues);
+		syncPayees = await settings.get(SettingKeys.syncPayees);
+	}
 
-    function onSyncClicked() {
-        rotationClass = rotationClass == ''
-            ? 'animate-[spin_2s_linear_infinite]'
-            : ''
-    }
+	function onSyncClicked() {
+		rotationClass = rotationClass == '' ? 'animate-[spin_2s_linear_infinite]' : '';
+
+		if (rotationClass !== '') {
+			Notifier.notify('not implemented', 'bg-info-500');
+		}
+	}
 </script>
 
 <Toolbar title="Cashier Sync" />
@@ -62,9 +67,8 @@
 	</div>
 
 	<center class="pt-10">
-		<button class="btn bg-tertiary-500 uppercase text-secondary-500"
-            onclick={onSyncClicked}>
-			<span><RefreshCcw class="{rotationClass}" style="animation-direction: reverse;" /></span>
+		<button class="btn bg-tertiary-500 uppercase text-secondary-500" onclick={onSyncClicked}>
+			<span><RefreshCcw class={rotationClass} style="animation-direction: reverse;" /></span>
 			<span>Sync</span>
 		</button>
 	</center>

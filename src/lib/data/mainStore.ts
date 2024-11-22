@@ -1,7 +1,6 @@
 /**
  * State store for the app
  */
-import type internal from 'stream';
 import { writable, type Writable } from 'svelte/store';
 
 interface MainStore {

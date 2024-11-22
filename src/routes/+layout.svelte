@@ -4,7 +4,7 @@
 	// libs
 	import { swipe, type SwipeCustomEvent } from 'svelte-gestures';
 	import Navigation from '$lib/components/navigation.svelte';
-	import { page } from '$app/stores';
+	// import { page } from '$app/stores';
 	// Popups
 	import { computePosition, autoUpdate, offset, shift, flip, arrow } from '@floating-ui/dom';
 	import {
@@ -26,8 +26,6 @@
 	initializeStores();
 
 	// Reactive Properties
-	// $: classesSidebar = $page.url.pathname === '/' ? 'w-0' : 'w-0 lg:w-60';
-	// $: webManifest = pwaInfo ? pwaInfo.webManifest.linkTag : ''
 	let webManifest = $derived(pwaInfo ? pwaInfo.webManifest.linkTag : '');
 
 	const drawerStore = getDrawerStore();
