@@ -23,7 +23,7 @@
             {#if title}{@render title()}{/if}
 		</span>
 	</header>
-	<section class="p-4">
+	<section class="px-1 py-2">
         {#if content}{@render content()}{/if}
 	</section>
     {#if footer}

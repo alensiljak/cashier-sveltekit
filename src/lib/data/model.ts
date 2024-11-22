@@ -13,8 +13,8 @@ export class Account {
   name = ''
   balances?: Record<string, number>
   // currency: any
-  currentValue: any
-  currentCurrency: any
+  currentValue: number | string | undefined
+  currentCurrency: string | undefined
 
   constructor(accountName: string) {
     this.name = accountName
@@ -38,7 +38,7 @@ export class Payee {
 
 export class Posting {
   id?: number
-  transactionId: string | any
+  transactionId: number | undefined
   account: string
   amount?: number
   currency: string
@@ -46,7 +46,7 @@ export class Posting {
   constructor() {
     // Id is inserted automatically.
     // this.id = null
-    this.transactionId = ''
+    this.transactionId = undefined
     this.account = ''
     this.currency = ''
   }
@@ -62,19 +62,19 @@ export class Price {
   // symbol on the exchange
   ticker: string | undefined
   // downloaded price
-  price: any
+  price: unknown
   // currency of the price
   currency: string | undefined
 }
 
 export class ScheduledTransaction {
   id?: number
-  nextDate: any
+  nextDate: unknown
   transaction?: Transaction
-  period: any
+  period: unknown
   count?: number
-  endDate: any
-  remarks: any
+  endDate: unknown
+  remarks: unknown
 }
 
 export class Transaction {
