@@ -67,7 +67,7 @@
 		const records = JSON.parse(contents);
 		await db.settings.bulkAdd(records);
 
-		Notifier.notify('Settings imported', 'bg-primary-500')
+		Notifier.success('Settings imported')
 
 		await loadSettings();
 	}

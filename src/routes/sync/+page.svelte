@@ -4,18 +4,24 @@
 	import { onMount } from 'svelte';
 	import { SettingKeys, settings } from '$lib/settings';
 	import Notifier from '$lib/utils/notifier';
+	import type { PageData } from './$types';
+	import { CashierSync } from '$lib/cashier-sync';
+	import appService from '$lib/services/appService';
+	import CashierDAL from '$lib/data/dal';
 
 	Notifier.init();
 
-	let serverUrl = 'http://localhost:3000';
+	let { data }: { data: PageData } = $props();
+
+	let serverUrl = $state('http://localhost:3000');
 	let rootInvestmentAccount = null;
 	let currency = null;
 
-	let syncAccounts = false;
-	let syncAaValues = false;
-	let syncPayees = false;
+	let syncAccounts = $state(false);
+	let syncAaValues = $state(false);
+	let syncPayees = $state(false);
 
-	let rotationClass = '';
+	let rotationClass = $state('');
 
 	onMount(async () => {
 		// load sync settings
@@ -32,12 +38,25 @@
 		syncPayees = await settings.get(SettingKeys.syncPayees);
 	}
 
-	function onSyncClicked() {
+	async function onSyncClicked() {
 		rotationClass = rotationClass == '' ? 'animate-[spin_2s_linear_infinite]' : '';
 
-		if (rotationClass !== '') {
-			Notifier.notify('not implemented', 'bg-info-500');
+		try {
+			if (syncAccounts) {
+				await synchronizeAccounts();
+			}
+			if (syncAaValues) {
+				await synchronizeAaValues();
+			}
+			if (syncPayees) {
+				await synchronizePayees();
+			}
+		} catch (error: any) {
+			console.error(error);
+			Notifier.error(error.message);
 		}
+		// stop spinning indicator.
+		rotationClass = '';
 	}
 
 	async function saveSettings() {
@@ -50,6 +69,54 @@
 		await settings.set(SettingKeys.syncServerUrl, serverUrl);
 
 		Notifier.notify('Server URL saved', 'bg-success-500');
+	}
+
+	async function synchronizeAccounts() {
+		const sync = new CashierSync(serverUrl);
+
+		const report = await sync.readAccounts();
+		if (!report || report.length == 0) {
+			Notifier.error('Invalid response received: ' + report);
+			return;
+		}
+
+		// delete all accounts only after we have retrieved the new ones.
+		await appService.deleteAccounts();
+		await appService.importBalanceSheet(report);
+
+		Notifier.success('Accounts fetched from Ledger');
+	}
+
+	async function synchronizeAaValues() {
+		const sync = new CashierSync(serverUrl);
+
+		try {
+			await sync.readCurrentValues();
+
+			Notifier.success('Asset Allocation values loaded');
+		} catch (error: any) {
+			console.error(error);
+			Notifier.error(error.message);
+		}
+	}
+
+	async function synchronizePayees() {
+		const sync = new CashierSync(serverUrl);
+
+		const response = await sync.readPayees();
+
+		if (!response || response.length == 0) {
+			Notifier.error('Invalid response received: ' + response);
+			return;
+		}
+
+		// delete all payees only after we have retrieved the new ones.
+		const dal = new CashierDAL();
+		await dal.deletePayees();
+
+		await appService.importPayees(response);
+
+		Notifier.success('Payees fetched from Ledger');
 	}
 </script>
 
