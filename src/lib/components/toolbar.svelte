@@ -2,7 +2,6 @@
 	import { AppBar } from '@skeletonlabs/skeleton-svelte';
 	import { EllipsisVertical, Menu } from 'lucide-svelte';
 	import { getDrawerStore, popup, type PopupSettings } from '@skeletonlabs/skeleton';
-	import ToolbarMenu from './ToolbarMenu.svelte';
 	import type { Snippet } from 'svelte';
 
 	const drawerStore = getDrawerStore();
@@ -16,15 +15,10 @@
 	type Props = {
 		title?: string;
 		menuItems?: Snippet;
-		children?: Snippet;
 	};
-	let { title = 'Cashier', menuItems, children }: Props = $props();
+	let { title = 'Cashier', menuItems }: Props = $props();
 
 	// methods
-
-	function onMenuClicked() {
-		// console.log('menu clicked');
-	}
 
 	function toggleSidebar() {
 		drawerStore.open();
@@ -55,12 +49,15 @@
 	{/snippet}
 	{#snippet trail()}
 		{#if menuItems}
-			<button class="btn" onclick={onMenuClicked} use:popup={popupClick}>
+			<button class="btn" use:popup={popupClick}>
 				<EllipsisVertical size={20} class="" />
 			</button>
-			<ToolbarMenu>
-				{@render menuItems()}
-			</ToolbarMenu>
+			<!-- Pop-up Menu -->
+			<div class="list-nav variant-filled-primary p-3" data-popup="popupClick">
+				<ul>
+					{@render menuItems?.()}
+				</ul>
+			</div>
 		{/if}
 	{/snippet}
 	<!-- {#snippet headline()}

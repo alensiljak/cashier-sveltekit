@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Toolbar from '$lib/components/toolbar.svelte';
-	import { RefreshCcw, SettingsIcon } from 'lucide-svelte';
+	import { ArrowBigUpIcon, ArrowDownIcon, CircleCheckIcon, RefreshCcw, SettingsIcon } from 'lucide-svelte';
 	import { onMount } from 'svelte';
 	import { SettingKeys, settings } from '$lib/settings';
 	import Notifier from '$lib/utils/notifier';
@@ -123,12 +123,12 @@
 
 <Toolbar title="Cashier Sync">
     {#snippet menuItems()}
-	<ToolbarMenuItem text="Backup Settings">
-		{#snippet icon()}
-		<SettingsIcon />
-		{/snippet}
-	</ToolbarMenuItem>
-    {/snippet}
+	<ToolbarMenuItem text="Backup Settings" Icon={SettingsIcon} />
+    <ToolbarMenuItem text="test" Icon={ArrowDownIcon} />
+    <ToolbarMenuItem text="Backup Settings" Icon={ArrowDownIcon} />
+    <ToolbarMenuItem text="Restore Settings" targetNav="/settings" Icon={ArrowBigUpIcon} />
+    <ToolbarMenuItem text="X" Icon={CircleCheckIcon} />
+{/snippet}
 </Toolbar>
 
 <main class="container space-y-4 p-1 lg:p-10">
