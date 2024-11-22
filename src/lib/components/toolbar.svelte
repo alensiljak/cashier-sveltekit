@@ -18,7 +18,7 @@
 		children?: Snippet
 	}
 	// export let title: string = 'Cashier'
-	let { title, children }: Props = $props()
+	let { title = 'Cashier', children }: Props = $props()
 
 	// methods
 
