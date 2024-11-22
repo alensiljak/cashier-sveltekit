@@ -28,7 +28,7 @@ const Notifier = {
     // 'bg-negative-500'
   },
   neutral(message: string) {
-    this.notify(message)
+    this.notify(message, 'bg-info-500')
   }
 }
 

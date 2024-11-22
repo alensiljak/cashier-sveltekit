@@ -1,6 +1,13 @@
 <script lang="ts">
 	import Toolbar from '$lib/components/toolbar.svelte';
-	import { ArrowBigUpIcon, ArrowDownIcon, CircleCheckIcon, RefreshCcw, SettingsIcon } from 'lucide-svelte';
+	import {
+		ArrowBigUpIcon,
+		ArrowDownIcon,
+		CircleCheckIcon,
+		PowerIcon,
+		RefreshCcw,
+		SettingsIcon
+	} from 'lucide-svelte';
 	import { onMount } from 'svelte';
 	import { SettingKeys, settings } from '$lib/settings';
 	import Notifier from '$lib/utils/notifier';
@@ -37,6 +44,23 @@
 		syncAccounts = await settings.get(SettingKeys.syncAccounts);
 		syncAaValues = await settings.get(SettingKeys.syncAaValues);
 		syncPayees = await settings.get(SettingKeys.syncPayees);
+	}
+
+	/**
+	 * shut the remote server down
+	 */
+	async function onShutdownClick(e: Event) {
+        e.preventDefault()
+        
+		const sync = new CashierSync(serverUrl);
+		try {
+			await sync.shutdown();
+		} catch (error: any) {
+			console.error(error);
+			Notifier.error(error.message);
+		}
+
+		Notifier.neutral('The server shutdown request sent.');
 	}
 
 	async function onSyncClicked() {
@@ -122,13 +146,9 @@
 </script>
 
 <Toolbar title="Cashier Sync">
-    {#snippet menuItems()}
-	<ToolbarMenuItem text="Backup Settings" Icon={SettingsIcon} />
-    <ToolbarMenuItem text="test" Icon={ArrowDownIcon} />
-    <ToolbarMenuItem text="Backup Settings" Icon={ArrowDownIcon} />
-    <ToolbarMenuItem text="Restore Settings" targetNav="/settings" Icon={ArrowBigUpIcon} />
-    <ToolbarMenuItem text="X" Icon={CircleCheckIcon} />
-{/snippet}
+	{#snippet menuItems()}
+		<ToolbarMenuItem text="Shut down server" Icon={PowerIcon} onclick={onShutdownClick} />
+	{/snippet}
 </Toolbar>
 
 <main class="container space-y-4 p-1 lg:p-10">
