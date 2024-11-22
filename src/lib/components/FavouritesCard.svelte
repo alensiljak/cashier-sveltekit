@@ -68,9 +68,9 @@
 				<table class="table table-hover">
 					<tbody>
 						{#each accounts as account}
-							<tr>
-								<td class="!py-2">{account?.name}</td>
-								<td class="!py-2" style="text-align: end;">
+							<tr class="">
+								<td class="!py-1.5 border-b border-tertiary-200/15">{account?.name}</td>
+								<td class="!py-1.5 border-b text-end border-tertiary-200/15">
 									{getBalance(account).amount}
 									{getBalance(account).currency}
 								</td>
