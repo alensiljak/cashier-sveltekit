@@ -1,11 +1,11 @@
 /*
     Asset Allocation
 */
-import appService from '../appService'
-import { AssetClass, AssetClassDefinition } from './AssetClass'
+import appService from '$lib/services/appService'
+import { AssetClass, type AssetClassDefinition } from './AssetClass'
 import numeral from 'numeral'
 import toml from 'toml'
-import { AccountService } from './accountsService'
+import { AccountService } from '$lib/services/accountsService'
 import { SettingKeys, settings } from '$lib/settings'
 
 // constants
@@ -27,7 +27,7 @@ class AssetAllocationEngine {
   async loadFullAssetAllocation(): Promise<AssetClass[]> {
     // aa definition
 
-    let assetClasses = await this.loadDefinition()
+    const assetClasses = await this.loadDefinition()
     if (!assetClasses.length) return []
 
     this.assetClassIndex = this.buildAssetClassIndex(assetClasses)
@@ -50,16 +50,16 @@ class AssetAllocationEngine {
     // this.formatNumbers(this.assetClassIndex)
 
     // convert to array for display in a table
-    let result: AssetClass[] = Object.values(this.assetClassIndex)
+    const result: AssetClass[] = Object.values(this.assetClassIndex)
 
     return result
   }
 
   buildAssetClassIndex(assetClasses: AssetClass[]): Record<string, AssetClass> {
-    let index: Record<string, AssetClass> = {}
+    const index: Record<string, AssetClass> = {}
 
     for (let i = 0; i < assetClasses.length; i++) {
-      let ac = assetClasses[i]
+      const ac = assetClasses[i]
       index[ac.fullname] = ac
     }
 
@@ -71,15 +71,15 @@ class AssetAllocationEngine {
    * @param {Array} asetClasses
    */
   buildStockIndex(asetClasses: AssetClass[]): Record<string, string> {
-    let index: Record<string, string> = {}
+    const index: Record<string, string> = {}
 
     for (let i = 0; i < asetClasses.length; i++) {
-      let assetClass = asetClasses[i]
+      const assetClass = asetClasses[i]
       if (!assetClass.symbols) continue
 
-      let stocks = assetClass.symbols
+      const stocks = assetClass.symbols
       for (let j = 0; j < stocks.length; j++) {
-        let stock = stocks[j]
+        const stock = stocks[j]
 
         index[stock] = assetClass.fullname
       }
@@ -88,8 +88,8 @@ class AssetAllocationEngine {
   }
 
   calculateOffsets(dictionary: Record<string, AssetClass>) {
-    let root = dictionary['Allocation']
-    let total = root.currentValue
+    const root = dictionary['Allocation']
+    const total = root.currentValue
 
     // toFixed returns a string.
 
@@ -109,10 +109,10 @@ class AssetAllocationEngine {
     })
   }
 
-  cleanBlankArrayItems(array: any[]) {
+  cleanBlankArrayItems(array: string[]) {
     let i = 0
     while (i < array.length) {
-      let part = array[i]
+      const part = array[i]
       if (part === '') {
         array.splice(i, 1)
       } else {
@@ -130,7 +130,7 @@ class AssetAllocationEngine {
   }
 
   findChildren(dictionary: object, parent: AssetClass) {
-    let children: AssetClass[] = []
+    const children: AssetClass[] = []
 
     Object.values(dictionary).forEach((val) => {
       // console.log(key); // the name of the current key.
@@ -149,13 +149,13 @@ class AssetAllocationEngine {
    * @param {Array} rows
    */
   formatAllocationRowsForTxtExport(rows: AssetClass[]) {
-    let outputRows = []
+    const outputRows = []
     outputRows.push(
       'Asset Class       Allocation Current  Diff.  Diff.%  Alloc.Val.  Curr. Val.  Difference'
     )
 
     for (let i = 0; i < rows.length; i++) {
-      let row = rows[i]
+      const row = rows[i]
 
       /*
             {"name": "Asset Class", "width": 22},
@@ -172,35 +172,35 @@ class AssetAllocationEngine {
         space += ' '
       }
       // let name = row.name.padStart(22, ' ')
-      let firstCol = (space + row.name).padEnd(20, ' ')
+      const firstCol = (space + row.name).padEnd(20, ' ')
 
       let display = numeral(row.allocation).format(NUMBER_FORMAT)
-      let alloc = display.toString().padStart(6, ' ')
+      const alloc = display.toString().padStart(6, ' ')
 
       display = numeral(row.currentAllocation).format(NUMBER_FORMAT)
-      let curAl = display.toString().padStart(6, ' ')
+      const curAl = display.toString().padStart(6, ' ')
 
       display = numeral(row.diff).format(NUMBER_FORMAT)
-      let diff = display.toString().padStart(5, ' ')
+      const diff = display.toString().padStart(5, ' ')
 
       display = numeral(row.diffPerc).format(NUMBER_FORMAT)
-      let diffPerc = display.toString().padStart(6, ' ')
+      const diffPerc = display.toString().padStart(6, ' ')
 
       display = numeral(row.allocatedValue).format(NUMBER_FORMAT)
-      let alVal = display.toString().padStart(10, ' ')
+      const alVal = display.toString().padStart(10, ' ')
 
       display = numeral(row.currentValue).format(NUMBER_FORMAT)
-      let value = display.toString().padStart(10, ' ')
+      const value = display.toString().padStart(10, ' ')
 
       // let locCur =
       display = numeral(row.diffAmount).format(NUMBER_FORMAT)
-      let diffAmt = display.toString().padStart(10, ' ')
+      const diffAmt = display.toString().padStart(10, ' ')
 
-      let output = `${firstCol}  ${alloc}  ${curAl}  ${diff}  ${diffPerc}  ${alVal}  ${value}  ${diffAmt}`
+      const output = `${firstCol}  ${alloc}  ${curAl}  ${diff}  ${diffPerc}  ${alVal}  ${value}  ${diffAmt}`
 
       outputRows.push(output)
     }
-    let text = outputRows.join('\n')
+    const text = outputRows.join('\n')
     return text
   }
 
@@ -231,12 +231,12 @@ class AssetAllocationEngine {
       balance = balance.replace(',', '')
 
       // extract the currency
-      let parts = balance.split(' ')
+      const parts = balance.split(' ')
       const amount = parts[0]
       const currency = parts[1]
 
       // Update existing account.
-      let account = await appService.db.accounts.get(key)
+      const account = await appService.db.accounts.get(key)
       if (!account) {
         throw new Error('Invalid account ' + account.name)
       }
@@ -252,11 +252,11 @@ class AssetAllocationEngine {
     //console.log('toml:', aa)
 
     // Convert to backward-compatible structure (tree -> list).
-    let assetClasses = this.linearizeObject(parsed)
+    const assetClasses = this.linearizeObject(parsed)
 
     // todo: use the tree structure directly, at some later point.
 
-    let result = await this.validateAndSave(assetClasses)
+    const result = await this.validateAndSave(assetClasses)
     return result
   }
 
@@ -265,15 +265,15 @@ class AssetAllocationEngine {
    * Imports Asset Allocation definition as YAML.
    * @param {string} content The content of the YAML definition file.
    */
-  async importYamlDefinition(content: string) {
-    let parsed: AssetClassDefinition = { allocation: 0, symbols: [] } //= jsyaml.load(content) as object
+  async importYamlDefinition() {
+    const parsed: AssetClassDefinition = { allocation: 0, symbols: [] } //= jsyaml.load(content) as object
 
     // Convert to backward-compatible structure (tree -> list).
-    let assetClasses = this.linearizeObject(parsed)
+    const assetClasses = this.linearizeObject(parsed)
 
     // todo: use the tree structure directly, at some later point.
 
-    let result = await this.validateAndSave(assetClasses)
+    const result = await this.validateAndSave(assetClasses)
     return result
   }
 
@@ -293,14 +293,14 @@ class AssetAllocationEngine {
     for (const propertyName in rootObject) {
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
-      let child: AssetClassDefinition = rootObject[propertyName]
+      const child: AssetClassDefinition = rootObject[propertyName]
 
       // Only process the other definitions, not the properties (like allocation).
       // symbols is an array, which is also an object. Skip.
       if (!(typeof child == 'object') || child.constructor === Array) continue
 
       // convert to Asset Class
-      let item = new AssetClass()
+      const item = new AssetClass()
       item.allocation = child.allocation
       item.symbols = child.symbols
       // get the name
@@ -321,7 +321,7 @@ class AssetAllocationEngine {
       }
       childNamespace += propertyName
 
-      let children = this.linearizeObject(child, childNamespace)
+      const children = this.linearizeObject(child, childNamespace)
       if (children.length) {
         result = result.concat(children)
       }
@@ -337,8 +337,8 @@ class AssetAllocationEngine {
    */
   async validateAndSave(assetClassArray: AssetClass[]) {
     // Validate
-    let assetClassIndex = this.buildAssetClassIndex(assetClassArray)
-    let errors = this.validate(assetClassIndex)
+    const assetClassIndex = this.buildAssetClassIndex(assetClassArray)
+    const errors = this.validate(assetClassIndex)
     if (errors.length) throw 'Validation failed: ' + errors
 
     // persist
@@ -369,15 +369,15 @@ class AssetAllocationEngine {
         return
       }
 
-      let commodity = account.balance.currency
+      const commodity = account.balance.currency
       // Now get the asset class for this commodity.
-      let assetClassName = this.stockIndex[commodity]
+      const assetClassName = this.stockIndex[commodity]
       if (!assetClassName) {
         // console.debug(this.stockIndex)
         console.debug(account)
         throw new Error(`Asset class name not found for commodity ${commodity}`)
       }
-      let assetClass = this.assetClassIndex[assetClassName]
+      const assetClass = this.assetClassIndex[assetClassName]
       if (!assetClass) {
         throw new Error(`Asset class not found: ${assetClassName}`)
       }
@@ -399,7 +399,7 @@ class AssetAllocationEngine {
   }
 
   sumGroupBalances(acIndex: Record<string, AssetClass>) {
-    let root = acIndex['Allocation']
+    const root = acIndex['Allocation']
 
     if (root == null) {
       throw new Error(
@@ -407,14 +407,14 @@ class AssetAllocationEngine {
       )
     }
 
-    let sum = this.sumChildren(acIndex, root)
+    const sum = this.sumChildren(acIndex, root)
 
     root.currentValue = sum
   }
 
   sumChildren(dictionary: object, item: AssetClass) {
     // find all children
-    let children = this.findChildren(dictionary, item)
+    const children = this.findChildren(dictionary, item)
     // console.log(children);
     if (children.length === 0) {
       return item.currentValue
@@ -422,10 +422,10 @@ class AssetAllocationEngine {
 
     let sum = 0
     for (let i = 0; i < children.length; i++) {
-      let child: AssetClass = children[i]
+      const child: AssetClass = children[i]
       child.currentValue = this.sumChildren(dictionary, child)
 
-      let amount = child.currentValue
+      const amount = child.currentValue
       sum += amount
     }
 
@@ -437,12 +437,12 @@ class AssetAllocationEngine {
    * Currently checks the definition by comparing group sums.
    */
   validate(assetClassList: Record<string, AssetClass>) {
-    let errors: string[] = []
-    let keys = Object.keys(assetClassList)
+    const errors: string[] = []
+    const keys = Object.keys(assetClassList)
 
     keys.forEach((acName) => {
-      let ac: AssetClass = assetClassList[acName]
-      let result = this.validateGroupAllocation(ac, assetClassList)
+      const ac: AssetClass = assetClassList[acName]
+      const result = this.validateGroupAllocation(ac, assetClassList)
       if (result) {
         errors.push(result)
       }
@@ -461,7 +461,7 @@ class AssetAllocationEngine {
     assetClass: AssetClass,
     list: Record<string, AssetClass>
   ) {
-    let children = this.findChildren(list, assetClass)
+    const children = this.findChildren(list, assetClass)
     if (children.length === 0) return
 
     // sum the children's allocation.
@@ -472,7 +472,7 @@ class AssetAllocationEngine {
     }
 
     //let equal = parseFloat(assetClass.allocation) === sum
-    let equal = assetClass.allocation === sum
+    const equal = assetClass.allocation === sum
 
     if (!equal) {
       return (
