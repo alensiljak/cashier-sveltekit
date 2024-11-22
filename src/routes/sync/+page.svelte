@@ -8,6 +8,9 @@
 	Notifier.init();
 
 	let serverUrl = 'http://localhost:3000';
+	let rootInvestmentAccount = null;
+	let currency = null;
+
 	let syncAccounts = false;
 	let syncAaValues = false;
 	let syncPayees = false;
@@ -21,6 +24,8 @@
 
 	async function loadSettings() {
 		serverUrl = await settings.get(SettingKeys.syncServerUrl);
+		rootInvestmentAccount = await settings.get(SettingKeys.rootInvestmentAccount);
+		currency = await settings.get(SettingKeys.currency);
 
 		syncAccounts = await settings.get(SettingKeys.syncAccounts);
 		syncAaValues = await settings.get(SettingKeys.syncAaValues);
@@ -34,6 +39,18 @@
 			Notifier.notify('not implemented', 'bg-info-500');
 		}
 	}
+
+	async function saveSettings() {
+		await settings.set(SettingKeys.syncAccounts, syncAccounts);
+		await settings.set(SettingKeys.syncAaValues, syncAaValues);
+		await settings.set(SettingKeys.syncPayees, syncPayees);
+	}
+
+	async function saveSyncServerUrl() {
+		await settings.set(SettingKeys.syncServerUrl, serverUrl);
+
+		Notifier.notify('Server URL saved', 'bg-success-500');
+	}
 </script>
 
 <Toolbar title="Cashier Sync" />
@@ -44,7 +61,13 @@
 
 	<label class="label">
 		<span>Server URL</span>
-		<input class="input" type="text" placeholder="Server URL" bind:value={serverUrl} />
+		<input
+			class="input"
+			type="text"
+			placeholder="Server URL"
+			bind:value={serverUrl}
+			onchange={saveSyncServerUrl}
+		/>
 	</label>
 
 	<center>
@@ -53,15 +76,15 @@
 
 	<div class="flex flex-col space-y-8 pt-6">
 		<label class="flex items-center space-x-2">
-			<input class="checkbox" type="checkbox" bind:checked={syncAccounts} />
+			<input class="checkbox" type="checkbox" bind:checked={syncAccounts} onchange={saveSettings} />
 			<p>Sync account list with balances</p>
 		</label>
 		<label class="flex items-center space-x-2">
-			<input class="checkbox" type="checkbox" bind:checked={syncAaValues} />
+			<input class="checkbox" type="checkbox" bind:checked={syncAaValues} onchange={saveSettings} />
 			<p>Sync account balances in base currency, for asset allocation.</p>
 		</label>
 		<label class="flex items-center space-x-2">
-			<input class="checkbox" type="checkbox" bind:checked={syncPayees} />
+			<input class="checkbox" type="checkbox" bind:checked={syncPayees} onchange={saveSettings} />
 			<p>Sync Payees</p>
 		</label>
 	</div>
