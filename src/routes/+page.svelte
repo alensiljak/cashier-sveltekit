@@ -21,7 +21,8 @@
 			{ card: SyncCard, order: 2 },
 			{ card: FavouritesCard, order: 1 },
 			{ card: ForecastCard, order: 3 },
-			{ card: ScheduledXactsCard, order: 4}
+			{ card: ScheduledXactsCard, order: 5 },
+			{ card: JournalCard, order: 4 },
 		];
 		// todo: Get the array of names (ordered) and sort.
 	})
@@ -41,13 +42,7 @@
 
 <!-- Main -->
 <main class="container space-y-4 p-1 lg:p-10">
-	<ScheduledXactsCard />
-	<JournalCard />
-	<ForecastCard />
-	<FavouritesCard />
-	<SyncCard />
-
-	<p>sorted:</p>
+	<!-- Cards are displayed dynamically, in the selected order. -->
 	{#each cards as { card } }
 		<!-- <span>{card}</span> -->
 		{@render card()}

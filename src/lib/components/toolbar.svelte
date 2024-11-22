@@ -1,10 +1,8 @@
 <script lang="ts">
 	import { AppBar } from '@skeletonlabs/skeleton-svelte';
-	// import Paperclip from 'lucide-svelte/icons/paperclip';
-	// import Calendar from 'lucide-svelte/icons/calendar';
-	// import CircleUser from 'lucide-svelte/icons/circle-user';
 	import { ArrowBigUpIcon, ArrowDownIcon, CircleCheckIcon, EllipsisVertical, Menu } from 'lucide-svelte';
 	import { getDrawerStore, popup, type PopupSettings } from '@skeletonlabs/skeleton';
+	import ToolbarMenu from './ToolbarMenu.svelte';
 
 	const drawerStore = getDrawerStore();
 	const popupClick: PopupSettings = {
@@ -14,7 +12,8 @@
 	};
 
 	// Props
-	export let title: string = 'Cashier';
+	// export let title: string = 'Cashier'
+	let { title, children } = $props()
 
 	// methods
 
@@ -39,7 +38,7 @@
 >
 	{#snippet lead()}
 		<!-- <ArrowLeft size={24} /> -->
-		<button class="btn btn-sm mr-4 lg:hidden" on:click={toggleSidebar}>
+		<button class="btn btn-sm mr-4 lg:hidden" onclick={toggleSidebar}>
 			<!-- lg:hidden -->
 			<span>
 				<Menu size={24} />
@@ -51,7 +50,7 @@
 		<h4 class="h4 leading-9">{title}</h4>
 	{/snippet}
 	{#snippet trail()}
-		<button class="btn" on:click={onMenuClicked} use:popup={popupClick}>
+		<button class="btn" onclick={onMenuClicked} use:popup={popupClick}>
 			<EllipsisVertical size={20} class="" />
 		</button>
 	{/snippet}
@@ -61,31 +60,6 @@
 </AppBar>
 
 <!-- Menu -->
-<div class="list-nav variant-filled-primary p-3" data-popup="popupClick">
-	<ul>
-		<li>
-			<a href="/">
-				<span class="flex-auto">Backup Settings</span>
-				<span class="badge">
-					<ArrowDownIcon />
-				</span>
-			</a>
-		</li>
-		<li>
-			<a href="/">
-				<span class="flex-auto">Restore Settings</span>
-				<span class="badge">
-					<ArrowBigUpIcon />
-				</span>
-			</a>
-		</li>
-		<li>
-			<a href="/">
-				<span class="flex-auto">X</span>
-				<span class="badge">
-					<CircleCheckIcon />
-				</span>
-			</a>
-		</li>
-	</ul>
-</div>
+<ToolbarMenu>
+	
+</ToolbarMenu>
