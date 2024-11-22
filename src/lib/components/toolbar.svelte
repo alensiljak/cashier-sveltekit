@@ -36,17 +36,15 @@
 >
 	{#snippet lead()}
 		<!-- <ArrowLeft size={24} /> -->
-		<button class="btn btn-sm mr-4 lg:hidden" onclick={toggleSidebar}>
-			<!-- lg:hidden -->
+		<button class="btn btn-sm p-1 lg:hidden" onclick={toggleSidebar}>
 			<span>
 				<Menu size={24} />
 			</span>
 		</button>
 		<!-- <strong class="text-xl uppercase">Skeleton</strong> -->
 	{/snippet}
-	{#snippet children()}
-		<h4 class="h4 leading-9">{title}</h4>
-	{/snippet}
+	<!-- {#snippet children()}
+	{/snippet} -->
 	{#snippet trail()}
 		{#if menuItems}
 			<button class="btn" use:popup={popupClick}>
@@ -63,4 +61,6 @@
 	<!-- {#snippet headline()}
 			<h2 class="h2">Headline</h2>
 		{/snippet} -->
+
+	<h4 class="h4 leading-9">{title}</h4>
 </AppBar>
