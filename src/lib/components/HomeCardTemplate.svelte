@@ -8,9 +8,7 @@
 		header?: Snippet
 		content?: Snippet
 		footer?: Snippet
-        children?: Snippet
 	};
-	// let { children } = $props();
     let { icon, title, header, content, footer }: Props = $props();
 </script>
 

@@ -1,5 +1,5 @@
 <script>
-	import { RefreshCwIcon } from "lucide-svelte";
+	import { RefreshCwIcon, SettingsIcon } from "lucide-svelte";
 import CardTemplate from "./HomeCardTemplate.svelte";
 
 </script>
@@ -8,7 +8,17 @@ import CardTemplate from "./HomeCardTemplate.svelte";
     <RefreshCwIcon />
     {/snippet}
     {#snippet title()}
-        Synchronization
+        Cashier Sync
     {/snippet}
-    sync
+    {#snippet content()}
+        <p>Status:</p>
+    {/snippet}
+    {#snippet footer()}
+        <center>
+            <a href="/sync" class="btn variant-outline-warning uppercase">
+                <span><SettingsIcon /></span>
+                <span>Sync Settings</span>
+            </a>
+        </center>
+    {/snippet}
 </CardTemplate>

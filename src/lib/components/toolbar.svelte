@@ -3,6 +3,7 @@
 	import { ArrowBigUpIcon, ArrowDownIcon, CircleCheckIcon, EllipsisVertical, Menu } from 'lucide-svelte';
 	import { getDrawerStore, popup, type PopupSettings } from '@skeletonlabs/skeleton';
 	import ToolbarMenu from './ToolbarMenu.svelte';
+	import type { Snippet } from 'svelte';
 
 	const drawerStore = getDrawerStore();
 	const popupClick: PopupSettings = {
@@ -12,8 +13,12 @@
 	};
 
 	// Props
+	type Props = {
+		title?: string,
+		children?: Snippet
+	}
 	// export let title: string = 'Cashier'
-	let { title, children } = $props()
+	let { title, children }: Props = $props()
 
 	// methods
 
@@ -61,5 +66,5 @@
 
 <!-- Menu -->
 <ToolbarMenu>
-	
+
 </ToolbarMenu>
