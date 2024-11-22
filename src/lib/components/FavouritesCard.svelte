@@ -64,22 +64,19 @@
 		{#if !accounts}
 			<p>There are no favourite accounts defined</p>
 		{:else}
-			<div class="table-container">
-				<table class="table table-hover">
-					<tbody>
-						{#each accounts as account}
-							<tr class="">
-								<td class="!py-1.5 border-b border-tertiary-200/15">{account?.name}</td>
-								<td class="!py-1.5 border-b text-end border-tertiary-200/15">
-									{getBalance(account).amount}
-									{getBalance(account).currency}
-								</td>
-								<!-- ?.Balances?.FirstOrDefault() -->
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
+			{#each accounts as account}
+				<div class="flex w-full flex-col bg-surface-900 px-0.5 text-sm">
+					<div class="my-0.25 flex flex-row border-b border-tertiary-200/15 py-1">
+						<div class="cell grow">
+							{account?.name}
+						</div>
+						<div class="text-right">
+							{getBalance(account).amount}
+							{getBalance(account).currency}
+						</div>
+					</div>
+				</div>
+			{/each}
 		{/if}
 	{/snippet}
 </HomeCardTemplate>

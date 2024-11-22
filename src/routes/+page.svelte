@@ -41,7 +41,7 @@
 <Toolbar />
 
 <!-- Main -->
-<main class="container space-y-2 py-1 px-1 lg:px-32">
+<main class="container mx-auto space-y-2 py-1 px-1 lg:max-w-screen-sm">
 	<!-- Cards are displayed dynamically, in the selected order. -->
 	{#each cards as { card } }
 		{@render card()}
