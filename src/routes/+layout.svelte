@@ -13,7 +13,7 @@
 		Modal,
 		getDrawerStore,
 		storePopup,
-		Toast,
+		Toast
 	} from '@skeletonlabs/skeleton';
 	// PWA
 	import { pwaInfo } from 'virtual:pwa-info';
@@ -90,16 +90,15 @@
 	<Modal buttonPositive="variant-filled-primary" />
 
 	<AppShell slotSidebarLeft="bg-surface-500/5 w-0 lg:w-72">
-		<!-- <svelte:fragment slot="header">
-			<Applicationbar />
-		</svelte:fragment> -->
-		<!-- Left Sidebar Slot -->
+		<svelte:fragment slot="header">
+			<!-- <Applicationbar /> -->
+		</svelte:fragment>
 		<svelte:fragment slot="sidebarLeft">
 			<Navigation />
 		</svelte:fragment>
-		<!-- Page Route Content -->
-		<!-- <slot /> -->
-		{@render children()}
+		<svelte:fragment slot="default">
+			{@render children()}
+		</svelte:fragment>
 	</AppShell>
 </main>
 
