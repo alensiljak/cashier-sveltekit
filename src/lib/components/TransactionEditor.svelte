@@ -89,24 +89,26 @@
 	}
 </script>
 
-<input title="Date" placeholder="Date" type="date" class="input" bind:value={$xact.date} />
-<input
-	title="Payee"
-	placeholder="Payee"
-	type="text"
-	class="input"
-	bind:value={$xact.payee}
-	onclick={onPayeeClicked}
-/>
-<input title="Note" placeholder="Note" type="text" class="input" bind:value={$xact.note} />
-
-<!-- Postings -->
-<!-- actions and sum -->
-<div>Posting actions</div>
-{#each $xact?.postings as posting, index}
-	<PostingEditor
-		{index}
-		onAccountClicked={(event) => onPostingAccountClicked(index)}
-		onAmountChanged={onPostingAmountChanged}
+<div class="py-2 space-y-2">
+	<input title="Date" placeholder="Date" type="date" class="input" bind:value={$xact.date} />
+	<input
+		title="Payee"
+		placeholder="Payee"
+		type="text"
+		class="input"
+		bind:value={$xact.payee}
+		onclick={onPayeeClicked}
 	/>
-{/each}
+	<input title="Note" placeholder="Note" type="text" class="input" bind:value={$xact.note} />
+
+	<!-- Postings -->
+	<!-- actions and sum -->
+	<div>Posting actions</div>
+	{#each $xact?.postings as posting, index}
+		<PostingEditor
+			{index}
+			onAccountClicked={(event) => onPostingAccountClicked(index)}
+			onAmountChanged={onPostingAmountChanged}
+		/>
+	{/each}
+</div>
