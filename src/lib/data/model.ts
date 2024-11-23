@@ -38,7 +38,7 @@ export class Payee {
 
 export class Posting {
   id?: number
-  transactionId: number | undefined
+  // transactionId: number | undefined
   account: string
   amount?: number
   currency: string
@@ -46,7 +46,7 @@ export class Posting {
   constructor() {
     // Id is inserted automatically.
     // this.id = null
-    this.transactionId = undefined
+    // this.transactionId = undefined
     this.account = ''
     this.currency = ''
   }

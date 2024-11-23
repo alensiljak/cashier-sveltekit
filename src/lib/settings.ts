@@ -13,13 +13,13 @@ export class SelectionModeMetadata {
   // avoid confusion in unexpected navigation routes.
   origin = ''
 
-  postingIndex?: any
+  postingIndex?: number
 
   // The type of item being selected. Useful on return to the original entity.
   selectionType?: string
 
   // The id of the selected item.
-  selectedId: any
+  selectedId: unknown
 }
 
 export const Constants = {
@@ -63,7 +63,7 @@ class Settings {
    * @param {any} key
    * @returns Promise with the Setting object
    */
-  async get(key: any) {
+  async get(key: unknown) {
     const setting = await db.settings.get(key)
 
     if (!setting) return null
@@ -71,7 +71,7 @@ class Settings {
     let value = null
     try {
       value = JSON.parse(setting.value)
-    } catch (error) {
+    } catch {
       value = setting.value
     }
 
@@ -82,13 +82,13 @@ class Settings {
     return db.settings.toArray()
   }
 
-  async set(key: string, value: any) {
-    let jsonValue = JSON.stringify(value)
-    let setting = new Setting(key, jsonValue)
+  async set(key: string, value: unknown) {
+    const jsonValue = JSON.stringify(value)
+    const setting = new Setting(key, jsonValue)
 
     await db.settings.put(setting)
   }
 }
 
-let settings = new Settings()
+const settings = new Settings()
 export { settings }

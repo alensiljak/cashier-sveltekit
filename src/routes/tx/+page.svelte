@@ -2,7 +2,7 @@
 	import Fab from '$lib/components/FAB.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { Check } from 'lucide-svelte';
-	import { xact } from '$lib/data/mainStore';
+	import { selectionMetadata, xact } from '$lib/data/mainStore';
 	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
@@ -10,7 +10,7 @@
 	import Notifier from '$lib/utils/notifier';
 	import CashierDAL from '$lib/data/dal';
 	import type { Transaction } from '$lib/data/model';
-	import { SettingKeys, settings } from '$lib/settings';
+	import { SelectionModeMetadata, SettingKeys, settings } from '$lib/settings';
 	import appService from '$lib/services/appService';
 	import { base } from '$app/paths';
 	import TransactionEditor from '$lib/components/TransactionEditor.svelte';
@@ -18,8 +18,6 @@
 	let previousPage: string = base;
 
 	onMount(() => {
-		// Get the Xact from the store?
-		// No, it is available already.
 		if (!get(xact)) {
 			goto('/');
 		}
@@ -29,6 +27,17 @@
 		previousPage = from?.url.pathname || previousPage;
 	});
 
+	const onAccountClicked = (index: number) => {
+		// console.log('Account clicked at index:', index);
+
+		const meta = new SelectionModeMetadata();
+		meta.postingIndex = index;
+		meta.selectionType = 'account';
+		selectionMetadata.set(meta);
+
+		goto('/accounts');
+	};
+
 	async function onFab() {
 		// console.log('fab clicked!');
 		try {
@@ -37,6 +46,16 @@
 			Notifier.error(e.message);
 		}
 	}
+
+	const onPayeeClicked = () => {
+		// select a payee
+		// selection
+		const meta = new SelectionModeMetadata();
+		meta.selectionType = 'payee';
+		selectionMetadata.set(meta);
+
+		goto('/payees');
+	};
 
 	/**
 	 * save transaction
@@ -64,9 +83,12 @@
 		<ToolbarMenuItem text="Reset" />
 	{/snippet}
 </Toolbar>
-<Fab Icon={Check} onclick={onFab} />
 
-<!-- tx editor -->
- <TransactionEditor />
+<main class="container mx-auto lg:max-w-screen-sm">
+	<Fab Icon={Check} onclick={onFab} />
 
-<!-- dialog for confirming reset -->
+	<!-- tx editor -->
+	<TransactionEditor {onAccountClicked} {onPayeeClicked} />
+
+	<!-- dialog for confirming reset -->
+</main>

@@ -3,6 +3,7 @@
  */
 import { writable, type Writable } from 'svelte/store';
 import { Transaction } from './model';
+import type { SelectionModeMetadata } from '$lib/settings';
 
 interface MainStore {
     name: string;
@@ -20,4 +21,6 @@ export const state: Writable<Partial<MainStore>>
 
 // Real items
 
-export const xact: Writable<Transaction> = writable(new Transaction())
+export const xact: Writable<Transaction> = writable()
+
+export const selectionMetadata: Writable<SelectionModeMetadata | null> = writable()
