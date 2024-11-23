@@ -9,7 +9,7 @@
 		Icon?: Component;
         onclick?: MouseEventHandler<HTMLElement>;
 	};
-	let { targetNav = '/', text, Icon, onclick } = $props();
+	let { targetNav = '#', text, Icon, onclick } = $props();
 </script>
 
 <!--

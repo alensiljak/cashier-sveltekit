@@ -2,7 +2,7 @@
 	import GlossToolbar from '$lib/components/gloss-toolbar.svelte';
 	import JournalCard from '$lib/components/JournalCard.svelte';
 	import { PlusIcon } from 'lucide-svelte';
-	import Toolbar from '../lib/components/toolbar.svelte';
+	import Toolbar from '../lib/components/Toolbar.svelte';
 	import { goto } from '$app/navigation';
 	import { xact } from '$lib/data/mainStore';
 	import { Transaction } from '$lib/data/model';

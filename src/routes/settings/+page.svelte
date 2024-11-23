@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import GlossToolbar from '$lib/components/gloss-toolbar.svelte';
-	import Toolbar from '$lib/components/toolbar.svelte';
+	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { SettingKeys, settings } from '$lib/settings';
 	import Notifier from '$lib/utils/notifier';
 	import { FileButton, getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';

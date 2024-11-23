@@ -36,7 +36,7 @@
 >
 	{#snippet lead()}
 		<!-- <ArrowLeft size={24} /> -->
-		<button class="btn btn-sm p-1 lg:hidden" onclick={toggleSidebar}>
+		<button class="btn btn-sm py-1 pl-2 lg:hidden" onclick={toggleSidebar}>
 			<span>
 				<Menu size={24} />
 			</span>
@@ -47,7 +47,7 @@
 	{/snippet} -->
 	{#snippet trail()}
 		{#if menuItems}
-			<button class="btn" use:popup={popupClick}>
+			<button class="btn py-1 pr-2" use:popup={popupClick}>
 				<EllipsisVertical size={20} class="" />
 			</button>
 			<!-- Pop-up Menu -->
