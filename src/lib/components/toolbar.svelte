@@ -30,7 +30,7 @@
 	headlineClasses="sm:hidden"
 	centerClasses=""
 	toolbarClasses=""
-	padding="p-2"
+	padding="p-1.5"
 	background="bg-primary-500"
 	classes=""
 >
@@ -46,12 +46,13 @@
 	<!-- {#snippet children()}
 	{/snippet} -->
 	{#snippet trail()}
+		<!-- Drop-down Menu -->
 		{#if menuItems}
 			<button class="btn py-1 pr-2" use:popup={popupClick}>
 				<EllipsisVertical size={20} class="" />
 			</button>
 			<!-- Pop-up Menu -->
-			<div class="list-nav variant-filled-primary p-3" data-popup="popupClick">
+			<div class="list-nav variant-filled-primary p-3 shadow" data-popup="popupClick">
 				<ul>
 					{@render menuItems?.()}
 				</ul>

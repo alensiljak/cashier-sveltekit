@@ -9,7 +9,7 @@
 		Icon?: Component;
         onclick?: MouseEventHandler<HTMLElement>;
 	};
-	let { targetNav = '#', text, Icon, onclick } = $props();
+	let { targetNav = '#', text, Icon, onclick }: Props = $props();
 </script>
 
 <!--
@@ -19,7 +19,7 @@ Example usage:
 -->
 
 <li>
-	<a href={targetNav} class="w-60" onclick={onclick}>
+	<a href={targetNav} class="w-52" onclick={onclick}>
 		<span class="flex-auto">{text}</span>
 		<span class="badge">
 			<!-- {@render icon()} -->
