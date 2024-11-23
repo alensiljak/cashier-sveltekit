@@ -12,7 +12,9 @@
 
 	async function loadData() {
 		const dal = new CashierDAL();
-		accounts = await dal.loadAccounts().toArray();
+		accounts = await dal.loadAccounts().toArray()
+		// .sortBy('name');
+		// accounts = x.toArray();
 	}
 </script>
 
