@@ -11,6 +11,7 @@
 	import ForecastCard from '$lib/components/ForecastCard.svelte';
 	import ScheduledXactsCard from '$lib/components/ScheduledXactsCard.svelte';
 	import { onMount } from 'svelte';
+	import Fab from '$lib/components/FAB.svelte';
 
 	let cards: Array<any> = []
 	// let sortedCards = $derived(cards.sort((a, b) => a.order - b.order))
@@ -28,8 +29,6 @@
 	})
 
 	function onFab() {
-		console.log('fab clicked');
-
 		// create a new transaction in the app store
 		var tx = Transaction.create();
 		xact.set(tx);
@@ -51,10 +50,5 @@
 	{/each}
 
 	<!-- FAB -->
-	<button
-		class="absolute bottom-7 right-7 rounded-full bg-tertiary-500 p-4 text-secondary-500 shadow-lg transition duration-200 hover:bg-tertiary-500/75"
-		onclick={onFab}
-	>
-		<PlusIcon />
-	</button>
+	 <Fab onclick={onFab} Icon={PlusIcon} />
 </main>
