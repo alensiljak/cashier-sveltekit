@@ -12,7 +12,7 @@
 	onMount(async () => {
 		await loadData();
 
-		isInSelectionMode = $selectionMetadata !== undefined
+		isInSelectionMode = $selectionMetadata !== undefined;
 	});
 
 	async function loadData() {
@@ -26,12 +26,14 @@
 		// console.debug('account selected:', name)
 		if (isInSelectionMode) {
 			// store the selection.
-			$selectionMetadata.selectedId = name
+			if ($selectionMetadata) {
+				$selectionMetadata.selectedId = name;
+			}
 
-			history.back()
+			history.back();
 		} else {
 			// goto('/account') // show account details
-			console.info('redirect to account details')
+			console.info('redirect to account details');
 		}
 	}
 </script>
@@ -44,7 +46,11 @@
 		{#each accounts as account}
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-			<div class="border-b border-tertiary-200/15 py-2" onclick={() => onAccountSelected(account.name)} role="listitem">
+			<div
+				class="border-b border-tertiary-200/15 py-2"
+				onclick={() => onAccountSelected(account.name)}
+				role="listitem"
+			>
 				{account.name}
 			</div>
 		{/each}

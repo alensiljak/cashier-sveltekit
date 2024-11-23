@@ -31,7 +31,8 @@
 			return;
 		}
 
-		// todo: handle selection
+		// handle selection
+
 		const id = $selectionMetadata.selectedId;
 		if (id == undefined) {
 			console.warn('No item selected');
@@ -54,14 +55,15 @@
 					// redirected from account register, find an appropriate posting
 					index = getEmptyPostingIndex($xact);
 				}
-				let posting = $xact.postings[index];
+				// let posting = $xact.postings[index];
 
 				// load the account
 				const account = await appService.db.accounts.get(id);
 				const acctSvc = new AccountService();
 				const acctBalance = await acctSvc.getAccountBalance(account, defaultCurrency);
-				posting.account = account.name;
-				posting.currency = acctBalance.currency;
+
+				$xact.postings[index].account = account.name;
+				$xact.postings[index].currency = acctBalance.currency;
 
 				// todo: recalculateSum();
 				// todo: validateCurrencies();
@@ -69,7 +71,7 @@
 		}
 
 		// reset the selection mode
-		selectionMetadata.set(null);
+		selectionMetadata.set(undefined);
 	}
 
 	function onPostingAccountClicked(index: number) {

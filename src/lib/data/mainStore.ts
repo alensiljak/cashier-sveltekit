@@ -23,4 +23,4 @@ export const state: Writable<Partial<MainStore>>
 
 export const xact: Writable<Transaction> = writable()
 
-export const selectionMetadata: Writable<SelectionModeMetadata | null> = writable()
+export const selectionMetadata: Writable<SelectionModeMetadata | undefined> = writable()

@@ -17,13 +17,24 @@
 		onAmountChanged
 	}: Props = $props();
 
-	let posting: Posting = $state($xact.postings[index]);
+	// let posting: Posting = $state($xact.postings[index]);
+	let account = $state($xact.postings[index].account)
+	let amount = $state($xact.postings[index].amount)
+	let currency = $state($xact.postings[index].currency)
 
 	onMount(() => {
 		// bind to the Posting from the store.
 		// posting = $xact.postings[index]
 		// console.log(posting)
 	});
+
+	function updateAmount(value: number) {
+		$xact.postings[index].amount = value
+	}
+
+	function updateCurrency(value: string) {
+		$xact.postings[index].currency = value
+	}
 </script>
 
 <input
@@ -32,7 +43,7 @@
 	type="text"
 	class="input"
 	readonly
-	bind:value={posting.account}
+	bind:value={$xact.postings[index].account}
 	onclick={onAccountClicked}
 />
 
@@ -47,7 +58,8 @@
 		placeholder="Amount"
 		type="number"
 		class="w=2/4 input text-right"
-		bind:value={posting.amount}
+		bind:value={amount}
+		oninput={() => updateAmount(amount as number)}
 		onchange={onAmountChanged}
 	/>
 	<input
@@ -55,6 +67,7 @@
 		placeholder="Currency"
 		type="text"
 		class="input w-1/4 text-center uppercase"
-		bind:value={posting.currency}
+		bind:value={currency}
+		oninput={() => updateCurrency(currency)}
 	/>
 </div>

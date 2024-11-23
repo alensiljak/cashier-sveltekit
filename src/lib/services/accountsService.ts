@@ -6,13 +6,13 @@
  */
 import { Account, AccountBalance } from '$lib/data/model'
 import db from '$lib/data/db'
-import { SettingKeys, settings, Constants } from '$lib/settings'
+// import { SettingKeys, settings, Constants } from '$lib/settings'
 
 export class AccountService {
   constructor() {}
 
   async createDefaultAccounts() {
-    let accountsList = this.getDefaultChartOfAccounts()
+    const accountsList = this.getDefaultChartOfAccounts()
     await this.createAccounts(accountsList)
   }
 
@@ -41,7 +41,7 @@ export class AccountService {
       throw new Error('Default currency is mandatory!')
     }
 
-    let result = new AccountBalance()
+    const result = new AccountBalance()
     // const defaultCurrency = await settings.get(SettingKeys.currency)
 
     // default value
@@ -52,7 +52,7 @@ export class AccountService {
     if (!account.balances) return result
 
     // Do we have a balance in the default currency?
-    let balance = account.balances[defaultCurrency]
+    const balance = account.balances[defaultCurrency]
     if (balance) {
       result.amount = balance
       result.currency = defaultCurrency
