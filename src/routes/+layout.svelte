@@ -4,7 +4,6 @@
 	// libs
 	import { swipe, type SwipeCustomEvent } from 'svelte-gestures';
 	import Navigation from '$lib/components/navigation.svelte';
-	// import { page } from '$app/stores';
 	// Popups
 	import { computePosition, autoUpdate, offset, shift, flip, arrow } from '@floating-ui/dom';
 	import {
