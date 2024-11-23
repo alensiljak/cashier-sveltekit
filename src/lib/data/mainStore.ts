@@ -2,6 +2,7 @@
  * State store for the app
  */
 import { writable, type Writable } from 'svelte/store';
+import { Transaction } from './model';
 
 interface MainStore {
     name: string;
@@ -19,4 +20,4 @@ export const state: Writable<Partial<MainStore>>
 
 // Real items
 
-export const xact: Writable<undefined | object> = writable(undefined)
+export const xact: Writable<Transaction> = writable(new Transaction())

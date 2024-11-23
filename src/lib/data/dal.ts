@@ -60,7 +60,7 @@ class CashierDAL {
       tx.id = new Date().getTime()
     }
 
-    // convert to pocos
+    // validate Postings
     const postings = tx.postings
     // check whether the accounts exist!
     if (postings.length) {

@@ -13,6 +13,7 @@
 	import { SettingKeys, settings } from '$lib/settings';
 	import appService from '$lib/services/appService';
 	import { base } from '$app/paths';
+	import TransactionEditor from '$lib/components/TransactionEditor.svelte';
 
 	let previousPage: string = base;
 
@@ -66,5 +67,6 @@
 <Fab Icon={Check} onclick={onFab} />
 
 <!-- tx editor -->
+ <TransactionEditor />
 
 <!-- dialog for confirming reset -->

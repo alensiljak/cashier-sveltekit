@@ -16,7 +16,7 @@ import {
 // import { Notify } from 'quasar'
 import { settings, SettingKeys } from '$lib/settings'
 // import { toRaw } from 'vue'
-import { TransactionParser } from '$lib/utils/transactionParser'
+// import { TransactionParser } from '$lib/utils/transactionParser'
 import { TransactionAugmenter } from '$lib/utils/transactionAugmenter'
 // import { Collection } from 'dexie'
 import { AccountService } from '$lib/services/accountsService'
@@ -70,7 +70,7 @@ class AppService {
         console.log('count:', x)
 
         // delete transaction record
-        let result = await db.transactions.where('id').equals(id).delete()
+        const result = await db.transactions.where('id').equals(id).delete()
         console.log('transactions -', result)
 
         // delete postings
@@ -132,11 +132,11 @@ class AppService {
   readFile(fileInfo: Blob, callback: any): void {
     if (!fileInfo) return
 
-    let reader = new FileReader()
+    const reader = new FileReader()
 
     reader.onload = (event) => {
       // File was successfully read.
-      let content = event.target?.result
+      const content = event.target?.result
 
       callback(content)
     }
@@ -148,11 +148,11 @@ class AppService {
     return new Promise((resolve, reject) => {
       if (!fileInfo) reject('FileInfo must be sent!')
 
-      let reader = new FileReader()
+      const reader = new FileReader()
 
       reader.onload = (event) => {
         // File was successfully read.
-        let content = event?.target?.result
+        const content = event?.target?.result
 
         resolve(content as string)
       }
@@ -184,7 +184,7 @@ class AppService {
 
     // postings
     for (let i = 0; i < tx.postings.length; i++) {
-      let p = tx.postings[i]
+      const p = tx.postings[i]
       if (!p.account) continue
 
       output += '    '
@@ -211,7 +211,7 @@ class AppService {
     if (Number.isNaN(value)) return null
 
     // make sure we have a number
-    let result = Number(value)
+    const result = Number(value)
     // let val = (value/1).toFixed(2).replace('.', ',')
     // return val.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")
     return result.toFixed(2)
@@ -230,7 +230,7 @@ class AppService {
       throw new Error('Root investment account not set!')
     }
 
-    let accounts: Account[] = await this.db.accounts
+    const accounts: Account[] = await this.db.accounts
       .where('name')
       .startsWithIgnoreCase(rootAccount)
       .toArray()
@@ -299,7 +299,7 @@ class AppService {
    * @param lines Output of `ledger balance --flat`
    * @returns The promise resolving to the id of the last record updated (Dexie default)
    */
-  async importBalanceSheet(lines: string[]): Promise<any> {
+  async importBalanceSheet(lines: string[]): Promise<unknown> {
     if (!lines || !lines.length) {
       throw new Error('No balance records received for import!')
     }
@@ -321,7 +321,7 @@ class AppService {
       if (line === '') continue
 
       // name
-      let namePart = line.substring(21).trim()
+      const namePart = line.substring(21).trim()
       account.name = namePart
 
       let balancePart = line.substring(0, 20)
@@ -382,7 +382,7 @@ class AppService {
    * @param payees Array of payee names from Ledger.
    */
   async importPayees(payeeNames: string[]): Promise<void> {
-    let payees = payeeNames.map((name) => new Payee(name))
+    const payees = payeeNames.map((name) => new Payee(name))
     await db.payees.bulkAdd(payees)
   }
 
@@ -416,7 +416,7 @@ class AppService {
     accountName: string,
   ): Promise<Transaction[]> {
     // get all the transactions which have postings that have this account.
-    let txIds: number[] = []
+    // const txIds: number[] = []
 
     let txs = await db.transactions
       .filter((tx) =>
@@ -444,17 +444,17 @@ class AppService {
    * @returns {Array} List of Account records which are marked as Favourites.
    */
   async loadFavouriteAccounts(): Promise<Account[]> {
-    let favArray = await settings.get(SettingKeys.favouriteAccounts)
+    const favArray = await settings.get(SettingKeys.favouriteAccounts)
     if (!favArray) {
       return []
     }
 
     // load account details
-    let accounts = await db.accounts.bulkGet(favArray)
+    const accounts = await db.accounts.bulkGet(favArray)
 
     // Handle any accounts that have not been found
     for (let i = 0; i < accounts.length; i++) {
-      let account = accounts[i]
+      const account = accounts[i]
       if (account === undefined) {
         // the account has been removed but the Favourites record exists.
         accounts.splice(i, 1)
@@ -490,7 +490,7 @@ class AppService {
    * @param {Transaction} tx
    */
   async saveLastTransaction(tx: Transaction) {
-    let lastTx = new LastTransaction()
+    const lastTx = new LastTransaction()
     lastTx.payee = tx.payee as string
 
     lastTx.transaction = tx
