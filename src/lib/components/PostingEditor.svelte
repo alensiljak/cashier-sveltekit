@@ -20,7 +20,7 @@
 <input
 	title="Amount"
 	placeholder="Amount"
-	type="text"
+	type="number"
 	class="input"
 	bind:value={posting.amount}
 />
@@ -28,6 +28,6 @@
 	title="Currency"
 	placeholder="Currency"
 	type="text"
-	class="input"
+	class="input uppercase"
 	bind:value={posting.currency}
 />
