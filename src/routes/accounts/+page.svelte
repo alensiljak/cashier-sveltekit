@@ -23,7 +23,6 @@
 	}
 
 	function onAccountSelected(name: string) {
-		// console.debug('account selected:', name)
 		if (isInSelectionMode) {
 			// store the selection.
 			if ($selectionMetadata) {
