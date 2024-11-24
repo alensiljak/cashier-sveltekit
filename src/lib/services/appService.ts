@@ -21,8 +21,8 @@ import { AccountService } from '$lib/services/accountsService'
 
 class AppService {
   /**
-   * Clears Ids and reference Ids in Transaction and Postings.
-   * @param {Transaction} tx
+   * Clears Ids and reference Ids in Xact and Postings.
+   * @param {Xact} tx
    */
   clearIds(tx: Xact) {
     delete tx.id
@@ -165,8 +165,8 @@ class AppService {
   }
 
   /**
-   * Translates Transaction into a ledger entry.
-   * @param {Transaction} tx
+   * Translates Xact into a ledger entry.
+   * @param {Xact} tx
    * @returns {String} A ledger entry
    */
   translateToLedger(tx: Xact) {
@@ -414,12 +414,12 @@ class AppService {
    */
   async loadAccountTransactionsFor(
     accountName: string,
-  ): Promise<Transaction[]> {
+  ): Promise<Xact[]> {
     // get all the transactions which have postings that have this account.
     // const txIds: number[] = []
 
-    let txs = await db.transactions
-      .filter((tx) =>
+    let txs = await db.xacts
+      .filter((tx: Xact) =>
         tx.postings.some((posting: Posting) => posting.account == accountName),
       )
       .toArray()
@@ -467,8 +467,8 @@ class AppService {
 
   /**
    * Load single transaction with postings.
-   * @param {int} id Transaction id
-   * @returns Transaction with Postings
+   * @param {int} id Xact id
+   * @returns Xact with Postings
    */
   async loadTransaction(id: number) {
     if (typeof id === 'string') {
@@ -485,9 +485,9 @@ class AppService {
   }
 
   /**
-   * Saves the given transaction as the Last Transaction for the Payee.
+   * Saves the given transaction as the Last Xact for the Payee.
    * This is retrieved when the Payee is selected on a new transaction, or when editing.
-   * @param {Transaction} tx
+   * @param {Xact} tx
    */
   async saveLastTransaction(tx: Xact) {
     const lastTx = new LastXact()

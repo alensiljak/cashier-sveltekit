@@ -18,7 +18,7 @@ import {
 interface CashierDatabase extends Dexie {
     accounts: Table
     assetAllocation: Table
-    lastTransaction: Table
+    lastXact: Table
     payees: Table
     scheduled: Table
     settings: Table

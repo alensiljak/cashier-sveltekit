@@ -48,7 +48,7 @@ class CashierDAL {
 
   /**
    * Save the transaction to the database.
-   * @param {Transaction} tx The transaction object
+   * @param {Xact} tx The transaction object
    * @returns the numeric id of the new transaction
    */
   async saveXact(tx: Xact): Promise<number> {

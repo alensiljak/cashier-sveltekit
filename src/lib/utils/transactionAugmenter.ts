@@ -147,10 +147,10 @@ export class TransactionAugmenter {
 
   /**
    * Identifies the amount to display, from the user's perspective - a debit, credit, transfer for
-   * a Transaction.
-   * Appends {amount, currency} to the Transaction record.
+   * a Xact.
+   * Appends {amount, currency} to the Xact record.
    * It is normally useful to run calculateEmptyPostingAmounts() to populate the blank Postings.
-   * @param {Array<Transaction>} txs
+   * @param {Array<Xact>} txs
    * @returns {Array<AccountBalance>} An array of balance records that matches the transactions.
    */
   static calculateTxAmounts(txs: Xact[]): AccountBalance[] {
