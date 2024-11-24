@@ -1,6 +1,6 @@
-function debounce(func: Function, delay: number) {
+function debounce<T extends unknown[], R>(func: (...args: T) => R, delay: number) {
     let timeoutId: ReturnType<typeof setTimeout>;
-    return function (...args: any[]) {
+    return function (...args: T) {
         clearTimeout(timeoutId);
         timeoutId = setTimeout(() => func(...args), delay);
     };

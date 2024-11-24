@@ -5,10 +5,12 @@
 	import CashierDAL from '$lib/data/dal';
 	import { selectionMetadata } from '$lib/data/mainStore';
 	import type { Account } from '$lib/data/model';
+	import { ListSearch } from '$lib/utils/ListSearch';
 	import { onMount } from 'svelte';
 
 	let accounts: Array<Account> = [];
-	let isInSelectionMode = false;
+	let filteredAccounts: Array<Account> = [];
+		let isInSelectionMode = false;
 
 	onMount(async () => {
 		await loadData();
@@ -21,6 +23,8 @@
 		accounts = await dal.loadAccounts().toArray();
 		// .sortBy('name');
 		// accounts = x.toArray();
+
+		filteredAccounts = accounts;
 	}
 
 	function onAccountSelected(name: string) {
@@ -37,18 +41,31 @@
 		}
 	}
 
-	async function onSearch(value: string) {
-		console.log('now search for', value)
+	/**
+	 * Apply filtering when the user types something in the search bar.
+	 * @param value The search term
+	 */
+	 async function onSearch(value: string) {
+		if (value) {
+			// Apply filter
+			let search = new ListSearch();
+			let regex = search.getRegex(value);
+
+			filteredAccounts = accounts.filter((account) => regex.test(account.name));
+		} else {
+			// Clear filter. Use all records.
+			filteredAccounts = accounts;
+		}
 	}
 </script>
 
 <main class="flex h-screen flex-col">
 	<Toolbar title="Accounts" />
 	<!-- todo: search toolbar -->
-	<SearchToolbar focus onSearch={onSearch} />
+	<SearchToolbar focus {onSearch} />
 	<!-- Account list -->
 	<div class={`h-screen overflow-auto`}>
-		{#each accounts as account}
+		{#each filteredAccounts as account}
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 			<div
