@@ -501,7 +501,7 @@ class AppService {
     // no need to remember the date
     delete lastTx.transaction.date
 
-    await this.db.lastTransaction.put(lastTx)
+    await this.db.lastXact.put(lastTx)
 
     return true
   }
