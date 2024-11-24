@@ -4,9 +4,12 @@
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import db from '$lib/data/db';
-	import type { Xact } from '$lib/data/model';
+	import { AccountBalance, type Xact } from '$lib/data/model';
+	import { TransactionAugmenter } from '$lib/utils/transactionAugmenter';
+	import Notifier from '$lib/utils/notifier';
 
 	let xacts: Xact[] = $state([]);
+	let xactAmounts: AccountBalance[] = $state([]);
 
 	onMount(async () => {
 		await loadData();
@@ -16,6 +19,13 @@
 		xacts = await db.xacts.orderBy('date').reverse().limit(5).toArray();
 
 		// Balances = new XactAugmenter().calculateXactAmounts(Xacts);
+		try {
+			const amounts = TransactionAugmenter.calculateTxAmounts(xacts);
+			xactAmounts.push(...amounts);
+		} catch (error: any) {
+			console.error(error);
+			Notifier.error(error.message);
+		}
 	}
 
 	function onClick() {
@@ -34,8 +44,15 @@
 		{#if xacts.length == 0}
 			<p>The device journal is empty</p>
 		{:else}
-			{#each xacts as xact}
-				<snap>yo</snap>
+			{#each xacts as xact, index}
+				<div class="flex space-y-1 border-b border-tertiary-200/15">
+					<div class="grow">
+						{xact.payee}
+					</div>
+					<div>
+						{ xactAmounts[index].amount } { xactAmounts[index].currency }
+					</div>
+				</div>
 			{/each}
 		{/if}
 	{/snippet}
