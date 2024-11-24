@@ -6,18 +6,15 @@
 	import { selectionMetadata } from '$lib/data/mainStore';
 	import Fab from '$lib/components/FAB.svelte';
 	import { CheckIcon, SearchIcon } from 'lucide-svelte';
+	import SearchToolbar from '$lib/components/SearchToolbar.svelte';
 
 	let payees: Array<Payee> = [];
 	let isInSelectionMode = false;
-	let searchField: HTMLInputElement;
 
 	onMount(async () => {
 		await loadData();
 
 		isInSelectionMode = $selectionMetadata !== undefined;
-
-		// focus on filter
-		searchField.focus()
 	});
 
 	async function loadData() {
@@ -54,6 +51,11 @@
 			console.info('ignore');
 		}
 	}
+
+	async function onSearch(value: string) {
+		console.log('now search for', value)
+	}
+
 </script>
 
 <!-- <Fab Icon={CheckIcon} onclick={onFabClick} /> -->
@@ -61,14 +63,7 @@
 <main class="flex h-screen flex-col">
 	<Toolbar title="Payees" />
 	<!-- search toolbar -->
-	<div class="bg-primary-500">
-		<div class="input-group input-group-divider mx-auto w-5/6 grid-cols-[1fr_auto] lg:w-2/5 rounded-full">
-			<input type="search" placeholder="Search..." class="" bind:this={searchField} />
-			<div class="text-white"><SearchIcon /></div>
-		</div>
-		<!-- <button class="variant-filled-secondary">Submit</button> -->
-		<!-- <div class="input-group-shim"><SearchIcon /></div> -->
-	</div>
+	<SearchToolbar focus onSearch={onSearch} />
 
 	<div class="h-screen overflow-auto">
 		{#each payees as payee}

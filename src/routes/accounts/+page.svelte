@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import SearchToolbar from '$lib/components/SearchToolbar.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import CashierDAL from '$lib/data/dal';
 	import { selectionMetadata } from '$lib/data/mainStore';
@@ -35,11 +36,16 @@
 			console.info('redirect to account details');
 		}
 	}
+
+	async function onSearch(value: string) {
+		console.log('now search for', value)
+	}
 </script>
 
 <main class="flex h-screen flex-col">
 	<Toolbar title="Accounts" />
 	<!-- todo: search toolbar -->
+	<SearchToolbar focus onSearch={onSearch} />
 	<!-- Account list -->
 	<div class={`h-screen overflow-auto`}>
 		{#each accounts as account}

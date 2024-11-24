@@ -1,0 +1,44 @@
+<script lang="ts">
+	import { debounceAction } from '$lib/utils/debounce';
+	import { SearchIcon } from 'lucide-svelte';
+	import { onMount } from 'svelte';
+	import type { EventHandler } from 'svelte/elements';
+
+	interface Props {
+		focus: boolean;
+		onSearch?: (arg0: string) => void;
+	};
+	let { focus = false, onSearch }: Props = $props();
+
+	let searchField: HTMLInputElement;
+
+	onMount(() => {
+		if (focus) {
+			searchField.focus();
+		}
+	});
+
+	function handleSearch(value: string) {
+		// console.log('Searching for:', value);
+		// Perform your search operation here
+        if (onSearch) {
+            onSearch(value)
+        }
+	}
+</script>
+
+<div class="bg-primary-500">
+	<div
+		class="input-group input-group-divider mx-auto w-5/6 grid-cols-[1fr_auto] rounded-full lg:w-2/5"
+	>
+		<input
+			type="search"
+			placeholder="Search..."
+			bind:this={searchField}
+			use:debounceAction={{ callback: handleSearch, delay: 400 }}
+		/>
+		<div class="text-white"><SearchIcon /></div>
+	</div>
+	<!-- <button class="variant-filled-secondary">Submit</button> -->
+	<!-- <div class="input-group-shim"><SearchIcon /></div> -->
+</div>
