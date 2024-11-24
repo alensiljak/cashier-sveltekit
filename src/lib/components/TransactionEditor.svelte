@@ -9,6 +9,7 @@
 	import { AccountService } from '$lib/services/accountsService';
 	import { SettingKeys, settings } from '$lib/settings';
 	import { getEmptyPostingIndex } from '$lib/utils/xactUtils';
+	import type { Posting } from '$lib/data/model';
 
 	type Props = {
 		onPayeeClicked?: EventHandler;
@@ -44,6 +45,11 @@
 
 		switch ($selectionMetadata.selectionType) {
 			case 'payee':
+				if ($selectionMetadata.selectedId) {
+					$xact.payee = $selectionMetadata.selectedId as string
+
+					// todo: loadLastTransaction()
+				}
 				break;
 
 			case 'account':
@@ -83,7 +89,7 @@
 	function onPostingAmountChanged() {
 		// todo recalculate sum
 		console.log('recalculate sum');
-		$xact.postings.forEach((posting) => {
+		$xact.postings.forEach((posting: Posting) => {
 			console.log('amount:', posting.amount);
 		});
 	}

@@ -5,7 +5,7 @@
 	import Toolbar from '../lib/components/Toolbar.svelte';
 	import { goto } from '$app/navigation';
 	import { xact } from '$lib/data/mainStore';
-	import { Transaction } from '$lib/data/model';
+	import { Xact } from '$lib/data/model';
 	import FavouritesCard from '$lib/components/FavouritesCard.svelte';
 	import SyncCard from '$lib/components/SyncCard.svelte';
 	import ForecastCard from '$lib/components/ForecastCard.svelte';
@@ -30,7 +30,7 @@
 
 	function onFab() {
 		// create a new transaction in the app store
-		var tx = Transaction.create();
+		var tx = Xact.create();
 		xact.set(tx);
 
 		goto('/tx');

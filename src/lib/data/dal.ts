@@ -3,7 +3,7 @@
  */
 
 import type { Collection, IndexableType } from 'dexie'
-import { Account, Payee, ScheduledTransaction, Transaction } from '$lib/data/model'
+import { Account, Payee, ScheduledTransaction, Xact } from '$lib/data/model'
 import db from '$lib/data/db'
 
 class CashierDAL {
@@ -51,7 +51,7 @@ class CashierDAL {
    * @param {Transaction} tx The transaction object
    * @returns the numeric id of the new transaction
    */
-  async saveTransaction(tx: Transaction): Promise<number> {
+  async saveXact(tx: Xact): Promise<number> {
     if (!tx) {
       throw new Error('transaction object is invalid!', tx)
     }

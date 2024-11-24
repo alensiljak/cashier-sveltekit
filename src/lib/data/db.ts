@@ -4,8 +4,8 @@
 import Dexie, { type Table } from 'dexie'
 import {
     Account,
-    LastTransaction,
-    Transaction,
+    LastXact,
+    Xact,
     Payee,
     // Posting,
     ScheduledTransaction,
@@ -22,7 +22,7 @@ interface CashierDatabase extends Dexie {
     payees: Table
     scheduled: Table
     settings: Table
-    transactions: Table
+    xacts: Table
 }
 
 const db = new Dexie('Cashier') as CashierDatabase
@@ -32,20 +32,20 @@ const db = new Dexie('Cashier') as CashierDatabase
 db.version(1).stores({
     accounts: 'name',
     assetAllocation: 'fullname',
-    lastTransaction: 'payee',
+    lastXact: 'payee',
     payees: 'name',
     scheduled: '++id, nextDate',
     settings: 'key',
-    transactions: '++id, date',
+    xacts: '++id, date',
 })
 
 // Mappings
 
 db.accounts.mapToClass(Account)
 db.assetAllocation.mapToClass(AssetClass)
-db.lastTransaction.mapToClass(LastTransaction)
+db.lastXact.mapToClass(LastXact)
 db.payees.mapToClass(Payee)
-db.transactions.mapToClass(Transaction)
+db.xacts.mapToClass(Xact)
 db.settings.mapToClass(Setting)
 db.scheduled.mapToClass(ScheduledTransaction)
 

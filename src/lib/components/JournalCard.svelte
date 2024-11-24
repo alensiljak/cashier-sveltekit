@@ -4,16 +4,16 @@
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import db from '$lib/data/db';
-	import type { Transaction } from '$lib/data/model';
+	import type { Xact } from '$lib/data/model';
 
-	let xacts: Transaction[] = $state([]);
+	let xacts: Xact[] = $state([]);
 
 	onMount(async () => {
 		await loadData();
 	});
 
 	async function loadData() {
-		xacts = await db.transactions.orderBy('date').reverse().limit(5).toArray();
+		xacts = await db.xacts.orderBy('date').reverse().limit(5).toArray();
 
 		// Balances = new XactAugmenter().calculateXactAmounts(Xacts);
 	}

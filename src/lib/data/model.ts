@@ -22,9 +22,9 @@ export class Account {
   }
 }
 
-export class LastTransaction {
+export class LastXact {
   payee = ''
-  transaction?: Transaction
+  transaction?: Xact
 }
 
 export class Payee {
@@ -70,14 +70,14 @@ export class Price {
 export class ScheduledTransaction {
   id?: number
   nextDate: unknown
-  transaction?: Transaction
+  transaction?: Xact
   period: unknown
   count?: number
   endDate: unknown
   remarks: unknown
 }
 
-export class Transaction {
+export class Xact {
   id?: number
   date?: string
   payee?: string
@@ -95,7 +95,7 @@ export class Transaction {
   }
 
   static create() {
-    const tx = new Transaction()
+    const tx = new Xact()
     // Set the date to today.
     tx.date = new Date().toISOString().substring(0, 10)
 

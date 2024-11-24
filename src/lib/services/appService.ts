@@ -6,19 +6,17 @@
 import db from '$lib/data/db'
 import {
   Account,
-  AccountBalance,
-  LastTransaction,
+  //AccountBalance,
+  LastXact,
   Payee,
   Posting,
-  ScheduledTransaction,
-  Transaction,
+  // ScheduledTransaction,
+  Xact,
 } from '$lib/data/model'
-// import { Notify } from 'quasar'
 import { settings, SettingKeys } from '$lib/settings'
 // import { toRaw } from 'vue'
 // import { TransactionParser } from '$lib/utils/transactionParser'
 import { TransactionAugmenter } from '$lib/utils/transactionAugmenter'
-// import { Collection } from 'dexie'
 import { AccountService } from '$lib/services/accountsService'
 
 class AppService {
@@ -26,11 +24,11 @@ class AppService {
    * Clears Ids and reference Ids in Transaction and Postings.
    * @param {Transaction} tx
    */
-  clearIds(tx: Transaction) {
+  clearIds(tx: Xact) {
     delete tx.id
     tx.postings.forEach((posting: Posting) => {
       delete posting.id
-      delete posting.transactionId
+      // delete posting.transactionId
     })
     return tx
   }
@@ -61,25 +59,27 @@ class AppService {
       id = Number(id)
     }
 
-    await this.db.transaction(
-      'rw',
-      this.db.transactions,
-      // this.db.postings,
-      async (tx) => {
-        const x = await db.transactions.where('id').equals(id).count()
-        console.log('count:', x)
+    // await this.db.Transaction(
+    //   'rw',
+    //   this.db.transactions,
+    //   // this.db.postings,
+    //   async (tx: Xact) => {
+    //     const x = await db.transactions.where('id').equals(id).count()
+    //     console.log('count:', x)
 
-        // delete transaction record
-        const result = await db.transactions.where('id').equals(id).delete()
-        console.log('transactions -', result)
+    //     // delete transaction record
+    //     const result = await db.transactions.where('id').equals(id).delete()
+    //     console.log('transactions -', result)
 
-        // delete postings
-        // result = await db.postings.where('transactionId').equals(id).delete()
-        // console.log('postings -', result)
+    //     // delete postings
+    //     // result = await db.postings.where('transactionId').equals(id).delete()
+    //     // console.log('postings -', result)
 
-        return 'Transaction complete'
-      },
-    )
+    //     return 'Transaction complete'
+    //   },
+    // )
+    await this.db.xacts.delete(id);
+
     console.log('Delete transaction completed.', id)
     //.catch(error => console.error('Error on Delete Transaction:', error))
   }
@@ -93,7 +93,7 @@ class AppService {
     await this.db.transactions.clear()
   }
 
-  async duplicateTransaction(tx: Transaction) {
+  async duplicateTransaction(tx: Xact) {
     // copy a new transaction
     const newTx = $state.raw(tx)
 
@@ -169,7 +169,7 @@ class AppService {
    * @param {Transaction} tx
    * @returns {String} A ledger entry
    */
-  translateToLedger(tx: Transaction) {
+  translateToLedger(tx: Xact) {
     let output = ''
 
     // transaction
@@ -475,7 +475,7 @@ class AppService {
       throw new Error('numeric ids are required as keys!')
     }
 
-    const tx = await db.transactions.get(id)
+    const tx = await db.xacts.get(id)
 
     return tx
   }
@@ -489,8 +489,8 @@ class AppService {
    * This is retrieved when the Payee is selected on a new transaction, or when editing.
    * @param {Transaction} tx
    */
-  async saveLastTransaction(tx: Transaction) {
-    const lastTx = new LastTransaction()
+  async saveLastTransaction(tx: Xact) {
+    const lastTx = new LastXact()
     lastTx.payee = tx.payee as string
 
     lastTx.transaction = tx

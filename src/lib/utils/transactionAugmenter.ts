@@ -1,4 +1,4 @@
-import { Account, AccountBalance, Posting, Transaction } from '$lib/data/model'
+import { Account, AccountBalance, Posting, Xact } from '$lib/data/model'
 import appService from '$lib/services/appService'
 import { TransactionParser } from '$lib/utils/transactionParser'
 import { AccountService } from '$lib/services/accountsService'
@@ -18,8 +18,8 @@ export class TransactionAugmenter {
    * @returns The same array of Transactions
    */
   static calculateEmptyPostingAmounts(
-    transactions: Transaction[]
-  ): Transaction[] {
+    transactions: Xact[]
+  ): Xact[] {
     // iterate
     transactions.forEach((tx) => {
       const postings = tx.postings
@@ -97,7 +97,7 @@ export class TransactionAugmenter {
 
     for (let i = 0; i < accounts.length; i++) {
       // load all postings for the account
-      let account = accounts[i]
+      const account = accounts[i]
       // todo: if the favourite account is not found, gray it out?
       if (!account) continue // null check
 
@@ -110,10 +110,10 @@ export class TransactionAugmenter {
       let sum = account.balance.amount
 
       //
-      let txs = await appService.loadAccountTransactionsFor(account.name)
+      const txs = await appService.loadAccountTransactionsFor(account.name)
 
       TransactionAugmenter.calculateEmptyPostingAmounts(txs)
-      let postings = TransactionParser.extractPostingsFor(txs, account.name)
+      const postings = TransactionParser.extractPostingsFor(txs, account.name)
 
       for (let j = 0; j < postings.length; j++) {
         let amount = postings[j].amount
@@ -153,15 +153,15 @@ export class TransactionAugmenter {
    * @param {Array<Transaction>} txs
    * @returns {Array<AccountBalance>} An array of balance records that matches the transactions.
    */
-  static calculateTxAmounts(txs: Transaction[]): AccountBalance[] {
+  static calculateTxAmounts(txs: Xact[]): AccountBalance[] {
     // get Amounts
     TransactionAugmenter.calculateEmptyPostingAmounts(txs)
 
     const result: AccountBalance[] = []
 
     // Find the asset account and decide on the flow direction.
-    txs.forEach((tx, index) => {
-      let balance = new AccountBalance()
+    txs.forEach((tx) => {
+      const balance = new AccountBalance()
 
       // Get the assets and liabilities posting(s) from the transaction.
       const postings = tx.postings.filter(
@@ -197,7 +197,7 @@ export class TransactionAugmenter {
           ).length > 0
         ) {
           // Take the sign from the Asset posting
-          let assetPostings = postings.filter((posting) =>
+          const assetPostings = postings.filter((posting) =>
             posting.account.startsWith('Assets:')
           )
           balance.amount = assetPostings[0].amount as number

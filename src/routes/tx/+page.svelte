@@ -9,7 +9,7 @@
 	import { afterNavigate, goto } from '$app/navigation';
 	import Notifier from '$lib/utils/notifier';
 	import CashierDAL from '$lib/data/dal';
-	import type { Transaction } from '$lib/data/model';
+	import type { Xact } from '$lib/data/model';
 	import { SelectionModeMetadata, SettingKeys, settings } from '$lib/settings';
 	import appService from '$lib/services/appService';
 	import { base } from '$app/paths';
@@ -61,10 +61,10 @@
 	 * save transaction
 	 */
 	async function saveXact() {
-		const tx = get(xact) as Transaction;
+		const tx = get(xact) as Xact;
 		const dal = new CashierDAL();
 
-		await dal.saveTransaction(tx);
+		await dal.saveXact(tx);
 
 		// Remember Last Transaction?
 		const remember = await settings.get(SettingKeys.rememberLastTransaction);
