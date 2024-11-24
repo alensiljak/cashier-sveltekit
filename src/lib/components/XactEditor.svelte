@@ -102,6 +102,7 @@
 		placeholder="Payee"
 		type="text"
 		class="input"
+		readonly
 		bind:value={$xact.payee}
 		onclick={onPayeeClicked}
 	/>

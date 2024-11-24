@@ -13,7 +13,7 @@
 	import { SelectionModeMetadata, SettingKeys, settings } from '$lib/settings';
 	import appService from '$lib/services/appService';
 	import { base } from '$app/paths';
-	import TransactionEditor from '$lib/components/TransactionEditor.svelte';
+	import TransactionEditor from '$lib/components/XactEditor.svelte';
 
 	let previousPage: string = base;
 

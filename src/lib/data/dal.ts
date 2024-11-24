@@ -78,9 +78,9 @@ class CashierDAL {
     }
 
     // save all items in a transaction
-    const id = await db.transaction('rw', db.transactions, async () => {
+    const id = await db.transaction('rw', db.xacts, async () => {
       // returns the transaction id
-      const id = await db.transactions.put(tx)
+      const id = await db.xacts.put(tx)
       return id
     })
     return id as number
