@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Component, Snippet } from 'svelte';
+	import type { Component } from 'svelte';
 	import type { MouseEventHandler } from 'svelte/elements';
 
 	// Props
@@ -7,7 +7,7 @@
 		targetNav?: string;
 		text?: string;
 		Icon?: Component;
-        onclick?: MouseEventHandler<HTMLElement>;
+		onclick?: MouseEventHandler<HTMLElement>;
 	};
 	let { targetNav = '#', text, Icon, onclick }: Props = $props();
 </script>
@@ -19,7 +19,7 @@ Example usage:
 -->
 
 <li>
-	<a href={targetNav} class="w-52" onclick={onclick}>
+	<a href={targetNav} class="w-52" {onclick}>
 		<span class="flex-auto">{text}</span>
 		<span class="badge">
 			<!-- {@render icon()} -->
