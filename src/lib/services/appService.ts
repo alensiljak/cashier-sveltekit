@@ -492,7 +492,6 @@ class AppService {
   async saveLastTransaction(tx: Xact) {
     const lastTx = new LastXact()
     lastTx.payee = tx.payee as string
-
     lastTx.transaction = tx
 
     // Delete unneeded properties - the ids, date, etc.

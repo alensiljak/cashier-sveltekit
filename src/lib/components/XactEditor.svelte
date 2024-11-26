@@ -22,7 +22,8 @@
 	}
 
 	onMount(() => {
-		//
+		console.debug('editing xact', $xact.id)
+		
 		handleEntitySelection();
 	});
 

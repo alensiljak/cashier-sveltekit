@@ -61,15 +61,16 @@
 	 * save transaction
 	 */
 	async function saveXact() {
-		const tx = get(xact) as Xact;
+		// create a deep copy
+		const clonedXact = JSON.parse(JSON.stringify($xact));
 		const dal = new CashierDAL();
 
-		await dal.saveXact(tx);
+		await dal.saveXact(clonedXact);
 
 		// Remember Last Transaction?
 		const remember = await settings.get(SettingKeys.rememberLastTransaction);
 		if (remember) {
-			await appService.saveLastTransaction(tx);
+			await appService.saveLastTransaction(clonedXact);
 		}
 
 		//goto(previousPage);

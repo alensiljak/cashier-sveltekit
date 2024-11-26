@@ -9,7 +9,7 @@ import { SettingKeys, settings } from '$lib/settings'
  * like the amount on a missing posting.
  */
 export class TransactionAugmenter {
-  constructor() {}
+  constructor() { }
 
   /**
    * Calculates and adds the amounts for the empty postings. This "completes" the Postings
@@ -153,64 +153,73 @@ export class TransactionAugmenter {
    * @param {Array<Xact>} txs
    * @returns {Array<Money>} An array of balance records that matches the transactions.
    */
-  static calculateTxAmounts(txs: Xact[]): Money[] {
+  static calculateTxAmounts(xacts: Xact[]): Money[] {
     // get Amounts
-    TransactionAugmenter.calculateEmptyPostingAmounts(txs)
+    TransactionAugmenter.calculateEmptyPostingAmounts(xacts)
 
     const result: Money[] = []
 
     // Find the asset account and decide on the flow direction.
-    txs.forEach((tx) => {
-      const balance = new Money()
-
-      // Get the assets and liabilities posting(s) from the transaction.
-      const postings = tx.postings.filter(
-        (posting) =>
-          posting.account.startsWith('Assets:') ||
-          posting.account.startsWith('Liabilities:')
-      )
-
-      if (postings.length === 0) {
-        console.warn('No postings found in Assets or Liabilities!')
-      } else if (postings.length === 1) {
-        // a clear payment case with one source (asset/liability) account.
-        const posting = postings[0]
-        if (!posting || !posting.amount || typeof posting.amount === 'string') {
-          const msg = `Invalid amount on ${tx.date}, ${tx.payee}, ${posting.account}, ${posting.amount}`
-          console.error(msg)
-          //return
-        } else {
-          balance.amount = Number(posting.amount?.toFixed(2) as string)
-          balance.currency = posting.currency
-        }
-      } else if (postings.length === 2) {
-        // involves a transfer
-        balance.amount = Math.abs(postings[0].amount as number)
-        balance.currency = postings[0].currency
-
-        // Treat the liability account as an expense.
-        if (
-          postings.filter((posting) => posting.account.startsWith('Assets:'))
-            .length > 0 &&
-          postings.filter((posting) =>
-            posting.account.startsWith('Liabilities:')
-          ).length > 0
-        ) {
-          // Take the sign from the Asset posting
-          const assetPostings = postings.filter((posting) =>
-            posting.account.startsWith('Assets:')
-          )
-          balance.amount = assetPostings[0].amount as number
-        }
-      } else {
-        // todo: handle these cases (transfers, complex tx)
-        console.warn('more than one posting found with assets')
-      }
+    xacts.forEach((xact) => {
+      const balance = this.calculateXactAmount(xact);
 
       // Assemble the output
       result.push(balance)
     })
 
     return result
+  }
+
+  static calculateXactAmount(xact: Xact): Money {
+    const balance = new Money()
+
+    // Get the assets and liabilities posting(s) from the transaction.
+    const postings = xact.postings.filter(
+      (posting) =>
+        posting.account.startsWith('Assets:') ||
+        posting.account.startsWith('Liabilities:')
+    )
+
+    if (postings.length === 0) {
+      console.warn('No postings found in Assets or Liabilities!')
+    } else if (postings.length === 1) {
+      // a clear payment case with one source (asset/liability) account.
+      const posting = postings[0]
+      if (!posting || !posting.amount || typeof posting.amount === 'string') {
+        // The amount is invalid. Ignore.
+
+        // const msg = `Invalid amount on ${xact.date}, ${xact.payee}, ${posting.account}, ${posting.amount}`
+        // console.error(msg)
+
+        //return
+      } else {
+        balance.amount = Number(posting.amount?.toFixed(2) as string)
+        balance.currency = posting.currency
+      }
+    } else if (postings.length === 2) {
+      // involves a transfer
+      balance.amount = Math.abs(postings[0].amount as number)
+      balance.currency = postings[0].currency
+
+      // Treat the liability account as an expense.
+      if (
+        postings.filter((posting) => posting.account.startsWith('Assets:'))
+          .length > 0 &&
+        postings.filter((posting) =>
+          posting.account.startsWith('Liabilities:')
+        ).length > 0
+      ) {
+        // Take the sign from the Asset posting
+        const assetPostings = postings.filter((posting) =>
+          posting.account.startsWith('Assets:')
+        )
+        balance.amount = assetPostings[0].amount as number
+      }
+    } else {
+      // todo: handle these cases (transfers, complex tx)
+      console.warn('more than one posting found with assets')
+    }
+
+    return balance;
   }
 }
