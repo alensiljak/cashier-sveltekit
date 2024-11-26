@@ -29,6 +29,9 @@ const Notifier = {
   },
   neutral(message: string) {
     this.notify(message, 'bg-info-500')
+  },
+  warn(message: string) {
+    this.notify(message, 'bg-tertiary-500')
   }
 }
 

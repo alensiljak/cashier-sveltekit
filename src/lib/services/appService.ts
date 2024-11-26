@@ -108,12 +108,12 @@ class AppService {
    * ready to be exported as a file or copied as a string.
    */
   async getExportTransactions() {
-    const txs = await db.transactions.orderBy('date').toArray()
+    const txs = await db.xacts.orderBy('date').toArray()
 
     let output = ''
 
     for (let i = 0; i < txs.length; i++) {
-      let tx = txs[i]
+      const tx = txs[i]
 
       if (i > 0) {
         output += '\n' // space between transactions
