@@ -22,8 +22,8 @@
 	}
 
 	onMount(() => {
-		console.debug('editing xact', $xact.id)
-		
+		console.debug('editing xact', $xact.id);
+
 		handleEntitySelection();
 	});
 
@@ -35,7 +35,7 @@
 
 		// handle selection
 
-		const id = $selectionMetadata.selectedId;
+		const id = $selectionMetadata.selectedId as string;
 		if (id == undefined) {
 			console.warn('No item selected');
 			Notifier.neutral('Selection canceled');
@@ -47,14 +47,14 @@
 		switch ($selectionMetadata.selectionType) {
 			case 'payee':
 				if ($selectionMetadata.selectedId) {
-					$xact.payee = $selectionMetadata.selectedId as string
+					$xact.payee = id as string;
 
-					// todo: loadLastTransaction()
+					await loadLastTransaction(id);
 				}
 				break;
 
 			case 'account':
-			// get the posting
+				// get the posting
 				var index = null;
 				if (typeof $selectionMetadata.postingIndex === 'number') {
 					index = $selectionMetadata.postingIndex;
@@ -80,6 +80,29 @@
 		selectionMetadata.set(undefined);
 	}
 
+	/**
+	 * Load the last transaction for the payee
+	 */
+	async function loadLastTransaction(payee: string) {
+		if (!$xact) {
+			throw new Error('No transaction loaded!');
+		}
+
+		// do this only if enabled
+		const enabled = await settings.get(SettingKeys.rememberLastTransaction);
+		if (!enabled) return;
+		// and we are not on an existing transaction
+		if ($xact.id) return;
+
+		const lastTx = await appService.db.lastXact.get(payee);
+		if (!lastTx) return;
+		// use the current date
+		lastTx.transaction.date = $xact.date;
+
+		// Replace the current transaction.
+		xact.set(lastTx.transaction);
+	}
+
 	function onPostingAccountClicked(index: number) {
 		if (onAccountClicked) {
 			onAccountClicked(index);
@@ -95,7 +118,7 @@
 	}
 </script>
 
-<div class="py-2 space-y-2">
+<div class="space-y-2 py-2">
 	<input title="Date" placeholder="Date" type="date" class="input" bind:value={$xact.date} />
 	<input
 		title="Payee"
