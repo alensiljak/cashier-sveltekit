@@ -6,7 +6,6 @@
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import db from '$lib/data/db';
 	import { Xact } from '$lib/data/model';
-	import appService from '$lib/services/appService';
 	import Notifier from '$lib/utils/notifier';
 	import { getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
 	import { FileDownIcon, PlusIcon, TrashIcon } from 'lucide-svelte';
@@ -58,8 +57,15 @@
 		goto('/tx');
 	}
 
-	async function onRowClick(e: Event) {
-		console.log(e.currentTarget);
+	/**
+	 * When the Xact row is clicked, open the details page.
+	 * @param tx
+	 */
+	async function onRowClick(tx: Xact) {
+		// store into state
+		xact.set(tx)
+
+		goto('/xact-actions')
 	}
 </script>
 

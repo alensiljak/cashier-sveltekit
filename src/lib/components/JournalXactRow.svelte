@@ -4,14 +4,20 @@
 
 	interface Props {
 		xact: Xact;
-        onclick?: EventHandler
+		onclick?: (xact: Xact) => void;
 	}
 	let { xact, onclick }: Props = $props();
+
+	function onRowClicked() {
+		if (onclick) {
+			onclick(xact);
+		}
+	}
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-<article onclick={onclick}>
+<article onclick={onRowClicked}>
 	<!-- date/payee -->
 	<div class="flex flex-row space-x-2">
 		<div>
@@ -32,7 +38,7 @@
 
 	<!-- postings -->
 	{#if xact.postings}
-		<div class="pl-6 leading-4 text-sm">
+		<div class="pl-6 text-sm leading-4">
 			{#each xact.postings as posting}
 				<div class="flex flex-row">
 					<div class="grow">{posting.account}</div>

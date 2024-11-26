@@ -6,7 +6,7 @@
 	type Props = {
 		targetNav?: string;
 		text?: string;
-		Icon?: Component;
+		Icon?: any;
 		onclick?: MouseEventHandler<HTMLElement>;
 	};
 	let { targetNav = '#', text, Icon, onclick }: Props = $props();
