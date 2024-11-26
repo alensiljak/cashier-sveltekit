@@ -6,9 +6,9 @@ import type { Money, Xact } from "$lib/data/model";
  * @param amount 
  */
 export function getXactAmountColour(xact: Xact, balance: Money) {
-    const RED = 'text-secondary-500' // red
-    const YELLOW = 'text-tertiary-500' // yellow
-    const GREEN = 'text-primary-500' // green
+    const RED = 'text-red-500'
+    const YELLOW = 'text-yellow-500'
+    const GREEN = 'text-green-500'
 
     let colour = ''
 
