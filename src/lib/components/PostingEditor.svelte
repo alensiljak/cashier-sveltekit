@@ -66,8 +66,9 @@
 		title="Currency"
 		placeholder="Currency"
 		type="text"
-		class="input w-1/4 text-center uppercase"
+		class="input w-1/4 text-center"
 		bind:value={currency}
 		oninput={() => updateCurrency(currency)}
 	/>
+	<!-- uppercase -->
 </div>

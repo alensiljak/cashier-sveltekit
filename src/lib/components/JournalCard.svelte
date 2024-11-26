@@ -4,24 +4,41 @@
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import db from '$lib/data/db';
-	import { AccountBalance, type Xact } from '$lib/data/model';
+	import { Money, type Xact } from '$lib/data/model';
 	import { TransactionAugmenter } from '$lib/utils/transactionAugmenter';
 	import Notifier from '$lib/utils/notifier';
+	import { getXactAmountColour } from '$lib/utils/formatter';
 
 	let xacts: Xact[] = $state([]);
-	let xactAmounts: AccountBalance[] = $state([]);
+	let xactBalances: Money[] = $state([]);
 
 	onMount(async () => {
 		await loadData();
 	});
 
+	/**
+	 * Return the colour to use for the amount.
+	 * @param i Index of the Xact in the list.
+	 */
+	function getXactColour(i: number) {
+		if(!xactBalances[i].amount) return '';
+
+		const xact = xacts[i]
+		const balance = xactBalances[i]
+
+		const colour = getXactAmountColour(xact, balance);
+
+		console.log(balance, colour)
+
+		return colour
+	}
+
 	async function loadData() {
 		xacts = await db.xacts.orderBy('date').reverse().limit(5).toArray();
 
-		// Balances = new XactAugmenter().calculateXactAmounts(Xacts);
 		try {
 			const amounts = TransactionAugmenter.calculateTxAmounts(xacts);
-			xactAmounts.push(...amounts);
+			xactBalances.push(...amounts);
 		} catch (error: any) {
 			console.error(error);
 			Notifier.error(error.message);
@@ -49,8 +66,8 @@
 					<div class="grow">
 						{xact.payee}
 					</div>
-					<div>
-						{ xactAmounts[index].amount } { xactAmounts[index].currency }
+					<div class={`${getXactColour(index)}`}>
+						{ xactBalances[index].amount } { xactBalances[index].currency }
 					</div>
 				</div>
 			{/each}

@@ -1,4 +1,4 @@
-import { Account, AccountBalance, Posting, Xact } from '$lib/data/model'
+import { Account, Money, Posting, Xact } from '$lib/data/model'
 import appService from '$lib/services/appService'
 import { TransactionParser } from '$lib/utils/transactionParser'
 import { AccountService } from '$lib/services/accountsService'
@@ -151,17 +151,17 @@ export class TransactionAugmenter {
    * Appends {amount, currency} to the Xact record.
    * It is normally useful to run calculateEmptyPostingAmounts() to populate the blank Postings.
    * @param {Array<Xact>} txs
-   * @returns {Array<AccountBalance>} An array of balance records that matches the transactions.
+   * @returns {Array<Money>} An array of balance records that matches the transactions.
    */
-  static calculateTxAmounts(txs: Xact[]): AccountBalance[] {
+  static calculateTxAmounts(txs: Xact[]): Money[] {
     // get Amounts
     TransactionAugmenter.calculateEmptyPostingAmounts(txs)
 
-    const result: AccountBalance[] = []
+    const result: Money[] = []
 
     // Find the asset account and decide on the flow direction.
     txs.forEach((tx) => {
-      const balance = new AccountBalance()
+      const balance = new Money()
 
       // Get the assets and liabilities posting(s) from the transaction.
       const postings = tx.postings.filter(
