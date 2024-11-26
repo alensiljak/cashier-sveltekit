@@ -60,29 +60,8 @@ class CashierDAL {
       tx.id = new Date().getTime()
     }
 
-    // validate Postings
-    const postings = tx.postings
-    // check whether the accounts exist!
-    if (postings.length) {
-      const accounts = await this.loadAccounts().toArray()
-      const accountNames = accounts.map((account) => account.name)
-
-      postings.forEach((posting) => {
-        const account = posting.account
-        if (!accountNames.includes(account)) {
-          throw new Error(
-            `The account ${account} does not exist! Please create first.`,
-          )
-        }
-      })
-    }
-
-    // save all items in a transaction
-    const id = await db.transaction('rw', db.xacts, async () => {
-      // returns the transaction id
-      const id = await db.xacts.put(tx)
-      return id
-    })
+    // returns the transaction id
+    const id = await db.xacts.put(tx)
     return id as number
   }
 }
