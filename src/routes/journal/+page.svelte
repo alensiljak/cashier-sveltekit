@@ -47,7 +47,7 @@
 	}
 
 	async function onExportClick() {
-		Notifier.neutral('not implemented');
+		goto('/export/journal')
 	}
 
 	async function onFab() {
