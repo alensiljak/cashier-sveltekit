@@ -28,8 +28,6 @@
 
 		const colour = getXactAmountColour(xact, balance);
 
-		console.log(balance, colour)
-
 		return colour
 	}
 

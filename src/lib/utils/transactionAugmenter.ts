@@ -197,6 +197,10 @@ export class TransactionAugmenter {
         balance.currency = posting.currency
       }
     } else if (postings.length === 2) {
+      if(!postings[0].amount) {
+        return balance
+      }
+
       // involves a transfer
       balance.amount = Math.abs(postings[0].amount as number)
       balance.currency = postings[0].currency
