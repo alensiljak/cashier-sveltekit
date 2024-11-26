@@ -53,7 +53,7 @@
 				break;
 
 			case 'account':
-				// get the posting
+			// get the posting
 				var index = null;
 				if (typeof $selectionMetadata.postingIndex === 'number') {
 					index = $selectionMetadata.postingIndex;
@@ -61,7 +61,6 @@
 					// redirected from account register, find an appropriate posting
 					index = getEmptyPostingIndex($xact);
 				}
-				// let posting = $xact.postings[index];
 
 				// load the account
 				const account = await appService.db.accounts.get(id);

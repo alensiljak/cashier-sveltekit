@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import JournalXactRow from '$lib/components/JournalXactRow.svelte';
 	import SquareButton from '$lib/components/SquareButton.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
@@ -47,6 +48,10 @@
 
 		history.back();
 	}
+
+    async function onEditClicked() {
+        await goto('/tx')
+    }
 </script>
 
 <Toolbar title="Transaction Actions" />
@@ -56,12 +61,8 @@
 
 	<!-- button grid -->
 	<div class="mt-4 inline-grid w-full grid-cols-3 gap-4 justify-self-center">
-		<div class="">
-			<SquareButton text="Edit" Icon={PenSquareIcon} colour="tertiary" />
-		</div>
-		<div class="">
-			<SquareButton text="Duplicate" Icon={CopyIcon} colour="primary" />
-		</div>
+		<SquareButton text="Edit" Icon={PenSquareIcon} colour="tertiary" onclick={onEditClicked} />
+		<SquareButton text="Duplicate" Icon={CopyIcon} colour="primary" />
 		<SquareButton text="Schedule" Icon={CalendarClockIcon} colour="tertiary" />
 		<SquareButton text="Copy Ledger" Icon={CopyIcon} colour="primary" />
 		<SquareButton text="Delete" Icon={TrashIcon} colour="secondary" onclick={onDeleteClicked} />
