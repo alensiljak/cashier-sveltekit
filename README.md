@@ -41,7 +41,7 @@ You can preview the production build with `npm run preview`.
 
 PWA is set up using `@vite-pwa/sveltekit`, which is part of `vite-plugin-pwa`. It auto-generates the service worker. 
 
-Sveltekit will register `service-worker.js` automatically, if the file exists. However, the service worker has to be written manually.
+Sveltekit will register `service-worker.js` automatically, if the file exists. The service worker has to be written manually. However, with the plugin, this is not necessary. The plugin will generate the Service Worker automatically, based on the project information.
 
-Vite plugin PWA will create the service worker and the registration script. This needs to be added manually in the `app.html`.
-The manifest also needs to be included in the `<head>`, so that the app can be installed.
+Vite plugin PWA will create the service worker and the registration script. This is then applied in the `+layout.svelte`, in the `<body>` section.
+The manifest needs to be included in the `<head>`, so that the app can be installed.
