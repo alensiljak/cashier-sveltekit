@@ -91,7 +91,7 @@ class AppService {
   async deleteTransactions() {
     // also clear any remaining postings
     // this.db.postings.clear()
-    await this.db.transactions.clear()
+    await this.db.xacts.clear()
   }
 
   async duplicateTransaction(tx: Xact) {
@@ -144,7 +144,7 @@ class AppService {
    * @param {FileInfo} fileInfo The file info from the input control.
    * @param {Function} callback A function to run when complete, passing the file content.
    */
-  readFile(fileInfo: Blob, callback: any): void {
+  readFile(fileInfo: Blob, callback: (content: unknown) => void): void {
     if (!fileInfo) return
 
     const reader = new FileReader()
