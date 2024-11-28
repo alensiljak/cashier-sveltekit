@@ -1,7 +1,7 @@
 <script lang="ts">
 	import GlossToolbar from '$lib/components/gloss-toolbar.svelte';
 	import JournalCard from '$lib/components/JournalCard.svelte';
-	import { PlusIcon } from 'lucide-svelte';
+	import { PlusIcon, SettingsIcon } from 'lucide-svelte';
 	import Toolbar from '../lib/components/Toolbar.svelte';
 	import { goto } from '$app/navigation';
 	import { xact } from '$lib/data/mainStore';
@@ -12,8 +12,9 @@
 	import ScheduledXactsCard from '$lib/components/ScheduledXactsCard.svelte';
 	import { onMount } from 'svelte';
 	import Fab from '$lib/components/FAB.svelte';
+	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 
-	let cards: Array<any> = []
+	let cards: Array<any> = [];
 	// let sortedCards = $derived(cards.sort((a, b) => a.order - b.order))
 
 	onMount(() => {
@@ -23,10 +24,10 @@
 			{ card: FavouritesCard, order: 1 },
 			{ card: ForecastCard, order: 3 },
 			{ card: ScheduledXactsCard, order: 5 },
-			{ card: JournalCard, order: 4 },
+			{ card: JournalCard, order: 4 }
 		];
 		// todo: Get the array of names (ordered) and sort.
-	})
+	});
 
 	function onFab() {
 		// create a new transaction in the app store
@@ -37,12 +38,16 @@
 	}
 </script>
 
-<Toolbar />
+<Toolbar>
+	{#snippet menuItems()}
+		<ToolbarMenuItem text="Home Settings" Icon={SettingsIcon} targetNav="/home-settings" />
+	{/snippet}
+</Toolbar>
 
 <!-- Main -->
-<main class="container mx-auto space-y-2 py-1 px-1 lg:max-w-screen-sm">
+<main class="container mx-auto space-y-2 px-1 py-1 lg:max-w-screen-sm">
 	<!-- Cards are displayed dynamically, in the selected order. -->
-	{#each cards as { card } }
+	{#each cards as { card }}
 		{@render card()}
 		<!-- {@const SvelteComponent = card}
 		<SvelteComponent /> -->
@@ -50,5 +55,5 @@
 	{/each}
 
 	<!-- FAB -->
-	 <Fab onclick={onFab} Icon={PlusIcon} />
+	<Fab onclick={onFab} Icon={PlusIcon} />
 </main>
