@@ -3,8 +3,8 @@
 	import HomeCardTemplate from './HomeCardTemplate.svelte';
 	import { goto } from '$app/navigation';
 
-	function onClick() {
-		goto('/scheduled-xacts');
+	async function onClick() {
+		await goto('/scheduled-xacts');
 	}
 </script>
 

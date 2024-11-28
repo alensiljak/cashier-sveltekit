@@ -46,7 +46,7 @@
 	}
 
 	async function onExportClick() {
-		goto('/export/journal')
+		await goto('/export/journal')
 	}
 
 	async function onFab() {
@@ -54,7 +54,7 @@
 		var tx = Xact.create();
 		xact.set(tx);
 
-		goto('/tx');
+		await goto('/tx');
 	}
 
 	/**

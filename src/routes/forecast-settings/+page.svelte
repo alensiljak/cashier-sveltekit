@@ -43,12 +43,12 @@
 		await saveSettings();
 	}
 
-	function onAddAccountClicked() {
+	async function onAddAccountClicked() {
 		var meta = new SelectionModeMetadata();
 		meta.selectionType = SelectionType.ACCOUNT;
 		selectionMetadata.set(meta);
 
-		goto('/accounts');
+		await goto('/accounts');
 	}
 
     function onDeleteClicked(index: number) {

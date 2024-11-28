@@ -17,9 +17,9 @@
 
 	let previousPage: string = base;
 
-	onMount(() => {
+	onMount(async () => {
 		if (!get(xact)) {
-			goto('/');
+			await goto('/');1
 		}
 	});
 
@@ -27,7 +27,7 @@
 		previousPage = from?.url.pathname || previousPage;
 	});
 
-	const onAccountClicked = (index: number) => {
+	const onAccountClicked = async (index: number) => {
 		// console.log('Account clicked at index:', index);
 
 		const meta = new SelectionModeMetadata();
@@ -35,7 +35,7 @@
 		meta.selectionType = 'account';
 		selectionMetadata.set(meta);
 
-		goto('/accounts');
+		await goto('/accounts');
 	};
 
 	async function onFab() {
@@ -47,14 +47,14 @@
 		}
 	}
 
-	const onPayeeClicked = () => {
+	const onPayeeClicked = async () => {
 		// select a payee
 		// selection
 		const meta = new SelectionModeMetadata();
 		meta.selectionType = 'payee';
 		selectionMetadata.set(meta);
 
-		goto('/payees');
+		await goto('/payees');
 	};
 
 	/**
@@ -73,7 +73,6 @@
 			await appService.saveLastTransaction(clonedXact);
 		}
 
-		//goto(previousPage);
 		history.back();
 	}
 </script>

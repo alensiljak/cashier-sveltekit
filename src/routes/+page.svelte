@@ -29,12 +29,12 @@
 		// todo: Get the array of names (ordered) and sort.
 	});
 
-	function onFab() {
+	async function onFab() {
 		// create a new transaction in the app store
 		var tx = Xact.create();
 		xact.set(tx);
 
-		goto('/tx');
+		await goto('/tx');
 	}
 </script>
 

@@ -43,8 +43,8 @@
 		}
 	}
 
-	function onClick() {
-		goto('/journal');
+	async function onClick() {
+		await goto('/journal');
 	}
 </script>
 

@@ -10,7 +10,7 @@
 
 	let accounts: Array<Account> = [];
 	let filteredAccounts: Array<Account> = [];
-		let isInSelectionMode = false;
+	let isInSelectionMode = false;
 
 	onMount(async () => {
 		await loadData();
@@ -45,7 +45,7 @@
 	 * Apply filtering when the user types something in the search bar.
 	 * @param value The search term
 	 */
-	 async function onSearch(value: string) {
+	async function onSearch(value: string) {
 		if (value) {
 			// Apply filter
 			let search = new ListSearch();
