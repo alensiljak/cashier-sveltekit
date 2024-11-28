@@ -5,12 +5,13 @@
 	import type { EventHandler } from 'svelte/elements';
 
 	type Props = {
-		onclick?: EventHandler
+		onclick?: EventHandler;
         Icon?: Component
         backgroundColor?: string
         textColor?: string
 	};
-	let { onclick, Icon=Check, backgroundColor='bg-tertiary-500', textColor='text-secondary-500' } = $props();
+	const clickHandler: EventHandler = (e: Event) => {};
+	let { onclick = clickHandler, Icon=Check, backgroundColor='bg-tertiary-500', textColor='text-secondary-500' } = $props();
 </script>
 
 <button

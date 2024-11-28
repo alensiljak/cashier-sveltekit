@@ -61,7 +61,7 @@
 
 <main class="flex h-screen flex-col">
 	<Toolbar title="Accounts" />
-	<!-- todo: search toolbar -->
+	<!-- search toolbar -->
 	<SearchToolbar focus {onSearch} />
 	<!-- Account list -->
 	<div class="h-screen overflow-auto p-1">
