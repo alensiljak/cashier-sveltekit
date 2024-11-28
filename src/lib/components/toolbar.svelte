@@ -49,11 +49,12 @@
 	{#snippet trail()}
 		<!-- Drop-down Menu -->
 		{#if menuItems}
-			<button class="btn py-1 pr-2" use:popup={popupClick}>
+			<button class="btn py-1 pr-2 text-tertiary" use:popup={popupClick}>
 				<EllipsisVertical size={20} class="" />
 			</button>
 			<!-- Pop-up Menu -->
-			<div class="list-nav variant-filled-primary p-3 shadow" data-popup="popupClick">
+			<div class="list-nav variant-filled-primary shadow w-52" 
+				data-popup="popupClick">
 				<ul>
 					{@render menuItems?.()}
 				</ul>

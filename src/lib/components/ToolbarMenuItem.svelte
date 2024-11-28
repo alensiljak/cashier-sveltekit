@@ -1,5 +1,4 @@
 <script lang="ts">
-	import type { Component } from 'svelte';
 	import type { MouseEventHandler } from 'svelte/elements';
 
 	// Props
@@ -9,21 +8,26 @@
 		Icon?: any;
 		onclick?: MouseEventHandler<HTMLElement>;
 	};
-	let { targetNav = '#', text, Icon, onclick }: Props = $props();
+	let { targetNav, text, Icon, onclick }: Props = $props();
 </script>
 
 <!--
 Example usage:
-
 <ToolbarMenuItem text="Restore Settings" targetNav="/settings" Icon={ArrowBigUpIcon} />
 -->
 
 <li>
-	<a href={targetNav} class="w-52" {onclick}>
+	<!-- <a href={targetNav} {onclick}>
 		<span class="flex-auto">{text}</span>
 		<span class="badge">
-			<!-- {@render icon()} -->
 			<Icon />
 		</span>
-	</a>
+	</a> -->
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+	<!-- svelte-ignore a11y_interactive_supports_focus -->
+	<div class="flex cursor-pointer flex-row p-4 hover:bg-primary-600" {onclick} role="button">
+		<div class="grow">{text}</div>
+		<div><Icon /></div>
+	</div>
 </li>
