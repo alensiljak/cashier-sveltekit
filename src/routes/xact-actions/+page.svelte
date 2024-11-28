@@ -6,6 +6,7 @@
 	import db from '$lib/data/db';
 	import { xact } from '$lib/data/mainStore';
 	import { Xact } from '$lib/data/model';
+	import appService from '$lib/services/appService';
 	import Notifier from '$lib/utils/notifier';
 	import type { ModalSettings } from '@skeletonlabs/skeleton';
 	import { getModalStore } from '@skeletonlabs/skeleton';
@@ -18,6 +19,16 @@
 	onMount(async () => {
 		// console.log($xact.payee)
 	});
+
+	async function onCopyClicked() {
+		// get a journal version
+		const text = await appService.translateToLedger($xact);
+
+		// copy to clipboard
+		await navigator.clipboard.writeText(text);
+
+		Notifier.success('Transaction copied to clipboard');
+	}
 
 	async function onDeleteClicked() {
 		// check xact
@@ -49,9 +60,9 @@
 		history.back();
 	}
 
-    async function onEditClicked() {
-        await goto('/tx')
-    }
+	async function onEditClicked() {
+		await goto('/tx');
+	}
 </script>
 
 <Toolbar title="Transaction Actions" />
@@ -64,7 +75,7 @@
 		<SquareButton text="Edit" Icon={PenSquareIcon} colour="tertiary" onclick={onEditClicked} />
 		<SquareButton text="Duplicate" Icon={CopyIcon} colour="primary" />
 		<SquareButton text="Schedule" Icon={CalendarClockIcon} colour="tertiary" />
-		<SquareButton text="Copy Ledger" Icon={CopyIcon} colour="primary" />
+		<SquareButton text="Copy Ledger" Icon={CopyIcon} colour="primary" onclick={onCopyClicked} />
 		<SquareButton text="Delete" Icon={TrashIcon} colour="secondary" onclick={onDeleteClicked} />
 	</div>
 </main>
