@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
 	import SearchToolbar from '$lib/components/SearchToolbar.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import CashierDAL from '$lib/data/dal';
