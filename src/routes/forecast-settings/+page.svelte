@@ -62,8 +62,8 @@
 	}
 
 	async function saveSettings() {
-		settings.set(SettingKeys.forecastAccounts, accountNames);
-		settings.set(SettingKeys.forecastDays, days);
+		await settings.set(SettingKeys.forecastAccounts, accountNames);
+		await settings.set(SettingKeys.forecastDays, days);
 	}
 </script>
 
