@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { xact } from '$lib/data/mainStore';
-	import type { Posting } from '$lib/data/model';
 	import { onMount } from 'svelte';
 	import type { EventHandler } from 'svelte/elements';
 
@@ -16,6 +15,8 @@
 		onAccountClicked,
 		onAmountChanged
 	}: Props = $props();
+
+	let amountInput: HTMLInputElement;
 
 	onMount(() => {
 		// bind to the Posting from the store.
@@ -54,8 +55,10 @@
 		type="number"
 		class="w=2/4 input text-right"
 		bind:value={$xact.postings[index].amount}
+		bind:this={amountInput}
 		oninput={() => updateAmount($xact.postings[index].amount as number)}
 		onchange={onAmountChanged}
+		onfocus={() => amountInput.select()}
 	/>
 	<input
 		title="Currency"
