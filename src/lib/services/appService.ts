@@ -18,6 +18,7 @@ import { settings, SettingKeys } from '$lib/settings'
 // import { TransactionParser } from '$lib/utils/transactionParser'
 import { TransactionAugmenter } from '$lib/utils/transactionAugmenter'
 import { AccountService } from '$lib/services/accountsService'
+import { HomeCardNames } from '$lib/enums'
 
 class AppService {
   /**
@@ -124,6 +125,20 @@ class AppService {
     return output
   }
 
+  async getVisibleCards(): Promise<string[]> {
+    let visibleCardNames: string[] = await settings.get(SettingKeys.visibleCards);
+    if (!visibleCardNames) {
+      // create the default cards list here
+      visibleCardNames = [
+        HomeCardNames.FAVOURITES,
+        HomeCardNames.JOURNAL,
+        HomeCardNames.SCHEDULED,
+        HomeCardNames.SYNC,
+        HomeCardNames.FORECAST
+      ];
+    }
+    return visibleCardNames
+  }
   /**
    * Load data from a file.
    * @param {FileInfo} fileInfo The file info from the input control.
