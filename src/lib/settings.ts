@@ -31,6 +31,8 @@ export const SettingKeys = {
   assetAllocationDefinition: 'aa.definition',
   currency: 'currency',
   favouriteAccounts: 'favouriteAccounts',
+  forecastAccounts: 'forecast.accounts',
+  forecastDays: 'forecast.days',
   dbInitialized: 'dbInitialized', // Marks that the db has been initialized
   pCloudToken: 'pCloudToken',
   syncServerUrl: 'syncServerUrl',
