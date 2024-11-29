@@ -19,11 +19,8 @@
 		// load card names
 		let cardNames = await settings.get(SettingKeys.visibleCards);
 		cardNames.forEach((name: string, i: string) => {
-			console.debug(i);
 			items.push({ id: i.toString(), name: name });
 		});
-
-		console.debug(items);
 	});
 
 	/**
@@ -36,8 +33,6 @@
 		const { draggedItem, targetContainer } = state;
 		const dragIndex = items.findIndex((item: Item) => item.id === draggedItem.id);
 		const dropIndex = parseInt(targetContainer ?? '0');
-
-		console.debug(dragIndex, dropIndex);
 
 		if (dragIndex !== -1 && !isNaN(dropIndex)) {
 			const [item] = items.splice(dragIndex, 1);
