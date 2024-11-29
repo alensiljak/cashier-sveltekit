@@ -10,24 +10,45 @@
 	import SyncCard from '$lib/components/SyncCard.svelte';
 	import ForecastCard from '$lib/components/ForecastCard.svelte';
 	import ScheduledXactsCard from '$lib/components/ScheduledXactsCard.svelte';
-	import { onMount } from 'svelte';
+	import { onMount, type Component } from 'svelte';
 	import Fab from '$lib/components/FAB.svelte';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
+	import { CardNames, SettingKeys, settings } from '$lib/settings';
 
-	let cards: Array<any> = [];
-	// let sortedCards = $derived(cards.sort((a, b) => a.order - b.order))
+	let cards: Array<Component> = $state([]);
+	let cardsOrder = $state([]);
 
-	onMount(() => {
+	onMount(async () => {
 		// display the cards ordered.
-		cards = [
-			{ card: SyncCard, order: 2 },
-			{ card: FavouritesCard, order: 1 },
-			{ card: ForecastCard, order: 3 },
-			{ card: ScheduledXactsCard, order: 5 },
-			{ card: JournalCard, order: 4 }
-		];
-		// todo: Get the array of names (ordered) and sort.
+		await loadCardList();
 	});
+
+	async function loadCardList() {
+		cardsOrder = await settings.get(SettingKeys.visibleCards);
+		cardsOrder.forEach((name: string) => {
+			let card;
+			switch (name) {
+				case CardNames.FavouritesCard:
+					card = FavouritesCard;
+					break;
+				case CardNames.ForecastCard:
+					card = ForecastCard;
+					break;
+				case CardNames.JournalCard:
+					card = JournalCard;
+					break;
+				case CardNames.ScheduledXactCard:
+					card = ScheduledXactsCard;
+					break;
+				case CardNames.SyncCard:
+					card = SyncCard;
+					break;
+			}
+			if (card) {
+				cards.push(card);
+			}
+		});
+	}
 
 	async function onFab() {
 		// create a new transaction in the app store
@@ -47,11 +68,8 @@
 <!-- Main -->
 <main class="container mx-auto space-y-2 px-1 py-1 lg:max-w-screen-sm">
 	<!-- Cards are displayed dynamically, in the selected order. -->
-	{#each cards as { card }}
-		{@render card()}
-		<!-- {@const SvelteComponent = card}
-		<SvelteComponent /> -->
-		<!-- <svelte:component this={card} /> -->
+	{#each cards as Card}
+		 <Card></Card>
 	{/each}
 
 	<!-- FAB -->
