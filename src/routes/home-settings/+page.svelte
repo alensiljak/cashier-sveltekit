@@ -68,11 +68,7 @@
 	}
 </script>
 
-<Toolbar title="Home Settings">
-	{#snippet menuItems()}
-		<ToolbarMenuItem text="Reorder Cards" targetNav="/home-reorder" />
-	{/snippet}
-</Toolbar>
+<Toolbar title="Home Settings" />
 
 <Fab Icon={CheckIcon} onclick={onFabClicked} />
 

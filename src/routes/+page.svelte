@@ -1,7 +1,7 @@
 <script lang="ts">
 	import GlossToolbar from '$lib/components/gloss-toolbar.svelte';
 	import JournalCard from '$lib/components/JournalCard.svelte';
-	import { PlusIcon, SettingsIcon } from 'lucide-svelte';
+	import { ArrowDownUpIcon, PlusIcon, SettingsIcon } from 'lucide-svelte';
 	import Toolbar from '../lib/components/Toolbar.svelte';
 	import { goto } from '$app/navigation';
 	import { xact } from '$lib/data/mainStore';
@@ -62,7 +62,8 @@
 <Toolbar>
 	{#snippet menuItems()}
 		<ToolbarMenuItem text="Home Settings" Icon={SettingsIcon} targetNav="/home-settings" />
-	{/snippet}
+		<ToolbarMenuItem text="Reorder Cards" targetNav="/home-reorder" Icon={ArrowDownUpIcon} />
+		{/snippet}
 </Toolbar>
 
 <!-- Main -->
