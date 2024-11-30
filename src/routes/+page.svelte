@@ -14,6 +14,7 @@
 	import Fab from '$lib/components/FAB.svelte';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import { CardNames, SettingKeys, settings } from '$lib/settings';
+	import appService from '$lib/services/appService';
 
 	let cards: Array<Component> = $state([]);
 	let cardsOrder = $state([]);
@@ -24,7 +25,8 @@
 	});
 
 	async function loadCardList() {
-		cardsOrder = await settings.get(SettingKeys.visibleCards);
+		let cardsOrder = await appService.getVisibleCards();
+
 		cardsOrder.forEach((name: string) => {
 			let card;
 			switch (name) {

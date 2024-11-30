@@ -83,3 +83,13 @@
 	</div>
 </center>
 </section>
+
+<style>
+	:global(.dragging) {
+		@apply opacity-50 shadow-lg ring-2 ring-secondary-400;
+	}
+
+	:global(.drag-over) {
+		@apply bg-tertiary-50;
+	}
+</style>
