@@ -22,13 +22,18 @@ const config: UserConfig = defineConfig({
 				config: true,
 			},
 			manifest: {
+				"id": './',
 				"name": "Cashier",
 				"short_name": "cashier",
-				"start_url": '/',
+  				"description": "Mobile app for Ledger-cli",
+				"categories": ['personal finance'],
+				"start_url": './',
+				"orientation": "portrait",
 				"theme_color": "#076461",
 				"background_color": "#000000",
 				"display": 'standalone',
 				"scope": '/',
+				"prefer_related_applications": false,
 				"icons": [
 					{
 						"src": "icons/icon-16.png",
@@ -94,8 +99,14 @@ const config: UserConfig = defineConfig({
 						"src": "icons/icon-512.png",
 						"sizes": "512x512",
 						"type": "image/png",
-						purpose: 'any maskable',
-					}
+						purpose: 'any',
+					},
+					{
+						"src": "icons/maskable-icon-512.png",
+						"sizes": "512x512",
+						"type": "image/png",
+						"purpose": "maskable"
+					  }
 				]
 			},
 			injectManifest: {

@@ -1,13 +1,16 @@
 {
+  "id": "/",
   "name": "Cashier",
   "short_name": "cashier",
   "description": "Mobile app for Ledger-cli",
+  "categories": ["personal finance"],
   "start_url": "/index.html",
   "orientation": "portrait",
   "display": "standalone",
-  "background_color": "#000000",
   "theme_color": "#076461",
+  "background_color": "#000000",
   "scope": "/",
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "icons/icon-16.png",
@@ -52,7 +55,14 @@
     {
       "src": "icons/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/maskable-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
