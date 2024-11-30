@@ -4,7 +4,7 @@
   "short_name": "cashier",
   "description": "Mobile app for Ledger-cli",
   "categories": ["personal finance"],
-  "start_url": "/index.html",
+  "start_url": "/",
   "orientation": "portrait",
   "display": "standalone",
   "theme_color": "#076461",
