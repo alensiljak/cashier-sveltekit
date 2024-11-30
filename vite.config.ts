@@ -1,22 +1,34 @@
 import { sveltekit } from '@sveltejs/kit/vite';
+import type { UserConfig } from 'vite';
 //import { VitePWA } from 'vite-plugin-pwa'
 import { SvelteKitPWA } from '@vite-pwa/sveltekit';
 import { defineConfig } from 'vite';
 
-/** @type {import('vite').UserConfig} */
-const config = defineConfig({
+const config: UserConfig = defineConfig({
+	build: {
+		sourcemap: process.env.SOURCE_MAP === 'true',
+	},
 	plugins: [
 		sveltekit(),
 		SvelteKitPWA({
+			strategies: 'generateSW',
 			// registerType: 'prompt',  // this is the default.
+			mode: 'development',
 			injectRegister: false,
+			scope: '/',
+			base: '/',
+			selfDestroying: process.env.SELF_DESTROYING_SW === 'true',
+			pwaAssets: {
+				config: true,
+			},
 			manifest: {
 				"name": "Cashier",
 				"short_name": "cashier",
-				start_url: '/index.html',
+				"start_url": '/',
 				"theme_color": "#076461",
 				"background_color": "#000000",
-				display: 'standalone',
+				"display": 'standalone',
+				"scope": '/',
 				"icons": [
 					{
 						"src": "icons/icon-16.png",
@@ -86,11 +98,20 @@ const config = defineConfig({
 					}
 				]
 			},
+			injectManifest: {
+				globPatterns: ['client/**/*.{js,css,ico,png,svg,webp,woff,woff2}']
+			},
 			workbox: {
 				globPatterns: [
 					'client/**/*.{js,css,ico,png,svg,txt,webp,webmanifest}',
 					'prerendered/**/*.html'
 				]
+			},
+			devOptions: {
+				enabled: process.env.SW_DEV === 'true',
+				suppressWarnings: process.env.SUPPRESS_WARNING === 'true',
+				type: 'module',
+				navigateFallback: '/index.html',
 			},
 			kit: {
 				includeVersionFile: true
@@ -98,9 +119,9 @@ const config = defineConfig({
 		}),
 		//VitePWA({ registerType: 'autoUpdate' })
 	],
-	test: {
-		include: ['src/**/*.{test,spec}.{js,ts}']
-	}
+	// test: {
+	// 	include: ['src/**/*.{test,spec}.{js,ts}']
+	// }
 });
 
 export default config;

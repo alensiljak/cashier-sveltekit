@@ -1,11 +1,13 @@
 {
   "name": "Cashier",
   "short_name": "cashier",
+  "description": "Mobile app for Ledger-cli",
   "start_url": "/index.html",
   "orientation": "portrait",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#076461",
+  "scope": "/",
   "icons": [
     {
       "src": "icons/icon-16.png",

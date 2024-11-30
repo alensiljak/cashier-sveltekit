@@ -68,6 +68,8 @@
 
 <svelte:head>
 	<title>Cashier</title>
+
+	<!-- PWA -->
 	{@html webManifest}
 
 	{#if pwaAssetsHead.themeColor}

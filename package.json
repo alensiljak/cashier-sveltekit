@@ -59,5 +59,6 @@
 		"workbox-window": "^7.3.0"
 	},
 	"dependencies": {
+		"@vite-pwa/assets-generator": "^0.2.6"
 	}
 }

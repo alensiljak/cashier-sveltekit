@@ -13,7 +13,7 @@
 	import { onMount, type Component } from 'svelte';
 	import Fab from '$lib/components/FAB.svelte';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
-	import { CardNames, SettingKeys, settings } from '$lib/settings';
+	import { CardNames } from '$lib/settings';
 	import appService from '$lib/services/appService';
 
 	let cards: Array<Component> = $state([]);
