@@ -70,6 +70,7 @@
 	<title>Cashier</title>
 
 	<!-- PWA -->
+	<base href="/" />
 	{@html webManifest}
 
 	{#if pwaAssetsHead.themeColor}
