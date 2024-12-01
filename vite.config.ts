@@ -27,7 +27,7 @@ const config: UserConfig = defineConfig({
 				"short_name": "cashier",
   				"description": "Mobile app for Ledger-cli",
 				"categories": ['personal finance'],
-				"start_url": '/index.html',
+				"start_url": '/',
 				"orientation": "portrait",
 				"theme_color": "#076461",
 				"background_color": "#000000",
