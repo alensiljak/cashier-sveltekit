@@ -71,11 +71,10 @@
 
 	<!-- PWA -->
 	<base href="/" />
-	{@html webManifest}
-
-	{#if pwaAssetsHead.themeColor}
+	<!-- {@html webManifest} -->
+	<!-- {#if pwaAssetsHead.themeColor}
 		<meta name="theme-color" content={pwaAssetsHead.themeColor.content} />
-	{/if}
+	{/if} -->
 	{#each pwaAssetsHead.links as link}
 		<link {...link} />
 	{/each}

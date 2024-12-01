@@ -52,3 +52,5 @@ The manifest needs to be included in the `<head>`, so that the app can be instal
 
 ## Tips
 Install "@vite-pwa/assets-generator".
+
+To get the prompt in mobile browsers, add the items manually (see app.html). Adding them through svelte:head does not seem to work.
