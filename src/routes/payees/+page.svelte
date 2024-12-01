@@ -5,13 +5,18 @@
 	import { onMount } from 'svelte';
 	import { selectionMetadata } from '$lib/data/mainStore';
 	import Fab from '$lib/components/FAB.svelte';
-	import { CheckIcon, SearchIcon } from 'lucide-svelte';
+	import { CheckIcon } from 'lucide-svelte';
 	import SearchToolbar from '$lib/components/SearchToolbar.svelte';
 	import { ListSearch } from '$lib/utils/ListSearch';
+	import Notifier from '$lib/utils/notifier';
+
+	Notifier.init()
 
 	let payees: Array<Payee> = [];
-	let filteredPayees: Array<Payee> = [];
-	let isInSelectionMode = false;
+	let filteredPayees: Array<Payee> = $state([]);
+	let isInSelectionMode = $state(false);
+	let searchString = $state('')
+	let showFab = $derived(isInSelectionMode && searchString)
 
 	onMount(async () => {
 		await loadData();
@@ -30,12 +35,13 @@
 	 * Accept the search term as the Payee.
 	 */
 	function onFabClick() {
-		// if(string.IsNullOrWhiteSpace(searchTerm))
-		// {
-		//     Notification.Warning("The search term is empty!");
-		//     return;
-		// }
-		// await onPayeeSelected(searchTerm);
+		if(!searchString)
+		{
+		    Notifier.warn("The search term is empty!");
+		    return;
+		}
+
+		onPayeeSelected(searchString);
 	}
 
 	function onPayeeSelected(name: string) {
@@ -61,6 +67,9 @@
 	 * @param value The search term
 	 */
 	async function onSearch(value: string) {
+		// keep the search string, for showing FAB.
+		searchString = value;
+
 		if (value) {
 			// Apply filter
 			let search = new ListSearch();
@@ -74,9 +83,11 @@
 	}
 </script>
 
-<!-- <Fab Icon={CheckIcon} onclick={onFabClick} /> -->
+{#if showFab}
+<Fab Icon={CheckIcon} onclick={onFabClick} />
+{/if}
 
-<main class="flex h-screen flex-col">
+<section class="flex h-screen flex-col">
 	<Toolbar title="Payees" />
 	<!-- search toolbar -->
 	<SearchToolbar focus {onSearch} />
@@ -94,4 +105,4 @@
 			</div>
 		{/each}
 	</div>
-</main>
+</section>
