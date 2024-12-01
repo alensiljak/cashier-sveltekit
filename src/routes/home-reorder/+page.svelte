@@ -2,12 +2,11 @@
 	import Fab from '$lib/components/FAB.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { SettingKeys, settings } from '$lib/settings';
-	import { CheckIcon } from 'lucide-svelte';
+	import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from 'lucide-svelte';
 	import { onMount } from 'svelte';
-	import { flip } from 'svelte/animate';
-	import { fade } from 'svelte/transition';
 	import appService from '$lib/services/appService';
-	import DragListReorder from '$lib/components/DragListReorder.svelte';
+
+	let MAX_ITEMS: number = 0;
 
 	interface Item {
 		id: string;
@@ -21,7 +20,33 @@
 		cardNames.forEach((name: string, index: number) => {
 			items.push({ id: index.toString(), name: name });
 		});
+
+		MAX_ITEMS = cardNames.length;
 	});
+
+	async function onItemDownClicked(index: number) {
+		// console.log('item down:', index);
+
+		if (index === MAX_ITEMS - 1) {
+			console.log('already at bottom');
+			return;
+		}
+
+		// Swap the item at the given index with the item above it
+		[items[index + 1], items[index]] = [items[index], items[index + 1]];
+	}
+
+	async function onItemUpClicked(index: number) {
+		// console.log('item up:', index);
+
+		if (index === 0) {
+			console.log('already at top');
+			return;
+		}
+
+		// Swap the item at the given index with the item above it
+		[items[index - 1], items[index]] = [items[index], items[index - 1]];
+	}
 
 	async function onFabClicked() {
 		// save settings
@@ -36,16 +61,29 @@
 <Toolbar title="Reorder Cards" />
 <Fab Icon={CheckIcon} onclick={onFabClicked} />
 
-<section class="p-1">
-	<center>
-		<div class="items-center">
-			{#each items as item, index (item.id)}
-				<div>
-					{item.name}
-				</div>
-			{/each}
+<section class="container space-y-2 p-1">
+	{#each items as item, index (item.id)}
+		<div
+			class="flex h-14 flex-row items-center space-x-3 rounded-lg border
+		border-tertiary-500/25 px-2"
+		>
+			<div class="grow">
+				<span>{item.name}</span>
+			</div>
+			<button
+				class="variant-outline-tertiary btn-icon text-tertiary-500"
+				onclick={() => onItemDownClicked(index)}
+			>
+				<ChevronDownIcon /></button
+			>
+			<button
+				class="variant-outline-tertiary btn btn-icon text-tertiary-500"
+				onclick={() => onItemUpClicked(index)}
+			>
+				<ChevronUpIcon /></button
+			>
 		</div>
-	</center>
+	{/each}
 
-	<DragListReorder />
+	<!-- <DragListReorder /> -->
 </section>
