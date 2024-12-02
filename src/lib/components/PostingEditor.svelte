@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { xact } from '$lib/data/mainStore';
+	import { DiffIcon } from 'lucide-svelte';
 	import { onMount } from 'svelte';
 	import type { EventHandler } from 'svelte/elements';
 
@@ -24,6 +25,14 @@
 		// console.log(posting)
 	});
 
+	/**
+	 * Change amount sign.
+	 */
+	function changeSign() {
+		let amount = $xact.postings[index].amount || 0
+		$xact.postings[index].amount = amount * (-1)
+	}
+
 	function updateAmount(value: number) {
 		$xact.postings[index].amount = value
 	}
@@ -46,7 +55,9 @@
 <div class="flex flex-row">
 	<!-- amount sign -->
 	<div class="w-1/4 text-center">
-		<button class="variant-outline-surface btn">+/-</button>
+		<button type="button" class="btn variant-outline-surface" onclick={changeSign}>
+			<DiffIcon />
+		</button>
 	</div>
 
 	<input
