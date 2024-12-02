@@ -37,7 +37,7 @@ export class Payee {
 }
 
 export class Posting {
-  id?: number
+  // id?: number
   // transactionId: number | undefined
   account: string
   amount?: number
