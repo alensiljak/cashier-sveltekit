@@ -23,7 +23,9 @@ export function getXactAmountColour(xact: Xact, balance: Money) {
     return colour
 }
 
-export function getMoneyColour(money: Money) {
+export function getMoneyColour(money: Money): string | undefined {
+  if(!money) return;
+
   return getAmountColour(money.amount)
 }
 

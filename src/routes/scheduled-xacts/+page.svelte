@@ -5,22 +5,34 @@
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import { ISODATEFORMAT } from '$lib/constants';
 	import db from '$lib/data/db';
-	import type { ScheduledTransaction } from '$lib/data/model';
+	import type { Money, ScheduledTransaction, Xact } from '$lib/data/model';
+	import { getMoneyColour } from '$lib/utils/formatter';
 	import { ListSearch } from '$lib/utils/ListSearch';
+	import Notifier from '$lib/utils/notifier';
+	import { XactAugmenter } from '$lib/utils/xactAugmenter';
 	import { CalendarIcon, PackageIcon, PackageOpenIcon, PlusIcon } from 'lucide-svelte';
 	import moment from 'moment';
 	import { onMount } from 'svelte';
 
+	Notifier.init();
+
+	const today = moment().format(ISODATEFORMAT);
+
 	let allItems: ScheduledTransaction[] = $state([]);
 	let filteredList: ScheduledTransaction[] = $state([]);
 	let currentDate = null;
-	const today = moment().format(ISODATEFORMAT);
+	let amounts: Money[] = $state([]);
 
 	onMount(async () => {
 		await loadData();
 
-		// await calculateAmounts()
+		await calculateAmounts();
 	});
+
+	function calculateAmounts() {
+		let xacts = filteredList.map((scx) => scx.transaction);
+		amounts = XactAugmenter.calculateXactAmounts(xacts as Xact[]);
+	}
 
 	async function loadData() {
 		let sorted = await db.scheduled
@@ -50,6 +62,8 @@
 		//   mainStore.newScheduledTx()
 		//   mainStore.newTx()
 		//   router.push({ name: 'scheduledtxeditor' })
+
+		Notifier.neutral('not implemented');
 	}
 
 	async function onRestoreClick() {}
@@ -68,7 +82,7 @@
 	}
 </script>
 
-<div class="flex h-screen flex-col">
+<article class="flex h-screen flex-col">
 	<Toolbar title="Scheduled Transactions">
 		{#snippet menuItems()}
 			<ToolbarMenuItem Icon={PackageIcon} text="Backup" />
@@ -81,22 +95,28 @@
 
 	<Fab onclick={onFabClicked} Icon={PlusIcon} />
 
-	<main class="p-1 grow overflow-auto">
+	<section class="grow overflow-auto p-1">
 		{#if filteredList.length === 0}
 			<p>No scheduled transactions found</p>
 		{:else}
 			<!-- list -->
-			<div>
+			<div class="space-y-2">
 				{#each filteredList as scx, i}
-					{#if scx.nextDate !== currentDate}
-						{@const currentDate = scx.nextDate}
-						<CalendarIcon />
-						<p>{scx.nextDate}</p>
-					{/if}
+					<div class="flex flex-row">
+						{#if scx.nextDate !== currentDate}
+							{@const currentDate = scx.nextDate}
+							<CalendarIcon />
+							<p>{scx.nextDate}</p>
+						{/if}
 
-					<p>{scx.transaction?.payee}</p>
+						<p>{scx.transaction?.payee}</p>
+						<div class={`${getMoneyColour(amounts[i])}`}>
+							{amounts[i]?.amount}
+							{amounts[i]?.currency}
+						</div>
+					</div>
 				{/each}
 			</div>
 		{/if}
-	</main>
-</div>
+	</section>
+</article>
