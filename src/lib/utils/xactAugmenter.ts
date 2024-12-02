@@ -153,7 +153,7 @@ export class XactAugmenter {
    * @param {Array<Xact>} txs
    * @returns {Array<Money>} An array of balance records that matches the transactions.
    */
-  static calculateTxAmounts(xacts: Xact[]): Money[] {
+  static calculateXactAmounts(xacts: Xact[]): Money[] {
     // get Amounts
     XactAugmenter.calculateEmptyPostingAmounts(xacts)
 
@@ -197,7 +197,7 @@ export class XactAugmenter {
         balance.currency = posting.currency
       }
     } else if (postings.length === 2) {
-      if(!postings[0].amount) {
+      if (!postings[0].amount) {
         return balance
       }
 

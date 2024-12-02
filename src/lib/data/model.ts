@@ -69,12 +69,16 @@ export class Price {
 
 export class ScheduledTransaction {
   id?: number
-  nextDate: unknown
+  nextDate: string
   transaction?: Xact
   period: unknown
   count?: number
   endDate: unknown
   remarks: unknown
+
+  constructor() {
+    this.nextDate = ''
+  }
 }
 
 export class Xact {

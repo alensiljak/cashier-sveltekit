@@ -35,7 +35,7 @@
 		xacts = await db.xacts.orderBy('date').reverse().limit(5).toArray();
 
 		try {
-			const amounts = XactAugmenter.calculateTxAmounts(xacts);
+			const amounts = XactAugmenter.calculateXactAmounts(xacts);
 			xactBalances.push(...amounts);
 		} catch (error: any) {
 			console.error(error);
