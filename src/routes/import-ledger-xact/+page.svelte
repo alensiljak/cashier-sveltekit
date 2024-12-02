@@ -24,11 +24,8 @@
 
 		// parse the transaction
 		let x = parseXact(inputText);
-		console.log(x);
-		return;
 		// set to store
 		xact.set(x);
-
 		// show the editor for any modifications
 		goto('/tx');
 	}
