@@ -8,7 +8,7 @@
 	import { Xact } from '$lib/data/model';
 	import Notifier from '$lib/utils/notifier';
 	import { getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
-	import { FileDownIcon, PlusIcon, TrashIcon } from 'lucide-svelte';
+	import { FileDownIcon, ImportIcon, PlusIcon, TrashIcon } from 'lucide-svelte';
 	import { onMount } from 'svelte';
 	import { xact } from '$lib/data/mainStore';
 
@@ -75,6 +75,7 @@
 		<ToolbarMenuItem text="Export" Icon={FileDownIcon} onclick={onExportClick} />
 		<!-- Delete All -->
 		<ToolbarMenuItem text="Delete All" onclick={onDeleteAllClicked} Icon={TrashIcon} />
+		<ToolbarMenuItem text="Import Ledger item" Icon={ImportIcon} targetNav="/import-ledger-xact" />
 	{/snippet}
 </Toolbar>
 

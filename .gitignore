@@ -22,3 +22,5 @@ vite.config.ts.timestamp-*
 
 # Local Netlify folder
 .netlify
+# Tests
+test-results

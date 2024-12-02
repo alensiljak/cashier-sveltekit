@@ -25,3 +25,11 @@ export class TransactionParser {
     return result
   }
 }
+
+export function parseXact(input: string) {
+  const parts = input.split('\n');
+  console.log(parts);
+  
+  // date, payee
+  // postings
+}

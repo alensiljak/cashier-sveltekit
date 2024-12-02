@@ -130,9 +130,15 @@ const config: UserConfig = defineConfig({
 		}),
 		//VitePWA({ registerType: 'autoUpdate' })
 	],
-	// test: {
-	// 	include: ['src/**/*.{test,spec}.{js,ts}']
-	// }
+	test: {
+		environment: 'jsdom',
+		globals: true,
+		// include: ['src/**/*.{test,spec}.{js,ts}']
+		// include: ['tests/**/*.{test,spec}.{js,ts}']
+		// include: ['tests/**/*.{test,spec}.{js,ts}']
+		include: ['tests/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+		exclude: ['tests/ui/**/*'],
+	}
 });
 
 export default config;
