@@ -5,7 +5,7 @@
 	import { onMount } from 'svelte';
 	import db from '$lib/data/db';
 	import { Money, type Xact } from '$lib/data/model';
-	import { TransactionAugmenter } from '$lib/utils/transactionAugmenter';
+	import { XactAugmenter } from '$lib/utils/xactAugmenter';
 	import Notifier from '$lib/utils/notifier';
 	import { getXactAmountColour } from '$lib/utils/formatter';
 
@@ -35,7 +35,7 @@
 		xacts = await db.xacts.orderBy('date').reverse().limit(5).toArray();
 
 		try {
-			const amounts = TransactionAugmenter.calculateTxAmounts(xacts);
+			const amounts = XactAugmenter.calculateTxAmounts(xacts);
 			xactBalances.push(...amounts);
 		} catch (error: any) {
 			console.error(error);

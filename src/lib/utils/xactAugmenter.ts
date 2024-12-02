@@ -8,7 +8,7 @@ import { SettingKeys, settings } from '$lib/settings'
  * Modifies the transaction records in-memory to create the missing parts,
  * like the amount on a missing posting.
  */
-export class TransactionAugmenter {
+export class XactAugmenter {
   constructor() { }
 
   /**
@@ -112,7 +112,7 @@ export class TransactionAugmenter {
       //
       const txs = await appService.loadAccountTransactionsFor(account.name)
 
-      TransactionAugmenter.calculateEmptyPostingAmounts(txs)
+      XactAugmenter.calculateEmptyPostingAmounts(txs)
       const postings = TransactionParser.extractPostingsFor(txs, account.name)
 
       for (let j = 0; j < postings.length; j++) {
@@ -155,7 +155,7 @@ export class TransactionAugmenter {
    */
   static calculateTxAmounts(xacts: Xact[]): Money[] {
     // get Amounts
-    TransactionAugmenter.calculateEmptyPostingAmounts(xacts)
+    XactAugmenter.calculateEmptyPostingAmounts(xacts)
 
     const result: Money[] = []
 

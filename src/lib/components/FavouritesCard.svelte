@@ -5,7 +5,7 @@
 	import type { Account } from '$lib/data/model';
 	import { onMount } from 'svelte';
 	import { SettingKeys, settings } from '$lib/settings';
-	import { TransactionAugmenter } from '$lib/utils/transactionAugmenter';
+	import { XactAugmenter } from '$lib/utils/xactAugmenter';
 	import appService from '$lib/services/appService';
 	import Notifier from '$lib/utils/notifier';
 	import { AccountService } from '$lib/services/accountsService';
@@ -38,7 +38,7 @@
 			favArray = favArray.slice(0, 5);
 
 			// adjust the balance
-			const augmenter = new TransactionAugmenter();
+			const augmenter = new XactAugmenter();
 			favArray = await augmenter.adjustAccountBalances(favArray);
 
 			accounts = favArray;

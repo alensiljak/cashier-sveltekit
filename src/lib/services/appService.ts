@@ -10,13 +10,10 @@ import {
   LastXact,
   Payee,
   Posting,
-  // ScheduledTransaction,
   Xact,
 } from '$lib/data/model'
 import { settings, SettingKeys } from '$lib/settings'
-// import { toRaw } from 'vue'
-// import { TransactionParser } from '$lib/utils/transactionParser'
-import { TransactionAugmenter } from '$lib/utils/transactionAugmenter'
+import { XactAugmenter } from '$lib/utils/xactAugmenter'
 import { AccountService } from '$lib/services/accountsService'
 import { HomeCardNames } from '$lib/enums'
 
@@ -27,10 +24,10 @@ class AppService {
    */
   clearIds(tx: Xact) {
     delete tx.id
-    tx.postings.forEach((posting: Posting) => {
-      delete posting.id
-      // delete posting.transactionId
-    })
+    // tx.postings.forEach((posting: Posting) => {
+    //   delete posting.id
+    //   // delete posting.transactionId
+    // })
     return tx
   }
 
@@ -445,7 +442,7 @@ class AppService {
     //   .flat()
     //   .filter((p: Posting) => p.account == accountName)
 
-    txs = TransactionAugmenter.calculateEmptyPostingAmounts(txs)
+    txs = XactAugmenter.calculateEmptyPostingAmounts(txs)
 
     return txs
   }

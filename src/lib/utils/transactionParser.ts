@@ -3,7 +3,6 @@
  * Used for calculation of the empty postings
  */
 import { Posting, Xact } from '$lib/data/model'
-// import { TransactionAugmenter } from '$lib/transactionAugmenter'
 
 export class TransactionParser {
   /**
