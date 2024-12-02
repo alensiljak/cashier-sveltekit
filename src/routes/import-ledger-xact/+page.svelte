@@ -1,32 +1,52 @@
-<script>
-	import { goto } from '$app/navigation';
+<script lang="ts">
+	import { afterNavigate, goto } from '$app/navigation';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { xact } from '$lib/data/mainStore';
-	import appService from '$lib/services/appService';
+	import Notifier from '$lib/utils/notifier';
+	import { parseXact } from '$lib/utils/transactionParser';
 	import { ImportIcon } from 'lucide-svelte';
+	import { onMount } from 'svelte';
+
+    Notifier.init()
+
+	let inputText = $state('');
+    let inputControl: HTMLTextAreaElement;
+
+    onMount(() => {
+        inputControl.focus()
+    })
 
 	async function onImportClicked() {
-        // parse the transaction
-        
+        if(!inputText) {
+            Notifier.warn('Paste a transaction record into the input field first')
+            return;
+        }
 
-        // set to store
-        // $xact = 
+		// parse the transaction
+		let x = parseXact(inputText);
+		console.log(x);
+		return;
+		// set to store
+		xact.set(x);
 
-        // show the editor for any modifications
-        goto('/tx')
-    }
+		// show the editor for any modifications
+		goto('/tx');
+	}
 </script>
 
-<Toolbar title="Import Ledger item"></Toolbar>
-<section>
-	<p>Paste a Ledger transaction record below to import it.</p>
+<article class="flex h-screen flex-col">
+	<Toolbar title="Import Ledger item"></Toolbar>
 
-	<textarea></textarea>
+	<section class="h-full p-1 flex flex-col space-y-3">
+		<p>Paste a Ledger transaction record below to import it.</p>
 
-	<center>
-		<button type="button" class="btn variant-filled-primary" onclick={onImportClicked}>
-            <span><ImportIcon /></span>
-            <span>Import</span>
-        </button>
-	</center>
-</section>
+		<textarea class="textarea grow" bind:value={inputText} bind:this={inputControl}></textarea>
+
+		<center class="py-6">
+			<button type="button" class="variant-filled-primary btn" onclick={onImportClicked}>
+				<span><ImportIcon /></span>
+				<span>Import</span>
+			</button>
+		</center>
+	</section>
+</article>

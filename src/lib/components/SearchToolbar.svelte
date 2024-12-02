@@ -2,7 +2,6 @@
 	import { debounceAction } from '$lib/utils/debounce';
 	import { SearchIcon } from 'lucide-svelte';
 	import { onMount } from 'svelte';
-	import type { EventHandler } from 'svelte/elements';
 
 	interface Props {
 		focus: boolean;
