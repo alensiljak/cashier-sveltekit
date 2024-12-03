@@ -21,14 +21,14 @@
 	 * @param i Index of the Xact in the list.
 	 */
 	function getXactColour(i: number) {
-		if(!xactBalances[i].amount) return '';
+		if (!xactBalances[i].amount) return '';
 
-		const xact = xacts[i]
-		const balance = xactBalances[i]
+		const xact = xacts[i];
+		const balance = xactBalances[i];
 
 		const colour = getXactAmountColour(xact, balance);
 
-		return colour
+		return colour;
 	}
 
 	async function loadData() {
@@ -59,19 +59,22 @@
 		{#if xacts.length == 0}
 			<p>The device journal is empty</p>
 		{:else}
-			{#each xacts as xact, index}
-				<div class="flex space-x-2 border-b border-tertiary-200/15 text-sm">
-					<time class="opacity-60">
-						{xact.date}
-					</time>
-					<div class="grow">
-						{xact.payee}
+			<div class="container space-y-1 text-sm">
+				{#each xacts as xact, index}
+					<div class="flex space-x-2 border-b border-tertiary-200/15">
+						<time class="opacity-60">
+							{xact.date}
+						</time>
+						<div class="grow">
+							{xact.payee}
+						</div>
+						<div class={`${getXactColour(index)}`}>
+							{xactBalances[index].amount}
+							{xactBalances[index].currency}
+						</div>
 					</div>
-					<div class={`${getXactColour(index)}`}>
-						{ xactBalances[index].amount } { xactBalances[index].currency }
-					</div>
-				</div>
-			{/each}
+				{/each}
+			</div>
 		{/if}
 	{/snippet}
 	{#snippet footer()}
