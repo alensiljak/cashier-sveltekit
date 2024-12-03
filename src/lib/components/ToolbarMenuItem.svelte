@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import type { MouseEventHandler } from 'svelte/elements';
 
 	// Props
@@ -6,9 +7,20 @@
 		targetNav?: string;
 		text?: string;
 		Icon?: any;
-		onclick?: MouseEventHandler<HTMLElement>;
+		onclick?: () => void;
 	};
-	let { targetNav = '#', text, Icon, onclick }: Props = $props();
+	let { targetNav, text, Icon, onclick }: Props = $props();
+
+	async function onMenuClicked() {
+		if(targetNav) {
+			// navigate to the given destination.
+			await goto(targetNav)
+		}
+
+		if(onclick) {
+			onclick()
+		}
+	}
 </script>
 
 <!--
@@ -17,17 +29,11 @@ Example usage:
 -->
 
 <li class="hover:bg-primary-600">
-	<a href={targetNav} {onclick} data-sveltekit-replacestate={targetNav === '#' || null}>
-		<span class="flex-auto">{text}</span>
+	<button type="button" class="btn flex flex-row w-full"
+		onclick={onMenuClicked}>
+		<span class="grow">{text}</span>
 		<span class="badge">
 			<Icon />
 		</span>
-	</a>
-	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-	<!-- svelte-ignore a11y_interactive_supports_focus -->
-	<!-- <div class="flex cursor-pointer flex-row p-4 hover:bg-primary-600" {onclick} role="button">
-		<div class="grow">{text}</div>
-		<div><Icon /></div>
-	</div> -->
+	</button>
 </li>

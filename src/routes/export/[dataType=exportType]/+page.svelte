@@ -12,7 +12,7 @@
 
 	let output = $state('');
 
-	if (navigator.share) {
+	if (navigator.share !== undefined) {
 		console.log('can share');
 	} else {
 		console.log('native sharing not supported');

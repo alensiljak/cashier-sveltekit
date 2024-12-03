@@ -54,10 +54,10 @@
 					<EllipsisVertical size={20} class="" />
 				</button>
 				<!-- Pop-up Menu -->
-				<div class="list-nav variant-filled-primary w-52 shadow" data-popup="popupClick">
-					<ul>
+				<div class="list-nav variant-filled-primary min-w-52 shadow" data-popup="popupClick">
+					<menu>
 						{@render menuItems?.()}
-					</ul>
+					</menu>
 				</div>
 			{/if}
 		{/snippet}
