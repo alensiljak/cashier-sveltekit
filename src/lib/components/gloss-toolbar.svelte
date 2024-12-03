@@ -3,12 +3,10 @@
 </script>
 
 <div class="toolbar relative flex bg-primary-800 p-2">
-	<button class="btn btn-sm ">
+	<button class="btn btn-sm">
 		<MenuIcon />
 	</button>
-	<h4 class="ml-3 h4 leading-8">
-    My Toolbar
-  </h4>
+	<h4 class="h4 ml-3 leading-8">My Toolbar</h4>
 	<div class="gloss-effect absolute inset-0"></div>
 </div>
 
