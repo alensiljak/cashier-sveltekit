@@ -52,8 +52,9 @@
 	<Toolbar title={`Restore ${itemType}`} />
 
 	<div class="p-1">
-		<p>You can currently restore the backup of Scheduled Transactions</p>
-		<p>Note that this will overwrite all your current records of the same type!</p>
+		<p>You can currently restore the Scheduled Transactions.</p>
+		<p>This will overwrite all your existing records of the same type!</p>
+		<p>Either select a backup file or paste the backup into the text box below.</p>
 
 		<center class="py-6">
 			<FileButton name="files" bind:files button="btn bg-primary-500" on:change={onFileChanged} />
