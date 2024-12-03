@@ -99,27 +99,33 @@
 	}
 </script>
 
-<Toolbar title="Export {dataType}" />
+<article class="flex h-screen flex-col">
+	<Toolbar title="Export {dataType}" />
 
-<main class="p-1">
-	<p>Note: Journal is exported in ledger format, Scheduled Transactions in JSON.</p>
+	<main class="flex h-full flex-col p-1">
+		<p>Note: Journal is exported in ledger format, Scheduled Transactions in JSON.</p>
 
-	<textarea
-		class="textarea mt-3 p-2"
-		rows="20"
-		placeholder="Enter some long form content."
-		bind:value={output}
-	></textarea>
+		<textarea
+			class="textarea mt-3 grow overflow-auto p-2"
+			rows="20"
+			placeholder="Enter some long form content."
+			bind:value={output}
+		></textarea>
 
-	<!-- action buttons -->
-	<div class="flex flex-row justify-center space-x-24 py-3">
-		<!-- copy to clipboard -->
-		<button class="variant-filled-primary btn-icon" onclick={onCopyClick}><CopyIcon /></button>
-		<!-- pCloud Save ?-->
-		<!-- WebShare -->
-		<!-- Download -->
-		<button class="variant-filled-primary btn-icon" onclick={onDownloadClick}
-			><FileDownIcon /></button
-		>
-	</div>
-</main>
+		<!-- action buttons -->
+		<div class="my-3 flex flex-row justify-center space-x-24 py-3">
+			<!-- copy to clipboard -->
+			<button class="variant-filled-primary btn" onclick={onCopyClick}>
+				<CopyIcon />
+				<span>Copy</span>
+			</button>
+			<!-- pCloud Save ?-->
+			<!-- WebShare -->
+			<!-- Download -->
+			<button class="variant-filled-primary btn" onclick={onDownloadClick}>
+				<FileDownIcon />
+				<span>Download</span>
+			</button>
+		</div>
+	</main>
+</article>
