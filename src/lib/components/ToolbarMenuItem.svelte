@@ -31,7 +31,7 @@ Example usage:
 <li class="hover:bg-primary-600">
 	<button type="button" class="btn flex flex-row w-full"
 		onclick={onMenuClicked}>
-		<span class="grow">{text}</span>
+		<span class="grow text-start">{text}</span>
 		<span class="badge">
 			<Icon />
 		</span>
