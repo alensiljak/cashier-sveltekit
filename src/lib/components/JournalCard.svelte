@@ -60,7 +60,10 @@
 			<p>The device journal is empty</p>
 		{:else}
 			{#each xacts as xact, index}
-				<div class="flex space-y-1 border-b border-tertiary-200/15">
+				<div class="flex space-x-2 border-b border-tertiary-200/15 text-sm">
+					<time class="opacity-60">
+						{xact.date}
+					</time>
 					<div class="grow">
 						{xact.payee}
 					</div>
