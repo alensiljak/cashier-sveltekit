@@ -64,15 +64,15 @@
 				{#each scxs as scx, index}
 				<!-- row -->
 				<div class="flex flex-row space-x-2">
-					<span class={`${getDateColour(scx.nextDate)}`}>
+					<time class={`${getDateColour(scx.nextDate)}`}>
 						{scx.nextDate}
-					</span>
-					<span class="grow">
+					</time>
+					<data class="grow">
 						{scx.transaction?.payee}
-					</span>
-					<span class={`${getAmountColour(amounts[index]?.amount)}`}>
+					</data>
+					<data class={`${getAmountColour(amounts[index]?.amount)}`}>
 						{amounts[index]?.amount} {amounts[index]?.currency}
-					</span>
+					</data>
 				</div>
 				{/each}
 			</div>

@@ -106,14 +106,14 @@
 						{#if scx.nextDate !== currentDate}
 							{@const currentDate = scx.nextDate}
 							<CalendarIcon />
-							<p>{scx.nextDate}</p>
+							<time>{scx.nextDate}</time>
 						{/if}
 
-						<p>{scx.transaction?.payee}</p>
-						<div class={`${getMoneyColour(amounts[i])}`}>
+						<data>{scx.transaction?.payee}</data>
+						<data class={`${getMoneyColour(amounts[i])}`}>
 							{amounts[i]?.amount}
 							{amounts[i]?.currency}
-						</div>
+						</data>
 					</div>
 				{/each}
 			</div>
