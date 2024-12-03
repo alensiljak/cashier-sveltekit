@@ -6,7 +6,7 @@
 	interface Props {
 		focus: boolean;
 		onSearch?: (arg0: string) => void;
-	};
+	}
 	let { focus = false, onSearch }: Props = $props();
 
 	let searchField: HTMLInputElement;
@@ -17,19 +17,21 @@
 		}
 	});
 
+	/**
+	 * Triggered when a (debounced) typing has been performed in the input field.
+	 * @param value
+	 */
 	function handleSearch(value: string) {
-		// console.log('Searching for:', value);
-		// Perform your search operation here
-        if (onSearch) {
-            onSearch(value)
-        }
+		if (onSearch) {
+			onSearch(value);
+		}
 	}
 </script>
 
-<div class="bg-primary-500">
+<search class="bg-primary-500">
 	<div
-		class="input-group input-group-divider mx-auto w-5/6 grid-cols-[1fr_auto] rounded-full lg:w-2/5"
-	>
+		class="input-group input-group-divider mx-auto w-5/6 grid-cols-[1fr_auto]
+		rounded-full lg:w-2/5">
 		<input
 			type="search"
 			placeholder="Search..."
@@ -40,4 +42,4 @@
 	</div>
 	<!-- <button class="variant-filled-secondary">Submit</button> -->
 	<!-- <div class="input-group-shim"><SearchIcon /></div> -->
-</div>
+</search>
