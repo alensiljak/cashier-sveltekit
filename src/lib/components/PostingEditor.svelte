@@ -69,11 +69,13 @@
 		title="Amount"
 		placeholder="Amount"
 		type="number"
-		class="w=2/4 input text-right"
+		class="w=2/4 input variant-form-material text-right bg-red-500"
 		bind:value={$xact.postings[index].amount}
 		bind:this={amountInput}
 		onfocus={() => amountInput.select()}
 		oninput={onAmountChanged}
+		class:bg-green-500={$xact.postings[index].amount as number >= 0} 
+  		class:negative={$xact.postings[index].amount as number < 0} 
 	/>
 	<!--
 		oninput={() => updateAmount($xact.postings[index].amount as number)}
@@ -83,7 +85,7 @@
 		title="Currency"
 		placeholder="Currency"
 		type="text"
-		class="input w-1/4 text-center"
+		class="input variant-form-material w-1/4 text-center"
 		bind:value={$xact.postings[index].currency}
 	/>
 	<!--

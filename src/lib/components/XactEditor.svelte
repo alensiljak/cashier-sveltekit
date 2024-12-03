@@ -26,9 +26,11 @@
 	}
 
 	onMount(() => {
-		console.debug('editing xact', $xact.id);
+		if ($selectionMetadata) {
+			handleEntitySelection();
+		}
 
-		handleEntitySelection();
+		recalculateSum();
 	});
 
 	async function handleEntitySelection() {
@@ -114,7 +116,7 @@
 		}
 
 		$xact.postings.push(new Posting());
-		$xact.postings = $xact.postings
+		$xact.postings = $xact.postings;
 	}
 
 	function onPostingAccountClicked(index: number) {
@@ -145,7 +147,13 @@
 </script>
 
 <div class="space-y-3 py-2">
-	<input title="Date" placeholder="Date" type="date" class="input" bind:value={$xact.date} />
+	<input
+		title="Date"
+		placeholder="Date"
+		type="date"
+		class="input variant-form-material"
+		bind:value={$xact.date}
+	/>
 	<input
 		title="Payee"
 		placeholder="Payee"
@@ -155,7 +163,13 @@
 		bind:value={$xact.payee}
 		onclick={onPayeeClicked}
 	/>
-	<input title="Note" placeholder="Note" type="text" class="input" bind:value={$xact.note} />
+	<input
+		title="Note"
+		placeholder="Note"
+		type="text"
+		class="input variant-form-material"
+		bind:value={$xact.note}
+	/>
 
 	<!-- Postings -->
 	<!-- actions and sum -->
