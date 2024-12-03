@@ -9,13 +9,17 @@
 	import { AccountService } from '$lib/services/accountsService';
 	import { SettingKeys, settings } from '$lib/settings';
 	import { getEmptyPostingIndex } from '$lib/utils/xactUtils';
-	import type { Posting } from '$lib/data/model';
+	import { Posting } from '$lib/data/model';
+	import { ArrowUpDownIcon, PlusCircleIcon, SigmaIcon, TrashIcon } from 'lucide-svelte';
 
 	type Props = {
 		onPayeeClicked?: EventHandler;
 		onAccountClicked?: (index: number) => void;
 	};
 	let { onPayeeClicked, onAccountClicked }: Props = $props();
+
+	let sum = $state(0);
+	let _emptyPostingCount = 0;
 
 	if (!$xact) {
 		goto('/');
@@ -103,6 +107,16 @@
 		xact.set(lastTx.transaction);
 	}
 
+	function onAddPostingClicked() {
+		if (!$xact) {
+			Notifier.error('The transaction is not initialized!');
+			return;
+		}
+
+		$xact.postings.push(new Posting());
+		$xact.postings = $xact.postings
+	}
+
 	function onPostingAccountClicked(index: number) {
 		if (onAccountClicked) {
 			onAccountClicked(index);
@@ -110,15 +124,27 @@
 	}
 
 	function onPostingAmountChanged() {
-		// todo recalculate sum
-		console.log('recalculate sum');
-		$xact.postings.forEach((posting: Posting) => {
-			console.log('amount:', posting.amount);
+		// recalculate sum
+		recalculateSum();
+	}
+
+	function recalculateSum() {
+		sum = 0;
+		_emptyPostingCount = 0;
+
+		if (!xact || !$xact.postings || $xact.postings.length === 0) return;
+
+		$xact.postings.forEach((posting) => {
+			if (posting.amount) {
+				sum += posting.amount;
+			} else {
+				_emptyPostingCount += 1;
+			}
 		});
 	}
 </script>
 
-<div class="space-y-2 py-2">
+<div class="space-y-3 py-2">
 	<input title="Date" placeholder="Date" type="date" class="input" bind:value={$xact.date} />
 	<input
 		title="Payee"
@@ -133,7 +159,25 @@
 
 	<!-- Postings -->
 	<!-- actions and sum -->
-	<div>Posting actions</div>
+	<div class="space-y-2 rounded-lg bg-primary-500/25 p-3">
+		<div class="flex flex-row">
+			<span class="grow text-center">Postings</span>
+			<div><SigmaIcon /></div>
+			<data class="pl-2">{sum}</data>
+		</div>
+		<div class="flex flex-row justify-center space-x-10">
+			<button type="button" class="variant-ringed-primary btn-icon" onclick={onAddPostingClicked}>
+				<PlusCircleIcon />
+			</button>
+			<a class="variant-ringed-primary btn-icon" href="/postings-reorder">
+				<ArrowUpDownIcon />
+			</a>
+			<a class="variant-ringed-primary btn-icon" href="/postings-delete">
+				<TrashIcon />
+			</a>
+		</div>
+	</div>
+	<!-- posting list -->
 	{#each $xact?.postings as posting, index}
 		<PostingEditor
 			{index}

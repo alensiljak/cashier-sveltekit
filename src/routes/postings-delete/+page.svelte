@@ -1,0 +1,1 @@
+<p>postings delete</p>

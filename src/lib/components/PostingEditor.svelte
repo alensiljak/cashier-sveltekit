@@ -8,7 +8,7 @@
 		index: number;
 		// posting?: Posting;
 		onAccountClicked?: EventHandler;
-		onAmountChanged?: EventHandler;
+		onAmountChanged?: () => void;
 	};
 	let {
 		index,
@@ -29,16 +29,21 @@
 	 * Change amount sign.
 	 */
 	function changeSign() {
-		let amount = $xact.postings[index].amount || 0
-		$xact.postings[index].amount = amount * (-1)
+		let amount = $xact.postings[index].amount || 0;
+		$xact.postings[index].amount = amount * -1;
+
+		if (onAmountChanged) {
+			onAmountChanged();
+		}
 	}
 
 	function updateAmount(value: number) {
-		$xact.postings[index].amount = value
+		console.debug('update amount', value);
+		$xact.postings[index].amount = value;
 	}
 
 	function updateCurrency(value: string) {
-		$xact.postings[index].currency = value
+		$xact.postings[index].currency = value;
 	}
 </script>
 
@@ -55,7 +60,7 @@
 <div class="flex flex-row">
 	<!-- amount sign -->
 	<div class="w-1/4 text-center">
-		<button type="button" class="btn variant-outline-surface" onclick={changeSign}>
+		<button type="button" class="variant-outline-surface btn" onclick={changeSign}>
 			<DiffIcon />
 		</button>
 	</div>
@@ -67,17 +72,22 @@
 		class="w=2/4 input text-right"
 		bind:value={$xact.postings[index].amount}
 		bind:this={amountInput}
+		onfocus={() => amountInput.select()}
+		oninput={onAmountChanged}
+	/>
+	<!--
 		oninput={() => updateAmount($xact.postings[index].amount as number)}
 		onchange={onAmountChanged}
-		onfocus={() => amountInput.select()}
-	/>
+	-->
 	<input
 		title="Currency"
 		placeholder="Currency"
 		type="text"
 		class="input w-1/4 text-center"
 		bind:value={$xact.postings[index].currency}
-		oninput={() => updateCurrency($xact.postings[index].currency)}
 	/>
-	<!-- uppercase -->
+	<!--
+		oninput={() => updateCurrency($xact.postings[index].currency)}
+		uppercase
+	-->
 </div>
