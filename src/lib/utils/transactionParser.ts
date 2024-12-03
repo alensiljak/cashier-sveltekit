@@ -25,30 +25,42 @@ export class TransactionParser {
   }
 }
 
+function validateEmptyString(input: string) {
+  if (!input) {
+    throw new Error('Missing input')
+  }
+}
+
 export function parseXact(input: string) {
-  const parts = input.split('\n');
-  // console.log('parts:', parts);
+  validateEmptyString(input);
+
+  const lines = input.split('\n');
 
   const xact = new Xact()
   let postingIndex = 1;
 
   // date
-  let separatorIndex = parts[0].indexOf(' ')
-  const date = parts[0].substring(0, separatorIndex)
+  let line = lines[0]
+  validateEmptyString(line);
+  let separatorIndex = lines[0].indexOf(' ')
+  const date = lines[0].substring(0, separatorIndex)
   xact.date = date
   // payee
-  xact.payee = parts[0].substring(separatorIndex + 1)
+  xact.payee = lines[0].substring(separatorIndex + 1)
 
   // note?
-  let line = parts[1].trim()
+  line = lines[1].trim()
+  validateEmptyString(line);
   if (line.startsWith(';')) {
     xact.note = line.substring(1).trim()
     postingIndex = 2
   }
 
   // postings
-  for (let i = postingIndex; i < parts.length; i++) {
-    line = parts[i].trim()
+  for (let i = postingIndex; i < lines.length; i++) {
+    line = lines[i].trim()
+    validateEmptyString(line);
+    
     const posting = new Posting()
 
     // separator
