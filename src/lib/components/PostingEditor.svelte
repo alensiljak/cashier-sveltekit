@@ -18,7 +18,7 @@
 	}: Props = $props();
 
 	let amountInput: HTMLInputElement;
-	let amountFieldColor = $derived($xact.postings[index].amount as number >= 0 ? '!bg-primary-500/20' : '!bg-secondary-500/20')
+	let amountFieldColor = $derived($xact?.postings[index].amount as number < 0 ? '!bg-secondary-500/20' : '!bg-primary-500/20')
 
 	onMount(() => {
 		// bind to the Posting from the store.
