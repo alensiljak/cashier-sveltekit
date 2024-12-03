@@ -10,15 +10,8 @@
 
 	const modalStore = getModalStore();
 
-	// let _postings: Posting[] = $state([]);
-
 	onMount(async () => {
-		await loadData();
 	});
-
-	async function loadData() {
-		// _postings = $xact.postings;
-	}
 
 	function onDeleteClicked(index: number) {
 		// confirm dialog
@@ -32,8 +25,6 @@
 					$xact.postings.splice(index, 1);
 					// fix for the binding
 					$xact.postings = $xact.postings;
-					// _postings.splice(index, 1);
-					// _postings = $xact.postings;
 				}
 			}
 		};
@@ -50,8 +41,10 @@
 <Fab Icon={CheckIcon} onclick={onFabClicked} />
 
 <article class="p-1">
+	<!-- list -->
 	<div class="space-y-3 py-3">
 		{#each $xact.postings as posting, i}
+			<!-- posting row -->
 			<div class="flex flex-row">
 				<span class="flex grow items-center">
 					{posting.account}

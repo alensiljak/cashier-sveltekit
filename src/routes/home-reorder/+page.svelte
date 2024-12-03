@@ -25,8 +25,6 @@
 	});
 
 	async function onItemDownClicked(index: number) {
-		// console.log('item down:', index);
-
 		if (index === MAX_ITEMS - 1) {
 			console.log('already at bottom');
 			return;
@@ -37,8 +35,6 @@
 	}
 
 	async function onItemUpClicked(index: number) {
-		// console.log('item up:', index);
-
 		if (index === 0) {
 			console.log('already at top');
 			return;
