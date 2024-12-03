@@ -351,11 +351,11 @@ class AssetAllocationEngine {
    */
   async loadCurrentValues() {
     const acctSvc = new AccountService()
-    const defaultCurrency = await settings.get(SettingKeys.currency)
+    const defaultCurrency = await appService.getDefaultCurrency()
     const invAccounts = await appService.loadInvestmentAccounts()
 
     await invAccounts.forEach((account) => {
-      let amount = parseFloat(account.currentValue)
+      let amount = parseFloat(account.currentValue as string)
       if (!amount || isNaN(amount)) {
         console.warn(`Account ${account.name} has no current value set.`)
         amount = 0

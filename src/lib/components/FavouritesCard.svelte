@@ -25,7 +25,7 @@
 	}
 
 	async function loadData() {
-		defaultCurrency = await settings.get(SettingKeys.currency);
+		defaultCurrency = await appService.getDefaultCurrency()
 
 		try {
 			let favArray = await appService.loadFavouriteAccounts();

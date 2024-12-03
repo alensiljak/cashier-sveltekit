@@ -229,6 +229,11 @@ class AppService {
     return result.toFixed(2)
   }
 
+  async getDefaultCurrency(): Promise<string> {
+    const result = await settings.get(SettingKeys.currency)
+    return result
+  }
+
   /**
    * Get all the investment accounts in a dictionary.
    * Start from the investment root setting, and include the commodity.
@@ -248,7 +253,7 @@ class AppService {
       .toArray()
 
     // add the balance
-    const defaultCurrency = await settings.get(SettingKeys.currency)
+    const defaultCurrency = await this.getDefaultCurrency()
     const acctSvc = new AccountService()
     accounts.forEach((account) => {
       account.balance = acctSvc.getAccountBalance(account, defaultCurrency)

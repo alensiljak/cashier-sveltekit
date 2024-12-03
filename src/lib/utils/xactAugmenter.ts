@@ -93,7 +93,7 @@ export class XactAugmenter {
     }
 
     const acctSvc = new AccountService()
-    const defaultCurrency = await settings.get(SettingKeys.currency)
+    const defaultCurrency = await appService.getDefaultCurrency()
 
     for (let i = 0; i < accounts.length; i++) {
       // load all postings for the account
