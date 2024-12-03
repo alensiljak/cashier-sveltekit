@@ -59,8 +59,10 @@
 		{#if scxs.length === 0}
 			<p>There are no scheduled transactions</p>
 		{:else}
-			<div>
+		<!-- list container -->
+			<div class="text-sm space-y-1">
 				{#each scxs as scx, index}
+				<!-- row -->
 				<div class="flex flex-row space-x-2">
 					<span class={`${getDateColour(scx.nextDate)}`}>
 						{scx.nextDate}
