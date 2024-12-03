@@ -18,6 +18,7 @@
 	}: Props = $props();
 
 	let amountInput: HTMLInputElement;
+	let amountFieldColor = $derived($xact.postings[index].amount as number >= 0 ? '!bg-primary-500/20' : '!bg-secondary-500/20')
 
 	onMount(() => {
 		// bind to the Posting from the store.
@@ -69,15 +70,14 @@
 		title="Amount"
 		placeholder="Amount"
 		type="number"
-		class="w=2/4 input variant-form-material text-right bg-red-500"
+		class={`w=2/4 input variant-form-material text-right ${amountFieldColor}`}
 		bind:value={$xact.postings[index].amount}
 		bind:this={amountInput}
 		onfocus={() => amountInput.select()}
 		oninput={onAmountChanged}
-		class:bg-green-500={$xact.postings[index].amount as number >= 0} 
-  		class:negative={$xact.postings[index].amount as number < 0} 
 	/>
 	<!--
+		class={$xact.postings[index].amount as number >= 0 ? '!bg-primary-500/20' : '!bg-secondary-500/20'}
 		oninput={() => updateAmount($xact.postings[index].amount as number)}
 		onchange={onAmountChanged}
 	-->
