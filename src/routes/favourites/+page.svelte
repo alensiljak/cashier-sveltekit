@@ -13,7 +13,7 @@
 	import { formatAmount, getMoneyColour } from '$lib/utils/formatter';
 	import Notifier from '$lib/utils/notifier';
 	import { getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
-	import { PlusIcon } from 'lucide-svelte';
+	import { ArrowUpDownIcon, PlusCircleIcon, PlusIcon, Trash2Icon, TrashIcon } from 'lucide-svelte';
 	import { onMount } from 'svelte';
 
 	const modalStore = getModalStore();
@@ -110,10 +110,10 @@
 <article class="flex h-screen flex-col">
 	<Toolbar title="Favourites">
 		{#snippet menuItems()}
-			<ToolbarMenuItem text="Add" onclick={onAddClicked} />
-			<ToolbarMenuItem text="Delete" onclick={onDeleteClicked} />
-			<ToolbarMenuItem text="Delete All" onclick={onDeleteAllClicked} />
-			<ToolbarMenuItem text="Reorder" onclick={onReorderClick} />
+			<ToolbarMenuItem text="Add" Icon={PlusCircleIcon} onclick={onAddClicked} />
+			<ToolbarMenuItem text="Delete" Icon={TrashIcon} onclick={onDeleteClicked} />
+			<ToolbarMenuItem text="Delete All" Icon={Trash2Icon} onclick={onDeleteAllClicked} />
+			<ToolbarMenuItem text="Reorder" Icon={ArrowUpDownIcon} onclick={onReorderClick} />
 		{/snippet}
 	</Toolbar>
 
