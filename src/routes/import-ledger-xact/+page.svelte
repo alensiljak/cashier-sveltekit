@@ -17,7 +17,15 @@
     })
 
 	async function onImportClicked() {
-        if(!inputText) {
+		try {
+			await importXact()
+		} catch (error) {
+			Notifier.error(error.message)
+		}
+	}
+
+	async function importXact() {
+		if(!inputText) {
             Notifier.warn('Paste a transaction record into the input field first')
             return;
         }
