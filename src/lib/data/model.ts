@@ -20,6 +20,16 @@ export class Account {
     this.name = accountName
     //this.balances['EUR'] = 30
   }
+
+  getAccountName() {
+    const separatorIndex = this.name.lastIndexOf(':')
+    return this.name.substring(separatorIndex + 1)
+  }
+
+  getParentName() {
+    const separatorIndex = this.name.lastIndexOf(':')
+    return this.name.substring(0, separatorIndex)
+  }
 }
 
 export class LastXact {

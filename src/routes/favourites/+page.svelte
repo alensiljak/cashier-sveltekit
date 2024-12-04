@@ -95,7 +95,7 @@
 			response: async (r: boolean) => {
 				if (r) {
 					await settings.set(SettingKeys.favouriteAccounts, []);
-					await loadData()
+					await loadData();
 				}
 			}
 		};
@@ -124,15 +124,16 @@
 			<p>No favourite accounts set</p>
 		{:else}
 			<!-- list -->
-			<div class="space-y-2">
+			<div>
 				{#each accounts as account}
 					<!-- row -->
-					<div class="flex flex-row">
-						<data class="mr-1 grow">
-							{account.name}
-						</data>
+					<div class="py-1 flex flex-row border-b border-tertiary-200/15">
+						<div class="mr-1 flex grow flex-col">
+							<small>{account.getParentName()}</small>
+							<data class="ml-4">{account.getAccountName()}</data>
+						</div>
 						{#key refreshKey}
-							<data class={`text-end ${getMoneyColour(account.balance as Money)}`}>
+							<data class={`content-end text-end ${getMoneyColour(account.balance as Money)}`}>
 								{formatAmount(account.balance?.amount as number)}&nbsp;{account.balance?.currency}
 							</data>
 						{/key}
