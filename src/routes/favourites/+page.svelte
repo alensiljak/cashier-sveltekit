@@ -12,9 +12,11 @@
 	import { SelectionModeMetadata, SettingKeys, settings } from '$lib/settings';
 	import { formatAmount, getMoneyColour } from '$lib/utils/formatter';
 	import Notifier from '$lib/utils/notifier';
+	import { getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
 	import { PlusIcon } from 'lucide-svelte';
 	import { onMount } from 'svelte';
 
+	const modalStore = getModalStore();
 	Notifier.init();
 
 	let accounts: Account[] = $state([]);
@@ -78,21 +80,46 @@
 
 		await goto('/accounts');
 	}
+
+	async function onDeleteClicked() {
+		await goto('/favourites-delete');
+	}
+
+	function onDeleteAllClicked() {
+		// confirm dialog
+		const modal: ModalSettings = {
+			type: 'confirm',
+			// Data
+			title: 'Confirm Delete',
+			body: 'Do you want to clear the favourite accounts list?',
+			response: async (r: boolean) => {
+				if (r) {
+					await settings.set(SettingKeys.favouriteAccounts, []);
+					await loadData()
+				}
+			}
+		};
+		modalStore.trigger(modal);
+	}
+
+	async function onReorderClick() {
+		await goto('/favourites-reorder');
+	}
 </script>
 
-<article class="h-screen grid grid-rows-[auto-1fr]">
+<article class="flex h-screen flex-col">
 	<Toolbar title="Favourites">
 		{#snippet menuItems()}
 			<ToolbarMenuItem text="Add" onclick={onAddClicked} />
-			<ToolbarMenuItem text="Delete" />
-			<ToolbarMenuItem text="Delete All" />
-			<ToolbarMenuItem text="Reorder" />
+			<ToolbarMenuItem text="Delete" onclick={onDeleteClicked} />
+			<ToolbarMenuItem text="Delete All" onclick={onDeleteAllClicked} />
+			<ToolbarMenuItem text="Reorder" onclick={onReorderClick} />
 		{/snippet}
 	</Toolbar>
 
 	<Fab Icon={PlusIcon} onclick={onAddClicked} />
 
-	<section class="p-1 grow overflow-auto">
+	<section class="grow overflow-auto p-1">
 		{#if accounts.length === 0}
 			<p>No favourite accounts set</p>
 		{:else}
