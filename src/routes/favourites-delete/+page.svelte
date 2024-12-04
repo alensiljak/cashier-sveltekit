@@ -51,7 +51,9 @@ import Toolbar from '$lib/components/Toolbar.svelte';
 	<section class="p-1 grow overflow-auto">
 		{#each _accounts as account, i}
 			<div class="flex flex-row border-b border-tertiary-200/15 py-1">
-				<data class="grow content-center"> {account}</data>
+				<data class="grow content-center">
+					{account}
+				</data>
 				<div class="pr-2">
 					<button
 						type="button"
