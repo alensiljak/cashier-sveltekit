@@ -84,7 +84,7 @@ export class ScheduledTransaction {
   period: unknown
   count?: number
   endDate: unknown
-  remarks: unknown
+  remarks?: string
 
   constructor() {
     this.nextDate = ''

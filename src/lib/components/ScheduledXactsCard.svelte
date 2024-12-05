@@ -78,4 +78,13 @@
 			</div>
 		{/if}
 	{/snippet}
+	{#snippet footer()}
+	<center>
+		<a href="/export/journal" class="variant-outline-warning btn uppercase">
+			<span></span>
+			<span>Export</span>
+		</a>
+	</center>
+{/snippet}
+
 </HomeCardTemplate>
