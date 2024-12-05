@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import Fab from '$lib/components/FAB.svelte';
 	import SearchToolbar from '$lib/components/SearchToolbar.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
@@ -6,6 +7,7 @@
 	import { ISODATEFORMAT } from '$lib/constants';
 	import db from '$lib/data/db';
 	import type { Money, ScheduledTransaction, Xact } from '$lib/data/model';
+	import appService from '$lib/services/appService';
 	import { getDateColour, getMoneyColour } from '$lib/utils/formatter';
 	import { ListSearch } from '$lib/utils/ListSearch';
 	import Notifier from '$lib/utils/notifier';
@@ -20,7 +22,6 @@
 
 	let allItems: ScheduledTransaction[] = $state([]);
 	let filteredList: ScheduledTransaction[] = $state([]);
-	let currentDate = null;
 	let amounts: Money[] = $state([]);
 
 	onMount(async () => {
@@ -67,8 +68,11 @@
 		Notifier.neutral('not implemented');
 	}
 
-	function onItemClicked() {
-		// todo: show details page
+	async function onItemClicked(id: number) {
+		// show details page
+		let scx = await appService.loadScheduledXact(id)
+
+		await goto(`/scx-actions/${id}`)
 	}
 
 	async function onSearch(value: string) {
@@ -94,7 +98,6 @@
 
 		for (let i = 0; i < list.length; i++) {
 			let scx = list[i];
-			console.debug('comparing', scx.nextDate, previousDate);
 
 			if (scx.nextDate !== previousDate) {
 				previousDate = scx.nextDate;
@@ -135,7 +138,7 @@
 					{/if}
 					<!-- svelte-ignore a11y_click_events_have_key_events -->
 					<!-- svelte-ignore a11y_no_static_element_interactions -->
-					<div class="flex flex-row" onclick={onItemClicked}>
+					<div class="flex flex-row" onclick={() => onItemClicked(scx.id as number)}>
 						<div class="grow">
 							<data>{scx.transaction?.payee}</data>
 							<div class="text-sm opacity-60">

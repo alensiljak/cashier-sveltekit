@@ -10,12 +10,14 @@ import {
   LastXact,
   Payee,
   Posting,
+  ScheduledTransaction,
   Xact,
 } from '$lib/data/model'
 import { settings, SettingKeys } from '$lib/settings'
 import { XactAugmenter } from '$lib/utils/xactAugmenter'
 import { AccountService } from '$lib/services/accountsService'
 import { HomeCardNames } from '$lib/enums'
+import { ScheduledXact, xact } from '$lib/data/mainStore'
 
 class AppService {
   /**
@@ -480,6 +482,18 @@ class AppService {
     }
 
     return accounts
+  }
+
+  async loadScheduledXact(id: number): Promise<ScheduledTransaction> {
+    const scx = await db.scheduled.get(id)
+    if(!scx) {
+      throw new Error('Scheduled transaction not found!')
+    }
+
+    ScheduledXact.set(scx)
+    xact.set(scx.transaction)
+
+    return scx
   }
 
   /**
