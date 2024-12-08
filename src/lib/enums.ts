@@ -9,3 +9,12 @@ export const HomeCardNames = {
   SCHEDULED: 'ScheduledXactCard',
   SYNC: 'SyncCard',
 } as const;
+
+export const RecurrencePeriods = {
+  Days: 'days',
+  Weeks: 'weeks',
+  Months: 'months',
+  StartOfMonth: 'start of month',
+  EndOfMonth: 'end of month',
+  Years: 'years'
+}

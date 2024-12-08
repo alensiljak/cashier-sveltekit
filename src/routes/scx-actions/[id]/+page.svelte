@@ -73,6 +73,10 @@
 		await goto('/tx', { replaceState: true });
 	}
 
+	async function onEditClicked(id: any) {
+		await goto(`/scx-editor/${id}`)
+	}
+
 	/**
 	 * Saves the Scheduled Transaction record.
 	 */
@@ -167,7 +171,8 @@
 			<SquareButton Icon={ChevronsRightIcon} classes="bg-primary-500 text-tertiary-500">
 				Skip
 			</SquareButton>
-			<SquareButton Icon={PenSquareIcon} classes="bg-tertiary-500 text-secondary-500">
+			<SquareButton Icon={PenSquareIcon} classes="bg-tertiary-500 text-secondary-500"
+			onclick={() => onEditClicked($ScheduledXact.id)}>
 				Edit
 			</SquareButton>
 			<SquareButton Icon={TrashIcon} classes="bg-secondary-500 text-tertiary-500">

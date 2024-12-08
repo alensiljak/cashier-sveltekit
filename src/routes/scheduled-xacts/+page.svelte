@@ -84,27 +84,6 @@
 			filteredList = allItems;
 		}
 	}
-
-	/**
-	 * Removes the dates from the rows, leaving only the first record with the date.
-	 * This is used when displaying the list, to separate date groups.
-	 * @param list
-	 */
-	function removeRedundantDates(list: ScheduledTransaction[]): ScheduledTransaction[] {
-		let previousDate = null;
-
-		for (let i = 0; i < list.length; i++) {
-			let scx = list[i];
-
-			if (scx.nextDate !== previousDate) {
-				previousDate = scx.nextDate;
-			} else {
-				scx.nextDate = '';
-			}
-		}
-
-		return list;
-	}
 </script>
 
 <article class="flex h-screen flex-col">
