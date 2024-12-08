@@ -9,8 +9,8 @@
 	let _days: number = $state(0);
 
 	onMount(async () => {
-		await loadData()
-	})
+		await loadData();
+	});
 
 	async function loadData() {
 		let accountNames = await settings.get(SettingKeys.forecastAccounts);
@@ -38,6 +38,10 @@
 		</a>
 	{/snippet}
 	{#snippet content()}
-		<DailyForecastChart daysCount={_days} accountNames={_accountNames} />
+		{#if !_accountNames.length}
+			<p>There are no accounts selected for forecasting</p>
+		{:else}
+			<DailyForecastChart daysCount={_days} accountNames={_accountNames} />
+		{/if}
 	{/snippet}
 </HomeCardTemplate>
