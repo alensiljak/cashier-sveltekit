@@ -15,7 +15,7 @@ import {
 } from '$lib/data/model'
 import { settings, SettingKeys } from '$lib/settings'
 import { XactAugmenter } from '$lib/utils/xactAugmenter'
-import { AccountService } from '$lib/services/accountsService'
+import { getAccountBalance } from '$lib/services/accountsService'
 import { HomeCardNames } from '$lib/enums'
 import { ScheduledXact, xact } from '$lib/data/mainStore'
 
@@ -256,9 +256,8 @@ class AppService {
 
     // add the balance
     const defaultCurrency = await this.getDefaultCurrency()
-    const acctSvc = new AccountService()
     accounts.forEach((account) => {
-      account.balance = acctSvc.getAccountBalance(account, defaultCurrency)
+      account.balance = getAccountBalance(account, defaultCurrency)
     })
 
     return accounts

@@ -11,12 +11,17 @@
 		LinearScale,
 		Legend,
 		Chart,
-		Title,
+		Title
 	} from 'chart.js';
 	import { onMount } from 'svelte';
 	import 'hw-chartjs-plugin-colorschemes/src/plugins/plugin.colorschemes';
 	// office.Composite6
 	import { Composite6 } from 'hw-chartjs-plugin-colorschemes/src/colorschemes/colorschemes.office';
+	import { getAccountBalance, getShortAccountName } from '$lib/services/accountsService';
+	import db from '$lib/data/db';
+	import type { Account, ScheduledTransaction } from '$lib/data/model';
+	import appService from '$lib/services/appService';
+	import moment from 'moment';
 
 	interface Props {
 		daysCount: number;
@@ -24,15 +29,31 @@
 	}
 	let { daysCount, accountNames }: Props = $props();
 
+	let defaultCurrency: string;
+	let maxDate: moment.Moment;
 	let chartDiv: any;
 	Chart.register(Title, Legend, BarElement, CategoryScale, LinearScale, BarController);
 
-	onMount(() => {
-		renderChart();
+	onMount(async () => {
+		defaultCurrency = await appService.getDefaultCurrency();
+		maxDate = moment().add(daysCount, 'days');
+
+		let data = await loadData();
+
+		renderChart(data);
 	});
 
+	async function addScx(accountName: string) {
+		// project scheduled transactions
+		let scxs = await loadScxsFor(accountName);
+
+		// calculate values for subsequent days
+
+		// Perform the calculation.
+	}
+
 	function createXAxis() {
-		let labels: string[] = new Array(daysCount);
+		let labels: string[] = new Array(daysCount + 1);
 
 		for (let i = 0; i <= daysCount; i++) {
 			// labels on weeks only
@@ -45,29 +66,63 @@
 		return labels;
 	}
 
-	function renderChart() {
+	async function loadData() {
+		let data: any = {
+			datasets: []
+		};
+
+		// {
+		// 	label: 'third',
+		// 	data: [300, 150, 12, 1000.16, 100]
+		// }
+
+		for (const accountName of accountNames) {
+			let dataset = await populateAccount(accountName);
+			data.datasets.push(dataset);
+		}
+
+		return data;
+	}
+
+	async function loadScxsFor(accountName: string) {
+		let scxs: ScheduledTransaction[] = await db.scheduled.orderBy('nextDate').toArray();
+		let scxsForAccount = scxs.filter(
+			(scx) =>
+				scx?.transaction?.postings?.filter((scx) => scx.account === accountName) &&
+				scx.transaction.date &&
+				scx.transaction.date <= maxDate.toString()
+		);
+		return scxsForAccount;
+	}
+
+	async function populateAccount(accountName: string) {
+		// create a dataset record for each account.
+		let entry = {
+			label: '',
+			data: new Array(daysCount + 1)
+		};
+		// load account
+		const account: Account = await db.accounts.get(accountName);
+		entry.label = account.getAccountName();
+		// todo: add local transactions
+		entry.data[0] = getAccountBalance(account, defaultCurrency).amount;
+
+		// add scheduled transactions
+		await addScx(accountName);
+
+		return entry;
+	}
+
+	function renderChart(data: any) {
 		// document.getElementById('chartDiv') as ChartItem
 		const ctx = chartDiv.getContext('2d');
 
 		// labels, x-axis
 		const labels = createXAxis();
-		const data = {
-			labels: labels,
-			datasets: [
-				{
-					label: 'first!',
-					data: [3, 4, 6, 7200, 300]
-				},
-				{
-					label: 'second',
-					data: [8, 2400, 4320, 271.16, 123.18]
-				},
-				{
-					label: 'third',
-					data: [300, 150, 12, 1000.16, 100]
-				}
-			]
-		};
+		data.labels = labels;
+
+		// Color palettes:
+		// https://nagix.github.io/chartjs-plugin-colorschemes/colorchart.html
 
 		const config: any = {
 			type: 'bar',
@@ -94,7 +149,7 @@
 				}
 			}
 		};
-		var chart = new Chart(ctx, config);
+		const chart = new Chart(ctx, config);
 	}
 </script>
 

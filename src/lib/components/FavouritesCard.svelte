@@ -4,14 +4,12 @@
 	import { goto } from '$app/navigation';
 	import type { Account } from '$lib/data/model';
 	import { onMount } from 'svelte';
-	import { SettingKeys, settings } from '$lib/settings';
 	import { XactAugmenter } from '$lib/utils/xactAugmenter';
 	import appService from '$lib/services/appService';
 	import Notifier from '$lib/utils/notifier';
-	import { AccountService } from '$lib/services/accountsService';
+	import { getAccountBalance } from '$lib/services/accountsService';
 
 	Notifier.init();
-	const accountService = new AccountService();
 
 	let defaultCurrency: string;
 	let accounts: Array<Account> = $state([]);
@@ -21,7 +19,7 @@
 	});
 
 	function getBalance(account: Account) {
-		return accountService.getAccountBalance(account, defaultCurrency);
+		return getAccountBalance(account, defaultCurrency);
 	}
 
 	async function loadData() {

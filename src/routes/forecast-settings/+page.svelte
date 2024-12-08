@@ -88,7 +88,7 @@
     {#each accountNames as accountName, index}
         <div class="w-full flex p-2">
             <div class="grow">
-                {accountName} {index}
+                {accountName}
             </div>
             <button class="btn-icon variant-filled-error" onclick={() => onDeleteClicked(index)}>
                 <TrashIcon />

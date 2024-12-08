@@ -5,8 +5,7 @@ import appService from '$lib/services/appService'
 import { AssetClass, type AssetClassDefinition } from './AssetClass'
 import numeral from 'numeral'
 import toml from 'toml'
-import { AccountService } from '$lib/services/accountsService'
-import { SettingKeys, settings } from '$lib/settings'
+import { getAccountBalance } from '$lib/services/accountsService'
 
 // constants
 
@@ -350,7 +349,6 @@ class AssetAllocationEngine {
    * Add the account balances to asset classes.
    */
   async loadCurrentValues() {
-    const acctSvc = new AccountService()
     const defaultCurrency = await appService.getDefaultCurrency()
     const invAccounts = await appService.loadInvestmentAccounts()
 
@@ -361,7 +359,7 @@ class AssetAllocationEngine {
         amount = 0
       }
 
-      const acctBalance = acctSvc.getAccountBalance(account, defaultCurrency)
+      const acctBalance = getAccountBalance(account, defaultCurrency)
       account.balance = acctBalance
 
       if (acctBalance.amount == 0) {

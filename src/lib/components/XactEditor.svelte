@@ -6,7 +6,7 @@
 	import { goto } from '$app/navigation';
 	import Notifier from '$lib/utils/notifier';
 	import appService from '$lib/services/appService';
-	import { AccountService } from '$lib/services/accountsService';
+	import { getAccountBalance } from '$lib/services/accountsService';
 	import { SettingKeys, settings } from '$lib/settings';
 	import { getEmptyPostingIndex } from '$lib/utils/xactUtils';
 	import { Posting } from '$lib/data/model';
@@ -71,8 +71,7 @@
 
 				// load the account
 				const account = await appService.db.accounts.get(id);
-				const acctSvc = new AccountService();
-				const acctBalance = await acctSvc.getAccountBalance(account, defaultCurrency);
+				const acctBalance = await getAccountBalance(account, defaultCurrency);
 
 				$xact.postings[index].account = account.name;
 				$xact.postings[index].currency = acctBalance.currency;

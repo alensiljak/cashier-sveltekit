@@ -1,8 +1,7 @@
 import { Account, Money, Posting, Xact } from '$lib/data/model'
 import appService from '$lib/services/appService'
 import { TransactionParser } from '$lib/utils/transactionParser'
-import { AccountService } from '$lib/services/accountsService'
-import { SettingKeys, settings } from '$lib/settings'
+import { getAccountBalance } from '$lib/services/accountsService'
 
 /**
  * Modifies the transaction records in-memory to create the missing parts,
@@ -92,7 +91,6 @@ export class XactAugmenter {
       return accounts
     }
 
-    const acctSvc = new AccountService()
     const defaultCurrency = await appService.getDefaultCurrency()
 
     for (let i = 0; i < accounts.length; i++) {
@@ -103,7 +101,7 @@ export class XactAugmenter {
 
       // handle empty balances
       if (!account.balance) {
-        account.balance = acctSvc.getAccountBalance(account, defaultCurrency)
+        account.balance = getAccountBalance(account, defaultCurrency)
       }
 
       //let sum = parseFloat(account.balance.amount)

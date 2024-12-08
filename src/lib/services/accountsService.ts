@@ -6,7 +6,6 @@
  */
 import { Account, Money } from '$lib/data/model'
 import db from '$lib/data/db'
-// import { SettingKeys, settings, Constants } from '$lib/settings'
 
 export class AccountService {
   constructor() {}
@@ -34,39 +33,6 @@ export class AccountService {
       }
     })
     await db.accounts.bulkAdd(accounts)
-  }
-
-  getAccountBalance(account: Account, defaultCurrency: string): Money {
-    if (!defaultCurrency) {
-      throw new Error('Default currency is mandatory!')
-    }
-
-    const result = new Money()
-    // const defaultCurrency = await settings.get(SettingKeys.currency)
-
-    // default value
-    result.amount = 0
-    result.currency = defaultCurrency
-
-    // Are there any balance records?
-    if (!account.balances) return result
-
-    // Do we have a balance in the default currency?
-    const balance = account.balances[defaultCurrency]
-    if (balance) {
-      result.amount = balance
-      result.currency = defaultCurrency
-      return result
-    }
-
-    // Otherwise take the first balance/currency.
-    const currencies = Object.keys(account.balances)
-    if (!currencies) return result
-
-    const currency = currencies[0]
-    result.amount = account.balances[currency]
-    result.currency = currency
-    return result
   }
 
   // async getAccountsFromCache() {
@@ -176,4 +142,42 @@ export class AccountService {
     `
     return accountsList
   }
+}
+
+export function getAccountBalance(account: Account, defaultCurrency: string): Money {
+  if (!defaultCurrency) {
+    throw new Error('Default currency is mandatory!')
+  }
+
+  const result = new Money()
+  // const defaultCurrency = await settings.get(SettingKeys.currency)
+
+  // default value
+  result.amount = 0
+  result.currency = defaultCurrency
+
+  // Are there any balance records?
+  if (!account.balances) return result
+
+  // Do we have a balance in the default currency?
+  const balance = account.balances[defaultCurrency]
+  if (balance) {
+    result.amount = balance
+    result.currency = defaultCurrency
+    return result
+  }
+
+  // Otherwise take the first balance/currency.
+  const currencies = Object.keys(account.balances)
+  if (!currencies) return result
+
+  const currency = currencies[0]
+  result.amount = account.balances[currency]
+  result.currency = currency
+  return result
+}
+
+export function getShortAccountName(accountName: string): string {
+  const separatorIndex = accountName.lastIndexOf(':')
+  return accountName.substring(separatorIndex + 1)
 }
