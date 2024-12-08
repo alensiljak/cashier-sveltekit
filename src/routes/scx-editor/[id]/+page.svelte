@@ -1,28 +1,23 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import Fab from '$lib/components/FAB.svelte';
 	import ScheduleEditor from '$lib/components/ScheduleEditor.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import XactEditor from '$lib/components/XactEditor.svelte';
-	import CashierDAL, { saveScheduledTransaction } from '$lib/data/dal';
-	import db from '$lib/data/db';
+	import { saveScheduledTransaction } from '$lib/data/dal';
 	import { ScheduledXact, xact } from '$lib/data/mainStore';
 	import type { ScheduledTransaction } from '$lib/data/model';
 	import Notifier from '$lib/utils/notifier';
 	import { onMount } from 'svelte';
 
 	const id = $page.params.id;
+    
+    // export let data;
 
     Notifier.init()
 
 	onMount(async () => {
-		if (!id) {
-			goto('/');
-		}
-        if(!ScheduledXact) {
-            console.debug('load scx')
-        }
+        // await loadData()
 	});
 
     async function onFabClicked() {
@@ -37,6 +32,8 @@
         if(!$ScheduledXact.transaction) {
             throw new Error('Transaction not found in app state!')
         }
+
+        // translate radio buttons
 
         // Use the current Xact.
 		const clonedXact = JSON.parse(JSON.stringify($xact));

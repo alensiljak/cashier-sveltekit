@@ -81,7 +81,7 @@ export class ScheduledTransaction {
   id?: number
   nextDate: string
   transaction?: Xact
-  period: string
+  period?: string
   count?: number
   endDate: unknown
   remarks?: string
