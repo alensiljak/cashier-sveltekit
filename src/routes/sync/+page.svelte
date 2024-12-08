@@ -1,12 +1,8 @@
 <script lang="ts">
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import {
-		ArrowBigUpIcon,
-		ArrowDownIcon,
-		CircleCheckIcon,
 		PowerIcon,
 		RefreshCcw,
-		SettingsIcon
 	} from 'lucide-svelte';
 	import { onMount } from 'svelte';
 	import { SettingKeys, settings } from '$lib/settings';
@@ -49,9 +45,7 @@
 	/**
 	 * shut the remote server down
 	 */
-	async function onShutdownClick(e: Event) {
-        e.preventDefault()
-        
+	async function onShutdownClick() {
 		const sync = new CashierSync(serverUrl);
 		try {
 			await sync.shutdown();
