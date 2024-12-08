@@ -163,13 +163,13 @@
 			>
 				Enter
 			</SquareButton>
-			<SquareButton Icon={ChevronsRightIcon} classes="bg-tertiary-500 text-secondary-500">
+			<SquareButton Icon={ChevronsRightIcon} classes="bg-primary-500 text-tertiary-500">
 				Skip
 			</SquareButton>
 			<SquareButton Icon={PenSquareIcon} classes="bg-tertiary-500 text-secondary-500">
 				Edit
 			</SquareButton>
-			<SquareButton Icon={TrashIcon} classes="bg-tertiary-500 text-secondary-500">
+			<SquareButton Icon={TrashIcon} classes="bg-secondary-500 text-tertiary-500">
 				Delete
 			</SquareButton>
 		</div>
