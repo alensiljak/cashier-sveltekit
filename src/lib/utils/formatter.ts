@@ -1,4 +1,5 @@
 import type { Money, Xact } from "$lib/data/model";
+import moment from "moment";
 
 const RED = 'text-red-500'
 const YELLOW = 'text-yellow-500'
@@ -41,6 +42,28 @@ export function getAmountColour(amount: number) {
   }
 
   return colour
+}
+
+/**
+ * Returns the colour based on whether the date is due or not.
+ * @param dateString the Skeleton text colour name
+ */
+export function getDateColour(dateString: string): string | undefined {
+  const date = moment(dateString).toDate()
+  const today = moment().startOf('day').toDate()
+
+  if(date < today) {
+    // red
+    return 'text-secondary-400'
+  }
+  if(date === today) {
+    // yellow
+    return 'text-base-400'
+  }
+  if(date > today) {
+    // green
+    return 'text-primary-400'
+  }
 }
 
 /**

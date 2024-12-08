@@ -81,13 +81,14 @@ export class ScheduledTransaction {
   id?: number
   nextDate: string
   transaction?: Xact
-  period: unknown
+  period: string
   count?: number
   endDate: unknown
-  remarks: unknown
+  remarks?: string
 
   constructor() {
     this.nextDate = ''
+    this.period = ''
   }
 }
 

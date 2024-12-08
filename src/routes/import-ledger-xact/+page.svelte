@@ -20,7 +20,7 @@
 		try {
 			await importXact()
 		} catch (error) {
-			Notifier.error(error.message)
+			Notifier.error((error as Error).message)
 		}
 	}
 

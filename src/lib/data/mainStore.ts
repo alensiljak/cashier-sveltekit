@@ -2,7 +2,7 @@
  * State store for the app
  */
 import { writable, type Writable } from 'svelte/store';
-import { Xact } from './model';
+import { ScheduledTransaction, Xact } from './model';
 import type { SelectionModeMetadata } from '$lib/settings';
 
 interface MainStore {
@@ -22,5 +22,6 @@ export const state: Writable<Partial<MainStore>>
 // Real items
 
 export const xact: Writable<Xact> = writable()
+export const ScheduledXact: Writable<ScheduledTransaction> = writable()
 
 export const selectionMetadata: Writable<SelectionModeMetadata | undefined> = writable()
