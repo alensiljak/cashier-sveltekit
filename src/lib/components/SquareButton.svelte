@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { CheckIcon } from 'lucide-svelte';
 	import type { Snippet } from 'svelte';
 	import type { EventHandler } from 'svelte/elements';
 

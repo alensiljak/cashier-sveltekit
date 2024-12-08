@@ -72,10 +72,20 @@
 
 	<!-- button grid -->
 	<div class="mt-4 inline-grid w-full grid-cols-3 gap-4 justify-self-center">
-		<SquareButton text="Edit" Icon={PenSquareIcon} colour="tertiary" onclick={onEditClicked} />
-		<SquareButton text="Duplicate" Icon={CopyIcon} colour="primary" />
-		<SquareButton text="Schedule" Icon={CalendarClockIcon} colour="tertiary" />
-		<SquareButton text="Copy Ledger" Icon={CopyIcon} colour="primary" onclick={onCopyClicked} />
-		<SquareButton text="Delete" Icon={TrashIcon} colour="secondary" onclick={onDeleteClicked} />
+		<SquareButton Icon={PenSquareIcon} classes="bg-tertiary-500 text-secondary-500" onclick={onEditClicked}>
+			Edit
+		</SquareButton>
+		<SquareButton Icon={CopyIcon} classes="bg-primary-500 text-tertiary-500">
+			Duplicate
+		</SquareButton>
+		<SquareButton Icon={CalendarClockIcon} classes="bg-tertiary-500 text-secondary-500">
+			Schedule
+		</SquareButton>
+		<SquareButton Icon={CopyIcon} classes="bg-primary-500 text-tertiary-500" onclick={onCopyClicked}>
+			Copy Ledger
+		</SquareButton>
+		<SquareButton Icon={TrashIcon} classes="bg-secondary-500 text-tertiary-500" onclick={onDeleteClicked}>
+			Delete
+		</SquareButton>
 	</div>
 </main>
