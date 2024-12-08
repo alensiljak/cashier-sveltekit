@@ -84,6 +84,7 @@
 	{/if}
 </div>
 
+<!-- Remarks -->
 <div>
 	<p>Remarks</p>
 	{#if $ScheduledXact.remarks}

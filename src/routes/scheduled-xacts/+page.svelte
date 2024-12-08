@@ -6,7 +6,8 @@
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import { ISODATEFORMAT } from '$lib/constants';
 	import db from '$lib/data/db';
-	import type { Money, ScheduledTransaction, Xact } from '$lib/data/model';
+	import { ScheduledXact, xact } from '$lib/data/mainStore';
+	import { ScheduledTransaction, Xact, type Money } from '$lib/data/model';
 	import appService from '$lib/services/appService';
 	import { getDateColour, getMoneyColour } from '$lib/utils/formatter';
 	import { ListSearch } from '$lib/utils/ListSearch';
@@ -58,11 +59,14 @@
 
 	async function onFabClicked() {
 		// reset any cached values
-		//   mainStore.newScheduledTx()
-		//   mainStore.newTx()
-		//   goto("/scheduled-xact-editor")
+		let scx = new ScheduledTransaction()
+		let x = Xact.create()
+		scx.transaction = x
 
-		Notifier.neutral('not implemented');
+		ScheduledXact.set(scx)
+		xact.set(x)
+
+		await goto("/scx-editor/null")
 	}
 
 	async function onItemClicked(id: number) {
