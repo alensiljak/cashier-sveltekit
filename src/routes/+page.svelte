@@ -1,5 +1,4 @@
 <script lang="ts">
-	import GlossToolbar from '$lib/components/gloss-toolbar.svelte';
 	import JournalCard from '$lib/components/JournalCard.svelte';
 	import { ArrowDownUpIcon, PlusIcon, SettingsIcon } from 'lucide-svelte';
 	import Toolbar from '../lib/components/Toolbar.svelte';
@@ -17,7 +16,6 @@
 	import appService from '$lib/services/appService';
 
 	let cards: Array<Component> = $state([]);
-	let cardsOrder = $state([]);
 
 	onMount(async () => {
 		// display the cards ordered.
@@ -61,20 +59,22 @@
 	}
 </script>
 
-<Toolbar>
-	{#snippet menuItems()}
-		<ToolbarMenuItem text="Home Settings" Icon={SettingsIcon} targetNav="/home-settings" />
-		<ToolbarMenuItem text="Reorder Cards" targetNav="/home-reorder" Icon={ArrowDownUpIcon} />
+<article class="h-screen flex flex-col">
+	<Toolbar>
+		{#snippet menuItems()}
+			<ToolbarMenuItem text="Home Settings" Icon={SettingsIcon} targetNav="/home-settings" />
+			<ToolbarMenuItem text="Reorder Cards" targetNav="/home-reorder" Icon={ArrowDownUpIcon} />
 		{/snippet}
-</Toolbar>
+	</Toolbar>
 
-<!-- Main -->
-<main class="container mx-auto space-y-2 px-1 py-1 lg:max-w-screen-sm">
-	<!-- Cards are displayed dynamically, in the selected order. -->
-	{#each cards as Card}
-		 <Card></Card>
-	{/each}
+	<!-- Main -->
+	<section class="container mx-auto space-y-2 px-1 py-1 lg:max-w-screen-sm overflow-auto">
+		<!-- Cards are displayed dynamically, in the selected order. -->
+		{#each cards as Card}
+			<Card></Card>
+		{/each}
 
-	<!-- FAB -->
-	<Fab onclick={onFab} Icon={PlusIcon} />
-</main>
+		<!-- FAB -->
+		<Fab onclick={onFab} Icon={PlusIcon} />
+	</section>
+</article>

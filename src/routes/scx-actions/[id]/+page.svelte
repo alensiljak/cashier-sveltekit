@@ -74,7 +74,25 @@
 	}
 
 	async function onEditClicked(id: any) {
-		await goto(`/scx-editor/${id}`)
+		await goto(`/scx-editor/${id}`);
+	}
+
+	async function onSkipClicked() {
+		// confirm dialog
+		const modal: ModalSettings = {
+			type: 'confirm',
+			// Data
+			title: 'Confirm skip',
+			body: 'Do you want to skip the next iteration?',
+			response: async (r: boolean) => {
+				if (r) {
+					await skip()
+					Notifier.success('Transaction skipped to next iteration')
+					history.back()
+				}
+			}
+		};
+		modalStore.trigger(modal);
 	}
 
 	/**
@@ -120,7 +138,7 @@
 		//tx.value = templateTx
 		stx.nextDate = $xact.date as string;
 
-		$ScheduledXact = stx
+		$ScheduledXact = stx;
 
 		const result = await saveData();
 		if (!result) {
@@ -168,11 +186,18 @@
 			>
 				Enter
 			</SquareButton>
-			<SquareButton Icon={ChevronsRightIcon} classes="bg-primary-500 text-tertiary-500">
+			<SquareButton
+				Icon={ChevronsRightIcon}
+				classes="bg-primary-500 text-tertiary-500"
+				onclick={onSkipClicked}
+			>
 				Skip
 			</SquareButton>
-			<SquareButton Icon={PenSquareIcon} classes="bg-tertiary-500 text-secondary-500"
-			onclick={() => onEditClicked($ScheduledXact.id)}>
+			<SquareButton
+				Icon={PenSquareIcon}
+				classes="bg-tertiary-500 text-secondary-500"
+				onclick={() => onEditClicked($ScheduledXact.id)}
+			>
 				Edit
 			</SquareButton>
 			<SquareButton Icon={TrashIcon} classes="bg-secondary-500 text-tertiary-500">
