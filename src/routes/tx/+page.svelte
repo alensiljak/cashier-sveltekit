@@ -27,17 +27,6 @@
 		previousPage = from?.url.pathname || previousPage;
 	});
 
-	const onAccountClicked = async (index: number) => {
-		// console.log('Account clicked at index:', index);
-
-		const meta = new SelectionModeMetadata();
-		meta.postingIndex = index;
-		meta.selectionType = 'account';
-		selectionMetadata.set(meta);
-
-		await goto('/accounts');
-	};
-
 	async function onFab() {
 		// console.log('fab clicked!');
 		try {
@@ -46,16 +35,6 @@
 			Notifier.error(e.message);
 		}
 	}
-
-	const onPayeeClicked = async () => {
-		// select a payee
-		// selection
-		const meta = new SelectionModeMetadata();
-		meta.selectionType = 'payee';
-		selectionMetadata.set(meta);
-
-		await goto('/payees');
-	};
 
 	/**
 	 * save transaction
@@ -88,7 +67,7 @@
 	<Fab Icon={Check} onclick={onFab} />
 
 	<!-- tx editor -->
-	<TransactionEditor {onAccountClicked} {onPayeeClicked} />
+	<TransactionEditor />
 
 	<!-- dialog for confirming reset -->
 </main>

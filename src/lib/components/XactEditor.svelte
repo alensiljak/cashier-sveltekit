@@ -7,16 +7,10 @@
 	import Notifier from '$lib/utils/notifier';
 	import appService from '$lib/services/appService';
 	import { getAccountBalance } from '$lib/services/accountsService';
-	import { SettingKeys, settings } from '$lib/settings';
+	import { SelectionModeMetadata, SettingKeys, settings } from '$lib/settings';
 	import { getEmptyPostingIndex } from '$lib/utils/xactUtils';
 	import { Posting } from '$lib/data/model';
 	import { ArrowUpDownIcon, PlusCircleIcon, SigmaIcon, TrashIcon } from 'lucide-svelte';
-
-	type Props = {
-		onPayeeClicked?: EventHandler;
-		onAccountClicked?: (index: number) => void;
-	};
-	let { onPayeeClicked, onAccountClicked }: Props = $props();
 
 	let sum = $state(0);
 	let _emptyPostingCount = 0;
@@ -120,6 +114,24 @@
 		$xact.postings.push(new Posting());
 		$xact.postings = $xact.postings;
 	}
+
+	const onAccountClicked = async (index: number) => {
+		const meta = new SelectionModeMetadata();
+		meta.postingIndex = index;
+		meta.selectionType = 'account';
+		selectionMetadata.set(meta);
+
+		await goto('/accounts');
+	};
+
+	const onPayeeClicked = async () => {
+		// select a payee
+		const meta = new SelectionModeMetadata();
+		meta.selectionType = 'payee';
+		selectionMetadata.set(meta);
+
+		await goto('/payees');
+	};
 
 	function onPostingAccountClicked(index: number) {
 		if (onAccountClicked) {
