@@ -30,18 +30,6 @@ class CashierDAL {
     return db.payees.orderBy('name')
   }
 
-  async saveScheduledTransaction(stx: ScheduledTransaction) {
-    if (!stx.id) {
-      stx.id = new Date().getTime()
-      // console.log('new id generated:', this.scheduledTx.id)
-    }
-
-    const result = await db.scheduled.put(stx)
-    //console.debug('saving schtx:', result)
-
-    return result
-  }
-
   async saveAccount(account: Account): Promise<IndexableType> {
     return await db.accounts.put(account)
   }
@@ -67,3 +55,18 @@ class CashierDAL {
 }
 
 export default CashierDAL
+
+export async function saveScheduledTransaction(stx: ScheduledTransaction) {
+  if (!stx.id) {
+    stx.id = new Date().getTime()
+  }
+
+  // clear any transaction ids!
+  if(stx.transaction && stx.transaction.id) {
+    delete stx.transaction.id
+  }
+
+  const result = await db.scheduled.put(stx)
+
+  return result
+}

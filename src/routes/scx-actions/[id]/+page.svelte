@@ -4,7 +4,7 @@
 	import JournalXactRow from '$lib/components/JournalXactRow.svelte';
 	import SquareButton from '$lib/components/SquareButton.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
-	import CashierDAL from '$lib/data/dal';
+	import CashierDAL, { saveScheduledTransaction } from '$lib/data/dal';
 	import { ScheduledXact, xact } from '$lib/data/mainStore';
 	import type { ScheduledTransaction, Xact } from '$lib/data/model';
 	import appService from '$lib/services/appService';
@@ -100,8 +100,7 @@
 	 */
 	async function saveData() {
 		let raw: ScheduledTransaction = JSON.parse(JSON.stringify($ScheduledXact));
-		const dal = new CashierDAL();
-		const result = await dal.saveScheduledTransaction(raw);
+		const result = await saveScheduledTransaction(raw);
 		return result;
 	}
 

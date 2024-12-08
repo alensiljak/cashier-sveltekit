@@ -87,7 +87,5 @@
 <!-- Remarks -->
 <div>
 	<p>Remarks</p>
-	{#if $ScheduledXact.remarks}
-		<textarea class="textarea" bind:value={$ScheduledXact.remarks}></textarea>
-	{/if}
+	<textarea class="textarea" bind:value={$ScheduledXact.remarks}></textarea>
 </div>
