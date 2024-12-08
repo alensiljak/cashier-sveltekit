@@ -93,7 +93,7 @@
 		}
 
 		const startDate = stx.nextDate;
-		const count = stx.count;
+		const count = stx.count as number;
 		const period = stx.period;
 		const endDate = stx.endDate;
 
@@ -114,8 +114,9 @@
 		templateTx.date = newDate;
 		stx.transaction = templateTx;
 		//tx.value = templateTx
-
 		stx.nextDate = $xact.date as string;
+
+		$ScheduledXact = stx
 
 		const result = await saveData();
 		if (!result) {
