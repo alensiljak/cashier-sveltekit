@@ -1,20 +1,20 @@
 <script lang="ts">
 	import { ScheduledXact } from '$lib/data/mainStore';
-	import { ScheduledTransaction } from '$lib/data/model';
 	import { RecurrencePeriods } from '$lib/enums';
 	import { onMount } from 'svelte';
 
-	let scx: ScheduledTransaction | undefined = $state(new ScheduledTransaction());
 	let _periods: string[] = $state([]);
-	let hasRecurrence: boolean = $derived(scx.count !== undefined && scx?.period !== undefined);
-    let recurrenceSet: boolean = $state(false);
+	let recurrenceValue = $state('false');
+	// let hasRecurrence: boolean = $state(false);
+	let hasRecurrence = $derived(recurrenceValue === 'true' ? true : false);
 
 	onMount(async () => {
 		await loadData();
 	});
 
 	async function loadData() {
-		scx = $ScheduledXact;
+		recurrenceValue =
+			$ScheduledXact.count !== undefined && $ScheduledXact?.period !== undefined ? 'true' : 'false';
 
 		// populate periods
 		_periods = Object.values(RecurrencePeriods);
@@ -28,14 +28,14 @@
 	<p>Repeats:</p>
 
 	<!-- radio group -->
-	<div class="space-x-2 flex flex-row">
+	<div class="flex flex-row space-x-2">
 		<label class="flex items-center space-x-2">
 			<input
 				class="radio"
 				type="radio"
 				name="recurrence"
 				value="false"
-				bind:group={recurrenceSet}
+				bind:group={recurrenceValue}
 			/>
 			<p>Never</p>
 		</label>
@@ -45,17 +45,15 @@
 				type="radio"
 				name="recurrence"
 				value="true"
-				bind:group={recurrenceSet}
+				bind:group={recurrenceValue}
 			/>
 			<p>Every ...</p>
 		</label>
 	</div>
-	<input type="text" class="input" bind:value={recurrenceSet} />
-
-	{#if recurrenceSet}
+	{#if hasRecurrence}
 		<div>
-			{#if scx?.count}
-				<input type="number" class="input" bind:value={scx.count} />
+			{#if $ScheduledXact.count}
+				<input type="number" class="input" bind:value={$ScheduledXact.count} />
 			{/if}
 			<select class="select">
 				{#each _periods as period}
@@ -81,14 +79,14 @@
 		</label>
 	</div>
 
-	{#if scx?.endDate}
-		<input type="date" class="input" bind:value={scx.endDate} />
+	{#if $ScheduledXact.endDate}
+		<input type="date" class="input" bind:value={$ScheduledXact.endDate} />
 	{/if}
 </div>
 
 <div>
 	<p>Remarks</p>
-	{#if scx?.remarks}
-		<textarea class="textarea" bind:value={scx.remarks}></textarea>
+	{#if $ScheduledXact.remarks}
+		<textarea class="textarea" bind:value={$ScheduledXact.remarks}></textarea>
 	{/if}
 </div>
