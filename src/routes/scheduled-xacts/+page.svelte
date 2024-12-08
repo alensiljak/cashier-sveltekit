@@ -52,9 +52,6 @@
 				: sorting;
 		});
 
-		// Leave date values only at the top of the group.
-		sorted = removeRedundantDates(sorted);
-
 		allItems = sorted;
 		filteredList = sorted;
 	}
@@ -130,7 +127,8 @@
 			<!-- list -->
 			<div class="space-y-1">
 				{#each filteredList as scx, i}
-					{#if scx.nextDate}
+					<!-- Leave date values only at the first occurrence. -->
+					{#if i === 0 || scx.nextDate !== filteredList[i - 1].nextDate}
 						<div class={`flex flex-row justify-center border-t border-tertiary-200/15 py-1 ${getDateColour(scx.nextDate)}`}>
 							<CalendarIcon />
 							<time class="ml-2">{scx.nextDate}</time>
