@@ -10,7 +10,7 @@
 	import appService from '$lib/services/appService';
 	import Notifier from '$lib/utils/notifier';
 	import { getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
-	import { calculateNextIteration, Iterator } from '$lib/scheduledTransactions';
+	import { calculateNextIteration } from '$lib/scheduledTransactions';
 	import {
 		CheckIcon,
 		ChevronsRightIcon,
