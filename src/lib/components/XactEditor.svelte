@@ -2,7 +2,6 @@
 	import { selectionMetadata, xact } from '$lib/data/mainStore';
 	import { onMount } from 'svelte';
 	import PostingEditor from './PostingEditor.svelte';
-	import type { EventHandler } from 'svelte/elements';
 	import { goto } from '$app/navigation';
 	import Notifier from '$lib/utils/notifier';
 	import appService from '$lib/services/appService';
@@ -11,8 +10,9 @@
 	import { getEmptyPostingIndex } from '$lib/utils/xactUtils';
 	import { Posting } from '$lib/data/model';
 	import { ArrowUpDownIcon, PlusCircleIcon, SigmaIcon, TrashIcon } from 'lucide-svelte';
+	import { Big } from 'big.js'
 
-	let sum = $state(0);
+	let sum = $state(Big(0));
 	let _emptyPostingCount = 0;
 
 	if (!$xact) {
@@ -145,14 +145,14 @@
 	}
 
 	function recalculateSum() {
-		sum = 0;
+		sum = new Big(0);
 		_emptyPostingCount = 0;
 
 		if (!xact || !$xact.postings || $xact.postings.length === 0) return;
 
 		$xact.postings.forEach((posting) => {
 			if (posting.amount) {
-				sum += posting.amount;
+				sum = sum.plus(new Big(posting.amount));
 			} else {
 				_emptyPostingCount += 1;
 			}
