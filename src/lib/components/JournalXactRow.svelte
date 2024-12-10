@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Xact } from '$lib/data/model';
+	import { getAmountColour } from '$lib/utils/formatter';
 	import type { EventHandler } from 'svelte/elements';
 
 	interface Props {
@@ -20,10 +21,10 @@
 <article onclick={onRowClicked}>
 	<!-- date/payee -->
 	<div class="flex flex-row space-x-2">
-		<div>
+		<time class="opacity-60">
 			{xact.date}
 			<!-- todo: ISO format -->
-		</div>
+		</time>
 		<div>
 			{xact.payee}
 		</div>
@@ -31,7 +32,7 @@
 
 	<!-- note -->
 	{#if xact.note}
-		<div class="pl-6 leading-4 text-primary-500">
+		<div class="pl-6 leading-4 text-primary-400">
 			<small>; {xact.note}</small>
 		</div>
 	{/if}
@@ -40,9 +41,10 @@
 	{#if xact.postings}
 		<div class="pl-6 text-sm leading-4">
 			{#each xact.postings as posting}
-				<div class="flex flex-row">
-					<div class="grow">{posting.account}</div>
-					<div>{posting.amount} {posting.currency}</div>
+				<div class="flex flex-row opacity-60">
+					<data class="grow">{posting.account}</data>
+					<data class={`${getAmountColour(posting.amount as number)}`}>
+						{posting.amount} {posting.currency}</data>
 				</div>
 			{/each}
 		</div>
