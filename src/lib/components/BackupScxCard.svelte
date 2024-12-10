@@ -5,6 +5,7 @@
 	import { SettingKeys, settings } from "$lib/settings";
 	import Notifier from "$lib/utils/notifier";
 	import { goto } from "$app/navigation";
+	import { getRemoteBackupCount } from "$lib/services/cloudBackupService";
 
     Notifier.init()
 
@@ -24,7 +25,7 @@
             return
         }
 
-        
+        // getRemoteBackupCount
     }
 </script>
 <HomeCardTemplate>
