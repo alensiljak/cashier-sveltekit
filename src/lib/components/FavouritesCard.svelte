@@ -8,6 +8,7 @@
 	import appService from '$lib/services/appService';
 	import Notifier from '$lib/utils/notifier';
 	import { getAccountBalance } from '$lib/services/accountsService';
+	import { formatAmount, getAmountColour } from '$lib/utils/formatter';
 
 	Notifier.init();
 
@@ -68,10 +69,10 @@
 						<div class="cell grow">
 							{account?.name}
 						</div>
-						<div class="text-right">
+						<data class={`text-right ${getAmountColour(getBalance(account).amount)}`}>
 							{getBalance(account).amount}
 							{getBalance(account).currency}
-						</div>
+						</data>
 					</div>
 				</div>
 			{/each}

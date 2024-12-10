@@ -30,7 +30,12 @@ export function getMoneyColour(money: Money): string | undefined {
   return getAmountColour(money.amount)
 }
 
-export function getAmountColour(amount: number) {
+/**
+ * Colorize the Money values based on the amount (red <0, yellow 0, green >0).
+ * @param amount The amount to base the color upon.
+ * @returns The Skeleton/Tailwind color string, to be used in the container class.
+ */
+export function getAmountColour(amount: number): string {
   let colour = ''
 
   if (amount < 0) {
