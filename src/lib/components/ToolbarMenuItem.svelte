@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import type { MouseEventHandler } from 'svelte/elements';
 
 	// Props
 	type Props = {

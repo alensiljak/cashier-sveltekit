@@ -29,6 +29,7 @@ export const Constants = {
 
 export const SettingKeys = {
   assetAllocationDefinition: 'aa.definition',
+  backupServerUrl: 'backupServerUrl',  // Server for online backup (pCloud).
   currency: 'currency',
   favouriteAccounts: 'favouriteAccounts',
   forecastAccounts: 'forecast.accounts',
