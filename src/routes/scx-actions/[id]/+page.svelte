@@ -56,7 +56,6 @@
 		// clear the id field, if any, to get a new one on save.
 		newTx.id = undefined;
 		const dal = new CashierDAL();
-
 		const id = await dal.saveXact(newTx);
 
 		// update the iteration date
@@ -69,7 +68,6 @@
 		xact.set(tx);
 
 		// open the transaction. Maintain page navigation history.
-		//router.replace({ name: 'tx', params: { id: id } });
 		await goto('/tx', { replaceState: true });
 	}
 
@@ -135,7 +133,7 @@
 		templateTx.date = newDate;
 		stx.transaction = templateTx;
 		//tx.value = templateTx
-		stx.nextDate = $xact.date as string;
+		stx.nextDate = newDate;
 
 		$ScheduledXact = stx;
 
