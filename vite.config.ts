@@ -3,12 +3,14 @@ import type { UserConfig } from 'vite';
 //import { VitePWA } from 'vite-plugin-pwa'
 import { SvelteKitPWA } from '@vite-pwa/sveltekit';
 import { defineConfig } from 'vite';
+import { svelte } from '@sveltejs/vite-plugin-svelte';
 
 const config: UserConfig = defineConfig({
 	build: {
 		sourcemap: process.env.SOURCE_MAP === 'true',
 	},
 	plugins: [
+		// svelte(),
 		sveltekit(),
 		SvelteKitPWA({
 			strategies: 'generateSW',
