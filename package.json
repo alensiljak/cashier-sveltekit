@@ -63,8 +63,7 @@
 		"typescript-eslint": "^8.18.0",
 		"vite": "^6.0.0",
 		"vitest": "^2.1.8",
+		"webdav": "^5.7.1",
 		"workbox-window": "^7.3.0"
-	},
-	"dependencies": {
 	}
 }

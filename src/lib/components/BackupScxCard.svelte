@@ -5,12 +5,13 @@
 	import { SettingKeys, settings } from "$lib/settings";
 	import Notifier from "$lib/utils/notifier";
 	import { goto } from "$app/navigation";
-	import { getRemoteBackupCount } from "$lib/services/cloudBackupService";
+	import { backupScheduledXacts, getLatestFilename, getRemoteBackupCount } from "$lib/services/cloudBackupService";
+	import db from "$lib/data/db";
 
     Notifier.init()
 
     let totalBackups;
-    let lastBackup;
+    let lastBackup: string;
     let localXacts;
 
     onMount(async () => {
@@ -25,7 +26,30 @@
             return
         }
 
-        // getRemoteBackupCount
+        let remoteBackups = await getRemoteBackupCount();
+        totalBackups = remoteBackups;
+
+        lastBackup = await getLatestFilename();
+        lastBackup = lastBackup === '' ? 'n/a' : lastBackup;
+
+        let localCount = await db.scheduled.count()
+        localXacts = localCount
+    }
+
+    async function onBackupClick() {
+        Notifier.warn('Not implemented')
+
+        backupScheduledXacts();
+
+        // clear cache
+        
+        await loadData()
+
+        Notifier.success('Scheduled Transactions backup complete')
+    }
+
+    async function onRestoreClick() {
+        Notifier.warn('Not implemented')
     }
 </script>
 <HomeCardTemplate>
@@ -42,8 +66,10 @@
     {/snippet}
     {#snippet footer()}
     <div class="grid grid-cols-2 gap-4 place-items-center">
-        <button type="button" class="btn variant-filled-primary">Backup</button>
-        <button type="button" class="btn variant-filled-tertiary">Restore</button>
+        <button type="button" class="btn variant-filled-primary" onclick={onBackupClick}>
+            Backup</button>
+        <button type="button" class="btn variant-filled-tertiary" onclick={onRestoreClick}>
+            Restore</button>
     </div>
     {/snippet}
 </HomeCardTemplate>
