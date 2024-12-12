@@ -45,13 +45,9 @@ async function openWrite(filename: string, create: boolean = true) {
 async function getHandle(filename: string, create: boolean = false) {
     try {
         const root = await navigator.storage.getDirectory();
-        // console.debug('root:', root)
-        console.debug(create)
-
         const fileHandle = await root.getFileHandle(filename, {
             create: create
         });
-        console.debug('handle:', fileHandle)
 
         return fileHandle
     } catch (error: unknown) {
