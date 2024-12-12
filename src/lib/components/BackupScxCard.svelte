@@ -5,14 +5,16 @@
 	import { SettingKeys, settings } from "$lib/settings";
 	import Notifier from "$lib/utils/notifier";
 	import { goto } from "$app/navigation";
-	import { backupScheduledXacts, clearCache, getLatestFilename, getRemoteBackupCount } from "$lib/services/cloudBackupService";
 	import db from "$lib/data/db";
+	import { CloudBackupService } from "$lib/services/cloudBackupService";
+	import { BackupType } from "$lib/enums";
 
     Notifier.init()
+    let backupSvc: CloudBackupService
 
-    let totalBackups;
-    let lastBackup: string;
-    let localXacts;
+    let totalBackups = $state(0);
+    let lastBackup: string = $state('')
+    let localXacts = $state(0);
 
     onMount(async () => {
         await loadData()
@@ -26,10 +28,11 @@
             return
         }
 
-        let remoteBackups = await getRemoteBackupCount();
-        totalBackups = remoteBackups;
+        backupSvc = new CloudBackupService(serverUrl)
 
-        lastBackup = await getLatestFilename();
+        totalBackups = await backupSvc.getRemoteBackupCount(BackupType.SCHEDULEDXACTS);
+
+        lastBackup = await backupSvc.getLatestFilename();
         lastBackup = lastBackup === '' ? 'n/a' : lastBackup;
 
         let localCount = await db.scheduled.count()
@@ -37,9 +40,9 @@
     }
 
     async function onBackupClick() {
-        backupScheduledXacts();
+        backupSvc.backupScheduledXacts();
 
-        clearCache()
+        backupSvc.clearCache()
         
         await loadData()
 

@@ -6,68 +6,101 @@ import moment from "moment";
 import appService from "./appService";
 import { BackupType } from "$lib/enums";
 import { ISODATEFORMAT, LONGTIMEFORMAT } from "$lib/constants";
+import { createClient, type FileStat } from 'webdav'
 
-export async function backupScheduledXacts() {
-    // get the JSON data for export
-    let output = await appService.getScheduledXactsForExport()
-    if (!output) {
-        throw new Error('Error retrieving and serializing Scheduled Transactions!')
+export class CloudBackupService {
+    _serverUrl: string
+    _client
+    // Used to avoid sending too many request.
+    _resourceCache?: FileStat[]
+
+    constructor(serverUrl: string) {
+        this._serverUrl = serverUrl
+        this._client = createClient(serverUrl)
     }
 
-    // get filename
-    const filename = getFilenameForNewBackup(BackupType.SCHEDULEDXACTS)
-    console.debug(filename)
-    // upload
-}
+    async backupScheduledXacts() {
+        // get the JSON data for export
+        const output = await appService.getScheduledXactsForExport()
+        if (!output) {
+            throw new Error('Error retrieving and serializing Scheduled Transactions!')
+        }
 
-export function clearCache() {
+        // get filename
+        const filename = this.getFilenameForNewBackup(BackupType.SCHEDULEDXACTS)
 
-}
-
-export function getRemoteBackupCount() {
-    const files = getFileListing()
-
-    // filter only the backups for Scheduled Xacts
-    const result = files;
-    return result
-}
-
-export function getLatestFilename(): string {
-
-}
-
-// private
-
-function getFileListing(): string[] {
-    // Fetch the file listing only if the cache is empty.
-    let url = getUrl('/')
-}
-
-
-function getFilenameForNewBackup(backupType: string) {
-    const now = moment()
-
-    // file extension
-    let extension;
-    switch (backupType) {
-        case BackupType.JOURNAL:
-            extension = 'ledger'
-            break;
-        default:
-            // case BackupType.SCHEDULEDXACTS:
-            extension = 'json'
-            break;
+        // upload
+        //const url = this.getUrl(`/${filename}`)
+        const path = `/${filename}`
+        //const 
+        const result = await this._client.putFileContents(path, output)
+        return result
     }
 
-    const prefix = backupType.toLowerCase()
-    const date = now.format(ISODATEFORMAT)
-    const time = now.format(LONGTIMEFORMAT)
+    clearCache() {
 
-    const filename = `${prefix}_${date}_${time}.${extension}`
+    }
 
-    return filename
-}
+    /**
+     * Retrieves the number of backups for the given backup type.
+     * @returns 
+     */
+    async getRemoteBackupCount(backupType: string): Promise<number> {
+        const files = await this.getFileListing()
 
-function getUrl(url: string) {
+        // filter only the backups for Scheduled Xacts
+        const result = files
+            .filter((item: FileStat) => item.filename.startsWith(backupType))
+            .length
+        return result
+    }
+
+    getLatestFilename(): string {
+
+    }
+
+    // private
+
+    async getFileListing(): Promise<FileStat[]> {
+        // Fetch the file listing only if the cache is empty.
+        if (!this._resourceCache) {
+            //const url = this.getUrl('/')
+            const response = await this._client.getDirectoryContents('/')
+
+            // cache the listing
+            this._resourceCache = response as FileStat[]
+        }
+
+        return this._resourceCache
+    }
+
+
+    getFilenameForNewBackup(backupType: string) {
+        const now = moment()
+
+        // file extension
+        let extension;
+        switch (backupType) {
+            case BackupType.JOURNAL:
+                extension = 'ledger'
+                break;
+            default:
+                // case BackupType.SCHEDULEDXACTS:
+                extension = 'json'
+                break;
+        }
+
+        const prefix = backupType.toLowerCase()
+        const date = now.format(ISODATEFORMAT)
+        const time = now.format(LONGTIMEFORMAT)
+
+        const filename = `${prefix}_${date}_${time}.${extension}`
+
+        return filename
+    }
+
+    getUrl(path: string) {
+        return `${this._serverUrl}/${path}`
+    }
 
 }
