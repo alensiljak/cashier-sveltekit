@@ -1,9 +1,8 @@
+import { AssetAllocationEngine } from '$lib/AssetAllocation'
 import { AssetAllocationFilename } from '$lib/constants.js'
 import * as OpfsLib from '$lib/utils/opfslib.js'
 
-export async function load({ params }) {
-    // console.debug(params)
-
+export async function load() {
     try {
         await loadData()
     } catch (error) {
@@ -19,7 +18,13 @@ async function loadData() {
 }
 
 async function loadAaFromFile() {
-    const alloc = await OpfsLib.readFile(AssetAllocationFilename)
+    const definition = await OpfsLib.readFile(AssetAllocationFilename)
+    if(!definition) {
+        throw new Error('Could not load AA definition!')
+    }
 
-    console.debug('allocation:', alloc)
+    const aa = new AssetAllocationEngine()
+    await aa.loadFullAssetAllocation(definition)
+
+    return aa.assetClasses
 }

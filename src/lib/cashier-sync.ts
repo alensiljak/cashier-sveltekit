@@ -3,8 +3,8 @@
 */
 // import ky from 'ky'
 import { settings, SettingKeys } from '$lib/settings'
-import { engine } from '$lib/AssetAllocation'
 import moment from 'moment'
+import { AssetAllocationEngine } from './AssetAllocation'
 
 /**
  * Cashier Sync class talks to CashierSync on the server. The methods here represent the methods
@@ -132,7 +132,8 @@ export class CashierSync {
     // parse
     const currentValues = this.parseCurrentValues(result, rootAccount)
 
-    await engine.importCurrentValuesJson(currentValues)
+    const aa = new AssetAllocationEngine()
+    await aa.importCurrentValuesJson(currentValues)
     return 'OK'
   }
 

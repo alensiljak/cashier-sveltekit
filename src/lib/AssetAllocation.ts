@@ -14,7 +14,8 @@ export const NUMBER_FORMAT = '0,0.00'
 /**
  * loadDefinition = loads the pre-set definition
  */
-class AssetAllocationEngine {
+export class AssetAllocationEngine {
+  assetClasses: AssetClass[] = []
   assetClassIndex: Record<string, AssetClass>
   stockIndex: Record<string, string>
 
@@ -23,16 +24,16 @@ class AssetAllocationEngine {
     this.stockIndex = {}
   }
 
-  async loadFullAssetAllocation(): Promise<AssetClass[]> {
+  async loadFullAssetAllocation(definition: string): Promise<AssetClass[]> {
     // aa definition
 
-    const assetClasses = await this.loadDefinition()
-    if (!assetClasses.length) return []
+    this.assetClasses = await this.parseDefinition(definition)
+    if (!this.assetClasses.length) return []
 
-    this.assetClassIndex = this.buildAssetClassIndex(assetClasses)
+    this.assetClassIndex = this.buildAssetClassIndex(this.assetClasses)
 
     // build the stock index
-    this.stockIndex = this.buildStockIndex(assetClasses)
+    this.stockIndex = this.buildStockIndex(this.assetClasses)
 
     await this.loadCurrentValues()
 
@@ -329,6 +330,18 @@ class AssetAllocationEngine {
     return result
   }
 
+  parseDefinition(definition: string): AssetClass[] {
+    if(!definition) {
+      throw new Error('The AA definition not set.')
+    }
+
+    // read from TOML file.
+    const parsed = toml.parse(definition)
+    const assetClasses = this.linearizeObject(parsed)
+
+    return assetClasses
+  }
+
   /**
    * Used on import only!
    * Validates the asset allocation and stores it into the database.
@@ -386,14 +399,6 @@ class AssetAllocationEngine {
       }
       assetClass.currentValue += amount
     })
-  }
-
-  /**
-   * Load the asset allocation definition from persistence.
-   * @returns Array of asset class records
-   */
-  async loadDefinition(): Promise<AssetClass[]> {
-    return appService.db.assetAllocation.toArray()
   }
 
   sumGroupBalances(acIndex: Record<string, AssetClass>) {
@@ -482,4 +487,4 @@ class AssetAllocationEngine {
   }
 }
 
-export const engine = new AssetAllocationEngine()
+//export const engine = new AssetAllocationEngine()
