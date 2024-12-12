@@ -24,7 +24,7 @@ export class AssetClass {
   get depth() {
     if (!this.parentName) return 0
 
-    let parents = this.parentName.split(':')
+    const parents = this.parentName.split(':')
     return parents.length
   }
 
@@ -45,14 +45,14 @@ export class AssetClass {
   //   }
 
   get name() {
-    let parts = this.fullname.split(':')
-    let lastIndex = parts.length - 1
+    const parts = this.fullname.split(':')
+    const lastIndex = parts.length - 1
     return parts[lastIndex]
   }
 
   get parentName() {
-    let parts = this.fullname.split(':')
-    let lastIndex = parts.length - 1
+    const parts = this.fullname.split(':')
+    const lastIndex = parts.length - 1
     // this.name = parts[lastIndex];
     parts.splice(lastIndex, 1)
     return parts.join(':')
@@ -62,7 +62,7 @@ export class AssetClass {
 export interface StockSymbol {
   name: string
   accounts: Account[]
-  analysis: any
+  analysis: unknown
 }
 
 /**

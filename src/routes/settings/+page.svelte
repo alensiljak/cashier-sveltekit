@@ -5,30 +5,39 @@
 	import { SettingKeys, settings } from '$lib/settings';
 	import Notifier from '$lib/utils/notifier';
 	import { FileButton, getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
-	import { xact } from '$lib/data/mainStore';
-	import { get } from 'svelte/store';
-	import db from '$lib/data/db'
-	import appService from '$lib/services/appService'
+	import db from '$lib/data/db';
+	import appService from '$lib/services/appService';
+	import { invalidate } from '$app/navigation';
+	import * as OpfsLib from '$lib/utils/opfslib.js'
+	import { AssetAllocationFilename } from '$lib/constants.js';
 
 	const modalStore = getModalStore();
 	Notifier.init();
 
-	let currency: string = '';
-	let rootInvestmentAccount: string = '';
-	let rememberLastTransaction: boolean | undefined = undefined;
+	export let data;
+
+	// let currency: string = '';
+	// let rootInvestmentAccount: string = '';
+	// let rememberLastTransaction: boolean | undefined = undefined;
 	let settings_files: FileList;
+	let aa_files: FileList;
 
 	onMount(async () => {
 		// console.log('the component has mounted');
-		await loadSettings();
-
-		console.debug('xact is', get(xact));
+		//await loadSettings();
 	});
 
-	async function loadSettings() {
-		currency = await settings.get(SettingKeys.currency);
-		rootInvestmentAccount = await settings.get(SettingKeys.rootInvestmentAccount);
-		rememberLastTransaction = await settings.get(SettingKeys.rememberLastTransaction);
+	async function onAaFileChanged() {
+		const modal: ModalSettings = {
+			type: 'confirm',
+			// Data
+			title: 'Confirm Import',
+			body: 'Do you want to import the selected Asset Allocation file?',
+			response: async (r: boolean) => {
+				if (r) await restoreAssetAllocation();
+			}
+		};
+		modalStore.trigger(modal);
 	}
 
 	/**
@@ -49,15 +58,31 @@
 		modalStore.trigger(modal);
 	}
 
+	async function restoreAssetAllocation() {
+		if (aa_files.length === 0) {
+			console.error('no files selected!');
+			return;
+		}
+		let file = aa_files[0];
+		const contents: any = await appService.readFileAsync(file as Blob);
+
+		// save to OPFS
+		await OpfsLib.saveFile(AssetAllocationFilename, contents)
+
+		// todo: reset AA cache
+
+		Notifier.success('Asset Allocation imported')
+	}
+
 	/**
 	 * Restore the selected settings file.
 	 */
 	async function restoreSettings() {
-		if(settings_files.length === 0) {
-			console.error('no files selected!')
-			return
+		if (settings_files.length === 0) {
+			console.error('no files selected!');
+			return;
 		}
-		let file = settings_files[0]
+		let file = settings_files[0];
 		const contents: any = await appService.readFileAsync(file as Blob);
 
 		// clear settings table
@@ -67,15 +92,16 @@
 		const records = JSON.parse(contents);
 		await db.settings.bulkAdd(records);
 
-		Notifier.success('Settings imported')
+		Notifier.success('Settings imported');
 
-		await loadSettings();
+		invalidate('/settings')
+		// await loadSettings();
 	}
 
 	async function saveSettings() {
-		await settings.set(SettingKeys.currency, currency);
-		await settings.set(SettingKeys.rootInvestmentAccount, rootInvestmentAccount);
-		await settings.set(SettingKeys.rememberLastTransaction, rememberLastTransaction);
+		await settings.set(SettingKeys.currency, data.currency);
+		await settings.set(SettingKeys.rootInvestmentAccount, data.rootInvestmentAccount);
+		await settings.set(SettingKeys.rememberLastTransaction, data.rememberLastTransaction);
 
 		Notifier.notify('Settings saved', 'variant-filled-primary');
 	}
@@ -89,7 +115,7 @@
 	<!-- currency -->
 	<label class="label">
 		<span>Main Currency</span>
-		<input class="input" type="text" placeholder="Main Currency" bind:value={currency} />
+		<input class="input" type="text" placeholder="Main Currency" bind:value={data.currency} />
 	</label>
 	<!-- investment account -->
 	<label class="label">
@@ -98,13 +124,13 @@
 			class="input"
 			type="text"
 			placeholder="Investment account root"
-			bind:value={rootInvestmentAccount}
+			bind:value={data.rootInvestmentAccount}
 		/>
 	</label>
 
 	<!-- last transaction -->
 	<label class="flex items-center space-x-2">
-		<input class="checkbox" type="checkbox" bind:checked={rememberLastTransaction} />
+		<input class="checkbox" type="checkbox" bind:checked={data.rememberLastTransaction} />
 		<p>Remember last transaction for payees.</p>
 	</label>
 
@@ -119,7 +145,17 @@
 		</button>
 	</center>
 
-	<section>Import Asset Allocation file</section>
+	<section>
+		<h3 class="h3">Asset Allocation</h3>
+		<center>
+			<FileButton
+				name="aa_file"
+				button="btn variant-soft-primary"
+				bind:files={aa_files}
+				on:change={onAaFileChanged}
+			/>
+		</center>
+	</section>
 
 	<section>
 		<h3 class="h3">Restore Settings</h3>
