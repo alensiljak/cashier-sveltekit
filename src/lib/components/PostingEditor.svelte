@@ -18,7 +18,9 @@
 	}: Props = $props();
 
 	let amountInput: HTMLInputElement;
-	let amountFieldColor = $derived($xact?.postings[index].amount as number < 0 ? '!bg-secondary-500/20' : '!bg-primary-500/20')
+	let amountFieldColor = $derived(
+		($xact?.postings[index].amount as number) < 0 ? '!bg-secondary-500/20' : '!bg-primary-500/20'
+	);
 
 	onMount(() => {
 		// bind to the Posting from the store.
@@ -60,17 +62,20 @@
 
 <div class="flex flex-row">
 	<!-- amount sign -->
-	<div class="w-1/4 text-center">
-		<button type="button" class="variant-outline-surface btn" onclick={changeSign}>
+	<div>
+		<button
+			type="button"
+			class="variant-outline-surface btn w-12 grow-0 rounded border border-tertiary-200/50 px-1"
+			onclick={changeSign}
+		>
 			<DiffIcon />
 		</button>
 	</div>
-
 	<input
 		title="Amount"
 		placeholder="Amount"
 		type="number"
-		class={`w=2/4 input variant-form-material text-right ${amountFieldColor}`}
+		class={`input variant-form-material grow text-right ${amountFieldColor} px-1`}
 		bind:value={$xact.postings[index].amount}
 		bind:this={amountInput}
 		onfocus={() => amountInput.select()}
@@ -81,13 +86,15 @@
 		oninput={() => updateAmount($xact.postings[index].amount as number)}
 		onchange={onAmountChanged}
 	-->
-	<input
-		title="Currency"
-		placeholder="Currency"
-		type="text"
-		class="input variant-form-material w-1/4 text-center"
-		bind:value={$xact.postings[index].currency}
-	/>
+	<div class="min-w-24 shrink">
+		<input
+			title="Currency"
+			placeholder="Currency"
+			type="text"
+			class="input variant-form-material px-1 text-center"
+			bind:value={$xact.postings[index].currency}
+		/>
+	</div>
 	<!--
 		oninput={() => updateCurrency($xact.postings[index].currency)}
 		uppercase
