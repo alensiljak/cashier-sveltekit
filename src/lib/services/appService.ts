@@ -286,6 +286,16 @@ class AppService {
   }
 
   /**
+   * 
+   * @returns All Scheduled Xacts, serialized to JSON.
+   */
+  async getScheduledXactsForExport(): Promise<string> {
+    const records: ScheduledTransaction[] = await db.scheduled.toArray()
+    const output = this.serialize(records)
+    return output
+  }
+
+  /**
    * Deprecated. Now using importBalanceSheet instead.
    * Imports accounts list from Ledger.
    * @param accountsList Output of `ledger accounts`
@@ -533,6 +543,10 @@ class AppService {
     await this.db.lastXact.put(lastTx)
 
     return true
+  }
+
+  serialize(content: unknown) {
+    return JSON.stringify(content)
   }
 }
 

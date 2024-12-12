@@ -5,7 +5,7 @@
 	import { SettingKeys, settings } from "$lib/settings";
 	import Notifier from "$lib/utils/notifier";
 	import { goto } from "$app/navigation";
-	import { backupScheduledXacts, getLatestFilename, getRemoteBackupCount } from "$lib/services/cloudBackupService";
+	import { backupScheduledXacts, clearCache, getLatestFilename, getRemoteBackupCount } from "$lib/services/cloudBackupService";
 	import db from "$lib/data/db";
 
     Notifier.init()
@@ -37,11 +37,9 @@
     }
 
     async function onBackupClick() {
-        Notifier.warn('Not implemented')
-
         backupScheduledXacts();
 
-        // clear cache
+        clearCache()
         
         await loadData()
 

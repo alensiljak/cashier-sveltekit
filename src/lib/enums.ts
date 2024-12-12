@@ -1,3 +1,8 @@
+export const BackupType = {
+  JOURNAL: 'journal',
+  SCHEDULEDXACTS: 'scheduled'
+}
+
 export const SelectionType = {
   ACCOUNT: 'Account',
 } as const;
