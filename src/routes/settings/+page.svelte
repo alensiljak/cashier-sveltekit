@@ -7,7 +7,7 @@
 	import { FileButton, getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
 	import db from '$lib/data/db';
 	import appService from '$lib/services/appService';
-	import { invalidate } from '$app/navigation';
+	import { invalidate, invalidateAll } from '$app/navigation';
 	import * as OpfsLib from '$lib/utils/opfslib.js'
 	import { AssetAllocationFilename } from '$lib/constants.js';
 
@@ -16,15 +16,10 @@
 
 	export let data;
 
-	// let currency: string = '';
-	// let rootInvestmentAccount: string = '';
-	// let rememberLastTransaction: boolean | undefined = undefined;
 	let settings_files: FileList;
 	let aa_files: FileList;
 
 	onMount(async () => {
-		// console.log('the component has mounted');
-		//await loadSettings();
 	});
 
 	async function onAaFileChanged() {

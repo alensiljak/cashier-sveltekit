@@ -1,10 +1,12 @@
 import { AssetAllocationEngine } from '$lib/AssetAllocation'
+import type { AssetClass } from '$lib/AssetClass'
 import { AssetAllocationFilename } from '$lib/constants.js'
 import * as OpfsLib from '$lib/utils/opfslib.js'
 
 export async function load() {
     try {
-        await loadData()
+        const assetClasses: AssetClass[] = await loadData()
+        return { assetClasses }
     } catch (error) {
         console.error(error)
     }
@@ -13,7 +15,7 @@ export async function load() {
 async function loadData() {
     // check state for caches AA.
     // else
-    await loadAaFromFile()
+    return await loadAaFromFile()
 
 }
 

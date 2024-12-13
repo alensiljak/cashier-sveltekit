@@ -16,7 +16,7 @@
             "type": "firefox",
             "request": "launch",
             "reAttach": true,
-            "url": "http://localhost/index.html",
+            "url": "http://localhost:5173",
             "webRoot": "${workspaceFolder}"
         },
         {
@@ -25,7 +25,7 @@
             "request": "attach",
             "pathMappings": [
                 {
-                    "url": "http://localhost:5173/src",
+                    "url": "http://localhost:5173/",
                     "path": "${workspaceFolder}/src"
                 }
             ]

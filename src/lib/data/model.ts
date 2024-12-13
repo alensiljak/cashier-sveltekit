@@ -3,7 +3,7 @@
 */
 
 export class Money {
-  amount = 0
+  quantity = 0
   currency = ''
 }
 

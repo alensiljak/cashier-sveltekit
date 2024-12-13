@@ -8,7 +8,7 @@ import { Account, Money } from '$lib/data/model'
 import db from '$lib/data/db'
 
 export class AccountService {
-  constructor() {}
+  constructor() { }
 
   async createDefaultAccounts() {
     const accountsList = this.getDefaultChartOfAccounts()
@@ -145,26 +145,25 @@ export class AccountService {
 }
 
 export function getAccountBalance(account: Account, defaultCurrency: string): Money {
-  if (!defaultCurrency) {
-    throw new Error('Default currency is mandatory!')
-  }
+  // if (!defaultCurrency) {
+  //   throw new Error('Default currency is mandatory!')
+  // }
 
   const result = new Money()
-  // const defaultCurrency = await settings.get(SettingKeys.currency)
-
   // default value
-  result.amount = 0
   result.currency = defaultCurrency
 
   // Are there any balance records?
   if (!account.balances) return result
 
-  // Do we have a balance in the default currency?
-  const balance = account.balances[defaultCurrency]
-  if (balance) {
-    result.amount = balance
-    result.currency = defaultCurrency
-    return result
+  if (defaultCurrency) {
+    // Do we have a balance in the default currency?
+    const defaultQuantity = account.balances[defaultCurrency]
+    if(defaultQuantity) {
+      result.quantity = defaultQuantity
+      result.currency = defaultCurrency
+      return result
+    }
   }
 
   // Otherwise take the first balance/currency.
@@ -172,7 +171,7 @@ export function getAccountBalance(account: Account, defaultCurrency: string): Mo
   if (!currencies) return result
 
   const currency = currencies[0]
-  result.amount = account.balances[currency]
+  result.quantity = account.balances[currency]
   result.currency = currency
   return result
 }

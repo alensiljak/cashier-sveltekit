@@ -6,6 +6,8 @@ import { AssetClass, type AssetClassDefinition } from './AssetClass'
 import numeral from 'numeral'
 import toml from 'toml'
 import { getAccountBalance } from '$lib/services/accountsService'
+import Big from 'big.js'
+import type { Money } from './data/model'
 
 // constants
 
@@ -95,7 +97,7 @@ export class AssetAllocationEngine {
 
     Object.values(dictionary).forEach((ac) => {
       // calculate current allocation
-      ac.currentAllocation = (ac.currentValue * 100) / total
+      ac.currentAllocation = ac.currentValue.times(100).div(total).toNumber()
 
       // diff
       ac.diff = ac.currentAllocation - ac.allocation
@@ -103,9 +105,9 @@ export class AssetAllocationEngine {
       // diff %
       ac.diffPerc = (ac.diff * 100) / ac.allocation
 
-      ac.allocatedValue = (ac.allocation * total) / 100
+      ac.allocatedValue = Big((ac.allocation * total.toNumber()) / 100)
 
-      ac.diffAmount = ac.currentValue - ac.allocatedValue
+      ac.diffAmount = ac.currentValue.minus(ac.allocatedValue).toNumber()
     })
   }
 
@@ -331,7 +333,7 @@ export class AssetAllocationEngine {
   }
 
   parseDefinition(definition: string): AssetClass[] {
-    if(!definition) {
+    if (!definition) {
       throw new Error('The AA definition not set.')
     }
 
@@ -365,17 +367,17 @@ export class AssetAllocationEngine {
     const defaultCurrency = await appService.getDefaultCurrency()
     const invAccounts = await appService.loadInvestmentAccounts()
 
-    await invAccounts.forEach((account) => {
-      let amount = parseFloat(account.currentValue as string)
-      if (!amount || isNaN(amount)) {
-        console.warn(`Account ${account.name} has no current value set.`)
-        amount = 0
-      }
+    invAccounts.forEach((account) => {
+      // Current Value is populated from Ledger. Only the active accounts will have a value.
+      if (!account.currentValue) return
 
-      const acctBalance = getAccountBalance(account, defaultCurrency)
+      const amount = Big(account.currentValue)
+
+      // add the account balance.
+      const acctBalance: Money = getAccountBalance(account, defaultCurrency)
       account.balance = acctBalance
 
-      if (acctBalance.amount == 0) {
+      if (acctBalance.quantity == 0) {
         // skip adding to the sum.
         return
       }
@@ -393,11 +395,11 @@ export class AssetAllocationEngine {
         throw new Error(`Asset class not found: ${assetClassName}`)
       }
 
-      if (isNaN(assetClass.currentValue)) {
-        // typeof assetClass.currentValue === 'undefined' ||
-        assetClass.currentValue = 0
-      }
-      assetClass.currentValue += amount
+      // if (isNaN(assetClass.currentValue)) {
+      //   // typeof assetClass.currentValue === 'undefined' ||
+      //   assetClass.currentValue = 0
+      // }
+      assetClass.currentValue = assetClass.currentValue.plus(amount)
     })
   }
 
@@ -415,7 +417,7 @@ export class AssetAllocationEngine {
     root.currentValue = sum
   }
 
-  sumChildren(dictionary: object, item: AssetClass) {
+  sumChildren(dictionary: object, item: AssetClass): Big {
     // find all children
     const children = this.findChildren(dictionary, item)
     // console.log(children);
@@ -423,13 +425,13 @@ export class AssetAllocationEngine {
       return item.currentValue
     }
 
-    let sum = 0
+    let sum = Big(0)
     for (let i = 0; i < children.length; i++) {
       const child: AssetClass = children[i]
       child.currentValue = this.sumChildren(dictionary, child)
 
       const amount = child.currentValue
-      sum += amount
+      sum = sum.plus(amount)
     }
 
     return sum

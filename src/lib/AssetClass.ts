@@ -1,11 +1,12 @@
 import { Account } from '$lib/data/model'
+import Big from 'big.js'
 
 export class AssetClass {
   fullname: string
   allocation = 0
-  allocatedValue = 0
+  allocatedValue = Big(0)
   currentAllocation = 0
-  currentValue = 0
+  currentValue = Big(0)
   diff = 0
   diffAmount = 0
   diffPerc = 0

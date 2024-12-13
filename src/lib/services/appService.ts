@@ -244,21 +244,16 @@ class AppService {
   async loadInvestmentAccounts(): Promise<Account[]> {
     // get the root investment account.
     const rootAccount = await settings.get(SettingKeys.rootInvestmentAccount)
-
     if (!rootAccount) {
       throw new Error('Root investment account not set!')
     }
 
-    const accounts: Account[] = await this.db.accounts
-      .where('name')
-      .startsWithIgnoreCase(rootAccount)
+    let accounts: Account[] = await this.db.accounts
+      .where('name').startsWithIgnoreCase(rootAccount)
       .toArray()
 
-    // add the balance
-    const defaultCurrency = await this.getDefaultCurrency()
-    accounts.forEach((account) => {
-      account.balance = getAccountBalance(account, defaultCurrency)
-    })
+    // Get only the accounts with a current value.
+    accounts = accounts.filter((account) => account.currentValue)
 
     return accounts
   }
