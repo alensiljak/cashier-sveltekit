@@ -35,7 +35,7 @@
 	async function loadSettings() {
 		serverUrl = await settings.get(SettingKeys.syncServerUrl);
 		rootInvestmentAccount = await settings.get(SettingKeys.rootInvestmentAccount);
-		currency = await settings.get(SettingKeys.currency);
+		currency = await appService.getDefaultCurrency()
 
 		syncAccounts = await settings.get(SettingKeys.syncAccounts);
 		syncAaValues = await settings.get(SettingKeys.syncAaValues);

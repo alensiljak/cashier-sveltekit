@@ -10,6 +10,7 @@
 	import { invalidate, invalidateAll } from '$app/navigation';
 	import * as OpfsLib from '$lib/utils/opfslib.js'
 	import { AssetAllocationFilename } from '$lib/constants.js';
+	import { DefaultCurrencyStore } from '$lib/data/mainStore.js';
 
 	const modalStore = getModalStore();
 	Notifier.init();
@@ -95,6 +96,8 @@
 
 	async function saveSettings() {
 		await settings.set(SettingKeys.currency, data.currency);
+		DefaultCurrencyStore.set(data.currency)
+		
 		await settings.set(SettingKeys.rootInvestmentAccount, data.rootInvestmentAccount);
 		await settings.set(SettingKeys.rememberLastTransaction, data.rememberLastTransaction);
 

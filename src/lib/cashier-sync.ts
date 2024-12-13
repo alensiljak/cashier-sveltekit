@@ -5,6 +5,7 @@
 import { settings, SettingKeys } from '$lib/settings'
 import moment from 'moment'
 import { AssetAllocationEngine } from './AssetAllocation'
+import appService from './services/appService'
 
 /**
  * Cashier Sync class talks to CashierSync on the server. The methods here represent the methods
@@ -99,7 +100,7 @@ export class CashierSync {
    * @returns array of Account objects
    */
   async readBalances(): Promise<string[]> {
-    //const currency = await settings.get(SettingKeys.currency)
+    //const currency = await appService.getDefaultCurrency()
 
     // Get values in the default currency? In case of multi-currency accounts (i.e. expenses).
 
@@ -119,7 +120,7 @@ export class CashierSync {
     if (!rootAccount) {
       throw new Error('No root investment account set!')
     }
-    const currency = await settings.get(SettingKeys.currency)
+    const currency = await appService.getDefaultCurrency()
     if (!currency) {
       throw new Error('No default currency set!')
     }

@@ -1,3 +1,4 @@
+import appService from "$lib/services/appService";
 import { SettingKeys, settings } from "$lib/settings.js";
 
 export async function load() {
@@ -6,7 +7,7 @@ export async function load() {
 }
 
 async function loadSettings() {
-    const currency = await settings.get(SettingKeys.currency);
+    const currency = await appService.getDefaultCurrency()
     const rootInvestmentAccount = await settings.get(SettingKeys.rootInvestmentAccount);
     const rememberLastTransaction = await settings.get(SettingKeys.rememberLastTransaction);
 

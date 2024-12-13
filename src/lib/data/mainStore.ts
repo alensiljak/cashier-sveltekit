@@ -22,6 +22,7 @@ export const state: Writable<Partial<MainStore>>
 
 // Real items
 
+export const DefaultCurrencyStore: Writable<string> = writable()
 export const xact: Writable<Xact> = writable()
 export const ScheduledXact: Writable<ScheduledTransaction> = writable()
 export const AssetAllocationStore: Writable<AssetClass[] | undefined> = writable()

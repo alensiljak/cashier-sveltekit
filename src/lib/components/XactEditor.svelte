@@ -41,7 +41,7 @@
 			return;
 		}
 
-		const defaultCurrency = await settings.get(SettingKeys.currency);
+		const defaultCurrency = await appService.getDefaultCurrency()
 
 		switch ($selectionMetadata.selectionType) {
 			case 'payee':

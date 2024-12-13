@@ -16,8 +16,9 @@ import {
 import { settings, SettingKeys } from '$lib/settings'
 import { XactAugmenter } from '$lib/utils/xactAugmenter'
 import { HomeCardNames } from '$lib/enums'
-import { ScheduledXact, xact } from '$lib/data/mainStore'
+import { DefaultCurrencyStore, ScheduledXact, xact } from '$lib/data/mainStore'
 import { loadInvestmentAccounts } from './accountsService'
+import { get } from 'svelte/store'
 
 class AppService {
   /**
@@ -229,8 +230,12 @@ class AppService {
   }
 
   async getDefaultCurrency(): Promise<string> {
-    const result = await settings.get(SettingKeys.currency)
-    return result
+    let defaultCurrency = get(DefaultCurrencyStore)
+    if(!defaultCurrency) {
+      defaultCurrency = await settings.get(SettingKeys.currency)
+      DefaultCurrencyStore.set(defaultCurrency)
+    }
+    return defaultCurrency
   }
 
   /**
@@ -302,7 +307,7 @@ class AppService {
       throw new Error('No balance records received for import!')
     }
 
-    const mainCurrency = await settings.get(SettingKeys.currency)
+    const mainCurrency = await this.getDefaultCurrency()
     if (!mainCurrency) {
       throw new Error('No default currency set!')
     }

@@ -7,6 +7,7 @@
 import { Account, Money } from '$lib/data/model'
 import db from '$lib/data/db'
 import { SettingKeys, settings } from '$lib/settings'
+import appService from './appService'
 
 
 export async function createDefaultAccounts() {
@@ -199,4 +200,10 @@ export async function loadInvestmentAccounts(): Promise<Account[]> {
   accounts = accounts.filter((account) => account.currentValue)
 
   return accounts
+}
+
+export async function populateAccountBalances(accounts: Account[]) {
+  const currency = await appService.getDefaultCurrency()
+
+  accounts.forEach(acct => acct.balance = getAccountBalance(acct, currency))
 }
