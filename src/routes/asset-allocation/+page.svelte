@@ -16,6 +16,37 @@
 		_allocation = data.assetClasses as AssetClass[];
 	});
 
+	/**
+	 * Colors the values with offset.
+	 * @param value
+	 */
+	function getOffsetColor(value: number) {
+		if (value <= -20) {
+			return 'text-red-700';
+		}
+		if (-20 < value && value < 0) {
+			return 'text-red-300';
+		}
+		if (0 < value && value < 20) {
+			return 'text-green-300';
+		}
+		if (value >= 20) {
+			return 'text-green-700';
+		}
+	}
+
+	function getRowColor(depth: number) {
+		if (depth === 0) {
+			return 'bg-gray-900'
+		}
+		if (depth === 1) {
+			return 'bg-gray-700'
+		}
+		if (depth === 2) {
+			return 'bg-gray-800'
+		}
+	}
+
 	async function onClearCacheClick() {
 		// clear from state
 
@@ -33,8 +64,8 @@
 		{/snippet}
 	</Toolbar>
 
-	<section class="overflow-auto p-3 table-container">
-		<table class="table table-hover table-compact mx-auto">
+	<section class="overflow-auto p-3">
+		<table class="table-hover mx-auto max-w-2xl">
 			<thead>
 				<tr>
 					<th colspan="1"></th>
@@ -42,18 +73,18 @@
 					<th colspan="3" style="text-align: center;">Value</th>
 				</tr>
 				<tr>
-					<th class="text-center table-cell-fit">Asset Class</th>
-					<th class="text-center table-cell-fit">Target</th>
-					<th class="text-center table-cell-fit">Current</th>
-					<th class="text-center table-cell-fit">Diff&nbsp;%</th>
-					<th class="text-center table-cell-fit">Allocated</th>
-					<th class="text-center table-cell-fit">Current</th>
-					<th class="text-center table-cell-fit">Difference</th>
+					<th class="table-cell-fit text-center">Asset Class</th>
+					<th class="table-cell-fit text-center">Target</th>
+					<th class="table-cell-fit text-center">Current</th>
+					<th class="table-cell-fit text-center">Diff&nbsp;%</th>
+					<th class="table-cell-fit text-center">Allocated</th>
+					<th class="table-cell-fit text-center">Current</th>
+					<th class="table-cell-fit text-center">Difference</th>
 				</tr>
 			</thead>
 			<tbody>
 				{#each _allocation as item}
-					<tr>
+					<tr class={`border-b border-tertiary-200/15 ${getRowColor(item.depth)}`}>
 						<td>
 							<span class={`pl-${item.depth * 2}`}>
 								{item.name}
@@ -65,7 +96,7 @@
 						<td class="text-end">
 							{numeral(item.currentAllocation).format(NUMBER_FORMAT)}
 						</td>
-						<td class="text-end">
+						<td class={`text-end ${getOffsetColor(item.diffPerc)}`}>
 							{numeral(item.diffPerc).format(NUMBER_FORMAT)}
 						</td>
 						<td class="text-end">
@@ -74,7 +105,7 @@
 						<td class="text-end">
 							{numeral(item.currentValue).format(NUMBER_FORMAT)}
 						</td>
-						<td class="text-end">
+						<td class={`text-end ${getOffsetColor(item.diffPerc)}`}>
 							{numeral(item.diffAmount).format(NUMBER_FORMAT)}
 						</td>
 					</tr>
