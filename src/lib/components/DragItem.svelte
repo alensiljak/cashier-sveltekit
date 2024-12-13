@@ -26,7 +26,7 @@
     const transform = $derived(
         todo_list.$is_dragging && todo_list.$drag_type === type
             ? todo_list.$start_index == index
-                ? todo_list.$transform.reduce((p, c) => c ? p - c : p, 0)
+                ? todo_list.$transform.reduce((p: any, c: any) => c ? p - c : p, 0)
                 : todo_list.$transform[index]
             : 0
     )
@@ -35,9 +35,9 @@
      * @param {MouseEvent} event
      * @returns {void}
      */
-    const handle_click = event => {
+    const handle_click = (event: MouseEvent): void => {
         alert(
-            /** @type {HTMLElement} */(event.target)/**/?.textContent
+            /** @type {HTMLElement} */(event.target as HTMLElement)/**/?.textContent
         )
     }
     const handle_dragenter = () => {
@@ -49,6 +49,8 @@
     <Dragable delay={300}
             ondragstart={handle_dragstart}
             setDragElement={set_drag_element}>
+        <!-- svelte-ignore a11y_click_events_have_key_events -->
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div bind:offsetHeight={todo_list.heights[type][index]}
                 style="border-radius:.5em; width:6em; outline:.1em solid; text-align:center; font-size:2em; cursor:pointer; transform:translateY({transform}px);
                 {todo_list.$is_dragging && todo_list.$drag_type == type && `transition:${duration}ms`};

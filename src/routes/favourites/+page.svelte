@@ -7,7 +7,7 @@
 	import { selectionMetadata } from '$lib/data/mainStore';
 	import type { Account, Money } from '$lib/data/model';
 	import { SelectionType } from '$lib/enums';
-	import { AccountService, getAccountBalance } from '$lib/services/accountsService';
+	import * as AccountService from '$lib/services/accountsService';
 	import appService from '$lib/services/appService';
 	import { SelectionModeMetadata, SettingKeys, settings } from '$lib/settings';
 	import { formatAmount, getMoneyColour } from '$lib/utils/formatter';
@@ -64,7 +64,7 @@
 		let defaultCurrency = await appService.getDefaultCurrency();
 		// get account balances
 		accounts.forEach((account) => {
-			account.balance = getAccountBalance(account, defaultCurrency);
+			account.balance = AccountService.getAccountBalance(account, defaultCurrency);
 		});
 
 		// todo: add local Xacts to the balance.

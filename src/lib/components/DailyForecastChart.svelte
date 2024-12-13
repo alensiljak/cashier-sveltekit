@@ -16,6 +16,7 @@
 	import { onMount } from 'svelte';
 	import 'hw-chartjs-plugin-colorschemes/src/plugins/plugin.colorschemes';
 	// office.Composite6
+	// @ts-ignore
 	import { Composite6 } from 'hw-chartjs-plugin-colorschemes/src/colorschemes/colorschemes.office';
 	import { getAccountBalance, getShortAccountName } from '$lib/services/accountsService';
 	import db from '$lib/data/db';

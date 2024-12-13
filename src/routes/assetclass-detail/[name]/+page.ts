@@ -1,5 +1,7 @@
+import { AssetAllocationStore } from "$lib/data/mainStore";
 import { loadInvestmentAccounts } from "$lib/services/accountsService";
 import { SettingKeys, settings } from "$lib/settings";
+import { get } from "svelte/store";
 
 /*
     Asset Class Detail
@@ -17,9 +19,10 @@ export async function load() {
     }
 
     // todo: add the balances.
-    // todo: load asset classes.
+    // load asset classes.
+    const aa = get(AssetAllocationStore)
 
     const currency = await settings.get(SettingKeys.currency)
 
-    return {serverUrl, investmentAccounts, currency}
+    return { serverUrl, investmentAccounts, currency, aa }
 }

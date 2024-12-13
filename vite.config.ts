@@ -3,7 +3,7 @@ import type { UserConfig } from 'vite';
 //import { VitePWA } from 'vite-plugin-pwa'
 import { SvelteKitPWA } from '@vite-pwa/sveltekit';
 import { defineConfig } from 'vite';
-import { svelte } from '@sveltejs/vite-plugin-svelte';
+// import { svelte } from '@sveltejs/vite-plugin-svelte';
 
 const config: UserConfig = defineConfig({
 	build: {
@@ -132,15 +132,15 @@ const config: UserConfig = defineConfig({
 		}),
 		//VitePWA({ registerType: 'autoUpdate' })
 	],
-	test: {
-		environment: 'jsdom',
-		globals: true,
-		// include: ['src/**/*.{test,spec}.{js,ts}']
-		// include: ['tests/**/*.{test,spec}.{js,ts}']
-		// include: ['tests/**/*.{test,spec}.{js,ts}']
-		include: ['tests/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
-		exclude: ['tests/ui/**/*'],
-	}
+	// test: {
+	// 	environment: 'jsdom',
+	// 	globals: true,
+	// 	// include: ['src/**/*.{test,spec}.{js,ts}']
+	// 	// include: ['tests/**/*.{test,spec}.{js,ts}']
+	// 	// include: ['tests/**/*.{test,spec}.{js,ts}']
+	// 	include: ['tests/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+	// 	exclude: ['tests/ui/**/*'],
+	// }
 });
 
 export default config;

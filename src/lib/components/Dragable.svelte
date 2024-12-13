@@ -15,14 +15,14 @@
     } = $props()
     
     /** @type {HTMLDivElement} */
-    let container
+    let container: HTMLDivElement
     /** @type {HTMLDivElement} */
-    let drag_view
+    let drag_view: HTMLDivElement
     /** @type {ReturnType<typeof setTimeout> | 0} */
-    let timeout
+    let timeout: ReturnType<typeof setTimeout> | 0
     
     /** @param {{ clientX: number, clientY: number }} event */
-    const handle_mousedown = ({ clientX, clientY }) => {
+    const handle_mousedown = ({ clientX, clientY }: { clientX: number; clientY: number; }) => {
         if (delay) timeout = setTimeout(start_drag, delay, clientX, clientY)
         else start_drag(clientX, clientY)
     }
@@ -33,7 +33,7 @@
         }
     }
     /** @param {TouchEvent} event */
-    const handle_touchstart = event => {
+    const handle_touchstart = (event: TouchEvent) => {
         handle_mousedown(event.touches[0])
     }
     const handle_touchend = () => {
@@ -43,8 +43,9 @@
      * @param {number} client_x
      * @param {number} client_y
      */
-    const start_drag = (client_x, client_y) => {
-        const drag_element = /** @type {HTMLDivElement} */((drag_view.children[0] || container).cloneNode(true))/**/
+    const start_drag = (client_x: number, client_y: number) => {
+        const drag_element: HTMLDivElement = /** @type {HTMLDivElement} */
+            ((drag_view.children[0] || container).cloneNode(true) as HTMLDivElement)/**/
         drag_element.style.position = "absolute"
         drag_element.style.top = container.offsetTop + "px"
         drag_element.style.left = container.offsetLeft + "px"
@@ -56,6 +57,7 @@
     <svelte:window onmouseup={handle_mouseup}
         ontouchend={handle_touchend} />
     
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div bind:this={container}
             class={classs}
             style="touch-action:none;user-select:none;width:fit-content;"

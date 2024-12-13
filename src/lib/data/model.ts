@@ -8,6 +8,9 @@ export class Money {
 }
 
 export class Account {
+  /**
+   * Used to sum up the balance of sub-accounts in Asset Allocation calculation.
+   */
   balance?: Money
 
   name = ''
@@ -18,7 +21,6 @@ export class Account {
 
   constructor(accountName: string) {
     this.name = accountName
-    //this.balances['EUR'] = 30
   }
 
   getAccountName() {

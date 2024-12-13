@@ -8,50 +8,48 @@ import { Account, Money } from '$lib/data/model'
 import db from '$lib/data/db'
 import { SettingKeys, settings } from '$lib/settings'
 
-export class AccountService {
-  constructor() { }
 
-  async createDefaultAccounts() {
-    const accountsList = this.getDefaultChartOfAccounts()
-    await this.createAccounts(accountsList)
-  }
+export async function createDefaultAccounts() {
+  const accountsList = getDefaultChartOfAccounts()
+  await createAccounts(accountsList)
+}
 
-  /**
-   * Creates accounts in the db, from a string list.
-   * @param accountsList List of accounts, one account full name per line
-   */
-  async createAccounts(accountsList: string) {
-    let accountNames = accountsList.split('\n')
-    // trim
-    accountNames = accountNames.map((account) => account.trim())
-    accountNames = accountNames.filter((account) => account)
+/**
+ * Creates accounts in the db, from a string list.
+ * @param accountsList List of accounts, one account full name per line
+ */
+async function createAccounts(accountsList: string) {
+  let accountNames = accountsList.split('\n')
+  // trim
+  accountNames = accountNames.map((account) => account.trim())
+  accountNames = accountNames.filter((account) => account)
 
-    // create objects
-    // const accounts = accountNames.map((accountName) => new Account(accountName))
-    const accounts = accountNames.map((accountName) => {
-      return {
-        name: accountName,
-      }
-    })
-    await db.accounts.bulkAdd(accounts)
-  }
+  // create objects
+  // const accounts = accountNames.map((accountName) => new Account(accountName))
+  const accounts = accountNames.map((accountName) => {
+    return {
+      name: accountName,
+    }
+  })
+  await db.accounts.bulkAdd(accounts)
+}
 
-  // async getAccountsFromCache() {
-  //   // This version simply retrieves the cached version of /accounts response.
-  //   const serverUrl = await settings.get(SettingKeys.syncServerUrl)
-  //   const cashierSync = new CashierSync(serverUrl)
-  //   const cache = await caches.open(Constants.CacheName)
-  //   const accountsResponse = await cache.match(cashierSync.getAccountsUrl())
-  //   if (!accountsResponse) {
-  //     throw new Error('Accounts not cached!')
-  //   }
-  //   const accounts = await accountsResponse.json()
-  //   // they should be already sorted by name.
-  //   console.debug(accounts)
-  // }
+// async getAccountsFromCache() {
+//   // This version simply retrieves the cached version of /accounts response.
+//   const serverUrl = await settings.get(SettingKeys.syncServerUrl)
+//   const cashierSync = new CashierSync(serverUrl)
+//   const cache = await caches.open(Constants.CacheName)
+//   const accountsResponse = await cache.match(cashierSync.getAccountsUrl())
+//   if (!accountsResponse) {
+//     throw new Error('Accounts not cached!')
+//   }
+//   const accounts = await accountsResponse.json()
+//   // they should be already sorted by name.
+//   console.debug(accounts)
+// }
 
-  getDefaultChartOfAccounts() {
-    const accountsList = `
+function getDefaultChartOfAccounts() {
+  const accountsList = `
     Assets:Cash
     Assets:Bank Accounts:Checking
     Assets:Bank Accounts:Savings
@@ -141,8 +139,7 @@ export class AccountService {
     Liabilities:Credit Cards
     Liabilities:Loans
     `
-    return accountsList
-  }
+  return accountsList
 }
 
 export function getAccountBalance(account: Account, defaultCurrency: string): Money {

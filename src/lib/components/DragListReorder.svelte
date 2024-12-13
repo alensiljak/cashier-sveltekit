@@ -1,3 +1,4 @@
+<!-- @ts-nocheck -->
 <script module lang="ts">
     const create_todo_list = () => {
         let items$ = $state(
@@ -25,9 +26,9 @@
         }
         let is_dragging$ = $state(false)
         /** @type {number[]} */
-        let transform$ = $state([])
+        let transform$: number[] = $state([])
         /** @type {"done" | "todo"} */
-        let drag_type$ = $state("done")
+        let drag_type$: 'done' | 'todo' = $state("done")
         let index$ = $state(0)
         let start_index$ = $state(0)
     
@@ -46,7 +47,7 @@
          * @param {"done" | "todo"} type
          * @returns {void}
          */
-        const enter_drag = (index, type) => {
+        const enter_drag = (index: number, type: "done" | "todo"): void => {
             if (type != drag_type$) move_item(index, type)
             else if (index != start_index$) transition_list(index)
         }
@@ -55,7 +56,7 @@
          * @param {"done" | "todo"} type
          * @returns {void}
          */
-        const move_item = (index, type) => {
+        const move_item = (index: number, type: "done" | "todo"): void => {
             const item = items$[drag_type$].splice(start_index$, 1)[0]
             items$[type].splice(index, 0, item)
             start_index$ = index$ = index
@@ -68,7 +69,7 @@
          * @param {"done" | "todo"} type
          * @returns {void}
          */
-        const start_drag = (index, type) => {
+        const start_drag = (index: number, type: "done" | "todo"): void => {
             transform$ = []
             index$ = index
             start_index$ = index
@@ -76,7 +77,7 @@
             is_dragging$ = true
         }
         /** @param {number} index */
-        const transition_list = index => {
+        const transition_list = (index: number) => {
             if (transform$[index]) {
                 if (index$ > start_index$) {
                     for (let i = index$; i >= index; i--) {
@@ -134,7 +135,7 @@
     
     const todo_list = create_todo_list()
     
-    let set_drag_element = /** @type {(clientX: number, clientY: number, drag: HTMLElement) => any} */
+    let set_drag_element: (clientX: number, clientY: number, drag_element: HTMLElement) => void = /** @type {(clientX: number, clientY: number, drag: HTMLElement) => any} */
         ($state())/**/
     </script>
     

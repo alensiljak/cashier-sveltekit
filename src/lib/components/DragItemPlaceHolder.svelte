@@ -15,7 +15,7 @@
     }
     </script>
     
-    <!-- svelte-ignore a11y-no-static-element-interactions -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div style="user-select:none; width:6em; outline:.1em dashed; text-align:center; font-size:2em; opacity:.75em; cursor:pointer;"
             ondragenter={handle_dragenter}>
         Drag here!
