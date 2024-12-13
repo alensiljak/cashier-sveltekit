@@ -17,7 +17,6 @@
 	Notifier.init();
 
 	onMount(async () => {
-		// console.log($xact.payee)
 	});
 
 	async function onCopyClicked() {

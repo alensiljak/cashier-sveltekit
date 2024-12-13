@@ -5,8 +5,6 @@ import appService from "$lib/services/appService";
  * @returns 
  */
 export async function load({ params }) {
-    //console.debug('in load', params.id)
-
     // if there is an Id, and no record, load the transaction.
     await loadData(params.id)
 

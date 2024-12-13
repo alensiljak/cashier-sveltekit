@@ -15,7 +15,6 @@ import {
 } from '$lib/data/model'
 import { settings, SettingKeys } from '$lib/settings'
 import { XactAugmenter } from '$lib/utils/xactAugmenter'
-import { getAccountBalance } from '$lib/services/accountsService'
 import { HomeCardNames } from '$lib/enums'
 import { ScheduledXact, xact } from '$lib/data/mainStore'
 
@@ -65,15 +64,12 @@ class AppService {
     //   // this.db.postings,
     //   async (tx: Xact) => {
     //     const x = await db.transactions.where('id').equals(id).count()
-    //     console.log('count:', x)
 
     //     // delete transaction record
     //     const result = await db.transactions.where('id').equals(id).delete()
-    //     console.log('transactions -', result)
 
     //     // delete postings
     //     // result = await db.postings.where('transactionId').equals(id).delete()
-    //     // console.log('postings -', result)
 
     //     return 'Transaction complete'
     //   },
@@ -419,7 +415,6 @@ class AppService {
     }
 
     const parsed = JSON.parse(jsonList)
-    // console.debug(parsed)
     // first delete all existing records?
     await db.scheduled.clear()
 

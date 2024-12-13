@@ -29,7 +29,6 @@
 
 	async function handleEntitySelection() {
 		if (!$selectionMetadata) {
-			console.info('not selection mode');
 			return;
 		}
 

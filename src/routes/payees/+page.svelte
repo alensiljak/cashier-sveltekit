@@ -9,6 +9,7 @@
 	import SearchToolbar from '$lib/components/SearchToolbar.svelte';
 	import { ListSearch } from '$lib/utils/ListSearch';
 	import Notifier from '$lib/utils/notifier';
+	import { goto } from '$app/navigation';
 
 	Notifier.init()
 
@@ -57,8 +58,7 @@
 
 			history.back();
 		} else {
-			// goto('/account') // show account details
-			console.info('ignore');
+			goto('/account') // todo: show account details
 		}
 	}
 

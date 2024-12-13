@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import SearchToolbar from '$lib/components/SearchToolbar.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import CashierDAL from '$lib/data/dal';
@@ -35,8 +36,7 @@
 
 			history.back();
 		} else {
-			// goto('/account') // show account details
-			console.info('redirect to account details');
+			goto('/account') // todo: show account details
 		}
 	}
 

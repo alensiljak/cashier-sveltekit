@@ -12,7 +12,6 @@
 	let _allocation: AssetClass[];
 
 	onMount(() => {
-		// console.debug(data.assetClasses?.length)
 		_allocation = data.assetClasses as AssetClass[];
 	});
 

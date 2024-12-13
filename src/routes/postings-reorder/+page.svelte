@@ -17,7 +17,7 @@
 
 	function onItemDownClicked(index: number) {
 		if (index === MAX_ITEMS - 1) {
-			console.log('already at bottom');
+			// already at bottom
 			return;
 		}
 
@@ -30,7 +30,7 @@
 
 	function onItemUpClicked(index: number) {
 		if (index === 0) {
-			console.log('already at top');
+			// already at top
 			return;
 		}
 
