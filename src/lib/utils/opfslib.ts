@@ -22,6 +22,7 @@ export async function saveFile(filename: string, content: string) {
     await stream?.close()
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function openRead(filename: string) {
     const fileHandle = getHandle(filename)
     if (!fileHandle) {
@@ -50,7 +51,8 @@ async function getHandle(filename: string, create: boolean = false) {
         });
 
         return fileHandle
-    } catch (error: unknown) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
         if (error.name === 'NotFoundError') {
             console.log('The file does not exist');
         } else {

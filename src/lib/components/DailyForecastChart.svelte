@@ -105,7 +105,7 @@
 		const account: Account = await db.accounts.get(accountName);
 		entry.label = account.getAccountName();
 		// todo: add local transactions
-		entry.data[0] = getAccountBalance(account, defaultCurrency).amount;
+		entry.data[0] = getAccountBalance(account, defaultCurrency).quantity;
 
 		// add scheduled transactions
 		await addScx(accountName);

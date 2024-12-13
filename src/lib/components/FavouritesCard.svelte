@@ -69,8 +69,8 @@
 						<div class="cell grow">
 							{account?.name}
 						</div>
-						<data class={`text-right ${getAmountColour(getBalance(account).amount)}`}>
-							{getBalance(account).amount}
+						<data class={`text-right ${getAmountColour(getBalance(account).quantity)}`}>
+							{getBalance(account).quantity}
 							{getBalance(account).currency}
 						</data>
 					</div>

@@ -38,7 +38,7 @@ export class CloudBackupService {
     }
 
     clearCache() {
-
+        this._resourceCache = undefined
     }
 
     /**
@@ -47,16 +47,25 @@ export class CloudBackupService {
      */
     async getRemoteBackupCount(backupType: string): Promise<number> {
         const files = await this.getFileListing()
+        const filenames = files.map(f => f.basename)
 
         // filter only the backups for Scheduled Xacts
-        const result = files
-            .filter((item: FileStat) => item.filename.startsWith(backupType))
+        const result = filenames
+            .filter(f => f.startsWith(backupType))
             .length
         return result
     }
 
-    getLatestFilename(): string {
+    async getLatestFilename(): Promise<string> {
+        const files = await this.getFileListing()
+        const filenames = files.map(f => f.basename)
 
+        // get only the scheduled xact backups
+        const result = filenames
+            .filter(f => f.startsWith(BackupType.SCHEDULEDXACTS))
+            .sort((a, b) => b.localeCompare(a))
+        [0];
+        return result
     }
 
     // private
@@ -73,7 +82,6 @@ export class CloudBackupService {
 
         return this._resourceCache
     }
-
 
     getFilenameForNewBackup(backupType: string) {
         const now = moment()

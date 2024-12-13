@@ -21,7 +21,7 @@
 	 * @param i Index of the Xact in the list.
 	 */
 	function getXactColour(i: number) {
-		if (!xactBalances[i].amount) return '';
+		if (!xactBalances[i].quantity) return '';
 
 		const xact = xacts[i];
 		const balance = xactBalances[i];
@@ -69,7 +69,7 @@
 							{xact.payee}
 						</div>
 						<div class={`${getXactColour(index)}`}>
-							{xactBalances[index].amount}
+							{xactBalances[index].quantity}
 							{xactBalances[index].currency}
 						</div>
 					</div>

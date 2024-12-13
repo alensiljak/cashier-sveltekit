@@ -19,7 +19,7 @@ export function getXactAmountColour(xact: Xact, balance: Money) {
     // 2 Asset accounts. Assume transfer.
     colour = YELLOW
   } else {
-    colour = getAmountColour(balance.amount)
+    colour = getAmountColour(balance.quantity)
   }
   return colour
 }
@@ -27,7 +27,7 @@ export function getXactAmountColour(xact: Xact, balance: Money) {
 export function getMoneyColour(money: Money): string | undefined {
   if (!money) return;
 
-  return getAmountColour(money.amount)
+  return getAmountColour(money.quantity)
 }
 
 /**

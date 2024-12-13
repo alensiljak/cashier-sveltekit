@@ -1,13 +1,17 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /*
   Scheduled Transactions functionality
 */
 import moment from 'moment'
+import type { ScheduledTransaction } from './data/model';
 
 /**
  * Projects the scheduled transactions.
  */
 export class Projector {
-  constructor(schedules) {
+  schedules;
+
+  constructor(schedules: any) {
     // this.dateFrom = dateFrom
     // this.dateTo = dateTo
     this.schedules = schedules
@@ -16,12 +20,12 @@ export class Projector {
   /**
    * Calculates the dates
    */
-  project(startDate, endDate) {
-    let result = []
+  project(startDate: any, endDate: any) {
+    let result: any = []
     // For each schedule in the schedules
     for (let i = 0; i < this.schedules.length; i++) {
-      let stx = this.schedules[i]
-      let projections = this.projectTx(stx, startDate, endDate)
+      const stx = this.schedules[i]
+      const projections = this.projectTx(stx, startDate, endDate)
       result = [...result, ...projections]
     }
 
@@ -32,7 +36,8 @@ export class Projector {
    * Projects a single schedule into the given timeframe.
    * @param {ScheduledTransaction} stx
    */
-  projectTx(stx, startDate, endDate) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  projectTx(stx: ScheduledTransaction, startDate: any, endDate: any) {
     //console.log(stx)
 
     const projections = []
@@ -62,7 +67,8 @@ export class Projector {
 /**
  * Calculate the schedule based on the given parameters.
  */
-export function calculateNextIteration(startDate, count: number, period, endDate) {
+export function calculateNextIteration(startDate: any, count: number, 
+  period: any, endDate: any) {
   // calculate next iteration from the given date.
 
   if (!startDate || !count || !period) {

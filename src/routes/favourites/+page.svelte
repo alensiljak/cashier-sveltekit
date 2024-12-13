@@ -133,7 +133,7 @@
 						</div>
 						{#key refreshKey}
 							<data class={`content-end text-end ${getMoneyColour(account.balance as Money)}`}>
-								{formatAmount(account.balance?.amount as number)}&nbsp;{account.balance?.currency}
+								{formatAmount(account.balance?.quantity as number)}&nbsp;{account.balance?.currency}
 							</data>
 						{/key}
 					</div>

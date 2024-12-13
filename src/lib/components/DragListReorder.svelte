@@ -1,4 +1,4 @@
-<script context="module" lang="ts">
+<script module lang="ts">
     const create_todo_list = () => {
         let items$ = $state(
             {

@@ -105,7 +105,7 @@ export class XactAugmenter {
       }
 
       //let sum = parseFloat(account.balance.amount)
-      let sum = account.balance.amount
+      let sum = account.balance.quantity
 
       //
       const txs = await appService.loadAccountTransactionsFor(account.name)
@@ -137,7 +137,7 @@ export class XactAugmenter {
 
       // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/NumberFormat
       //let x = new Intl.NumberFormat('en-AU').format(newBalance)
-      account.balance.amount = newBalance
+      account.balance.quantity = newBalance
       // { style: 'currency', currency: 'EUR' }
     }
     return accounts
@@ -191,7 +191,7 @@ export class XactAugmenter {
 
         //return
       } else {
-        balance.amount = Number(posting.amount?.toFixed(2) as string)
+        balance.quantity = Number(posting.amount?.toFixed(2) as string)
         balance.currency = posting.currency
       }
     } else if (postings.length === 2) {
@@ -200,7 +200,7 @@ export class XactAugmenter {
       }
 
       // involves a transfer
-      balance.amount = Math.abs(postings[0].amount as number)
+      balance.quantity = Math.abs(postings[0].amount as number)
       balance.currency = postings[0].currency
 
       // Treat the liability account as an expense.
@@ -215,7 +215,7 @@ export class XactAugmenter {
         const assetPostings = postings.filter((posting) =>
           posting.account.startsWith('Assets:')
         )
-        balance.amount = assetPostings[0].amount as number
+        balance.quantity = assetPostings[0].amount as number
       }
     } else {
       // todo: handle these cases (transfers, complex tx)

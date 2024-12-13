@@ -1,9 +1,9 @@
-import { Posting, type Transaction } from "$lib/data/model"
+import { Posting, type Xact } from "$lib/data/model"
 
 /**
  * Find an empty posting, or create one.
  */
-export function getEmptyPostingIndex(tx: Transaction) {
+export function getEmptyPostingIndex(tx: Xact) {
     if (!tx) {
       throw new Error('No transaction loaded!')
     }

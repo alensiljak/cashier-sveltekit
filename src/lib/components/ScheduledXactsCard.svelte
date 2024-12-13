@@ -70,8 +70,8 @@
 					<data class="grow">
 						{scx.transaction?.payee}
 					</data>
-					<data class={`${getAmountColour(amounts[index]?.amount)}`}>
-						{amounts[index]?.amount} {amounts[index]?.currency}
+					<data class={`${getAmountColour(amounts[index]?.quantity)}`}>
+						{amounts[index]?.quantity} {amounts[index]?.currency}
 					</data>
 				</div>
 				{/each}
