@@ -164,5 +164,7 @@
 		</center>
 	</section>
 
-	<section>Reload App</section>
+	<!-- <section>
+		Reload App
+	</section> -->
 </main>

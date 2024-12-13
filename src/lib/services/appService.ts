@@ -17,6 +17,7 @@ import { settings, SettingKeys } from '$lib/settings'
 import { XactAugmenter } from '$lib/utils/xactAugmenter'
 import { HomeCardNames } from '$lib/enums'
 import { ScheduledXact, xact } from '$lib/data/mainStore'
+import { loadInvestmentAccounts } from './accountsService'
 
 class AppService {
   /**
@@ -233,35 +234,13 @@ class AppService {
   }
 
   /**
-   * Get all the investment accounts in a dictionary.
-   * Start from the investment root setting, and include the commodity.
-   * @returns Promise with investment accounts collection
-   */
-  async loadInvestmentAccounts(): Promise<Account[]> {
-    // get the root investment account.
-    const rootAccount = await settings.get(SettingKeys.rootInvestmentAccount)
-    if (!rootAccount) {
-      throw new Error('Root investment account not set!')
-    }
-
-    let accounts: Account[] = await this.db.accounts
-      .where('name').startsWithIgnoreCase(rootAccount)
-      .toArray()
-
-    // Get only the accounts with a current value.
-    accounts = accounts.filter((account) => account.currentValue)
-
-    return accounts
-  }
-
-  /**
    * Get all the investment commodities. These are commodities used in inv. accounts.
    */
   async getInvestmentCommodities(): Promise<string[]> {
     // get all investment accounts, iterate to get unique commodities?
     let commodities: string[] = []
 
-    const accounts = await this.loadInvestmentAccounts()
+    const accounts = await loadInvestmentAccounts()
     await accounts.forEach((account) => {
       if (!account.balances) return
 

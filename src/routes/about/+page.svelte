@@ -5,7 +5,8 @@
 <article class="flex h-screen flex-col">
 	<Toolbar title="About"></Toolbar>
 
-	<section class="overflow-auto p-1">
+	<section class="overflow-auto p-1 space-y-4">
+        <h1 class="h1">Cashier Svelte</h1>
 		<p>
 			Cashier Svelte is a version of <a class="anchor" href="cashier.alensiljak.eu.org">Cashier</a>, built with
 			Svelte.
@@ -28,5 +29,8 @@
 			created transactions. For a proper start, it should be populated with the data from Ledger,
 			using Cashier Server, <a class="anchor" href="https://github.com/alensiljak/cashier-server-rust">repo</a>.
 		</p>
-	</section>
+
+        <h3 class="h3">Links</h3>
+        <p>Repository: at <a class="anchor" href="https://github.com/alensiljak/cashier-svelte">GitHub</a></p>
+    </section>
 </article>

@@ -1,9 +1,10 @@
 <script lang="ts">
-	import { invalidateAll } from '$app/navigation';
+	import { invalidate, invalidateAll } from '$app/navigation';
 	import { AssetClass } from '$lib/AssetClass';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import { NUMBER_FORMAT } from '$lib/constants.js';
+	import { AssetAllocationStore } from '$lib/data/mainStore.js';
 	import { DatabaseZapIcon, FileDownIcon } from 'lucide-svelte';
 	import numeral from 'numeral';
 	import { onMount } from 'svelte';
@@ -36,20 +37,22 @@
 
 	function getRowColor(depth: number) {
 		if (depth === 0) {
-			return 'bg-gray-900'
+			return 'bg-gray-900';
 		}
 		if (depth === 1) {
-			return 'bg-gray-700'
+			return 'bg-gray-700';
 		}
 		if (depth === 2) {
-			return 'bg-gray-800'
+			return 'bg-gray-800';
 		}
 	}
 
 	async function onClearCacheClick() {
 		// clear from state
+		AssetAllocationStore.set(undefined)
 
-		await invalidateAll();
+		// invalidate()
+		invalidateAll();
 	}
 </script>
 
@@ -86,7 +89,9 @@
 					<tr class={`border-b border-tertiary-200/15 ${getRowColor(item.depth)}`}>
 						<td>
 							<span class={`pl-${item.depth * 2}`}>
-								{item.name}
+								<a class="underline" href={`/assetclass-detail/${item.fullname}`}>
+									{item.name}
+								</a>
 							</span>
 						</td>
 						<td class="text-end">

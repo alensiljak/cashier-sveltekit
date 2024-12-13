@@ -5,7 +5,7 @@ import appService from '$lib/services/appService'
 import { AssetClass, type AssetClassDefinition } from './AssetClass'
 import numeral from 'numeral'
 import toml from 'toml'
-import { getAccountBalance } from '$lib/services/accountsService'
+import { getAccountBalance, loadInvestmentAccounts } from '$lib/services/accountsService'
 import Big from 'big.js'
 import type { Money } from './data/model'
 import { NUMBER_FORMAT } from './constants'
@@ -366,7 +366,7 @@ export class AssetAllocationEngine {
    */
   async loadCurrentValues() {
     const defaultCurrency = await appService.getDefaultCurrency()
-    const invAccounts = await appService.loadInvestmentAccounts()
+    const invAccounts = await loadInvestmentAccounts()
 
     invAccounts.forEach((account) => {
       // Current Value is populated from Ledger. Only the active accounts will have a value.

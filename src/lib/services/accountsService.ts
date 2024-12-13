@@ -6,6 +6,7 @@
  */
 import { Account, Money } from '$lib/data/model'
 import db from '$lib/data/db'
+import { SettingKeys, settings } from '$lib/settings'
 
 export class AccountService {
   constructor() { }
@@ -159,7 +160,7 @@ export function getAccountBalance(account: Account, defaultCurrency: string): Mo
   if (defaultCurrency) {
     // Do we have a balance in the default currency?
     const defaultQuantity = account.balances[defaultCurrency]
-    if(defaultQuantity) {
+    if (defaultQuantity) {
       result.quantity = defaultQuantity
       result.currency = defaultCurrency
       return result
@@ -179,4 +180,26 @@ export function getAccountBalance(account: Account, defaultCurrency: string): Mo
 export function getShortAccountName(accountName: string): string {
   const separatorIndex = accountName.lastIndexOf(':')
   return accountName.substring(separatorIndex + 1)
+}
+
+/**
+ * Get all the investment accounts in a dictionary.
+ * Start from the investment root setting, and include the commodity.
+ * @returns Promise with investment accounts collection
+ */
+export async function loadInvestmentAccounts(): Promise<Account[]> {
+  // get the root investment account.
+  const rootAccount = await settings.get(SettingKeys.rootInvestmentAccount)
+  if (!rootAccount) {
+    throw new Error('Root investment account not set!')
+  }
+
+  let accounts: Account[] = await db.accounts
+    .where('name').startsWithIgnoreCase(rootAccount)
+    .toArray()
+
+  // Get only the accounts with a current value.
+  accounts = accounts.filter((account) => account.currentValue)
+
+  return accounts
 }
