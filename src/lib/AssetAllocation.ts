@@ -8,10 +8,11 @@ import toml from 'toml'
 import { getAccountBalance } from '$lib/services/accountsService'
 import Big from 'big.js'
 import type { Money } from './data/model'
+import { NUMBER_FORMAT } from './constants'
 
 // constants
 
-export const NUMBER_FORMAT = '0,0.00'
+//export const NUMBER_FORMAT = '0,0.00'
 
 /**
  * loadDefinition = loads the pre-set definition
