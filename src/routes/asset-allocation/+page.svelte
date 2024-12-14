@@ -63,6 +63,9 @@
 	 * validate the allocation (definition)
 	 */
 	async function onValidateClick() {
+		Notifier.neutral('incomplete')
+		return;
+		
 		if (data.assetClasses?.length === 0) {
 			Notifier.neutral('Please recalculate the allocation first.');
 		}
