@@ -135,12 +135,14 @@
     
     const todo_list = create_todo_list()
     
-    let set_drag_element: (clientX: number, clientY: number, drag_element: HTMLElement) => void = /** @type {(clientX: number, clientY: number, drag: HTMLElement) => any} */
-        ($state())/**/
+    type DragHandler = (clientX: number, clientY: number, drag_element: HTMLElement) => void;
+
+    let set_drag_element: DragHandler | undefined = /** @type {(clientX: number, clientY: number, drag: HTMLElement) => any} */
+        $state()/**/
     </script>
     
     <div style="display:flex; justify-content:center;">
-        <DragContainer bind:setDragElement={set_drag_element}
+        <DragContainer bind:setDragElement={set_drag_element as DragHandler}
                 ondragend={todo_list.end_drag}>
             <div style="display:flex; flex-wrap:wrap;">
                 <div style="display:flex; flex-direction:column; gap:10px">

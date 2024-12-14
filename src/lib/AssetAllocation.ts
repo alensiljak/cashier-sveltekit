@@ -9,6 +9,7 @@ import { getAccountBalance, loadInvestmentAccounts } from '$lib/services/account
 import Big from 'big.js'
 import type { Money } from './data/model'
 import { NUMBER_FORMAT } from './constants'
+import * as Validation from './assetAllocationValidation'
 
 // constants
 
@@ -130,20 +131,6 @@ export class AssetAllocationEngine {
    */
   async emptyData() {
     return appService.db.assetAllocation.clear()
-  }
-
-  findChildren(dictionary: object, parent: AssetClass) {
-    const children: AssetClass[] = []
-
-    Object.values(dictionary).forEach((val) => {
-      // console.log(key); // the name of the current key.
-      // console.log(val); // the value of the current key.
-      if (parent.fullname === val.parentName) {
-        children.push(val)
-      }
-    })
-
-    return children
   }
 
   /**
@@ -353,7 +340,7 @@ export class AssetAllocationEngine {
   async validateAndSave(assetClassArray: AssetClass[]) {
     // Validate
     const assetClassIndex = this.buildAssetClassIndex(assetClassArray)
-    const errors = this.validate(assetClassIndex)
+    const errors = Validation.validate(assetClassIndex)
     if (errors.length) throw 'Validation failed: ' + errors
 
     // persist
@@ -420,7 +407,7 @@ export class AssetAllocationEngine {
 
   sumChildren(dictionary: object, item: AssetClass): Big {
     // find all children
-    const children = this.findChildren(dictionary, item)
+    const children = findChildren(dictionary, item)
     // console.log(children);
     if (children.length === 0) {
       return item.currentValue
@@ -438,56 +425,20 @@ export class AssetAllocationEngine {
     return sum
   }
 
-  /**
-   * Validate Asset Allocation.
-   * Currently checks the definition by comparing group sums.
-   */
-  validate(assetClassList: Record<string, AssetClass>) {
-    const errors: string[] = []
-    const keys = Object.keys(assetClassList)
-
-    keys.forEach((acName) => {
-      const ac: AssetClass = assetClassList[acName]
-      const result = this.validateGroupAllocation(ac, assetClassList)
-      if (result) {
-        errors.push(result)
-      }
-    })
-
-    console.log('AA validation results: ', errors)
-
-    return errors
-  }
-
-  /**
-   * Validate that the group's allocation matches the sum of the children classes.
-   * @param {AssetClass} assetClass
-   */
-  validateGroupAllocation(
-    assetClass: AssetClass,
-    list: Record<string, AssetClass>
-  ) {
-    const children = this.findChildren(list, assetClass)
-    if (children.length === 0) return
-
-    // sum the children's allocation.
-    let sum = 0.0
-    for (let i = 0; i < children.length; i++) {
-      //sum += parseFloat(children[i].allocation)
-      sum += children[i].allocation
-    }
-
-    //let equal = parseFloat(assetClass.allocation) === sum
-    const equal = assetClass.allocation === sum
-
-    if (!equal) {
-      return (
-        "- '" +
-        assetClass.fullname +
-        "' does not match the sum of child classes!\n"
-      )
-    }
-  }
 }
 
 //export const engine = new AssetAllocationEngine()
+
+export function findChildren(dictionary: object, parent: AssetClass) {
+  const children: AssetClass[] = []
+
+  Object.values(dictionary).forEach((val) => {
+      // console.log(key); // the name of the current key.
+      // console.log(val); // the value of the current key.
+      if (parent.fullname === val.parentName) {
+          children.push(val)
+      }
+  })
+
+  return children
+}

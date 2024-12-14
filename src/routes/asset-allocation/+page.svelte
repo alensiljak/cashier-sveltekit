@@ -1,13 +1,17 @@
 <script lang="ts">
 	import { invalidate, invalidateAll } from '$app/navigation';
+	import { validate } from '$lib/assetAllocationValidation.js';
 	import { AssetClass } from '$lib/AssetClass';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import { NUMBER_FORMAT } from '$lib/constants.js';
 	import { AssetAllocationStore } from '$lib/data/mainStore.js';
-	import { DatabaseZapIcon, FileDownIcon } from 'lucide-svelte';
+	import Notifier from '$lib/utils/notifier.js';
+	import { DatabaseZapIcon, FileDownIcon, ScaleIcon } from 'lucide-svelte';
 	import numeral from 'numeral';
 	import { onMount } from 'svelte';
+
+	Notifier.init();
 
 	export let data;
 	let _allocation: AssetClass[];
@@ -49,10 +53,33 @@
 
 	async function onClearCacheClick() {
 		// clear from state
-		AssetAllocationStore.set(undefined)
+		AssetAllocationStore.set(undefined);
 
 		// invalidate()
 		invalidateAll();
+	}
+
+	/**
+	 * validate the allocation (definition)
+	 */
+	async function onValidateClick() {
+		if (data.assetClasses?.length === 0) {
+			Notifier.neutral('Please recalculate the allocation first.');
+		}
+
+		// confirm that the group allocations match the sum of the children's allocation.
+		// todo: let errors = validate(engine.assetClassIndex);
+		const errors: string | any[] = []
+
+		if (errors.length > 0) {
+			let message = 'Errors: ';
+			for (let i = 0; i < errors.length; i++) {
+				message += errors[i];
+			}
+			Notifier.error(message);
+		} else {
+			Notifier.success('The allocation is valid.');
+		}
 	}
 </script>
 
@@ -61,7 +88,7 @@
 		{#snippet menuItems()}
 			<ToolbarMenuItem text="Clear cache" Icon={DatabaseZapIcon} onclick={onClearCacheClick} />
 			<ToolbarMenuItem text="Export" Icon={FileDownIcon} />
-			<ToolbarMenuItem text="Validate" />
+			<ToolbarMenuItem text="Validate" Icon={ScaleIcon} onclick={onValidateClick} />
 			<ToolbarMenuItem text="Help" />
 		{/snippet}
 	</Toolbar>
