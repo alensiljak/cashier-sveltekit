@@ -16,8 +16,6 @@
 	let data = $state($page.data);
 	let cursor = $state('');
 
-	$inspect(data.stocks);
-
 	onMount(async () => {
 		cursor = 'cursor-wait';
 
@@ -53,11 +51,8 @@
 			return symbols;
 		}
 
-		// for (let i = 0; i < symbols.length; i++) {
 		for (let stock of symbols) {
-			// let stock = symbols[i];
 			let symbol = stock.name;
-			// let stock = symbols.find((obj) => obj.name === symbol);
 			if (!stock) {
 				throw new Error(`Stock ${symbol} not found!`);
 			}
@@ -68,25 +63,15 @@
 				stock.analysis = analysis;
 
 				// update cache
-				// AaStocksStore.update((cache) => {
-				// 	if (!cache[symbol]) {
-				// 		cache[symbol] = { name: 'yo', accounts: []};
-				// 	}
-				// 	cache[symbol].analysis = analysis
-
-				// 	return cache;
-				// });
-				// const cache = get(AaStocksStore);
-				// console.log('cache', cache)
-				// if (!cache[symbol]) {
-				// 	// let clone = JSON.parse(JSON.stringify(stock));
-				// 	// clone.analysis = analysis;
-				// 	cache[symbol] = stock;
-				// 	return cache;
-				// }
-				// console.log('item', cache[symbol]);
-				// AaStocksStore.set(cache);
-				// console.log('saved cache', cache);
+				AaStocksStore.update((cache) => {
+					return {
+						...cache,
+						[symbol]: {
+							...cache[symbol],
+							analysis: analysis
+						}
+					}
+				});
 			}
 		}
 

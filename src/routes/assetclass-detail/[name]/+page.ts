@@ -46,6 +46,7 @@ function populateStocksWithCaching(assetClass: AssetClass, investmentAccounts: A
     const stocks = populateStocks(assetClass, investmentAccounts)
 
     let cache = get(AaStocksStore)
+    console.log('loading from cache:', cache)
     if (!cache) {
         cache = {}
     }
@@ -58,7 +59,8 @@ function populateStocksWithCaching(assetClass: AssetClass, investmentAccounts: A
 
         const cachedStock = cache[stock.name]
         if (cachedStock) {
-            stock = cachedStock
+            //stock = cachedStock
+            Object.assign(stock, cachedStock)
         } else {
             // cache the new stock
             cache[stock.name] = stock
