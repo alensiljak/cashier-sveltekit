@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { invalidate, invalidateAll } from '$app/navigation';
-	import { validate } from '$lib/assetAllocationValidation.js';
-	import { AssetClass } from '$lib/AssetClass';
+	import { AssetClass } from '$lib/assetAllocation/AssetClass.js';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import { NUMBER_FORMAT } from '$lib/constants.js';

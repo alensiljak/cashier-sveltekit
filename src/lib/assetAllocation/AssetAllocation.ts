@@ -7,13 +7,9 @@ import numeral from 'numeral'
 import toml from 'toml'
 import { getAccountBalance, loadInvestmentAccounts } from '$lib/services/accountsService'
 import Big from 'big.js'
-import type { Money } from './data/model'
-import { NUMBER_FORMAT } from './constants'
+import type { Money } from '../data/model'
+import { NUMBER_FORMAT } from '../constants'
 import * as Validation from './assetAllocationValidation'
-
-// constants
-
-//export const NUMBER_FORMAT = '0,0.00'
 
 /**
  * loadDefinition = loads the pre-set definition

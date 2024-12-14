@@ -1,5 +1,5 @@
-import { AssetAllocationEngine } from '$lib/AssetAllocation'
-import type { AssetClass } from '$lib/AssetClass'
+import { AssetAllocationEngine } from '$lib/assetAllocation/AssetAllocation'
+import type { AssetClass } from '$lib/assetAllocation/AssetClass'
 import { AssetAllocationFilename } from '$lib/constants.js'
 import { AssetAllocationStore } from '$lib/data/mainStore'
 import * as OpfsLib from '$lib/utils/opfslib.js'

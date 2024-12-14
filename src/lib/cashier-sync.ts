@@ -4,7 +4,7 @@
 // import ky from 'ky'
 import { settings, SettingKeys } from '$lib/settings'
 import moment from 'moment'
-import { AssetAllocationEngine } from './AssetAllocation'
+import { AssetAllocationEngine } from './assetAllocation/AssetAllocation'
 import appService from './services/appService'
 
 /**

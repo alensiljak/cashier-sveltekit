@@ -1,6 +1,6 @@
 import { goto } from "$app/navigation";
-import type { AssetClass, StockSymbol } from "$lib/AssetClass";
-import { AssetAllocationStore } from "$lib/data/mainStore";
+import type { AssetClass, StockSymbol } from "$lib/assetAllocation/AssetClass";
+import { AaStocksStore, AssetAllocationStore } from "$lib/data/mainStore";
 import type { Account } from "$lib/data/model.js";
 import * as AccountService from "$lib/services/accountsService";
 import appService from "$lib/services/appService";
@@ -18,12 +18,12 @@ export async function load({ params }) {
         return
     }
 
+    const currency = await appService.getDefaultCurrency()
     const serverUrl = await settings.get(SettingKeys.syncServerUrl)
     if (!serverUrl) {
         throw new Error('Sync Server URL not set!')
     }
 
-    // const acctSvc = new AccountService()
     const investmentAccounts = await AccountService.loadInvestmentAccounts()
     if (investmentAccounts.length === 0) {
         console.warn('No investment accounts found')
@@ -32,18 +32,12 @@ export async function load({ params }) {
     // add the balances.
     await AccountService.populateAccountBalances(investmentAccounts)
 
-    const currency = await appService.getDefaultCurrency()
-
     // load asset class
-    console.debug(aa)
-    console.debug(params.name)
     const assetClass = aa?.find(ac => ac.fullname === params.name)
     if (!assetClass) {
         throw new Error('Asset class not found')
     }
     const stocks = populateStocksWithCaching(assetClass, investmentAccounts)
-
-    // todo: securityAnalysis
 
     return { serverUrl, investmentAccounts, currency, aa, assetClass, stocks }
 }
@@ -51,8 +45,28 @@ export async function load({ params }) {
 function populateStocksWithCaching(assetClass: AssetClass, investmentAccounts: Account[]) {
     const stocks = populateStocks(assetClass, investmentAccounts)
 
-    // todo: cache them into store
-    
+    let cache = get(AaStocksStore)
+    if (!cache) {
+        cache = {}
+    }
+
+    // get cached version, if available
+    stocks.forEach(stock => {
+        if (!stock.name) {
+            throw new Error('empty stock name!')
+        }
+
+        const cachedStock = cache[stock.name]
+        if (cachedStock) {
+            stock = cachedStock
+        } else {
+            // cache the new stock
+            cache[stock.name] = stock
+        }
+    })
+
+    AaStocksStore.set(cache)
+
     return stocks
 }
 
@@ -79,3 +93,4 @@ function populateStocks(assetClass: AssetClass, investmentAccounts: Account[]): 
 
     return result
 }
+

@@ -91,3 +91,14 @@ export function getColourForYield(amount: string): string {
   const number = Number(amount)
   return getAmountColour(number)
 }
+
+export function getColourForGainLoss(gainloss: string): string {
+  if(!gainloss) {
+    return ''
+  }
+
+  const parts = gainloss.split(' ')
+  const amountPart = Number(parts[0])
+  const colour = getAmountColour(amountPart)
+  return colour
+}
