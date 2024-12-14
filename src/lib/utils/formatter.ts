@@ -83,3 +83,11 @@ export function formatAmount(amount: number): string {
     return amount.toLocaleString('en-UK')
   }
 }
+
+export function getColourForYield(amount: string): string {
+  if(!amount) return ''
+
+  amount = amount.substring(0, amount.length -1)
+  const number = Number(amount)
+  return getAmountColour(number)
+}

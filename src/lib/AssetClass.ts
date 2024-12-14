@@ -60,10 +60,15 @@ export class AssetClass {
   }
 }
 
+export interface StockAnalysis {
+  yield: string,
+  gainLoss: string
+}
+
 export interface StockSymbol {
   name: string
   accounts: Account[]
-  analysis: unknown
+  analysis?: StockAnalysis
 }
 
 /**
