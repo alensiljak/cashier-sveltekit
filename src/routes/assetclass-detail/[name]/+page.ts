@@ -45,8 +45,8 @@ export async function load({ params }) {
 function populateStocksWithCaching(assetClass: AssetClass, investmentAccounts: Account[]) {
     const stocks = populateStocks(assetClass, investmentAccounts)
 
+    // Get cache.
     let cache = get(AaStocksStore)
-    console.log('loading from cache:', cache)
     if (!cache) {
         cache = {}
     }

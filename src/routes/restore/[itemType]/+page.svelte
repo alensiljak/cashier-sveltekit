@@ -20,7 +20,7 @@
 		}
 
 		let file = selection[0];
-		console.debug('file:', file);
+		// console.debug('file:', file);
 
 		_content = await file.text();
 	}

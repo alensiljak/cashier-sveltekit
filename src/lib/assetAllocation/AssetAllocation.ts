@@ -371,7 +371,7 @@ export class AssetAllocationEngine {
       const assetClassName = this.stockIndex[commodity]
       if (!assetClassName) {
         // console.debug(this.stockIndex)
-        console.debug(account)
+        // console.debug(account)
         throw new Error(`Asset class name not found for commodity ${commodity}`)
       }
       const assetClass = this.assetClassIndex[assetClassName]

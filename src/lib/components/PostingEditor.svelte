@@ -41,7 +41,7 @@
 	}
 
 	function updateAmount(value: number) {
-		console.debug('update amount', value);
+		// console.debug('update amount', value);
 		$xact.postings[index].amount = value;
 	}
 
