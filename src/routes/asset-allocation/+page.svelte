@@ -4,7 +4,7 @@
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import { NUMBER_FORMAT } from '$lib/constants.js';
-	import { AssetAllocationStore } from '$lib/data/mainStore.js';
+	import { AaStocksStore, AssetAllocationStore } from '$lib/data/mainStore.js';
 	import Notifier from '$lib/utils/notifier.js';
 	import { DatabaseZapIcon, FileDownIcon, ScaleIcon } from 'lucide-svelte';
 	import numeral from 'numeral';
@@ -53,6 +53,7 @@
 	async function onClearCacheClick() {
 		// clear from state
 		AssetAllocationStore.set(undefined);
+		AaStocksStore.set(undefined);
 
 		// invalidate()
 		invalidateAll();

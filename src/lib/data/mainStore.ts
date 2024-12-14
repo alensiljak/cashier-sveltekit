@@ -28,4 +28,4 @@ export const xact: Writable<Xact> = writable()
 export const ScheduledXact: Writable<ScheduledTransaction> = writable()
 // asset allocation
 export const AssetAllocationStore: Writable<AssetClass[] | undefined> = writable()
-export const AaStocksStore: Writable<StockCache> = writable()
+export const AaStocksStore: Writable<StockCache | undefined> = writable()

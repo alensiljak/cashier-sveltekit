@@ -64,6 +64,8 @@
 
 				// update cache
 				AaStocksStore.update((cache) => {
+					if(!cache) return;
+					// create a new object with the field.
 					return {
 						...cache,
 						[symbol]: {
