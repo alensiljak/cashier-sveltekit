@@ -4,7 +4,6 @@
 	import { Posting } from '$lib/data/model';
     import * as Formatter from '$lib/utils/formatter'
 
-	console.debug($page.data);
 </script>
 
 <article class="flex h-screen flex-col">
