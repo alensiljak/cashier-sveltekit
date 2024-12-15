@@ -73,6 +73,10 @@
 		refreshKey += 1;
 	}
 
+	async function onAccountClick(accountName?: string) {
+		goto('/account-xacts/' + accountName);
+	}
+
 	async function onAddClicked() {
 		$selectionMetadata = new SelectionModeMetadata();
 		$selectionMetadata.selectionType = SelectionType.ACCOUNT;
@@ -126,7 +130,13 @@
 			<div>
 				{#each accounts as account}
 					<!-- row -->
-					<div class="py-1 flex flex-row border-b border-tertiary-200/15">
+					<!-- svelte-ignore a11y_click_events_have_key_events -->
+					<!-- svelte-ignore a11y_no_static_element_interactions -->
+					<div
+						class="flex flex-row border-b border-tertiary-200/15 py-1
+								hover:bg-surface-600 cursor-pointer"
+						onclick={() => onAccountClick(account.name)}
+					>
 						<div class="mr-1 flex grow flex-col">
 							<small>{account.getParentName()}</small>
 							<data class="ml-4">{account.getAccountName()}</data>

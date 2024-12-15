@@ -1,14 +1,16 @@
 /**
- * The service which handles the Accounts data.
+ * The operations on the Accounts data.
  * It should simply use the cached versions of API requests,
  * and parse them when needed.
  * No other local storage is used.
+ * 
+ * Use as:
+ * import * as AccountService from 'accountService'
  */
 import { Account, Money } from '$lib/data/model'
 import db from '$lib/data/db'
 import { SettingKeys, settings } from '$lib/settings'
 import appService from './appService'
-
 
 export async function createDefaultAccounts() {
   const accountsList = getDefaultChartOfAccounts()
@@ -143,7 +145,7 @@ function getDefaultChartOfAccounts() {
   return accountsList
 }
 
-export function getAccountBalance(account: Account, defaultCurrency: string): Money {
+export function getAccountBalance(account: Account, defaultCurrency?: string): Money {
   // if (!defaultCurrency) {
   //   throw new Error('Default currency is mandatory!')
   // }
