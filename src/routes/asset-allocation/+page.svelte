@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { invalidate, invalidateAll } from '$app/navigation';
+	import { AssetAllocationEngine } from '$lib/assetAllocation/AssetAllocation.js';
 	import { AssetClass } from '$lib/assetAllocation/AssetClass.js';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
@@ -14,10 +15,39 @@
 
 	export let data;
 	let _allocation: AssetClass[];
+	let buttonContainer: HTMLDivElement;
 
 	onMount(() => {
 		_allocation = data.assetClasses as AssetClass[];
 	});
+
+	function downloadAsFile(content: string) {
+		var a = document.createElement('a');
+
+		// filename
+		// todo: let now = moment()
+		let now = new Date();
+		let filename = 'asset-allocation_';
+		filename += now.toISOString().substring(0, 10);
+		filename += '_';
+		filename += ('' + now.getHours()).padStart(2, '0');
+		filename += '-';
+		filename += ('' + now.getMinutes()).padStart(2, '0');
+		// filename += now.getTimezoneOffset()
+		filename += '.txt';
+		a.download = filename;
+
+		let encoded = btoa(content);
+		// a.href = "data:application/octet-stream;base64," + Base64.encode(this.output);
+		a.href = 'data:text/plain;base64,' + encoded;
+		// charset=UTF-8;
+
+		buttonContainer.appendChild(a);
+		a.click();
+
+		// cleanup?
+		buttonContainer.removeChild(a);
+	}
 
 	/**
 	 * Colors the values with offset.
@@ -59,20 +89,27 @@
 		invalidateAll();
 	}
 
+	async function onExportClick() {
+		let aa = new AssetAllocationEngine();
+		const output = aa.formatAllocationRowsForTxtExport(_allocation);
+
+		downloadAsFile(output)
+	}
+
 	/**
 	 * validate the allocation (definition)
 	 */
 	async function onValidateClick() {
-		Notifier.neutral('incomplete')
+		Notifier.neutral('incomplete');
 		return;
-		
+
 		if (data.assetClasses?.length === 0) {
 			Notifier.neutral('Please recalculate the allocation first.');
 		}
 
 		// confirm that the group allocations match the sum of the children's allocation.
 		// todo: let errors = validate(engine.assetClassIndex);
-		const errors: string | any[] = []
+		const errors: string | any[] = [];
 
 		if (errors.length > 0) {
 			let message = 'Errors: ';
@@ -90,7 +127,7 @@
 	<Toolbar title="Asset Allocation">
 		{#snippet menuItems()}
 			<ToolbarMenuItem text="Clear cache" Icon={DatabaseZapIcon} onclick={onClearCacheClick} />
-			<ToolbarMenuItem text="Export" Icon={FileDownIcon} />
+			<ToolbarMenuItem text="Export" Icon={FileDownIcon} onclick={onExportClick} />
 			<ToolbarMenuItem text="Validate" Icon={ScaleIcon} onclick={onValidateClick} />
 			<ToolbarMenuItem text="Help" />
 		{/snippet}
@@ -147,4 +184,8 @@
 			</tbody>
 		</table>
 	</section>
+	<!-- The button is required for file export, to attach the event! -->
+	<div bind:this={buttonContainer} style="display:none;">
+		<button>Export</button>
+	</div>
 </article>
