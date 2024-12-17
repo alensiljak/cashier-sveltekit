@@ -19,6 +19,7 @@
 		TrashIcon
 	} from 'lucide-svelte';
 	import { onMount } from 'svelte';
+	import db from '$lib/data/db';
 
 	Notifier.init();
 	const modalStore = getModalStore();
@@ -29,6 +30,14 @@
 			goto('/');
 		}
 	});
+
+	async function deleteXact(id: number) {
+		await db.scheduled.delete(id)
+
+		Notifier.success('Scheduled transaction deleted')
+
+		history.back()
+	}
 
 	async function onEnterClicked() {
 		// confirm dialog
@@ -69,6 +78,23 @@
 
 		// open the transaction. Maintain page navigation history.
 		await goto('/tx', { replaceState: true });
+	}
+
+	async function onDeleteClick() {
+        var msg = `Do you want to delete the scheduled transaction ${$ScheduledXact.transaction?.payee}?`;
+		// confirmation dialog
+		const modal: ModalSettings = {
+			type: 'confirm',
+			title: 'Confirm Deletion',
+			body: msg,
+			response: async (r: boolean) => {
+				if (r) {
+					const id = $ScheduledXact.id as number
+					await deleteXact(id)
+				}
+			}
+		};
+		modalStore.trigger(modal);
 	}
 
 	async function onEditClicked(id: any) {
@@ -197,7 +223,8 @@
 			>
 				Edit
 			</SquareButton>
-			<SquareButton Icon={TrashIcon} classes="bg-secondary-500 text-tertiary-500">
+			<SquareButton Icon={TrashIcon} classes="bg-secondary-500 text-tertiary-500"
+				onclick={onDeleteClick}>
 				Delete
 			</SquareButton>
 		</div>
