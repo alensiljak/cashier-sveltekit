@@ -1,8 +1,9 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import { goto, replaceState } from '$app/navigation';
 	import JournalXactRow from '$lib/components/JournalXactRow.svelte';
 	import SquareButton from '$lib/components/SquareButton.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
+	import CashierDAL from '$lib/data/dal';
 	import db from '$lib/data/db';
 	import { xact } from '$lib/data/mainStore';
 	import { Xact } from '$lib/data/model';
@@ -16,8 +17,7 @@
 	const modalStore = getModalStore();
 	Notifier.init();
 
-	onMount(async () => {
-	});
+	onMount(async () => {});
 
 	async function onCopyClicked() {
 		// get a journal version
@@ -61,11 +61,23 @@
 
 	async function onDuplicateClick() {
 		if (!$xact) {
-			Notifier.warn('There is no active transaction!')
-			return
+			Notifier.warn('There is no active transaction!');
+			return;
 		}
 
-		// appService.crea
+		// create the transaction
+		const newXact = appService.createXactFrom($xact);
+		// save
+		const dal = new CashierDAL();
+		const id = await dal.saveXact(newXact);
+
+		Notifier.success('Transaction copied');
+
+		// load the new tx for editing
+		xact.set(newXact);
+
+		// navigate to the editor for the new transaction, resetting the navigation?
+		goto('/tx', { replaceState: true })
 	}
 
 	async function onEditClicked() {
@@ -80,19 +92,35 @@
 
 	<!-- button grid -->
 	<div class="mt-4 inline-grid w-full grid-cols-3 gap-4 justify-self-center">
-		<SquareButton Icon={PenSquareIcon} classes="bg-tertiary-500 text-secondary-500" onclick={onEditClicked}>
+		<SquareButton
+			Icon={PenSquareIcon}
+			classes="bg-tertiary-500 text-secondary-500"
+			onclick={onEditClicked}
+		>
 			Edit
 		</SquareButton>
-		<SquareButton Icon={CopyIcon} classes="bg-primary-500 text-tertiary-500" onclick={onDuplicateClick}>
+		<SquareButton
+			Icon={CopyIcon}
+			classes="bg-primary-500 text-tertiary-500"
+			onclick={onDuplicateClick}
+		>
 			Duplicate
 		</SquareButton>
 		<SquareButton Icon={CalendarClockIcon} classes="bg-tertiary-500 text-secondary-500">
 			Schedule
 		</SquareButton>
-		<SquareButton Icon={CopyIcon} classes="bg-primary-500 text-tertiary-500" onclick={onCopyClicked}>
+		<SquareButton
+			Icon={CopyIcon}
+			classes="bg-primary-500 text-tertiary-500"
+			onclick={onCopyClicked}
+		>
 			Copy Ledger
 		</SquareButton>
-		<SquareButton Icon={TrashIcon} classes="bg-secondary-500 text-tertiary-500" onclick={onDeleteClicked}>
+		<SquareButton
+			Icon={TrashIcon}
+			classes="bg-secondary-500 text-tertiary-500"
+			onclick={onDeleteClicked}
+		>
 			Delete
 		</SquareButton>
 	</div>
