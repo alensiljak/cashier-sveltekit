@@ -7,12 +7,9 @@ import appService from "$lib/services/appService";
 export async function load({ params }) {
     // if there is an Id, and no record, load the transaction.
     await loadData(params.id)
-
-    // const data = 'blah'
-    // return { data };
 }
 
-async function loadData(id: string) {
+async function loadData(id?: string) {
     if (!id) return
 
     // empty id is sent as "null"

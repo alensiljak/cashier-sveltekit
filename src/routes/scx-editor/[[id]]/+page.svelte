@@ -11,42 +11,41 @@
 	import { onMount } from 'svelte';
 
 	const id = $page.params.id;
-    
-    // export let data;
 
-    Notifier.init()
+	// export let data;
 
-	onMount(async () => {
-        // await loadData()
-	});
+	Notifier.init();
 
-    async function onFabClicked() {
-        await saveData()
-    }
+	async function onFabClicked() {
+		try {
+			await saveData();
+		} catch (err) {
+			Notifier.error(err.message as string);
+			console.error(err);
+		}
+	}
 
-    async function saveData() {
-        if(!$ScheduledXact) {
-            Notifier.warn('Scheduled Transaction does not exist!')
-            return
-        }
-        if(!$ScheduledXact.transaction) {
-            throw new Error('Transaction not found in app state!')
-        }
+	async function saveData() {
+		if (!$ScheduledXact) {
+			Notifier.warn('Scheduled Transaction does not exist!');
+			return;
+		}
+		if (!$xact) {
+			throw new Error('Transaction not found in app state!');
+		}
 
-        // translate radio buttons
-
-        // Use the current Xact.
+		// Use the current Xact.
 		const clonedXact = JSON.parse(JSON.stringify($xact));
-        $ScheduledXact.transaction = clonedXact
-        // use transaction date.
-        $ScheduledXact.nextDate = $xact.date as string
+		$ScheduledXact.transaction = clonedXact;
+		// use transaction date.
+		$ScheduledXact.nextDate = $xact.date as string;
 
 		let raw: ScheduledTransaction = JSON.parse(JSON.stringify($ScheduledXact));
 		const result = await saveScheduledTransaction(raw);
 
-        Notifier.success('Scheduled transaction saved')
-        history.back()
-    }
+		Notifier.success('Scheduled transaction saved');
+		history.back();
+	}
 </script>
 
 <article>

@@ -5,8 +5,8 @@
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import CashierDAL from '$lib/data/dal';
 	import db from '$lib/data/db';
-	import { xact } from '$lib/data/mainStore';
-	import { Xact } from '$lib/data/model';
+	import { ScheduledXact, xact } from '$lib/data/mainStore';
+	import { ScheduledTransaction, Xact } from '$lib/data/model';
 	import appService from '$lib/services/appService';
 	import Notifier from '$lib/utils/notifier';
 	import type { ModalSettings } from '@skeletonlabs/skeleton';
@@ -83,6 +83,17 @@
 	async function onEditClicked() {
 		await goto('/tx');
 	}
+
+	async function onScheduleClick() {
+		ScheduledXact.set(new ScheduledTransaction())
+
+		// clear the Xact id
+		if ($xact) {
+			$xact.id = undefined
+		}
+
+		goto('/scx-editor')
+	}
 </script>
 
 <Toolbar title="Transaction Actions" />
@@ -106,7 +117,8 @@
 		>
 			Duplicate
 		</SquareButton>
-		<SquareButton Icon={CalendarClockIcon} classes="bg-tertiary-500 text-secondary-500">
+		<SquareButton Icon={CalendarClockIcon} classes="bg-tertiary-500 text-secondary-500"
+		onclick={onScheduleClick}>
 			Schedule
 		</SquareButton>
 		<SquareButton
