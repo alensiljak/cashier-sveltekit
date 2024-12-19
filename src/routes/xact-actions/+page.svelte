@@ -59,6 +59,15 @@
 		history.back();
 	}
 
+	async function onDuplicateClick() {
+		if (!$xact) {
+			Notifier.warn('There is no active transaction!')
+			return
+		}
+
+		// appService.crea
+	}
+
 	async function onEditClicked() {
 		await goto('/tx');
 	}
@@ -74,7 +83,7 @@
 		<SquareButton Icon={PenSquareIcon} classes="bg-tertiary-500 text-secondary-500" onclick={onEditClicked}>
 			Edit
 		</SquareButton>
-		<SquareButton Icon={CopyIcon} classes="bg-primary-500 text-tertiary-500">
+		<SquareButton Icon={CopyIcon} classes="bg-primary-500 text-tertiary-500" onclick={onDuplicateClick}>
 			Duplicate
 		</SquareButton>
 		<SquareButton Icon={CalendarClockIcon} classes="bg-tertiary-500 text-secondary-500">

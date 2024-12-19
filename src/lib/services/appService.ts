@@ -39,6 +39,20 @@ class AppService {
     return db.accounts.add(acc)
   }
 
+  createXactFrom(existing: Xact): Xact {
+    const newXact = new Xact();
+    newXact.date = existing.date
+    newXact.payee = existing.payee
+    newXact.note = existing.note
+    
+    // postings
+    if (existing.postings) {
+      newXact.postings = [...existing.postings]
+    }
+
+    return newXact
+  }
+
   get db() {
     return db
   }
