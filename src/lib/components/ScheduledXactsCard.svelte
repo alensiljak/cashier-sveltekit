@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { CalendarClockIcon } from 'lucide-svelte';
+	import { CalendarClockIcon, FileUpIcon } from 'lucide-svelte';
 	import HomeCardTemplate from './HomeCardTemplate.svelte';
 	import { goto } from '$app/navigation';
 	import type { Money, ScheduledTransaction, Xact } from '$lib/data/model';
@@ -9,6 +9,7 @@
 	import { ISODATEFORMAT } from '$lib/constants';
 	import { XactAugmenter } from '$lib/utils/xactAugmenter';
 	import { getAmountColour, getXactAmountColour } from '$lib/utils/formatter';
+	import { preventDefault } from 'svelte/legacy';
 
 	let today: string = $state('');
 	let scxs: ScheduledTransaction[] = $state([]);
@@ -46,6 +47,11 @@
 	async function onClick() {
 		await goto('/scheduled-xacts');
 	}
+
+	async function onExportClick(e: Event){
+		e.stopPropagation()
+		await goto('/export/scheduled')
+	}
 </script>
 
 <HomeCardTemplate onclick={onClick}>
@@ -80,10 +86,10 @@
 	{/snippet}
 	{#snippet footer()}
 	<center>
-		<a href="/export/journal" class="variant-outline-warning btn uppercase">
-			<span></span>
+		<button type="button" class="variant-outline-warning btn uppercase" onclick={onExportClick}>
+			<FileUpIcon />
 			<span>Export</span>
-		</a>
+		</button>
 	</center>
 {/snippet}
 

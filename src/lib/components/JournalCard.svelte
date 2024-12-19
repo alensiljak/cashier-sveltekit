@@ -46,6 +46,11 @@
 	async function onClick() {
 		await goto('/journal');
 	}
+
+	async function onExportClick(e: Event) {
+		e.stopPropagation();
+		await goto('/export/journal');
+	}
 </script>
 
 <HomeCardTemplate onclick={onClick}>
@@ -79,10 +84,10 @@
 	{/snippet}
 	{#snippet footer()}
 		<center>
-			<a href="/export/journal" class="variant-outline-warning btn uppercase">
-				<span><FileUpIcon /></span>
+			<button type="button" class="variant-outline-warning btn uppercase" onclick={onExportClick}>
+				<FileUpIcon />
 				<span>Export</span>
-			</a>
+			</button>
 		</center>
 	{/snippet}
 </HomeCardTemplate>
