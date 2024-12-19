@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import JournalXactRow from '$lib/components/JournalXactRow.svelte';
 	import SquareButton from '$lib/components/SquareButton.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
@@ -23,7 +23,7 @@
 
 	Notifier.init();
 	const modalStore = getModalStore();
-	const id = $page.params.id;
+	const id = page.params.id;
 
 	onMount(() => {
 		if (!id) {

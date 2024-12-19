@@ -1,14 +1,13 @@
 <script lang="ts">
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import appService from '$lib/services/appService';
+	import { getFilenameForBackup } from '$lib/services/cloudBackupService';
 	import Notifier from '$lib/utils/notifier';
 	import { CopyIcon, FileDownIcon } from 'lucide-svelte';
-	import moment from 'moment';
 	import { onMount } from 'svelte';
-	import { get } from 'svelte/store';
 
-	const dataType = $page.params.dataType;
+	const dataType = page.params.dataType;
 
 	let output = $state('');
 
@@ -34,36 +33,6 @@
 		}
 	}
 
-	/**
-	 * Returns the file extension based on the export data type.
-	 */
-	function getFileExtension(): string {
-		// extension
-		let extension = 'txt';
-
-		switch (dataType) {
-			case 'journal':
-				extension = 'ledger';
-				break;
-			case 'scheduled':
-				extension = 'json';
-				break;
-		}
-		return extension;
-	}
-
-	/**
-	 * Generates the file name for the export file, when downloading.
-	 */
-	function getFilename(): string {
-		// create the file name for the downloaded export file.
-		let extension = getFileExtension();
-		// filename
-		const now = moment().format('YYYY-MM-DD_HH-mm');
-		let filename = `cashier_${dataType}_${now}.${extension}`;
-		return filename;
-	}
-
 	async function loadScheduledTransactions() {
 		const collection = await appService.db.scheduled.orderBy('nextDate').toArray();
 		const output = JSON.stringify(collection);
@@ -82,7 +51,7 @@
 	}
 
 	async function onDownloadClick() {
-		let fileName = getFilename();
+		let fileName = getFilenameForBackup(dataType);
 
 		// Save file
 		const blob = new Blob([output], { type: 'text/plain' });

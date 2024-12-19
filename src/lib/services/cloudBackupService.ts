@@ -27,7 +27,7 @@ export class CloudBackupService {
         }
 
         // get filename
-        const filename = this.getFilenameForNewBackup(BackupType.SCHEDULEDXACTS)
+        const filename = getFilenameForBackup(BackupType.SCHEDULEDXACTS)
 
         // upload
         //const url = this.getUrl(`/${filename}`)
@@ -83,32 +83,33 @@ export class CloudBackupService {
         return this._resourceCache
     }
 
-    getFilenameForNewBackup(backupType: string) {
-        const now = moment()
-
-        // file extension
-        let extension;
-        switch (backupType) {
-            case BackupType.JOURNAL:
-                extension = 'ledger'
-                break;
-            default:
-                // case BackupType.SCHEDULEDXACTS:
-                extension = 'json'
-                break;
-        }
-
-        const prefix = backupType.toLowerCase()
-        const date = now.format(ISODATEFORMAT)
-        const time = now.format(LONGTIMEFORMAT)
-
-        const filename = `${prefix}_${date}_${time}.${extension}`
-
-        return filename
-    }
-
     getUrl(path: string) {
         return `${this._serverUrl}/${path}`
     }
 
+}
+
+export function getFilenameForBackup(backupType: string) {
+    const prefix = backupType.toLowerCase()
+
+    // date/time
+    const now = moment()
+    const date = now.format(ISODATEFORMAT)
+    const time = now.format(LONGTIMEFORMAT)
+
+    // file extension
+    let extension;
+    switch (backupType) {
+        case BackupType.JOURNAL:
+            extension = 'ledger'
+            break;
+        default:
+            // case BackupType.SCHEDULEDXACTS:
+            extension = 'json'
+            break;
+    }
+
+    const filename = `${prefix}_${date}_${time}.${extension}`
+
+    return filename
 }

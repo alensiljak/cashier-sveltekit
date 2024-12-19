@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import Fab from '$lib/components/FAB.svelte';
 	import ScheduleEditor from '$lib/components/ScheduleEditor.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
@@ -10,7 +10,7 @@
 	import Notifier from '$lib/utils/notifier';
 	import { onMount } from 'svelte';
 
-	const id = $page.params.id;
+	const id = page.params.id;
 
 	// export let data;
 
@@ -19,7 +19,7 @@
 	async function onFabClicked() {
 		try {
 			await saveData();
-		} catch (err) {
+		} catch (err: any) {
 			Notifier.error(err.message as string);
 			console.error(err);
 		}

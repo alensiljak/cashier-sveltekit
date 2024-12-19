@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import appService from '$lib/services/appService';
 	import Notifier from '$lib/utils/notifier';
 	import { FileButton, getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
 
 	const modalStore = getModalStore();
-	const itemType = $page.params.itemType;
+	const itemType = page.params.itemType;
 	let files: FileList | undefined = $state(undefined);
 	let _content: string | undefined = $state(undefined);
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import type { StockSymbol } from '$lib/assetAllocation/AssetClass.js';
 	import {
 		SecurityAnalyser,
@@ -12,8 +12,8 @@
 	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
 
-	const name = $page.params.name;
-	let data = $state($page.data);
+	const name = page.params.name;
+	let data = $state(page.data);
 	let cursor = $state('');
 
 	onMount(async () => {

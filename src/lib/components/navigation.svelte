@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { getDrawerStore } from '@skeletonlabs/skeleton';
 	import {
 		HomeIcon,
@@ -36,13 +36,13 @@
 <nav class="list-nav p-4">
 	<ul>
 		<li>
-			<a href="/" on:click={drawerClose} class:active={$page.url.pathname === '/'}>
+			<a href="/" on:click={drawerClose} class:active={page.url.pathname === '/'}>
 				<span><HomeIcon /></span>
 				<span>Home</span>
 			</a>
 		</li>
 		<li>
-			<a href="/journal" on:click={drawerClose} class:active={$page.url.pathname === '/journal'}>
+			<a href="/journal" on:click={drawerClose} class:active={page.url.pathname === '/journal'}>
 				<span><ScrollIcon /></span>
 				<span>Journal</span>
 			</a>
@@ -51,20 +51,20 @@
 			<a
 				href="/favourites"
 				on:click={drawerClose}
-				class:active={$page.url.pathname === '/favourites'}
+				class:active={page.url.pathname === '/favourites'}
 			>
 				<span><StarIcon /></span>
 				<span>Favourites</span>
 			</a>
 		</li>
 		<li>
-			<a href="/accounts" on:click={drawerClose} class:active={$page.url.pathname === '/accounts'}>
+			<a href="/accounts" on:click={drawerClose} class:active={page.url.pathname === '/accounts'}>
 				<span><LandmarkIcon /></span>
 				<span>Accounts</span>
 			</a>
 		</li>
 		<li>
-			<a href="/payees" on:click={drawerClose} class:active={$page.url.pathname === '/payees'}>
+			<a href="/payees" on:click={drawerClose} class:active={page.url.pathname === '/payees'}>
 				<span><UsersRoundIcon /></span>
 				<span>Payees</span>
 			</a>
@@ -73,7 +73,7 @@
 			<a
 				href="/asset-allocation"
 				on:click={drawerClose}
-				class:active={$page.url.pathname === '/asset-allocation'}
+				class:active={page.url.pathname === '/asset-allocation'}
 			>
 				<span><ChartPieIcon /></span>
 				<span>Asset Allocation</span>
@@ -83,7 +83,7 @@
 			<a
 				href="/scheduled-xacts"
 				on:click={drawerClose}
-				class:active={$page.url.pathname === '/scheduled-xacts'}
+				class:active={page.url.pathname === '/scheduled-xacts'}
 			>
 				<span><CalendarClockIcon /></span>
 				<span>Scheduled Transactions</span>
@@ -94,26 +94,26 @@
 			<a
 				href="/cloud-backup"
 				on:click={drawerClose}
-				class:active={$page.url.pathname === '/cloud-backup'}
+				class:active={page.url.pathname === '/cloud-backup'}
 			>
 				<span><UploadCloudIcon /></span>
 				<span>Cloud Backup</span>
 			</a>
 		</li>
 		<li>
-			<a href="/settings" on:click={drawerClose} class:active={$page.url.pathname === '/settings'}>
+			<a href="/settings" on:click={drawerClose} class:active={page.url.pathname === '/settings'}>
 				<span><SettingsIcon /></span>
 				<span class="flex-auto">Settings</span>
 			</a>
 		</li>
 		<li>
-			<a href="/help" on:click={drawerClose} class:active={$page.url.pathname === '/help'}>
+			<a href="/help" on:click={drawerClose} class:active={page.url.pathname === '/help'}>
 				<span><HelpCircleIcon /></span>
 				<span class="flex-auto">Help</span>
 			</a>
 		</li>
 		<li>
-			<a href="/about" on:click={drawerClose} class:active={$page.url.pathname === '/about'}>
+			<a href="/about" on:click={drawerClose} class:active={page.url.pathname === '/about'}>
 				<span><InfoIcon /></span>
 				<span>About</span>
 			</a>
