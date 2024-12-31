@@ -1,6 +1,6 @@
 <script lang="ts">
 	import JournalCard from '$lib/components/JournalCard.svelte';
-	import { ArrowDownUpIcon, PlusIcon, SettingsIcon } from 'lucide-svelte';
+	import { ArrowDownUpIcon, DatabaseIcon, PlusIcon, SettingsIcon } from 'lucide-svelte';
 	import Toolbar from '../lib/components/Toolbar.svelte';
 	import { goto } from '$app/navigation';
 	import { xact } from '$lib/data/mainStore';
@@ -64,6 +64,7 @@
 		{#snippet menuItems()}
 			<ToolbarMenuItem text="Home Settings" Icon={SettingsIcon} targetNav="/home-settings" />
 			<ToolbarMenuItem text="Reorder Cards" targetNav="/home-reorder" Icon={ArrowDownUpIcon} />
+			<ToolbarMenuItem text="Backup" targetNav="/backup" Icon={DatabaseIcon} />
 		{/snippet}
 	</Toolbar>
 
