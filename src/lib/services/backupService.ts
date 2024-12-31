@@ -61,3 +61,13 @@ function downloadTextFile(text: string, fileName: string) {
         URL.revokeObjectURL(url);
     }, 1500);
 }
+
+export async function restoreBackup(content: string) {
+    const backup: Backup = JSON.parse(content)
+
+    // backup.settings
+    // backup.journal
+    // backup.scx
+
+    console.log(backup.settings.length)
+}

@@ -150,6 +150,7 @@ class AppService {
     }
     return visibleCardNames
   }
+  
   /**
    * Load data from a file.
    * @param {FileInfo} fileInfo The file info from the input control.

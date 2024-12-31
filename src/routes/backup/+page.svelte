@@ -1,31 +1,66 @@
 <script lang="ts">
 	import Toolbar from '$lib/components/Toolbar.svelte';
-	import { ISODATEFORMAT, LONGTIMEFORMAT } from '$lib/constants';
-	import { createBackup, getBackupFilename } from '$lib/services/backupService';
-	import { FileButton } from '@skeletonlabs/skeleton';
-	import moment from 'moment';
+	import * as BackupService from '$lib/services/backupService';
+	import Notifier from '$lib/utils/notifier';
+	import { FileButton, getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
 	import { onMount } from 'svelte';
 
+	const modalStore = getModalStore();
+
 	let _filename: string;
-	// let files: FileList;
+	let files: FileList;
+
+	Notifier.init();
 
 	onMount(() => {
-		_filename = getBackupFilename()
+		_filename = BackupService.getBackupFilename();
 	});
 
 	async function onBackupClick() {
-        await createBackup(_filename)
+		await BackupService.createBackup(_filename);
 	}
 
 	function onChangeHandler(e: Event): void {
-		console.log('file data:', e);
+		if (files.length > 1) {
+			Notifier.warn('Only one file must be selected!');
+			return;
+		}
+
+		// prompt for restore
+		let file = files[0];
+		let filename = file.name;
+		// confirm dialog
+		const modal: ModalSettings = {
+			type: 'confirm',
+			// Data
+			title: 'Confirm Restore',
+			body: 'Do you want to restore' + filename + '?<br/>This will overwrite all your data.',
+			response: async (r: boolean) => {
+				if (r) {
+                    await readFile(file)
+				}
+			}
+		};
+		modalStore.trigger(modal);
 	}
 
+	async function readFile(file: File) {
+		let fileContent;
+
+		const reader = new FileReader();
+		reader.onload = async (e: any) => {
+			fileContent = e?.target?.result; // Store the file content
+			await BackupService.restoreBackup(fileContent)
+
+            Notifier.warn('Incomplete')
+		};
+		reader.readAsText(file); // Read as text
+	}
 </script>
 
 <article>
 	<Toolbar title="Backup"></Toolbar>
-	<section>
+	<section class="p-1">
 		<p>You can backup all local data:</p>
 		<ul>
 			<li>transactions</li>
@@ -36,12 +71,6 @@
 
 		<div class="flex flex-row">
 			<input type="text" class="input" bind:value={_filename} readonly />
-			<!-- <FileButton
-				name="files"
-				button="btn variant-soft-primary"
-				bind:files
-				on:change={onChangeHandler}
-			/> -->
 		</div>
 
 		<center class="pt-4">
@@ -49,5 +78,15 @@
 				>Backup</button
 			>
 		</center>
+	</section>
+	<hr class="my-4" />
+	<section class="p-1">
+		<p>To restore, select a file below</p>
+		<FileButton
+			name="files"
+			button="btn variant-soft-secondary"
+			bind:files
+			on:change={onChangeHandler}
+		/>
 	</section>
 </article>
