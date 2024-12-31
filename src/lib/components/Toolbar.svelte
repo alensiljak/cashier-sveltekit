@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { AppBar } from '@skeletonlabs/skeleton-svelte';
+	import { AppBar, Popover } from '@skeletonlabs/skeleton-svelte';
 	import { EllipsisVertical, Menu } from 'lucide-svelte';
 	import { getDrawerStore, popup, type PopupSettings } from '@skeletonlabs/skeleton';
 	import type { Snippet } from 'svelte';
@@ -10,6 +10,7 @@
 		target: 'popupClick',
 		placement: 'top'
 	};
+	let menuOpenState = $state(false);
 
 	// Props
 	type Props = {
@@ -50,15 +51,28 @@
 		{#snippet trail()}
 			<!-- Drop-down Menu -->
 			{#if menuItems}
-				<button class="text-tertiary btn py-1 pr-2" use:popup={popupClick}>
+				<Popover bind:open={menuOpenState}>
+					{#snippet trigger()}
+					<div class="py-1 pr-2">
+						<EllipsisVertical size={20} />
+					</div>
+					{/snippet}
+					{#snippet content()}
+						<div class="list-nav variant-filled-primary min-w-52 shadow">
+							{@render menuItems?.()}
+						</div>
+					{/snippet}
+				</Popover>
+
+				<!-- <button class="text-tertiary btn py-1 pr-2" use:popup={popupClick}>
 					<EllipsisVertical size={20} class="" />
-				</button>
+				</button> -->
 				<!-- Pop-up Menu -->
-				<div class="list-nav variant-filled-primary min-w-52 shadow" data-popup="popupClick">
+				<!-- <div class="list-nav variant-filled-primary min-w-52 shadow" data-popup="popupClick">
 					<menu>
 						{@render menuItems?.()}
 					</menu>
-				</div>
+				</div> -->
 			{/if}
 		{/snippet}
 		<!-- {#snippet headline()}

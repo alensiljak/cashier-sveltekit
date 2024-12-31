@@ -10,7 +10,9 @@
 	};
 	let { targetNav, text, Icon, onclick }: Props = $props();
 
-	async function onMenuClicked() {
+	async function onMenuClicked(event: Event) {
+		event.preventDefault();
+		
 		if(targetNav) {
 			// navigate to the given destination.
 			await goto(targetNav)
@@ -27,7 +29,7 @@ Example usage:
 <ToolbarMenuItem text="Restore Settings" targetNav="/settings" Icon={ArrowBigUpIcon} />
 -->
 
-<li class="hover:bg-primary-600">
+<div class="hover:bg-primary-600">
 	<button type="button" class="btn flex flex-row w-full"
 		onclick={onMenuClicked}>
 		<span class="grow text-start">{text}</span>
@@ -35,4 +37,4 @@ Example usage:
 			<Icon />
 		</span>
 	</button>
-</li>
+</div>
