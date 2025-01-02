@@ -43,7 +43,7 @@
 					Notifier.success('All local transactions deleted.');
 					// Reload data.
 					// await loadData();
-					invalidate('/journal');
+					await invalidate('/journal');
 				}
 			}
 		};
