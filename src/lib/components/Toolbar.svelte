@@ -21,6 +21,11 @@
 
 	// methods
 
+	function onMenuClick() {
+		// automatically close the menu
+		menuOpenState = false;
+	}
+
 	function toggleSidebar() {
 		drawerStore.open();
 	}
@@ -58,7 +63,9 @@
 					</div>
 					{/snippet}
 					{#snippet content()}
-						<div class="list-nav variant-filled-primary min-w-52 shadow">
+						<!-- svelte-ignore a11y_click_events_have_key_events -->
+						<!-- svelte-ignore a11y_no_static_element_interactions -->
+						<div class="list-nav variant-filled-primary min-w-52 shadow" onclick={onMenuClick}>
 							{@render menuItems?.()}
 						</div>
 					{/snippet}
