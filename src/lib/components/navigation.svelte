@@ -12,7 +12,10 @@
 		CalendarClockIcon,
 		HelpCircleIcon,
 		SettingsIcon,
-		UploadCloudIcon
+		UploadCloudIcon,
+
+		DatabaseIcon
+
 	} from 'lucide-svelte';
 
 	const drawerStore = getDrawerStore();
@@ -90,7 +93,7 @@
 			</a>
 		</li>
 		<hr class="bg-primary-500 h-1 border-none" />
-		<li>
+		<!-- <li>
 			<a
 				href="/cloud-backup"
 				on:click={drawerClose}
@@ -98,6 +101,16 @@
 			>
 				<span><UploadCloudIcon /></span>
 				<span>Cloud Backup</span>
+			</a>
+		</li> -->
+		<li>
+			<a
+				href="/backup"
+				on:click={drawerClose}
+				class:active={page.url.pathname === '/backup'}
+			>
+				<span><DatabaseIcon /></span>
+				<span>Backup</span>
 			</a>
 		</li>
 		<li>

@@ -62,7 +62,7 @@
 	<Toolbar title="Backup"></Toolbar>
 	<section class="p-1">
 		<p>You can backup all local data:</p>
-		<ul>
+		<ul class="list mx-8">
 			<li>transactions</li>
 			<li>scheduled transactions</li>
 			<li>settings</li>
@@ -79,14 +79,16 @@
 			>
 		</center>
 	</section>
-	<hr class="my-4" />
+	<hr class="my-8" />
 	<section class="p-1">
-		<p>To restore, select a file below</p>
+		<div class="flex flex-row space-x-4 items-center">
+		<p>To restore (overwriting any existing records!): </p>
 		<FileButton
 			name="files"
 			button="btn variant-soft-secondary"
 			bind:files
 			on:change={onChangeHandler}
 		/>
+	</div>
 	</section>
 </article>
