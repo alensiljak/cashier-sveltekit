@@ -42,7 +42,6 @@
 					await db.xacts.clear();
 					Notifier.success('All local transactions deleted.');
 					// Reload data.
-					// await loadData();
 					await invalidate('/journal');
 				}
 			}
