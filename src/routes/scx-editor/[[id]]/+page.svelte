@@ -8,11 +8,8 @@
 	import { ScheduledXact, xact } from '$lib/data/mainStore';
 	import type { ScheduledTransaction } from '$lib/data/model';
 	import Notifier from '$lib/utils/notifier';
-	import { onMount } from 'svelte';
 
 	const id = page.params.id;
-
-	// export let data;
 
 	Notifier.init();
 

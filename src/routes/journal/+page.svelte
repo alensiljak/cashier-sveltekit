@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import { goto, invalidate } from '$app/navigation';
 	import Fab from '$lib/components/FAB.svelte';
 	import JournalXactRow from '$lib/components/JournalXactRow.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
@@ -11,20 +11,23 @@
 	import { FileDownIcon, ImportIcon, PlusIcon, TrashIcon } from 'lucide-svelte';
 	import { onMount } from 'svelte';
 	import { xact } from '$lib/data/mainStore';
+	import type { PageData } from './$types';
 
 	const modalStore = getModalStore();
 	Notifier.init();
 
-	let xacts: Xact[] = $state([]);
+	let listContainer: any;
+	let { data }: { data: PageData } = $props();
+	let xacts: Xact[] = data.xacts;
 
 	onMount(async () => {
-		// load data
-		await loadData();
+		// Scroll to the end of the list
+		// window.scrollTo({
+		// 	top: document.body.scrollHeight,
+		// 	behavior: 'smooth'
+		// });
+		listContainer.scrollTop = listContainer.scrollHeight;
 	});
-
-	async function loadData() {
-		xacts = await db.xacts.orderBy('date').reverse().toArray();
-	}
 
 	async function onDeleteAllClicked() {
 		// show confirmation dialog
@@ -38,7 +41,9 @@
 					// delete all Xacts
 					await db.xacts.clear();
 					Notifier.success('All local transactions deleted.');
-					await loadData();
+					// Reload data.
+					// await loadData();
+					invalidate('/journal');
 				}
 			}
 		};
@@ -46,7 +51,7 @@
 	}
 
 	async function onExportClick() {
-		await goto('/export/journal')
+		await goto('/export/journal');
 	}
 
 	async function onFab() {
@@ -63,30 +68,36 @@
 	 */
 	async function onRowClick(tx: Xact) {
 		// store into state
-		xact.set(tx)
+		xact.set(tx);
 
-		goto('/xact-actions')
+		goto('/xact-actions');
 	}
 </script>
 
-<Toolbar title="Journal">
-	{#snippet menuItems()}
-		<!-- Export -->
-		<ToolbarMenuItem text="Export" Icon={FileDownIcon} onclick={onExportClick} />
-		<!-- Delete All -->
-		<ToolbarMenuItem text="Delete All" onclick={onDeleteAllClicked} Icon={TrashIcon} />
-		<ToolbarMenuItem text="Import Ledger item" Icon={ImportIcon} targetNav="/import-ledger-xact" />
-	{/snippet}
-</Toolbar>
+<article class="flex h-screen flex-col">
+	<Toolbar title="Journal">
+		{#snippet menuItems()}
+			<!-- Export -->
+			<ToolbarMenuItem text="Export" Icon={FileDownIcon} onclick={onExportClick} />
+			<!-- Delete All -->
+			<ToolbarMenuItem text="Delete All" onclick={onDeleteAllClicked} Icon={TrashIcon} />
+			<ToolbarMenuItem
+				text="Import Ledger item"
+				Icon={ImportIcon}
+				targetNav="/import-ledger-xact"
+			/>
+		{/snippet}
+	</Toolbar>
 
-<Fab onclick={onFab} Icon={PlusIcon} />
+	<section class="grow space-y-2 overflow-auto p-1 pb-3" bind:this={listContainer}>
+		{#if xacts?.length == 0}
+			<p>The device journal is empty</p>
+		{:else}
+			{#each xacts as xact}
+				<JournalXactRow {xact} onclick={onRowClick} />
+			{/each}
+		{/if}
+	</section>
 
-<main class="space-y-2 p-1">
-	{#if xacts.length == 0}
-		<p>The device journal is empty</p>
-	{:else}
-		{#each xacts as xact}
-			<JournalXactRow {xact} onclick={onRowClick} />
-		{/each}
-	{/if}
-</main>
+	<Fab onclick={onFab} Icon={PlusIcon} />
+</article>
