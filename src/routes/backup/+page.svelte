@@ -34,10 +34,10 @@
 			type: 'confirm',
 			// Data
 			title: 'Confirm Restore',
-			body: 'Do you want to restore' + filename + '?<br/>This will overwrite all your data.',
+			body: 'Do you want to restore' + filename + '?<br/>This will overwrite your existing records.',
 			response: async (r: boolean) => {
 				if (r) {
-                    await readFile(file)
+					await readFile(file);
 				}
 			}
 		};
@@ -50,9 +50,8 @@
 		const reader = new FileReader();
 		reader.onload = async (e: any) => {
 			fileContent = e?.target?.result; // Store the file content
-			await BackupService.restoreBackup(fileContent)
-
-            Notifier.warn('Incomplete')
+			await BackupService.restoreBackup(fileContent);
+			Notifier.success('Backup restored');
 		};
 		reader.readAsText(file); // Read as text
 	}
@@ -81,14 +80,14 @@
 	</section>
 	<hr class="my-8" />
 	<section class="p-1">
-		<div class="flex flex-row space-x-4 items-center">
-		<p>To restore (overwriting any existing records!): </p>
-		<FileButton
-			name="files"
-			button="btn variant-soft-secondary"
-			bind:files
-			on:change={onChangeHandler}
-		/>
-	</div>
+		<div class="flex flex-row items-center space-x-4">
+			<p>To restore (overwriting any existing records!):</p>
+			<FileButton
+				name="files"
+				button="btn variant-soft-secondary"
+				bind:files
+				on:change={onChangeHandler}
+			/>
+		</div>
 	</section>
 </article>

@@ -62,12 +62,22 @@ function downloadTextFile(text: string, fileName: string) {
     }, 1500);
 }
 
+/**
+ * Restores the backup, deleting any existing data.
+ * @param content JSON contents of the backup file
+ */
 export async function restoreBackup(content: string) {
     const backup: Backup = JSON.parse(content)
 
     // backup.settings
-    // backup.journal
-    // backup.scx
+	await db.settings.clear();
+    await db.settings.bulkAdd(backup.settings);
 
-    console.log(backup.settings.length)
+    // backup.journal
+    await db.xacts.clear();
+    await db.xacts.bulkAdd(backup.journal)
+
+    // backup.scx
+    await db.scheduled.clear();
+    await db.scheduled.bulkAdd(backup.scx)
 }
