@@ -60,6 +60,8 @@
 <article>
 	<Toolbar title="Backup"></Toolbar>
 	<section class="p-1">
+		<h3 class="h3">Create Backup</h3>
+
 		<p>You can backup all local data:</p>
 		<ul class="list mx-8">
 			<li>transactions</li>
@@ -80,6 +82,7 @@
 	</section>
 	<hr class="my-8" />
 	<section class="p-1">
+		<h3 class="h3">Restore Backup</h3>
 		<div class="flex flex-row items-center space-x-4">
 			<p>To restore (overwriting any existing records!):</p>
 			<FileButton
