@@ -35,7 +35,8 @@
 		// Get the latest 5 transactions.
 		xacts = await db.xacts.orderBy('date').reverse().limit(5).toArray();
 		// now order from oldest to newest.
-		xacts = xacts.sort((a, b) => (new Date(a.date as string) as any) - (new Date(b.date as string) as any));
+		// xacts = xacts.sort((a, b) => (new Date(a.date as string) as any) - (new Date(b.date as string) as any));
+		xacts.reverse()
 
 		try {
 			const amounts = XactAugmenter.calculateXactAmounts(xacts);
