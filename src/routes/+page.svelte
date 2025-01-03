@@ -64,7 +64,6 @@
 		{#snippet menuItems()}
 			<ToolbarMenuItem text="Home Settings" Icon={SettingsIcon} targetNav="/home-settings" />
 			<ToolbarMenuItem text="Reorder Cards" targetNav="/home-reorder" Icon={ArrowDownUpIcon} />
-			<ToolbarMenuItem text="Backup" targetNav="/backup" Icon={DatabaseIcon} />
 		{/snippet}
 	</Toolbar>
 
