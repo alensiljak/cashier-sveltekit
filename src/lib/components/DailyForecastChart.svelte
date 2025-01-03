@@ -20,9 +20,11 @@
 	import { Composite6 } from 'hw-chartjs-plugin-colorschemes/src/colorschemes/colorschemes.office';
 	import { getAccountBalance, getShortAccountName } from '$lib/services/accountsService';
 	import db from '$lib/data/db';
-	import type { Account, ScheduledTransaction } from '$lib/data/model';
+	import type { Account, ScheduledTransaction, Xact } from '$lib/data/model';
 	import appService from '$lib/services/appService';
 	import moment from 'moment';
+	import { XactAugmenter } from '$lib/utils/xactAugmenter';
+	import { ISODATEFORMAT } from '$lib/constants';
 
 	interface Props {
 		daysCount: number;
@@ -44,13 +46,72 @@
 		renderChart(data);
 	});
 
-	async function addScx(accountName: string) {
+	async function addScxData(accountName: string, amounts: number[]): Promise<number[]> {
 		// project scheduled transactions
 		let scxs = await loadScxsFor(accountName);
 
+		// todo: project the schedule into the selected period (i.e. if a xact repeats daily, it should be
+		// included 7 times in a weekly forecast).
+
 		// calculate values for subsequent days
+		amounts = addScxAmounts(scxs, amounts, accountName);
 
 		// Perform the calculation.
+		amounts = calculateDailyAmounts(amounts);
+
+		return amounts;
+	}
+
+	function addScxAmounts(
+		scxs: ScheduledTransaction[],
+		amounts: number[],
+		accountName: string
+	): number[] {
+		let xacts = scxs.map((s) => s.transaction) as Xact[];
+		if (!xacts || xacts.length === 0) return amounts;
+		xacts = XactAugmenter.calculateEmptyPostingAmounts(xacts);
+
+		// start from today
+		const today = moment().startOf('day');
+		for (var scx of scxs) {
+			let diff = moment(scx.nextDate).diff(today, 'days');
+			// Handle overdue payments (negative days).
+			if (diff < 0) diff = 0;
+
+			const postings = scx.transaction?.postings.filter((p) => p.account == accountName);
+			if (!postings || postings?.length === 0) continue;
+
+			// add all the posting amounts
+			let dailyAmount = 0;
+			for (var posting of postings) {
+				if (!posting.amount) continue;
+				dailyAmount += posting.amount;
+			}
+			amounts[diff] += dailyAmount;
+		}
+
+		return amounts;
+	}
+
+	/**
+	 * Calculates total daily amounts. The previous amounts contain only the amounts for that particular day.
+	 * A kind of a hack. Since the daily amounts have been inserted already, just recalculate the daily balance
+	 * based on the balance of the previous day.
+	 * @param amounts transaction amounts per day
+	 */
+	function calculateDailyAmounts(amounts: number[]): number[] {
+		let balance = 0; // balance on the previous day. Running balance.
+		for (let i = 0; i < amounts.length; i++) {
+			let dailyAmount = amounts[i] || 0;
+			// add today's transactions to the running balance.
+			let dailyBalance = balance + dailyAmount;
+			// set the value in the daily cell, in the array.
+			amounts[i] = dailyBalance;
+			// update the running balance.
+			balance = dailyBalance;
+		}
+
+		return amounts;
 	}
 
 	function createXAxis() {
@@ -78,7 +139,7 @@
 		// }
 
 		for (const accountName of accountNames) {
-			let dataset = await populateAccount(accountName);
+			let dataset = await createDatasetFor(accountName);
 			data.datasets.push(dataset);
 		}
 
@@ -89,29 +150,37 @@
 		let scxs: ScheduledTransaction[] = await db.scheduled.orderBy('nextDate').toArray();
 		let scxsForAccount = scxs.filter(
 			(scx) =>
-				scx?.transaction?.postings?.filter((scx) => scx.account === accountName) &&
+				scx?.transaction?.postings?.filter((scx) => scx.account == accountName).length &&
 				scx.transaction.date &&
-				scx.transaction.date <= maxDate.toString()
+				scx.transaction.date <= maxDate.format(ISODATEFORMAT).toString()
 		);
 		return scxsForAccount;
 	}
 
-	async function populateAccount(accountName: string) {
+	async function createDatasetFor(accountName: string) {
 		// create a dataset record for each account.
-		let entry = {
+		let dataset = {
 			label: '',
 			data: new Array(daysCount + 1)
 		};
+
 		// load account
 		const account: Account = await db.accounts.get(accountName);
-		entry.label = account.getAccountName();
+		dataset.label = account.getAccountName();
+
+		// add default values.
+		for (var i = 0; i < dataset.data.length; i++) {
+			dataset.data[i] = 0;
+		}
+
 		// todo: add local transactions
-		entry.data[0] = getAccountBalance(account, defaultCurrency).quantity;
+
+		dataset.data[0] = getAccountBalance(account, defaultCurrency).quantity;
 
 		// add scheduled transactions
-		await addScx(accountName);
+		dataset.data = await addScxData(accountName, dataset.data);
 
-		return entry;
+		return dataset;
 	}
 
 	function renderChart(data: any) {

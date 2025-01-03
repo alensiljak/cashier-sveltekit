@@ -152,7 +152,7 @@ export function getAccountBalance(account: Account, defaultCurrency?: string): M
 
   const result = new Money()
   // default value
-  result.currency = defaultCurrency
+  result.currency = defaultCurrency as string
 
   // Are there any balance records?
   if (!account.balances) return result

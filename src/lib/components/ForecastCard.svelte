@@ -38,7 +38,7 @@
 		</a>
 	{/snippet}
 	{#snippet content()}
-		{#if !_accountNames.length}
+		{#if !_accountNames.length || !_days}
 			<p>There are no accounts selected for forecasting</p>
 		{:else}
 			<DailyForecastChart daysCount={_days} accountNames={_accountNames} />
