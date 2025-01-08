@@ -5,18 +5,21 @@ import { AssetAllocationStore } from '$lib/data/mainStore'
 import * as OpfsLib from '$lib/utils/opfslib.js'
 import { get } from 'svelte/store'
 
+const aa = new AssetAllocationEngine()
+
 export async function load() {
     try {
         // check state for cached AA.
         let assetClasses: AssetClass[] | undefined = get(AssetAllocationStore)
         if (!assetClasses || assetClasses.length === 0) {
-            assetClasses = await loadAaFromFile()
+            await loadAaFromFile()
+            assetClasses = aa.assetClasses
 
             // save into store.
             AssetAllocationStore.set(assetClasses)
         }
 
-        return { assetClasses }
+        return { aa, assetClasses }
     } catch (error) {
         console.error(error)
     }
@@ -28,8 +31,5 @@ async function loadAaFromFile() {
         throw new Error('Could not load AA definition!')
     }
 
-    const aa = new AssetAllocationEngine()
     await aa.loadFullAssetAllocation(definition)
-
-    return aa.assetClasses
 }

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { invalidate, invalidateAll } from '$app/navigation';
 	import { AssetAllocationEngine } from '$lib/assetAllocation/AssetAllocation.js';
+	import { validate } from '$lib/assetAllocation/assetAllocationValidation.js';
 	import { AssetClass } from '$lib/assetAllocation/AssetClass.js';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
@@ -100,16 +101,12 @@
 	 * validate the allocation (definition)
 	 */
 	async function onValidateClick() {
-		Notifier.neutral('incomplete');
-		return;
-
 		if (data.assetClasses?.length === 0) {
 			Notifier.neutral('Please recalculate the allocation first.');
 		}
 
 		// confirm that the group allocations match the sum of the children's allocation.
-		// todo: let errors = validate(engine.assetClassIndex);
-		const errors: string | any[] = [];
+		let errors = validate(data.aa!.assetClassIndex);
 
 		if (errors.length > 0) {
 			let message = 'Errors: ';

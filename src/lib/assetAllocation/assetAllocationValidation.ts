@@ -8,6 +8,7 @@ import type { AssetClass } from "./AssetClass"
 /**
  * Validate Asset Allocation.
  * Currently checks the definition by comparing group sums.
+ * @param assetClassList dictionary of asset classes
  */
 export function validate(assetClassList: Record<string, AssetClass>) {
     const errors: string[] = []
