@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { invalidate, invalidateAll } from '$app/navigation';
+	import { invalidateAll } from '$app/navigation';
 	import { AssetAllocationEngine } from '$lib/assetAllocation/AssetAllocation.js';
 	import { validate } from '$lib/assetAllocation/assetAllocationValidation.js';
 	import { AssetClass } from '$lib/assetAllocation/AssetClass.js';
@@ -86,7 +86,6 @@
 		AssetAllocationStore.set(undefined);
 		AaStocksStore.set(undefined);
 
-		// invalidate()
 		invalidateAll();
 	}
 

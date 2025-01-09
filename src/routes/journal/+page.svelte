@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { goto, invalidate, invalidateAll } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
 	import Fab from '$lib/components/FAB.svelte';
 	import JournalXactRow from '$lib/components/JournalXactRow.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';

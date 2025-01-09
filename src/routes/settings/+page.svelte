@@ -7,7 +7,7 @@
 	import { FileButton, getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
 	import db from '$lib/data/db';
 	import appService from '$lib/services/appService';
-	import { invalidate, invalidateAll } from '$app/navigation';
+	import { invalidateAll } from '$app/navigation';
 	import * as OpfsLib from '$lib/utils/opfslib.js'
 	import { AssetAllocationFilename } from '$lib/constants.js';
 	import { DefaultCurrencyStore } from '$lib/data/mainStore.js';
@@ -90,8 +90,7 @@
 
 		Notifier.success('Settings imported');
 
-		invalidate('/settings')
-		// await loadSettings();
+		invalidateAll();
 	}
 
 	async function saveSettings() {
