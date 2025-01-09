@@ -6,6 +6,7 @@ import { settings, SettingKeys } from '$lib/settings'
 import moment from 'moment'
 import { AssetAllocationEngine } from './assetAllocation/AssetAllocation'
 import appService from './services/appService'
+import { ISODATEFORMAT } from './constants'
 
 /**
  * Cashier Sync class talks to CashierSync on the server. The methods here represent the methods
@@ -192,9 +193,7 @@ export class CashierSync {
   async readPayees(): Promise<string[]> {
     // Limit the payees to the last 5 years, otherwise there's a high risk of crashing.
     // This command is somehow very memory hungry on Android.
-    const year_str = moment().format('YYYY')
-    const year = Number(year_str)
-    const begin = year - 5
+    const begin = moment().subtract(5, 'years').format(ISODATEFORMAT)
 
     const command = CashierSync.payeesCommand + ' -b ' + begin
     const response = await this.ledger(command, { timeout: 20000 })
