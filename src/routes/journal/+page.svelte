@@ -18,7 +18,6 @@
 
 	let listContainer: any;
 	let { data }: { data: PageData } = $props();
-	let xacts: Xact[] = data.xacts;
 
 	onMount(async () => {
 		// Scroll to the end of the list
@@ -89,10 +88,10 @@
 	</Toolbar>
 
 	<section class="grow space-y-2 overflow-auto p-1 pb-3" bind:this={listContainer}>
-		{#if xacts?.length == 0}
+		{#if data.xacts?.length == 0}
 			<p>The device journal is empty</p>
 		{:else}
-			{#each xacts as xact}
+			{#each data.xacts as xact}
 				<JournalXactRow {xact} onclick={onRowClick} />
 			{/each}
 		{/if}
