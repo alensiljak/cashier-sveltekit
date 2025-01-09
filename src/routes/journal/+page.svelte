@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { goto, invalidate } from '$app/navigation';
+	import { goto, invalidate, invalidateAll } from '$app/navigation';
 	import Fab from '$lib/components/FAB.svelte';
 	import JournalXactRow from '$lib/components/JournalXactRow.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
@@ -42,7 +42,7 @@
 					await db.xacts.clear();
 					Notifier.success('All local transactions deleted.');
 					// Reload data.
-					await invalidate('/journal');
+					await invalidateAll();
 				}
 			}
 		};
