@@ -69,13 +69,22 @@
 		}
 	}
 
-	function getRowColor(depth: number) {
-		if (depth === 0) {
-			return 'bg-gray-900';
+	function getRowColor(ac: AssetClass) {
+		// determine if this is an asset class by checking for symbols.
+		if (ac.symbols?.length) {
+			return '';
 		}
+
+		const depth = ac.depth;
+		// root
+		if (depth === 0) {
+			return 'bg-gray-600';
+		}
+		// equity/fixed/real
 		if (depth === 1) {
 			return 'bg-gray-700';
 		}
+		// area
 		if (depth === 2) {
 			return 'bg-gray-800';
 		}
@@ -149,7 +158,7 @@
 			</thead>
 			<tbody>
 				{#each _allocation as item}
-					<tr class={`border-b border-tertiary-200/15 ${getRowColor(item.depth)}`}>
+					<tr class={`border-b border-tertiary-200/15 ${getRowColor(item)}`}>
 						<td>
 							<span class={`pl-${item.depth * 2}`}>
 								<a class="underline" href={`/assetclass-detail/${item.fullname}`}>
