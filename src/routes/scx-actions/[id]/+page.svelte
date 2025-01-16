@@ -197,7 +197,7 @@
 		<!-- remarks -->
 		<div>
 			<p>Remarks:</p>
-			<textarea class="textarea" readonly>{$ScheduledXact.remarks}</textarea>
+			<textarea class="textarea" rows="5" readonly>{$ScheduledXact.remarks}</textarea>
 		</div>
 
 		<!-- actions -->
