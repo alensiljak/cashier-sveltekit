@@ -201,7 +201,7 @@
 		</div>
 
 		<!-- actions -->
-		<div class="grid grid-cols-3 pt-10 lg:px-20">
+		<div class="grid grid-cols-3 pt-3 lg:px-20">
 			<SquareButton
 				Icon={ScrollIcon}
 				classes="bg-tertiary-500 text-secondary-500"
