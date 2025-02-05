@@ -7,10 +7,7 @@
 	// Popups
 	import { computePosition, autoUpdate, offset, shift, flip, arrow } from '@floating-ui/dom';
 	import {
-		Drawer,
 		initializeStores,
-		// Modal,
-		getDrawerStore,
 		storePopup,
 		Toast
 	} from '@skeletonlabs/skeleton';
@@ -27,8 +24,6 @@
 
 	// Reactive Properties
 	let webManifest = $derived(pwaInfo ? pwaInfo.webManifest.linkTag : '');
-
-	const drawerStore = getDrawerStore();
 
 	// set up popups
 	storePopup.set({ computePosition, autoUpdate, offset, shift, flip, arrow });
@@ -57,12 +52,10 @@
 
 	function handleSwipe(e: SwipeCustomEvent) {
 		if (e.detail.direction == 'right') {
-			// alertVisible = true;
-			drawerStore.open({ duration: 350 });
+			drawerState.update((state) => true);
 		}
 		if (e.detail.direction == 'left') {
-			// alertVisible = false;
-			drawerStore.close();
+			drawerState.update((state) => false);
 		}
 	}
 </script>
@@ -78,20 +71,16 @@
 </svelte:head>
 
 <div use:swipe onswipe={handleSwipe}>
-	<!-- Drawer -->
-	<!-- <Drawer width="w-72">
-		<Navigation />
-	</Drawer> -->
-
 	<Toast />
-	<!-- <Modal buttonPositive="variant-filled-primary" /> -->
+	
+	<!-- sidebar as modal -->
 	<Modal
 		bind:open={$drawerState}
 		triggerBase=""
 		contentBase="bg-surface-500/95 shadow-xl w-[288px] h-screen"
 		positionerJustify="justify-start"
-		transitionsPositionerIn={{ x: -288, duration: 200 }}
-		transitionsPositionerOut={{ x: -288, duration: 200 }}
+		transitionsPositionerIn={{ x: -288, duration: 350 }}
+		transitionsPositionerOut={{ x: -288, duration: 350 }}
 	>
 		{#snippet trigger()}{/snippet}
 		{#snippet content()}

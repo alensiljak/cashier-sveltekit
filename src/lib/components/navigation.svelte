@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { drawerState } from '$lib/data/mainStore';
-	import { getDrawerStore } from '@skeletonlabs/skeleton';
 	import {
 		HomeIcon,
 		InfoIcon,
@@ -19,10 +18,7 @@
 
 	} from 'lucide-svelte';
 
-	const drawerStore = getDrawerStore();
-
 	function drawerClose(): void {
-		drawerStore.close();
 		// the new drawer
 		drawerState.update((state) => false);
 	}

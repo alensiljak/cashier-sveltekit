@@ -1,12 +1,11 @@
 <script lang="ts">
 	import { AppBar, Popover } from '@skeletonlabs/skeleton-svelte';
 	import { EllipsisVertical, Menu } from 'lucide-svelte';
-	import { getDrawerStore, popup, type PopupSettings } from '@skeletonlabs/skeleton';
+	import { popup, type PopupSettings } from '@skeletonlabs/skeleton';
 	import type { Snippet } from 'svelte';
 	import { drawerState } from '$lib/data/mainStore';
 	import { get } from 'svelte/store';
 
-	const drawerStore = getDrawerStore();
 	const popupClick: PopupSettings = {
 		event: 'click',
 		target: 'popupClick',
@@ -29,10 +28,8 @@
 	}
 
 	function toggleSidebar() {
-		drawerStore.open();
 		// toggle sidebar state.
 		drawerState.update((state) => !state);
-		console.log('drawerState:', get(drawerState));
 	}
 </script>
 
