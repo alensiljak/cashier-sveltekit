@@ -7,7 +7,6 @@
 	// Popups
 	import { computePosition, autoUpdate, offset, shift, flip, arrow } from '@floating-ui/dom';
 	import {
-		AppShell,
 		Drawer,
 		initializeStores,
 		Modal,
@@ -71,38 +70,31 @@
 
 	<!-- PWA -->
 	<base href="/" />
-	<!-- {@html webManifest} -->
-	<!-- {#if pwaAssetsHead.themeColor}
-		<meta name="theme-color" content={pwaAssetsHead.themeColor.content} />
-	{/if} -->
 	{#each pwaAssetsHead.links as link}
 		<link {...link} />
 	{/each}
 </svelte:head>
 
-<main use:swipe onswipe={handleSwipe}>
+<div use:swipe onswipe={handleSwipe}>
 	<!-- Drawer -->
 	<Drawer width="w-72">
-		<!-- <h2 class="p-4">Navigation</h2>
-	<hr /> -->
 		<Navigation />
 	</Drawer>
 
 	<Toast />
 	<Modal buttonPositive="variant-filled-primary" />
 
-	<AppShell slotSidebarLeft="bg-surface-500/5 w-0 lg:w-72">
-		<svelte:fragment slot="header">
-			<!-- <Applicationbar /> -->
-		</svelte:fragment>
-		<svelte:fragment slot="sidebarLeft">
+	<!-- former AppShell -->
+	<div class="grid grid-cols-1 lg:grid-cols-[288px_1fr]">
+		<aside class="sticky top-0 col-span-1 hidden h-screen bg-surface-500/5 lg:block">
 			<Navigation />
-		</svelte:fragment>
-		<svelte:fragment slot="default">
+		</aside>
+
+		<main class="col-span-1">
 			{@render children()}
-		</svelte:fragment>
-	</AppShell>
-</main>
+		</main>
+	</div>
+</div>
 
 {#await import('$lib/components/ReloadPrompt.svelte') then { default: ReloadPrompt }}
 	<ReloadPrompt />
