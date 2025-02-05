@@ -3,6 +3,8 @@
 	import { EllipsisVertical, Menu } from 'lucide-svelte';
 	import { getDrawerStore, popup, type PopupSettings } from '@skeletonlabs/skeleton';
 	import type { Snippet } from 'svelte';
+	import { drawerState } from '$lib/data/mainStore';
+	import { get } from 'svelte/store';
 
 	const drawerStore = getDrawerStore();
 	const popupClick: PopupSettings = {
@@ -28,6 +30,9 @@
 
 	function toggleSidebar() {
 		drawerStore.open();
+		// toggle sidebar state.
+		drawerState.update((state) => !state);
+		console.log('drawerState:', get(drawerState));
 	}
 </script>
 

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { drawerState } from '$lib/data/mainStore';
 	import { getDrawerStore } from '@skeletonlabs/skeleton';
 	import {
 		HomeIcon,
@@ -22,6 +23,8 @@
 
 	function drawerClose(): void {
 		drawerStore.close();
+		// the new drawer
+		drawerState.update((state) => false);
 	}
 </script>
 

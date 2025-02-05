@@ -9,7 +9,7 @@
 	import {
 		Drawer,
 		initializeStores,
-		Modal,
+		// Modal,
 		getDrawerStore,
 		storePopup,
 		Toast
@@ -18,6 +18,8 @@
 	import { pwaInfo } from 'virtual:pwa-info';
 	import { pwaAssetsHead } from 'virtual:pwa-assets/head';
 	import { onMount } from 'svelte';
+	import { Modal } from '@skeletonlabs/skeleton-svelte';
+	import { drawerState } from '$lib/data/mainStore';
 
 	let { children } = $props();
 
@@ -77,12 +79,25 @@
 
 <div use:swipe onswipe={handleSwipe}>
 	<!-- Drawer -->
-	<Drawer width="w-72">
+	<!-- <Drawer width="w-72">
 		<Navigation />
-	</Drawer>
+	</Drawer> -->
 
 	<Toast />
-	<Modal buttonPositive="variant-filled-primary" />
+	<!-- <Modal buttonPositive="variant-filled-primary" /> -->
+	<Modal
+		bind:open={$drawerState}
+		triggerBase=""
+		contentBase="bg-surface-500/95 shadow-xl w-[288px] h-screen"
+		positionerJustify="justify-start"
+		transitionsPositionerIn={{ x: -288, duration: 200 }}
+		transitionsPositionerOut={{ x: -288, duration: 200 }}
+	>
+		{#snippet trigger()}{/snippet}
+		{#snippet content()}
+			<Navigation />
+		{/snippet}
+	</Modal>
 
 	<!-- former AppShell -->
 	<div class="grid grid-cols-1 lg:grid-cols-[288px_1fr]">

@@ -20,7 +20,7 @@ export const state: Writable<Partial<MainStore>>
         xact: undefined
     });
 
-// Real items
+// Store items.
 
 export const selectionMetadata: Writable<SelectionModeMetadata | undefined> = writable()
 export const DefaultCurrencyStore: Writable<string> = writable()
@@ -29,3 +29,5 @@ export const ScheduledXact: Writable<ScheduledTransaction> = writable()
 // asset allocation
 export const AssetAllocationStore: Writable<AssetClass[] | undefined> = writable()
 export const AaStocksStore: Writable<StockCache | undefined> = writable()
+// Drawer/sidebar store.
+export const drawerState: Writable<boolean> = writable(false);
