@@ -139,7 +139,7 @@
 	</label> -->
 
 	<center>
-		<button class="variant-filled-error btn uppercase !text-warning-500" on:click={saveSettings}>
+		<button class="variant-filled-error btn uppercase !text-warning-500" onclick={saveSettings}>
 			Save
 		</button>
 	</center>
