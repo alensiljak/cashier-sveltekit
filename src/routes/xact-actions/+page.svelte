@@ -9,15 +9,21 @@
 	import { ScheduledTransaction, Xact } from '$lib/data/model';
 	import appService from '$lib/services/appService';
 	import Notifier from '$lib/utils/notifier';
-	import type { ModalSettings } from '@skeletonlabs/skeleton';
-	import { getModalStore } from '@skeletonlabs/skeleton';
 	import { CalendarClockIcon, CopyIcon, PenSquareIcon, TrashIcon } from 'lucide-svelte';
 	import { onMount } from 'svelte';
+	import { Modal } from '@skeletonlabs/skeleton-svelte';
 
-	const modalStore = getModalStore();
 	Notifier.init();
+	let isDeleteConfirmationOpen = $state(false);
 
 	onMount(async () => {});
+
+	/**
+	 * Close all dialogs.
+	 */
+	function closeModal() {
+		isDeleteConfirmationOpen = false;
+	}
 
 	async function onCopyClicked() {
 		// get a journal version
@@ -37,16 +43,7 @@
 		}
 
 		// confirm dialog
-		const modal: ModalSettings = {
-			type: 'confirm',
-			// Data
-			title: 'Confirm Delete',
-			body: 'Do you want to delete the transaction?',
-			response: async (r: boolean) => {
-				if (r) await onDeleteConfirmed();
-			}
-		};
-		modalStore.trigger(modal);
+		isDeleteConfirmationOpen = true;
 	}
 
 	async function onDeleteConfirmed() {
@@ -77,7 +74,7 @@
 		xact.set(newXact);
 
 		// navigate to the editor for the new transaction, resetting the navigation?
-		goto('/tx', { replaceState: true })
+		goto('/tx', { replaceState: true });
 	}
 
 	async function onEditClicked() {
@@ -85,14 +82,14 @@
 	}
 
 	async function onScheduleClick() {
-		ScheduledXact.set(new ScheduledTransaction())
+		ScheduledXact.set(new ScheduledTransaction());
 
 		// clear the Xact id
 		if ($xact) {
-			$xact.id = undefined
+			$xact.id = undefined;
 		}
 
-		goto('/scx-editor')
+		goto('/scx-editor');
 	}
 </script>
 
@@ -117,8 +114,11 @@
 		>
 			Duplicate
 		</SquareButton>
-		<SquareButton Icon={CalendarClockIcon} classes="bg-tertiary-500 text-secondary-500"
-		onclick={onScheduleClick}>
+		<SquareButton
+			Icon={CalendarClockIcon}
+			classes="bg-tertiary-500 text-secondary-500"
+			onclick={onScheduleClick}
+		>
 			Schedule
 		</SquareButton>
 		<SquareButton
@@ -137,3 +137,30 @@
 		</SquareButton>
 	</div>
 </main>
+<!-- "Delete" dialog -->
+<Modal
+	bind:open={isDeleteConfirmationOpen}
+	triggerBase="hidden"
+	contentBase="card bg-surface-100-900 p-4 space-y-4 shadow-xl max-w-screen-sm"
+	backdropClasses="backdrop-blur-sm"
+>
+	{#snippet trigger()}Open Modal{/snippet}
+	{#snippet content()}
+		<header class="flex justify-between">
+			<h2 class="h4">Confirm Delete</h2>
+		</header>
+		<article>
+			<p class="opacity-60">
+				Do you want to delete the transaction?
+			</p>
+		</article>
+		<footer class="flex justify-end gap-4">
+			<button type="button" class="variant-tonal btn" onclick={closeModal}>Cancel</button>
+			<button
+				type="button"
+				class="btn-primary variant-filled-primary btn text-tertiary-500"
+				onclick={onDeleteConfirmed}>OK</button
+			>
+		</footer>
+	{/snippet}
+</Modal>

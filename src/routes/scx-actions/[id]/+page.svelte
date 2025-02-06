@@ -9,7 +9,6 @@
 	import type { ScheduledTransaction, Xact } from '$lib/data/model';
 	import appService from '$lib/services/appService';
 	import Notifier from '$lib/utils/notifier';
-	// import { getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
 	import { calculateNextIteration } from '$lib/scheduledTransactions';
 	import {
 		CheckIcon,
