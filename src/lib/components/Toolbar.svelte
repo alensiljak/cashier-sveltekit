@@ -1,16 +1,9 @@
 <script lang="ts">
 	import { AppBar, Popover } from '@skeletonlabs/skeleton-svelte';
 	import { EllipsisVertical, Menu } from 'lucide-svelte';
-	import { popup, type PopupSettings } from '@skeletonlabs/skeleton';
 	import type { Snippet } from 'svelte';
 	import { drawerState } from '$lib/data/mainStore';
-	import { get } from 'svelte/store';
 
-	const popupClick: PopupSettings = {
-		event: 'click',
-		target: 'popupClick',
-		placement: 'top'
-	};
 	let menuOpenState = $state(false);
 
 	// Props
@@ -50,7 +43,6 @@
 					<Menu size={24} />
 				</span>
 			</button>
-			<!-- <strong class="text-xl uppercase">Skeleton</strong> -->
 			<h4 class="h4 pl-0 leading-9">{title}</h4>
 		{/snippet}
 		<!-- {#snippet children()}
@@ -58,7 +50,9 @@
 		{#snippet trail()}
 			<!-- Drop-down Menu -->
 			{#if menuItems}
-				<Popover bind:open={menuOpenState}>
+				<Popover bind:open={menuOpenState}
+				positioning={{ placement: 'bottom-start' }}
+				>
 					{#snippet trigger()}
 					<div class="py-1 pr-2">
 						<EllipsisVertical size={20} />

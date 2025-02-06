@@ -10,10 +10,6 @@ body {
 }
 
 /* Modal / sidebar */
-[data-part='trigger'] {
-  /* styles for the trigger element */
-  display: none;
-}
 [data-part='positioner'] {
   /* styles for the positioner element */
   /* background-color: #fff; */

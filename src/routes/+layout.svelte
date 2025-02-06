@@ -76,7 +76,7 @@
 	<!-- sidebar as modal -->
 	<Modal
 		bind:open={$drawerState}
-		triggerBase=""
+		triggerBase="hidden"
 		contentBase="bg-surface-500/95 shadow-xl w-[288px] h-screen"
 		positionerJustify="justify-start"
 		transitionsPositionerIn={{ x: -288, duration: 350 }}
