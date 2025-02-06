@@ -153,7 +153,7 @@
 	</section>
 </article>
 
-<!-- "Delete" dialog -->
+<!-- "Delete All" dialog -->
 <Modal
 	bind:open={isDeleteAllConfirmationOpen}
 	triggerBase="hidden"

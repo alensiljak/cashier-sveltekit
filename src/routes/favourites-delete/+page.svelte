@@ -1,14 +1,15 @@
 <script lang="ts">
 	import Fab from '$lib/components/FAB.svelte';
-import Toolbar from '$lib/components/Toolbar.svelte';
+	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { SettingKeys, settings } from '$lib/settings';
 	import Notifier from '$lib/utils/notifier';
-	import { getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
 	import { CheckIcon, DeleteIcon, TrashIcon } from 'lucide-svelte';
 	import { onMount } from 'svelte';
+	import { Modal } from '@skeletonlabs/skeleton-svelte';
 
-	const modalStore = getModalStore();
 	Notifier.init();
+	let isDeleteConfirmationOpen = $state(false);
+	let indexToDelete = -1;
 
 	let _accounts: string[] = $state([]);
 
@@ -16,39 +17,37 @@ import Toolbar from '$lib/components/Toolbar.svelte';
 		_accounts = await settings.get(SettingKeys.favouriteAccounts);
 	});
 
-	async function onDeleteClicked(index: number) {
-		let account = _accounts[index]
+	/**
+	 * Close all dialogs.
+	 */
+	function closeModal() {
+		isDeleteConfirmationOpen = false;
+	}
 
-		// confirm dialog
-		const modal: ModalSettings = {
-			type: 'confirm',
-			// Data
-			title: 'Confirm Removal',
-			body: `Do you want to remove\n ${account} \nfrom favourites?`,
-			response: async (r: boolean) => {
-				if (r) {
-					_accounts.splice(index, 1)
-				}
-			}
-		};
-		modalStore.trigger(modal);
+	async function onDeleteClicked(index: number) {
+		indexToDelete = index;
+		isDeleteConfirmationOpen = true;
+	}
+
+	async function onDeleteConfirmed() {
+		_accounts.splice(indexToDelete, 1);
 	}
 
 	async function onFabClicked() {
 		// save
-		await settings.set(SettingKeys.favouriteAccounts, _accounts)
+		await settings.set(SettingKeys.favouriteAccounts, _accounts);
 
-		Notifier.success('Favourites updated')
+		Notifier.success('Favourites updated');
 
-		history.back()
+		history.back();
 	}
 </script>
 
-<article class="h-screen flex flex-col">
+<article class="flex h-screen flex-col">
 	<Toolbar title="Delete Favourites"></Toolbar>
 	<Fab Icon={CheckIcon} onclick={onFabClicked} />
 
-	<section class="p-1 grow overflow-auto">
+	<section class="grow overflow-auto p-1">
 		{#each _accounts as account, i}
 			<div class="flex flex-row border-b border-tertiary-200/15 py-1">
 				<data class="grow content-center">
@@ -67,3 +66,31 @@ import Toolbar from '$lib/components/Toolbar.svelte';
 		{/each}
 	</section>
 </article>
+
+<!-- "Delete" dialog -->
+<Modal
+	bind:open={isDeleteConfirmationOpen}
+	triggerBase="hidden"
+	contentBase="card bg-surface-100-900 p-4 space-y-4 shadow-xl max-w-screen-sm"
+	backdropClasses="backdrop-blur-sm"
+>
+	{#snippet trigger()}Open Modal{/snippet}
+	{#snippet content()}
+		<header class="flex justify-between">
+			<h2 class="h4">Confirm Removal</h2>
+		</header>
+		<article>
+			<p class="opacity-60">
+				Do you want to remove\n ${_accounts[indexToDelete]} \nfrom favourites?
+			</p>
+		</article>
+		<footer class="flex justify-end gap-4">
+			<button type="button" class="variant-tonal btn" onclick={closeModal}>Cancel</button>
+			<button
+				type="button"
+				class="btn-primary variant-filled-primary btn text-tertiary-500"
+				onclick={onDeleteConfirmed}>OK</button
+			>
+		</footer>
+	{/snippet}
+</Modal>
