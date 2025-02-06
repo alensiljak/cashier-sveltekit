@@ -13,7 +13,8 @@
 		"test:e2e": "playwright test",
 		"lint": "prettier --plugin-search-dir . --check . && eslint .",
 		"format": "prettier --plugin-search-dir . --write .",
-		"deploy": "netlify deploy --prod"
+		"deploy": "netlify deploy --prod",
+		"publish": "npm run build && npm run deploy"
 	},
 	"devDependencies": {
 		"@floating-ui/dom": "^1.6.13",
