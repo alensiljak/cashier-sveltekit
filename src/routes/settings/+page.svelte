@@ -4,18 +4,22 @@
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { SettingKeys, settings } from '$lib/settings';
 	import Notifier from '$lib/utils/notifier';
-	import { FileButton, getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
+	import { FileButton } from '@skeletonlabs/skeleton';
 	import db from '$lib/data/db';
 	import appService from '$lib/services/appService';
 	import { invalidateAll } from '$app/navigation';
 	import * as OpfsLib from '$lib/utils/opfslib.js'
 	import { AssetAllocationFilename } from '$lib/constants.js';
 	import { DefaultCurrencyStore } from '$lib/data/mainStore.js';
+	import { Modal } from '@skeletonlabs/skeleton-svelte';
+	import type { PageData } from './$types';
 
-	const modalStore = getModalStore();
 	Notifier.init();
+	let isAaConfirmationOpen = $state(false);
+	let isSettingsConfirmationOpen = $state(false);
 
-	export let data;
+	// export let data;
+	let data: PageData = $props();
 
 	let settings_files: FileList;
 	let aa_files: FileList;
@@ -23,17 +27,20 @@
 	onMount(async () => {
 	});
 
+	/**
+	 * Close all dialogs.
+	 */
+	 function closeModal() {
+		isAaConfirmationOpen = false;
+		isSettingsConfirmationOpen = false;
+	}
+
 	async function onAaFileChanged() {
-		const modal: ModalSettings = {
-			type: 'confirm',
-			// Data
-			title: 'Confirm Import',
-			body: 'Do you want to import the selected Asset Allocation file?',
-			response: async (r: boolean) => {
-				if (r) await restoreAssetAllocation();
-			}
-		};
-		modalStore.trigger(modal);
+		isAaConfirmationOpen = true;
+	}
+
+	async function onAaImportConfirmed() {
+		await restoreAssetAllocation();
 	}
 
 	/**
@@ -42,16 +49,11 @@
 	 */
 	async function onSettingsFileChangeHandler() {
 		// prompt for confirmation with a dialog
-		const modal: ModalSettings = {
-			type: 'confirm',
-			// Data
-			title: 'Confirm Restore',
-			body: 'Do you want to restore the selected settings file?',
-			response: async (r: boolean) => {
-				if (r) await restoreSettings();
-			}
-		};
-		modalStore.trigger(modal);
+		isSettingsConfirmationOpen = true;
+	}
+
+	async function onSettingsRestoreConfirmed() {
+		await restoreSettings()
 	}
 
 	async function restoreAssetAllocation() {
@@ -170,3 +172,58 @@
 		Reload App
 	</section> -->
 </main>
+
+<!-- "AA import" dialog -->
+<Modal
+	bind:open={isAaConfirmationOpen}
+	triggerBase="hidden"
+	contentBase="card bg-surface-100-900 p-4 space-y-4 shadow-xl max-w-screen-sm"
+	backdropClasses="backdrop-blur-sm"
+>
+	{#snippet trigger()}Open Modal{/snippet}
+	{#snippet content()}
+		<header class="flex justify-between">
+			<h2 class="h4">Confirm Restore</h2>
+		</header>
+		<article>
+			<p class="opacity-60">
+				Do you want to import the selected Asset Allocation file?
+			</p>
+		</article>
+		<footer class="flex justify-end gap-4">
+			<button type="button" class="variant-tonal btn" onclick={closeModal}>Cancel</button>
+			<button
+				type="button"
+				class="btn-primary variant-filled-primary btn text-tertiary-500"
+				onclick={onAaImportConfirmed}>OK</button
+			>
+		</footer>
+	{/snippet}
+</Modal>
+<!-- "Settings import" dialog -->
+<Modal
+	bind:open={isSettingsConfirmationOpen}
+	triggerBase="hidden"
+	contentBase="card bg-surface-100-900 p-4 space-y-4 shadow-xl max-w-screen-sm"
+	backdropClasses="backdrop-blur-sm"
+>
+	{#snippet trigger()}Open Modal{/snippet}
+	{#snippet content()}
+		<header class="flex justify-between">
+			<h2 class="h4">Confirm Restore</h2>
+		</header>
+		<article>
+			<p class="opacity-60">
+				Do you want to restore the selected settings file?
+			</p>
+		</article>
+		<footer class="flex justify-end gap-4">
+			<button type="button" class="variant-tonal btn" onclick={closeModal}>Cancel</button>
+			<button
+				type="button"
+				class="btn-primary variant-filled-primary btn text-tertiary-500"
+				onclick={onSettingsRestoreConfirmed}>OK</button
+			>
+		</footer>
+	{/snippet}
+</Modal>
