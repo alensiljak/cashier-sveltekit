@@ -23,8 +23,10 @@
 	import { Modal } from '@skeletonlabs/skeleton-svelte';
 
 	Notifier.init();
-	// const modalStore = getModalStore();
+	// dialog modals
 	let isEnterConfirmationOpen = $state(false);
+	let isSkipConfirmationOpen = $state(false);
+	let isDeleteConfirmationOpen = $state(false);
 
 	const id = page.params.id;
 
@@ -39,6 +41,8 @@
 	 */
 	function closeModal() {
 		isEnterConfirmationOpen = false;
+		isSkipConfirmationOpen = false;
+		isDeleteConfirmationOpen = false;
 	}
 
 	async function deleteXact(id: number) {
@@ -50,20 +54,6 @@
 	}
 
 	async function onEnterClicked() {
-		// confirm dialog
-		// const modal: ModalSettings = {
-		// 	type: 'confirm',
-		// 	// Data
-		// 	title: 'Confirm Creation',
-		// 	body: 'Do you want to enter this transaction into the journal?',
-		// 	response: async (r: boolean) => {
-		// 		if (r) {
-		// 			await onEnterConfirmed();
-		// 		}
-		// 	}
-		// };
-		// modalStore.trigger(modal);
-
 		isEnterConfirmationOpen = true;
 	}
 
@@ -97,20 +87,12 @@
 	}
 
 	async function onDeleteClick() {
-		var msg = `Do you want to delete the scheduled transaction ${$ScheduledXact.transaction?.payee}?`;
-		// confirmation dialog
-		const modal: ModalSettings = {
-			type: 'confirm',
-			title: 'Confirm Deletion',
-			body: msg,
-			response: async (r: boolean) => {
-				if (r) {
-					const id = $ScheduledXact.id as number;
-					await deleteXact(id);
-				}
-			}
-		};
-		modalStore.trigger(modal);
+		isDeleteConfirmationOpen = true;
+	}
+
+	async function onDeleteConfirmed() {
+		const id = $ScheduledXact.id as number;
+		await deleteXact(id);
 	}
 
 	async function onEditClicked(id: any) {
@@ -119,20 +101,13 @@
 
 	async function onSkipClicked() {
 		// confirm dialog
-		const modal: ModalSettings = {
-			type: 'confirm',
-			// Data
-			title: 'Confirm skip',
-			body: 'Do you want to skip the next iteration?',
-			response: async (r: boolean) => {
-				if (r) {
-					await skip();
-					Notifier.success('Transaction skipped to next iteration');
-					history.back();
-				}
-			}
-		};
-		modalStore.trigger(modal);
+		isSkipConfirmationOpen = true;
+	}
+
+	async function onSkipConfirmed() {
+		await skip();
+		Notifier.success('Transaction skipped to next iteration');
+		history.back();
 	}
 
 	/**
@@ -267,7 +242,63 @@
 		</article>
 		<footer class="flex justify-end gap-4">
 			<button type="button" class="variant-tonal btn" onclick={closeModal}>Cancel</button>
-			<button type="button" class="variant-filled-primary btn btn-primary text-tertiary-500" onclick={onEnterConfirmed}>OK</button>
+			<button
+				type="button"
+				class="btn-primary variant-filled-primary btn text-tertiary-500"
+				onclick={onEnterConfirmed}>OK</button
+			>
+		</footer>
+	{/snippet}
+</Modal>
+<!-- "Skip" dialog -->
+<Modal
+	bind:open={isSkipConfirmationOpen}
+	triggerBase="hidden"
+	contentBase="card bg-surface-100-900 p-4 space-y-4 shadow-xl max-w-screen-sm"
+	backdropClasses="backdrop-blur-sm"
+>
+	{#snippet trigger()}Open Modal{/snippet}
+	{#snippet content()}
+		<header class="flex justify-between">
+			<h2 class="h4">Confirm Skip</h2>
+		</header>
+		<article>
+			<p class="opacity-60">Do you want to skip the next iteration?</p>
+		</article>
+		<footer class="flex justify-end gap-4">
+			<button type="button" class="variant-tonal btn" onclick={closeModal}>Cancel</button>
+			<button
+				type="button"
+				class="btn-primary variant-filled-primary btn text-tertiary-500"
+				onclick={onSkipConfirmed}>OK</button
+			>
+		</footer>
+	{/snippet}
+</Modal>
+<!-- "Delete" dialog -->
+<Modal
+	bind:open={isDeleteConfirmationOpen}
+	triggerBase="hidden"
+	contentBase="card bg-surface-100-900 p-4 space-y-4 shadow-xl max-w-screen-sm"
+	backdropClasses="backdrop-blur-sm"
+>
+	{#snippet trigger()}Open Modal{/snippet}
+	{#snippet content()}
+		<header class="flex justify-between">
+			<h2 class="h4">Confirm Delete</h2>
+		</header>
+		<article>
+			<p class="opacity-60">
+				Do you want to delete the scheduled transaction {$ScheduledXact.transaction?.payee}?
+			</p>
+		</article>
+		<footer class="flex justify-end gap-4">
+			<button type="button" class="variant-tonal btn" onclick={closeModal}>Cancel</button>
+			<button
+				type="button"
+				class="btn-primary variant-filled-primary btn text-tertiary-500"
+				onclick={onDeleteConfirmed}>OK</button
+			>
 		</footer>
 	{/snippet}
 </Modal>
