@@ -2,10 +2,11 @@
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import * as BackupService from '$lib/services/backupService';
 	import Notifier from '$lib/utils/notifier';
-	import { FileButton, getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
+	import { FileButton } from '@skeletonlabs/skeleton';
 	import { onMount } from 'svelte';
+	import { Modal } from '@skeletonlabs/skeleton-svelte';
 
-	const modalStore = getModalStore();
+	let isRestoreConfirmationOpen = $state(false);
 
 	let _filename: string;
 	let files: FileList;
@@ -15,6 +16,13 @@
 	onMount(() => {
 		_filename = BackupService.getBackupFilename();
 	});
+
+	/**
+	 * Close all dialogs.
+	 */
+	function closeModal() {
+		isRestoreConfirmationOpen = false;
+	}
 
 	async function onBackupClick() {
 		await BackupService.createBackup(_filename);
@@ -27,21 +35,11 @@
 		}
 
 		// prompt for restore
-		let file = files[0];
-		let filename = file.name;
-		// confirm dialog
-		const modal: ModalSettings = {
-			type: 'confirm',
-			// Data
-			title: 'Confirm Restore',
-			body: 'Do you want to restore' + filename + '?<br/>This will overwrite your existing records.',
-			response: async (r: boolean) => {
-				if (r) {
-					await readFile(file);
-				}
-			}
-		};
-		modalStore.trigger(modal);
+		isRestoreConfirmationOpen = true;
+	}
+
+	async function onRestoreConfirmed() {
+		await readFile(files[0]);
 	}
 
 	async function readFile(file: File) {
@@ -94,3 +92,32 @@
 		</div>
 	</section>
 </article>
+
+<!-- "Delete" dialog -->
+<Modal
+	bind:open={isRestoreConfirmationOpen}
+	triggerBase="hidden"
+	contentBase="card bg-surface-100-900 p-4 space-y-4 shadow-xl max-w-screen-sm"
+	backdropClasses="backdrop-blur-sm"
+>
+	{#snippet trigger()}Open Modal{/snippet}
+	{#snippet content()}
+		<header class="flex justify-between">
+			<h2 class="h4">Confirm Restore</h2>
+		</header>
+		<article>
+			<p class="opacity-60">
+				Do you want to restore {files[0].name}?<br />
+				This will overwrite your existing records.
+			</p>
+		</article>
+		<footer class="flex justify-end gap-4">
+			<button type="button" class="variant-tonal btn" onclick={closeModal}>Cancel</button>
+			<button
+				type="button"
+				class="btn-primary variant-filled-primary btn text-tertiary-500"
+				onclick={onRestoreConfirmed}>OK</button
+			>
+		</footer>
+	{/snippet}
+</Modal>
