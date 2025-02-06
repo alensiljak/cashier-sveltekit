@@ -78,6 +78,8 @@
 	}
 
 	async function onEnterConfirmed() {
+		closeModal();
+
 		try {
 			await enterXact();
 		} catch (error) {
@@ -90,6 +92,8 @@
 	}
 
 	async function onDeleteConfirmed() {
+		closeModal();
+
 		const id = $ScheduledXact.id as number;
 		await deleteXact(id);
 	}
@@ -104,6 +108,8 @@
 	}
 
 	async function onSkipConfirmed() {
+		closeModal();
+
 		await skip();
 		Notifier.success('Transaction skipped to next iteration');
 		history.back();

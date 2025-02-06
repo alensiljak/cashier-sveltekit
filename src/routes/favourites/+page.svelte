@@ -101,6 +101,8 @@
 	}
 
 	async function onDeleteAllConfirmed() {
+		closeModal();
+		
 		await settings.set(SettingKeys.favouriteAccounts, []);
 		await loadData();
 	}

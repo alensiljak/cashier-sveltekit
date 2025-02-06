@@ -47,6 +47,8 @@
 	}
 
 	async function onDeleteConfirmed() {
+		closeModal();
+
 		await db.xacts.delete($xact.id);
 
 		xact.set(Xact.create());

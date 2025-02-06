@@ -30,6 +30,8 @@
 	}
 
 	async function onDeleteConfirmed() {
+		closeModal();
+
 		_accounts.splice(indexToDelete, 1);
 	}
 

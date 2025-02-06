@@ -40,6 +40,8 @@
 	}
 
 	async function onAaImportConfirmed() {
+		closeModal();
+
 		await restoreAssetAllocation();
 	}
 
@@ -53,6 +55,8 @@
 	}
 
 	async function onSettingsRestoreConfirmed() {
+		closeModal();
+
 		await restoreSettings()
 	}
 

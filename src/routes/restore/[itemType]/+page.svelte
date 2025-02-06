@@ -44,6 +44,8 @@
 	}
 
 	async function onRestoreConfirmed() {
+		closeModal();
+
 		await appService.importScheduledTransactions(_content as string);
 
 		Notifier.success('Restore complete!');

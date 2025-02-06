@@ -39,6 +39,8 @@
 	}
 
 	async function onRestoreConfirmed() {
+		closeModal();
+		
 		await readFile(files[0]);
 	}
 

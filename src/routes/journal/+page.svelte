@@ -41,6 +41,8 @@
 	}
 
 	async function onDeleteAllConfirmed() {
+		closeModal();
+
 		// delete all Xacts
 		await db.xacts.clear();
 		Notifier.success('All local transactions deleted.');
