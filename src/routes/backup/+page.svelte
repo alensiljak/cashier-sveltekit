@@ -8,8 +8,8 @@
 
 	let isRestoreConfirmationOpen = $state(false);
 
-	let _filename = $state(''); // string
-	let files = $state(null); // FileList
+	let _filename = $state<string>();
+	let files = $state<FileList>();
 
 	Notifier.init();
 
@@ -25,10 +25,12 @@
 	}
 
 	async function onBackupClick() {
-		await BackupService.createBackup(_filename);
+		await BackupService.createBackup(_filename as string);
 	}
 
 	function onChangeHandler(e: Event): void {
+		if (!files) return;
+
 		if (files.length > 1) {
 			Notifier.warn('Only one file must be selected!');
 			return;
@@ -40,6 +42,8 @@
 
 	async function onRestoreConfirmed() {
 		closeModal();
+
+		if (!files) return;
 		
 		await readFile(files[0]);
 	}
@@ -109,7 +113,7 @@
 		</header>
 		<article>
 			<p class="opacity-60">
-				Do you want to restore {files[0].name}?<br />
+				Do you want to restore {files?.[0].name}?<br />
 				This will overwrite your existing records.
 			</p>
 		</article>

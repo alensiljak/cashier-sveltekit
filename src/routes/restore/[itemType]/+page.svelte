@@ -7,8 +7,8 @@
 	import { Modal } from '@skeletonlabs/skeleton-svelte';
 
 	const itemType = page.params.itemType;
-	let files: FileList | undefined = $state(undefined);
-	let _content: string | undefined = $state(undefined);
+	let files = $state<FileList>();
+	let _content = $state<string>();
 
 	Notifier.init();
 	let isRestoreConfirmationOpen = $state(false);
