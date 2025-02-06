@@ -9,7 +9,7 @@
 	import type { ScheduledTransaction, Xact } from '$lib/data/model';
 	import appService from '$lib/services/appService';
 	import Notifier from '$lib/utils/notifier';
-	import { getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
+	// import { getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
 	import { calculateNextIteration } from '$lib/scheduledTransactions';
 	import {
 		CheckIcon,
@@ -20,9 +20,12 @@
 	} from 'lucide-svelte';
 	import { onMount } from 'svelte';
 	import db from '$lib/data/db';
+	import { Modal } from '@skeletonlabs/skeleton-svelte';
 
 	Notifier.init();
-	const modalStore = getModalStore();
+	// const modalStore = getModalStore();
+	let isEnterConfirmationOpen = $state(false);
+
 	const id = page.params.id;
 
 	onMount(() => {
@@ -31,32 +34,37 @@
 		}
 	});
 
+	/**
+	 * Close all dialogs.
+	 */
+	function closeModal() {
+		isEnterConfirmationOpen = false;
+	}
+
 	async function deleteXact(id: number) {
-		await db.scheduled.delete(id)
+		await db.scheduled.delete(id);
 
-		Notifier.success('Scheduled transaction deleted')
+		Notifier.success('Scheduled transaction deleted');
 
-		history.back()
+		history.back();
 	}
 
 	async function onEnterClicked() {
 		// confirm dialog
-		const modal: ModalSettings = {
-			type: 'confirm',
-			// Data
-			title: 'Confirm Creation',
-			body: 'Do you want to enter this transaction into the journal?',
-			response: async (r: boolean) => {
-				if (r) {
-					try {
-						await enterXact();
-					} catch (error) {
-						Notifier.error((error as Error).message);
-					}
-				}
-			}
-		};
-		modalStore.trigger(modal);
+		// const modal: ModalSettings = {
+		// 	type: 'confirm',
+		// 	// Data
+		// 	title: 'Confirm Creation',
+		// 	body: 'Do you want to enter this transaction into the journal?',
+		// 	response: async (r: boolean) => {
+		// 		if (r) {
+		// 			await onEnterConfirmed();
+		// 		}
+		// 	}
+		// };
+		// modalStore.trigger(modal);
+
+		isEnterConfirmationOpen = true;
 	}
 
 	async function enterXact() {
@@ -80,8 +88,16 @@
 		await goto('/tx', { replaceState: true });
 	}
 
+	async function onEnterConfirmed() {
+		try {
+			await enterXact();
+		} catch (error) {
+			Notifier.error((error as Error).message);
+		}
+	}
+
 	async function onDeleteClick() {
-        var msg = `Do you want to delete the scheduled transaction ${$ScheduledXact.transaction?.payee}?`;
+		var msg = `Do you want to delete the scheduled transaction ${$ScheduledXact.transaction?.payee}?`;
 		// confirmation dialog
 		const modal: ModalSettings = {
 			type: 'confirm',
@@ -89,8 +105,8 @@
 			body: msg,
 			response: async (r: boolean) => {
 				if (r) {
-					const id = $ScheduledXact.id as number
-					await deleteXact(id)
+					const id = $ScheduledXact.id as number;
+					await deleteXact(id);
 				}
 			}
 		};
@@ -110,9 +126,9 @@
 			body: 'Do you want to skip the next iteration?',
 			response: async (r: boolean) => {
 				if (r) {
-					await skip()
-					Notifier.success('Transaction skipped to next iteration')
-					history.back()
+					await skip();
+					Notifier.success('Transaction skipped to next iteration');
+					history.back();
 				}
 			}
 		};
@@ -223,10 +239,35 @@
 			>
 				Edit
 			</SquareButton>
-			<SquareButton Icon={TrashIcon} classes="bg-secondary-500 text-tertiary-500"
-				onclick={onDeleteClick}>
+			<SquareButton
+				Icon={TrashIcon}
+				classes="bg-secondary-500 text-tertiary-500"
+				onclick={onDeleteClick}
+			>
 				Delete
 			</SquareButton>
 		</div>
 	</section>
 </article>
+
+<!-- "Enter" dialog -->
+<Modal
+	bind:open={isEnterConfirmationOpen}
+	triggerBase="hidden"
+	contentBase="card bg-surface-100-900 p-4 space-y-4 shadow-xl max-w-screen-sm"
+	backdropClasses="backdrop-blur-sm"
+>
+	{#snippet trigger()}Open Modal{/snippet}
+	{#snippet content()}
+		<header class="flex justify-between">
+			<h2 class="h4">Confirm Creation</h2>
+		</header>
+		<article>
+			<p class="opacity-60">Do you want to enter this transaction into the journal?</p>
+		</article>
+		<footer class="flex justify-end gap-4">
+			<button type="button" class="variant-tonal btn" onclick={closeModal}>Cancel</button>
+			<button type="button" class="variant-filled-primary btn btn-primary text-tertiary-500" onclick={onEnterConfirmed}>OK</button>
+		</footer>
+	{/snippet}
+</Modal>
