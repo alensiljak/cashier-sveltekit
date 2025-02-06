@@ -9,7 +9,7 @@
 
 	Notifier.init();
 	let isDeleteConfirmationOpen = $state(false);
-	let indexToDelete = -1;
+	let indexToDelete = $state(-1);
 
 	let _accounts: string[] = $state([]);
 

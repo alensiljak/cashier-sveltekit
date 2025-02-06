@@ -8,8 +8,8 @@
 
 	let isRestoreConfirmationOpen = $state(false);
 
-	let _filename: string;
-	let files: FileList;
+	let _filename = $state(''); // string
+	let files = $state(null); // FileList
 
 	Notifier.init();
 

@@ -21,8 +21,8 @@
 	// export let data;
 	let data: PageData = $props();
 
-	let settings_files: FileList;
-	let aa_files: FileList;
+	let settings_files = $state(null); // FileList
+	let aa_files = $state(null); // FileList
 
 	onMount(async () => {
 	});
