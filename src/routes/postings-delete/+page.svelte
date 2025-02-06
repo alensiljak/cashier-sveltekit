@@ -1,34 +1,33 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
 	import Fab from '$lib/components/FAB.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { xact } from '$lib/data/mainStore';
-	import type { Posting } from '$lib/data/model';
-	import { getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
 	import { CheckIcon, TrashIcon } from 'lucide-svelte';
 	import { onMount } from 'svelte';
+	import { Modal } from '@skeletonlabs/skeleton-svelte';
 
-	const modalStore = getModalStore();
+	let isDeleteConfirmationOpen = $state(false);
+	let indexToDelete = -1;
 
-	onMount(async () => {
-	});
+	onMount(async () => {});
+
+	/**
+	 * Close all dialogs.
+	 */
+	function closeModal() {
+		isDeleteConfirmationOpen = false;
+	}
 
 	function onDeleteClicked(index: number) {
 		// confirm dialog
-		const modal: ModalSettings = {
-			type: 'confirm',
-			// Data
-			title: 'Confirm Delete',
-			body: 'Do you want to delete the selected posting?',
-			response: (r: boolean) => {
-				if (r) {
-					$xact.postings.splice(index, 1);
-					// fix for the binding
-					$xact.postings = $xact.postings;
-				}
-			}
-		};
-		modalStore.trigger(modal);
+		indexToDelete = index;
+		isDeleteConfirmationOpen = true;
+	}
+
+	async function onDeleteConfirmed() {
+		$xact.postings.splice(indexToDelete, 1);
+		// fix for the binding
+		$xact.postings = $xact.postings;
 	}
 
 	function onFabClicked() {
@@ -59,3 +58,29 @@
 		{/each}
 	</div>
 </article>
+
+<!-- "Delete All" dialog -->
+<Modal
+	bind:open={isDeleteConfirmationOpen}
+	triggerBase="hidden"
+	contentBase="card bg-surface-100-900 p-4 space-y-4 shadow-xl max-w-screen-sm"
+	backdropClasses="backdrop-blur-sm"
+>
+	{#snippet trigger()}Open Modal{/snippet}
+	{#snippet content()}
+		<header class="flex justify-between">
+			<h2 class="h4">Confirm Delete</h2>
+		</header>
+		<article>
+			<p class="opacity-60">Do you want to delete the selected posting?</p>
+		</article>
+		<footer class="flex justify-end gap-4">
+			<button type="button" class="variant-tonal btn" onclick={closeModal}>Cancel</button>
+			<button
+				type="button"
+				class="btn-primary variant-filled-primary btn text-tertiary-500"
+				onclick={onDeleteConfirmed}>OK</button
+			>
+		</footer>
+	{/snippet}
+</Modal>
