@@ -93,7 +93,7 @@
 	</section>
 </article>
 
-<!-- "Delete" dialog -->
+<!-- "Restore" dialog -->
 <Modal
 	bind:open={isRestoreConfirmationOpen}
 	triggerBase="hidden"
