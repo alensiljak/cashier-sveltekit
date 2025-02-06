@@ -12,12 +12,12 @@
 	import { SelectionModeMetadata, SettingKeys, settings } from '$lib/settings';
 	import { formatAmount, getMoneyColour } from '$lib/utils/formatter';
 	import Notifier from '$lib/utils/notifier';
-	import { getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
 	import { ArrowUpDownIcon, PlusCircleIcon, PlusIcon, Trash2Icon, TrashIcon } from 'lucide-svelte';
 	import { onMount } from 'svelte';
+	import { Modal } from '@skeletonlabs/skeleton-svelte';
 
-	const modalStore = getModalStore();
 	Notifier.init();
+	let isDeleteAllConfirmationOpen = $state(false);
 
 	let accounts: Account[] = $state([]);
 	let refreshKey = $state(0);
@@ -27,6 +27,13 @@
 
 		await loadData();
 	});
+
+	/**
+	 * Close all dialogs.
+	 */
+	function closeModal() {
+		isDeleteAllConfirmationOpen = false;
+	}
 
 	async function addAccount(accountName: string) {
 		const favNames: string[] = await settings.get(SettingKeys.favouriteAccounts);
@@ -90,19 +97,12 @@
 
 	function onDeleteAllClicked() {
 		// confirm dialog
-		const modal: ModalSettings = {
-			type: 'confirm',
-			// Data
-			title: 'Confirm Delete',
-			body: 'Do you want to clear the favourite accounts list?',
-			response: async (r: boolean) => {
-				if (r) {
-					await settings.set(SettingKeys.favouriteAccounts, []);
-					await loadData();
-				}
-			}
-		};
-		modalStore.trigger(modal);
+		isDeleteAllConfirmationOpen = true;
+	}
+
+	async function onDeleteAllConfirmed() {
+		await settings.set(SettingKeys.favouriteAccounts, []);
+		await loadData();
 	}
 
 	async function onReorderClick() {
@@ -133,8 +133,8 @@
 					<!-- svelte-ignore a11y_click_events_have_key_events -->
 					<!-- svelte-ignore a11y_no_static_element_interactions -->
 					<div
-						class="flex flex-row border-b border-tertiary-200/15 py-1
-								hover:bg-surface-600 cursor-pointer"
+						class="flex cursor-pointer flex-row border-b border-tertiary-200/15
+								py-1 hover:bg-surface-600"
 						onclick={() => onAccountClick(account.name)}
 					>
 						<div class="mr-1 flex grow flex-col">
@@ -152,3 +152,31 @@
 		{/if}
 	</section>
 </article>
+
+<!-- "Delete" dialog -->
+<Modal
+	bind:open={isDeleteAllConfirmationOpen}
+	triggerBase="hidden"
+	contentBase="card bg-surface-100-900 p-4 space-y-4 shadow-xl max-w-screen-sm"
+	backdropClasses="backdrop-blur-sm"
+>
+	{#snippet trigger()}Open Modal{/snippet}
+	{#snippet content()}
+		<header class="flex justify-between">
+			<h2 class="h4">Confirm Delete</h2>
+		</header>
+		<article>
+			<p class="opacity-60">
+				Do you want to clear the favourite accounts list?
+			</p>
+		</article>
+		<footer class="flex justify-end gap-4">
+			<button type="button" class="variant-tonal btn" onclick={closeModal}>Cancel</button>
+			<button
+				type="button"
+				class="btn-primary variant-filled-primary btn text-tertiary-500"
+				onclick={onDeleteAllConfirmed}>OK</button
+			>
+		</footer>
+	{/snippet}
+</Modal>
