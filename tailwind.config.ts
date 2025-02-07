@@ -3,6 +3,7 @@ import type { Config } from 'tailwindcss';
 import forms from '@tailwindcss/forms';
 import typography from '@tailwindcss/typography';
 import { myCustomTheme } from './cashier-theme.ts'
+// import { cashierTheme } from './cashier-theme-v3.ts';
 
 // 1. Import the Skeleton plugin
 import { skeleton } from '@skeletonlabs/tw-plugin';
@@ -34,6 +35,7 @@ const config = {
 			themes: { 
 				//preset: ['gold-nouveau'] 
 				custom: [ myCustomTheme ]
+				// custom: [ cashierTheme ]
 			}
 			//[ 
 			// themes.nouveau,

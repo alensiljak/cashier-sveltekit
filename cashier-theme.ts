@@ -1,3 +1,6 @@
+/*
+	Theme for Skeleton v2.
+*/
 
 import type { CustomThemeConfig } from '@skeletonlabs/tw-plugin';
 
