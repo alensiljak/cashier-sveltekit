@@ -1,7 +1,6 @@
 <script lang="ts">
 	import type { Xact } from '$lib/data/model';
 	import { getAmountColour } from '$lib/utils/formatter';
-	import type { EventHandler } from 'svelte/elements';
 
 	interface Props {
 		xact: Xact;
