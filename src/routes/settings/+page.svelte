@@ -105,7 +105,7 @@
 
 	async function saveSettings() {
 		await settings.set(SettingKeys.currency, currency);
-		DefaultCurrencyStore.set(currency);
+		DefaultCurrencyStore.set(currency as string);
 
 		await settings.set(SettingKeys.rootInvestmentAccount, rootInvestmentAccount);
 		await settings.set(SettingKeys.rememberLastTransaction, rememberLastTransaction);
