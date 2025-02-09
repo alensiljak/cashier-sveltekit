@@ -61,11 +61,11 @@
 	}
 
 	async function restoreAssetAllocation() {
-		if (aa_files.length === 0) {
+		if (aa_files?.length === 0) {
 			console.error('no files selected!');
 			return;
 		}
-		let file = aa_files[0];
+		let file = aa_files?.[0];
 		const contents: any = await appService.readFileAsync(file as Blob);
 
 		// save to OPFS
@@ -80,11 +80,11 @@
 	 * Restore the selected settings file.
 	 */
 	async function restoreSettings() {
-		if (settings_files.length === 0) {
+		if (settings_files?.length === 0) {
 			console.error('no files selected!');
 			return;
 		}
-		let file = settings_files[0];
+		let file = settings_files?.[0];
 		const contents: any = await appService.readFileAsync(file as Blob);
 
 		// clear settings table
