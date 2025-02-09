@@ -66,7 +66,7 @@ class Settings {
    * @param {any} key
    * @returns Promise with the Setting object
    */
-  async get(key: unknown) {
+  async get<T>(key: unknown): Promise<T> {
     const setting = await db.settings.get(key)
 
     if (!setting) return null

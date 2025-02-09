@@ -8,29 +8,33 @@
 	import db from '$lib/data/db';
 	import appService from '$lib/services/appService';
 	import { invalidateAll } from '$app/navigation';
-	import * as OpfsLib from '$lib/utils/opfslib.js'
+	import * as OpfsLib from '$lib/utils/opfslib.js';
 	import { AssetAllocationFilename } from '$lib/constants.js';
 	import { DefaultCurrencyStore } from '$lib/data/mainStore.js';
 	import { Modal } from '@skeletonlabs/skeleton-svelte';
-	import type { PageData } from './$types';
 
 	Notifier.init();
 	let isAaConfirmationOpen = $state(false);
 	let isSettingsConfirmationOpen = $state(false);
 
-	// export let data;
-	let data: PageData = $props();
+	// let data: PageData = $props();
+	let rememberLastTransaction = $state<boolean>();
+	let rootInvestmentAccount = $state<string>();
+	let currency = $state<string>();
 
 	let settings_files = $state<FileList>();
 	let aa_files = $state<FileList>();
 
 	onMount(async () => {
+		currency = await appService.getDefaultCurrency();
+		rootInvestmentAccount = await settings.get<string>(SettingKeys.rootInvestmentAccount);
+		rememberLastTransaction = await settings.get<boolean>(SettingKeys.rememberLastTransaction);
 	});
 
 	/**
 	 * Close all dialogs.
 	 */
-	 function closeModal() {
+	function closeModal() {
 		isAaConfirmationOpen = false;
 		isSettingsConfirmationOpen = false;
 	}
@@ -57,7 +61,7 @@
 	async function onSettingsRestoreConfirmed() {
 		closeModal();
 
-		await restoreSettings()
+		await restoreSettings();
 	}
 
 	async function restoreAssetAllocation() {
@@ -69,11 +73,11 @@
 		const contents: any = await appService.readFileAsync(file as Blob);
 
 		// save to OPFS
-		await OpfsLib.saveFile(AssetAllocationFilename, contents)
+		await OpfsLib.saveFile(AssetAllocationFilename, contents);
 
 		// todo: reset AA cache
 
-		Notifier.success('Asset Allocation imported')
+		Notifier.success('Asset Allocation imported');
 	}
 
 	/**
@@ -100,11 +104,11 @@
 	}
 
 	async function saveSettings() {
-		await settings.set(SettingKeys.currency, data.currency);
-		DefaultCurrencyStore.set(data.currency)
-		
-		await settings.set(SettingKeys.rootInvestmentAccount, data.rootInvestmentAccount);
-		await settings.set(SettingKeys.rememberLastTransaction, data.rememberLastTransaction);
+		await settings.set(SettingKeys.currency, currency);
+		DefaultCurrencyStore.set(currency);
+
+		await settings.set(SettingKeys.rootInvestmentAccount, rootInvestmentAccount);
+		await settings.set(SettingKeys.rememberLastTransaction, rememberLastTransaction);
 
 		Notifier.notify('Settings saved', 'variant-filled-primary');
 	}
@@ -118,7 +122,7 @@
 	<!-- currency -->
 	<label class="label">
 		<span>Main Currency</span>
-		<input class="input" type="text" placeholder="Main Currency" bind:value={data.currency} />
+		<input class="input" type="text" placeholder="Main Currency" bind:value={currency} />
 	</label>
 	<!-- investment account -->
 	<label class="label">
@@ -127,13 +131,13 @@
 			class="input"
 			type="text"
 			placeholder="Investment account root"
-			bind:value={data.rootInvestmentAccount}
+			bind:value={rootInvestmentAccount}
 		/>
 	</label>
 
 	<!-- last transaction -->
 	<label class="flex items-center space-x-2">
-		<input class="checkbox" type="checkbox" bind:checked={data.rememberLastTransaction} />
+		<input class="checkbox" type="checkbox" bind:checked={rememberLastTransaction} />
 		<p>Remember last transaction for payees.</p>
 	</label>
 
@@ -190,9 +194,7 @@
 			<h2 class="h4">Confirm Restore</h2>
 		</header>
 		<article>
-			<p class="opacity-60">
-				Do you want to import the selected Asset Allocation file?
-			</p>
+			<p class="opacity-60">Do you want to import the selected Asset Allocation file?</p>
 		</article>
 		<footer class="flex justify-end gap-4">
 			<button type="button" class="variant-tonal btn" onclick={closeModal}>Cancel</button>
@@ -217,9 +219,7 @@
 			<h2 class="h4">Confirm Restore</h2>
 		</header>
 		<article>
-			<p class="opacity-60">
-				Do you want to restore the selected settings file?
-			</p>
+			<p class="opacity-60">Do you want to restore the selected settings file?</p>
 		</article>
 		<footer class="flex justify-end gap-4">
 			<button type="button" class="variant-tonal btn" onclick={closeModal}>Cancel</button>

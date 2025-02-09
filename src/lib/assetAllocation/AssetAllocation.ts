@@ -87,11 +87,15 @@ export class AssetAllocationEngine {
     return index
   }
 
+  /**
+   * Calculate offsets of the current values from the set allocation values.
+   * @param dictionary Asset Class Index dictionary
+   * @returns 
+   */
   calculateOffsets(dictionary: Record<string, AssetClass>) {
     const root = dictionary['Allocation']
     const total = root.currentValue
-
-    // toFixed returns a string.
+    if (total.eq(Big(0))) return;
 
     Object.values(dictionary).forEach((ac) => {
       // calculate current allocation
