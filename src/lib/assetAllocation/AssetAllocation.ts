@@ -239,7 +239,6 @@ export class AssetAllocationEngine {
 
   async importTomlDefinition(content: string) {
     const parsed = toml.parse(content)
-    //console.log('toml:', aa)
 
     // Convert to backward-compatible structure (tree -> list).
     const assetClasses = this.linearizeObject(parsed)
@@ -301,8 +300,6 @@ export class AssetAllocationEngine {
       }
 
       result.push(item)
-
-      //console.log(`object: ${propertyName}`, child)
 
       // iterate
       let childNamespace = namespace
@@ -374,8 +371,6 @@ export class AssetAllocationEngine {
       // Now get the asset class for this commodity.
       const assetClassName = this.stockIndex[commodity]
       if (!assetClassName) {
-        // console.debug(this.stockIndex)
-        // console.debug(account)
         throw new Error(`Asset class name not found for commodity ${commodity}`)
       }
       const assetClass = this.assetClassIndex[assetClassName]
@@ -408,7 +403,6 @@ export class AssetAllocationEngine {
   sumChildren(dictionary: object, item: AssetClass): Big {
     // find all children
     const children = findChildren(dictionary, item)
-    // console.log(children);
     if (children.length === 0) {
       return item.currentValue
     }
@@ -427,14 +421,10 @@ export class AssetAllocationEngine {
 
 }
 
-//export const engine = new AssetAllocationEngine()
-
 export function findChildren(dictionary: object, parent: AssetClass) {
   const children: AssetClass[] = []
 
   Object.values(dictionary).forEach((val) => {
-      // console.log(key); // the name of the current key.
-      // console.log(val); // the value of the current key.
       if (parent.fullname === val.parentName) {
           children.push(val)
       }
