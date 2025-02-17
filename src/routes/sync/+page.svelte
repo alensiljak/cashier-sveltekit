@@ -12,6 +12,7 @@
 	import appService from '$lib/services/appService';
 	import CashierDAL from '$lib/data/dal';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
+	import { beforeNavigate } from '$app/navigation';
 
 	Notifier.init();
 
@@ -30,6 +31,11 @@
 	onMount(async () => {
 		// load sync settings
 		await loadSettings();
+	});
+
+	beforeNavigate(async () => {
+		// shutdown the server when leaving the page
+		await onShutdownClick();
 	});
 
 	async function loadSettings() {
