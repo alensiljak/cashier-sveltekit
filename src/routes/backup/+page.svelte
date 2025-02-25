@@ -96,6 +96,9 @@
 				on:change={onChangeHandler}
 			/>
 		</div>
+		<div>
+			It is recommended to also perform a Cashier Sync after restoring a backup.
+		</div>
 	</section>
 </article>
 

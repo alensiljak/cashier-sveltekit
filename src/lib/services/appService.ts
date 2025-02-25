@@ -461,8 +461,9 @@ class AppService {
    * @returns {Array} List of Account records which are marked as Favourites.
    */
   async loadFavouriteAccounts(): Promise<Account[]> {
-    const favArray = await settings.get(SettingKeys.favouriteAccounts)
+    const favArray = await settings.get<string[]>(SettingKeys.favouriteAccounts)
     if (!favArray) {
+      console.warn('No favourite accounts found.')
       return []
     }
 
@@ -474,6 +475,8 @@ class AppService {
       const account = accounts[i]
       if (account === undefined) {
         // the account has been removed but the Favourites record exists.
+        console.warn('Account marked as favourite but not found in Accounts.')
+
         accounts.splice(i, 1)
         i--
       }

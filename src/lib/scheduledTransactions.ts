@@ -110,7 +110,5 @@ export function calculateNextIteration(startDate: any, count: number,
     }
   }
 
-  console.debug('next:', output)
-
   return output
 }

@@ -13,7 +13,7 @@
 	});
 
 	async function loadData() {
-		let accountNames = await settings.get(SettingKeys.forecastAccounts);
+		let accountNames = await settings.get<string[]>(SettingKeys.forecastAccounts);
 		if (!accountNames) return;
 
 		_accountNames = accountNames;
