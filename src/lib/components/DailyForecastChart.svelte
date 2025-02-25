@@ -25,12 +25,15 @@
 	import moment from 'moment';
 	import { XactAugmenter } from '$lib/utils/xactAugmenter';
 	import { ISODATEFORMAT } from '$lib/constants';
+	import Notifier from '$lib/utils/notifier';
 
 	interface Props {
 		daysCount: number;
 		accountNames: string[];
 	}
 	let { daysCount, accountNames }: Props = $props();
+
+	Notifier.init();
 
 	let defaultCurrency: string;
 	let maxDate: moment.Moment;
@@ -41,9 +44,14 @@
 		defaultCurrency = await appService.getDefaultCurrency();
 		maxDate = moment().add(daysCount, 'days');
 
-		let data = await loadData();
+		try {
+			let data = await loadData();
 
-		renderChart(data);
+			renderChart(data);
+		} catch (error) {
+			Notifier.error('Error loading data for the chart.');
+			console.error(error);
+		}
 	});
 
 	async function addScxData(accountName: string, amounts: number[]): Promise<number[]> {
