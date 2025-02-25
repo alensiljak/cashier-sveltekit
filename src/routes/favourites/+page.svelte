@@ -19,7 +19,7 @@
 	Notifier.init();
 	let isDeleteAllConfirmationOpen = $state(false);
 
-	let accounts: Account[] = [];
+	let accounts: Account[] = $state([]);
 	let refreshKey = $state(0);
 
 	onMount(async () => {
