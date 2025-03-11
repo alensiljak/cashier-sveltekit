@@ -1,9 +1,6 @@
 <script lang="ts">
 	import Toolbar from '$lib/components/Toolbar.svelte';
-	import {
-		PowerIcon,
-		RefreshCcw,
-	} from 'lucide-svelte';
+	import { PowerIcon, RefreshCcw } from 'lucide-svelte';
 	import { onMount } from 'svelte';
 	import { SettingKeys, settings } from '$lib/settings';
 	import Notifier from '$lib/utils/notifier';
@@ -25,6 +22,7 @@
 	let syncAccounts = $state(false);
 	let syncAaValues = $state(false);
 	let syncPayees = $state(false);
+	let shutdownServer = $state(true);
 
 	let rotationClass = $state('');
 
@@ -34,14 +32,16 @@
 	});
 
 	beforeNavigate(async () => {
-		// shutdown the server when leaving the page
-		await onShutdownClick();
+		if (shutdownServer) {
+			// shutdown the server when leaving the page
+			await onShutdownClick();
+		}
 	});
 
 	async function loadSettings() {
 		serverUrl = await settings.get(SettingKeys.syncServerUrl);
 		rootInvestmentAccount = await settings.get(SettingKeys.rootInvestmentAccount);
-		currency = await appService.getDefaultCurrency()
+		currency = await appService.getDefaultCurrency();
 
 		syncAccounts = await settings.get(SettingKeys.syncAccounts);
 		syncAaValues = await settings.get(SettingKeys.syncAaValues);
@@ -191,4 +191,16 @@
 			<span>Sync</span>
 		</button>
 	</center>
+
+	<div>
+		<label class="flex items-center space-x-2">
+			<input
+				class="checkbox"
+				type="checkbox"
+				bind:checked={shutdownServer}
+				onchange={saveSettings}
+			/>
+			<p>Shut down Cashier Sync server when leaving the page.</p>
+		</label>
+	</div>
 </main>
