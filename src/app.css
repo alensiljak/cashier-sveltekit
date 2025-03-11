@@ -1,32 +1,17 @@
+/* Tailwind */
 @import 'tailwindcss';
+
+/* Skeleton */
 @import "@skeletonlabs/skeleton";
 @import "@skeletonlabs/skeleton/optional/presets";
 
-/*
-  Add your theme import for your theme: "my-custom-theme" here
-*/
+/* Your custom theme */
 @import "../cashier-theme";
+
+/* Tell tailwind to include Skeleton components */
 @source "../node_modules/@skeletonlabs/skeleton-svelte/dist";
 
 @custom-variant dark (&:is(.dark *));
-
-/*
-  The default border color has changed to `currentColor` in Tailwind CSS v4,
-  so we've added these compatibility styles to make sure everything still
-  looks the same as it did with Tailwind CSS v3.
-
-  If we ever want to remove these styles, we need to add an explicit border
-  color utility to any element that depends on these defaults.
-*/
-@layer base {
-  *,
-  ::after,
-  ::before,
-  ::backdrop,
-  ::file-selector-button {
-    border-color: var(--color-gray-200, currentColor);
-  }
-}
 
 /* Resets */
 
