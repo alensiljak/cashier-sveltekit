@@ -50,8 +50,9 @@
 		{#snippet trail()}
 			<!-- Drop-down Menu -->
 			{#if menuItems}
-				<Popover bind:open={menuOpenState}
-				positioning={{ placement: 'bottom-start' }}
+				<Popover open={menuOpenState}
+					onOpenChange={(e) => (menuOpenState = e.open)}
+					positioning={{ placement: 'bottom-start' }}
 				>
 					{#snippet trigger()}
 					<div class="py-1 pr-2">
