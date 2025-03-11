@@ -17,7 +17,8 @@
 
 html,
 body {
-  @apply h-full;
+  /* @apply h-full; */
+  height: 100%;
 }
 
 /* Modal / sidebar */
