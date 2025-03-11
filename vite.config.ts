@@ -4,12 +4,14 @@ import type { UserConfig } from 'vite';
 import { SvelteKitPWA } from '@vite-pwa/sveltekit';
 import { defineConfig } from 'vite';
 // import { svelte } from '@sveltejs/vite-plugin-svelte';
+import tailwindcss from "@tailwindcss/vite";
 
 const config: UserConfig = defineConfig({
 	build: {
 		sourcemap: process.env.SOURCE_MAP === 'true',
 	},
 	plugins: [
+		tailwindcss(),
 		// svelte(),
 		sveltekit(),
 		SvelteKitPWA({
