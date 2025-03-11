@@ -62,7 +62,7 @@
 					{#snippet content()}
 						<!-- svelte-ignore a11y_click_events_have_key_events -->
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
-						<div class="list-nav variant-filled-primary min-w-52 shadow" onclick={onMenuClick}>
+						<div class="list-nav variant-filled-primary min-w-52 shadow-sm" onclick={onMenuClick}>
 							{@render menuItems?.()}
 						</div>
 					{/snippet}
@@ -72,7 +72,7 @@
 					<EllipsisVertical size={20} class="" />
 				</button> -->
 				<!-- Pop-up Menu -->
-				<!-- <div class="list-nav variant-filled-primary min-w-52 shadow" data-popup="popupClick">
+				<!-- <div class="list-nav variant-filled-primary min-w-52 shadow-sm" data-popup="popupClick">
 					<menu>
 						{@render menuItems?.()}
 					</menu>

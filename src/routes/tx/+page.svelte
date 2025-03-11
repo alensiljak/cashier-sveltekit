@@ -63,7 +63,7 @@
 	{/snippet}
 </Toolbar>
 
-<main class="container mx-auto lg:max-w-screen-sm">
+<main class="container mx-auto lg:max-w-(--breakpoint-sm)">
 	<Fab Icon={Check} onclick={onFab} />
 
 	<!-- tx editor -->

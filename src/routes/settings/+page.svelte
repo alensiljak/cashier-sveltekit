@@ -154,7 +154,7 @@
 	</label> -->
 
 	<center>
-		<button class="variant-filled-error btn uppercase !text-warning-500" onclick={saveSettings}>
+		<button class="variant-filled-error btn uppercase text-warning-500!" onclick={saveSettings}>
 			Save
 		</button>
 	</center>
@@ -194,8 +194,8 @@
 <Modal
 	open={isAaConfirmationOpen}
 	triggerBase="hidden"
-	contentBase="card bg-surface-100-900 p-4 space-y-4 shadow-xl max-w-screen-sm"
-	backdropClasses="backdrop-blur-sm"
+	contentBase="card bg-surface-100-900 p-4 space-y-4 shadow-xl max-w-(--breakpoint-sm)"
+	backdropClasses="backdrop-blur-xs"
 >
 	{#snippet trigger()}Open Modal{/snippet}
 	{#snippet content()}
@@ -219,8 +219,8 @@
 <Modal
 	open={isSettingsConfirmationOpen}
 	triggerBase="hidden"
-	contentBase="card bg-surface-100-900 p-4 space-y-4 shadow-xl max-w-screen-sm"
-	backdropClasses="backdrop-blur-sm"
+	contentBase="card bg-surface-100-900 p-4 space-y-4 shadow-xl max-w-(--breakpoint-sm)"
+	backdropClasses="backdrop-blur-xs"
 >
 	{#snippet trigger()}Open Modal{/snippet}
 	{#snippet content()}

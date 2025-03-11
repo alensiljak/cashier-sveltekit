@@ -21,7 +21,7 @@
 <div class="m-4 flex h-32 items-center justify-center bg-surface-600/50">
 	<button type="button" class={`btn flex flex-col w-20 aspect-square ${classes}`} {onclick}>
         <Icon />
-        <span class="mt-1 !ml-0">
+        <span class="mt-1 ml-0!">
         {@render children?.()}
     </span>
 	</button>

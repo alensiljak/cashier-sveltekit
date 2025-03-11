@@ -234,8 +234,8 @@
 <Modal
 	open={isEnterConfirmationOpen}
 	triggerBase="hidden"
-	contentBase="card bg-surface-100-900 p-4 space-y-4 shadow-xl max-w-screen-sm"
-	backdropClasses="backdrop-blur-sm"
+	contentBase="card bg-surface-100-900 p-4 space-y-4 shadow-xl max-w-(--breakpoint-sm)"
+	backdropClasses="backdrop-blur-xs"
 >
 	{#snippet trigger()}Open Modal{/snippet}
 	{#snippet content()}
@@ -259,8 +259,8 @@
 <Modal
 	open={isSkipConfirmationOpen}
 	triggerBase="hidden"
-	contentBase="card bg-surface-100-900 p-4 space-y-4 shadow-xl max-w-screen-sm"
-	backdropClasses="backdrop-blur-sm"
+	contentBase="card bg-surface-100-900 p-4 space-y-4 shadow-xl max-w-(--breakpoint-sm)"
+	backdropClasses="backdrop-blur-xs"
 >
 	{#snippet trigger()}Open Modal{/snippet}
 	{#snippet content()}
@@ -284,8 +284,8 @@
 <Modal
 	open={isDeleteConfirmationOpen}
 	triggerBase="hidden"
-	contentBase="card bg-surface-100-900 p-4 space-y-4 shadow-xl max-w-screen-sm"
-	backdropClasses="backdrop-blur-sm"
+	contentBase="card bg-surface-100-900 p-4 space-y-4 shadow-xl max-w-(--breakpoint-sm)"
+	backdropClasses="backdrop-blur-xs"
 >
 	{#snippet trigger()}Open Modal{/snippet}
 	{#snippet content()}

@@ -19,7 +19,7 @@
 
 	let amountInput: HTMLInputElement;
 	let amountFieldColor = $derived(
-		($xact?.postings[index].amount as number) < 0 ? '!bg-secondary-500/20' : '!bg-primary-500/20'
+		($xact?.postings[index].amount as number) < 0 ? 'bg-secondary-500/20!' : 'bg-primary-500/20!'
 	);
 
 	onMount(() => {
@@ -65,7 +65,7 @@
 	<div>
 		<button
 			type="button"
-			class="variant-outline-surface btn w-12 grow-0 rounded border border-tertiary-200/50 px-1"
+			class="variant-outline-surface btn w-12 grow-0 rounded-sm border border-tertiary-200/50 px-1"
 			onclick={changeSign}
 		>
 			<DiffIcon />
@@ -82,7 +82,7 @@
 		oninput={onAmountChanged}
 	/>
 	<!--
-		class={$xact.postings[index].amount as number >= 0 ? '!bg-primary-500/20' : '!bg-secondary-500/20'}
+		class={$xact.postings[index].amount as number >= 0 ? 'bg-primary-500/20!' : 'bg-secondary-500/20!'}
 		oninput={() => updateAmount($xact.postings[index].amount as number)}
 		onchange={onAmountChanged}
 	-->
