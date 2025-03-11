@@ -133,9 +133,8 @@
 	</ul>
 </nav>
 
-<style lang="postcss">
+<style>
 	/* active navigation item style */
-	.active {
-		@apply bg-secondary-500;
-	}
+	/* replace @apply bg-secondary-500; */
+	.active { background-color: var(--color-secondary-500); }
 </style>
