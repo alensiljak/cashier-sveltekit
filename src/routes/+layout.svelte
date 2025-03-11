@@ -6,16 +6,12 @@
 	import Navigation from '$lib/components/navigation.svelte';
 	// Popups
 	import { computePosition, autoUpdate, offset, shift, flip, arrow } from '@floating-ui/dom';
-	import {
-		initializeStores,
-		storePopup,
-		Toast
-	} from '@skeletonlabs/skeleton';
+	import { initializeStores, storePopup, Toast } from '@skeletonlabs/skeleton';
 	// PWA
 	import { pwaInfo } from 'virtual:pwa-info';
 	import { pwaAssetsHead } from 'virtual:pwa-assets/head';
 	import { onMount } from 'svelte';
-	import { Modal } from '@skeletonlabs/skeleton-svelte';
+	import { Modal, ToastProvider } from '@skeletonlabs/skeleton-svelte';
 	import { drawerState } from '$lib/data/mainStore';
 
 	let { children } = $props();
@@ -71,8 +67,6 @@
 </svelte:head>
 
 <div use:swipe onswipe={handleSwipe}>
-	<Toast />
-	
 	<!-- sidebar as modal -->
 	<Modal
 		open={$drawerState}
@@ -91,12 +85,14 @@
 
 	<!-- former AppShell -->
 	<div class="grid grid-cols-1 lg:grid-cols-[288px_1fr]">
-		<aside class="sticky top-0 col-span-1 hidden h-screen bg-surface-500/5 lg:block">
+		<aside class="bg-surface-500/5 sticky top-0 col-span-1 hidden h-screen lg:block">
 			<Navigation />
 		</aside>
 
 		<main class="col-span-1">
-			{@render children()}
+			<ToastProvider>
+				{@render children()}
+			</ToastProvider>
 		</main>
 	</div>
 </div>
