@@ -75,7 +75,8 @@
 	
 	<!-- sidebar as modal -->
 	<Modal
-		bind:open={$drawerState}
+		open={$drawerState}
+		onOpenChange={(e) => (drawerState.update((state) => e.open))}
 		triggerBase="hidden"
 		contentBase="bg-surface-500/95 shadow-xl w-[288px] h-screen"
 		positionerJustify="justify-start"
