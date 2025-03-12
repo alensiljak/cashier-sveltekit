@@ -4,14 +4,15 @@
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { SettingKeys, settings } from '$lib/settings';
 	import Notifier from '$lib/utils/notifier';
-	import { FileButton } from '@skeletonlabs/skeleton';
+	import { FileUpload } from '@skeletonlabs/skeleton-svelte';
 	import db from '$lib/data/db';
 	import appService from '$lib/services/appService';
 	import { invalidateAll } from '$app/navigation';
 	import * as OpfsLib from '$lib/utils/opfslib.js';
 	import { AssetAllocationFilename } from '$lib/constants.js';
-	import { DefaultCurrencyStore } from '$lib/data/mainStore.js';
+	import { AaStocksStore, AssetAllocationStore, DefaultCurrencyStore } from '$lib/data/mainStore.js';
 	import { Modal } from '@skeletonlabs/skeleton-svelte';
+	import type { FileChangeDetails } from '@zag-js/file-upload';
 
 	Notifier.init();
 	let isAaConfirmationOpen = $state(false);
@@ -22,8 +23,8 @@
 	let rootInvestmentAccount = $state<string>();
 	let currency = $state<string>();
 
-	let settings_files = $state<FileList>();
-	let aa_files = $state<FileList>();
+	let settings_files = $state<File[]>();
+	let aa_files = $state<File[]>();
 
 	onMount(async () => {
 		currency = await appService.getDefaultCurrency();
@@ -39,7 +40,9 @@
 		isSettingsConfirmationOpen = false;
 	}
 
-	async function onAaFileChanged() {
+	async function onAaFileChanged(details: FileChangeDetails) {
+		aa_files = details.acceptedFiles;
+
 		isAaConfirmationOpen = true;
 	}
 
@@ -53,7 +56,9 @@
 	 * Handles the change of the settings file selection.
 	 * When the file is selected, automatically offer to import it.
 	 */
-	async function onSettingsFileChangeHandler() {
+	async function onSettingsFileChangeHandler(details: FileChangeDetails) {
+		settings_files = details.acceptedFiles;
+
 		// prompt for confirmation with a dialog
 		isSettingsConfirmationOpen = true;
 	}
@@ -75,7 +80,9 @@
 		// save to OPFS
 		await OpfsLib.saveFile(AssetAllocationFilename, contents);
 
-		// todo: reset AA cache
+		// reset AA cache
+		AssetAllocationStore.set(undefined);
+		AaStocksStore.set(undefined);
 
 		Notifier.success('Asset Allocation imported');
 	}
@@ -155,24 +162,26 @@
 	<section>
 		<h3 class="h3">Asset Allocation</h3>
 		<center>
-			<FileButton
+			<FileUpload
 				name="aa_file"
-				button="btn variant-soft-primary"
-				bind:files={aa_files}
-				on:change={onAaFileChanged}
-			/>
+				onFileChange={onAaFileChanged}>
+				<button class="btn variant-soft-primary">
+					<span>Select the AA definition</span>
+				</button>
+			</FileUpload>
 		</center>
 	</section>
 
 	<section>
 		<h3 class="h3">Restore Settings</h3>
+		<p>This functionality is now redundant. You can use Backup/Restore, which also includes Settings.</p>
 		<center>
-			<FileButton
+			<FileUpload
 				name="settings_file"
-				button="btn variant-soft-primary"
-				bind:files={settings_files}
-				on:change={onSettingsFileChangeHandler}
-			/>
+				onFileChange={onSettingsFileChangeHandler}>
+				<button class="btn variant-soft-primary">
+					<span>Select the settings file</span>
+			</FileUpload>
 		</center>
 	</section>
 

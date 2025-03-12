@@ -2,14 +2,15 @@
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import * as BackupService from '$lib/services/backupService';
 	import Notifier from '$lib/utils/notifier';
-	import { FileButton } from '@skeletonlabs/skeleton';
+	import { FileUpload } from '@skeletonlabs/skeleton-svelte';
 	import { onMount } from 'svelte';
 	import { Modal } from '@skeletonlabs/skeleton-svelte';
+	import type { FileChangeDetails } from '@zag-js/file-upload';
 
 	let isRestoreConfirmationOpen = $state(false);
 
 	let _filename = $state<string>();
-	let files = $state<FileList>();
+	let files = $state<File[]>();
 
 	Notifier.init();
 
@@ -28,7 +29,8 @@
 		await BackupService.createBackup(_filename as string);
 	}
 
-	function onChangeHandler(e: Event): void {
+	function onChangeHandler(details: FileChangeDetails): void {
+		files = details.acceptedFiles;
 		if (!files) return;
 
 		if (files.length > 1) {
@@ -89,12 +91,13 @@
 		<h3 class="h3">Restore Backup</h3>
 		<div class="flex flex-row items-center space-x-4">
 			<p>To restore (overwriting any existing records!):</p>
-			<FileButton
+			<FileUpload
 				name="files"
-				button="btn variant-soft-secondary"
-				bind:files
-				on:change={onChangeHandler}
-			/>
+				onFileChange={onChangeHandler}>
+				<button class="btn variant-soft-secondary">
+					<span>Click to choose the backup file</span>
+				</button>
+			</FileUpload>
 		</div>
 		<div>
 			It is recommended to also perform a Cashier Sync after restoring a backup.
