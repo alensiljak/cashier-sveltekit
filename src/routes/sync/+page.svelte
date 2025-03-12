@@ -60,7 +60,7 @@
 			Notifier.error(error.message);
 		}
 
-		Notifier.neutral('The server shutdown request sent.');
+		Notifier.info('The server shutdown request sent.');
 	}
 
 	async function onSyncClicked() {

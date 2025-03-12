@@ -37,7 +37,7 @@
 		const id = $selectionMetadata.selectedId as string;
 		if (id == undefined) {
 			console.warn('No item selected');
-			Notifier.neutral('Selection canceled');
+			Notifier.info('Selection canceled');
 			return;
 		}
 

@@ -110,7 +110,7 @@
 	 */
 	async function onValidateClick() {
 		if (data.assetClasses?.length === 0) {
-			Notifier.neutral('Please recalculate the allocation first.');
+			Notifier.info('Please recalculate the allocation first.');
 		}
 
 		// confirm that the group allocations match the sum of the children's allocation.
