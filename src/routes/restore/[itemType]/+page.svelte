@@ -3,11 +3,11 @@
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import appService from '$lib/services/appService';
 	import Notifier from '$lib/utils/notifier';
-	import { FileButton } from '@skeletonlabs/skeleton';
+	import { FileUpload } from '@skeletonlabs/skeleton-svelte';
 	import { Modal } from '@skeletonlabs/skeleton-svelte';
+	import type { FileChangeDetails } from '@zag-js/file-upload';
 
 	const itemType = page.params.itemType;
-	let files = $state<FileList>();
 	let _content = $state<string>();
 
 	Notifier.init();
@@ -20,8 +20,8 @@
 		isRestoreConfirmationOpen = false;
 	}
 
-	async function onFileChanged(event: Event) {
-		let selection = (event.target as HTMLInputElement).files;
+	async function onFileChanged(details: FileChangeDetails) {
+		let selection = details.acceptedFiles;
 		if (!selection || selection.length === 0) {
 			console.error('nothing selected');
 			return;
@@ -61,7 +61,12 @@
 		<p>Either select a backup file or paste the backup into the text box below.</p>
 
 		<center class="py-6">
-			<FileButton name="files" bind:files button="btn bg-primary-500" on:change={onFileChanged} />
+			<FileUpload name="files" 
+				onFileChange={onFileChanged}>
+				<button class="btn bg-primary-500">
+					<span>Select the backup file</span>
+				</button>
+			</FileUpload>
 		</center>
 	</div>
 
