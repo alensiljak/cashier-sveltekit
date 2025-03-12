@@ -30,9 +30,9 @@ const Notifier = {
   info(message: string) {
     this.notify(message, 'bg-info-500')
   },
-  warn(message: string) {
-    this.notify(message, 'bg-tertiary-500 text-secondary-500')
-  }
+  // warn(message: string) {
+  //   this.notify(message, 'bg-tertiary-500 text-secondary-500')
+  // }
 }
 
 export default Notifier
