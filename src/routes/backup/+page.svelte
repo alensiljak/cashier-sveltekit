@@ -32,7 +32,7 @@
 		if (!files) return;
 
 		if (files.length > 1) {
-			Notifier.warn('Only one file must be selected!');
+			Notifier.info('Only one file must be selected!');
 			return;
 		}
 

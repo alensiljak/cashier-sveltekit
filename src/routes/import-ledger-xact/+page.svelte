@@ -26,7 +26,7 @@
 
 	async function importXact() {
 		if(!inputText) {
-            Notifier.warn('Paste a transaction record into the input field first')
+            Notifier.info('Paste a transaction record into the input field first')
             return;
         }
 

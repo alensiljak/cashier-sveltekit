@@ -38,7 +38,7 @@
 	async function onDeleteClicked() {
 		// check xact
 		if (!$xact) {
-			Notifier.warn('Transaction is empty! Please select a transaction first.');
+			Notifier.info('Transaction is empty! Please select a transaction first.');
 			return;
 		}
 
@@ -60,7 +60,7 @@
 
 	async function onDuplicateClick() {
 		if (!$xact) {
-			Notifier.warn('There is no active transaction!');
+			Notifier.info('There is no active transaction!');
 			return;
 		}
 

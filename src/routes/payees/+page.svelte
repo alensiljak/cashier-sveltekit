@@ -38,7 +38,7 @@
 	function onFabClick() {
 		if(!searchString)
 		{
-		    Notifier.warn("The search term is empty!");
+		    Notifier.info("The search term is empty!");
 		    return;
 		}
 

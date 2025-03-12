@@ -15,7 +15,7 @@
 
 	onMount(async () => {
 		if (!$ScheduledXact) {
-			Notifier.warn('No Scheduled Transaction found!');
+			Notifier.info('No Scheduled Transaction found!');
 			goto('/scheduled-xacts');
 		}
 		await loadData();

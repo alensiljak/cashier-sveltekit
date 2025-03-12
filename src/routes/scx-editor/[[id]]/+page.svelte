@@ -24,7 +24,7 @@
 
 	async function saveData() {
 		if (!$ScheduledXact) {
-			Notifier.warn('Scheduled Transaction does not exist!');
+			Notifier.info('Scheduled Transaction does not exist!');
 			return;
 		}
 		if (!$xact) {

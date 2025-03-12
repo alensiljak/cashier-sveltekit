@@ -41,7 +41,7 @@
 
 	async function onCopyClick() {
 		if (!output) {
-			Notifier.warn('The content is empty.');
+			Notifier.info('The content is empty.');
 			return;
 		}
 

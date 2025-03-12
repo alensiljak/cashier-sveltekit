@@ -38,7 +38,7 @@
 	async function addAccount(accountName: string) {
 		const favNames: string[] = await settings.get(SettingKeys.favouriteAccounts);
 		if (favNames.includes(accountName)) {
-			Notifier.warn('The account is already present');
+			Notifier.info('The account is already present');
 			return;
 		} else {
 			favNames.push(accountName);

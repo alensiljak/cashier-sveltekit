@@ -35,7 +35,7 @@
 
 	async function onRestoreClicked() {
 		if (!_content) {
-			Notifier.warn('You need to select a file to restore');
+			Notifier.info('You need to select a file to restore');
 			return;
 		}
 

@@ -23,7 +23,7 @@
     async function loadData() {
         const serverUrl = await settings.get(SettingKeys.backupServerUrl)
         if(!serverUrl) {
-            Notifier.warn('Backup server URL not set.')
+            Notifier.info('Backup server URL not set.')
             await goto('/cloud-backup-settings')
             return
         }
@@ -50,7 +50,7 @@
     }
 
     async function onRestoreClick() {
-        Notifier.warn('Not implemented')
+        Notifier.info('Not implemented')
     }
 </script>
 <HomeCardTemplate>
