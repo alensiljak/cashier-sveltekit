@@ -11,13 +11,11 @@ import {
     ScheduledTransaction,
     Setting,
 } from '$lib/data/model'
-  import { AssetClass } from '$lib/assetAllocation/AssetClass'
 
 // Define the schema
 
 interface CashierDatabase extends Dexie {
     accounts: Table
-    assetAllocation: Table
     lastXact: Table
     payees: Table
     scheduled: Table
@@ -31,7 +29,6 @@ const db = new Dexie('Cashier') as CashierDatabase
 
 db.version(1).stores({
     accounts: 'name',
-    assetAllocation: 'fullname',
     lastXact: 'payee',
     payees: 'name',
     scheduled: '++id, nextDate',
@@ -42,7 +39,6 @@ db.version(1).stores({
 // Mappings
 
 db.accounts.mapToClass(Account)
-db.assetAllocation.mapToClass(AssetClass)
 db.lastXact.mapToClass(LastXact)
 db.payees.mapToClass(Payee)
 db.xacts.mapToClass(Xact)
