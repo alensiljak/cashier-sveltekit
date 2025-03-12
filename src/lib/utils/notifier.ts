@@ -6,13 +6,15 @@ import { type ToastContext } from '@skeletonlabs/skeleton-svelte';
 // import { getToastStore } from '@skeletonlabs/skeleton';
 // import type { ToastSettings, ToastStore } from '@skeletonlabs/skeleton';
 
-export const toast: ToastContext = getContext('toast');
+// export const toast: ToastContext = getContext('toast');
+let toast: ToastContext;
 
 // let toastStore: ToastStore;
 
 const Notifier = {
   init() {
     // toastStore = getToastStore();
+    toast = getContext('toast');
   },
   notify(message: string, 
     type: "info" | "error" | "success" | undefined,
