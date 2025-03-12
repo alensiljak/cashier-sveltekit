@@ -19,6 +19,11 @@
 	let buttonContainer: HTMLDivElement;
 
 	onMount(() => {
+		if (!data.aa) {
+			Notifier.error('Could not load Asset Allocation definition.');
+			return;
+		}
+
 		_allocation = data.assetClasses as AssetClass[];
 	});
 
