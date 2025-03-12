@@ -93,7 +93,7 @@
 	async function saveSyncServerUrl() {
 		await settings.set(SettingKeys.syncServerUrl, serverUrl);
 
-		Notifier.notify('Server URL saved', 'bg-success-500');
+		Notifier.success('Server URL saved');
 	}
 
 	async function synchronizeAccounts() {
