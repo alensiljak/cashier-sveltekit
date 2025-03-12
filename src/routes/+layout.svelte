@@ -4,9 +4,6 @@
 	// libs
 	import { swipe, type SwipeCustomEvent } from 'svelte-gestures';
 	import Navigation from '$lib/components/navigation.svelte';
-	// Popups
-	import { computePosition, autoUpdate, offset, shift, flip, arrow } from '@floating-ui/dom';
-	import { initializeStores, storePopup, Toast } from '@skeletonlabs/skeleton';
 	// PWA
 	import { pwaInfo } from 'virtual:pwa-info';
 	import { pwaAssetsHead } from 'virtual:pwa-assets/head';
@@ -15,14 +12,6 @@
 	import { drawerState } from '$lib/data/mainStore';
 
 	let { children } = $props();
-
-	initializeStores();
-
-	// Reactive Properties
-	let webManifest = $derived(pwaInfo ? pwaInfo.webManifest.linkTag : '');
-
-	// set up popups
-	storePopup.set({ computePosition, autoUpdate, offset, shift, flip, arrow });
 
 	onMount(async () => {
 		if (pwaInfo) {
