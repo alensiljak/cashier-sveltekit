@@ -46,7 +46,7 @@
 		closeModal();
 
 		if (!files) return;
-		
+
 		await readFile(files[0]);
 	}
 
@@ -91,16 +91,21 @@
 		<h3 class="h3">Restore Backup</h3>
 		<div class="flex flex-row items-center space-x-4">
 			<p>To restore (overwriting any existing records!):</p>
-			<FileUpload
-				name="files"
-				onFileChange={onChangeHandler}>
+			<FileUpload name="files" onFileChange={onChangeHandler}>
 				<button class="btn variant-soft-secondary">
 					<span>Click to choose the backup file</span>
 				</button>
 			</FileUpload>
 		</div>
 		<div>
-			It is recommended to also perform a Cashier Sync after restoring a backup.
+			<p>After restoring a backup, you should</p>
+			<ul>
+				<li>
+					load the Asset Allocation definition file (it is then stored in OPFS, which is not backed
+					up)
+				</li>
+				<li>perform a Cashier Sync to populate the latest financial data</li>
+			</ul>
 		</div>
 	</section>
 </article>
