@@ -107,7 +107,7 @@
 		let aa = new AssetAllocationEngine();
 		const output = aa.formatAllocationRowsForTxtExport(_allocation);
 
-		downloadAsFile(output)
+		downloadAsFile(output);
 	}
 
 	/**
@@ -144,7 +144,7 @@
 	</Toolbar>
 
 	<section class="overflow-auto p-3">
-		<table class=" mx-auto max-w-2xl">
+		<table class="table mx-auto max-w-2xl">
 			<thead>
 				<tr>
 					<th colspan="1"></th>
@@ -163,7 +163,7 @@
 			</thead>
 			<tbody>
 				{#each _allocation as item}
-					<tr class={`border-b border-tertiary-200/15 ${getRowColor(item)}`}>
+					<tr class={`border-tertiary-200/15 border-b ${getRowColor(item)}`}>
 						<td>
 							<span class={`pl-${item.depth * 2}`}>
 								<a class="underline" href={`/assetclass-detail/${item.fullname}`}>
