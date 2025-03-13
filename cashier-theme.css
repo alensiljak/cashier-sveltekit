@@ -1,7 +1,11 @@
+/*
+Cashier Theme
+Edit at https://themes.skeleton.dev/themes/import
+*/
 [data-theme='cashiertheme'] {
 	--text-scaling: 1.067;
 	--base-font-color: var(--color-surface-950);
-	--base-font-color-dark: var(--color-surface-50);
+	--base-font-color-dark: var(--color-tertiary-100);
 	--base-font-family: system-ui;
 	--base-font-size: inherit;
 	--base-line-height: inherit;
