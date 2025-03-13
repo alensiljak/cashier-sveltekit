@@ -57,8 +57,6 @@
 </svelte:head>
 
 <div use:swipe onswipe={handleSwipe}>
-	<ToastProvider />
-
 	<!-- sidebar as modal -->
 	<Modal
 		open={$drawerState}
@@ -85,9 +83,9 @@
 		</aside>
 
 		<main class="col-span-1">
-			<!-- <ToastProvider> -->
+			<ToastProvider>
 				{@render children()}
-			<!-- </ToastProvider> -->
+			</ToastProvider>
 		</main>
 	</div>
 </div>
