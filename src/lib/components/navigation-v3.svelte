@@ -3,10 +3,22 @@
 	// Icons
 	import IconSettings from '@lucide/svelte/icons/settings';
 	import { page } from '$app/state';
-	import { CalendarClockIcon, ChartPieIcon, DatabaseIcon, HelpCircleIcon, HomeIcon, InfoIcon, LandmarkIcon, ScrollIcon, SettingsIcon, StarIcon, UsersRoundIcon } from '@lucide/svelte';
+	import {
+		CalendarClockIcon,
+		ChartPieIcon,
+		DatabaseIcon,
+		HelpCircleIcon,
+		HomeIcon,
+		InfoIcon,
+		LandmarkIcon,
+		ScrollIcon,
+		SettingsIcon,
+		StarIcon,
+		UsersRoundIcon
+	} from '@lucide/svelte';
 
-    const hoverClass = 'hover:bg-primary-500/25'
-    const activeClass = 'bg-secondary-500/50'
+	const hoverClass = 'hover:bg-primary-500/25';
+	const activeClass = 'bg-secondary-500/50';
 
 	let isExpanded = $state(true);
 
@@ -23,7 +35,7 @@
 	tilesJustify="top"
 	padding="p-0"
 >
-<!-- 
+	<!-- 
 preset-tonal-tertiary-900-100
 bg-surface-900 text-tertiary-50 
  hover:bg-primary-200-->
@@ -38,53 +50,108 @@ bg-surface-900 text-tertiary-50
 		</div>
 	{/snippet}
 	{#snippet tiles()}
-		<Navigation.Tile labelExpanded="Browse Files" href="/" hover={hoverClass} active={activeClass}
-            selected={page.url.pathname === '/'} >
+		<Navigation.Tile
+			labelExpanded="Home"
+			href="/"
+			hover={hoverClass}
+			active={activeClass}
+			selected={page.url.pathname === '/'}
+		>
 			<HomeIcon />
 		</Navigation.Tile>
-		<Navigation.Tile labelExpanded="Journal" href="/journal" hover={hoverClass} active={activeClass}
-            selected={page.url.pathname === '/journal'}>
+		<Navigation.Tile
+			labelExpanded="Journal"
+			href="/journal"
+			hover={hoverClass}
+			active={activeClass}
+			selected={page.url.pathname === '/journal'}
+		>
 			<ScrollIcon />
 		</Navigation.Tile>
-        <Navigation.Tile labelExpanded="Browse Music" href="/music" hover={hoverClass} active={activeClass}
-            selected={page.url.pathname === '/music'}>
-            <StarIcon />
-        </Navigation.Tile>
-        <Navigation.Tile labelExpanded="Browse Videos" href="/videos" hover={hoverClass} active={activeClass}
-            selected={page.url.pathname === '/videos'}>
-            <LandmarkIcon />
-        </Navigation.Tile>
-        <Navigation.Tile labelExpanded="Browse Games" href="/games" hover={hoverClass} active={activeClass}
-            selected={page.url.pathname === '/games'}>
-            <UsersRoundIcon />
-        </Navigation.Tile>
-        <Navigation.Tile labelExpanded="Browse Games" href="/games" hover={hoverClass} active={activeClass}
-            selected={page.url.pathname === '/games'}>
-            <ChartPieIcon />
-        </Navigation.Tile>
-        <Navigation.Tile labelExpanded="Browse Games" href="/games" hover={hoverClass} active={activeClass}
-            selected={page.url.pathname === '/games'}>
-            <CalendarClockIcon />
-        </Navigation.Tile>
-        <Navigation.Tile labelExpanded="Browse Games" href="/games" hover={hoverClass} active={activeClass}
-            selected={page.url.pathname === '/games'}>
-            <DatabaseIcon />
-        </Navigation.Tile>
-        <Navigation.Tile labelExpanded="Browse Games" href="/games" hover={hoverClass} active={activeClass}
-            selected={page.url.pathname === '/games'}>
-            <SettingsIcon />
-        </Navigation.Tile>
-        <Navigation.Tile labelExpanded="Browse Games" href="/games" hover={hoverClass} active={activeClass}
-            selected={page.url.pathname === '/games'}>
-            <HelpCircleIcon />
-        </Navigation.Tile>
-        <Navigation.Tile labelExpanded="About" href="/about" hover={hoverClass} active={activeClass}
-            selected={page.url.pathname === '/about'}>
-            <InfoIcon />
-        </Navigation.Tile>
+		<Navigation.Tile
+			labelExpanded="Favourites"
+			href="/favourites"
+			hover={hoverClass}
+			active={activeClass}
+			selected={page.url.pathname === '/favourites'}
+		>
+			<StarIcon />
+		</Navigation.Tile>
+		<Navigation.Tile
+			labelExpanded="Accounts"
+			href="/accounts"
+			hover={hoverClass}
+			active={activeClass}
+			selected={page.url.pathname === '/accounts'}
+		>
+			<LandmarkIcon />
+		</Navigation.Tile>
+		<Navigation.Tile
+			labelExpanded="Payees"
+			href="/payees"
+			hover={hoverClass}
+			active={activeClass}
+			selected={page.url.pathname === '/payees'}
+		>
+			<UsersRoundIcon />
+		</Navigation.Tile>
+		<Navigation.Tile
+			labelExpanded="Asset Allocation"
+			href="/asset-allocation"
+			hover={hoverClass}
+			active={activeClass}
+			selected={page.url.pathname === '/asset-allocation'}
+		>
+			<ChartPieIcon />
+		</Navigation.Tile>
+		<Navigation.Tile
+			labelExpanded="Scheduled Transactions"
+			href="/scheduled-xacts"
+			hover={hoverClass}
+			active={activeClass}
+			selected={page.url.pathname === '/scheduled-xacts'}
+		>
+			<CalendarClockIcon />
+		</Navigation.Tile>
+
+		<hr class="hr border-primary-500 border-t-2" />
+
+		<Navigation.Tile
+			labelExpanded="Backup"
+			href="/backup"
+			hover={hoverClass}
+			active={activeClass}
+			selected={page.url.pathname === '/backup'}
+		>
+			<DatabaseIcon />
+		</Navigation.Tile>
+		<Navigation.Tile
+			labelExpanded="Help"
+			href="/help"
+			hover={hoverClass}
+			active={activeClass}
+			selected={page.url.pathname === '/help'}
+		>
+			<HelpCircleIcon />
+		</Navigation.Tile>
+		<Navigation.Tile
+			labelExpanded="About"
+			href="/about"
+			hover={hoverClass}
+			active={activeClass}
+			selected={page.url.pathname === '/about'}
+		>
+			<InfoIcon />
+		</Navigation.Tile>
 	{/snippet}
 	{#snippet footer()}
-		<Navigation.Tile labelExpanded="Settings" href="/settings" title="Settings">
+		<Navigation.Tile
+			labelExpanded="Settings"
+			href="/settings"
+			hover={hoverClass}
+			active={activeClass}
+			selected={page.url.pathname === '/settings'}
+		>
 			<SettingsIcon />
 		</Navigation.Tile>
 	{/snippet}
