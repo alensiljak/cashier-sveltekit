@@ -13,7 +13,8 @@
 /* Tell tailwind to include Skeleton components */
 @source "../node_modules/@skeletonlabs/skeleton-svelte/dist";
 
-@custom-variant dark (&:is(.dark *));
+/* @custom-variant dark (&:is(.dark *)); */
+@custom-variant dark (&:where(.dark, .dark *));
 
 /* Resets */
 
