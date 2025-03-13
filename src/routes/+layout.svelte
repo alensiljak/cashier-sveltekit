@@ -10,6 +10,7 @@
 	import { onMount } from 'svelte';
 	import { Modal, ToastProvider } from '@skeletonlabs/skeleton-svelte';
 	import { drawerState } from '$lib/data/mainStore';
+	import NavigationV3 from '$lib/components/navigation-v3.svelte';
 
 	let { children } = $props();
 
@@ -70,14 +71,17 @@
 	>
 		{#snippet trigger()}{/snippet}
 		{#snippet content()}
-			<Navigation />
+			<!-- <Navigation /> -->
+			 <NavigationV3 />
 		{/snippet}
 	</Modal>
 
 	<!-- former AppShell -->
 	<div class="grid grid-cols-1 lg:grid-cols-[288px_1fr]">
-		<aside class="bg-surface-500/5 sticky top-0 col-span-1 hidden h-screen lg:block">
-			<Navigation />
+		<aside class="sticky top-0 col-span-1 hidden h-screen lg:block">
+			<!-- bg-surface-500/5 -->
+			<!-- <Navigation /> -->
+			 <NavigationV3 />
 		</aside>
 
 		<main class="col-span-1">
