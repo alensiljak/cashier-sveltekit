@@ -64,7 +64,7 @@
 		open={$drawerState}
 		onOpenChange={(e) => (drawerState.update((state) => e.open))}
 		triggerBase="hidden"
-		contentBase="bg-surface-500/95 shadow-xl w-[288px] h-screen"
+		contentBase="bg-surface-500/95 shadow-xl w-[288px] h-screen overflow-y-auto"
 		positionerJustify="justify-start"
 		transitionsPositionerIn={{ x: -288, duration: 350 }}
 		transitionsPositionerOut={{ x: -288, duration: 350 }}
@@ -72,13 +72,13 @@
 		{#snippet trigger()}{/snippet}
 		{#snippet content()}
 			<!-- <Navigation /> -->
-			 <NavigationV3 />
+			<NavigationV3 />
 		{/snippet}
 	</Modal>
 
 	<!-- former AppShell -->
 	<div class="grid grid-cols-1 lg:grid-cols-[288px_1fr]">
-		<aside class="sticky top-0 col-span-1 hidden h-screen lg:block">
+		<aside class="sticky top-0 col-span-1 hidden h-screen lg:block overflow-y-auto">
 			<!-- bg-surface-500/5 -->
 			<!-- <Navigation /> -->
 			 <NavigationV3 />
