@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { MenuIcon } from 'lucide-svelte';
+	import { MenuIcon } from '@lucide/svelte';
 </script>
 
 <div class="toolbar relative flex bg-primary-800 p-2">

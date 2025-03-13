@@ -13,7 +13,7 @@
 	import { ListSearch } from '$lib/utils/ListSearch';
 	import Notifier from '$lib/utils/notifier';
 	import { XactAugmenter } from '$lib/utils/xactAugmenter';
-	import { CalendarIcon, PackageIcon, PackageOpenIcon, PlusIcon } from 'lucide-svelte';
+	import { CalendarIcon, PackageIcon, PackageOpenIcon, PlusIcon } from '@lucide/svelte';
 	import moment from 'moment';
 	import { onMount } from 'svelte';
 

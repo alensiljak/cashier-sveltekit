@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { StarIcon } from 'lucide-svelte';
+	import { StarIcon } from '@lucide/svelte';
 	import HomeCardTemplate from './HomeCardTemplate.svelte';
 	import { goto } from '$app/navigation';
 	import type { Account } from '$lib/data/model';

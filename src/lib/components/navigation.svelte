@@ -13,10 +13,9 @@
 		HelpCircleIcon,
 		SettingsIcon,
 		UploadCloudIcon,
-
 		DatabaseIcon
 
-	} from 'lucide-svelte';
+	} from '@lucide/svelte';
 
 	function drawerClose(): void {
 		// the new drawer

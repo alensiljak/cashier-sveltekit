@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Fab from '$lib/components/FAB.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
-	import { Check } from 'lucide-svelte';
+	import { Check } from '@lucide/svelte';
 	import { selectionMetadata, xact } from '$lib/data/mainStore';
 	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';

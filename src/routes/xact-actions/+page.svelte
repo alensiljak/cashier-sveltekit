@@ -10,7 +10,7 @@
 	import appService from '$lib/services/appService';
 	import Notifier from '$lib/utils/notifier';
 	import { Modal } from '@skeletonlabs/skeleton-svelte';
-	import { CalendarClockIcon, CopyIcon, PenSquareIcon, TrashIcon } from 'lucide-svelte';
+	import { CalendarClockIcon, CopyIcon, PenSquareIcon, TrashIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	Notifier.init();
 	let isDeleteConfirmationOpen = $state(false);

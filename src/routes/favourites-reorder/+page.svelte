@@ -2,7 +2,7 @@
 	import Fab from '$lib/components/FAB.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { SettingKeys, settings } from '$lib/settings';
-	import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from 'lucide-svelte';
+	import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 
 	let _favourites = $state([]);

@@ -9,7 +9,7 @@
 	import { SelectionModeMetadata, SettingKeys, settings } from '$lib/settings';
 	import { getEmptyPostingIndex } from '$lib/utils/xactUtils';
 	import { Posting } from '$lib/data/model';
-	import { ArrowUpDownIcon, PlusCircleIcon, SigmaIcon, TrashIcon } from 'lucide-svelte';
+	import { ArrowUpDownIcon, PlusCircleIcon, SigmaIcon, TrashIcon } from '@lucide/svelte';
 	import { Big } from 'big.js'
 
 	let sum = $state(Big(0));

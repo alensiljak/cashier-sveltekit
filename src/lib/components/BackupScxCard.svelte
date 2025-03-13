@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { CalendarClockIcon } from "lucide-svelte";
+	import { CalendarClockIcon } from "@lucide/svelte";
 	import HomeCardTemplate from "./HomeCardTemplate.svelte";
 	import { onMount } from "svelte";
 	import { SettingKeys, settings } from "$lib/settings";
@@ -21,7 +21,7 @@
     })
 
     async function loadData() {
-        const serverUrl = await settings.get(SettingKeys.backupServerUrl)
+        const serverUrl = await settings.get<string>(SettingKeys.backupServerUrl)
         if(!serverUrl) {
             Notifier.info('Backup server URL not set.')
             await goto('/cloud-backup-settings')

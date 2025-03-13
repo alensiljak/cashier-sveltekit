@@ -16,7 +16,7 @@
 		PenSquareIcon,
 		ScrollIcon,
 		TrashIcon
-	} from 'lucide-svelte';
+	} from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import db from '$lib/data/db';
 	import { Modal } from '@skeletonlabs/skeleton-svelte';

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { FileUpIcon, ScrollIcon } from 'lucide-svelte';
+	import { FileUpIcon, ScrollIcon } from '@lucide/svelte';
 	import HomeCardTemplate from './HomeCardTemplate.svelte';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';

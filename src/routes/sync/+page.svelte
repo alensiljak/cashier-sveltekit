@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Toolbar from '$lib/components/Toolbar.svelte';
-	import { PowerIcon, RefreshCcw } from 'lucide-svelte';
+	import { PowerIcon, RefreshCcw } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import { SettingKeys, settings } from '$lib/settings';
 	import Notifier from '$lib/utils/notifier';

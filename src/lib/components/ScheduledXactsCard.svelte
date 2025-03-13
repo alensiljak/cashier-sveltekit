@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { CalendarClockIcon, FileUpIcon } from 'lucide-svelte';
+	import { CalendarClockIcon, FileUpIcon } from '@lucide/svelte';
 	import HomeCardTemplate from './HomeCardTemplate.svelte';
 	import { goto } from '$app/navigation';
 	import type { Money, ScheduledTransaction, Xact } from '$lib/data/model';

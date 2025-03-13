@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { xact } from '$lib/data/mainStore';
-	import { DiffIcon } from 'lucide-svelte';
+	import { DiffIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import type { EventHandler } from 'svelte/elements';
 

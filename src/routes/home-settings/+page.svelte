@@ -4,7 +4,7 @@
 	import { HomeCardNames } from '$lib/enums';
 	import appService from '$lib/services/appService';
 	import { SettingKeys, settings } from '$lib/settings';
-	import { CheckIcon } from 'lucide-svelte';
+	import { CheckIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 
 	let visibleCards: string[] = $state([]);

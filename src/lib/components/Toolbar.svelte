@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { AppBar, Popover } from '@skeletonlabs/skeleton-svelte';
-	import { EllipsisVertical, Menu } from 'lucide-svelte';
+	import { EllipsisVertical, Menu } from '@lucide/svelte';
 	import type { Snippet } from 'svelte';
 	import { drawerState } from '$lib/data/mainStore';
 

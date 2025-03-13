@@ -7,7 +7,7 @@
 	import { selectionMetadata } from '$lib/data/mainStore';
 	import { SelectionType } from '$lib/enums';
 	import { SelectionModeMetadata, SettingKeys, settings } from '$lib/settings';
-	import { CheckIcon, TrashIcon } from 'lucide-svelte';
+	import { CheckIcon, TrashIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 
 	let days = $state(DEFAULT_FORECAST_DAYS);

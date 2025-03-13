@@ -1,6 +1,6 @@
 <!-- Floating action button -->
 <script lang="ts">
-	import { Check } from 'lucide-svelte';
+	import { Check } from '@lucide/svelte';
 	import type { Component } from 'svelte';
 	import type { EventHandler } from 'svelte/elements';
 

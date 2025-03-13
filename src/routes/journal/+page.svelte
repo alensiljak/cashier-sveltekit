@@ -7,7 +7,7 @@
 	import db from '$lib/data/db';
 	import { Xact } from '$lib/data/model';
 	import Notifier from '$lib/utils/notifier';
-	import { FileDownIcon, ImportIcon, PlusIcon, TrashIcon } from 'lucide-svelte';
+	import { FileDownIcon, ImportIcon, PlusIcon, TrashIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import { xact } from '$lib/data/mainStore';
 	import type { PageData } from './$types';

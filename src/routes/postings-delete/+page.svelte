@@ -3,7 +3,7 @@
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { xact } from '$lib/data/mainStore';
 	import { Modal } from '@skeletonlabs/skeleton-svelte';
-	import { CheckIcon, TrashIcon } from 'lucide-svelte';
+	import { CheckIcon, TrashIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	let isDeleteConfirmationOpen = $state(false);
 	let indexToDelete = -1;

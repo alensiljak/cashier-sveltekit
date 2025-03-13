@@ -1,5 +1,5 @@
 <script>
-	import { RefreshCwIcon, SettingsIcon } from "lucide-svelte";
+	import { RefreshCwIcon, SettingsIcon } from "@lucide/svelte";
 import CardTemplate from "./HomeCardTemplate.svelte";
 
 </script>

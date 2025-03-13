@@ -4,7 +4,7 @@
 	import appService from '$lib/services/appService';
 	import { getFilenameForBackup } from '$lib/services/cloudBackupService';
 	import Notifier from '$lib/utils/notifier';
-	import { CopyIcon, FileDownIcon } from 'lucide-svelte';
+	import { CopyIcon, FileDownIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 
 	const dataType = page.params.dataType;

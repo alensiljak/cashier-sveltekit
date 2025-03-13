@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { debounceAction } from '$lib/utils/debounce';
-	import { SearchIcon } from 'lucide-svelte';
+	import { SearchIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 
 	interface Props {

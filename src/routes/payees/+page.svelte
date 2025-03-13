@@ -5,7 +5,7 @@
 	import { onMount } from 'svelte';
 	import { selectionMetadata } from '$lib/data/mainStore';
 	import Fab from '$lib/components/FAB.svelte';
-	import { CheckIcon } from 'lucide-svelte';
+	import { CheckIcon } from '@lucide/svelte';
 	import SearchToolbar from '$lib/components/SearchToolbar.svelte';
 	import { ListSearch } from '$lib/utils/ListSearch';
 	import Notifier from '$lib/utils/notifier';

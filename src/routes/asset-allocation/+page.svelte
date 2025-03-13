@@ -8,7 +8,7 @@
 	import { NUMBER_FORMAT } from '$lib/constants.js';
 	import { AaStocksStore, AssetAllocationStore } from '$lib/data/mainStore.js';
 	import Notifier from '$lib/utils/notifier.js';
-	import { DatabaseZapIcon, FileDownIcon, ScaleIcon } from 'lucide-svelte';
+	import { DatabaseZapIcon, FileDownIcon, ScaleIcon } from '@lucide/svelte';
 	import numeral from 'numeral';
 	import { onMount } from 'svelte';
 
