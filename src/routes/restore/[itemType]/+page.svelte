@@ -10,6 +10,7 @@
 	let _content = $state<string>();
 
 	Notifier.init();
+	
 	let isRestoreConfirmationOpen = $state(false);
 
 	/**

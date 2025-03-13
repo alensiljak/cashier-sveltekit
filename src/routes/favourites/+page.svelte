@@ -15,7 +15,9 @@
 	import { Modal } from '@skeletonlabs/skeleton-svelte';
 	import { ArrowUpDownIcon, PlusCircleIcon, PlusIcon, Trash2Icon, TrashIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
+
 	Notifier.init();
+	
 	let isDeleteAllConfirmationOpen = $state(false);
 
 	let accounts: Account[] = $state([]);

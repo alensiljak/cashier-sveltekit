@@ -9,6 +9,8 @@
 	import Notifier from '$lib/utils/notifier';
 	import { getXactAmountColour } from '$lib/utils/formatter';
 
+	Notifier.init();
+	
 	let xacts: Xact[] = $state([]);
 	let xactBalances: Money[] = $state([]);
 

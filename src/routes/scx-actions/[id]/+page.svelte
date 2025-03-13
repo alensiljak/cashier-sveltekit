@@ -20,7 +20,9 @@
 	import { onMount } from 'svelte';
 	import db from '$lib/data/db';
 	import { Modal } from '@skeletonlabs/skeleton-svelte';
+
 	Notifier.init();
+	
 	// dialog modals
 	let isEnterConfirmationOpen = $state(false);
 	let isSkipConfirmationOpen = $state(false);

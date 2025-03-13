@@ -6,7 +6,9 @@
 	import { Modal } from '@skeletonlabs/skeleton-svelte';
 	import { CheckIcon, DeleteIcon, TrashIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
+
 	Notifier.init();
+	
 	let isDeleteConfirmationOpen = $state(false);
 	let indexToDelete = $state(-1);
 

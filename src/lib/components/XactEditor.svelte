@@ -12,6 +12,8 @@
 	import { ArrowUpDownIcon, PlusCircleIcon, SigmaIcon, TrashIcon } from '@lucide/svelte';
 	import { Big } from 'big.js'
 
+	Notifier.init();
+	
 	let sum = $state(Big(0));
 	let _emptyPostingCount = 0;
 

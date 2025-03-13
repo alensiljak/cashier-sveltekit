@@ -15,6 +15,8 @@
 	import { base } from '$app/paths';
 	import TransactionEditor from '$lib/components/XactEditor.svelte';
 
+	Notifier.init();
+
 	let previousPage: string = base;
 
 	onMount(async () => {

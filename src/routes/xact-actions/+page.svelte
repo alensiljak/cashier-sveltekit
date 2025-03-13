@@ -12,7 +12,9 @@
 	import { Modal } from '@skeletonlabs/skeleton-svelte';
 	import { CalendarClockIcon, CopyIcon, PenSquareIcon, TrashIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
+
 	Notifier.init();
+	
 	let isDeleteConfirmationOpen = $state(false);
 
 	onMount(async () => {});
