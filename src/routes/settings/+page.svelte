@@ -4,14 +4,13 @@
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { SettingKeys, settings } from '$lib/settings';
 	import Notifier from '$lib/utils/notifier';
-	import { FileUpload } from '@skeletonlabs/skeleton-svelte';
+	import { FileUpload, Modal } from '@skeletonlabs/skeleton-svelte';
 	import db from '$lib/data/db';
 	import appService from '$lib/services/appService';
 	import { invalidateAll } from '$app/navigation';
 	import * as OpfsLib from '$lib/utils/opfslib.js';
 	import { AssetAllocationFilename } from '$lib/constants.js';
 	import { AaStocksStore, AssetAllocationStore, DefaultCurrencyStore } from '$lib/data/mainStore.js';
-	import { Modal } from '@skeletonlabs/skeleton-svelte';
 	import type { FileChangeDetails } from '@zag-js/file-upload';
 
 	Notifier.init();
@@ -154,7 +153,7 @@
 	</label> -->
 
 	<center>
-		<button class="variant-filled-error btn uppercase text-warning-500!" onclick={saveSettings}>
+		<button class="preset-filled-error-500 btn uppercase text-warning-500!" onclick={saveSettings}>
 			Save
 		</button>
 	</center>
@@ -165,7 +164,7 @@
 			<FileUpload
 				name="aa_file"
 				onFileChange={onAaFileChanged}>
-				<button class="btn variant-soft-primary">
+				<button class="btn preset-tonal-primary">
 					<span>Select the AA definition</span>
 				</button>
 			</FileUpload>
@@ -179,7 +178,7 @@
 			<FileUpload
 				name="settings_file"
 				onFileChange={onSettingsFileChangeHandler}>
-				<button class="btn variant-soft-primary">
+				<button class="btn preset-tonal-primary">
 					<span>Select the settings file</span>
 			</FileUpload>
 		</center>
@@ -209,7 +208,7 @@
 			<button type="button" class="variant-tonal btn" onclick={closeModal}>Cancel</button>
 			<button
 				type="button"
-				class="btn-primary variant-filled-primary btn text-tertiary-500"
+				class="btn-primary preset-filled-primary-500 btn text-tertiary-500"
 				onclick={onAaImportConfirmed}>OK</button
 			>
 		</footer>
@@ -234,7 +233,7 @@
 			<button type="button" class="variant-tonal btn" onclick={closeModal}>Cancel</button>
 			<button
 				type="button"
-				class="btn-primary variant-filled-primary btn text-tertiary-500"
+				class="btn-primary preset-filled-primary-500 btn text-tertiary-500"
 				onclick={onSettingsRestoreConfirmed}>OK</button
 			>
 		</footer>

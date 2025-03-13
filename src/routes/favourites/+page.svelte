@@ -12,10 +12,9 @@
 	import { SelectionModeMetadata, SettingKeys, settings } from '$lib/settings';
 	import { formatAmount, getMoneyColour } from '$lib/utils/formatter';
 	import Notifier from '$lib/utils/notifier';
+	import { Modal } from '@skeletonlabs/skeleton-svelte';
 	import { ArrowUpDownIcon, PlusCircleIcon, PlusIcon, Trash2Icon, TrashIcon } from 'lucide-svelte';
 	import { onMount } from 'svelte';
-	import { Modal } from '@skeletonlabs/skeleton-svelte';
-
 	Notifier.init();
 	let isDeleteAllConfirmationOpen = $state(false);
 
@@ -145,7 +144,7 @@
 						</div>
 						{#key refreshKey}
 							<data class={`content-end text-end ${getMoneyColour(account.balance as Money)}`}>
-								{formatAmount(account.balance?.quantity as number)}&nbsp;{account.balance?.currency}
+								{formatAmount(account.balance?.quantity as number)} {account.balance?.currency}
 							</data>
 						{/key}
 					</div>
@@ -176,7 +175,7 @@
 			<button type="button" class="variant-tonal btn" onclick={closeModal}>Cancel</button>
 			<button
 				type="button"
-				class="btn-primary variant-filled-primary btn text-tertiary-500"
+				class="btn-primary preset-filled-primary-500 btn text-tertiary-500"
 				onclick={onDeleteAllConfirmed}>OK</button
 			>
 		</footer>

@@ -67,9 +67,9 @@
     {/snippet}
     {#snippet footer()}
     <div class="grid grid-cols-2 gap-4 place-items-center">
-        <button type="button" class="btn variant-filled-primary" onclick={onBackupClick}>
+        <button type="button" class="btn preset-filled-primary-500" onclick={onBackupClick}>
             Backup</button>
-        <button type="button" class="btn variant-filled-tertiary" onclick={onRestoreClick}>
+        <button type="button" class="btn preset-filled-tertiary-500" onclick={onRestoreClick}>
             Restore</button>
     </div>
     {/snippet}

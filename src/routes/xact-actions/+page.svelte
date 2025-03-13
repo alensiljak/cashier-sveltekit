@@ -9,10 +9,9 @@
 	import { ScheduledTransaction, Xact } from '$lib/data/model';
 	import appService from '$lib/services/appService';
 	import Notifier from '$lib/utils/notifier';
+	import { Modal } from '@skeletonlabs/skeleton-svelte';
 	import { CalendarClockIcon, CopyIcon, PenSquareIcon, TrashIcon } from 'lucide-svelte';
 	import { onMount } from 'svelte';
-	import { Modal } from '@skeletonlabs/skeleton-svelte';
-
 	Notifier.init();
 	let isDeleteConfirmationOpen = $state(false);
 
@@ -160,7 +159,7 @@
 			<button type="button" class="variant-tonal btn" onclick={closeModal}>Cancel</button>
 			<button
 				type="button"
-				class="btn-primary variant-filled-primary btn text-tertiary-500"
+				class="btn-primary preset-filled-primary-500 btn text-tertiary-500"
 				onclick={onDeleteConfirmed}>OK</button
 			>
 		</footer>

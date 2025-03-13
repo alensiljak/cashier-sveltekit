@@ -3,10 +3,9 @@
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { SettingKeys, settings } from '$lib/settings';
 	import Notifier from '$lib/utils/notifier';
+	import { Modal } from '@skeletonlabs/skeleton-svelte';
 	import { CheckIcon, DeleteIcon, TrashIcon } from 'lucide-svelte';
 	import { onMount } from 'svelte';
-	import { Modal } from '@skeletonlabs/skeleton-svelte';
-
 	Notifier.init();
 	let isDeleteConfirmationOpen = $state(false);
 	let indexToDelete = $state(-1);
@@ -90,7 +89,7 @@
 			<button type="button" class="variant-tonal btn" onclick={closeModal}>Cancel</button>
 			<button
 				type="button"
-				class="btn-primary variant-filled-primary btn text-tertiary-500"
+				class="btn-primary preset-filled-primary-500 btn text-tertiary-500"
 				onclick={onDeleteConfirmed}>OK</button
 			>
 		</footer>

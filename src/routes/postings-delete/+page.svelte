@@ -2,10 +2,9 @@
 	import Fab from '$lib/components/FAB.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { xact } from '$lib/data/mainStore';
+	import { Modal } from '@skeletonlabs/skeleton-svelte';
 	import { CheckIcon, TrashIcon } from 'lucide-svelte';
 	import { onMount } from 'svelte';
-	import { Modal } from '@skeletonlabs/skeleton-svelte';
-
 	let isDeleteConfirmationOpen = $state(false);
 	let indexToDelete = -1;
 
@@ -51,7 +50,7 @@
 					{posting.account}
 				</span>
 				<button
-					class="variant-ringed btn-icon mr-2 text-secondary-500"
+					class="preset-outlined btn-icon mr-2 text-secondary-500"
 					onclick={() => onDeleteClicked(i)}
 				>
 					<TrashIcon />
@@ -80,7 +79,7 @@
 			<button type="button" class="variant-tonal btn" onclick={closeModal}>Cancel</button>
 			<button
 				type="button"
-				class="btn-primary variant-filled-primary btn text-tertiary-500"
+				class="btn-primary preset-filled-primary-500 btn text-tertiary-500"
 				onclick={onDeleteConfirmed}>OK</button
 			>
 		</footer>

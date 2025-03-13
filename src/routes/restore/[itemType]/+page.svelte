@@ -3,8 +3,7 @@
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import appService from '$lib/services/appService';
 	import Notifier from '$lib/utils/notifier';
-	import { FileUpload } from '@skeletonlabs/skeleton-svelte';
-	import { Modal } from '@skeletonlabs/skeleton-svelte';
+	import { FileUpload, Modal } from '@skeletonlabs/skeleton-svelte';
 	import type { FileChangeDetails } from '@zag-js/file-upload';
 
 	const itemType = page.params.itemType;
@@ -105,7 +104,7 @@
 			<button type="button" class="variant-tonal btn" onclick={closeModal}>Cancel</button>
 			<button
 				type="button"
-				class="btn-primary variant-filled-primary btn text-tertiary-500"
+				class="btn-primary preset-filled-primary-500 btn text-tertiary-500"
 				onclick={onRestoreConfirmed}>OK</button
 			>
 		</footer>

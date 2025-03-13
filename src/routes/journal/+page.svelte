@@ -7,11 +7,11 @@
 	import db from '$lib/data/db';
 	import { Xact } from '$lib/data/model';
 	import Notifier from '$lib/utils/notifier';
-	import { Modal } from '@skeletonlabs/skeleton-svelte';
 	import { FileDownIcon, ImportIcon, PlusIcon, TrashIcon } from 'lucide-svelte';
 	import { onMount } from 'svelte';
 	import { xact } from '$lib/data/mainStore';
 	import type { PageData } from './$types';
+	import { Modal } from '@skeletonlabs/skeleton-svelte';
 
 	Notifier.init();
 	let isDeleteAllConfirmationOpen = $state(false);
@@ -121,7 +121,7 @@
 			<button type="button" class="variant-tonal btn" onclick={closeModal}>Cancel</button>
 			<button
 				type="button"
-				class="btn-primary variant-filled-primary btn text-tertiary-500"
+				class="btn-primary preset-filled-primary-500 btn text-tertiary-500"
 				onclick={onDeleteAllConfirmed}>OK</button
 			>
 		</footer>

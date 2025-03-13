@@ -2,9 +2,8 @@
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import * as BackupService from '$lib/services/backupService';
 	import Notifier from '$lib/utils/notifier';
-	import { FileUpload } from '@skeletonlabs/skeleton-svelte';
+	import { FileUpload, Modal } from '@skeletonlabs/skeleton-svelte';
 	import { onMount } from 'svelte';
-	import { Modal } from '@skeletonlabs/skeleton-svelte';
 	import type { FileChangeDetails } from '@zag-js/file-upload';
 
 	let isRestoreConfirmationOpen = $state(false);
@@ -81,7 +80,7 @@
 		</div>
 
 		<center class="pt-4">
-			<button type="button" class="variant-filled-primary btn" onclick={onBackupClick}
+			<button type="button" class="preset-filled-primary-500 btn" onclick={onBackupClick}
 				>Backup</button
 			>
 		</center>
@@ -92,7 +91,7 @@
 		<div class="flex flex-row items-center space-x-4">
 			<p>To restore (overwriting any existing records!):</p>
 			<FileUpload name="files" onFileChange={onChangeHandler}>
-				<button class="btn variant-soft-secondary">
+				<button class="btn preset-tonal-secondary">
 					<span>Click to choose the backup file</span>
 				</button>
 			</FileUpload>
@@ -132,7 +131,7 @@
 			<button type="button" class="variant-tonal btn" onclick={closeModal}>Cancel</button>
 			<button
 				type="button"
-				class="btn-primary variant-filled-primary btn text-tertiary-500"
+				class="btn-primary preset-filled-primary-500 btn text-tertiary-500"
 				onclick={onRestoreConfirmed}>OK</button
 			>
 		</footer>

@@ -84,14 +84,14 @@
 		<!-- action buttons -->
 		<div class="my-3 flex flex-row justify-center space-x-24 py-3">
 			<!-- copy to clipboard -->
-			<button class="variant-filled-primary btn" onclick={onCopyClick}>
+			<button class="preset-filled-primary-500 btn" onclick={onCopyClick}>
 				<CopyIcon />
 				<span>Copy</span>
 			</button>
 			<!-- pCloud Save ?-->
 			<!-- WebShare -->
 			<!-- Download -->
-			<button class="variant-filled-primary btn" onclick={onDownloadClick}>
+			<button class="preset-filled-primary-500 btn" onclick={onDownloadClick}>
 				<FileDownIcon />
 				<span>Download</span>
 			</button>

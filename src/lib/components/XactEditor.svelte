@@ -193,13 +193,13 @@
 			<data class="pl-2">{sum}</data>
 		</div>
 		<div class="flex flex-row justify-center space-x-10">
-			<button type="button" class="variant-ringed-primary btn-icon" onclick={onAddPostingClicked}>
+			<button type="button" class="preset-outlined-primary-500 btn-icon" onclick={onAddPostingClicked}>
 				<PlusCircleIcon />
 			</button>
-			<a class="variant-ringed-primary btn-icon" href="/postings-reorder">
+			<a class="preset-outlined-primary-500 btn-icon" href="/postings-reorder">
 				<ArrowUpDownIcon />
 			</a>
-			<a class="variant-ringed-primary btn-icon" href="/postings-delete">
+			<a class="preset-outlined-primary-500 btn-icon" href="/postings-delete">
 				<TrashIcon />
 			</a>
 		</div>

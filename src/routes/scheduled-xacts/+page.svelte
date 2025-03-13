@@ -127,7 +127,7 @@
 							</div>
 						</div>
 						<data class={`${getMoneyColour(amounts[i])}`}>
-							{amounts[i]?.quantity}&nbsp;{amounts[i]?.currency}
+							{amounts[i]?.quantity} {amounts[i]?.currency}
 						</data>
 					</div>
 				{/each}

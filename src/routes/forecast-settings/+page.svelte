@@ -90,7 +90,7 @@
             <div class="grow">
                 {accountName}
             </div>
-            <button class="btn-icon variant-filled-error" onclick={() => onDeleteClicked(index)}>
+            <button class="btn-icon preset-filled-error-500" onclick={() => onDeleteClicked(index)}>
                 <TrashIcon />
             </button>
         </div>

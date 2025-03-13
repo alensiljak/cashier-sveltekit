@@ -20,7 +20,6 @@
 	import { onMount } from 'svelte';
 	import db from '$lib/data/db';
 	import { Modal } from '@skeletonlabs/skeleton-svelte';
-
 	Notifier.init();
 	// dialog modals
 	let isEnterConfirmationOpen = $state(false);
@@ -249,7 +248,7 @@
 			<button type="button" class="variant-tonal btn" onclick={closeModal}>Cancel</button>
 			<button
 				type="button"
-				class="btn-primary variant-filled-primary btn text-tertiary-500"
+				class="btn-primary preset-filled-primary-500 btn text-tertiary-500"
 				onclick={onEnterConfirmed}>OK</button
 			>
 		</footer>
@@ -274,7 +273,7 @@
 			<button type="button" class="variant-tonal btn" onclick={closeModal}>Cancel</button>
 			<button
 				type="button"
-				class="btn-primary variant-filled-primary btn text-tertiary-500"
+				class="btn-primary preset-filled-primary-500 btn text-tertiary-500"
 				onclick={onSkipConfirmed}>OK</button
 			>
 		</footer>
@@ -301,7 +300,7 @@
 			<button type="button" class="variant-tonal btn" onclick={closeModal}>Cancel</button>
 			<button
 				type="button"
-				class="btn-primary variant-filled-primary btn text-tertiary-500"
+				class="btn-primary preset-filled-primary-500 btn text-tertiary-500"
 				onclick={onDeleteConfirmed}>OK</button
 			>
 		</footer>

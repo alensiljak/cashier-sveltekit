@@ -1,8 +1,5 @@
 <script lang="ts">
 	import { swipe, type SwipeCustomEvent } from 'svelte-gestures';
-    import { 
-        getDrawerStore,
-	} from '@skeletonlabs/skeleton';
 	import Navigation from '$lib/components/navigation.svelte';
 	import { fade } from 'svelte/transition';
 
@@ -37,7 +34,7 @@
 		<slot></slot>
 
 		{#if alertVisible}
-			<aside class="alert variant-ghost" transition:fade={{ duration: 200 }}>
+			<aside class="alert preset-tonal border border-surface-500" transition:fade={{ duration: 200 }}>
 				<!-- Icon -->
 				<div>(icon)</div>
 				<!-- Message -->
