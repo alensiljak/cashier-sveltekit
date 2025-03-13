@@ -26,7 +26,7 @@ const Notifier = {
     // toastStore.trigger(t);
 
     toast.create({
-      // title
+      title: title,
       description: message,
       type: type,
     });
