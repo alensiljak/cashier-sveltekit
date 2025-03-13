@@ -43,7 +43,7 @@
 					<Menu size={24} />
 				</span>
 			</button>
-			<h4 class="h4 pl-0 leading-9">{title}</h4>
+			<h5 class="h5 pl-0 leading-9">{title}</h5>
 		{/snippet}
 		<!-- {#snippet children()}
 	{/snippet} -->
@@ -72,7 +72,7 @@
 					<EllipsisVertical size={20} class="" />
 				</button> -->
 				<!-- Pop-up Menu -->
-				<!-- <div class="list-nav variant-filled-primary min-w-52 shadow-sm" data-popup="popupClick">
+				<!-- <div class="list-nav preset-filled-primary-500 min-w-52 shadow-sm" data-popup="popupClick">
 					<menu>
 						{@render menuItems?.()}
 					</menu>

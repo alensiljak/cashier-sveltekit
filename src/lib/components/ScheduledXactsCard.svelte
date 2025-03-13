@@ -86,7 +86,7 @@
 	{/snippet}
 	{#snippet footer()}
 	<center>
-		<button type="button" class="variant-outline-warning btn uppercase" onclick={onExportClick}>
+		<button type="button" class="preset-outlined-warning-500 btn uppercase" onclick={onExportClick}>
 			<FileUpIcon />
 			<span>Export</span>
 		</button>

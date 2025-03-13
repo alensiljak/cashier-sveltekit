@@ -15,7 +15,7 @@ import CardTemplate from "./HomeCardTemplate.svelte";
     {/snippet}
     {#snippet footer()}
         <center>
-            <a href="/sync" class="btn variant-outline-warning uppercase">
+            <a href="/sync" class="btn preset-outlined-warning-500 uppercase">
                 <span><SettingsIcon /></span>
                 <span>Sync Settings</span>
             </a>

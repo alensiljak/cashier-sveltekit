@@ -59,7 +59,7 @@
 				<div class="pr-2">
 					<button
 						type="button"
-						class="variant-outline btn-icon bg-secondary-500 text-tertiary-500"
+						class="preset-outline btn-icon bg-secondary-500 text-tertiary-500"
 						onclick={() => onDeleteClicked(i)}
 					>
 						<TrashIcon />
@@ -88,7 +88,7 @@
 			</p>
 		</article>
 		<footer class="flex justify-end gap-4">
-			<button type="button" class="variant-tonal btn" onclick={closeModal}>Cancel</button>
+			<button type="button" class="preset-tonal btn" onclick={closeModal}>Cancel</button>
 			<button
 				type="button"
 				class="btn-primary preset-filled-primary-500 btn text-tertiary-500"

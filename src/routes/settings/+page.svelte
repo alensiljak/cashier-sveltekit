@@ -205,7 +205,7 @@
 			<p class="opacity-60">Do you want to import the selected Asset Allocation file?</p>
 		</article>
 		<footer class="flex justify-end gap-4">
-			<button type="button" class="variant-tonal btn" onclick={closeModal}>Cancel</button>
+			<button type="button" class="preset-tonal btn" onclick={closeModal}>Cancel</button>
 			<button
 				type="button"
 				class="btn-primary preset-filled-primary-500 btn text-tertiary-500"
@@ -230,7 +230,7 @@
 			<p class="opacity-60">Do you want to restore the selected settings file?</p>
 		</article>
 		<footer class="flex justify-end gap-4">
-			<button type="button" class="variant-tonal btn" onclick={closeModal}>Cancel</button>
+			<button type="button" class="preset-tonal btn" onclick={closeModal}>Cancel</button>
 			<button
 				type="button"
 				class="btn-primary preset-filled-primary-500 btn text-tertiary-500"

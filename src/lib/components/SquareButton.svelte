@@ -14,7 +14,7 @@
 	let { Icon, classes, onclick, children }: Props = $props();
     // colour = 'primary',
 
-	// let buttonColour = $derived(colour ? 'variant-filled-' + colour : '');
+	// let buttonColour = $derived(colour ? 'preset-filled-' + colour : '');
 </script>
 
 <!-- flex-col text-center -->

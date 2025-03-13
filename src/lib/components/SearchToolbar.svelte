@@ -40,6 +40,6 @@
 		/>
 		<div class="text-white"><SearchIcon /></div>
 	</div>
-	<!-- <button class="variant-filled-secondary">Submit</button> -->
+	<!-- <button class="preset-filled-secondary-500">Submit</button> -->
 	<!-- <div class="input-group-shim"><SearchIcon /></div> -->
 </search>

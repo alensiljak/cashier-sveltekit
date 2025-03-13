@@ -1,5 +1,7 @@
 /* Tailwind */
 @import 'tailwindcss';
+@plugin '@tailwindcss/forms';
+@plugin '@tailwindcss/typography';
 
 /* Skeleton */
 @import "@skeletonlabs/skeleton";
