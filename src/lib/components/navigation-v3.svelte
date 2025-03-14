@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { Navigation } from '@skeletonlabs/skeleton-svelte';
-	// Icons
-	import IconSettings from '@lucide/svelte/icons/settings';
+	import { drawerState } from '$lib/data/mainStore';
 	import { page } from '$app/state';
+	// Icons
 	import {
 		CalendarClockIcon,
 		ChartPieIcon,
@@ -22,23 +22,22 @@
 
 	let isExpanded = $state(true);
 
+	function closeDrawer(): void {
+		// the new drawer
+		drawerState.update((state) => false);
+	}
+
 	function toggleExpanded() {
 		isExpanded = !isExpanded;
 	}
 </script>
 
-<!-- <div class="card border-surface-100-900 grid h-[760px] w-full grid-cols-[auto_1fr] border-[1px]"> -->
-<!-- Component -->
 <Navigation.Rail
 	expanded={isExpanded}
 	classes="w-full bg-surface-900 text-tertiary-100 preset-tonal-tertiary-900-100"
 	tilesJustify="top"
 	padding="p-0"
 >
-	<!-- 
-preset-tonal-tertiary-900-100
-bg-surface-900 text-tertiary-50 
- hover:bg-primary-200-->
 	{#snippet header()}
 		<div class="bg-primary-500 w-full p-4">
 			<div class="flex w-full items-center justify-center">
@@ -56,6 +55,7 @@ bg-surface-900 text-tertiary-50
 			hover={hoverClass}
 			active={activeClass}
 			selected={page.url.pathname === '/'}
+			onclick={closeDrawer}
 		>
 			<HomeIcon />
 		</Navigation.Tile>
@@ -65,6 +65,7 @@ bg-surface-900 text-tertiary-50
 			hover={hoverClass}
 			active={activeClass}
 			selected={page.url.pathname === '/journal'}
+			onclick={closeDrawer}
 		>
 			<ScrollIcon />
 		</Navigation.Tile>
@@ -74,6 +75,7 @@ bg-surface-900 text-tertiary-50
 			hover={hoverClass}
 			active={activeClass}
 			selected={page.url.pathname === '/favourites'}
+			onclick={closeDrawer}
 		>
 			<StarIcon />
 		</Navigation.Tile>
@@ -83,6 +85,7 @@ bg-surface-900 text-tertiary-50
 			hover={hoverClass}
 			active={activeClass}
 			selected={page.url.pathname === '/accounts'}
+			onclick={closeDrawer}
 		>
 			<LandmarkIcon />
 		</Navigation.Tile>
@@ -92,6 +95,7 @@ bg-surface-900 text-tertiary-50
 			hover={hoverClass}
 			active={activeClass}
 			selected={page.url.pathname === '/payees'}
+			onclick={closeDrawer}
 		>
 			<UsersRoundIcon />
 		</Navigation.Tile>
@@ -101,6 +105,7 @@ bg-surface-900 text-tertiary-50
 			hover={hoverClass}
 			active={activeClass}
 			selected={page.url.pathname === '/asset-allocation'}
+			onclick={closeDrawer}
 		>
 			<ChartPieIcon />
 		</Navigation.Tile>
@@ -110,6 +115,7 @@ bg-surface-900 text-tertiary-50
 			hover={hoverClass}
 			active={activeClass}
 			selected={page.url.pathname === '/scheduled-xacts'}
+			onclick={closeDrawer}
 		>
 			<CalendarClockIcon />
 		</Navigation.Tile>
@@ -122,6 +128,7 @@ bg-surface-900 text-tertiary-50
 			hover={hoverClass}
 			active={activeClass}
 			selected={page.url.pathname === '/backup'}
+			onclick={closeDrawer}
 		>
 			<DatabaseIcon />
 		</Navigation.Tile>
@@ -131,6 +138,7 @@ bg-surface-900 text-tertiary-50
 			hover={hoverClass}
 			active={activeClass}
 			selected={page.url.pathname === '/help'}
+			onclick={closeDrawer}
 		>
 			<HelpCircleIcon />
 		</Navigation.Tile>
@@ -140,6 +148,7 @@ bg-surface-900 text-tertiary-50
 			hover={hoverClass}
 			active={activeClass}
 			selected={page.url.pathname === '/about'}
+			onclick={closeDrawer}
 		>
 			<InfoIcon />
 		</Navigation.Tile>
@@ -151,21 +160,9 @@ bg-surface-900 text-tertiary-50
 			hover={hoverClass}
 			active={activeClass}
 			selected={page.url.pathname === '/settings'}
+			onclick={closeDrawer}
 		>
 			<SettingsIcon />
 		</Navigation.Tile>
 	{/snippet}
 </Navigation.Rail>
-
-<!-- Content -->
-<!-- <div class="flex items-center justify-center">
-      <p class="opacity-20">(Content)</p>
-    </div> -->
-<!-- </div> -->
-<style>
-	/* active navigation item style */
-	/* replace @apply bg-secondary-500; */
-	/* .active {
-		background-color: var(--color-secondary-500);
-	} */
-</style>
