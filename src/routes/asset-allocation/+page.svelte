@@ -144,7 +144,7 @@
 	</Toolbar>
 
 	<section class="overflow-auto p-3">
-		<table class="table mx-auto max-w-2xl">
+		<table class="mx-auto max-w-2xl ">
 			<thead>
 				<tr>
 					<th colspan="1"></th>
@@ -152,13 +152,13 @@
 					<th colspan="3" style="text-align: center;">Value</th>
 				</tr>
 				<tr>
-					<th class="table-cell-fit text-center">Asset Class</th>
-					<th class="table-cell-fit text-center">Target</th>
-					<th class="table-cell-fit text-center">Current</th>
-					<th class="table-cell-fit text-center">Diff %</th>
-					<th class="table-cell-fit text-center">Allocated</th>
-					<th class="table-cell-fit text-center">Current</th>
-					<th class="table-cell-fit text-center">Difference</th>
+					<th class="table-cell-fit text-center px-2">Asset Class</th>
+					<th class="table-cell-fit text-center px-2">Target</th>
+					<th class="table-cell-fit text-center px-2">Current</th>
+					<th class="table-cell-fit text-center px-2">Diff %</th>
+					<th class="table-cell-fit text-center px-2">Allocated</th>
+					<th class="table-cell-fit text-center pl-5 pr-2">Current</th>
+					<th class="table-cell-fit text-center px-2">Difference</th>
 				</tr>
 			</thead>
 			<tbody>
