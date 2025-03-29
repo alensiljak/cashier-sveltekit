@@ -88,6 +88,9 @@ export class ScheduledTransaction {
   endDate: unknown
   remarks?: string
 
+  // Transaction Amount, for display only.
+  amount?: Money
+
   constructor() {
     this.nextDate = ''
     this.period = ''

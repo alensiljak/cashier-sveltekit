@@ -5,7 +5,6 @@
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import { ISODATEFORMAT } from '$lib/constants';
-	import db from '$lib/data/db';
 	import { ScheduledXact, xact } from '$lib/data/mainStore';
 	import { ScheduledTransaction, Xact, type Money } from '$lib/data/model';
 	import appService from '$lib/services/appService';
@@ -17,44 +16,25 @@
 	import moment from 'moment';
 	import { onMount } from 'svelte';
 
-	Notifier.init();
-
 	const today = moment().format(ISODATEFORMAT);
+	let { data }: { data: PageData } = $props();
+
+	Notifier.init();
 
 	let allItems: ScheduledTransaction[] = $state([]);
 	let filteredList: ScheduledTransaction[] = $state([]);
-	let amounts: Money[] = $state([]);
 
 	onMount(async () => {
-		await loadData();
-
+		allItems = data.sorted;
 		await calculateAmounts();
+
+		filteredList = [...allItems];
 	});
 
 	function calculateAmounts() {
-		let xacts = filteredList.map((scx) => scx.transaction);
-		amounts = XactAugmenter.calculateXactAmounts(xacts as Xact[]);
-	}
-
-	async function loadData() {
-		let sorted = await db.scheduled
-			.orderBy('nextDate')
-			//.sortBy('symbol')
-			.toArray();
-
-		// sort also by payee, case insensitive
-		sorted.sort((a, b) => {
-			const tx1 = a.transaction;
-			const tx2 = b.transaction;
-
-			var sorting = a.nextDate.localeCompare(b.nextDate);
-			return sorting == 0
-				? tx1.payee.localeCompare(tx2.payee, 'en', { sensitivity: 'base' })
-				: sorting;
+		allItems.forEach(scx => {
+			scx.amount = XactAugmenter.calculateXactAmount(scx.transaction as Xact);
 		});
-
-		allItems = sorted;
-		filteredList = sorted;
 	}
 
 	async function onFabClicked() {
@@ -126,8 +106,8 @@
 								{scx.remarks?.split('\n')[0]}
 							</div>
 						</div>
-						<data class={`${getMoneyColour(amounts[i])}`}>
-							{amounts[i]?.quantity} {amounts[i]?.currency}
+						<data class={`${getMoneyColour(scx.amount as Money)}`}>
+							{scx.amount?.quantity} {scx.amount?.currency}
 						</data>
 					</div>
 				{/each}
