@@ -32,6 +32,9 @@
 	});
 
 	function calculateAmounts() {
+		// Populate empty postings.
+		XactAugmenter.calculateEmptyPostingAmounts(allItems.map((scx) => scx.transaction) as Xact[]);
+		// Calculate the amounts and cache them in the amount property.
 		allItems.forEach(scx => {
 			scx.amount = XactAugmenter.calculateXactAmount(scx.transaction as Xact);
 		});

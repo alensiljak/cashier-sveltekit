@@ -168,6 +168,12 @@ export class XactAugmenter {
     return result
   }
 
+  /**
+   * It is recommended to run calculateEmptyPostingAmounts() to populate the blank Postings prior to calling this method.
+   * This method is used to calculate the amount for a single transaction.
+   * @param xact The transaction to calculate the amount for.
+   * @returns 
+   */
   static calculateXactAmount(xact: Xact): Money {
     const balance = new Money()
 
