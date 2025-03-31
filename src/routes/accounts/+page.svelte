@@ -2,29 +2,40 @@
 	import { goto } from '$app/navigation';
 	import SearchToolbar from '$lib/components/SearchToolbar.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
-	import CashierDAL from '$lib/data/dal';
 	import { selectionMetadata } from '$lib/data/mainStore';
 	import type { Account } from '$lib/data/model';
 	import { ListSearch } from '$lib/utils/ListSearch';
 	import { onMount } from 'svelte';
+	import type { PageData } from './$types';
 
+	let { data }: { data: PageData } = $props();
+	
 	let accounts: Array<Account> = [];
-	let filteredAccounts: Array<Account> = [];
+	let filteredAccounts: Array<Account> = $state([]);
 	let isInSelectionMode = false;
 
 	onMount(async () => {
-		await loadData();
+		accounts = data.accounts;
+		filteredAccounts = accounts;
 
 		isInSelectionMode = $selectionMetadata !== undefined;
 	});
 
-	async function loadData() {
-		const dal = new CashierDAL();
-		accounts = await dal.loadAccounts().toArray();
-		// .sortBy('name');
-		// accounts = x.toArray();
-
-		filteredAccounts = accounts;
+	/**
+	 * Colour the account names based on the account type.
+	 */
+	function getAccountColour(accountName: string): string {
+		if (accountName.startsWith('Income:')) {
+			return 'text-primary-200';
+		} else if (accountName.startsWith('Expenses:')) {
+			return 'text-secondary-200';
+		} else if (accountName.startsWith('Assets:')) {
+			return 'text-tertiary-100';
+		} else if (accountName.startsWith('Liabilities:')) {
+			return 'text-purple-200';
+		} else {
+			return '';
+		}
 	}
 
 	function onAccountSelected(name: string) {
@@ -68,7 +79,7 @@
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 			<div
-				class="border-b border-tertiary-200/15 py-2"
+				class="border-b border-tertiary-200/15 py-2 {getAccountColour(account.name)}"
 				onclick={() => onAccountSelected(account.name)}
 				role="listitem"
 			>
