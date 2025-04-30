@@ -10,7 +10,7 @@
 	import appService from '$lib/services/appService';
 	import Notifier from '$lib/utils/notifier';
 	import { Modal } from '@skeletonlabs/skeleton-svelte';
-	import { CalendarClockIcon, CopyIcon, PenSquareIcon, TrashIcon } from '@lucide/svelte';
+	import { CalendarClockIcon, CopyIcon, ClipboardIcon, PenSquareIcon, TrashIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 
 	Notifier.init();
@@ -111,7 +111,7 @@
 			Edit
 		</SquareButton>
 		<SquareButton
-			Icon={CopyIcon}
+			Icon={ClipboardIcon}
 			classes="bg-primary-500 text-tertiary-500"
 			onclick={onDuplicateClick}
 		>
@@ -129,7 +129,6 @@
 			classes="bg-primary-500 text-tertiary-500"
 			onclick={onCopyClicked}
 		>
-			Copy <br />
 			Ledger
 		</SquareButton>
 		<SquareButton
