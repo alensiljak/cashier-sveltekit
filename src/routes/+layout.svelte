@@ -3,14 +3,16 @@
 	import '../app.css';
 	// libs
 	import { swipe, type SwipeCustomEvent } from 'svelte-gestures';
-	import Navigation from '$lib/components/navigation.svelte';
+	// import Navigation from '$lib/components/navigation.svelte';
 	// PWA
 	import { pwaInfo } from 'virtual:pwa-info';
 	import { pwaAssetsHead } from 'virtual:pwa-assets/head';
 	import { onMount } from 'svelte';
-	import { Modal, ToastProvider } from '@skeletonlabs/skeleton-svelte';
+	import { Modal } from '@skeletonlabs/skeleton-svelte';
 	import { drawerState } from '$lib/data/mainStore';
 	import NavigationV3 from '$lib/components/navigation-v3.svelte';
+	import { Toaster } from '@skeletonlabs/skeleton-svelte';
+	import { toaster } from '../lib/toaster-svelte';
 
 	let { children } = $props();
 
@@ -56,6 +58,8 @@
 	{/each}
 </svelte:head>
 
+<Toaster {toaster}></Toaster>
+
 <div use:swipe onswipe={handleSwipe}>
 	<!-- sidebar as modal -->
 	<Modal
@@ -83,9 +87,7 @@
 		</aside>
 
 		<main class="col-span-1">
-			<ToastProvider>
-				{@render children()}
-			</ToastProvider>
+			{@render children()}
 		</main>
 	</div>
 </div>
