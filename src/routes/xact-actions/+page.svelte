@@ -129,7 +129,8 @@
 			classes="bg-primary-500 text-tertiary-500"
 			onclick={onCopyClicked}
 		>
-			Copy Ledger
+			Copy <br />
+			Ledger
 		</SquareButton>
 		<SquareButton
 			Icon={TrashIcon}
