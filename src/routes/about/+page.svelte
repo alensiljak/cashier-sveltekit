@@ -25,9 +25,10 @@
 		</p>
 
 		<p>
-			To achieve its full purpose, Cashier is synchronized with Ledger data. It allows exporting the
+			To achieve its full purpose, Cashier is synchronized with Ledger-cli data. It allows exporting the
 			created transactions. For a proper start, it should be populated with the data from Ledger,
-			using Cashier Server, <a class="anchor" href="https://github.com/alensiljak/cashier-server-rust">repo</a>.
+			using Cashier Server, <a class="anchor" href="https://github.com/alensiljak/cashier-server-python">repo</a>.
+			Install the server with <code>uv tool install cashier-server</code>.
 		</p>
 
         <h3 class="h3">Links</h3>
