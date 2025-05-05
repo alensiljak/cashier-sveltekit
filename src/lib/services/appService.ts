@@ -452,9 +452,9 @@ class AppService {
     return txs
   }
 
-  loadAssetClass(fullname: string) {
-    return db.assetAllocation.get(fullname)
-  }
+  // loadAssetClass(fullname: string) {
+  //   return db.assetAllocation.get(fullname)
+  // }
 
   /**
    * Loads the favourite accounts.
@@ -468,17 +468,22 @@ class AppService {
     }
 
     // load account details
-    const accounts = await db.accounts.bulkGet(favArray)
+    const accounts: Account[] = await db.accounts.bulkGet(favArray)
 
-    // Handle any accounts that have not been found
+    // Handle any accounts that have not been found.
+    // Keep them in the list. They should be grayed out.
     for (let i = 0; i < accounts.length; i++) {
-      const account = accounts[i]
+      let account = accounts[i]
       if (account === undefined) {
         // the account has been removed but the Favourites record exists.
         console.warn('Account marked as favourite but not found in Accounts.')
 
-        accounts.splice(i, 1)
-        i--
+        account = new Account(favArray[i])
+        account.exists = false
+        accounts[i] = account
+        
+        // accounts.splice(i, 1)
+        // i--
       }
     }
 

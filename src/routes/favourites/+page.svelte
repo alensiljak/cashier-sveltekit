@@ -65,6 +65,10 @@
 		selectionMetadata.set(undefined);
 	}
 
+	function isGrayedOut(account: Account) {
+		return account.exists === false;
+	}
+
 	async function loadData() {
 		// load from settings
 		accounts = await appService.loadFavouriteAccounts();
@@ -136,8 +140,8 @@
 					<!-- svelte-ignore a11y_click_events_have_key_events -->
 					<!-- svelte-ignore a11y_no_static_element_interactions -->
 					<div
-						class="flex cursor-pointer flex-row border-b border-tertiary-200/15
-								py-1 hover:bg-surface-600"
+						class={`flex cursor-pointer flex-row border-b border-tertiary-200/15
+								py-1 hover:bg-surface-600 ${isGrayedOut(account) ? 'text-surface-300' : ''}`}
 						onclick={() => onAccountClick(account.name)}
 					>
 						<div class="mr-1 flex grow flex-col">
