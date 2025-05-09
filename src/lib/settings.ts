@@ -37,6 +37,7 @@ export const SettingKeys = {
   dbInitialized: 'dbInitialized', // Marks that the db has been initialized
   pCloudToken: 'pCloudToken',
   syncServerUrl: 'syncServerUrl',
+  ptaSystem: 'ptaSystem', // ledger or beancount
   // path to the prices repository for CashierSync.
   pricesRepositoryPath: 'pricesRepositoryPath',
   // path to the book repository for CashierSync.

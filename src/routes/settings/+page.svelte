@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import GlossToolbar from '$lib/components/gloss-toolbar.svelte';
+	// import GlossToolbar from '$lib/components/gloss-toolbar.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { SettingKeys, settings } from '$lib/settings';
 	import Notifier from '$lib/utils/notifier';
@@ -21,14 +21,17 @@
 	let rememberLastTransaction = $state<boolean>();
 	let rootInvestmentAccount = $state<string>();
 	let currency = $state<string>();
+	let ptaSystem = $state<string>()
 
 	let settings_files = $state<File[]>();
 	let aa_files = $state<File[]>();
 
 	onMount(async () => {
+		// load data
 		currency = await appService.getDefaultCurrency();
 		rootInvestmentAccount = await settings.get<string>(SettingKeys.rootInvestmentAccount);
 		rememberLastTransaction = await settings.get<boolean>(SettingKeys.rememberLastTransaction);
+		ptaSystem = await settings.get<string>(SettingKeys.ptaSystem)
 	});
 
 	/**
@@ -116,6 +119,8 @@
 		await settings.set(SettingKeys.rootInvestmentAccount, rootInvestmentAccount);
 		await settings.set(SettingKeys.rememberLastTransaction, rememberLastTransaction);
 
+		await settings.set(SettingKeys.ptaSystem, ptaSystem)
+
 		Notifier.success('Settings saved');
 	}
 </script>
@@ -152,11 +157,26 @@
 		<p>Dark mode</p>
 	</label> -->
 
+	<!-- ledger / beancount -->
+	<p>Select the default plain-text-account system:</p>
+	<form class="space-y-2">
+		<label class="flex items-center space-x-2">
+			<input class="radio" type="radio" name="radio-direct" value="beancount" bind:group={ptaSystem} />
+			<p>Beancount</p>
+		</label>
+		<label class="flex items-center space-x-2">
+			<input class="radio" type="radio" checked name="radio-direct" value="ledger" bind:group={ptaSystem} />
+			<p>Ledger-cli</p>
+		</label>
+	</form>
+
 	<center>
 		<button class="preset-filled-error-500 btn uppercase text-warning-500!" onclick={saveSettings}>
 			Save
 		</button>
 	</center>
+
+	<hr />
 
 	<section>
 		<h3 class="h3">Asset Allocation</h3>
