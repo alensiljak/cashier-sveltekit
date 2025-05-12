@@ -131,7 +131,13 @@ class AppService {
         output += '\n' // space between transactions
       }
 
-      output += this.translateToLedger(tx)
+      // prepare output.
+      let output_system = await settings.get(SettingKeys.ptaSystem)
+      if (output_system === 'ledger') {
+        output += this.translateToLedger(tx)
+      } else {
+        output += this.translateToBeancount(tx)
+      }
     }
     return output
   }
@@ -189,6 +195,43 @@ class AppService {
 
       reader.readAsText(fileInfo)
     })
+  }
+
+  /**
+   * Translates Xact into a beancount entry.
+   * @param {Xact} tx
+   * @returns {String} A beancount journal entry
+   */
+  translateToBeancount(tx: Xact) {
+    let output = ''
+
+    // transaction
+    output += tx.date
+    output += ' txn "' + tx.payee + '"'
+    // note
+    if (tx.note) {
+      output += ' "' + tx.note + '"'
+    }
+    output += '\n'
+
+    // postings
+    for (let i = 0; i < tx.postings.length; i++) {
+      const p = tx.postings[i]
+      if (!p.account) continue
+
+      // indent
+      output += '  '
+      output += p.account == null ? '' : p.account
+      if (p.amount) {
+        output += '  '
+        output += p.amount == null ? '' : p.amount
+        output += ' '
+        output += p.currency == null ? '' : p.currency
+      }
+      output += '\n'
+    }
+
+    return output
   }
 
   /**
