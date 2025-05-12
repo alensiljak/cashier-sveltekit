@@ -12,12 +12,16 @@
 	import { Modal } from '@skeletonlabs/skeleton-svelte';
 	import { CalendarClockIcon, CopyIcon, ClipboardIcon, PenSquareIcon, TrashIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
+	import { SettingKeys, settings } from '$lib/settings';
 
 	Notifier.init();
 	
 	let isDeleteConfirmationOpen = $state(false);
+	let ptaSystem = $state('');
 
-	onMount(async () => {});
+	onMount(async () => {
+		ptaSystem = await settings.get(SettingKeys.ptaSystem);
+	});
 
 	/**
 	 * Close all dialogs.
@@ -28,7 +32,12 @@
 
 	async function onCopyClicked() {
 		// get a journal version
-		const text = await appService.translateToLedger($xact);
+		let text = ''
+		if(ptaSystem == 'ledger') {
+			text = appService.translateToLedger($xact);
+		} else {
+			text = appService.translateToBeancount($xact);
+		}
 
 		// copy to clipboard
 		await navigator.clipboard.writeText(text);
@@ -129,7 +138,7 @@
 			classes="bg-primary-500 text-tertiary-500"
 			onclick={onCopyClicked}
 		>
-			Ledger
+			Copy
 		</SquareButton>
 		<SquareButton
 			Icon={TrashIcon}
