@@ -8,6 +8,7 @@
 	import { CashierSync } from '$lib/cashier-sync.js';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { AaStocksStore } from '$lib/data/mainStore';
+	import { SettingKeys, settings } from '$lib/settings';
 	import * as Formatter from '$lib/utils/formatter.js';
 	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
@@ -81,7 +82,9 @@
 	}
 
 	async function runServerCheck(serverUrl: string): Promise<string> {
-		const sync = new CashierSync(serverUrl);
+    	const ptaSystem = await settings.get(SettingKeys.ptaSystem) as string
+
+		const sync = new CashierSync(serverUrl, ptaSystem);
 		const result = await sync.healthCheck();
 		return result;
 	}

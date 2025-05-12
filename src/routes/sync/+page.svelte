@@ -5,24 +5,25 @@
 	import { SettingKeys, settings } from '$lib/settings';
 	import Notifier from '$lib/utils/notifier';
 	import type { PageData } from './$types';
-	import { CashierSync } from '$lib/cashier-sync';
 	import appService from '$lib/services/appService';
 	import CashierDAL from '$lib/data/dal';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import { beforeNavigate } from '$app/navigation';
+	import { CashierSync } from '$lib/cashier-sync';
 
 	Notifier.init();
 
 	let { data }: { data: PageData } = $props();
 
 	let serverUrl = $state('http://localhost:3000');
-	let rootInvestmentAccount = null;
-	let currency = null;
+	let rootInvestmentAccount = '';
+	let currency = '';
+	let ptaSystem: string = '';
 
 	let syncAccounts = $state(false);
 	let syncAaValues = $state(false);
 	let syncPayees = $state(false);
-	let shutdownServer = $state(true);
+	let shutdownServer = $state(false);
 
 	let rotationClass = $state('');
 
@@ -42,6 +43,8 @@
 		serverUrl = await settings.get(SettingKeys.syncServerUrl);
 		rootInvestmentAccount = await settings.get(SettingKeys.rootInvestmentAccount);
 		currency = await appService.getDefaultCurrency();
+    	ptaSystem = await settings.get(SettingKeys.ptaSystem) as string
+
 
 		syncAccounts = await settings.get(SettingKeys.syncAccounts);
 		syncAaValues = await settings.get(SettingKeys.syncAaValues);
@@ -52,7 +55,7 @@
 	 * shut the remote server down
 	 */
 	async function onShutdownClick() {
-		const sync = new CashierSync(serverUrl);
+		const sync = new CashierSync(serverUrl, ptaSystem);
 		try {
 			await sync.shutdown();
 		} catch (error: any) {
@@ -97,7 +100,7 @@
 	}
 
 	async function synchronizeAccounts() {
-		const sync = new CashierSync(serverUrl);
+		const sync = new CashierSync(serverUrl, ptaSystem);
 
 		const report = await sync.readAccounts();
 		if (!report || report.length == 0) {
@@ -113,7 +116,7 @@
 	}
 
 	async function synchronizeAaValues() {
-		const sync = new CashierSync(serverUrl);
+		const sync = new CashierSync(serverUrl, ptaSystem);
 
 		try {
 			await sync.readCurrentValues();
@@ -126,7 +129,7 @@
 	}
 
 	async function synchronizePayees() {
-		const sync = new CashierSync(serverUrl);
+		const sync = new CashierSync(serverUrl, ptaSystem);
 
 		const response = await sync.readPayees();
 

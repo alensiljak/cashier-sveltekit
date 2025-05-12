@@ -1,28 +1,26 @@
 /*
-  Synchronization with Ledger server.
+  Synchronization with Cashier (Ledger/Beancount) server.
 */
-// import ky from 'ky'
 import { settings, SettingKeys } from '$lib/settings'
 import moment from 'moment'
 import { AssetAllocationEngine } from './assetAllocation/AssetAllocation'
 import appService from './services/appService'
 import { ISODATEFORMAT } from './constants'
+import { getQueries } from './sync-queries'
 
 /**
- * Cashier Sync class talks to CashierSync on the server. The methods here represent the methods
- * implemented by the server. This is a proxy class for fething Ledger data.
+ * Cashier Sync class communicates with the CashierSync server over network.
+ * The methods here represent the methods implemented by the server. 
+ * This is a proxy class for fething Ledger data.
  */
 export class CashierSync {
-  //static accountsQuery = 'accounts'
   /**
    * This returns all the accounts and also includes the balances
    */
-  static accountsQuery = 'b --flat --empty --no-total'
-  static payeesQuery = 'payees'
-
   serverUrl: string
+  queries: Record<string, any>
 
-  constructor(serverUrl: string) {
+  constructor(serverUrl: string, ptaSystem: string) {
     if (!serverUrl) {
       throw new Error('CashierSync URL not set.')
     }
@@ -30,19 +28,13 @@ export class CashierSync {
       serverUrl = serverUrl.substring(0, serverUrl.length - 1)
     }
     this.serverUrl = serverUrl
-    //this.balancesUrl = this.serverUrl + CashierSync.balancesUrl
-    //this.currentValuesUrl = this.serverUrl + CashierSync.currentValuesUrl
+    this.queries = getQueries(ptaSystem)
   }
 
   async get(path: string, options?: object) {
     const url = new URL(`${this.serverUrl}${path}`)
     const response = await fetch(url, options)
     return response
-  }
-
-  getPayeesUrl(): URL {
-    const url = this.createUrl(CashierSync.payeesQuery)
-    return url
   }
 
   createUrl(query: string): URL {
@@ -73,7 +65,7 @@ export class CashierSync {
     // HEAD is enough to check if the server is online.
     const result = await this.get('/ping')
     if (!result.ok) {
-      throw new Error('Error contacting Ledger server!')
+      throw new Error('Error contacting Cashier server!')
     }
 
     const text = await result.text()
@@ -85,8 +77,8 @@ export class CashierSync {
    * @returns array of Account objects
    */
   async readAccounts(): Promise<string[]> {
-    const query = CashierSync.accountsQuery
-    const response = await this.send(query)
+    const accountsQuery = this.queries.accounts
+    const response = await this.send(accountsQuery)
     if (!response.ok) {
       throw new Error('Error reading accounts!')
     }
@@ -102,11 +94,10 @@ export class CashierSync {
    */
   async readBalances(): Promise<string[]> {
     //const currency = await appService.getDefaultCurrency()
-
     // Get values in the default currency? In case of multi-currency accounts (i.e. expenses).
 
-    const query = 'b --flat --no-total'
-    const response = await this.send(query)
+    const balancesQuery = this.queries.balances
+    const response = await this.send(balancesQuery)
     const content: string[] = await response.json()
 
     return content
@@ -126,7 +117,7 @@ export class CashierSync {
       throw new Error('No default currency set!')
     }
 
-    const query = `b ^${rootAccount} -X ${currency} --flat --no-total`
+    const query = this.queries.currentValues(rootAccount, currency)
 
     const response = await this.send(query)
     const result: Array<string> = await response.json()
@@ -166,7 +157,7 @@ export class CashierSync {
   }
 
   async readLots(symbol: string) {
-    const query = `b ^Assets and invest and :${symbol}$ --lots --no-total --collapse`
+    const query = this.queries.lots()
 
     //const response = await ky.get(url)
     const response = await this.send(query)
@@ -195,7 +186,11 @@ export class CashierSync {
     // This command is somehow very memory hungry on Android.
     const begin = moment().subtract(5, 'years').format(ISODATEFORMAT)
 
-    const query = CashierSync.payeesQuery + ' -b ' + begin
+    // Ledger
+    const payeesQuery = 'payees'
+    const query = payeesQuery + ' -b ' + begin
+    // Beancount
+    // const query = "SELECT COALESCE(payee, narration)"
     const response = await this.send(query, { timeout: 20000 })
     if (!response.ok) {
       throw new Error('Error reading payees!')
@@ -206,6 +201,11 @@ export class CashierSync {
     return content
   }
 
+  /**
+   * This no longer exists.
+   * @param searchParams 
+   * @returns 
+   */
   async search(searchParams: object) {
     const url = new URL(`${this.serverUrl}/search`)
 
@@ -237,7 +237,7 @@ export class CashierSync {
   }
 
   /**
-   * Shutdown CashierSync server from the client app.
+   * Shutdown Cashier Server from the client app.
    */
   shutdown() {
     return this.get('/shutdown')
