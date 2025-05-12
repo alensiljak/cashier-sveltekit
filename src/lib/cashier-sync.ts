@@ -13,12 +13,12 @@ import { ISODATEFORMAT } from './constants'
  * implemented by the server. This is a proxy class for fething Ledger data.
  */
 export class CashierSync {
-  //static accountsCommand = 'accounts'
+  //static accountsQuery = 'accounts'
   /**
    * This returns all the accounts and also includes the balances
    */
-  static accountsCommand = 'b --flat --empty --no-total'
-  static payeesCommand = 'payees'
+  static accountsQuery = 'b --flat --empty --no-total'
+  static payeesQuery = 'payees'
 
   serverUrl: string
 
@@ -41,26 +41,26 @@ export class CashierSync {
   }
 
   getPayeesUrl(): URL {
-    const url = this.createUrl(CashierSync.payeesCommand)
+    const url = this.createUrl(CashierSync.payeesQuery)
     return url
   }
 
-  createUrl(command: string): URL {
-    const path = this.createPath(command)
+  createUrl(query: string): URL {
+    const path = this.createPath(query)
     const url = new URL(`${this.serverUrl}${path}`)
     return url
   }
 
-  createPath(command: string) {
-    return `?command=${command}`
+  createPath(query: string) {
+    return `?query=${query}`
   }
 
   /**
-   * Sends a ledger command to the Ledger server and returns the response.
-   * @param {String} command
+   * Sends a ledger query to the Ledger server and returns the response.
+   * @param {String} query
    */
-  async ledger(command: string, options?: object) {
-    const url = this.createUrl(command)
+  async send(query: string, options?: object) {
+    const url = this.createUrl(query)
 
     const response = await fetch(url, options)
     return response
@@ -85,8 +85,8 @@ export class CashierSync {
    * @returns array of Account objects
    */
   async readAccounts(): Promise<string[]> {
-    const command = CashierSync.accountsCommand
-    const response = await this.ledger(command)
+    const query = CashierSync.accountsQuery
+    const response = await this.send(query)
     if (!response.ok) {
       throw new Error('Error reading accounts!')
     }
@@ -105,8 +105,8 @@ export class CashierSync {
 
     // Get values in the default currency? In case of multi-currency accounts (i.e. expenses).
 
-    const command = 'b --flat --no-total'
-    const response = await this.ledger(command)
+    const query = 'b --flat --no-total'
+    const response = await this.send(query)
     const content: string[] = await response.json()
 
     return content
@@ -117,7 +117,7 @@ export class CashierSync {
    * @returns Current account values
    */
   async readCurrentValues(): Promise<string> {
-    const rootAccount = await settings.get(SettingKeys.rootInvestmentAccount)
+    const rootAccount = await settings.get(SettingKeys.rootInvestmentAccount) as string
     if (!rootAccount) {
       throw new Error('No root investment account set!')
     }
@@ -126,9 +126,9 @@ export class CashierSync {
       throw new Error('No default currency set!')
     }
 
-    const command = `b ^${rootAccount} -X ${currency} --flat --no-total`
+    const query = `b ^${rootAccount} -X ${currency} --flat --no-total`
 
-    const response = await this.ledger(command)
+    const response = await this.send(query)
     const result: Array<string> = await response.json()
 
     // parse
@@ -166,10 +166,10 @@ export class CashierSync {
   }
 
   async readLots(symbol: string) {
-    const command = `b ^Assets and invest and :${symbol}$ --lots --no-total --collapse`
+    const query = `b ^Assets and invest and :${symbol}$ --lots --no-total --collapse`
 
     //const response = await ky.get(url)
-    const response = await this.ledger(command)
+    const response = await this.send(query)
     if (!response.ok) throw new Error('error fetching lots: ' + response.text())
 
     const result: string[] = await response.json()
@@ -195,8 +195,8 @@ export class CashierSync {
     // This command is somehow very memory hungry on Android.
     const begin = moment().subtract(5, 'years').format(ISODATEFORMAT)
 
-    const command = CashierSync.payeesCommand + ' -b ' + begin
-    const response = await this.ledger(command, { timeout: 20000 })
+    const query = CashierSync.payeesQuery + ' -b ' + begin
+    const response = await this.send(query, { timeout: 20000 })
     if (!response.ok) {
       throw new Error('Error reading payees!')
     }
