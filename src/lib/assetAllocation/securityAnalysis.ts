@@ -65,7 +65,7 @@ export class SecurityAnalyser {
    * This value is affected by the recent purchases, which result in seemingly lower yield!
    */
   async getYield(symbol: string): Promise<string> {
-    const currency = await settings.get(SettingKeys.currency)
+    const currency = await settings.get(SettingKeys.currency) as string
     this.currency = currency
     await this.ledgerApi.init()
 
@@ -124,6 +124,9 @@ export class SecurityAnalyser {
 
     const command = `b ^Income and :${symbol}$ -b ${yieldFrom} --flat -X ${currency}`
     const report = await this.ledgerApi.query(command)
+    if (report['error']) {
+      throw new Error(report['error'])
+    }
 
     const total = this.#extractTotal(report)
     return total
@@ -141,6 +144,9 @@ export class SecurityAnalyser {
     //let line = ledgerReport[0]
     const parser = new LedgerOutputParser()
     const totalLines = parser.getTotalLines(ledgerReport)
+    if (totalLines.length == 0) {
+      throw new Error('No total received!')
+    }
     let totalLine = totalLines[0]
 
     // Gets the numeric value of the total from the ledger total line

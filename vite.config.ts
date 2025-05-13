@@ -8,7 +8,8 @@ import tailwindcss from "@tailwindcss/vite";
 
 const config: UserConfig = defineConfig({
 	build: {
-		sourcemap: process.env.SOURCE_MAP === 'true',
+		//sourcemap: process.env.SOURCE_MAP === 'true',
+		sourcemap: false,
 	},
 	plugins: [
 		tailwindcss(),
@@ -17,11 +18,13 @@ const config: UserConfig = defineConfig({
 		SvelteKitPWA({
 			strategies: 'generateSW',
 			// registerType: 'prompt',  // this is the default.
-			mode: 'development',
+			//mode: 'development',
+			mode: 'production',
 			injectRegister: false,
 			scope: '/',
 			base: '/',
-			selfDestroying: process.env.SELF_DESTROYING_SW === 'true',
+			//selfDestroying: process.env.SELF_DESTROYING_SW === 'true',
+			selfDestroying: false,
 			pwaAssets: {
 				config: true,
 			},

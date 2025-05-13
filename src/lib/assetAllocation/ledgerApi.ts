@@ -18,15 +18,15 @@ export class LedgerApi {
 
   /**
    * Perform a ledger-cli query
-   * @param {String} command Ledger command. i.e. "balance assets -b 2022-08-01"
+   * @param {String} query Ledger command. i.e. "balance assets -b 2022-08-01"
    */
-  async query(command: string): Promise<string[]> {
-    const url = new URL(`${this.serverUrl}?command=${command}`)
+  async query(query: string): Promise<string[]> {
+    const url = new URL(`${this.serverUrl}?query=${query}`)
     //var options = null
     const response = await ky(url) //, options)
 
     if (!response.ok) {
-      throw new Error('Error querying the ledger server!', response.Error)
+      throw new Error('Error querying the Cashier server!', response.error)
     }
 
     const result: string[] = await response.json()
