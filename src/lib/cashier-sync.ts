@@ -7,6 +7,7 @@ import { AssetAllocationEngine } from './assetAllocation/AssetAllocation'
 import appService from './services/appService'
 import { ISODATEFORMAT } from './constants'
 import { getQueries } from './sync-queries'
+import type { Queries } from './sync-queries'
 
 /**
  * Cashier Sync class communicates with the CashierSync server over network.
@@ -18,7 +19,7 @@ export class CashierSync {
    * This returns all the accounts and also includes the balances
    */
   serverUrl: string
-  queries: Record<string, any>
+  queries: Queries
 
   constructor(serverUrl: string, ptaSystem: string) {
     if (!serverUrl) {
@@ -77,7 +78,7 @@ export class CashierSync {
    * @returns array of Account objects
    */
   async readAccounts(): Promise<string[]> {
-    const accountsQuery = this.queries.accounts
+    const accountsQuery = this.queries.accounts()
     const response = await this.send(accountsQuery)
     if (!response.ok) {
       throw new Error('Error reading accounts!')
@@ -96,7 +97,7 @@ export class CashierSync {
     //const currency = await appService.getDefaultCurrency()
     // Get values in the default currency? In case of multi-currency accounts (i.e. expenses).
 
-    const balancesQuery = this.queries.balances
+    const balancesQuery = this.queries.balances()
     const response = await this.send(balancesQuery)
     const content: string[] = await response.json()
 
@@ -157,9 +158,8 @@ export class CashierSync {
   }
 
   async readLots(symbol: string) {
-    const query = this.queries.lots()
+    const query = this.queries.lots(symbol)
 
-    //const response = await ky.get(url)
     const response = await this.send(query)
     if (!response.ok) throw new Error('error fetching lots: ' + response.text())
 
@@ -184,13 +184,8 @@ export class CashierSync {
   async readPayees(): Promise<string[]> {
     // Limit the payees to the last 5 years, otherwise there's a high risk of crashing.
     // This command is somehow very memory hungry on Android.
-    const begin = moment().subtract(5, 'years').format(ISODATEFORMAT)
-
-    // Ledger
-    const payeesQuery = 'payees'
-    const query = payeesQuery + ' -b ' + begin
-    // Beancount
-    // const query = "SELECT COALESCE(payee, narration)"
+    const from = moment().subtract(5, 'years').format(ISODATEFORMAT)
+    const query = this.queries.payees(from)
     const response = await this.send(query, { timeout: 20000 })
     if (!response.ok) {
       throw new Error('Error reading payees!')
