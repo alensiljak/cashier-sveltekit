@@ -25,10 +25,14 @@ const LedgerQueries: Queries = {
 }
 
 const BeancountQueries: Queries = {
+    /**
+     * # is url-encoded (%23)
+     * @returns accounts query
+     */
     accounts: () => 
-        'SELECT account FROM #accounts WHERE close IS NULL',
+        'SELECT account FROM %23accounts WHERE close IS NULL',
     balances: () => 
-        'balances',
+        'SELECT account, sum(position) ORDER BY account',
     currentValues: (rootAccount: string, currency: string) =>
         `select account, CONVERT(sum(position), '${currency}')
         where account = '${rootAccount}'`,
