@@ -19,6 +19,7 @@ import { HomeCardNames } from '$lib/enums'
 import { DefaultCurrencyStore, ScheduledXact, xact } from '$lib/data/mainStore'
 import { loadInvestmentAccounts } from './accountsService'
 import { get } from 'svelte/store'
+import { parseBalanceSheetRow } from '$lib/utils/ledgerParser'
 
 class AppService {
   /**
@@ -372,47 +373,20 @@ class AppService {
 
     const accounts: Account[] = [] // the array of accounts to be updated.
 
-    let account = new Account('')
-    // balance
-    let accountBalances: Record<string, number> = {}
-
     // read and parse the balance sheet entries
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i]
       if (line === '') continue
 
-      // name
-      const namePart = line.substring(21).trim()
-      account.name = namePart
-
-      let balancePart = line.substring(0, 20)
-      balancePart = balancePart.trim()
-      // separate the currency
-      const balanceParts = balancePart.split(' ')
-
-      // currency
-      let currencyPart = balanceParts[1]
-      if (typeof currencyPart === 'undefined') {
-        currencyPart = ''
+      // parse
+      // todo: parse beancount row
+      debugger
+      let account = parseBalanceSheetRow(line)
+      if (!account) {
+        continue
+      } else {
+        accounts.push(account)
       }
-
-      let amountPart = balanceParts[0]
-      // clean-up the thousand-separators
-      amountPart = amountPart.replace(/,/g, '')
-
-      accountBalances[currencyPart] = parseFloat(amountPart)
-
-      // If we do not have a name, it's an amount of a multicurrency account.
-      // Keep the balance until we get the line with the account name.
-      if (!namePart) continue
-
-      // Once we have the name, assign the balances dictionary and keep for update.
-      account.balances = accountBalances
-      accounts.push(account)
-
-      // clean-up.
-      account = new Account('')
-      accountBalances = {}
     }
 
     return db.accounts.bulkPut(accounts)
