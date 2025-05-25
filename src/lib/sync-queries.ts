@@ -30,7 +30,8 @@ const BeancountQueries: Queries = {
      * @returns accounts query
      */
     accounts: () => 
-        'SELECT account FROM %23accounts WHERE close IS NULL',
+        'SELECT sum(number), currency, account ORDER BY account',
+        //'SELECT account FROM %23accounts WHERE close IS NULL',
     balances: () => 
         'SELECT account, sum(position) ORDER BY account',
     currentValues: (rootAccount: string, currency: string) =>

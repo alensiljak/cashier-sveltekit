@@ -19,7 +19,14 @@ import { HomeCardNames } from '$lib/enums'
 import { DefaultCurrencyStore, ScheduledXact, xact } from '$lib/data/mainStore'
 import { loadInvestmentAccounts } from './accountsService'
 import { get } from 'svelte/store'
-import { parseBalanceSheetRow } from '$lib/utils/ledgerParser'
+import * as LedgerParser from '$lib/utils/ledgerParser'
+import * as BeancountParser from '$lib/utils/beancountParser'
+
+
+interface AccountIndex {
+  [key: string]: Account;
+}
+
 
 class AppService {
   /**
@@ -45,7 +52,7 @@ class AppService {
     newXact.date = existing.date
     newXact.payee = existing.payee
     newXact.note = existing.note
-    
+
     // postings
     if (existing.postings) {
       newXact.postings = [...existing.postings]
@@ -157,7 +164,7 @@ class AppService {
     }
     return visibleCardNames
   }
-  
+
   /**
    * Load data from a file.
    * @param {FileInfo} fileInfo The file info from the input control.
@@ -290,7 +297,7 @@ class AppService {
 
   async getDefaultCurrency(): Promise<string> {
     let defaultCurrency = get(DefaultCurrencyStore)
-    if(!defaultCurrency) {
+    if (!defaultCurrency) {
       defaultCurrency = await settings.get(SettingKeys.currency)
       DefaultCurrencyStore.set(defaultCurrency)
     }
@@ -371,7 +378,7 @@ class AppService {
       throw new Error('No default currency set!')
     }
 
-    const accounts: Account[] = [] // the array of accounts to be updated.
+    let accountBalances: AccountIndex = {}
 
     // read and parse the balance sheet entries
     for (let i = 0; i < lines.length; i++) {
@@ -379,16 +386,33 @@ class AppService {
       if (line === '') continue
 
       // parse
-      // todo: parse beancount row
-      debugger
-      let account = parseBalanceSheetRow(line)
+      let ptaSystem = await settings.get(SettingKeys.ptaSystem)
+      let account;
+      if (ptaSystem === 'ledger') {
+        account = LedgerParser.parseBalanceSheetRow(line)
+      } else if (ptaSystem === 'beancount') {
+        account = BeancountParser.parseBalanceSheetRow(line)
+      }
+
       if (!account) {
         continue
       } else {
-        accounts.push(account)
+        // see if we already have this account
+        let existingAccount = accountBalances[account.name]
+        if (existingAccount && existingAccount.balances && account.balances) {
+          // add the new balance in another currency
+          const currency = Object.keys(account.balances)[0]
+          const amount = Object.values(account.balances)[0]
+          existingAccount.balances[currency] = amount
+        } else {
+          // insert account
+          accountBalances[account.name] = account
+        }
       }
     }
 
+    // the array of accounts to be updated.
+    const accounts: Account[] = Object.values(accountBalances)
     return db.accounts.bulkPut(accounts)
   }
 
@@ -498,7 +522,7 @@ class AppService {
         account = new Account(favArray[i])
         account.exists = false
         accounts[i] = account
-        
+
         // accounts.splice(i, 1)
         // i--
       }
@@ -509,7 +533,7 @@ class AppService {
 
   async loadScheduledXact(id: number): Promise<ScheduledTransaction> {
     const scx = await db.scheduled.get(id)
-    if(!scx) {
+    if (!scx) {
       throw new Error('Scheduled transaction not found!')
     }
 
