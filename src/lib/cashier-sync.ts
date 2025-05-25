@@ -8,6 +8,8 @@ import appService from './services/appService'
 import { ISODATEFORMAT } from './constants'
 import { getQueries } from './sync-queries'
 import type { Queries } from './sync-queries'
+import * as LedgerParser from '$lib/utils/ledgerParser'
+import * as BeancountParser from '$lib/utils/beancountParser'
 
 /**
  * Cashier Sync class communicates with the CashierSync server over network.
@@ -108,7 +110,7 @@ export class CashierSync {
    * Get current account values in the base currency.
    * @returns Current account values
    */
-  async readCurrentValues(): Promise<string> {
+  async readCurrentValues(ptaSystem: string): Promise<string> {
     const rootAccount = await settings.get(SettingKeys.rootInvestmentAccount) as string
     if (!rootAccount) {
       throw new Error('No root investment account set!')
@@ -124,37 +126,18 @@ export class CashierSync {
     const result: Array<string> = await response.json()
 
     // parse
-    const currentValues = this.parseCurrentValues(result, rootAccount)
+    let currentValues: Record<string, string>;
+    if (ptaSystem === 'beancount') {
+      currentValues = BeancountParser.parseCurrentValues(result, rootAccount)
+    } else if (ptaSystem === 'ledger') {
+      currentValues = LedgerParser.parseCurrentValues(result, rootAccount)
+    } else {
+      throw new Error('Unknown PTA system: ' + ptaSystem)
+    }
 
     const aa = new AssetAllocationEngine()
     await aa.importCurrentValuesJson(currentValues)
     return 'OK'
-  }
-
-  parseCurrentValues(
-    lines: Array<string>,
-    rootAccount: string,
-  ): Record<string, string> {
-    const result: Record<string, string> = {}
-
-    for (const line of lines) {
-      if (line === '') continue
-
-      const row = line.trim()
-
-      // split at the root account name
-      const rootIndex = row.indexOf(rootAccount)
-
-      let amount = row.substring(0, rootIndex)
-      amount = amount.trim()
-
-      const account = row.substring(rootIndex)
-
-      // add to the dictionary
-      result[account] = amount
-    }
-
-    return result
   }
 
   async readLots(symbol: string) {

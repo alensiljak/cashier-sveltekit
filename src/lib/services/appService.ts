@@ -368,7 +368,7 @@ class AppService {
    * @param lines Output of `ledger balance --flat`
    * @returns The promise resolving to the id of the last record updated (Dexie default)
    */
-  async importBalanceSheet(lines: string[]): Promise<unknown> {
+  async importBalanceSheet(ptaSystem: string, lines: string[]): Promise<unknown> {
     if (!lines || !lines.length) {
       throw new Error('No balance records received for import!')
     }
@@ -386,7 +386,6 @@ class AppService {
       if (line === '') continue
 
       // parse
-      let ptaSystem = await settings.get(SettingKeys.ptaSystem)
       let account;
       if (ptaSystem === 'ledger') {
         account = LedgerParser.parseBalanceSheetRow(line)

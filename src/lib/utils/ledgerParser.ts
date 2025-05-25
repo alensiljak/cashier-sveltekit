@@ -39,4 +39,30 @@ function parseBalanceSheetRow(line: string): Account | null {
     return account
 }
 
-export { parseBalanceSheetRow }
+function parseCurrentValues(
+    lines: Array<string>,
+    rootAccount: string,
+): Record<string, string> {
+    const result: Record<string, string> = {}
+
+    for (const line of lines) {
+        if (line === '') continue
+
+        const row = line.trim()
+
+        // split at the root account name
+        const rootIndex = row.indexOf(rootAccount)
+
+        let amount = row.substring(0, rootIndex)
+        amount = amount.trim()
+
+        const account = row.substring(rootIndex)
+
+        // add to the dictionary
+        result[account] = amount
+    }
+
+    return result
+}
+
+export { parseBalanceSheetRow, parseCurrentValues }

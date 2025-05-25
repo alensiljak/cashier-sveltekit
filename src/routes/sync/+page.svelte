@@ -18,7 +18,7 @@
 	let serverUrl = $state('http://localhost:3000');
 	let rootInvestmentAccount = '';
 	let currency = '';
-	let ptaSystem: string = '';
+	let _ptaSystem: string = '';
 
 	let syncAccounts = $state(false);
 	let syncAaValues = $state(false);
@@ -43,7 +43,7 @@
 		serverUrl = await settings.get(SettingKeys.syncServerUrl);
 		rootInvestmentAccount = await settings.get(SettingKeys.rootInvestmentAccount);
 		currency = await appService.getDefaultCurrency();
-    	ptaSystem = await settings.get(SettingKeys.ptaSystem) as string
+    	_ptaSystem = await settings.get(SettingKeys.ptaSystem) as string
 
 
 		syncAccounts = await settings.get(SettingKeys.syncAccounts);
@@ -55,7 +55,7 @@
 	 * shut the remote server down
 	 */
 	async function onShutdownClick() {
-		const sync = new CashierSync(serverUrl, ptaSystem);
+		const sync = new CashierSync(serverUrl, _ptaSystem);
 		try {
 			await sync.shutdown();
 		} catch (error: any) {
@@ -100,7 +100,7 @@
 	}
 
 	async function synchronizeAccounts() {
-		const sync = new CashierSync(serverUrl, ptaSystem);
+		const sync = new CashierSync(serverUrl, _ptaSystem);
 
 		const report = await sync.readAccounts();
 		if (!report || report.length == 0) {
@@ -110,16 +110,16 @@
 
 		// delete all accounts only after we have retrieved the new ones.
 		await appService.deleteAccounts();
-		await appService.importBalanceSheet(report);
+		await appService.importBalanceSheet(_ptaSystem, report);
 
 		Notifier.success('Accounts fetched from Ledger');
 	}
 
 	async function synchronizeAaValues() {
-		const sync = new CashierSync(serverUrl, ptaSystem);
+		const sync = new CashierSync(serverUrl, _ptaSystem);
 
 		try {
-			await sync.readCurrentValues();
+			await sync.readCurrentValues(_ptaSystem);
 
 			Notifier.success('Asset Allocation values loaded');
 		} catch (error: any) {
@@ -129,7 +129,7 @@
 	}
 
 	async function synchronizePayees() {
-		const sync = new CashierSync(serverUrl, ptaSystem);
+		const sync = new CashierSync(serverUrl, _ptaSystem);
 
 		const response = await sync.readPayees();
 

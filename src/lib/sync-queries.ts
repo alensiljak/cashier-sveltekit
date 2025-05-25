@@ -33,11 +33,13 @@ const BeancountQueries: Queries = {
         'SELECT sum(number), currency, account ORDER BY account',
         //'SELECT account FROM %23accounts WHERE close IS NULL',
     balances: () => 
-        'SELECT account, sum(position) ORDER BY account',
+        'SELECT account, sum(number), currency ORDER BY account',
     currentValues: (rootAccount: string, currency: string) =>
-        `select account, CONVERT(sum(position), '${currency}')
-        where account = '${rootAccount}'`,
-        //group by account`,
+        `SELECT account, CONVERT(value(sum(position)), '${currency}') \
+        WHERE account ~ '^${rootAccount}' \
+        GROUP BY account \
+        HAVING NOT empty(sum(position)) \
+        ORDER BY account`,
     lots: (symbol: string) =>
         'balances',
     payees: (from: string) =>
