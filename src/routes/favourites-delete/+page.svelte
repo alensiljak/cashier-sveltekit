@@ -8,7 +8,7 @@
 	import { onMount } from 'svelte';
 
 	Notifier.init();
-	
+
 	let isDeleteConfirmationOpen = $state(false);
 	let indexToDelete = $state(-1);
 
@@ -52,7 +52,7 @@
 
 	<section class="grow overflow-auto p-1">
 		{#each _accounts as account, i}
-			<div class="flex flex-row border-b border-tertiary-200/15 py-1">
+			<div class="border-tertiary-200/15 flex flex-row border-b py-1">
 				<data class="grow content-center">
 					{account}
 				</data>

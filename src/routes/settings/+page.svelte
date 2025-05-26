@@ -10,7 +10,11 @@
 	import { invalidateAll } from '$app/navigation';
 	import * as OpfsLib from '$lib/utils/opfslib.js';
 	import { AssetAllocationFilename } from '$lib/constants.js';
-	import { AaStocksStore, AssetAllocationStore, DefaultCurrencyStore } from '$lib/data/mainStore.js';
+	import {
+		AaStocksStore,
+		AssetAllocationStore,
+		DefaultCurrencyStore
+	} from '$lib/data/mainStore.js';
 	import type { FileChangeDetails } from '@zag-js/file-upload';
 
 	Notifier.init();
@@ -21,7 +25,7 @@
 	let rememberLastTransaction = $state<boolean>();
 	let rootInvestmentAccount = $state<string>();
 	let currency = $state<string>();
-	let ptaSystem = $state<string>()
+	let ptaSystem = $state<string>();
 
 	let settings_files = $state<File[]>();
 	let aa_files = $state<File[]>();
@@ -31,7 +35,7 @@
 		currency = await appService.getDefaultCurrency();
 		rootInvestmentAccount = await settings.get<string>(SettingKeys.rootInvestmentAccount);
 		rememberLastTransaction = await settings.get<boolean>(SettingKeys.rememberLastTransaction);
-		ptaSystem = await settings.get<string>(SettingKeys.ptaSystem)
+		ptaSystem = await settings.get<string>(SettingKeys.ptaSystem);
 	});
 
 	/**
@@ -119,7 +123,7 @@
 		await settings.set(SettingKeys.rootInvestmentAccount, rootInvestmentAccount);
 		await settings.set(SettingKeys.rememberLastTransaction, rememberLastTransaction);
 
-		await settings.set(SettingKeys.ptaSystem, ptaSystem)
+		await settings.set(SettingKeys.ptaSystem, ptaSystem);
 
 		Notifier.success('Settings saved');
 	}
@@ -161,17 +165,30 @@
 	<p>Select the default plain-text-account system:</p>
 	<form class="space-y-2">
 		<label class="flex items-center space-x-2">
-			<input class="radio" type="radio" name="radio-direct" value="beancount" bind:group={ptaSystem} />
+			<input
+				class="radio"
+				type="radio"
+				name="radio-direct"
+				value="beancount"
+				bind:group={ptaSystem}
+			/>
 			<p>Beancount</p>
 		</label>
 		<label class="flex items-center space-x-2">
-			<input class="radio" type="radio" checked name="radio-direct" value="ledger" bind:group={ptaSystem} />
+			<input
+				class="radio"
+				type="radio"
+				checked
+				name="radio-direct"
+				value="ledger"
+				bind:group={ptaSystem}
+			/>
 			<p>Ledger-cli</p>
 		</label>
 	</form>
 
 	<center>
-		<button class="preset-filled-error-500 btn uppercase text-warning-500!" onclick={saveSettings}>
+		<button class="preset-filled-error-500 btn text-warning-500! uppercase" onclick={saveSettings}>
 			Save
 		</button>
 	</center>
@@ -181,9 +198,7 @@
 	<section>
 		<h3 class="h3">Asset Allocation</h3>
 		<center>
-			<FileUpload
-				name="aa_file"
-				onFileChange={onAaFileChanged}>
+			<FileUpload name="aa_file" onFileChange={onAaFileChanged}>
 				<button class="btn preset-tonal-primary">
 					<span>Select the AA definition</span>
 				</button>
@@ -193,14 +208,15 @@
 
 	<section>
 		<h3 class="h3">Restore Settings</h3>
-		<p>This functionality is now redundant. You can use Backup/Restore, which also includes Settings.</p>
+		<p>
+			This functionality is now redundant. You can use Backup/Restore, which also includes Settings.
+		</p>
 		<center>
-			<FileUpload
-				name="settings_file"
-				onFileChange={onSettingsFileChangeHandler}>
+			<FileUpload name="settings_file" onFileChange={onSettingsFileChangeHandler}>
 				<button class="btn preset-tonal-primary">
 					<span>Select the settings file</span>
-			</FileUpload>
+				</button></FileUpload
+			>
 		</center>
 	</section>
 
