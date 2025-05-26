@@ -9,7 +9,7 @@ import { getAccountBalance, loadInvestmentAccounts } from '$lib/services/account
 import Big from 'big.js'
 import type { Money } from '../data/model'
 import { NUMBER_FORMAT } from '../constants'
-import * as Validation from './assetAllocationValidation'
+import type { CurrentValuesDict } from '$lib/utils/beancountParser'
 
 /**
  * loadDefinition = loads the pre-set definition
@@ -127,13 +127,6 @@ export class AssetAllocationEngine {
   }
 
   /**
-   * Deletes all data in Asset Allocation storage (table).
-   */
-  async emptyData() {
-    return appService.db.assetAllocation.clear()
-  }
-
-  /**
    * Formats the array of Asset Classes (the end result) for txt output.
    * The output can be stored for historical purposes, compared, etc.
    * @param {Array} rows
@@ -194,76 +187,28 @@ export class AssetAllocationEngine {
     return text
   }
 
-  // formatNumbers(dictionary: object) {
-  //   let format = '0,0.00'
-
-  //   Object.values(dictionary).forEach((ac: AssetClass) => {
-  //     ac.currentAllocation = numeral(ac.currentAllocation).format(format)
-  //     ac.currentValue = numeral(ac.currentValue).format(format)
-  //     ac.allocatedValue = numeral(ac.allocatedValue).format(format)
-  //     ac.diff = numeral(ac.diff).format(format)
-  //     ac.diffPerc = numeral(ac.diffPerc).format(format)
-  //     ac.diffAmount = numeral(ac.diffAmount).format(format)
-  //   })
-  // }
-
   /**
-   * Update the current balances in the asset allocation.
-   * @param {string} json
+   * Imports the account current values into the asset allocation.
+   * Executed during import of Current Values.
+   * Adapted to the Beancount report.
+   * @param {CurrentValuesDict} balancesDict Current values for all accounts
    */
-  async importCurrentValuesJson(json: Record<string, string>) {
-    const accounts = Object.keys(json)
+  async importCurrentValues(balancesDict: CurrentValuesDict) {
+    const accounts = Object.keys(balancesDict)
     for (let i = 0; i < accounts.length; i++) {
       const key = accounts[i]
-
-      // fix the balance
-      let balance: string = json[key]
-      balance = balance.replace(',', '')
-
-      // extract the currency
-      const parts = balance.split(' ')
-      const amount = parts[0]
-      const currency = parts[1]
+      let balance: Money = balancesDict[key]
 
       // Update existing account.
       const account = await appService.db.accounts.get(key)
       if (!account) {
         throw new Error('Invalid account ' + account.name)
       }
-      account.currentValue = amount
-      account.currentCurrency = currency
+      account.currentValue = balance.quantity
+      account.currentCurrency = balance.currency
 
       await appService.db.accounts.put(account)
     }
-  }
-
-  async importTomlDefinition(content: string) {
-    const parsed = toml.parse(content)
-
-    // Convert to backward-compatible structure (tree -> list).
-    const assetClasses = this.linearizeObject(parsed)
-
-    // todo: use the tree structure directly, at some later point.
-
-    const result = await this.validateAndSave(assetClasses)
-    return result
-  }
-
-  /**
-   * Do not use - the dependent js-yaml package is removed.
-   * Imports Asset Allocation definition as YAML.
-   * @param {string} content The content of the YAML definition file.
-   */
-  async importYamlDefinition() {
-    const parsed: AssetClassDefinition = { allocation: 0, symbols: [] } //= jsyaml.load(content) as object
-
-    // Convert to backward-compatible structure (tree -> list).
-    const assetClasses = this.linearizeObject(parsed)
-
-    // todo: use the tree structure directly, at some later point.
-
-    const result = await this.validateAndSave(assetClasses)
-    return result
   }
 
   /**
@@ -330,21 +275,6 @@ export class AssetAllocationEngine {
   }
 
   /**
-   * Used on import only!
-   * Validates the asset allocation and stores it into the database.
-   * @param {Array} assetClassArray
-   */
-  async validateAndSave(assetClassArray: AssetClass[]) {
-    // Validate
-    const assetClassIndex = this.buildAssetClassIndex(assetClassArray)
-    const errors = Validation.validate(assetClassIndex)
-    if (errors.length) throw 'Validation failed: ' + errors
-
-    // persist
-    return appService.db.assetAllocation.bulkPut(assetClassArray)
-  }
-
-  /**
    * Load current balances from accounts.
    * Add the account balances to asset classes.
    */
@@ -383,6 +313,9 @@ export class AssetAllocationEngine {
       //   assetClass.currentValue = 0
       // }
       assetClass.currentValue = assetClass.currentValue.plus(amount)
+      console.debug(
+        `Adding ${amount} ${commodity} to ${assetClass.fullname}. Total: ${assetClass.currentValue}`
+      )
     })
   }
 
@@ -425,9 +358,9 @@ export function findChildren(dictionary: object, parent: AssetClass) {
   const children: AssetClass[] = []
 
   Object.values(dictionary).forEach((val) => {
-      if (parent.fullname === val.parentName) {
-          children.push(val)
-      }
+    if (parent.fullname === val.parentName) {
+      children.push(val)
+    }
   })
 
   return children

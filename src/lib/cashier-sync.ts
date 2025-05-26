@@ -126,7 +126,7 @@ export class CashierSync {
     const result: Array<string> = await response.json()
 
     // parse
-    let currentValues: Record<string, string>;
+    let currentValues: BeancountParser.CurrentValueRow;
     if (ptaSystem === 'beancount') {
       currentValues = BeancountParser.parseCurrentValues(result, rootAccount)
     } else if (ptaSystem === 'ledger') {
@@ -136,7 +136,7 @@ export class CashierSync {
     }
 
     const aa = new AssetAllocationEngine()
-    await aa.importCurrentValuesJson(currentValues)
+    await aa.importCurrentValues(currentValues)
     return 'OK'
   }
 

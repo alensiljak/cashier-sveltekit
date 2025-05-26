@@ -32,9 +32,14 @@ function parseBalanceSheetRow(record: string[]): Account | null {
     return account
 }
 
-interface CurrentValueRow {
-    account: string
-    balance: Money
+/**
+ * Used to pass the current value of all the accounts.
+ * It is a dictionary with the account name as the key and
+ * the current value as the value. The current value is
+ * a Money object, representing the balance in the main currency.
+ */
+interface CurrentValuesDict {
+    [account: string]: Money;
 }
 
 /**
@@ -46,16 +51,13 @@ interface CurrentValueRow {
 function parseCurrentValues(
     lines: Array<Any>,
     rootAccount: string,
-): CurrentValueRow {
+): CurrentValuesDict {
     // The return value { "account": amount }
-    const result: CurrentValueRow = {
-        account: '',
-        balance: new Money(),
-    }
+    const result: CurrentValuesDict = {}
 
     try {
         for (const row of lines) {
-            result.account = row[0]
+            const account = row[0]
 
             let balances: Array<Any> = row[1]
             // balances is an array of balance records.
@@ -65,7 +67,7 @@ function parseCurrentValues(
             // common currency.
             const balance = balances[0]
             let amount = 0
-            let currency = 'n/a'
+            let currency = null
             if (balance && balance.length != 0) {
                 // Amount is an array of number and currency.
                 const amountArray: Array<Any> = balance[0]
@@ -74,8 +76,7 @@ function parseCurrentValues(
             }
 
             // add to the dictionary
-            result.balance.quantity = amount
-            result.balance.currency = currency
+            result[account] = { quantity: amount, currency: currency }
         }
     } catch (error) {
         console.error(error)
@@ -84,4 +85,4 @@ function parseCurrentValues(
     return result
 }
 export { parseBalanceSheetRow, parseCurrentValues }
-export type { CurrentValueRow }
+export type { CurrentValuesDict }

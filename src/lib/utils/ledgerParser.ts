@@ -2,7 +2,8 @@
  * Parses Ledger output
  */
 
-import { Account } from "$lib/data/model"
+import { Account, Money } from "$lib/data/model"
+import type { CurrentValuesDict } from "./beancountParser"
 
 function parseBalanceSheetRow(line: string): Account | null {
     let account = new Account('')
@@ -42,8 +43,8 @@ function parseBalanceSheetRow(line: string): Account | null {
 function parseCurrentValues(
     lines: Array<string>,
     rootAccount: string,
-): Record<string, string> {
-    const result: Record<string, string> = {}
+): CurrentValuesDict {
+    const result: CurrentValuesDict = {}
 
     for (const line of lines) {
         if (line === '') continue
@@ -53,13 +54,18 @@ function parseCurrentValues(
         // split at the root account name
         const rootIndex = row.indexOf(rootAccount)
 
-        let amount = row.substring(0, rootIndex)
-        amount = amount.trim()
+        let balance = row.substring(0, rootIndex)
+        balance = balance.trim()
 
         const account = row.substring(rootIndex)
 
-        // add to the dictionary
-        result[account] = amount
+        // split the balance into amount/currency.
+        const moneyParts = balance.split(' ')
+
+        // todo: test!
+
+        result[account].quantity = parseFloat(moneyParts[0])
+        result[account].currency = moneyParts[1]
     }
 
     return result
