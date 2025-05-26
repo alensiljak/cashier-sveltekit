@@ -43,8 +43,8 @@ const BeancountQueries: Queries = {
     lots: (symbol: string) =>
         'balances',
     payees: (from: string) =>
-        `SELECT COALESCE(payee, narration) as payee FROM transactions
-            WHERE date >= '${from}' ORDER BY payee`,
+        `SELECT DISTINCT(COALESCE(payee, narration)) as payee FROM transactions \
+         WHERE date >= ${from} ORDER BY payee`,
 }
 
 export function getQueries(ptaSystem: string): Queries {

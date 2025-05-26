@@ -166,9 +166,10 @@ export class CashierSync {
    * @returns array of Payee objects
    */
   async readPayees(): Promise<string[]> {
-    // Limit the payees to the last 5 years, otherwise there's a high risk of crashing.
-    // This command is somehow very memory hungry on Android.
+    // Limit the payees to the last 5 years, otherwise there's a high risk of 
+    // crashing. This command is somehow very memory hungry on Android.
     const from = moment().subtract(5, 'years').format(ISODATEFORMAT)
+    debugger
     const query = this.queries.payees(from)
     const response = await this.send(query, { timeout: 20000 })
     if (!response.ok) {
