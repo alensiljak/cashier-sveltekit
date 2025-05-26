@@ -10,6 +10,7 @@ import { getQueries } from './sync-queries'
 import type { Queries } from './sync-queries'
 import * as LedgerParser from '$lib/utils/ledgerParser'
 import * as BeancountParser from '$lib/utils/beancountParser'
+import type { CurrentValuesDict } from '$lib/utils/beancountParser'
 
 /**
  * Cashier Sync class communicates with the CashierSync server over network.
@@ -126,7 +127,7 @@ export class CashierSync {
     const result: Array<string> = await response.json()
 
     // parse
-    let currentValues: BeancountParser.CurrentValueRow;
+    let currentValues: CurrentValuesDict;
     if (ptaSystem === 'beancount') {
       currentValues = BeancountParser.parseCurrentValues(result, rootAccount)
     } else if (ptaSystem === 'ledger') {
