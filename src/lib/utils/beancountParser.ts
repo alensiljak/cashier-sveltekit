@@ -2,7 +2,7 @@
  * Parses Beancount output
  */
 
-import { Account } from "$lib/data/model"
+import { Account, Money } from "$lib/data/model"
 
 /**
  * Creates an Account object from a Beancount balance sheet record.
@@ -32,30 +32,56 @@ function parseBalanceSheetRow(record: string[]): Account | null {
     return account
 }
 
+interface CurrentValueRow {
+    account: string
+    balance: Money
+}
+
+/**
+ * 
+ * @param lines Array of records. Result returned from Cashier Server.
+ * @param rootAccount 
+ * @returns 
+ */
 function parseCurrentValues(
-    lines: Array<string>,
+    lines: Array<Any>,
     rootAccount: string,
-): Record<string, string> {
-    const result: Record<string, string> = {}
+): CurrentValueRow {
+    // The return value { "account": amount }
+    const result: CurrentValueRow = {
+        account: '',
+        balance: new Money(),
+    }
 
-    debugger
-    for (const line of lines) {
-        if (line === '') continue
+    try {
+        for (const row of lines) {
+            result.account = row[0]
 
-        const row = line.trim()
+            let balances: Array<Any> = row[1]
+            // balances is an array of balance records.
+            // Trim null elements (leftover from a tuple)
+            balances = balances.filter(element => element !== null);
+            // At this point we should have only one balance in the
+            // common currency.
+            const balance = balances[0]
+            let amount = 0
+            let currency = 'n/a'
+            if (balance && balance.length != 0) {
+                // Amount is an array of number and currency.
+                const amountArray: Array<Any> = balance[0]
+                amount = amountArray[0]
+                currency = amountArray[1]
+            }
 
-        // split at the root account name
-        const rootIndex = row.indexOf(rootAccount)
-
-        let amount = row.substring(0, rootIndex)
-        amount = amount.trim()
-
-        const account = row.substring(rootIndex)
-
-        // add to the dictionary
-        result[account] = amount
+            // add to the dictionary
+            result.balance.quantity = amount
+            result.balance.currency = currency
+        }
+    } catch (error) {
+        console.error(error)
     }
 
     return result
 }
 export { parseBalanceSheetRow, parseCurrentValues }
+export type { CurrentValueRow }
