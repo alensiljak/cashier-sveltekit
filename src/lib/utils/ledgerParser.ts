@@ -2,6 +2,7 @@
  * Parses Ledger output
  */
 
+import { LedgerOutputParser } from "$lib/assetAllocation/ledgerOutputParser"
 import { Account, Money } from "$lib/data/model"
 import type { CurrentValuesDict } from "./beancountParser"
 
@@ -71,4 +72,31 @@ function parseCurrentValues(
     return result
 }
 
-export { parseBalanceSheetRow, parseCurrentValues }
+/**
+ * Extracts the numeric amount value from the ledger Total response.
+ * @param {Array} ledgerReport
+ */
+function getNumberFromBalanceRow(ledgerReport: Array<string>): number {
+    if (ledgerReport.length == 0) {
+      return 0
+    }
+
+    //let line = ledgerReport[0]
+    const parser = new LedgerOutputParser()
+    const totalLines = parser.getTotalLines(ledgerReport)
+    if (totalLines.length == 0) {
+      throw new Error('No total received!')
+    }
+    let totalLine = totalLines[0]
+
+    // Gets the numeric value of the total from the ledger total line
+    totalLine = totalLine.trim()
+    const parts = totalLine.split(' ')
+    let totalNumeric = parts[0]
+    // remove thousand-separators
+    totalNumeric = totalNumeric.replaceAll(',', '')
+
+    return totalNumeric
+}
+
+export { parseBalanceSheetRow, parseCurrentValues, getNumberFromBalanceRow }

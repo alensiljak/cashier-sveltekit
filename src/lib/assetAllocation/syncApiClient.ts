@@ -4,7 +4,7 @@ import { settings, SettingKeys } from '../settings'
 /**
  * Used to communicate with Ledger server.
  */
-export class LedgerApi {
+export class SyncApiClient {
   serverUrl: string
 
   constructor() {

@@ -3,6 +3,7 @@
  */
 
 import { Account, Money } from "$lib/data/model"
+import type { AccountWithBalance, CurrentValuesDict } from "$lib/data/viewModels"
 
 /**
  * Creates an Account object from a Beancount balance sheet record.
@@ -33,13 +34,22 @@ function parseBalanceSheetRow(record: string[]): Account | null {
 }
 
 /**
- * Used to pass the current value of all the accounts.
- * It is a dictionary with the account name as the key and
- * the current value as the value. The current value is
- * a Money object, representing the balance in the main currency.
+ * Parses a standard balance row
+ *    -127.68 EUR  Income:Investment:Dividend:MMLP-MI
  */
-interface CurrentValuesDict {
-    [account: string]: Money;
+function getNumberFromBalanceRow(row: Array<Any>): number {
+    if (row.length === 0) return 0
+
+    const record = row[0]
+
+    debugger
+
+    const balances = record[0]
+    const account = record[1]
+    
+    const balance = balances[0]
+
+    return 0
 }
 
 /**
@@ -84,5 +94,5 @@ function parseCurrentValues(
 
     return result
 }
-export { parseBalanceSheetRow, parseCurrentValues }
-export type { CurrentValuesDict }
+
+export { parseBalanceSheetRow, parseCurrentValues, getNumberFromBalanceRow }

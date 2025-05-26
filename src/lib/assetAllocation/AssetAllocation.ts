@@ -313,9 +313,6 @@ export class AssetAllocationEngine {
       //   assetClass.currentValue = 0
       // }
       assetClass.currentValue = assetClass.currentValue.plus(amount)
-      console.debug(
-        `Adding ${amount} ${commodity} to ${assetClass.fullname}. Total: ${assetClass.currentValue}`
-      )
     })
   }
 

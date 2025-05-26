@@ -1,8 +1,10 @@
 import moment from 'moment'
 import { settings, SettingKeys } from '../settings'
-import { LedgerApi } from './ledgerApi'
-import { LedgerOutputParser } from './ledgerOutputParser'
+import { SyncApiClient } from './syncApiClient'
 import appService from '$lib/services/appService'
+import { getQueries } from '$lib/sync-queries'
+import * as BeancountParser from '$lib/utils/beancountParser'
+import * as LedgerParser from '$lib/utils/ledgerParser'
 
 const DATE_FORMAT = 'YYYY-MM-DD'
 
@@ -18,13 +20,13 @@ export interface SecurityAnalysis {
 
 export class SecurityAnalyser {
   currency: string | undefined
-  ledgerApi
+  syncApiClient: SyncApiClient
 
   constructor() {
     // symbol, currency
     // this.symbol = symbol
     //this.currency = null
-    this.ledgerApi = new LedgerApi()
+    this.syncApiClient = new SyncApiClient()
   }
 
   /**
@@ -34,7 +36,7 @@ export class SecurityAnalyser {
   // async getSecurityAnalysisFor(symbol: string): Promise<SecurityAnalysis> {
   //   let currency = await settings.get(SettingKeys.currency)
   //   this.currency = currency
-  //   await this.ledgerApi.init()
+  //   await this.syncApiClient.init()
 
   //   let result: SecurityAnalysis = {
   //     yield: await this.getYield(symbol, currency),
@@ -54,8 +56,11 @@ export class SecurityAnalyser {
    */
   // eslint-disable-next-line no-unused-private-class-members
   async #getBasis(symbol: string, currency: string) {
-    const command = `b ^Assets and :${symbol}$ -B -n -X ${currency}`
-    const report = await this.ledgerApi.query(command)
+    const ptaSystem = await settings.get(SettingKeys.ptaSystem) as string
+    const queries = getQueries(ptaSystem)
+    const command = queries.basis(symbol, currency)
+
+    const report = await this.syncApiClient.query(command)
 
     return report
   }
@@ -67,7 +72,7 @@ export class SecurityAnalyser {
   async getYield(symbol: string): Promise<string> {
     const currency = await settings.get(SettingKeys.currency) as string
     this.currency = currency
-    await this.ledgerApi.init()
+    await this.syncApiClient.init()
 
     // Retrieve income amount.
     const incomeStr = await this.#getIncomeBalance(symbol)
@@ -87,8 +92,6 @@ export class SecurityAnalyser {
       _yield = (income * 100) / value
     }
 
-    //console.debug('income:', income, 'value:', value, 'yield:', _yield)
-
     const result = _yield.toFixed(2) + '%'
 
     return result
@@ -97,10 +100,13 @@ export class SecurityAnalyser {
   async getGainLoss(symbol: string) {
     const currency = await appService.getDefaultCurrency()
     this.currency = currency
-    await this.ledgerApi.init()
+    await this.syncApiClient.init()
 
-    const command = `b ^Assets and :${symbol}$ -G -n -X ${currency}`
-    const report = await this.ledgerApi.query(command)
+    const ptaSystem = await settings.get(SettingKeys.ptaSystem) as string
+    const queries = getQueries(ptaSystem)
+    const command = queries.gainLoss(symbol, currency)
+    
+    const report = await this.syncApiClient.query(command)
     const line = report[0]
 
     if(!line) {
@@ -117,56 +123,51 @@ export class SecurityAnalyser {
 
   /**
    * Get the income in the last year.
+   * @returns {Promise<number>} The amount from the symbol's income balance
    */
-  async #getIncomeBalance(symbol: string) {
-    const currency = this.currency
+  async #getIncomeBalance(symbol: string): Promise<number> {
+    const currency = this.currency as string
     const yieldFrom = moment().subtract(1, 'year').format(DATE_FORMAT)
 
-    const command = `b ^Income and :${symbol}$ -b ${yieldFrom} --flat -X ${currency}`
-    const report = await this.ledgerApi.query(command)
+    const ptaSystem = await settings.get(SettingKeys.ptaSystem) as string
+    const queries = getQueries(ptaSystem)
+    const command = queries.incomeBalance(symbol, yieldFrom, currency)
+
+    const report = await this.syncApiClient.query(command)
     if (report['error']) {
       throw new Error(report['error'])
     }
 
-    const total = this.#extractTotal(report)
+    let total;
+    if (ptaSystem == 'ledger') {
+      total = LedgerParser.getNumberFromBalanceRow(report)
+    } else if (ptaSystem == 'beancount') {
+      total = BeancountParser.getNumberFromBalanceRow(report)
+    } else {
+      throw new Error('Unknown PTA system: ' + ptaSystem)
+    }
+
     return total
-  }
-
-  /**
-   * Extracts the Total value from a ledger response.
-   * @param {Array} ledgerReport
-   */
-  #extractTotal(ledgerReport: Array<string>) {
-    if (ledgerReport.length == 0) {
-      return 0
-    }
-
-    //let line = ledgerReport[0]
-    const parser = new LedgerOutputParser()
-    const totalLines = parser.getTotalLines(ledgerReport)
-    if (totalLines.length == 0) {
-      throw new Error('No total received!')
-    }
-    let totalLine = totalLines[0]
-
-    // Gets the numeric value of the total from the ledger total line
-    totalLine = totalLine.trim()
-    const parts = totalLine.split(' ')
-    let totalNumeric = parts[0]
-    // remove thousand-separators
-    totalNumeric = totalNumeric.replaceAll(',', '')
-
-    return totalNumeric
   }
 
   async #getValueBalance(symbol: string, currency: string) {
-    const command = `b ^Assets and :${symbol}$ -X ${currency}`
-    const api = this.ledgerApi
+    const ptaSystem = await settings.get(SettingKeys.ptaSystem) as string
+    const queries = getQueries(ptaSystem)
+    const command = queries.valueBalance(symbol, currency)
+
+    const api = this.syncApiClient
 
     await api.init()
     const report = await api.query(command)
-    const total = this.#extractTotal(report)
-    return total
+
+    debugger
+    if (ptaSystem == 'ledger') {
+      return LedgerParser.getNumberFromBalanceRow(report)
+    } else if (ptaSystem == 'beancount') {
+      return BeancountParser.getNumberFromBalanceRow(report)
+    } else {
+      throw new Error('Unknown PTA system: ' + ptaSystem)
+    }
   }
 
   /**

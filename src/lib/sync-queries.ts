@@ -8,6 +8,10 @@ export interface Queries {
     currentValues(rootAccount: string, currency: string): string
     lots(symbol: string): string
     payees(from: string): string
+    incomeBalance(symbol: string, yieldFrom: string, currency: string): string
+    gainLoss(symbol: string, currency: string): string
+    valueBalance(symbol: string, currency: string): string
+    basis(symbol: string, currency: string): string
 }
 
 
@@ -22,6 +26,14 @@ const LedgerQueries: Queries = {
         `b ^Assets and invest and :${symbol}$ --lots --no-total --collapse`,
     payees: (from: string) =>
         `payees -b ${from}`,
+    incomeBalance: (symbol: string, yieldFrom: string, currency: string) =>
+        `b ^Income and :${symbol}$ -b ${yieldFrom} --flat -X ${currency}`,
+    gainLoss: (symbol: string, currency: string) =>
+        `b ^Assets and :${symbol}$ -G -n -X ${currency}`,
+    valueBalance: (symbol: string, currency: string) =>
+        `b ^Assets and :${symbol}$ -X ${currency}`,
+    basis: (symbol: string, currency: string) =>
+        `b ^Assets and :${symbol}$ -B -n -X ${currency}`
 }
 
 const BeancountQueries: Queries = {
@@ -45,6 +57,28 @@ const BeancountQueries: Queries = {
     payees: (from: string) =>
         `SELECT DISTINCT(COALESCE(payee, narration)) as payee FROM transactions \
          WHERE date >= ${from} ORDER BY payee`,
+    /**
+     * Income balance for symbol
+     * @returns Income from the security.
+     */
+    incomeBalance: (symbol: string, yieldFrom: string, currency: string) =>
+        `SELECT CONVERT(value(sum(position)), '${currency}') as balance, account \
+        WHERE account ~ '^Income' \
+            AND account ~ ':${symbol}$' \
+            AND date >= ${yieldFrom}`,
+    gainLoss: (symbol: string, currency: string) =>
+        // todo: incomplete!
+        `SELECT account, \
+            sum(position) AS units, \
+            cost(sum(position)) AS cost_basis, \
+            value(sum(position)) AS market_value, \
+            value(sum(position)) - cost(sum(position)) AS unrealized_gain \
+        WHERE account ~ '^Assets:' AND account ~ ':${symbol}$' \
+        GROUP BY account`,
+    valueBalance: (symbol: string, currency: string) =>
+        `b ^Assets and :${symbol}$ -X ${currency}`,
+    basis: (symbol: string, currency: string) =>
+        `b ^Assets and :${symbol}$ -B -n -X ${currency}`
 }
 
 export function getQueries(ptaSystem: string): Queries {
