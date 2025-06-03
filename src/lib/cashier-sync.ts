@@ -77,7 +77,7 @@ export class CashierSync {
   }
 
   /**
-   * Retrieve the list of accounts
+   * Retrieve the list of accounts with their balances.
    * @returns array of Account objects
    */
   async readAccounts(): Promise<string[]> {
@@ -87,13 +87,13 @@ export class CashierSync {
       throw new Error('Error reading accounts!')
     }
 
-    const content = (await response.json()) as string[]
+    const content: string[] = (await response.json())
 
     return content
   }
 
   /**
-   * Retrieve the account balances.
+   * Retrieve the account balances for all accounts.
    * @returns array of Account objects
    */
   async readBalances(): Promise<string[]> {

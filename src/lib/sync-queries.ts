@@ -4,6 +4,7 @@
 
 export interface Queries {
     accounts(): string
+    openAccounts(): string
     balances(): string
     currentValues(rootAccount: string, currency: string): string
     lots(symbol: string): string
@@ -18,6 +19,11 @@ export interface Queries {
 const LedgerQueries: Queries = {
     accounts: () =>
         'b --flat --empty --no-total',
+    /**
+     * This functionality does not exist with Ledger.
+     */
+    openAccounts: () =>
+        'b --flat --no-total',
     balances: () =>
         'b --flat --no-total',
     currentValues: (rootAccount: string, currency: string) =>
@@ -44,7 +50,9 @@ const BeancountQueries: Queries = {
     accounts: () => 
         'SELECT sum(number), currency, account ORDER BY account',
         //'SELECT account FROM %23accounts WHERE close IS NULL',
-    balances: () => 
+    openAccounts: () =>
+        'SELECT account from #accounts where close is not null',
+    balances: () =>
         'SELECT account, sum(number), currency ORDER BY account',
     currentValues: (rootAccount: string, currency: string) =>
         `SELECT account, CONVERT(value(sum(position)), '${currency}') \
