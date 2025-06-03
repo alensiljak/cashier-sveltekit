@@ -10,7 +10,7 @@ import { getQueries } from './sync-queries'
 import type { Queries } from './sync-queries'
 import * as LedgerParser from '$lib/utils/ledgerParser'
 import * as BeancountParser from '$lib/utils/beancountParser'
-import type { CurrentValuesDict } from '$lib/utils/beancountParser'
+import type { CurrentValuesDict } from '$lib/data/viewModels'
 
 /**
  * Cashier Sync class communicates with the CashierSync server over network.
