@@ -51,7 +51,7 @@
 		"jsdom": "^26.0.0",
 		"ky": "^1.7.4",
 		"moment": "^2.30.1",
-		"netlify-cli": "^21.0.0",
+		"netlify-cli": "^22.0.0",
 		"numeral": "^2.0.6",
 		"prettier": "^3.4.2",
 		"prettier-plugin-svelte": "^3.3.2",
