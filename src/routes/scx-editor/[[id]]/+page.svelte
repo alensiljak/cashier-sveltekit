@@ -50,7 +50,7 @@
 	<section class="p-1">
 		<XactEditor />
 
-		<hr class="my-3 border-t-4! border-tertiary-500/25!" />
+		<hr class="border-tertiary-500/25! my-3 border-t-4!" />
 
 		<ScheduleEditor />
 

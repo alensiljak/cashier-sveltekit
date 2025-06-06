@@ -23,6 +23,7 @@ export class CashierSync {
    */
   serverUrl: string
   queries: Queries
+  ptaSystem: string
 
   constructor(serverUrl: string, ptaSystem: string) {
     if (!serverUrl) {
@@ -32,6 +33,8 @@ export class CashierSync {
       serverUrl = serverUrl.substring(0, serverUrl.length - 1)
     }
     this.serverUrl = serverUrl
+
+    this.ptaSystem = ptaSystem
     this.queries = getQueries(ptaSystem)
   }
 
@@ -169,14 +172,19 @@ export class CashierSync {
     // Limit the payees to the last 5 years, otherwise there's a high risk of 
     // crashing. This command is somehow very memory hungry on Android.
     const from = moment().subtract(5, 'years').format(ISODATEFORMAT)
-    debugger
+    
     const query = this.queries.payees(from)
     const response = await this.send(query, { timeout: 20000 })
     if (!response.ok) {
       throw new Error('Error reading payees!')
     }
 
-    const content = (await response.json()) as string[]
+    let content = (await response.json()) as string[]
+
+    if (this.ptaSystem === 'beancount') {
+      // beancount result requires some massaging
+      content = content.map(subArray => subArray[0]);
+    }
 
     return content
   }
