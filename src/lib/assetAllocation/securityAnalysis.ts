@@ -160,7 +160,6 @@ export class SecurityAnalyser {
     await api.init()
     const report = await api.query(command)
 
-    debugger
     if (ptaSystem == 'ledger') {
       return LedgerParser.getNumberFromBalanceRow(report)
     } else if (ptaSystem == 'beancount') {
