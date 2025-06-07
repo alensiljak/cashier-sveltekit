@@ -35,21 +35,22 @@ function parseBalanceSheetRow(record: string[]): Account | null {
 
 /**
  * Parses a standard balance row
- *    -127.68 EUR  Income:Investment:Dividend:MMLP-MI
+ * [
+ *    "(-127.68 EUR)", 
+ *    "Income:Investment:Dividend:MMLP-MI"
+ * ]
  */
-function getNumberFromBalanceRow(row: Array<Any>): number {
+function getNumberFromBalanceRow(row: Array<string>): number {
     if (row.length === 0) return 0
-
     const record = row[0]
 
-    debugger
+    let amount_str = record[0]
+    amount_str = amount_str.replace('(', '')
+    amount_str = amount_str.replace(')', '')
 
-    const balances = record[0]
-    const account = record[1]
-    
-    const balance = balances[0]
+    let amount: Money = Money.fromString(amount_str)
 
-    return 0
+    return amount.quantity
 }
 
 /**

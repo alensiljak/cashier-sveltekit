@@ -5,6 +5,18 @@
 export class Money {
   quantity = 0
   currency = ''
+
+  /**
+   * Parse values from a number string. Usually from the reports.
+   * @param amount_str Amount string, "-125.35 EUR"
+   */
+  static fromString(amount_str: string): Money {
+    const parts = amount_str.split(' ')
+    const result = new Money()
+    result.quantity = parseFloat(parts[0])
+    result.currency = parts[1]
+    return result
+  }
 }
 
 export class Account {

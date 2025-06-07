@@ -55,7 +55,7 @@ const BeancountQueries: Queries = {
     balances: () =>
         'SELECT account, sum(number), currency ORDER BY account',
     currentValues: (rootAccount: string, currency: string) =>
-        `SELECT account, CONVERT(value(sum(position)), '${currency}') \
+        `SELECT account, str(CONVERT(value(sum(position)), '${currency}')) \
         WHERE account ~ '^${rootAccount}' \
         GROUP BY account \
         HAVING NOT empty(sum(position)) \
@@ -70,12 +70,12 @@ const BeancountQueries: Queries = {
      * @returns Income from the security.
      */
     incomeBalance: (symbol: string, yieldFrom: string, currency: string) =>
-        `SELECT CONVERT(value(sum(position)), '${currency}') as balance, account \
+        `SELECT str(CONVERT(value(sum(position)), '${currency}')) as balance, account \
         WHERE account ~ '^Income' \
             AND account ~ ':${symbol}$' \
             AND date >= ${yieldFrom}`,
     gainLoss: (symbol: string, currency: string) =>
-        // todo: incomplete!
+        // todo: incomplete! No subtraction on Inventories.
         `SELECT account, \
             sum(position) AS units, \
             cost(sum(position)) AS cost_basis, \
@@ -83,8 +83,13 @@ const BeancountQueries: Queries = {
             value(sum(position)) - cost(sum(position)) AS unrealized_gain \
         WHERE account ~ '^Assets:' AND account ~ ':${symbol}$' \
         GROUP BY account`,
-    valueBalance: (symbol: string, currency: string) =>
-        `b ^Assets and :${symbol}$ -X ${currency}`,
+    valueBalance: (symbol: string, currency: string) => {
+        // convert the symbol to the account-name-compatible form.
+        symbol = symbol.replace('.', '-')
+        //`b ^Assets and :${symbol}$ -X ${currency}`,
+        return `select str(convert(sum(position), '${currency}')), account \
+                where account ~ 'Assets.*:${symbol}$'`
+    },
     basis: (symbol: string, currency: string) =>
         `b ^Assets and :${symbol}$ -B -n -X ${currency}`
 }
