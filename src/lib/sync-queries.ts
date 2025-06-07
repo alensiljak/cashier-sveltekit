@@ -77,9 +77,9 @@ const BeancountQueries: Queries = {
         // No subtraction on Inventories.
         // value(sum(position)) - cost(sum(position)) AS unrealized_gain \
         `SELECT account, \
-            sum(position) AS units, \
-            cost(sum(position)) AS cost_basis, \
-            value(sum(position)) AS market_value \
+            str(sum(position)) AS units, \
+            str(cost(sum(position))) AS cost_basis, \
+            str(value(sum(position))) AS market_value \
         WHERE account ~ '^Assets:.*:${symbol}$' \
         GROUP BY account`,
     valueBalance: (symbol: string, currency: string) => {
