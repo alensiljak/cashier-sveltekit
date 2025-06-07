@@ -71,17 +71,16 @@ const BeancountQueries: Queries = {
      */
     incomeBalance: (symbol: string, yieldFrom: string, currency: string) =>
         `SELECT str(CONVERT(value(sum(position)), '${currency}')) as balance, account \
-        WHERE account ~ '^Income' \
-            AND account ~ ':${symbol}$' \
+        WHERE account ~ '^Income.*:${symbol}$' \
             AND date >= ${yieldFrom}`,
     gainLoss: (symbol: string, currency: string) =>
-        // todo: incomplete! No subtraction on Inventories.
+        // No subtraction on Inventories.
+        // value(sum(position)) - cost(sum(position)) AS unrealized_gain \
         `SELECT account, \
             sum(position) AS units, \
             cost(sum(position)) AS cost_basis, \
-            value(sum(position)) AS market_value, \
-            value(sum(position)) - cost(sum(position)) AS unrealized_gain \
-        WHERE account ~ '^Assets:' AND account ~ ':${symbol}$' \
+            value(sum(position)) AS market_value \
+        WHERE account ~ '^Assets:.*:${symbol}$' \
         GROUP BY account`,
     valueBalance: (symbol: string, currency: string) => {
         // convert the symbol to the account-name-compatible form.

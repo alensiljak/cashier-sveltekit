@@ -105,11 +105,12 @@ export class SecurityAnalyser {
     const ptaSystem = await settings.get(SettingKeys.ptaSystem) as string
     const queries = getQueries(ptaSystem)
     const command = queries.gainLoss(symbol, currency)
-    
+
+    debugger
     const report = await this.syncApiClient.query(command)
     const line = report[0]
 
-    if(!line) {
+    if (!line) {
       return 'n/a'
     }
 
