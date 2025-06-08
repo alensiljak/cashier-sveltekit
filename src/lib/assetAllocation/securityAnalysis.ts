@@ -121,10 +121,9 @@ export class SecurityAnalyser {
     const gainLoss = marketValue - costBasis
 
     // const number = this.#getNumberFromCollapseResult(line)
-    const result = gainLoss.toFixed(2) + ' ' + this.currency
-
     // calculate the percentage
 
+    const result = `${gainLoss.toFixed(2)} ${this.currency}, ${(gainLoss / costBasis * 100).toFixed(2)}%`
     return result
   }
 
