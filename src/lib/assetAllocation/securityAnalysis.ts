@@ -116,8 +116,8 @@ export class SecurityAnalyser {
     // With Beancount, the result is an array of all accounts with this column values.
     const line: Array<string> = report[0]
     // Line contains columns: [(594.52 USD), (594.52 USD)]
-    const costBasis = BeancountParser.getNumberFromTupleString(line[0])
-    const marketValue = BeancountParser.getNumberFromTupleString(line[1])
+    const costBasis = BeancountParser.getMoneyFromTupleString(line[0]).quantity
+    const marketValue = BeancountParser.getMoneyFromTupleString(line[1])
     const gainLoss = marketValue - costBasis
 
     // const number = this.#getNumberFromCollapseResult(line)
@@ -140,8 +140,8 @@ export class SecurityAnalyser {
     const command = queries.incomeBalance(symbol, yieldFrom, currency)
 
     const report = await this.syncApiClient.query(command)
-    if (report['error']) {
-      throw new Error(report['error'])
+    if (report.length == 0) {
+      throw new Error('No income balance found for symbol ' + symbol)
     }
 
     let total;
@@ -150,7 +150,7 @@ export class SecurityAnalyser {
     } else if (ptaSystem == 'beancount') {
       // total = BeancountParser.getNumberFromBalanceRow(report)
       const line = report[0]
-      total = BeancountParser.getNumberFromTupleString(line[0])
+      total = BeancountParser.getMoneyFromTupleString(line[0]).quantity
     } else {
       throw new Error('Unknown PTA system: ' + ptaSystem)
     }
@@ -174,7 +174,7 @@ export class SecurityAnalyser {
 
       // return BeancountParser.getNumberFromBalanceRow(report)
       const line = report[0]
-      return BeancountParser.getNumberFromTupleString(line[0])
+      return BeancountParser.getMoneyFromTupleString(line[0]).quantity
     } else {
       throw new Error('Unknown PTA system: ' + ptaSystem)
     }

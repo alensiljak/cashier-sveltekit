@@ -53,13 +53,12 @@ function getNumberFromBalanceRow(row: Array<string>): number {
  * @param value String of a tuple with a column value. Example: '(594.52 USD)'
  * @returns number from the tuple
  */
-function getNumberFromTupleString(value: string): number {
+function getMoneyFromTupleString(value: string): Money {
     value = value.replace('(', '')
     value = value.replace(')', '')
 
-    const parts = value.split(' ')
-    const number = parts[0]
-    return Number(number)
+    const result = Money.fromString(value)
+    return result
 }
 
 
@@ -75,32 +74,16 @@ function parseCurrentValues(
 ): CurrentValuesDict {
     // The return value { "account": amount }
     const result: CurrentValuesDict = {}
+    for (const row of lines) {
+        const account = row[0]
 
-    try {
-        for (const row of lines) {
-            const account = row[0]
+        // At this point we should have only one balance in the
+        // common currency.
+        const balanceString = row[1]
+        const balance = getMoneyFromTupleString(balanceString)
 
-            let balances: Array<Any> = row[1]
-            // balances is an array of balance records.
-            // Trim null elements (leftover from a tuple)
-            balances = balances.filter(element => element !== null);
-            // At this point we should have only one balance in the
-            // common currency.
-            const balance = balances[0]
-            let amount = 0
-            let currency = null
-            if (balance && balance.length != 0) {
-                // Amount is an array of number and currency.
-                const amountArray: Array<Any> = balance[0]
-                amount = amountArray[0]
-                currency = amountArray[1]
-            }
-
-            // add to the dictionary
-            result[account] = { quantity: amount, currency: currency }
-        }
-    } catch (error) {
-        console.error(error)
+        // add to the dictionary
+        result[account] = { quantity: balance.quantity, currency: balance.currency }
     }
 
     return result
@@ -108,5 +91,5 @@ function parseCurrentValues(
 
 export {
     parseBalanceSheetRow, parseCurrentValues, getNumberFromBalanceRow,
-    getNumberFromTupleString
+    getMoneyFromTupleString
 }

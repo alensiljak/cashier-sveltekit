@@ -2,6 +2,7 @@ import { AssetAllocationEngine } from '$lib/assetAllocation/AssetAllocation'
 import type { AssetClass } from '$lib/assetAllocation/AssetClass'
 import { AssetAllocationFilename } from '$lib/constants.js'
 import { AssetAllocationStore } from '$lib/data/mainStore'
+import Notifier from '$lib/utils/notifier'
 import * as OpfsLib from '$lib/utils/opfslib.js'
 import { get } from 'svelte/store'
 
@@ -22,6 +23,7 @@ export async function load() {
         return { aa, assetClasses }
     } catch (error) {
         console.error(error)
+        Notifier.error(`Could not load Asset Allocation. ${error}`)
     }
 }
 
