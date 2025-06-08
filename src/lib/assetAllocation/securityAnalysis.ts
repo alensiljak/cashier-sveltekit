@@ -106,16 +106,22 @@ export class SecurityAnalyser {
     const queries = getQueries(ptaSystem)
     const command = queries.gainLoss(symbol, currency)
 
-    debugger
-    const report = await this.syncApiClient.query(command)
-    const line = report[0]
-
-    if (!line) {
+    const report: Array<any> = await this.syncApiClient.query(command) as Array<any>
+    if (report.length == 0) {
       return 'n/a'
     }
+    if (report.length > 1) {
+      throw new Error('Multiple gainloss records found for symbol ' + symbol)
+    }
+    // With Beancount, the result is an array of all accounts with this column values.
+    const line: Array<string> = report[0]
+    // Line contains columns: [(594.52 USD), (594.52 USD)]
+    const costBasis = BeancountParser.getNumberFromTupleString(line[0])
+    const marketValue = BeancountParser.getNumberFromTupleString(line[1])
+    const gainLoss = marketValue - costBasis
 
-    const number = this.#getNumberFromCollapseResult(line)
-    const result = number + ' ' + this.currency
+    // const number = this.#getNumberFromCollapseResult(line)
+    const result = gainLoss.toFixed(2) + ' ' + this.currency
 
     // calculate the percentage
 
@@ -174,7 +180,10 @@ export class SecurityAnalyser {
    * Parses a 1-line ledger result, when --collapse is used
    * @param {String} line
    */
-  #getNumberFromCollapseResult(line: string) {
+  #getNumberFromCollapseResult(line: string): string {
+    if (!line) {
+      return 'n/a'
+    }
     line = line.trim()
 
     // -1,139 EUR  Assets

@@ -1,7 +1,6 @@
 /**
  * Parses Beancount output
  */
-
 import { Account, Money } from "$lib/data/model"
 import type { AccountWithBalance, CurrentValuesDict } from "$lib/data/viewModels"
 
@@ -43,15 +42,26 @@ function parseBalanceSheetRow(record: string[]): Account | null {
 function getNumberFromBalanceRow(row: Array<string>): number {
     if (row.length === 0) return 0
     const record = row[0]
-
     let amount_str = record[0]
-    amount_str = amount_str.replace('(', '')
-    amount_str = amount_str.replace(')', '')
 
     let amount: Money = Money.fromString(amount_str)
-
     return amount.quantity
 }
+
+/**
+ * Extracts the numeric value from a column value (position).
+ * @param value String of a tuple with a column value. Example: '(594.52 USD)'
+ * @returns number from the tuple
+ */
+function getNumberFromTupleString(value: string): number {
+    value = value.replace('(', '')
+    value = value.replace(')', '')
+
+    const parts = value.split(' ')
+    const number = parts[0]
+    return Number(number)
+}
+
 
 /**
  * 
@@ -96,4 +106,7 @@ function parseCurrentValues(
     return result
 }
 
-export { parseBalanceSheetRow, parseCurrentValues, getNumberFromBalanceRow }
+export {
+    parseBalanceSheetRow, parseCurrentValues, getNumberFromBalanceRow,
+    getNumberFromTupleString
+}

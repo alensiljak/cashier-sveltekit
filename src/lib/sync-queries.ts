@@ -76,12 +76,12 @@ const BeancountQueries: Queries = {
     gainLoss: (symbol: string, currency: string) =>
         // No subtraction on Inventories.
         // value(sum(position)) - cost(sum(position)) AS unrealized_gain \
-        `SELECT account, \
-            str(sum(position)) AS units, \
-            str(cost(sum(position))) AS cost_basis, \
-            str(value(sum(position))) AS market_value \
-        WHERE account ~ '^Assets:.*:${symbol}$' \
-        GROUP BY account`,
+        // account, \
+        // str(sum(position)) AS units, \
+        `SELECT 
+            str(convert(cost(sum(position)), '${currency}')) AS cost_basis, \
+            str(convert(value(sum(position)), '${currency}')) AS market_value \
+        WHERE currency ~ '${symbol}'`,
     valueBalance: (symbol: string, currency: string) => {
         // convert the symbol to the account-name-compatible form.
         symbol = symbol.replace('.', '-')
