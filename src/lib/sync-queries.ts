@@ -81,7 +81,7 @@ const BeancountQueries: Queries = {
         `SELECT 
             str(convert(cost(sum(position)), '${currency}')) AS cost_basis, \
             str(convert(value(sum(position)), '${currency}')) AS market_value \
-        WHERE currency ~ '${symbol}'`,
+        WHERE currency = '${symbol}'`,
     valueBalance: (symbol: string, currency: string) => {
         // convert the symbol to the account-name-compatible form.
         // symbol = symbol.replace('.', '-')

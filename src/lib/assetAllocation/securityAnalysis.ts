@@ -117,7 +117,7 @@ export class SecurityAnalyser {
     const line: Array<string> = report[0]
     // Line contains columns: [(594.52 USD), (594.52 USD)]
     const costBasis = BeancountParser.getMoneyFromTupleString(line[0]).quantity
-    const marketValue = BeancountParser.getMoneyFromTupleString(line[1])
+    const marketValue = BeancountParser.getMoneyFromTupleString(line[1]).quantity
     const gainLoss = marketValue - costBasis
 
     // const number = this.#getNumberFromCollapseResult(line)
