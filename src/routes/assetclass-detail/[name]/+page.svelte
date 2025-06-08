@@ -129,7 +129,7 @@
 								{account.name},
 								{account.balance?.quantity}
 								{account.balance?.currency},
-								{account.currentValue}
+								{account.currentValue.toFixed(2)}
 								{account.currentCurrency}
 							</div>
 						{/each}
