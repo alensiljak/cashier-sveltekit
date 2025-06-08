@@ -84,10 +84,9 @@ const BeancountQueries: Queries = {
         WHERE currency ~ '${symbol}'`,
     valueBalance: (symbol: string, currency: string) => {
         // convert the symbol to the account-name-compatible form.
-        symbol = symbol.replace('.', '-')
-        //`b ^Assets and :${symbol}$ -X ${currency}`,
-        return `select str(convert(sum(position), '${currency}')), account \
-                where account ~ 'Assets.*:${symbol}$'`
+        // symbol = symbol.replace('.', '-')
+        return `select str(convert(sum(position), '${currency}')) \
+                where currency = '${symbol}'`
     },
     basis: (symbol: string, currency: string) =>
         `b ^Assets and :${symbol}$ -B -n -X ${currency}`

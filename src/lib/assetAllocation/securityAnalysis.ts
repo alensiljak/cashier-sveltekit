@@ -148,7 +148,9 @@ export class SecurityAnalyser {
     if (ptaSystem == 'ledger') {
       total = LedgerParser.getNumberFromBalanceRow(report)
     } else if (ptaSystem == 'beancount') {
-      total = BeancountParser.getNumberFromBalanceRow(report)
+      // total = BeancountParser.getNumberFromBalanceRow(report)
+      const line = report[0]
+      total = BeancountParser.getNumberFromTupleString(line[0])
     } else {
       throw new Error('Unknown PTA system: ' + ptaSystem)
     }
@@ -169,7 +171,10 @@ export class SecurityAnalyser {
     if (ptaSystem == 'ledger') {
       return LedgerParser.getNumberFromBalanceRow(report)
     } else if (ptaSystem == 'beancount') {
-      return BeancountParser.getNumberFromBalanceRow(report)
+
+      // return BeancountParser.getNumberFromBalanceRow(report)
+      const line = report[0]
+      return BeancountParser.getNumberFromTupleString(line[0])
     } else {
       throw new Error('Unknown PTA system: ' + ptaSystem)
     }
