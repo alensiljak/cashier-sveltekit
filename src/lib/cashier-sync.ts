@@ -79,6 +79,13 @@ export class CashierSync {
     return text
   }
 
+  async reloadData() {
+    const response = await this.get('/reload')
+    if (!response.ok) {
+      throw new Error('Error reloading data!')
+    }
+  }
+
   /**
    * Retrieve the list of accounts with their balances.
    * @returns array of Account objects

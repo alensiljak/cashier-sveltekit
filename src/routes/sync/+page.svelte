@@ -8,7 +8,6 @@
 	import appService from '$lib/services/appService';
 	import CashierDAL from '$lib/data/dal';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
-	import { beforeNavigate } from '$app/navigation';
 	import { CashierSync } from '$lib/cashier-sync';
 
 	Notifier.init();
@@ -23,7 +22,6 @@
 	let syncAccounts = $state(false);
 	let syncAaValues = $state(false);
 	let syncPayees = $state(false);
-	let shutdownServer = $state(false);
 
 	let rotationClass = $state('');
 
@@ -32,23 +30,20 @@
 		await loadSettings();
 	});
 
-	beforeNavigate(async () => {
-		if (shutdownServer) {
-			// shutdown the server when leaving the page
-			await onShutdownClick();
-		}
-	});
-
 	async function loadSettings() {
 		serverUrl = await settings.get(SettingKeys.syncServerUrl);
 		rootInvestmentAccount = await settings.get(SettingKeys.rootInvestmentAccount);
 		currency = await appService.getDefaultCurrency();
-    	_ptaSystem = await settings.get(SettingKeys.ptaSystem) as string
-
+		_ptaSystem = (await settings.get(SettingKeys.ptaSystem)) as string;
 
 		syncAccounts = await settings.get(SettingKeys.syncAccounts);
 		syncAaValues = await settings.get(SettingKeys.syncAaValues);
 		syncPayees = await settings.get(SettingKeys.syncPayees);
+	}
+
+	async function reloadData() {
+		const sync = new CashierSync(serverUrl, _ptaSystem);
+		await sync.reloadData();
 	}
 
 	/**
@@ -189,21 +184,24 @@
 	</div>
 
 	<center class="pt-10">
-		<button class="btn bg-tertiary-500 uppercase text-secondary-500" onclick={onSyncClicked}>
+		<button class="btn bg-tertiary-500 text-secondary-500 uppercase" onclick={onSyncClicked}>
 			<span><RefreshCcw class={rotationClass} style="animation-direction: reverse;" /></span>
 			<span>Sync</span>
 		</button>
 	</center>
 
-	<div>
-		<label class="flex items-center space-x-2">
-			<input
-				class="checkbox"
-				type="checkbox"
-				bind:checked={shutdownServer}
-				onchange={saveSettings}
-			/>
-			<p>Shut down Cashier Sync server when leaving the page.</p>
-		</label>
-	</div>
+	<hr />
+
+	<center>
+		<button class="btn bg-tertiary-500 text-secondary-500 uppercase mr-5" onclick={onShutdownClick}>
+			<span><PowerIcon /></span>
+			<span>Server Shutdown</span>
+		</button>
+
+		<!-- reload data -->
+		<button class="btn bg-tertiary-500 text-secondary-500 uppercase" onclick={reloadData}>
+			<span><RefreshCcw class={rotationClass} style="animation-direction: reverse;" /></span>
+			<span>Reload Data</span>
+		</button>
+	</center>
 </main>
