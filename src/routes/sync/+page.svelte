@@ -190,7 +190,7 @@
 		</button>
 	</center>
 
-	<hr />
+	<hr class="my-10" />
 
 	<center>
 		<button class="btn bg-tertiary-500 text-secondary-500 uppercase mr-5" onclick={onShutdownClick}>

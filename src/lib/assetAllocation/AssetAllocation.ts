@@ -202,7 +202,7 @@ export class AssetAllocationEngine {
       // Update existing account.
       const account = await appService.db.accounts.get(key)
       if (!account) {
-        throw new Error('Invalid account ' + account.name)
+        throw new Error('Invalid account ' + key)
       }
       account.currentValue = balance.quantity
       account.currentCurrency = balance.currency
