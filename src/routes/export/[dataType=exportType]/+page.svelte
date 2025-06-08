@@ -77,7 +77,7 @@
 		<p>Note: Journal is exported in ledger format, Scheduled Transactions in JSON.</p>
 
 		<textarea
-			class="textarea mt-3 grow overflow-auto p-2"
+			class="textarea mt-3 grow overflow-auto p-2 whitespace-nowrap"
 			rows="20"
 			placeholder="Enter some long form content."
 			bind:value={output}
