@@ -141,7 +141,9 @@ export class SecurityAnalyser {
 
     const report = await this.syncApiClient.query(command)
     if (report.length == 0) {
-      throw new Error('No income balance found for symbol ' + symbol)
+      console.warn('No income balance found for symbol ' + symbol)
+      // throw new Error('No income balance found for symbol ' + symbol)
+      return 0
     }
 
     let total;
