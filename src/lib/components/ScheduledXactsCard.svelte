@@ -13,30 +13,30 @@
 
 	let today: string = $state('');
 	let scxs: ScheduledTransaction[] = $state([]);
-	let amounts: Money[] = $state([])
+	let amounts: Money[] = $state([]);
 
 	onMount(async () => {
 		today = moment().format(ISODATEFORMAT);
 
 		await loadData();
 
-		calculateAmounts()
+		calculateAmounts();
 	});
 
 	function calculateAmounts() {
-		let xacts = scxs.map((scx) => scx.transaction)
-		amounts = XactAugmenter.calculateXactAmounts(xacts as Xact[])
+		let xacts = scxs.map((scx) => scx.transaction);
+		amounts = XactAugmenter.calculateXactAmounts(xacts as Xact[]);
 	}
 
 	function getDateColour(date: string) {
-		if(date < today) {
-			return 'text-secondary-500'
+		if (date < today) {
+			return 'text-secondary-500';
 		}
-		if(date === today) {
-			return 'text-tertiary-500'
+		if (date === today) {
+			return 'text-tertiary-500';
 		}
-		if(date > today) {
-			return 'text-primary-500'
+		if (date > today) {
+			return 'text-primary-500';
 		}
 	}
 
@@ -48,9 +48,9 @@
 		await goto('/scheduled-xacts');
 	}
 
-	async function onExportClick(e: Event){
-		e.stopPropagation()
-		await goto('/export/scheduled')
+	async function onExportClick(e: Event) {
+		e.stopPropagation();
+		await goto('/export/scheduled');
 	}
 </script>
 
@@ -65,32 +65,32 @@
 		{#if scxs.length === 0}
 			<p>There are no scheduled transactions</p>
 		{:else}
-		<!-- list container -->
-			<div class="text-sm space-y-1">
+			<!-- list container -->
+			<div class="space-y-1 text-sm">
 				{#each scxs as scx, index}
-				<!-- row -->
-				<div class="flex flex-row space-x-2">
-					<time class={`${getDateColour(scx.nextDate)}`}>
-						{scx.nextDate}
-					</time>
-					<data class="grow">
-						{scx.transaction?.payee}
-					</data>
-					<data class={`${getAmountColour(amounts[index]?.quantity)}`}>
-						{amounts[index]?.quantity} {amounts[index]?.currency}
-					</data>
-				</div>
+					<!-- row -->
+					<div class="flex flex-row space-x-2">
+						<time class={`${getDateColour(scx.nextDate)}`}>
+							{scx.nextDate}
+						</time>
+						<data class="grow">
+							{scx.transaction?.payee}
+						</data>
+						<data class={`${getAmountColour(amounts[index]?.quantity)}`}>
+							{amounts[index]?.quantity}
+							{amounts[index]?.currency}
+						</data>
+					</div>
 				{/each}
 			</div>
 		{/if}
 	{/snippet}
 	{#snippet footer()}
-	<center>
+		<!-- <center>
 		<button type="button" class="preset-outlined-warning-500 btn uppercase" onclick={onExportClick}>
 			<FileUpIcon />
 			<span>Export</span>
 		</button>
-	</center>
-{/snippet}
-
+	</center> -->
+	{/snippet}
 </HomeCardTemplate>
