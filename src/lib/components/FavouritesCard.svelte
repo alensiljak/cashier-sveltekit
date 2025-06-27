@@ -9,11 +9,22 @@
 	import Notifier from '$lib/utils/notifier';
 	import { getAccountBalance } from '$lib/services/accountsService';
 	import { formatAmount, getAmountColour } from '$lib/utils/formatter';
+	import { getBarWidth } from '$lib/utils/barWidthCalculator';
 
 	Notifier.init();
 
 	let defaultCurrency: string;
 	let accounts: Array<Account> = $state([]);
+
+	$effect(() => {
+		if (accounts.length > 0) {
+			maxBalance = Math.max(...accounts.map(account => Math.abs(getBalance(account).quantity)));
+			minBalance = Math.min(...accounts.map(account => Math.abs(getBalance(account).quantity)));
+		}
+	});
+
+	let maxBalance: number = $state(0);
+	let minBalance: number = $state(0);
 
 	onMount(async () => {
 		await loadData();
@@ -78,6 +89,10 @@
 							{getBalance(account).currency}
 						</data>
 					</div>
+					<div
+						class="h-1"
+						style="width: {getBarWidth(getBalance(account).quantity, minBalance, maxBalance)}%; background-color: {getBalance(account).quantity >= 0 ? 'green' : 'red'};"
+					></div>
 				</div>
 			{/each}
 		{/if}

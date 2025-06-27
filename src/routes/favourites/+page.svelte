@@ -11,6 +11,7 @@
 	import appService from '$lib/services/appService';
 	import { SelectionModeMetadata, SettingKeys, settings } from '$lib/settings';
 	import { formatAmount, getMoneyColour } from '$lib/utils/formatter';
+	import { getBarWidth } from '$lib/utils/barWidthCalculator';
 	import Notifier from '$lib/utils/notifier';
 	import { Modal } from '@skeletonlabs/skeleton-svelte';
 	import { ArrowUpDownIcon, PlusCircleIcon, PlusIcon, Trash2Icon, TrashIcon } from '@lucide/svelte';
@@ -22,6 +23,22 @@
 
 	let accounts: Account[] = $state([]);
 	let refreshKey = $state(0);
+
+	let maxBalance: number = $state(0);
+	let minBalance: number = $state(0);
+
+	$effect(() => {
+		if (accounts.length > 0) {
+			const quantities = accounts.map(account => Math.abs(account.balance?.quantity as number)).filter(q => !isNaN(q) && q > 0);
+			if (quantities.length > 0) {
+				maxBalance = Math.max(...quantities);
+				minBalance = Math.min(...quantities);
+			} else {
+				maxBalance = 0;
+				minBalance = 0;
+			}
+		}
+	});
 
 	onMount(async () => {
 		await handleAccountSelection();
@@ -78,6 +95,9 @@
 		accounts.forEach((account) => {
 			account.balance = AccountService.getAccountBalance(account, defaultCurrency);
 		});
+
+		// Explicitly re-assign accounts to trigger reactivity
+		accounts = [...accounts];
 
 		// todo: add local Xacts to the balance.
 
@@ -136,22 +156,30 @@
 			<!-- list -->
 			<div>
 				{#each accounts as account}
-					<!-- row -->
-					<!-- svelte-ignore a11y_click_events_have_key_events -->
-					<!-- svelte-ignore a11y_no_static_element_interactions -->
-					<div
-						class={`flex cursor-pointer flex-row border-b border-tertiary-200/15
-								py-1 hover:bg-surface-600 ${isGrayedOut(account) ? 'text-surface-300' : ''}`}
-						onclick={() => onAccountClick(account.name)}
-					>
-						<div class="mr-1 flex grow flex-col">
-							<small>{account.getParentName()}</small>
-							<data class="ml-4">{account.getAccountName()}</data>
+					<div class="flex w-full flex-col px-0.5 text-sm">
+						<!-- row -->
+						<!-- svelte-ignore a11y_click_events_have_key_events -->
+						<!-- svelte-ignore a11y_no_static_element_interactions -->
+						<div
+							class={`flex cursor-pointer flex-row border-b border-tertiary-200/15
+										py-1 hover:bg-surface-600 ${isGrayedOut(account) ? 'text-surface-300' : ''}`}
+							onclick={() => onAccountClick(account.name)}
+						>
+							<div class="mr-1 flex grow flex-col">
+								<small>{account.getParentName()}</small>
+								<data class="ml-4">{account.getAccountName()}</data>
+							</div>
+							{#key refreshKey}
+								<data class={`content-end text-end ${getMoneyColour(account.balance as Money)}`}>
+									{formatAmount(account.balance?.quantity as number)} {account.balance?.currency}
+								</data>
+							{/key}
 						</div>
-						{#key refreshKey}
-							<data class={`content-end text-end ${getMoneyColour(account.balance as Money)}`}>
-								{formatAmount(account.balance?.quantity as number)} {account.balance?.currency}
-							</data>
+							{#key refreshKey}
+						<div
+							class="h-1"
+							style="width: {getBarWidth(account.balance?.quantity as number, minBalance, maxBalance)}%; background-color: {account.balance?.quantity as number >= 0 ? 'green' : 'red'};"
+						></div>
 						{/key}
 					</div>
 				{/each}

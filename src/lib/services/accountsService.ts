@@ -145,6 +145,12 @@ function getDefaultChartOfAccounts() {
   return accountsList
 }
 
+/**
+ * Returns account balance
+ * @param account Account object
+ * @param defaultCurrency The default currency
+ * @returns The account balance in default currency or in the first currency found.
+ */
 export function getAccountBalance(account: Account, defaultCurrency?: string): Money {
   // if (!defaultCurrency) {
   //   throw new Error('Default currency is mandatory!')
@@ -189,7 +195,7 @@ export function getShortAccountName(accountName: string): string {
  */
 export async function loadInvestmentAccounts(): Promise<Account[]> {
   // get the root investment account.
-  const rootAccount = await settings.get(SettingKeys.rootInvestmentAccount)
+  const rootAccount: string = await settings.get(SettingKeys.rootInvestmentAccount)
   if (!rootAccount) {
     throw new Error('Root investment account not set!')
   }
