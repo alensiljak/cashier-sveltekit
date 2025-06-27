@@ -3,7 +3,8 @@ const MIN_PERCENTAGE_WIDTH = 2; // Minimum width for the smallest bar (e.g., 20 
 const MAX_PERCENTAGE_WIDTH = 100; // Maximum width for the largest bar
 
 export function getBarWidth(amount: number, minBalance: number, maxBalance: number): number {
-	if (isNaN(amount) || amount === 0 || maxBalance === 0) return MIN_PERCENTAGE_WIDTH;
+	if (amount === 0) return 0;
+	if (isNaN(amount) || maxBalance === 0) return MIN_PERCENTAGE_WIDTH;
 
 	const logAmount = Math.log(Math.abs(amount) * LOG_SCALE_FACTOR + 1);
 	const logMinBalance = Math.log(minBalance * LOG_SCALE_FACTOR + 1);
