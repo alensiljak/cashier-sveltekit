@@ -18,7 +18,7 @@
 	import { onMount } from 'svelte';
 
 	Notifier.init();
-	
+
 	let isDeleteAllConfirmationOpen = $state(false);
 
 	let accounts: Account[] = $state([]);
@@ -29,7 +29,9 @@
 
 	$effect(() => {
 		if (accounts.length > 0) {
-			const quantities = accounts.map(account => Math.abs(account.balance?.quantity as number)).filter(q => !isNaN(q) && q > 0);
+			const quantities = accounts
+				.map((account) => Math.abs(account.balance?.quantity as number))
+				.filter((q) => !isNaN(q) && q > 0);
 			if (quantities.length > 0) {
 				maxBalance = Math.max(...quantities);
 				minBalance = Math.min(...quantities);
@@ -127,7 +129,7 @@
 
 	async function onDeleteAllConfirmed() {
 		closeModal();
-		
+
 		await settings.set(SettingKeys.favouriteAccounts, []);
 		await loadData();
 	}
@@ -161,8 +163,8 @@
 						<!-- svelte-ignore a11y_click_events_have_key_events -->
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
 						<div
-							class={`flex cursor-pointer flex-row border-b border-tertiary-200/15
-										py-1 hover:bg-surface-600 ${isGrayedOut(account) ? 'text-surface-300' : ''}`}
+							class={`border-tertiary-200/15 hover:bg-surface-600 flex cursor-pointer flex-row
+										border-b py-1 ${isGrayedOut(account) ? 'text-surface-300' : ''}`}
 							onclick={() => onAccountClick(account.name)}
 						>
 							<div class="mr-1 flex grow flex-col">
@@ -171,15 +173,22 @@
 							</div>
 							{#key refreshKey}
 								<data class={`content-end text-end ${getMoneyColour(account.balance as Money)}`}>
-									{formatAmount(account.balance?.quantity as number)} {account.balance?.currency}
+									{formatAmount(account.balance?.quantity as number)}
+									{account.balance?.currency}
 								</data>
 							{/key}
 						</div>
-							{#key refreshKey}
-						<div
-							class="h-1"
-							style="width: {getBarWidth(account.balance?.quantity as number, minBalance, maxBalance)}%; background-color: {account.balance?.quantity as number >= 0 ? 'green' : 'red'};"
-						></div>
+						{#key refreshKey}
+							<div
+								class="h-1"
+								style="width: {getBarWidth(
+									account.balance?.quantity as number,
+									minBalance,
+									maxBalance
+								)}%; background-color: {(account.balance?.quantity as number) >= 0
+									? 'green'
+									: 'red'};"
+							></div>
 						{/key}
 					</div>
 				{/each}
@@ -201,9 +210,7 @@
 			<h2 class="h4">Confirm Delete</h2>
 		</header>
 		<article>
-			<p class="opacity-60">
-				Do you want to clear the favourite accounts list?
-			</p>
+			<p class="opacity-60">Do you want to clear the favourite accounts list?</p>
 		</article>
 		<footer class="flex justify-end gap-4">
 			<button type="button" class="preset-tonal btn" onclick={closeModal}>Cancel</button>

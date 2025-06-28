@@ -1,7 +1,7 @@
 <!-- The card for Scheduled Transactions backup -->
 <script lang="ts">
 	import BackupScxCard from '$lib/components/BackupScxCard.svelte';
-import Toolbar from '$lib/components/Toolbar.svelte';
+	import Toolbar from '$lib/components/Toolbar.svelte';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 </script>
 

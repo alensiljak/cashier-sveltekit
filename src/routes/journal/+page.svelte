@@ -14,7 +14,7 @@
 	import { Modal } from '@skeletonlabs/skeleton-svelte';
 
 	Notifier.init();
-	
+
 	let isDeleteAllConfirmationOpen = $state(false);
 
 	let listContainer: any;

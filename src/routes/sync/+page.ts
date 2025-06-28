@@ -3,13 +3,13 @@ import type { PageLoad } from './$types';
 
 /**
  * { params }
- * @param param0 
- * @returns 
+ * @param param0
+ * @returns
  */
 export const load: PageLoad = () => {
-    // console.log(params)
+	// console.log(params)
 
-    return {};
+	return {};
 
-    // error(404, 'Not found');
-}
+	// error(404, 'Not found');
+};

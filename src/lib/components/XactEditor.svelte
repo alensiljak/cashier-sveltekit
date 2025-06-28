@@ -10,10 +10,10 @@
 	import { getEmptyPostingIndex } from '$lib/utils/xactUtils';
 	import { Posting } from '$lib/data/model';
 	import { ArrowUpDownIcon, PlusCircleIcon, SigmaIcon, TrashIcon } from '@lucide/svelte';
-	import { Big } from 'big.js'
+	import { Big } from 'big.js';
 
 	Notifier.init();
-	
+
 	let sum = $state(Big(0));
 	let _emptyPostingCount = 0;
 
@@ -43,7 +43,7 @@
 			return;
 		}
 
-		const defaultCurrency = await appService.getDefaultCurrency()
+		const defaultCurrency = await appService.getDefaultCurrency();
 
 		switch ($selectionMetadata.selectionType) {
 			case 'payee':
@@ -188,14 +188,18 @@
 
 	<!-- Postings -->
 	<!-- actions and sum -->
-	<div class="space-y-2 rounded-lg bg-primary-500/25 p-3">
+	<div class="bg-primary-500/25 space-y-2 rounded-lg p-3">
 		<div class="flex flex-row">
 			<span class="grow text-center">Postings</span>
 			<div><SigmaIcon /></div>
 			<data class="pl-2">{sum}</data>
 		</div>
 		<div class="flex flex-row justify-center space-x-10">
-			<button type="button" class="preset-outlined-primary-500 btn-icon" onclick={onAddPostingClicked}>
+			<button
+				type="button"
+				class="preset-outlined-primary-500 btn-icon"
+				onclick={onAddPostingClicked}
+			>
 				<PlusCircleIcon />
 			</button>
 			<a class="preset-outlined-primary-500 btn-icon" href="/postings-reorder">

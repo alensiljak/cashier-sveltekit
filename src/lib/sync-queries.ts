@@ -3,101 +3,87 @@
  */
 
 export interface Queries {
-    accounts(): string
-    openAccounts(): string
-    balances(): string
-    currentValues(rootAccount: string, currency: string): string
-    lots(symbol: string): string
-    payees(from: string): string
-    incomeBalance(symbol: string, yieldFrom: string, currency: string): string
-    gainLoss(symbol: string, currency: string): string
-    valueBalance(symbol: string, currency: string): string
-    basis(symbol: string, currency: string): string
+	accounts(): string;
+	openAccounts(): string;
+	balances(): string;
+	currentValues(rootAccount: string, currency: string): string;
+	lots(symbol: string): string;
+	payees(from: string): string;
+	incomeBalance(symbol: string, yieldFrom: string, currency: string): string;
+	gainLoss(symbol: string, currency: string): string;
+	valueBalance(symbol: string, currency: string): string;
+	basis(symbol: string, currency: string): string;
 }
-
 
 const LedgerQueries: Queries = {
-    accounts: () =>
-        'b --flat --empty --no-total',
-    /**
-     * This functionality does not exist with Ledger.
-     */
-    openAccounts: () =>
-        'b --flat --no-total',
-    balances: () =>
-        'b --flat --no-total',
-    currentValues: (rootAccount: string, currency: string) =>
-        `b ^${rootAccount} -X ${currency} --flat --no-total`,
-    lots: (symbol: string) =>
-        `b ^Assets and invest and :${symbol}$ --lots --no-total --collapse`,
-    payees: (from: string) =>
-        `payees -b ${from}`,
-    incomeBalance: (symbol: string, yieldFrom: string, currency: string) =>
-        `b ^Income and :${symbol}$ -b ${yieldFrom} --flat -X ${currency}`,
-    gainLoss: (symbol: string, currency: string) =>
-        `b ^Assets and :${symbol}$ -G -n -X ${currency}`,
-    valueBalance: (symbol: string, currency: string) =>
-        `b ^Assets and :${symbol}$ -X ${currency}`,
-    basis: (symbol: string, currency: string) =>
-        `b ^Assets and :${symbol}$ -B -n -X ${currency}`
-}
+	accounts: () => 'b --flat --empty --no-total',
+	/**
+	 * This functionality does not exist with Ledger.
+	 */
+	openAccounts: () => 'b --flat --no-total',
+	balances: () => 'b --flat --no-total',
+	currentValues: (rootAccount: string, currency: string) =>
+		`b ^${rootAccount} -X ${currency} --flat --no-total`,
+	lots: (symbol: string) => `b ^Assets and invest and :${symbol}$ --lots --no-total --collapse`,
+	payees: (from: string) => `payees -b ${from}`,
+	incomeBalance: (symbol: string, yieldFrom: string, currency: string) =>
+		`b ^Income and :${symbol}$ -b ${yieldFrom} --flat -X ${currency}`,
+	gainLoss: (symbol: string, currency: string) => `b ^Assets and :${symbol}$ -G -n -X ${currency}`,
+	valueBalance: (symbol: string, currency: string) => `b ^Assets and :${symbol}$ -X ${currency}`,
+	basis: (symbol: string, currency: string) => `b ^Assets and :${symbol}$ -B -n -X ${currency}`
+};
 
 const BeancountQueries: Queries = {
-    /**
-     * # is url-encoded (%23)
-     * @returns accounts query
-     */
-    accounts: () => 
-        'SELECT sum(number), currency, account ORDER BY account',
-        //'SELECT account FROM %23accounts WHERE close IS NULL',
-    openAccounts: () =>
-        'SELECT account from #accounts where close is not null',
-    balances: () =>
-        'SELECT account, sum(number), currency ORDER BY account',
-    currentValues: (rootAccount: string, currency: string) =>
-        `SELECT account, str(CONVERT(value(sum(position)), '${currency}')) \
+	/**
+	 * # is url-encoded (%23)
+	 * @returns accounts query
+	 */
+	accounts: () => 'SELECT sum(number), currency, account ORDER BY account',
+	//'SELECT account FROM %23accounts WHERE close IS NULL',
+	openAccounts: () => 'SELECT account from #accounts where close is not null',
+	balances: () => 'SELECT account, sum(number), currency ORDER BY account',
+	currentValues: (rootAccount: string, currency: string) =>
+		`SELECT account, str(CONVERT(value(sum(position)), '${currency}')) \
         WHERE account ~ '^${rootAccount}' \
         GROUP BY account \
         HAVING NOT empty(sum(position)) \
         ORDER BY account`,
-    lots: (symbol: string) =>
-        'balances',
-    payees: (from: string) =>
-        `SELECT DISTINCT(COALESCE(payee, narration)) as payee FROM transactions \
+	lots: (symbol: string) => 'balances',
+	payees: (from: string) =>
+		`SELECT DISTINCT(COALESCE(payee, narration)) as payee FROM transactions \
          WHERE date >= ${from} ORDER BY payee`,
-    /**
-     * Income balance for symbol
-     * @returns Income from the security.
-     */
-    incomeBalance: (symbol: string, yieldFrom: string, currency: string) =>
-        `SELECT str(CONVERT(value(sum(position)), '${currency}')) as balance, account \
+	/**
+	 * Income balance for symbol
+	 * @returns Income from the security.
+	 */
+	incomeBalance: (symbol: string, yieldFrom: string, currency: string) =>
+		`SELECT str(CONVERT(value(sum(position)), '${currency}')) as balance, account \
         WHERE account ~ '^Income.*:${symbol}$' \
             AND date >= ${yieldFrom}`,
-    gainLoss: (symbol: string, currency: string) =>
-        // No subtraction on Inventories.
-        // value(sum(position)) - cost(sum(position)) AS unrealized_gain \
-        // account, \
-        // str(sum(position)) AS units, \
-        `SELECT 
+	gainLoss: (symbol: string, currency: string) =>
+		// No subtraction on Inventories.
+		// value(sum(position)) - cost(sum(position)) AS unrealized_gain \
+		// account, \
+		// str(sum(position)) AS units, \
+		`SELECT 
             str(convert(cost(sum(position)), '${currency}')) AS cost_basis, \
             str(convert(value(sum(position)), '${currency}')) AS market_value \
         WHERE currency = '${symbol}'`,
-    valueBalance: (symbol: string, currency: string) => {
-        // convert the symbol to the account-name-compatible form.
-        // symbol = symbol.replace('.', '-')
-        return `select str(convert(sum(position), '${currency}')) \
-                where currency = '${symbol}'`
-    },
-    basis: (symbol: string, currency: string) =>
-        `b ^Assets and :${symbol}$ -B -n -X ${currency}`
-}
+	valueBalance: (symbol: string, currency: string) => {
+		// convert the symbol to the account-name-compatible form.
+		// symbol = symbol.replace('.', '-')
+		return `select str(convert(sum(position), '${currency}')) \
+                where currency = '${symbol}'`;
+	},
+	basis: (symbol: string, currency: string) => `b ^Assets and :${symbol}$ -B -n -X ${currency}`
+};
 
 export function getQueries(ptaSystem: string): Queries {
-    if (ptaSystem === 'ledger') {
-        return LedgerQueries
-    } else if (ptaSystem == 'beancount') {
-        return BeancountQueries
-    } else {
-        throw new Error('Unknown PTA system: ' + ptaSystem)
-    }
+	if (ptaSystem === 'ledger') {
+		return LedgerQueries;
+	} else if (ptaSystem == 'beancount') {
+		return BeancountQueries;
+	} else {
+		throw new Error('Unknown PTA system: ' + ptaSystem);
+	}
 }

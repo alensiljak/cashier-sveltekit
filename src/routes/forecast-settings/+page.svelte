@@ -19,14 +19,14 @@
 	});
 
 	async function loadData() {
-        let accounts = await settings.get(SettingKeys.forecastAccounts)
-        if(!accounts) return;
+		let accounts = await settings.get(SettingKeys.forecastAccounts);
+		if (!accounts) return;
 
-        accountNames = accounts
+		accountNames = accounts;
 
-        // days
-        days = await settings.get(SettingKeys.forecastDays)
-    }
+		// days
+		days = await settings.get(SettingKeys.forecastDays);
+	}
 
 	async function handleAccountSelection() {
 		if (!$selectionMetadata) return;
@@ -51,9 +51,9 @@
 		await goto('/accounts');
 	}
 
-    function onDeleteClicked(index: number) {
-        accountNames.splice(index, 1)
-    }
+	function onDeleteClicked(index: number) {
+		accountNames.splice(index, 1);
+	}
 
 	async function onFabClicked() {
 		await saveSettings();
@@ -77,23 +77,22 @@
 
 <main class="p-1">
 	<h4 class="h4">Forecast for days:</h4>
-    <input type="number" class="input text-right" bind:value={days} />
+	<input type="number" class="input text-right" bind:value={days} />
 
 	<h4 class="h4">Accounts</h4>
 
-
-    {#if accountNames.length === 0}
-    <p>No accounts selected for forecasting. Please use the menu to add.</p>
-    {:else}
-    {#each accountNames as accountName, index}
-        <div class="w-full flex p-2">
-            <div class="grow">
-                {accountName}
-            </div>
-            <button class="btn-icon preset-filled-error-500" onclick={() => onDeleteClicked(index)}>
-                <TrashIcon />
-            </button>
-        </div>
-    {/each}
-    {/if}
+	{#if accountNames.length === 0}
+		<p>No accounts selected for forecasting. Please use the menu to add.</p>
+	{:else}
+		{#each accountNames as accountName, index}
+			<div class="flex w-full p-2">
+				<div class="grow">
+					{accountName}
+				</div>
+				<button class="btn-icon preset-filled-error-500" onclick={() => onDeleteClicked(index)}>
+					<TrashIcon />
+				</button>
+			</div>
+		{/each}
+	{/if}
 </main>

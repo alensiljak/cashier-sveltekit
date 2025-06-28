@@ -13,40 +13,42 @@ import { toaster } from '../toaster-svelte';
 // let toastStore: ToastStore;
 
 const Notifier = {
-  init() {
-    // toastStore = getToastStore();
-    // toast = getContext('toast');
-  },
-  notify(message: string, 
-    type: "info" | "error" | "success" | undefined,
-    title: string | undefined = undefined) {
-    // const t: ToastSettings = {
-    //   message: message,
-    //   background: background,
-    // };
-    // toastStore.trigger(t);
+	init() {
+		// toastStore = getToastStore();
+		// toast = getContext('toast');
+	},
+	notify(
+		message: string,
+		type: 'info' | 'error' | 'success' | undefined,
+		title: string | undefined = undefined
+	) {
+		// const t: ToastSettings = {
+		//   message: message,
+		//   background: background,
+		// };
+		// toastStore.trigger(t);
 
-    toaster.create({
-      title: title,
-      description: message,
-      type: type,
-    });
-  },
+		toaster.create({
+			title: title,
+			description: message,
+			type: type
+		});
+	},
 
-  success(message: string) {
-    this.notify(message, 'success')
-    // 'bg-positive-500'
-  },
-  error(message: string) {
-    this.notify(message, 'error')
-    // 'bg-negative-500'
-  },
-  info(message: string) {
-    this.notify(message, 'info')
-  },
-  // warn(message: string) {
-  //   this.notify(message, 'bg-tertiary-500 text-secondary-500')
-  // }
-}
+	success(message: string) {
+		this.notify(message, 'success');
+		// 'bg-positive-500'
+	},
+	error(message: string) {
+		this.notify(message, 'error');
+		// 'bg-negative-500'
+	},
+	info(message: string) {
+		this.notify(message, 'info');
+	}
+	// warn(message: string) {
+	//   this.notify(message, 'bg-tertiary-500 text-secondary-500')
+	// }
+};
 
-export default Notifier
+export default Notifier;

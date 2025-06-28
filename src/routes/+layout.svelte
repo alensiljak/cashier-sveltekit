@@ -64,7 +64,7 @@
 	<!-- sidebar as modal -->
 	<Modal
 		open={$drawerState}
-		onOpenChange={(e) => (drawerState.update((state) => e.open))}
+		onOpenChange={(e) => drawerState.update((state) => e.open)}
 		triggerBase="hidden"
 		contentBase="bg-surface-500/95 shadow-xl w-[288px] h-screen overflow-y-auto"
 		positionerJustify="justify-start"
@@ -80,10 +80,10 @@
 
 	<!-- former AppShell -->
 	<div class="grid grid-cols-1 lg:grid-cols-[288px_1fr]">
-		<aside class="sticky top-0 col-span-1 hidden h-screen lg:block overflow-y-auto">
+		<aside class="sticky top-0 col-span-1 hidden h-screen overflow-y-auto lg:block">
 			<!-- bg-surface-500/5 -->
 			<!-- <Navigation /> -->
-			 <NavigationV3 />
+			<NavigationV3 />
 		</aside>
 
 		<main class="col-span-1">

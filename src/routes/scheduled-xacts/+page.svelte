@@ -15,6 +15,7 @@
 	import { CalendarIcon, PackageIcon, PackageOpenIcon, PlusIcon } from '@lucide/svelte';
 	import moment from 'moment';
 	import { onMount } from 'svelte';
+	import type { PageData } from './$types';
 
 	const today = moment().format(ISODATEFORMAT);
 	let { data }: { data: PageData } = $props();
@@ -26,7 +27,7 @@
 
 	onMount(async () => {
 		allItems = data.sorted;
-		await calculateAmounts();
+		calculateAmounts();
 
 		filteredList = [...allItems];
 	});
@@ -35,28 +36,28 @@
 		// Populate empty postings.
 		XactAugmenter.calculateEmptyPostingAmounts(allItems.map((scx) => scx.transaction) as Xact[]);
 		// Calculate the amounts and cache them in the amount property.
-		allItems.forEach(scx => {
+		allItems.forEach((scx) => {
 			scx.amount = XactAugmenter.calculateXactAmount(scx.transaction as Xact);
 		});
 	}
 
 	async function onFabClicked() {
 		// reset any cached values
-		let scx = new ScheduledTransaction()
-		let x = Xact.create()
-		scx.transaction = x
+		let scx = new ScheduledTransaction();
+		let x = Xact.create();
+		scx.transaction = x;
 
-		ScheduledXact.set(scx)
-		xact.set(x)
+		ScheduledXact.set(scx);
+		xact.set(x);
 
-		await goto("/scx-editor/null")
+		await goto('/scx-editor/null');
 	}
 
 	async function onItemClicked(id: number) {
 		// show details page
-		let scx = await appService.loadScheduledXact(id)
+		let scx = await appService.loadScheduledXact(id);
 
-		await goto(`/scx-actions/${id}`)
+		await goto(`/scx-actions/${id}`);
 	}
 
 	async function onSearch(value: string) {
@@ -95,7 +96,9 @@
 				{#each filteredList as scx, i}
 					<!-- Leave date values only at the first occurrence. -->
 					{#if i === 0 || scx.nextDate !== filteredList[i - 1].nextDate}
-						<div class={`flex flex-row justify-center border-t border-tertiary-200/15 py-1 ${getDateColour(scx.nextDate)}`}>
+						<div
+							class={`border-tertiary-200/15 flex flex-row justify-center border-t py-1 ${getDateColour(scx.nextDate)}`}
+						>
 							<CalendarIcon />
 							<time class="ml-2">{scx.nextDate}</time>
 						</div>
@@ -110,7 +113,8 @@
 							</div>
 						</div>
 						<data class={`${getMoneyColour(scx.amount as Money)}`}>
-							{scx.amount?.quantity} {scx.amount?.currency}
+							{scx.amount?.quantity}
+							{scx.amount?.currency}
 						</data>
 					</div>
 				{/each}

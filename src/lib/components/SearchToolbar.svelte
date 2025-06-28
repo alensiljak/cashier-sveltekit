@@ -31,7 +31,8 @@
 <search class="bg-primary-500">
 	<div
 		class="input-group input-group-divider mx-auto w-5/6 grid-cols-[1fr_auto]
-		rounded-full lg:w-2/5">
+		rounded-full lg:w-2/5"
+	>
 		<input
 			type="search"
 			placeholder="Search..."
@@ -39,6 +40,6 @@
 			use:debounceAction={{ callback: handleSearch, delay: 400 }}
 			class="ig-input bg-surface-900"
 		/>
-		<div class="ig-cell preset-tonal "><SearchIcon /></div>
+		<div class="ig-cell preset-tonal"><SearchIcon /></div>
 	</div>
 </search>

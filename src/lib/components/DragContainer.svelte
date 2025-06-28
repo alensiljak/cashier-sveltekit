@@ -1,11 +1,11 @@
 <script lang="ts">
-	 interface Props {
-	   classs?: string
-	   dragElement?: HTMLElement | null;
-	   ondragend?: (event: DragEvent) => void
-	   ondragmove?: (event: DragEvent) => void
-	   setDragElement: (clientX: number, clientY: number, drag_element: HTMLElement) => void
-	 }
+	interface Props {
+		classs?: string;
+		dragElement?: HTMLElement | null;
+		ondragend?: (event: DragEvent) => void;
+		ondragmove?: (event: DragEvent) => void;
+		setDragElement: (clientX: number, clientY: number, drag_element: HTMLElement) => void;
+	}
 
 	let {
 		classs = '',
@@ -30,20 +30,21 @@
 	let is_dragging: boolean;
 	let request_id: number;
 	/** @type {HTMLElement?} */
-	let terrain: { dispatchEvent: (arg0: DragEvent) => void; } | null;
+	let terrain: { dispatchEvent: (arg0: DragEvent) => void } | null;
 	let x = 0;
 	let y = 0;
 
-    interface MyEvent {
-        clientX: number, clientY: number
-    }
+	interface MyEvent {
+		clientX: number;
+		clientY: number;
+	}
 
 	/** @param {{ clientX: number, clientY: number }} event */
 	const handle_mousemove = ({ clientX, clientY }: MyEvent) => {
 		if (is_dragging) {
 			const current = get_terrain(
-				/** @type {HTMLElement[]} */ 
-                (document.elementsFromPoint(clientX, clientY)) as HTMLElement[]
+				/** @type {HTMLElement[]} */
+				(document.elementsFromPoint(clientX, clientY)) as HTMLElement[]
 			);
 			if (current && terrain != current) {
 				if (terrain) {
@@ -185,5 +186,5 @@
 
 <div bind:this={container} class={classs} style="position:relative;">
 	<slot></slot>
-	 <!-- {@render children()} -->
+	<!-- {@render children()} -->
 </div>

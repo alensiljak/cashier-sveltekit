@@ -19,5 +19,5 @@
 	// from the referenced tsconfig.json - TypeScript does not merge them in
 
 	// "references": [{ "path": "./tsconfig.test.json" }]
-	"exclude": ["test/**/*"],
+	"exclude": ["test/**/*"]
 }

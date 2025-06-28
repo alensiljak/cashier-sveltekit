@@ -2,13 +2,12 @@
 	import { page } from '$app/state';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { Posting } from '$lib/data/model';
-    import * as Formatter from '$lib/utils/formatter'
-
+	import * as Formatter from '$lib/utils/formatter';
 </script>
 
 <article class="flex h-screen flex-col">
 	<Toolbar title="Account Transactions"></Toolbar>
-	<section class="h-full overflow-auto p-1 space-y-2">
+	<section class="h-full space-y-2 overflow-auto p-1">
 		<header>
 			<p>{page.data.account.getParentName()}</p>
 			<div class="flex flex-row">
@@ -26,9 +25,7 @@
 
 		<div class="space-y-1">
 			{#each page.data.xacts as xact}
-				{@const posting = xact.postings?.find(
-					(p: Posting) => p.account === page.data.account.name
-				)}
+				{@const posting = xact.postings?.find((p: Posting) => p.account === page.data.account.name)}
 
 				<div class="flex flex-row px-2">
 					<data class="grow">

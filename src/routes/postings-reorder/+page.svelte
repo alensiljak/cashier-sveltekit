@@ -7,9 +7,9 @@
 
 	let MAX_ITEMS: number = 0;
 
-    onMount(() => {
-        MAX_ITEMS = $xact.postings.length
-    })
+	onMount(() => {
+		MAX_ITEMS = $xact.postings.length;
+	});
 
 	function onFabClicked() {
 		history.back();

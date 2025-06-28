@@ -14,7 +14,6 @@
 		SettingsIcon,
 		UploadCloudIcon,
 		DatabaseIcon
-
 	} from '@lucide/svelte';
 
 	function drawerClose(): void {
@@ -26,10 +25,10 @@
 <!-- This is the navigation component. -->
 
 <div class="bg-primary-500 p-4">
-	<div class="w-100 flex items-center justify-center">
+	<div class="flex w-100 items-center justify-center">
 		<img src="/icons/icon-192.png" class="w-1/3 lg:w-1/2" alt="logo" />
 	</div>
-	<div class="text-center pt-2">
+	<div class="pt-2 text-center">
 		<h3 class="h3">Cashier</h3>
 	</div>
 </div>
@@ -102,11 +101,7 @@
 			</a>
 		</li> -->
 		<li>
-			<a
-				href="/backup"
-				on:click={drawerClose}
-				class:active={page.url.pathname === '/backup'}
-			>
+			<a href="/backup" on:click={drawerClose} class:active={page.url.pathname === '/backup'}>
 				<span><DatabaseIcon /></span>
 				<span>Backup</span>
 			</a>
@@ -135,5 +130,7 @@
 <style>
 	/* active navigation item style */
 	/* replace @apply bg-secondary-500; */
-	.active { background-color: var(--color-secondary-500); }
+	.active {
+		background-color: var(--color-secondary-500);
+	}
 </style>

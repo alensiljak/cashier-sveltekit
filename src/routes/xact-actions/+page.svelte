@@ -10,12 +10,18 @@
 	import appService from '$lib/services/appService';
 	import Notifier from '$lib/utils/notifier';
 	import { Modal } from '@skeletonlabs/skeleton-svelte';
-	import { CalendarClockIcon, CopyIcon, ClipboardIcon, PenSquareIcon, TrashIcon } from '@lucide/svelte';
+	import {
+		CalendarClockIcon,
+		CopyIcon,
+		ClipboardIcon,
+		PenSquareIcon,
+		TrashIcon
+	} from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import { SettingKeys, settings } from '$lib/settings';
 
 	Notifier.init();
-	
+
 	let isDeleteConfirmationOpen = $state(false);
 	let ptaSystem = $state('');
 
@@ -32,8 +38,8 @@
 
 	async function onCopyClicked() {
 		// get a journal version
-		let text = ''
-		if(ptaSystem == 'ledger') {
+		let text = '';
+		if (ptaSystem == 'ledger') {
 			text = appService.translateToLedger($xact);
 		} else {
 			text = appService.translateToBeancount($xact);
@@ -162,9 +168,7 @@
 			<h2 class="h4">Confirm Delete</h2>
 		</header>
 		<article>
-			<p class="opacity-60">
-				Do you want to delete the transaction?
-			</p>
+			<p class="opacity-60">Do you want to delete the transaction?</p>
 		</article>
 		<footer class="flex justify-end gap-4">
 			<button type="button" class="preset-tonal btn" onclick={closeModal}>Cancel</button>

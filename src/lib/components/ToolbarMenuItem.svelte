@@ -12,14 +12,14 @@
 
 	async function onMenuClicked(event: Event) {
 		event.preventDefault();
-		
-		if(targetNav) {
+
+		if (targetNav) {
 			// navigate to the given destination.
-			await goto(targetNav)
+			await goto(targetNav);
 		}
 
-		if(onclick) {
-			onclick()
+		if (onclick) {
+			onclick();
 		}
 	}
 </script>
@@ -30,8 +30,7 @@ Example usage:
 -->
 
 <div class="hover:bg-primary-600">
-	<button type="button" class="btn flex flex-row w-full"
-		onclick={onMenuClicked}>
+	<button type="button" class="btn flex w-full flex-row" onclick={onMenuClicked}>
 		<span class="grow text-start">{text}</span>
 		<span class="badge">
 			<Icon />

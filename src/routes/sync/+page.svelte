@@ -193,7 +193,7 @@
 	<hr class="my-10" />
 
 	<center>
-		<button class="btn text-tertiary-500 bg-secondary-500 uppercase mr-5" onclick={onShutdownClick}>
+		<button class="btn text-tertiary-500 bg-secondary-500 mr-5 uppercase" onclick={onShutdownClick}>
 			<span><PowerIcon /></span>
 			<span>Server Shutdown</span>
 		</button>

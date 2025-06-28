@@ -10,7 +10,7 @@
 	import { getXactAmountColour } from '$lib/utils/formatter';
 
 	Notifier.init();
-	
+
 	let xacts: Xact[] = $state([]);
 	let xactBalances: Money[] = $state([]);
 
@@ -71,7 +71,7 @@
 		{:else}
 			<div class="container space-y-1 text-sm">
 				{#each xacts as xact, index}
-					<div class="flex space-x-2 border-b border-tertiary-200/15">
+					<div class="border-tertiary-200/15 flex space-x-2 border-b">
 						<time class="opacity-60">
 							{xact.date}
 						</time>
@@ -89,7 +89,11 @@
 	{/snippet}
 	{#snippet footer()}
 		<center>
-			<button type="button" class="preset-outlined-warning-500 btn uppercase" onclick={onExportClick}>
+			<button
+				type="button"
+				class="preset-outlined-warning-500 btn uppercase"
+				onclick={onExportClick}
+			>
 				<FileUpIcon />
 				<span>Export</span>
 			</button>

@@ -39,11 +39,11 @@
 		endDateValue = $ScheduledXact.endDate ? 'true' : 'false';
 	}
 
-    async function onEndDateChanged() {
-        if(endDateValue !== 'false') return;
+	async function onEndDateChanged() {
+		if (endDateValue !== 'false') return;
 
-        $ScheduledXact.endDate = undefined
-    }
+		$ScheduledXact.endDate = undefined;
+	}
 </script>
 
 <h3 class="h3 text-center">Schedule</h3>
@@ -94,8 +94,14 @@
 
 	<div class="flex flex-row space-x-2">
 		<label class="flex items-center space-x-2">
-			<input class="radio" type="radio" name="end" value="false" bind:group={endDateValue} 
-            onchange={onEndDateChanged}/>
+			<input
+				class="radio"
+				type="radio"
+				name="end"
+				value="false"
+				bind:group={endDateValue}
+				onchange={onEndDateChanged}
+			/>
 			<p>Never</p>
 		</label>
 		<label class="flex items-center space-x-2">

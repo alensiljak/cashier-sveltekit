@@ -7,8 +7,8 @@
 
 	<section class="p-1">
 		<p>
-			For User Manual, see 
-            <a class="anchor" href="https://alensiljak.github.io/cashier-book/">Cashier Book</a>.
+			For User Manual, see
+			<a class="anchor" href="https://alensiljak.github.io/cashier-book/">Cashier Book</a>.
 		</p>
 	</section>
 </article>

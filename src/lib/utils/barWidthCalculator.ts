@@ -15,9 +15,10 @@ export function getBarWidth(amount: number, minBalance: number, maxBalance: numb
 		return MAX_PERCENTAGE_WIDTH;
 	}
 
-	const scaledWidth = (
-		(logAmount - logMinBalance) / (logMaxBalanceAdjusted - logMinBalance)
-	) * (MAX_PERCENTAGE_WIDTH - MIN_PERCENTAGE_WIDTH) + MIN_PERCENTAGE_WIDTH;
+	const scaledWidth =
+		((logAmount - logMinBalance) / (logMaxBalanceAdjusted - logMinBalance)) *
+			(MAX_PERCENTAGE_WIDTH - MIN_PERCENTAGE_WIDTH) +
+		MIN_PERCENTAGE_WIDTH;
 
 	return Math.max(MIN_PERCENTAGE_WIDTH, scaledWidth);
 }

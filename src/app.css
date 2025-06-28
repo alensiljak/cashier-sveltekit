@@ -4,11 +4,11 @@
 @plugin '@tailwindcss/typography';
 
 /* Skeleton */
-@import "@skeletonlabs/skeleton";
-@import "@skeletonlabs/skeleton/optional/presets";
+@import '@skeletonlabs/skeleton';
+@import '@skeletonlabs/skeleton/optional/presets';
 
 /* Your custom theme */
-@import "../cashier-theme";
+@import '../cashier-theme';
 
 /* Tell tailwind to include Skeleton components */
 @source "../node_modules/@skeletonlabs/skeleton-svelte/dist";
@@ -20,13 +20,13 @@
 
 html,
 body {
-  /* @apply h-full; */
-  height: 100%;
+	/* @apply h-full; */
+	height: 100%;
 }
 
 /* Modal / sidebar */
 [data-part='positioner'] {
-  /* styles for the positioner element */
-  /* background-color: #fff; */
-  padding: 0;
+	/* styles for the positioner element */
+	/* background-color: #fff; */
+	padding: 0;
 }

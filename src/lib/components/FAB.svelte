@@ -6,18 +6,24 @@
 
 	type Props = {
 		onclick?: EventHandler;
-        Icon?: Component
-        backgroundColor?: string
-        textColor?: string
+		Icon?: Component;
+		backgroundColor?: string;
+		textColor?: string;
 	};
 	const clickHandler: EventHandler = (e: Event) => {};
-	let { onclick = clickHandler, Icon=Check, backgroundColor='bg-tertiary-500', textColor='text-secondary-500' } = $props();
+	let {
+		onclick = clickHandler,
+		Icon = Check,
+		backgroundColor = 'bg-tertiary-500',
+		textColor = 'text-secondary-500'
+	} = $props();
 </script>
 
 <button
-	class={`fixed bottom-7 right-7 rounded-full ${backgroundColor} hover:${backgroundColor}/75 p-4 ${textColor} shadow-lg transition duration-200`}
-	onclick={onclick}>
-    <!-- absolute-->
+	class={`fixed right-7 bottom-7 rounded-full ${backgroundColor} hover:${backgroundColor}/75 p-4 ${textColor} shadow-lg transition duration-200`}
+	{onclick}
+>
+	<!-- absolute-->
 
 	<Icon />
 </button>

@@ -5,25 +5,25 @@
 	interface Props {
 		Icon?: any;
 		// text?: string;
-        // textColour?: string;
+		// textColour?: string;
 		// bgColour?: string;
-        classes: string;
+		classes: string;
 		onclick?: EventHandler;
-        children: Snippet
+		children: Snippet;
 	}
 	let { Icon, classes, onclick, children }: Props = $props();
-    // colour = 'primary',
+	// colour = 'primary',
 
 	// let buttonColour = $derived(colour ? 'preset-filled-' + colour : '');
 </script>
 
 <!-- flex-col text-center -->
-<div class="m-4 flex h-32 items-center justify-center bg-surface-600/50">
-	<button type="button" class={`btn flex flex-col w-20 aspect-square ${classes}`} {onclick}>
-        <Icon />
-        <span class="mt-1 ml-0!">
-        {@render children?.()}
-    </span>
+<div class="bg-surface-600/50 m-4 flex h-32 items-center justify-center">
+	<button type="button" class={`btn flex aspect-square w-20 flex-col ${classes}`} {onclick}>
+		<Icon />
+		<span class="mt-1 ml-0!">
+			{@render children?.()}
+		</span>
 	</button>
 </div>
 

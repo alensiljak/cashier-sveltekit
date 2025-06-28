@@ -11,13 +11,13 @@
 	import Notifier from '$lib/utils/notifier';
 	import { goto } from '$app/navigation';
 
-	Notifier.init()
+	Notifier.init();
 
 	let payees: Array<Payee> = [];
 	let filteredPayees: Array<Payee> = $state([]);
 	let isInSelectionMode = $state(false);
-	let searchString = $state('')
-	let showFab = $derived(isInSelectionMode && searchString)
+	let searchString = $state('');
+	let showFab = $derived(isInSelectionMode && searchString);
 
 	onMount(async () => {
 		await loadData();
@@ -29,17 +29,16 @@
 		const dal = new CashierDAL();
 		payees = await dal.loadPayees().toArray();
 
-		filteredPayees = payees
+		filteredPayees = payees;
 	}
 
 	/**
 	 * Accept the search term as the Payee.
 	 */
 	function onFabClick() {
-		if(!searchString)
-		{
-		    Notifier.info("The search term is empty!");
-		    return;
+		if (!searchString) {
+			Notifier.info('The search term is empty!');
+			return;
 		}
 
 		onPayeeSelected(searchString);
@@ -58,7 +57,7 @@
 
 			history.back();
 		} else {
-			goto('/account') // todo: show account details
+			goto('/account'); // todo: show account details
 		}
 	}
 
@@ -84,7 +83,7 @@
 </script>
 
 {#if showFab}
-<Fab Icon={CheckIcon} onclick={onFabClick} />
+	<Fab Icon={CheckIcon} onclick={onFabClick} />
 {/if}
 
 <section class="flex h-screen flex-col">
@@ -97,7 +96,7 @@
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 			<div
-				class="border-b border-tertiary-200/15 py-2"
+				class="border-tertiary-200/15 border-b py-2"
 				onclick={() => onPayeeSelected(payee.name)}
 				role="listitem"
 			>

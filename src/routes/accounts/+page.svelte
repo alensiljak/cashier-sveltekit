@@ -9,7 +9,7 @@
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
-	
+
 	let accounts: Array<Account> = [];
 	let filteredAccounts: Array<Account> = $state([]);
 	let isInSelectionMode = false;
@@ -47,7 +47,7 @@
 
 			history.back();
 		} else {
-			goto('/account') // todo: show account details
+			goto('/account'); // todo: show account details
 		}
 	}
 
@@ -79,7 +79,7 @@
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 			<div
-				class="border-b border-tertiary-200/15 py-2 {getAccountColour(account.name)}"
+				class="border-tertiary-200/15 border-b py-2 {getAccountColour(account.name)}"
 				onclick={() => onAccountSelected(account.name)}
 				role="listitem"
 			>

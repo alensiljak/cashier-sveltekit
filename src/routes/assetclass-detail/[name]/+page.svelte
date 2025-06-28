@@ -65,7 +65,7 @@
 
 				// update cache
 				AaStocksStore.update((cache) => {
-					if(!cache) return;
+					if (!cache) return;
 					// create a new object with the field.
 					return {
 						...cache,
@@ -73,7 +73,7 @@
 							...cache[symbol],
 							analysis: analysis
 						}
-					}
+					};
 				});
 			}
 		}
@@ -82,7 +82,7 @@
 	}
 
 	async function runServerCheck(serverUrl: string): Promise<string> {
-    	const ptaSystem = await settings.get(SettingKeys.ptaSystem) as string
+		const ptaSystem = (await settings.get(SettingKeys.ptaSystem)) as string;
 
 		const sync = new CashierSync(serverUrl, ptaSystem);
 		const result = await sync.healthCheck();

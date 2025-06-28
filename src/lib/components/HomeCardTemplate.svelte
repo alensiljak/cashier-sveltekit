@@ -16,11 +16,11 @@
 
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <!-- svelte-ignore a11y_click_events_have_key_events -->
-<article class="card rounded-lg bg-surface-600!" {onclick} role="list">
-	<header class="card-header flex rounded-t-lg bg-primary-500 px-3 py-2">
+<article class="card bg-surface-600! rounded-lg" {onclick} role="list">
+	<header class="card-header bg-primary-500 flex rounded-t-lg px-3 py-2">
 		{#if header}{@render header()}{/if}
 		{#if icon}{@render icon()}{/if}
-		<span class="pl-3 grow">
+		<span class="grow pl-3">
 			{#if title}{@render title()}{/if}
 		</span>
 		{#if menu}

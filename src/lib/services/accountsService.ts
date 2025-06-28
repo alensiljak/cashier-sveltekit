@@ -3,18 +3,18 @@
  * It should simply use the cached versions of API requests,
  * and parse them when needed.
  * No other local storage is used.
- * 
+ *
  * Use as:
  * import * as AccountService from 'accountService'
  */
-import { Account, Money } from '$lib/data/model'
-import db from '$lib/data/db'
-import { SettingKeys, settings } from '$lib/settings'
-import appService from './appService'
+import { Account, Money } from '$lib/data/model';
+import db from '$lib/data/db';
+import { SettingKeys, settings } from '$lib/settings';
+import appService from './appService';
 
 export async function createDefaultAccounts() {
-  const accountsList = getDefaultChartOfAccounts()
-  await createAccounts(accountsList)
+	const accountsList = getDefaultChartOfAccounts();
+	await createAccounts(accountsList);
 }
 
 /**
@@ -22,19 +22,19 @@ export async function createDefaultAccounts() {
  * @param accountsList List of accounts, one account full name per line
  */
 async function createAccounts(accountsList: string) {
-  let accountNames = accountsList.split('\n')
-  // trim
-  accountNames = accountNames.map((account) => account.trim())
-  accountNames = accountNames.filter((account) => account)
+	let accountNames = accountsList.split('\n');
+	// trim
+	accountNames = accountNames.map((account) => account.trim());
+	accountNames = accountNames.filter((account) => account);
 
-  // create objects
-  // const accounts = accountNames.map((accountName) => new Account(accountName))
-  const accounts = accountNames.map((accountName) => {
-    return {
-      name: accountName,
-    }
-  })
-  await db.accounts.bulkAdd(accounts)
+	// create objects
+	// const accounts = accountNames.map((accountName) => new Account(accountName))
+	const accounts = accountNames.map((accountName) => {
+		return {
+			name: accountName
+		};
+	});
+	await db.accounts.bulkAdd(accounts);
 }
 
 // async getAccountsFromCache() {
@@ -52,7 +52,7 @@ async function createAccounts(accountsList: string) {
 // }
 
 function getDefaultChartOfAccounts() {
-  const accountsList = `
+	const accountsList = `
     Assets:Cash
     Assets:Bank Accounts:Checking
     Assets:Bank Accounts:Savings
@@ -141,8 +141,8 @@ function getDefaultChartOfAccounts() {
     Income:Other
     Liabilities:Credit Cards
     Liabilities:Loans
-    `
-  return accountsList
+    `;
+	return accountsList;
 }
 
 /**
@@ -152,40 +152,40 @@ function getDefaultChartOfAccounts() {
  * @returns The account balance in default currency or in the first currency found.
  */
 export function getAccountBalance(account: Account, defaultCurrency?: string): Money {
-  // if (!defaultCurrency) {
-  //   throw new Error('Default currency is mandatory!')
-  // }
+	// if (!defaultCurrency) {
+	//   throw new Error('Default currency is mandatory!')
+	// }
 
-  const result = new Money()
-  // default value
-  result.currency = defaultCurrency as string
+	const result = new Money();
+	// default value
+	result.currency = defaultCurrency as string;
 
-  // Are there any balance records?
-  if (!account.balances) return result
+	// Are there any balance records?
+	if (!account.balances) return result;
 
-  if (defaultCurrency) {
-    // Do we have a balance in the default currency?
-    const defaultQuantity = account.balances[defaultCurrency]
-    if (defaultQuantity) {
-      result.quantity = defaultQuantity
-      result.currency = defaultCurrency
-      return result
-    }
-  }
+	if (defaultCurrency) {
+		// Do we have a balance in the default currency?
+		const defaultQuantity = account.balances[defaultCurrency];
+		if (defaultQuantity) {
+			result.quantity = defaultQuantity;
+			result.currency = defaultCurrency;
+			return result;
+		}
+	}
 
-  // Otherwise take the first balance/currency.
-  const currencies = Object.keys(account.balances)
-  if (!currencies) return result
+	// Otherwise take the first balance/currency.
+	const currencies = Object.keys(account.balances);
+	if (!currencies) return result;
 
-  const currency = currencies[0]
-  result.quantity = account.balances[currency]
-  result.currency = currency
-  return result
+	const currency = currencies[0];
+	result.quantity = account.balances[currency];
+	result.currency = currency;
+	return result;
 }
 
 export function getShortAccountName(accountName: string): string {
-  const separatorIndex = accountName.lastIndexOf(':')
-  return accountName.substring(separatorIndex + 1)
+	const separatorIndex = accountName.lastIndexOf(':');
+	return accountName.substring(separatorIndex + 1);
 }
 
 /**
@@ -194,24 +194,25 @@ export function getShortAccountName(accountName: string): string {
  * @returns Promise with investment accounts collection
  */
 export async function loadInvestmentAccounts(): Promise<Account[]> {
-  // get the root investment account.
-  const rootAccount: string = await settings.get(SettingKeys.rootInvestmentAccount)
-  if (!rootAccount) {
-    throw new Error('Root investment account not set!')
-  }
+	// get the root investment account.
+	const rootAccount: string = await settings.get(SettingKeys.rootInvestmentAccount);
+	if (!rootAccount) {
+		throw new Error('Root investment account not set!');
+	}
 
-  let accounts: Account[] = await db.accounts
-    .where('name').startsWithIgnoreCase(rootAccount)
-    .toArray()
+	let accounts: Account[] = await db.accounts
+		.where('name')
+		.startsWithIgnoreCase(rootAccount)
+		.toArray();
 
-  // Get only the accounts with a current value.
-  accounts = accounts.filter((account) => account.currentValue)
+	// Get only the accounts with a current value.
+	accounts = accounts.filter((account) => account.currentValue);
 
-  return accounts
+	return accounts;
 }
 
 export async function populateAccountBalances(accounts: Account[]) {
-  const currency = await appService.getDefaultCurrency()
+	const currency = await appService.getDefaultCurrency();
 
-  accounts.forEach(acct => acct.balance = getAccountBalance(acct, currency))
+	accounts.forEach((acct) => (acct.balance = getAccountBalance(acct, currency)));
 }

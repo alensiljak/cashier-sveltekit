@@ -10,7 +10,7 @@
 	let _content = $state<string>();
 
 	Notifier.init();
-	
+
 	let isRestoreConfirmationOpen = $state(false);
 
 	/**
@@ -61,8 +61,7 @@
 		<p>Either select a backup file or paste the backup into the text box below.</p>
 
 		<center class="py-6">
-			<FileUpload name="files" 
-				onFileChange={onFileChanged}>
+			<FileUpload name="files" onFileChange={onFileChanged}>
 				<button class="btn bg-primary-500">
 					<span>Select the backup file</span>
 				</button>
@@ -77,7 +76,7 @@
 	<center class="py-6">
 		<button
 			type="button"
-			class="btn bg-warning-500 uppercase text-error-500"
+			class="btn bg-warning-500 text-error-500 uppercase"
 			onclick={onRestoreClicked}>Restore</button
 		>
 	</center>

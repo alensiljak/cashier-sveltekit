@@ -1,70 +1,70 @@
-import { Account } from '$lib/data/model'
-import Big from 'big.js'
-import type { SecurityAnalysis } from './securityAnalysis'
+import { Account } from '$lib/data/model';
+import Big from 'big.js';
+import type { SecurityAnalysis } from './securityAnalysis';
 
 export class AssetClass {
-  fullname: string
-  allocation = 0
-  allocatedValue = Big(0)
-  currentAllocation = 0
-  currentValue = Big(0)
-  diff = 0
-  diffAmount = 0
-  diffPerc = 0
-  currency = ''
-  symbols: string[] = []
+	fullname: string;
+	allocation = 0;
+	allocatedValue = Big(0);
+	currentAllocation = 0;
+	currentValue = Big(0);
+	diff = 0;
+	diffAmount = 0;
+	diffPerc = 0;
+	currency = '';
+	symbols: string[] = [];
 
-  constructor() {
-    this.fullname = ''
-    // this.level = null; // the depth level, with root Allocation = 0
-  }
+	constructor() {
+		this.fullname = '';
+		// this.level = null; // the depth level, with root Allocation = 0
+	}
 
-  /**
-   * Represents the class depth in the allocation tree.
-   * The root element (Allocation) is 0. This is effectively the number of parents.
-   */
-  get depth() {
-    if (!this.parentName) return 0
+	/**
+	 * Represents the class depth in the allocation tree.
+	 * The root element (Allocation) is 0. This is effectively the number of parents.
+	 */
+	get depth() {
+		if (!this.parentName) return 0;
 
-    const parents = this.parentName.split(':')
-    return parents.length
-  }
+		const parents = this.parentName.split(':');
+		return parents.length;
+	}
 
-  //   get fullname() {
-  //     return this.full_name;
-  //   }
+	//   get fullname() {
+	//     return this.full_name;
+	//   }
 
-  //   set fullname(value) {
-  //     this.full_name = value;
+	//   set fullname(value) {
+	//     this.full_name = value;
 
-  //     //
-  //     let parts = value.split(":");
-  //     let lastIndex = parts.length - 1;
-  //     this.name = parts[lastIndex];
-  //     parts.splice(lastIndex, 1);
+	//     //
+	//     let parts = value.split(":");
+	//     let lastIndex = parts.length - 1;
+	//     this.name = parts[lastIndex];
+	//     parts.splice(lastIndex, 1);
 
-  //     this.parentname = parts.join(":");
-  //   }
+	//     this.parentname = parts.join(":");
+	//   }
 
-  get name() {
-    const parts = this.fullname.split(':')
-    const lastIndex = parts.length - 1
-    return parts[lastIndex]
-  }
+	get name() {
+		const parts = this.fullname.split(':');
+		const lastIndex = parts.length - 1;
+		return parts[lastIndex];
+	}
 
-  get parentName() {
-    const parts = this.fullname.split(':')
-    const lastIndex = parts.length - 1
-    // this.name = parts[lastIndex];
-    parts.splice(lastIndex, 1)
-    return parts.join(':')
-  }
+	get parentName() {
+		const parts = this.fullname.split(':');
+		const lastIndex = parts.length - 1;
+		// this.name = parts[lastIndex];
+		parts.splice(lastIndex, 1);
+		return parts.join(':');
+	}
 }
 
 export interface StockSymbol {
-  name: string
-  accounts: Account[]
-  analysis?: SecurityAnalysis
+	name: string;
+	accounts: Account[];
+	analysis?: SecurityAnalysis;
 }
 
 /**
@@ -80,8 +80,8 @@ export interface StockSymbol {
  *     } } }
  */
 export interface AssetClassDefinition {
-  allocation: number
-  symbols: string[]
+	allocation: number;
+	symbols: string[];
 }
 
-export type StockCache = Record<string, StockSymbol>
+export type StockCache = Record<string, StockSymbol>;

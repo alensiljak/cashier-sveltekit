@@ -8,7 +8,7 @@
 	import { onMount } from 'svelte';
 
 	Notifier.init();
-	
+
 	const dataType = page.params.dataType;
 
 	let output = $state('');

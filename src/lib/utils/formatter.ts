@@ -1,33 +1,32 @@
-import type { Money, Xact } from "$lib/data/model";
-import moment from "moment";
+import type { Money, Xact } from '$lib/data/model';
+import moment from 'moment';
 
-const RED = 'text-red-400'
-const YELLOW = 'text-yellow-500'
-const GREEN = 'text-green-500'
+const RED = 'text-red-400';
+const YELLOW = 'text-yellow-500';
+const GREEN = 'text-green-500';
 
 /**
- * 
+ *
  * @param xact Xact for which to retrieve the total amount.
- * @param amount 
+ * @param amount
  */
 export function getXactAmountColour(xact: Xact, balance: Money) {
+	let colour = '';
 
-  let colour = ''
-
-  // Transfers, yellow
-  if (xact.postings.filter((posting) => posting.account?.startsWith('Assets:')).length == 2) {
-    // 2 Asset accounts. Assume transfer.
-    colour = YELLOW
-  } else {
-    colour = getAmountColour(balance.quantity)
-  }
-  return colour
+	// Transfers, yellow
+	if (xact.postings.filter((posting) => posting.account?.startsWith('Assets:')).length == 2) {
+		// 2 Asset accounts. Assume transfer.
+		colour = YELLOW;
+	} else {
+		colour = getAmountColour(balance.quantity);
+	}
+	return colour;
 }
 
 export function getMoneyColour(money: Money): string | undefined {
-  if (!money) return;
+	if (!money) return;
 
-  return getAmountColour(money.quantity)
+	return getAmountColour(money.quantity);
 }
 
 /**
@@ -36,17 +35,17 @@ export function getMoneyColour(money: Money): string | undefined {
  * @returns The Skeleton/Tailwind color string, to be used in the container class.
  */
 export function getAmountColour(amount: number): string {
-  let colour = ''
+	let colour = '';
 
-  if (amount < 0) {
-    colour = RED
-  } else if (amount == 0) {
-    colour = YELLOW
-  } else if (amount > 0) {
-    colour = GREEN
-  }
+	if (amount < 0) {
+		colour = RED;
+	} else if (amount == 0) {
+		colour = YELLOW;
+	} else if (amount > 0) {
+		colour = GREEN;
+	}
 
-  return colour
+	return colour;
 }
 
 /**
@@ -54,21 +53,21 @@ export function getAmountColour(amount: number): string {
  * @param dateString the Skeleton text colour name
  */
 export function getDateColour(dateString: string): string | undefined {
-  const date = moment(dateString).toDate()
-  const today = moment().startOf('day').toDate()
+	const date = moment(dateString).toDate();
+	const today = moment().startOf('day').toDate();
 
-  if(date < today) {
-    // red
-    return 'text-secondary-400'
-  }
-  if(date === today) {
-    // yellow
-    return 'text-base-400'
-  }
-  if(date > today) {
-    // green
-    return 'text-primary-400'
-  }
+	if (date < today) {
+		// red
+		return 'text-secondary-400';
+	}
+	if (date === today) {
+		// yellow
+		return 'text-base-400';
+	}
+	if (date > today) {
+		// green
+		return 'text-primary-400';
+	}
 }
 
 /**
@@ -77,28 +76,28 @@ export function getDateColour(dateString: string): string | undefined {
  * @returns string, the number formatted to the app-wide standard.
  */
 export function formatAmount(amount: number): string {
-  if (!amount) {
-    return ''
-  } else {
-    return amount.toLocaleString('en-UK')
-  }
+	if (!amount) {
+		return '';
+	} else {
+		return amount.toLocaleString('en-UK');
+	}
 }
 
 export function getColourForYield(amount: string): string {
-  if(!amount) return ''
+	if (!amount) return '';
 
-  amount = amount.substring(0, amount.length -1)
-  const number = Number(amount)
-  return getAmountColour(number)
+	amount = amount.substring(0, amount.length - 1);
+	const number = Number(amount);
+	return getAmountColour(number);
 }
 
 export function getColourForGainLoss(gainloss: string): string {
-  if(!gainloss) {
-    return ''
-  }
+	if (!gainloss) {
+		return '';
+	}
 
-  const parts = gainloss.split(' ')
-  const amountPart = Number(parts[0])
-  const colour = getAmountColour(amountPart)
-  return colour
+	const parts = gainloss.split(' ');
+	const amountPart = Number(parts[0]);
+	const colour = getAmountColour(amountPart);
+	return colour;
 }

@@ -60,8 +60,8 @@
 <section class="container space-y-2 p-1">
 	{#each items as item, index (item.id)}
 		<div
-			class="flex h-14 flex-row items-center space-x-3 rounded-lg border
-		border-tertiary-500/25 px-2"
+			class="border-tertiary-500/25 flex h-14 flex-row items-center space-x-3 rounded-lg
+		border px-2"
 		>
 			<div class="grow">
 				<span>{item.name}</span>

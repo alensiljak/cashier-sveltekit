@@ -18,8 +18,8 @@
 
 	$effect(() => {
 		if (accounts.length > 0) {
-			maxBalance = Math.max(...accounts.map(account => Math.abs(getBalance(account).quantity)));
-			minBalance = Math.min(...accounts.map(account => Math.abs(getBalance(account).quantity)));
+			maxBalance = Math.max(...accounts.map((account) => Math.abs(getBalance(account).quantity)));
+			minBalance = Math.min(...accounts.map((account) => Math.abs(getBalance(account).quantity)));
 		}
 	});
 
@@ -35,7 +35,7 @@
 	}
 
 	async function loadData() {
-		defaultCurrency = await appService.getDefaultCurrency()
+		defaultCurrency = await appService.getDefaultCurrency();
 
 		try {
 			let favArray = await appService.loadFavouriteAccounts();
@@ -79,8 +79,8 @@
 			<p>There are no favourite accounts defined</p>
 		{:else}
 			{#each accounts as account}
-				<div class="flex w-full flex-col bg-surface-900 px-0.5 text-sm">
-					<div class="my-0.25 flex flex-row border-b border-tertiary-200/15 py-0.5">
+				<div class="bg-surface-900 flex w-full flex-col px-0.5 text-sm">
+					<div class="border-tertiary-200/15 my-0.25 flex flex-row border-b py-0.5">
 						<div class={`cell grow ${isGrayedOut(account) ? 'text-surface-300' : ''}`}>
 							{account?.name}
 						</div>
@@ -91,7 +91,11 @@
 					</div>
 					<div
 						class="h-1"
-						style="width: {getBarWidth(getBalance(account).quantity, minBalance, maxBalance)}%; background-color: {getBalance(account).quantity >= 0 ? 'green' : 'red'};"
+						style="width: {getBarWidth(
+							getBalance(account).quantity,
+							minBalance,
+							maxBalance
+						)}%; background-color: {getBalance(account).quantity >= 0 ? 'green' : 'red'};"
 					></div>
 				</div>
 			{/each}

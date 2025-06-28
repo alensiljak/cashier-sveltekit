@@ -31,7 +31,7 @@
 
 	<!-- note -->
 	{#if xact.note}
-		<div class="pl-6 leading-4 text-primary-400">
+		<div class="text-primary-400 pl-6 leading-4">
 			<small>; {xact.note}</small>
 		</div>
 	{/if}
@@ -43,7 +43,8 @@
 				<div class="flex flex-row opacity-60">
 					<data class="grow">{posting.account}</data>
 					<data class={`${getAmountColour(posting.amount as number)}`}>
-						{posting.amount} {posting.currency}</data>
+						{posting.amount} {posting.currency}</data
+					>
 				</div>
 			{/each}
 		</div>

@@ -38,7 +38,7 @@
 	>
 		{#snippet lead()}
 			<!-- <ArrowLeft size={24} /> -->
-			<button class="btn btn-sm py-1 pl-2 pr-0 lg:hidden" onclick={toggleSidebar}>
+			<button class="btn btn-sm py-1 pr-0 pl-2 lg:hidden" onclick={toggleSidebar}>
 				<span>
 					<Menu size={24} />
 				</span>
@@ -50,19 +50,23 @@
 		{#snippet trail()}
 			<!-- Drop-down Menu -->
 			{#if menuItems}
-				<Popover open={menuOpenState}
+				<Popover
+					open={menuOpenState}
 					onOpenChange={(e) => (menuOpenState = e.open)}
 					positioning={{ placement: 'bottom-start' }}
 				>
 					{#snippet trigger()}
-					<div class="py-1 pr-2">
-						<EllipsisVertical size={20} />
-					</div>
+						<div class="py-1 pr-2">
+							<EllipsisVertical size={20} />
+						</div>
 					{/snippet}
 					{#snippet content()}
 						<!-- svelte-ignore a11y_click_events_have_key_events -->
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
-						<div class="list-nav preset-filled-primary-500 min-w-52 shadow-sm" onclick={onMenuClick}>
+						<div
+							class="list-nav preset-filled-primary-500 min-w-52 shadow-sm"
+							onclick={onMenuClick}
+						>
 							{@render menuItems?.()}
 						</div>
 					{/snippet}

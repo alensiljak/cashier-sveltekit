@@ -21,7 +21,8 @@
 
 	onMount(async () => {
 		if (!get(xact)) {
-			await goto('/');1
+			await goto('/');
+			1;
 		}
 	});
 

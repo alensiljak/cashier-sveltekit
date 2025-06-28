@@ -2,114 +2,110 @@
     Cloud backup
 */
 
-import moment from "moment";
-import appService from "./appService";
-import { BackupType } from "$lib/enums";
-import { ISODATEFORMAT, LONGTIMEFORMAT } from "$lib/constants";
-import { createClient, type FileStat } from 'webdav'
+import moment from 'moment';
+import appService from './appService';
+import { BackupType } from '$lib/enums';
+import { ISODATEFORMAT, LONGTIMEFORMAT } from '$lib/constants';
+import { createClient, type FileStat } from 'webdav';
 
 export class CloudBackupService {
-    _serverUrl: string
-    _client
-    // Used to avoid sending too many request.
-    _resourceCache?: FileStat[]
+	_serverUrl: string;
+	_client;
+	// Used to avoid sending too many request.
+	_resourceCache?: FileStat[];
 
-    constructor(serverUrl: string) {
-        this._serverUrl = serverUrl
-        this._client = createClient(serverUrl)
-    }
+	constructor(serverUrl: string) {
+		this._serverUrl = serverUrl;
+		this._client = createClient(serverUrl);
+	}
 
-    async backupScheduledXacts() {
-        // get the JSON data for export
-        const output = await appService.getScheduledXactsForExport()
-        if (!output) {
-            throw new Error('Error retrieving and serializing Scheduled Transactions!')
-        }
+	async backupScheduledXacts() {
+		// get the JSON data for export
+		const output = await appService.getScheduledXactsForExport();
+		if (!output) {
+			throw new Error('Error retrieving and serializing Scheduled Transactions!');
+		}
 
-        // get filename
-        const filename = getFilenameForBackup(BackupType.SCHEDULEDXACTS)
+		// get filename
+		const filename = getFilenameForBackup(BackupType.SCHEDULEDXACTS);
 
-        // upload
-        //const url = this.getUrl(`/${filename}`)
-        const path = `/${filename}`
-        //const 
-        const result = await this._client.putFileContents(path, output)
-        return result
-    }
+		// upload
+		//const url = this.getUrl(`/${filename}`)
+		const path = `/${filename}`;
+		//const
+		const result = await this._client.putFileContents(path, output);
+		return result;
+	}
 
-    clearCache() {
-        this._resourceCache = undefined
-    }
+	clearCache() {
+		this._resourceCache = undefined;
+	}
 
-    /**
-     * Retrieves the number of backups for the given backup type.
-     * @returns 
-     */
-    async getRemoteBackupCount(backupType: string): Promise<number> {
-        const files = await this.getFileListing()
-        const filenames = files.map(f => f.basename)
+	/**
+	 * Retrieves the number of backups for the given backup type.
+	 * @returns
+	 */
+	async getRemoteBackupCount(backupType: string): Promise<number> {
+		const files = await this.getFileListing();
+		const filenames = files.map((f) => f.basename);
 
-        // filter only the backups for Scheduled Xacts
-        const result = filenames
-            .filter(f => f.startsWith(backupType))
-            .length
-        return result
-    }
+		// filter only the backups for Scheduled Xacts
+		const result = filenames.filter((f) => f.startsWith(backupType)).length;
+		return result;
+	}
 
-    async getLatestFilename(): Promise<string> {
-        const files = await this.getFileListing()
-        const filenames = files.map(f => f.basename)
+	async getLatestFilename(): Promise<string> {
+		const files = await this.getFileListing();
+		const filenames = files.map((f) => f.basename);
 
-        // get only the scheduled xact backups
-        const result = filenames
-            .filter(f => f.startsWith(BackupType.SCHEDULEDXACTS))
-            .sort((a, b) => b.localeCompare(a))
-        [0];
-        return result
-    }
+		// get only the scheduled xact backups
+		const result = filenames
+			.filter((f) => f.startsWith(BackupType.SCHEDULEDXACTS))
+			.sort((a, b) => b.localeCompare(a))[0];
+		return result;
+	}
 
-    // private
+	// private
 
-    async getFileListing(): Promise<FileStat[]> {
-        // Fetch the file listing only if the cache is empty.
-        if (!this._resourceCache) {
-            //const url = this.getUrl('/')
-            const response = await this._client.getDirectoryContents('/')
+	async getFileListing(): Promise<FileStat[]> {
+		// Fetch the file listing only if the cache is empty.
+		if (!this._resourceCache) {
+			//const url = this.getUrl('/')
+			const response = await this._client.getDirectoryContents('/');
 
-            // cache the listing
-            this._resourceCache = response as FileStat[]
-        }
+			// cache the listing
+			this._resourceCache = response as FileStat[];
+		}
 
-        return this._resourceCache
-    }
+		return this._resourceCache;
+	}
 
-    getUrl(path: string) {
-        return `${this._serverUrl}/${path}`
-    }
-
+	getUrl(path: string) {
+		return `${this._serverUrl}/${path}`;
+	}
 }
 
 export function getFilenameForBackup(backupType: string) {
-    const prefix = backupType.toLowerCase()
+	const prefix = backupType.toLowerCase();
 
-    // date/time
-    const now = moment()
-    const date = now.format(ISODATEFORMAT)
-    const time = now.format(LONGTIMEFORMAT)
+	// date/time
+	const now = moment();
+	const date = now.format(ISODATEFORMAT);
+	const time = now.format(LONGTIMEFORMAT);
 
-    // file extension
-    let extension;
-    switch (backupType) {
-        case BackupType.JOURNAL:
-            extension = 'ledger'
-            break;
-        default:
-            // case BackupType.SCHEDULEDXACTS:
-            extension = 'json'
-            break;
-    }
+	// file extension
+	let extension;
+	switch (backupType) {
+		case BackupType.JOURNAL:
+			extension = 'ledger';
+			break;
+		default:
+			// case BackupType.SCHEDULEDXACTS:
+			extension = 'json';
+			break;
+	}
 
-    const filename = `${prefix}_${date}_${time}.${extension}`
+	const filename = `${prefix}_${date}_${time}.${extension}`;
 
-    return filename
+	return filename;
 }
