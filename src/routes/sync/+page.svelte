@@ -4,7 +4,6 @@
 	import { onMount } from 'svelte';
 	import { SettingKeys, settings } from '$lib/settings';
 	import Notifier from '$lib/utils/notifier';
-	import type { PageData } from './$types';
 	import appService from '$lib/services/appService';
 	import CashierDAL from '$lib/data/dal';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
@@ -12,11 +11,9 @@
 
 	Notifier.init();
 
-	let { data }: { data: PageData } = $props();
+	// let { data }: { data: PageData } = $props();
 
 	let serverUrl = $state('http://localhost:3000');
-	let rootInvestmentAccount = '';
-	let currency = '';
 	let _ptaSystem: string = '';
 
 	let syncAccounts = $state(false);
@@ -32,8 +29,6 @@
 
 	async function loadSettings() {
 		serverUrl = await settings.get(SettingKeys.syncServerUrl);
-		rootInvestmentAccount = await settings.get(SettingKeys.rootInvestmentAccount);
-		currency = await appService.getDefaultCurrency();
 		_ptaSystem = (await settings.get(SettingKeys.ptaSystem)) as string;
 
 		syncAccounts = await settings.get(SettingKeys.syncAccounts);
