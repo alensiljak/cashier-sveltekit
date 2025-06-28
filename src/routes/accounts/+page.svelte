@@ -7,18 +7,24 @@
 	import { ListSearch } from '$lib/utils/ListSearch';
 	import { onMount } from 'svelte';
 	import type { PageData } from './$types';
+	import { getAccountBalance } from '$lib/services/accountsService';
+	import { getAmountColour } from '$lib/utils/formatter';
+	import appService from '$lib/services/appService';
+	import Notifier from '$lib/utils/notifier';
 
 	let { data }: { data: PageData } = $props();
 
 	let accounts: Array<Account> = [];
 	let filteredAccounts: Array<Account> = $state([]);
 	let isInSelectionMode = false;
+	let defaultCurrency: string;
 
 	onMount(async () => {
 		accounts = data.accounts;
 		filteredAccounts = accounts;
 
 		isInSelectionMode = $selectionMetadata !== undefined;
+		defaultCurrency = await appService.getDefaultCurrency();
 	});
 
 	/**
@@ -36,6 +42,10 @@
 		} else {
 			return '';
 		}
+	}
+
+	function getBalance(account: Account) {
+		return getAccountBalance(account, defaultCurrency);
 	}
 
 	function onAccountSelected(name: string) {
@@ -79,11 +89,16 @@
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 			<div
-				class="border-tertiary-200/15 border-b py-2 {getAccountColour(account.name)}"
+				class="border-tertiary-200/15 border-b py-2 flex justify-between items-center {getAccountColour(account.name)}"
 				onclick={() => onAccountSelected(account.name)}
 				role="listitem"
 			>
-				{account.name}
+				<div>{account.name}</div>
+				{#if getBalance(account).quantity !== 0}
+				<data class={`text-right ${getAmountColour(getBalance(account).quantity)}`}>
+					{getBalance(account).quantity} {getBalance(account).currency}
+				</data>
+				{/if}
 			</div>
 		{/each}
 	</div>
