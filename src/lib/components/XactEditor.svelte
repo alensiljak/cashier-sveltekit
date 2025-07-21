@@ -161,7 +161,7 @@
 	}
 </script>
 
-<div class="space-y-3 py-2">
+<div class="h-full flex flex-col space-y-3 py-2">
 	<input
 		title="Date"
 		placeholder="Date"
@@ -211,6 +211,7 @@
 		</div>
 	</div>
 	<!-- posting list -->
+	<div class="overflow-y-auto">
 	{#each $xact?.postings as posting, index}
 		<PostingEditor
 			{index}
@@ -218,4 +219,5 @@
 			onAmountChanged={onPostingAmountChanged}
 		/>
 	{/each}
+	</div>
 </div>
