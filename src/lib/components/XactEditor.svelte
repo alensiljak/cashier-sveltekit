@@ -161,7 +161,7 @@
 	}
 </script>
 
-<div class="flex-1 space-y-3 py-2">
+<div class="flex flex-col h-full space-y-3 py-2">
 	<input
 		title="Date"
 		placeholder="Date"

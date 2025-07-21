@@ -67,7 +67,7 @@
 		{/snippet}
 	</Toolbar>
 
-	<section class="container mx-auto flex-1 lg:max-w-(--breakpoint-sm)">
+	<section class="container mx-auto flex-1 overflow-y-auto lg:max-w-(--breakpoint-sm)">
 		<Fab Icon={Check} onclick={onFab} />
 
 		<!-- tx editor -->
