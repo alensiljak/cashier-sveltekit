@@ -59,18 +59,20 @@
 	}
 </script>
 
-<Toolbar title="Journal Entry">
-	{#snippet menuItems()}
-		<ToolbarMenuItem text="Save" />
-		<ToolbarMenuItem text="Reset" />
-	{/snippet}
-</Toolbar>
+<article class="flex h-screen flex-col">
+	<Toolbar title="Journal Entry">
+		{#snippet menuItems()}
+			<ToolbarMenuItem text="Save" />
+			<ToolbarMenuItem text="Reset" />
+		{/snippet}
+	</Toolbar>
 
-<main class="container mx-auto lg:max-w-(--breakpoint-sm)">
-	<Fab Icon={Check} onclick={onFab} />
+	<section class="container mx-auto flex-1 lg:max-w-(--breakpoint-sm)">
+		<Fab Icon={Check} onclick={onFab} />
 
-	<!-- tx editor -->
-	<TransactionEditor />
+		<!-- tx editor -->
+		<TransactionEditor />
 
-	<!-- dialog for confirming reset -->
-</main>
+		<!-- dialog for confirming reset -->
+	</section>
+</article>

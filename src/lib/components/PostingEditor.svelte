@@ -50,53 +50,55 @@
 	}
 </script>
 
-<input
-	title="Account"
-	placeholder="Account"
-	type="text"
-	class="input"
-	readonly
-	bind:value={$xact.postings[index].account}
-	onclick={onAccountClicked}
-/>
-
-<div class="flex flex-row">
-	<!-- amount sign -->
-	<div>
-		<button
-			type="button"
-			class="preset-outlined-surface-500 btn border-tertiary-200/50 w-12 grow-0 rounded-sm border px-1"
-			onclick={changeSign}
-		>
-			<DiffIcon />
-		</button>
-	</div>
+<section>
 	<input
-		title="Amount"
-		placeholder="Amount"
-		type="number"
-		class={`input variant-form-material grow text-right ${amountFieldColor} px-1`}
-		bind:value={$xact.postings[index].amount}
-		bind:this={amountInput}
-		onfocus={() => amountInput.select()}
-		oninput={onAmountChanged}
+		title="Account"
+		placeholder="Account"
+		type="text"
+		class="input"
+		readonly
+		bind:value={$xact.postings[index].account}
+		onclick={onAccountClicked}
 	/>
-	<!--
+
+	<div class="flex flex-row">
+		<!-- amount sign -->
+		<div>
+			<button
+				type="button"
+				class="preset-outlined-surface-500 btn border-tertiary-200/50 w-12 grow-0 rounded-sm border px-1"
+				onclick={changeSign}
+			>
+				<DiffIcon />
+			</button>
+		</div>
+		<input
+			title="Amount"
+			placeholder="Amount"
+			type="number"
+			class={`input variant-form-material grow text-right ${amountFieldColor} px-1`}
+			bind:value={$xact.postings[index].amount}
+			bind:this={amountInput}
+			onfocus={() => amountInput.select()}
+			oninput={onAmountChanged}
+		/>
+		<!--
 		class={$xact.postings[index].amount as number >= 0 ? 'bg-primary-500/20!' : 'bg-secondary-500/20!'}
 		oninput={() => updateAmount($xact.postings[index].amount as number)}
 		onchange={onAmountChanged}
 	-->
-	<div class="min-w-24 shrink">
-		<input
-			title="Currency"
-			placeholder="Currency"
-			type="text"
-			class="input variant-form-material px-1 text-center"
-			bind:value={$xact.postings[index].currency}
-		/>
-	</div>
-	<!--
+		<div class="min-w-24 shrink">
+			<input
+				title="Currency"
+				placeholder="Currency"
+				type="text"
+				class="input variant-form-material px-1 text-center"
+				bind:value={$xact.postings[index].currency}
+			/>
+		</div>
+		<!--
 		oninput={() => updateCurrency($xact.postings[index].currency)}
 		uppercase
 	-->
-</div>
+	</div>
+</section>

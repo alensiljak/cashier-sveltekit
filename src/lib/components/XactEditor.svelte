@@ -161,7 +161,7 @@
 	}
 </script>
 
-<div class="h-full flex flex-col space-y-3 py-2">
+<div class="flex-1 space-y-3 py-2">
 	<input
 		title="Date"
 		placeholder="Date"
@@ -211,13 +211,13 @@
 		</div>
 	</div>
 	<!-- posting list -->
-	<div class="overflow-y-auto">
-	{#each $xact?.postings as posting, index}
-		<PostingEditor
-			{index}
-			onAccountClicked={(event) => onPostingAccountClicked(index)}
-			onAmountChanged={onPostingAmountChanged}
-		/>
-	{/each}
+	<div class="flex-1 overflow-y-auto">
+		{#each $xact?.postings as posting, index}
+			<PostingEditor
+				{index}
+				onAccountClicked={(event) => onPostingAccountClicked(index)}
+				onAmountChanged={onPostingAmountChanged}
+			/>
+		{/each}
 	</div>
 </div>
