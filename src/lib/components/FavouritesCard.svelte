@@ -85,7 +85,7 @@
 							{account?.name}
 						</div>
 						<data class={`text-right ${getAmountColour(getBalance(account).quantity)}`}>
-							{getBalance(account).quantity}
+							{formatAmount(getBalance(account).quantity)}
 							{getBalance(account).currency}
 						</data>
 					</div>
