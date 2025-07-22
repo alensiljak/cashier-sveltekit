@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { getDrawerStore } from '@skeletonlabs/skeleton';
 	import { swipe, type SwipeCustomEvent } from 'svelte-gestures';
 	import Navigation from '$lib/components/navigation.svelte';
 	import { fade } from 'svelte/transition';

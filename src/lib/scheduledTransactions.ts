@@ -36,7 +36,7 @@ export class Projector {
 	 * Projects a single schedule into the given timeframe.
 	 * @param {ScheduledTransaction} stx
 	 */
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 	projectTx(stx: ScheduledTransaction, startDate: any, endDate: any) {
 		//console.log(stx)
 

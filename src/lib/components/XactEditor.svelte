@@ -149,7 +149,7 @@
 		sum = new Big(0);
 		_emptyPostingCount = 0;
 
-		if (!xact || !$xact.postings || $xact.postings.length === 0) return;
+		if (!$xact || !$xact.postings || $xact.postings.length === 0) return;
 
 		$xact.postings.forEach((posting) => {
 			if (posting.amount) {
