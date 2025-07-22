@@ -75,10 +75,14 @@
 			return;
 		}
 
-		if (navigator.share) {
+		let fileName = getFilenameForBackup(dataType);
+		const file = new File([output], fileName, { type: 'text/plain' });
+
+		if (navigator.canShare && navigator.canShare({ files: [file] })) {
 			await navigator.share({
+				files: [file],
 				title: `Cashier ${dataType} export`,
-				text: output
+				text: `Cashier ${dataType} export`
 			});
 		} else {
 			Notifier.error('Web Share API not supported.');
@@ -108,10 +112,10 @@
 			</button>
 			<!-- pCloud Save ?-->
 			<!-- WebShare -->
-			<button class="preset-filled-primary-500 btn" onclick={onShareClick}>
+			<!-- <button class="preset-filled-primary-500 btn" onclick={onShareClick}>
 				<Share2Icon />
 				<span>Share</span>
-			</button>
+			</button> -->
 			<!-- Download -->
 			<button class="preset-filled-primary-500 btn" onclick={onDownloadClick}>
 				<FileDownIcon />
