@@ -7,8 +7,8 @@ import { Account, Money } from '$lib/data/model';
 import type { CurrentValuesDict } from './beancountParser';
 
 function parseBalanceSheetRow(line: string): Account | null {
-	let account = new Account('');
-	let accountBalances: Record<string, number> = {};
+	const account = new Account('');
+	const accountBalances: Record<string, number> = {};
 
 	// name
 	const namePart = line.substring(21).trim();

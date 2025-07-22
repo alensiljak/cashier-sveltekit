@@ -197,7 +197,7 @@ export class AssetAllocationEngine {
 		const accounts = Object.keys(balancesDict);
 		for (let i = 0; i < accounts.length; i++) {
 			const key = accounts[i];
-			let balance: Money = balancesDict[key];
+			const balance: Money = balancesDict[key];
 
 			// Update existing account.
 			const account = await appService.db.accounts.get(key);

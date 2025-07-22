@@ -10,8 +10,8 @@ import type { AccountWithBalance, CurrentValuesDict } from '$lib/data/viewModels
  * @returns populated Account object
  */
 function parseBalanceSheetRow(record: string[]): Account | null {
-	let account = new Account('');
-	let accountBalances: Record<string, number> = {};
+	const account = new Account('');
+	const accountBalances: Record<string, number> = {};
 
 	// currency
 	const currency = record[1];
@@ -42,9 +42,9 @@ function parseBalanceSheetRow(record: string[]): Account | null {
 function getNumberFromBalanceRow(row: Array<string>): number {
 	if (row.length === 0) return 0;
 	const record = row[0];
-	let amount_str = record[0];
+	const amount_str = record[0];
 
-	let amount: Money = Money.fromString(amount_str);
+	const amount: Money = Money.fromString(amount_str);
 	return amount.quantity;
 }
 

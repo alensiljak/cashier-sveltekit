@@ -3,7 +3,7 @@ import type { PageLoad } from './$types';
 
 export const load: PageLoad = async () => {
 	const dal = new CashierDAL();
-	let accounts = await dal.loadAccounts().toArray();
+	const accounts = await dal.loadAccounts().toArray();
 
 	return { accounts };
 };

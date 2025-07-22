@@ -138,7 +138,7 @@ class AppService {
 			}
 
 			// prepare output.
-			let output_system = await settings.get(SettingKeys.ptaSystem);
+			const output_system = await settings.get(SettingKeys.ptaSystem);
 			if (output_system === 'ledger') {
 				output += this.translateToLedger(tx);
 			} else {
@@ -376,7 +376,7 @@ class AppService {
 			throw new Error('No default currency set!');
 		}
 
-		let accountBalances: AccountIndex = {};
+		const accountBalances: AccountIndex = {};
 
 		// read and parse the balance sheet entries
 		for (let i = 0; i < lines.length; i++) {
@@ -395,7 +395,7 @@ class AppService {
 				continue;
 			} else {
 				// see if we already have this account
-				let existingAccount = accountBalances[account.name];
+				const existingAccount = accountBalances[account.name];
 				if (existingAccount && existingAccount.balances && account.balances) {
 					// add the new balance in another currency
 					const currency = Object.keys(account.balances)[0];

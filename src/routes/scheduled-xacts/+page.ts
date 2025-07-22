@@ -5,12 +5,12 @@ import db from '$lib/data/db';
 import type { PageLoad } from './$types';
 
 export const load: PageLoad = async () => {
-	let data = await loadData();
+	const data = await loadData();
 	return data;
 };
 
 async function loadData() {
-	let sorted = await db.scheduled
+	const sorted = await db.scheduled
 		.orderBy('nextDate')
 		//.sortBy('symbol')
 		.toArray();
@@ -20,7 +20,7 @@ async function loadData() {
 		const tx1 = a.transaction;
 		const tx2 = b.transaction;
 
-		var sorting = a.nextDate.localeCompare(b.nextDate);
+		const sorting = a.nextDate.localeCompare(b.nextDate);
 		return sorting == 0
 			? tx1.payee.localeCompare(tx2.payee, 'en', { sensitivity: 'base' })
 			: sorting;
