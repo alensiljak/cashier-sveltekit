@@ -28,11 +28,15 @@ export function getBackupFilename(): string {
  * Generates backup file and sends it via download.
  */
 export async function createBackupFile(filename: string) {
-	const output = await createBackup()
+	const output: string = await createBackup()
 
 	downloadTextFile(output, filename);
 }
 
+/**
+ * Create backup content as text.
+ * @returns Text containing the backup content.
+ */
 export async function createBackup() {
 	// assemble the backup content
 	const allSettings = await settings.getAll();
@@ -49,8 +53,15 @@ export async function createBackup() {
 	return output;
 }
 
-function downloadTextFile(text: string, fileName: string) {
-	const blob = new Blob([text], { type: 'text/plain' });
+export function createTextFile(content: string, fileName: string): File {
+	const blob = new Blob([content], { type: 'text/plain' });
+	const file = new File([blob], fileName, { type: 'text/plain' });
+
+	return file;
+}
+
+function downloadTextFile(content: string, fileName: string) {
+	const blob = new Blob([content], { type: 'text/plain' });
 	const url = URL.createObjectURL(blob);
 
 	const a = document.createElement('a');
