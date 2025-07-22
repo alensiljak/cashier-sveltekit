@@ -90,7 +90,7 @@
 	}
 </script>
 
-<article class="h-screen flex flex-col">
+<article class="flex h-screen flex-col">
 	<Toolbar title="Asset Class Detail"></Toolbar>
 	<section class={`h-full p-1 ${cursor} overflow-y-auto`}>
 		<p>{name}</p>

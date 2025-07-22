@@ -89,15 +89,18 @@
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 			<div
-				class="border-tertiary-200/15 border-b py-2 flex justify-between items-center {getAccountColour(account.name)}"
+				class="border-tertiary-200/15 flex items-center justify-between border-b py-2 {getAccountColour(
+					account.name
+				)}"
 				onclick={() => onAccountSelected(account.name)}
 				role="listitem"
 			>
 				<div>{account.name}</div>
 				{#if getBalance(account).quantity !== 0}
-				<data class={`text-right ${getAmountColour(getBalance(account).quantity)}`}>
-					{getBalance(account).quantity} {getBalance(account).currency}
-				</data>
+					<data class={`text-right ${getAmountColour(getBalance(account).quantity)}`}>
+						{getBalance(account).quantity}
+						{getBalance(account).currency}
+					</data>
 				{/if}
 			</div>
 		{/each}
