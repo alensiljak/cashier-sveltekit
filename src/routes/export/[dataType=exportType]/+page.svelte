@@ -4,7 +4,7 @@
 	import appService from '$lib/services/appService';
 	import { getFilenameForBackup } from '$lib/services/cloudBackupService';
 	import Notifier from '$lib/utils/notifier';
-	import { CopyIcon, FileDownIcon } from '@lucide/svelte';
+	import { CopyIcon, FileDownIcon, Share2Icon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 
 	Notifier.init();
@@ -68,6 +68,22 @@
 		link.remove();
 		URL.revokeObjectURL(url);
 	}
+
+	async function onShareClick() {
+		if (!output) {
+			Notifier.info('The content is empty.');
+			return;
+		}
+
+		if (navigator.share) {
+			await navigator.share({
+				title: `Cashier ${dataType} export`,
+				text: output
+			});
+		} else {
+			Notifier.error('Web Share API not supported.');
+		}
+	}
 </script>
 
 <article class="flex h-screen flex-col">
@@ -92,6 +108,10 @@
 			</button>
 			<!-- pCloud Save ?-->
 			<!-- WebShare -->
+			<button class="preset-filled-primary-500 btn" onclick={onShareClick}>
+				<Share2Icon />
+				<span>Share</span>
+			</button>
 			<!-- Download -->
 			<button class="preset-filled-primary-500 btn" onclick={onDownloadClick}>
 				<FileDownIcon />
