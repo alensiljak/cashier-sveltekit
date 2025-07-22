@@ -89,7 +89,7 @@
 <article class="flex h-screen flex-col">
 	<Toolbar title="Export {dataType}" />
 
-	<main class="flex h-full flex-col p-1">
+	<main class="flex flex-col p-1 grow overflow-auto">
 		<p>Note: Journal is exported in ledger format, Scheduled Transactions in JSON.</p>
 
 		<textarea
