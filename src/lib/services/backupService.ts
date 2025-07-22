@@ -53,13 +53,6 @@ export async function createBackup() {
 	return output;
 }
 
-export function createTextFile(content: string, fileName: string): File {
-	const blob = new Blob([content], { type: 'text/plain' });
-	const file = new File([blob], fileName, { type: 'text/plain' });
-
-	return file;
-}
-
 function downloadTextFile(content: string, fileName: string) {
 	const blob = new Blob([content], { type: 'text/plain' });
 	const url = URL.createObjectURL(blob);
