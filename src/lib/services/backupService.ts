@@ -27,7 +27,13 @@ export function getBackupFilename(): string {
 /**
  * Generates backup file and sends it via download.
  */
-export async function createBackup(filename: string) {
+export async function createBackupFile(filename: string) {
+	const output = await createBackup()
+
+	downloadTextFile(output, filename);
+}
+
+export async function createBackup() {
 	// assemble the backup content
 	const allSettings = await settings.getAll();
 	const journal = await db.xacts.toArray();
@@ -40,8 +46,7 @@ export async function createBackup(filename: string) {
 	};
 
 	const output = JSON.stringify(backup);
-
-	downloadTextFile(output, filename);
+	return output;
 }
 
 function downloadTextFile(text: string, fileName: string) {

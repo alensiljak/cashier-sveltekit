@@ -3,6 +3,7 @@
 	import * as BackupService from '$lib/services/backupService';
 	import Notifier from '$lib/utils/notifier';
 	import { FileUpload, Modal } from '@skeletonlabs/skeleton-svelte';
+	import { FileDownIcon, Share2Icon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import type { FileChangeDetails } from '@zag-js/file-upload';
 
@@ -25,7 +26,7 @@
 	}
 
 	async function onBackupClick() {
-		await BackupService.createBackup(_filename as string);
+		await BackupService.createBackupFile(_filename as string);
 	}
 
 	function onChangeHandler(details: FileChangeDetails): void {
@@ -47,6 +48,19 @@
 		if (!files) return;
 
 		await readFile(files[0]);
+	}
+
+	async function onShareClick() {
+		const output = await BackupService.createBackup();
+
+		if (navigator.share) {
+			await navigator.share({
+				title: 'Cashier Backup',
+				text: output
+			});
+		} else {
+			Notifier.error('Web Share API not supported.');
+		}
 	}
 
 	async function readFile(file: File) {
@@ -80,9 +94,14 @@
 		</div>
 
 		<center class="pt-4">
-			<button type="button" class="preset-filled-primary-500 btn" onclick={onBackupClick}
-				>Backup</button
-			>
+			<button type="button" class="preset-filled-primary-500 btn" onclick={onBackupClick}>
+				<FileDownIcon />
+				<span>Backup</span>
+			</button>
+			<button type="button" class="preset-filled-primary-500 btn" onclick={onShareClick}>
+				<Share2Icon />
+				<span>Share</span>
+			</button>
 		</center>
 	</section>
 	<hr class="my-8" />
