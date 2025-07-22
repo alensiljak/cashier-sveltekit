@@ -100,7 +100,7 @@
 		></textarea>
 
 		<!-- action buttons -->
-		<div class="my-3 flex flex-row justify-center space-x-24 py-3">
+		<div class="my-3 flex flex-row justify-around py-3">
 			<!-- copy to clipboard -->
 			<button class="preset-filled-primary-500 btn" onclick={onCopyClick}>
 				<CopyIcon />
