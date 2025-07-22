@@ -7,7 +7,7 @@
 	import { Money, type Xact } from '$lib/data/model';
 	import { XactAugmenter } from '$lib/utils/xactAugmenter';
 	import Notifier from '$lib/utils/notifier';
-	import { getXactAmountColour } from '$lib/utils/formatter';
+	import { formatAmount, getXactAmountColour } from '$lib/utils/formatter';
 
 	Notifier.init();
 
@@ -79,7 +79,7 @@
 							{xact.payee}
 						</div>
 						<div class={`${getXactColour(index)}`}>
-							{xactBalances[index].quantity}
+							{formatAmount(xactBalances[index].quantity)}
 							{xactBalances[index].currency}
 						</div>
 					</div>

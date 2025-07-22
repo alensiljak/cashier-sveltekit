@@ -21,6 +21,7 @@ import { loadInvestmentAccounts } from './accountsService';
 import { get } from 'svelte/store';
 import * as LedgerParser from '$lib/utils/ledgerParser';
 import * as BeancountParser from '$lib/utils/beancountParser';
+import { formatAmount } from '$lib/utils/formatter';
 
 interface AccountIndex {
 	[key: string]: Account;
@@ -230,7 +231,7 @@ class AppService {
 			output += p.account == null ? '' : p.account;
 			if (p.amount) {
 				output += '  ';
-				output += p.amount == null ? '' : p.amount;
+				output += p.amount == null ? '' : formatAmount(p.amount);
 				output += ' ';
 				output += p.currency == null ? '' : p.currency;
 			}

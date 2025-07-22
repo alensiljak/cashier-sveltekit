@@ -8,7 +8,7 @@
 	import moment from 'moment';
 	import { ISODATEFORMAT } from '$lib/constants';
 	import { XactAugmenter } from '$lib/utils/xactAugmenter';
-	import { getAmountColour, getXactAmountColour } from '$lib/utils/formatter';
+	import { formatAmount, getAmountColour, getXactAmountColour } from '$lib/utils/formatter';
 	import { preventDefault } from 'svelte/legacy';
 
 	let today: string = $state('');
@@ -77,7 +77,7 @@
 							{scx.transaction?.payee}
 						</data>
 						<data class={`${getAmountColour(amounts[index]?.quantity)}`}>
-							{amounts[index]?.quantity}
+							{formatAmount(amounts[index]?.quantity)}
 							{amounts[index]?.currency}
 						</data>
 					</div>

@@ -78,9 +78,14 @@ export function getDateColour(dateString: string): string | undefined {
 export function formatAmount(amount: number): string {
 	if (!amount) {
 		return '';
-	} else {
-		return amount.toLocaleString('en-UK');
 	}
+
+	const options = {
+		minimumFractionDigits: 2,
+		// maximumFractionDigits: Math.max(2, decimalPlaces)
+	};
+
+	return amount.toLocaleString('en-UK', options);
 }
 
 export function getColourForYield(amount: string): string {
