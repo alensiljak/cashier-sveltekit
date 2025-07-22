@@ -76,16 +76,24 @@ export function getDateColour(dateString: string): string | undefined {
  * @returns string, the number formatted to the app-wide standard.
  */
 export function formatAmount(amount: number): string {
-	if (!amount) {
+	if (amount === null || amount === undefined) {
 		return '';
 	}
 
-	const options = {
+	// Check if it's a whole number
+	if (amount % 1 === 0) {
+		return amount.toLocaleString('en-UK', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+	}
+
+	// const amountStr = String(amount);
+	// const decimalPlaces = amountStr.split('.')[1]?.length || 0;
+
+	const numberOptions = {
 		minimumFractionDigits: 2,
 		// maximumFractionDigits: Math.max(2, decimalPlaces)
 	};
 
-	return amount.toLocaleString('en-UK', options);
+	return amount.toLocaleString('en-UK', numberOptions);
 }
 
 export function getColourForYield(amount: string): string {
