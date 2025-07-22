@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { goto, replaceState } from '$app/navigation';
+	import { goto } from '$app/navigation';
 	import JournalXactRow from '$lib/components/JournalXactRow.svelte';
 	import SquareButton from '$lib/components/SquareButton.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
@@ -84,7 +84,7 @@
 		const newXact = appService.createXactFrom($xact);
 		// save
 		const dal = new CashierDAL();
-		const id = await dal.saveXact(newXact);
+		await dal.saveXact(newXact);
 
 		Notifier.success('Transaction copied');
 
