@@ -1,8 +1,8 @@
+import { defineConfig } from 'vite';
 import { sveltekit } from '@sveltejs/kit/vite';
 import type { UserConfig } from 'vite';
 //import { VitePWA } from 'vite-plugin-pwa'
 import { SvelteKitPWA } from '@vite-pwa/sveltekit';
-import { defineConfig } from 'vite';
 // import { svelte } from '@sveltejs/vite-plugin-svelte';
 import tailwindcss from '@tailwindcss/vite';
 
