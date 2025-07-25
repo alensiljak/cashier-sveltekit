@@ -18,7 +18,6 @@
 	import type { FileChangeDetails } from '@zag-js/file-upload';
 
 	Notifier.init();
-	let isAaConfirmationOpen = $state(false);
 	let isSettingsConfirmationOpen = $state(false);
 
 	// let data: PageData = $props();
@@ -42,19 +41,19 @@
 	 * Close all dialogs.
 	 */
 	function closeModal() {
-		isAaConfirmationOpen = false;
 		isSettingsConfirmationOpen = false;
 	}
 
 	async function onAaFileChanged(details: FileChangeDetails) {
 		aa_files = details.acceptedFiles;
 
-		isAaConfirmationOpen = true;
+		const modal = document.getElementById('aa_restore_modal');
+		if (modal) {
+			modal.showModal();
+		}
 	}
 
 	async function onAaImportConfirmed() {
-		closeModal();
-
 		await restoreAssetAllocation();
 	}
 
@@ -188,7 +187,7 @@
 	</form>
 
 	<center>
-		<button class="preset-filled-error-500 btn text-warning-500! uppercase" onclick={saveSettings}>
+		<button class="btn btn-secondary uppercase" onclick={saveSettings}>
 			Save
 		</button>
 	</center>
@@ -199,7 +198,7 @@
 		<h3 class="h3">Asset Allocation</h3>
 		<center>
 			<FileUpload name="aa_file" onFileChange={onAaFileChanged}>
-				<button class="btn preset-tonal-primary">
+				<button class="btn btn-primary">
 					<span>Select the AA definition</span>
 				</button>
 			</FileUpload>
@@ -213,7 +212,7 @@
 		</p>
 		<center>
 			<FileUpload name="settings_file" onFileChange={onSettingsFileChangeHandler}>
-				<button class="btn preset-tonal-primary">
+				<button class="btn btn-primary">
 					<span>Select the settings file</span>
 				</button></FileUpload
 			>
@@ -225,31 +224,20 @@
 	</section> -->
 </main>
 
-<!-- "AA import" dialog -->
-<Modal
-	open={isAaConfirmationOpen}
-	triggerBase="hidden"
-	contentBase="card bg-surface-100-900 p-4 space-y-4 shadow-xl max-w-(--breakpoint-sm)"
-	backdropClasses="backdrop-blur-xs"
->
-	{#snippet trigger()}Open Modal{/snippet}
-	{#snippet content()}
-		<header class="flex justify-between">
-			<h2 class="h4">Confirm Restore</h2>
-		</header>
-		<article>
-			<p class="opacity-60">Do you want to import the selected Asset Allocation file?</p>
-		</article>
-		<footer class="flex justify-end gap-4">
-			<button type="button" class="preset-tonal btn" onclick={closeModal}>Cancel</button>
-			<button
-				type="button"
-				class="btn-primary preset-filled-primary-500 btn text-tertiary-500"
-				onclick={onAaImportConfirmed}>OK</button
-			>
-		</footer>
-	{/snippet}
-</Modal>
+
+<dialog id="aa_restore_modal" class="modal">
+	<div class="modal-box">
+	  <h3 class="font-bold text-lg">Confirm Restore</h3>
+	  <p class="py-4">Do you want to import the selected Asset Allocation file?</p>
+	  <div class="modal-action">
+		<form method="dialog">
+			<button class="btn">Cancel</button>
+			<button class="btn btn-primary" onclick={onAaImportConfirmed}>OK</button>
+		</form>
+	  </div>
+	</div>
+  </dialog>
+
 <!-- "Settings import" dialog -->
 <Modal
 	open={isSettingsConfirmationOpen}

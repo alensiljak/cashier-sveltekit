@@ -3,6 +3,51 @@
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
 @plugin "daisyui";
+/* DaisyUI custom theme */
+@plugin "daisyui/theme" {
+  name: "cashierthemedaisy";
+  default: true; /* set as default */
+  /* prefersdark: false; */ /* set as default dark mode (prefers-color-scheme:dark) */
+  /* color-scheme: light; */ /* color of browser-provided UI */
+  color-scheme: dark;
+
+  --color-base-100: oklch(89.78% 0 287.22);
+  --color-base-200: oklch(95% 0.03 240);
+  --color-base-300: oklch(92% 0.04 240);
+  --color-base-content: oklch(20% 0.05 240);
+  --color-primary: oklch(0.4553 0.0765 191.15);
+  --color-primary-content: oklch(0.8868 0.182186 95.3305);
+  --color-secondary: oklch(0.4241 0.1606 29.44);
+  --color-secondary-content: oklch(0.8868 0.182186 95.3305);
+  --color-accent: oklch(0.8868 0.182186 95.3305); /* tertiary */
+  --color-accent-content: oklch(98% 0.01 160);
+  --color-neutral: oklch(23.76% 0 228.89);
+  --color-neutral-content: oklch(98% 0.01 240);
+  --color-info: oklch(45.53% 0.08 191.14);
+  --color-info-content: oklch(98% 0.01 220);
+  --color-success: oklch(0.4553 0.0765 191.15);
+  --color-success-content: oklch(98% 0.01 140);
+  --color-warning: oklch(88.68% 0.18 95.32);
+  --color-warning-content: oklch(20% 0.05 80);
+  --color-error: oklch(0.4241 0.1606 29.44);
+  --color-error-content: oklch(98% 0.01 30);
+
+  /* border radius */
+  --radius-selector: 1rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+
+  /* base sizes */
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+
+  /* border size */
+  --border: 1px;
+
+  /* effects */
+  --depth: 1;
+  --noise: 0;
+}
 
 /* Skeleton */
 @import '@skeletonlabs/skeleton';
