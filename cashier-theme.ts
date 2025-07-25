@@ -1,5 +1,6 @@
 /*
 	Theme for Skeleton v2.
+	Deprecated after v3.
 */
 
 import type { CustomThemeConfig } from '@skeletonlabs/tw-plugin';
