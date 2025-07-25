@@ -12,7 +12,7 @@
   /* color-scheme: light; */ /* color of browser-provided UI */
   /* color-scheme: dark; */
 
-  --color-base-100: oklch(89.78% 0 287.22);
+  --color-base-100: oklch(23.76% 0 228.89deg); /* surface */
   --color-base-200: oklch(95% 0.03 240);
   --color-base-300: oklch(92% 0.04 240);
   --color-base-content: oklch(20% 0.05 240);
