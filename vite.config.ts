@@ -6,7 +6,13 @@ import { defineConfig } from 'vite';
 // import { svelte } from '@sveltejs/vite-plugin-svelte';
 import tailwindcss from '@tailwindcss/vite';
 
+// Generate build date in YYYYMMDD format
+const buildDate = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+
 const config: UserConfig = defineConfig({
+	define: {
+		__BUILD_DATE__: JSON.stringify(buildDate)
+	},
 	build: {
 		//sourcemap: process.env.SOURCE_MAP === 'true',
 		sourcemap: false
