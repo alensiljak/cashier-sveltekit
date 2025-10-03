@@ -21,11 +21,16 @@
 			return;
 		}
 
-		// Swap the item at the given index with the item above it
-		[$xact.postings[index + 1], $xact.postings[index]] = [
-			$xact.postings[index],
-			$xact.postings[index + 1]
+		// Swap the item at the given index with the item below it
+		const newPostings = [...$xact.postings];
+		[newPostings[index + 1], newPostings[index]] = [
+			newPostings[index],
+			newPostings[index + 1]
 		];
+		xact.update((current) => ({
+			...current,
+			postings: newPostings
+		}));
 	}
 
 	function onItemUpClicked(index: number) {
@@ -35,10 +40,15 @@
 		}
 
 		// Swap the item at the given index with the item above it
-		[$xact.postings[index - 1], $xact.postings[index]] = [
-			$xact.postings[index],
-			$xact.postings[index - 1]
+		const newPostings = [...$xact.postings];
+		[newPostings[index - 1], newPostings[index]] = [
+			newPostings[index],
+			newPostings[index - 1]
 		];
+		xact.update((current) => ({
+			...current,
+			postings: newPostings
+		}));
 	}
 </script>
 
