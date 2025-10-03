@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getDrawerStore } from '@skeletonlabs/skeleton';
-	import { swipe, type SwipeCustomEvent } from 'svelte-gestures';
+	import { useSwipe, type SwipeCustomEvent } from 'svelte-gestures';
 	import Navigation from '$lib/components/navigation.svelte';
 	import { fade } from 'svelte/transition';
 
@@ -20,7 +20,7 @@
 	}
 </script>
 
-<div class="grid grid-cols-[auto_1fr]" use:swipe on:swipe={handleSwipe}>
+<div class="grid grid-cols-[auto_1fr]" {...useSwipe(handleSwipe, () => ({}))}>
 	<!-- grid grid-cols-2 md:grid-cols-[auto_1fr] -->
 	<!-- Hide the sidebar on small screens; show at the medium breakpoint or wider -->
 	<div class="bg-surface-500/5 w-0 lg:w-64">

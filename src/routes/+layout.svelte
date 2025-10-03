@@ -2,7 +2,7 @@
 	// Stylesheets
 	import '../app.css';
 	// libs
-	import { swipe, type SwipeCustomEvent } from 'svelte-gestures';
+	import { useSwipe, type SwipeCustomEvent } from 'svelte-gestures';
 	// import Navigation from '$lib/components/navigation.svelte';
 	// PWA
 	import { pwaInfo } from 'virtual:pwa-info';
@@ -60,7 +60,7 @@
 
 <Toaster {toaster}></Toaster>
 
-<div use:swipe onswipe={handleSwipe}>
+<div {...useSwipe(handleSwipe, () => ({}))}>
 	<!-- sidebar as modal -->
 	<Modal
 		open={$drawerState}
