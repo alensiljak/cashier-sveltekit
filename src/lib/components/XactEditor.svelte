@@ -15,7 +15,7 @@
 	Notifier.init();
 
 	let sum = $state(Big(0));
-	let _emptyPostingCount = 0;
+	let _emptyPostingCount: number;
 
 	if (!$xact) {
 		goto('/');
