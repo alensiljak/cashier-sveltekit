@@ -212,7 +212,7 @@
 	</div>
 	<!-- posting list -->
 	<div class="flex-1 overflow-y-auto">
-		{#each $xact?.postings as posting, index}
+		{#each $xact?.postings as posting, index (posting)}
 			<PostingEditor
 				{index}
 				onAccountClicked={(event) => onPostingAccountClicked(index)}

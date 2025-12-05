@@ -4,10 +4,15 @@
 	import { xact } from '$lib/data/mainStore';
 	import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
 
 	let MAX_ITEMS: number = 0;
 
 	onMount(() => {
+		if (!$xact) {
+			goto('/');
+			return;
+		}
 		MAX_ITEMS = $xact.postings.length;
 	});
 
@@ -59,25 +64,27 @@
 <article class="p-1">
 	<!-- list -->
 	<div class="space-y-3 p-2">
-		{#each $xact.postings as posting, i}
-			<!-- posting row -->
-			<div class="grid grid-cols-[1fr_auto_auto] gap-3">
-				<span class="flex items-center">
-					{posting.account}
-				</span>
-				<button
-					class="preset-outlined-tertiary-500 btn-icon text-tertiary-500 aspect-square"
-					onclick={() => onItemDownClicked(i)}
-				>
-					<ChevronDownIcon /></button
-				>
-				<button
-					class="preset-outlined-tertiary-500 btn-icon text-tertiary-500 aspect-square"
-					onclick={() => onItemUpClicked(i)}
-				>
-					<ChevronUpIcon /></button
-				>
-			</div>
-		{/each}
+		{#if $xact}
+			{#each $xact.postings as posting, i (posting)}
+				<!-- posting row -->
+				<div class="grid grid-cols-[1fr_auto_auto] gap-3">
+					<span class="flex items-center">
+						{posting.account}
+					</span>
+					<button
+						class="preset-outlined-tertiary-500 btn-icon text-tertiary-500 aspect-square"
+						onclick={() => onItemDownClicked(i)}
+					>
+						<ChevronDownIcon /></button
+					>
+					<button
+						class="preset-outlined-tertiary-500 btn-icon text-tertiary-500 aspect-square"
+						onclick={() => onItemUpClicked(i)}
+					>
+						<ChevronUpIcon /></button
+					>
+				</div>
+			{/each}
+		{/if}
 	</div>
 </article>

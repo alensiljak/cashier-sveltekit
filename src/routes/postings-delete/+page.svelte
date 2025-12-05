@@ -5,10 +5,16 @@
 	import { Modal } from '@skeletonlabs/skeleton-svelte';
 	import { CheckIcon, TrashIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
 	let isDeleteConfirmationOpen = $state(false);
 	let indexToDelete = -1;
 
-	onMount(async () => {});
+	onMount(async () => {
+		if (!$xact) {
+			goto('/');
+			return;
+		}
+	});
 
 	/**
 	 * Close all dialogs.
@@ -43,20 +49,22 @@
 <article class="p-1">
 	<!-- list -->
 	<div class="space-y-3 py-3">
-		{#each $xact.postings as posting, i}
-			<!-- posting row -->
-			<div class="flex flex-row">
-				<span class="flex grow items-center">
-					{posting.account}
-				</span>
-				<button
-					class="preset-outlined btn-icon text-secondary-500 mr-2"
-					onclick={() => onDeleteClicked(i)}
-				>
-					<TrashIcon />
-				</button>
-			</div>
-		{/each}
+		{#if $xact}
+			{#each $xact.postings as posting, i}
+				<!-- posting row -->
+				<div class="flex flex-row">
+					<span class="flex grow items-center">
+						{posting.account}
+					</span>
+					<button
+						class="preset-outlined btn-icon text-secondary-500 mr-2"
+						onclick={() => onDeleteClicked(i)}
+					>
+						<TrashIcon />
+					</button>
+				</div>
+			{/each}
+		{/if}
 	</div>
 </article>
 
