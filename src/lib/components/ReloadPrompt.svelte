@@ -28,9 +28,9 @@
 			{/if}
 		</div>
 		{#if $needRefresh}
-			<button on:click={() => updateServiceWorker(true)}> Reload </button>
+			<button onclick={() => updateServiceWorker(true)}> Reload </button>
 		{/if}
-		<button on:click={close}> Close </button>
+		<button onclick={close}> Close </button>
 	</div>
 {/if}
 
