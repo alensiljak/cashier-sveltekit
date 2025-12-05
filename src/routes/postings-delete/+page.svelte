@@ -6,6 +6,8 @@
 	import { CheckIcon, TrashIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import {Posting} from '$lib/data/model'
+
 	let isDeleteConfirmationOpen = $state(false);
 	let indexToDelete = -1;
 
@@ -32,7 +34,12 @@
 	async function onDeleteConfirmed() {
 		closeModal();
 
-		$xact.postings = $xact.postings.filter((_, i) => i !== indexToDelete);
+		const newPostings = $xact.postings.filter((_: Posting, i: number) => i !== indexToDelete);
+
+		xact.update((current) => ({
+			...current,
+			postings: newPostings
+		}));
 	}
 
 	function onFabClicked() {
@@ -48,7 +55,7 @@
 	<!-- list -->
 	<div class="space-y-3 py-3">
 		{#if $xact}
-			{#each $xact.postings as posting, i}
+			{#each $xact.postings as posting: Posting, i (posting)}
 				<!-- posting row -->
 				<div class="flex flex-row">
 					<span class="flex grow items-center">
