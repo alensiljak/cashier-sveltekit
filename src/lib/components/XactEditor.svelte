@@ -166,7 +166,7 @@
 		title="Date"
 		placeholder="Date"
 		type="date"
-		class="input variant-form-material"
+		class="input"
 		bind:value={$xact.date}
 	/>
 	<input
@@ -182,7 +182,7 @@
 		title="Note"
 		placeholder="Note"
 		type="text"
-		class="input variant-form-material"
+		class="input"
 		bind:value={$xact.note}
 	/>
 

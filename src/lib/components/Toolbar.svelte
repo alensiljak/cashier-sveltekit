@@ -71,16 +71,6 @@
 						</div>
 					{/snippet}
 				</Popover>
-
-				<!-- <button class="text-tertiary btn py-1 pr-2" use:popup={popupClick}>
-					<EllipsisVertical size={20} class="" />
-				</button> -->
-				<!-- Pop-up Menu -->
-				<!-- <div class="list-nav preset-filled-primary-500 min-w-52 shadow-sm" data-popup="popupClick">
-					<menu>
-						{@render menuItems?.()}
-					</menu>
-				</div> -->
 			{/if}
 		{/snippet}
 		<!-- {#snippet headline()}

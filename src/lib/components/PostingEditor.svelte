@@ -76,7 +76,7 @@
 			title="Amount"
 			placeholder="Amount"
 			type="number"
-			class={`input variant-form-material grow text-right ${amountFieldColor} px-1`}
+			class={`input grow text-right ${amountFieldColor} px-1`}
 			bind:value={$xact.postings[index].amount}
 			bind:this={amountInput}
 			onfocus={() => amountInput.select()}
@@ -92,7 +92,7 @@
 				title="Currency"
 				placeholder="Currency"
 				type="text"
-				class="input variant-form-material px-1 text-center"
+				class="input px-1 text-center"
 				bind:value={$xact.postings[index].currency}
 			/>
 		</div>
