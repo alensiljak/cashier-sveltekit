@@ -32,9 +32,7 @@
 	async function onDeleteConfirmed() {
 		closeModal();
 
-		$xact.postings.splice(indexToDelete, 1);
-		// fix for the binding
-		$xact.postings = $xact.postings;
+		$xact.postings = $xact.postings.filter((_, i) => i !== indexToDelete);
 	}
 
 	function onFabClicked() {
