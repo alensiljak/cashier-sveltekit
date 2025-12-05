@@ -23,7 +23,7 @@
 			const { useRegisterSW } = await import('virtual:pwa-register/svelte');
 			useRegisterSW({
 				immediate: true,
-				onRegistered(r: any) {
+				onRegistered(r) {
 					// uncomment following code if you want check for updates
 					// r && setInterval(() => {
 					//    console.log('Checking for sw update')
@@ -31,7 +31,7 @@
 					// }, 20000 /* 20s for testing purposes */)
 					console.log(`SW Registered: ${r}`);
 				},
-				onRegisterError(error: any) {
+				onRegisterError(error) {
 					console.log('SW registration error', error);
 				}
 			});
@@ -53,7 +53,7 @@
 
 	<!-- PWA -->
 	<base href="/" />
-	{#each pwaAssetsHead.links as link}
+	{#each pwaAssetsHead.links as link (link)}
 		<link {...link} />
 	{/each}
 </svelte:head>
