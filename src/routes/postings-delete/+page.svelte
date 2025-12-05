@@ -6,7 +6,7 @@
 	import { CheckIcon, TrashIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import {Posting} from '$lib/data/model'
+	import {Posting, Xact} from '$lib/data/model'
 
 	let isDeleteConfirmationOpen = $state(false);
 	let indexToDelete = -1;
@@ -36,7 +36,7 @@
 
 		const newPostings = $xact.postings.filter((_: Posting, i: number) => i !== indexToDelete);
 
-		xact.update((current) => ({
+		xact.update((current: Xact) => ({
 			...current,
 			postings: newPostings
 		}));
