@@ -39,13 +39,6 @@
 		// Set up theme subscription to keep track of current theme
 		const unsubscribe = themeStore.subscribe(value => {
 			currentTheme = value;
-			// Apply theme to the html element
-			if (typeof document !== 'undefined') {
-				const html = document.documentElement;
-				if (html) {
-					html.setAttribute('data-theme', currentTheme);
-				}
-			}
 		});
 
 		// Cleanup function

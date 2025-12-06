@@ -37,7 +37,7 @@ export default {
 			'light'
 		],
 	},
-	darkMode: ['class', '[data-theme="dark"]'],
+	darkMode: 'class', // Enable dark mode based on the presence of 'dark' class
 	theme: {
 		extend: {
 			borderRadius: {

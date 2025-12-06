@@ -2,10 +2,12 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
-@plugin 'daisyui';
+@plugin 'daisyui'{
+   themes: light, dark --prefersdark --default;
+ };
 
 /* @custom-variant dark (&:is(.dark *)); */
-@custom-variant dark (&:where(.dark, .dark *));
+/*@custom-variant dark (&:where(.dark, .dark *));*/
 
 /* Resets */
 

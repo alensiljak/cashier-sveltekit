@@ -14,7 +14,6 @@
 		AssetAllocationStore,
 		DefaultCurrencyStore
 	} from '$lib/data/mainStore.js';
-	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 	import type { FileChangeDetails } from '@zag-js/file-upload';
 
 	Notifier.init();
@@ -155,16 +154,6 @@
 		<input class="checkbox" type="checkbox" bind:checked={rememberLastTransaction} />
 		<p>Remember last transaction for payees.</p>
 	</label>
-
-	<!-- Theme selector -->
-	<div class="flex items-center justify-between">
-		<label class="label">
-			<span class="label-text">Theme</span>
-		</label>
-		<div>
-			<ThemeToggle />
-		</div>
-	</div>
 
 	<!-- ledger / beancount -->
 	<p>Select the default plain-text-account system:</p>
