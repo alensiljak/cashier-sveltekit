@@ -28,18 +28,17 @@
 	}
 </script>
 
-<search class="bg-primary">
-	<div
-		class="input-group input-group-divider mx-auto w-5/6 grid-cols-[1fr_auto]
-		rounded-full lg:w-2/5"
-	>
+<div class="bg-primary p-3">
+	<div class="relative mx-auto w-5/6 lg:w-2/5">
+		<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 z-10">
+			<SearchIcon class="text-gray-400 h-4 w-4" />
+		</div>
 		<input
 			type="search"
 			placeholder="Search..."
 			bind:this={searchField}
 			use:debounceAction={{ callback: handleSearch, delay: 400 }}
-			class="ig-input bg-base-200"
+			class="w-full rounded-full border-0 bg-base-200 py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
 		/>
-		<div class="ig-cell bg-base-200"><SearchIcon /></div>
 	</div>
-</search>
+</div>
