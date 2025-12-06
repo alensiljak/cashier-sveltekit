@@ -19,9 +19,11 @@
 </script>
 
 <!-- flex-col text-center -->
-<div class="bg-surface-600/50 m-4 flex h-32 items-center justify-center">
-	<button type="button" class={`btn flex aspect-square w-20 flex-col ${buttonColour} ${classes}`} {onclick}>
-		<Icon />
+<div class="bg-base-content bg-opacity-20 m-4 flex h-32 items-center justify-center">
+	<button type="button" class={`btn aspect-square w-20 h-20 flex-col items-center justify-center rounded-lg ${buttonColour} ${classes}`} {onclick}>
+		<span class="text-current">
+			<Icon class="w-6 h-6 mb-1" />
+		</span>
 		<span class="mt-1 ml-0!">
 			{@render children?.()}
 		</span>

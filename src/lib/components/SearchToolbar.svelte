@@ -38,8 +38,8 @@
 			placeholder="Search..."
 			bind:this={searchField}
 			use:debounceAction={{ callback: handleSearch, delay: 400 }}
-			class="ig-input bg-surface-900"
+			class="ig-input bg-base-200"
 		/>
-		<div class="ig-cell bg-surface-900"><SearchIcon /></div>
+		<div class="ig-cell bg-base-200"><SearchIcon /></div>
 	</div>
 </search>

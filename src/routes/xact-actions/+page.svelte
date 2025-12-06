@@ -13,7 +13,7 @@
 		CalendarClockIcon,
 		CopyIcon,
 		ClipboardIcon,
-		PenSquareIcon,
+		SquarePenIcon,
 		TrashIcon
 	} from '@lucide/svelte';
 	import { onMount } from 'svelte';
@@ -23,6 +23,10 @@
 
 	let isDeleteConfirmationOpen = $state(false);
 	let ptaSystem = $state('');
+
+	if (!$xact) {
+	  goto('/');
+	}
 
 	onMount(async () => {
 		ptaSystem = await settings.get(SettingKeys.ptaSystem);
@@ -118,7 +122,7 @@
 	<!-- button grid -->
 	<div class="mt-4 inline-grid w-full grid-cols-3 gap-4 justify-self-center">
 		<SquareButton
-			Icon={PenSquareIcon}
+			Icon={SquarePenIcon}
 			classes="bg-neutral text-neutral-content"
 			onclick={onEditClicked}
 		>

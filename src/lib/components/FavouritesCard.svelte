@@ -79,9 +79,9 @@
 			<p>There are no favourite accounts defined</p>
 		{:else}
 			{#each accounts as account: Account (account.name)}
-				<div class="bg-surface-900 flex w-full flex-col px-0.5 text-sm">
+				<div class="bg-base-200 flex w-full flex-col px-0.5 text-sm">
 					<div class="border-base-content border-opacity-15 my-0.25 flex flex-row border-b py-0.5">
-						<div class={`cell grow ${isGrayedOut(account) ? 'text-surface-300' : ''}`}>
+						<div class={`cell grow ${isGrayedOut(account) ? 'text-base-content text-opacity-50' : ''}`}>
 							{account?.name}
 						</div>
 						<data class={`text-right ${getAmountColour(getBalance(account).quantity)}`}>

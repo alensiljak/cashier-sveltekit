@@ -16,7 +16,7 @@
 
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <!-- svelte-ignore a11y_click_events_have_key_events -->
-<article class="card bg-surface-600! rounded-lg" {onclick} role="list">
+<article class="card bg-base-200 rounded-lg" {onclick} role="list">
 	<header class="card-header bg-primary flex rounded-t-lg px-3 py-2">
 		{#if header}{@render header()}{/if}
 		{#if icon}{@render icon()}{/if}
