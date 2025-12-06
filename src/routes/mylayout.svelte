@@ -13,6 +13,7 @@
 			alertVisible = false;
 		}
 	}
+</script>
 
 <div class="grid grid-cols-[auto_1fr]" {...useSwipe(handleSwipe, () => ({}))}>
 	<!-- grid grid-cols-2 md:grid-cols-[auto_1fr] -->

@@ -61,7 +61,7 @@
 						{posting.account}
 					</span>
 					<button
-						class="preset-outlined btn-icon text-secondary-500 mr-2"
+						class="btn btn-outline btn-icon text-secondary-500 mr-2"
 						onclick={() => onDeleteClicked(i)}
 					>
 						<TrashIcon />

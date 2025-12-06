@@ -17,10 +17,27 @@ export default {
 					'error': '#92140c',
 				}
 			},
+			{
+				cashierthemedark: {
+					'primary': '#076461',
+					'secondary': '#92140c',
+					'accent': '#ffd700',
+					'neutral': '#2a2e37',
+					'base-100': '#1d2025',
+					'base-200': '#25282d',
+					'base-300': '#2e3238',
+					'base-content': '#e6e6e6',
+					'info': '#519390',
+					'success': '#076461',
+					'warning': '#ffd700',
+					'error': '#92140c',
+				}
+			},
 			'dark',
 			'light'
 		],
 	},
+	darkMode: ['class', '[data-theme="dark"]'],
 	theme: {
 		extend: {
 			borderRadius: {

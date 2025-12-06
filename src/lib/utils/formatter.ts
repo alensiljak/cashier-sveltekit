@@ -32,7 +32,7 @@ export function getMoneyColour(money: Money): string | undefined {
 /**
  * Colorize the Money values based on the amount (red <0, yellow 0, green >0).
  * @param amount The amount to base the color upon.
- * @returns The Skeleton/Tailwind color string, to be used in the container class.
+ * @returns The DaisyUI/Tailwind color string, to be used in the container class.
  */
 export function getAmountColour(amount: number): string {
 	let colour = '';
@@ -50,7 +50,7 @@ export function getAmountColour(amount: number): string {
 
 /**
  * Returns the colour based on whether the date is due or not.
- * @param dateString the Skeleton text colour name
+ * @param dateString the DaisyUI text colour name
  */
 export function getDateColour(dateString: string): string | undefined {
 	const date = moment(dateString).toDate();

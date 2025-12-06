@@ -14,6 +14,7 @@
 		AssetAllocationStore,
 		DefaultCurrencyStore
 	} from '$lib/data/mainStore.js';
+	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 	import type { FileChangeDetails } from '@zag-js/file-upload';
 
 	Notifier.init();
@@ -101,7 +102,7 @@
 			return;
 		}
 		let file = settings_files?.[0];
-		const contents: any = await appService.readFileAsync(file as Blob);
+		const contents: string = await appService.readFileAsync(file as Blob);
 
 		// clear settings table
 		await db.settings.clear();
@@ -155,10 +156,15 @@
 		<p>Remember last transaction for payees.</p>
 	</label>
 
-	<!-- <label class="flex items-center space-x-2">
-		<input class="checkbox" type="checkbox" checked />
-		<p>Dark mode</p>
-	</label> -->
+	<!-- Theme selector -->
+	<div class="flex items-center justify-between">
+		<label class="label">
+			<span class="label-text">Theme</span>
+		</label>
+		<div>
+			<ThemeToggle />
+		</div>
+	</div>
 
 	<!-- ledger / beancount -->
 	<p>Select the default plain-text-account system:</p>
@@ -198,7 +204,10 @@
 		<h3 class="h3">Asset Allocation</h3>
 		<center>
 			<label class="btn btn-primary">
-				<input type="file" name="aa_file" accept=".json" on:change={(e) => onAaFileChanged({ acceptedFiles: Array.from(e.target.files || []) })} />
+				<input type="file" name="aa_file" accept=".json" onchange={(e) => {
+					const target = e.target as HTMLInputElement;
+					onAaFileChanged({ acceptedFiles: Array.from(target.files || []) });
+				}} />
 				<span>Select the AA definition</span>
 			</label>
 		</center>
@@ -211,7 +220,10 @@
 		</p>
 		<center>
 			<label class="btn btn-primary">
-				<input type="file" name="settings_file" accept=".json" on:change={(e) => onSettingsFileChangeHandler({ acceptedFiles: Array.from(e.target.files || []) })} />
+				<input type="file" name="settings_file" accept=".json" onchange={(e) => {
+					const target = e.target as HTMLInputElement;
+					onSettingsFileChangeHandler({ acceptedFiles: Array.from(target.files || []) });
+				}} />
 				<span>Select the settings file</span>
 			</label>
 		</center>

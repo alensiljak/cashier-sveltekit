@@ -61,7 +61,10 @@
 
 		<center class="py-6">
 			<label class="btn bg-primary-500">
-				<input type="file" name="files" accept=".json" on:change={(e) => onFileChanged({ acceptedFiles: Array.from(e.target.files || []) })} />
+				<input type="file" name="files" accept=".json" onchange={(e) => {
+					const target = e.target as HTMLInputElement;
+					onFileChanged({ acceptedFiles: Array.from(target.files || []) });
+				}} />
 				<span>Select the backup file</span>
 			</label>
 		</center>

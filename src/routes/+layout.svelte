@@ -10,8 +10,10 @@
 	import { onMount } from 'svelte';
 	import { drawerState } from '$lib/data/mainStore';
 	import NavigationV3 from '$lib/components/navigation-v3.svelte';
+	import { themeStore, type Theme } from '$lib/stores/themeStore';
 
 	let { children } = $props();
+	let currentTheme: Theme;
 
 	onMount(async () => {
 		if (pwaInfo) {
@@ -33,6 +35,23 @@
 				}
 			});
 		}
+
+		// Set up theme subscription to keep track of current theme
+		const unsubscribe = themeStore.subscribe(value => {
+			currentTheme = value;
+			// Apply theme to the html element
+			if (typeof document !== 'undefined') {
+				const html = document.documentElement;
+				if (html) {
+					html.setAttribute('data-theme', currentTheme);
+				}
+			}
+		});
+
+		// Cleanup function
+		return () => {
+			unsubscribe();
+		};
 	});
 
 	function handleSwipe(e: SwipeCustomEvent) {

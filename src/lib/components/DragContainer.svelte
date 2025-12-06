@@ -185,6 +185,6 @@
 />
 
 <div bind:this={container} class={classs} style="position:relative;">
-	<slot></slot>
+	<slot />
 	<!-- {@render children()} -->
 </div>

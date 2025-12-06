@@ -78,7 +78,7 @@
 		{#if !accounts}
 			<p>There are no favourite accounts defined</p>
 		{:else}
-			{#each accounts as account}
+			{#each accounts as account: Account (account.name)}
 				<div class="bg-surface-900 flex w-full flex-col px-0.5 text-sm">
 					<div class="border-tertiary-200/15 my-0.25 flex flex-row border-b py-0.5">
 						<div class={`cell grow ${isGrayedOut(account) ? 'text-surface-300' : ''}`}>

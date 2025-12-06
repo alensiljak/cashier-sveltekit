@@ -35,7 +35,7 @@
 				<div tabindex="0" role="button" class="btn btn-ghost btn-circle">
 					<EllipsisVertical size={20} />
 				</div>
-				<ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-primary rounded-box w-52">
+				<ul role="menu" class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-primary rounded-box w-52">
 					{@render menuItems?.()}
 				</ul>
 			</div>

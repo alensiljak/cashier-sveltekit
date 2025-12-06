@@ -109,7 +109,10 @@
 		<div class="flex flex-row items-center space-x-4">
 			<p>To restore (overwriting any existing records!):</p>
 			<label class="btn btn-secondary">
-				<input type="file" name="files" accept=".json" on:change={(e) => onChangeHandler({ acceptedFiles: Array.from(e.target.files || []) })} />
+				<input type="file" name="files" accept=".json" onchange={(e) => {
+					const target = e.target as HTMLInputElement;
+					onChangeHandler({ acceptedFiles: Array.from(target.files || []) });
+				}} />
 				<span>Click to choose the backup file</span>
 			</label>
 		</div>

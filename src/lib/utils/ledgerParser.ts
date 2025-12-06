@@ -4,7 +4,7 @@
 
 import { LedgerOutputParser } from '$lib/assetAllocation/ledgerOutputParser';
 import { Account, Money } from '$lib/data/model';
-import type { CurrentValuesDict } from './beancountParser';
+import type { CurrentValuesDict } from '$lib/data/viewModels';
 
 function parseBalanceSheetRow(line: string): Account | null {
 	const account = new Account('');
@@ -93,7 +93,7 @@ function getNumberFromBalanceRow(ledgerReport: Array<string>): number {
 	// remove thousand-separators
 	totalNumeric = totalNumeric.replaceAll(',', '');
 
-	return totalNumeric;
+	return parseFloat(totalNumeric);
 }
 
 export { parseBalanceSheetRow, parseCurrentValues, getNumberFromBalanceRow };

@@ -67,7 +67,7 @@ function getMoneyFromTupleString(value: string): Money {
  * @param rootAccount
  * @returns
  */
-function parseCurrentValues(lines: Array<Any>, rootAccount: string): CurrentValuesDict {
+function parseCurrentValues(lines: Array<any>, rootAccount: string): CurrentValuesDict {
 	// The return value { "account": amount }
 	const result: CurrentValuesDict = {};
 	for (const row of lines) {

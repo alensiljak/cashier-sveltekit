@@ -30,6 +30,7 @@ export class Account {
 	// currency: any
 	currentValue: number | string | undefined;
 	currentCurrency: string | undefined;
+	exists: boolean = true;
 
 	constructor(accountName: string) {
 		this.name = accountName;

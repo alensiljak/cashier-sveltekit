@@ -60,8 +60,8 @@
 	onmousedown={handle_mousedown}
 	ontouchstart={handle_touchstart}
 >
-	<slot></slot>
+	<slot />
 </div>
 <div bind:this={drag_view} style="display:none;">
-	<slot name="drag"></slot>
+	<slot name="drag" />
 </div>

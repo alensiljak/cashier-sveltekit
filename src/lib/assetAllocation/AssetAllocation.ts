@@ -9,7 +9,7 @@ import { getAccountBalance, loadInvestmentAccounts } from '$lib/services/account
 import Big from 'big.js';
 import type { Money } from '../data/model';
 import { NUMBER_FORMAT } from '../constants';
-import type { CurrentValuesDict } from '$lib/utils/beancountParser';
+import type { CurrentValuesDict } from '$lib/data/viewModels';
 
 /**
  * loadDefinition = loads the pre-set definition

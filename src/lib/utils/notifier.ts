@@ -2,15 +2,7 @@
  * Displays a message to the user.
  */
 import { getContext } from 'svelte';
-// import { type ToastContext } from '@skeletonlabs/skeleton-svelte';
-// import { getToastStore } from '@skeletonlabs/skeleton';
-// import type { ToastSettings, ToastStore } from '@skeletonlabs/skeleton';
 import { toaster } from '../toaster-svelte';
-
-// export const toast: ToastContext = getContext('toast');
-// let toast: ToastContext;
-
-// let toastStore: ToastStore;
 
 const Notifier = {
 	init() {
@@ -22,12 +14,6 @@ const Notifier = {
 		type: 'info' | 'error' | 'success' | undefined,
 		title: string | undefined = undefined
 	) {
-		// const t: ToastSettings = {
-		//   message: message,
-		//   background: background,
-		// };
-		// toastStore.trigger(t);
-
 		switch(type) {
 			case 'success':
 				toaster.success(message);
@@ -44,18 +30,13 @@ const Notifier = {
 
 	success(message: string) {
 		toaster.success(message);
-		// 'bg-positive-500'
 	},
 	error(message: string) {
 		toaster.error(message);
-		// 'bg-negative-500'
 	},
 	info(message: string) {
 		toaster.info(message);
 	}
-	// warn(message: string) {
-	//   this.notify(message, 'bg-tertiary-500 text-secondary-500')
-	// }
 };
 
 export default Notifier;
