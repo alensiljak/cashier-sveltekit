@@ -106,18 +106,18 @@
 		<!-- action buttons -->
 		<div class="my-3 flex flex-row justify-around py-3">
 			<!-- copy to clipboard -->
-			<button class="preset-filled-primary-500 btn" onclick={onCopyClick}>
+			<button class="btn btn-primary" onclick={onCopyClick}>
 				<CopyIcon />
 				<span>Copy</span>
 			</button>
 			<!-- pCloud Save ?-->
 			<!-- WebShare -->
-			<!-- <button class="preset-filled-primary-500 btn" onclick={onShareClick}>
+			<!-- <button class="btn btn-primary" onclick={onShareClick}>
 				<Share2Icon />
 				<span>Share</span>
 			</button> -->
 			<!-- Download -->
-			<button class="preset-filled-primary-500 btn" onclick={onDownloadClick}>
+			<button class="btn btn-primary" onclick={onDownloadClick}>
 				<FileDownIcon />
 				<span>Download</span>
 			</button>

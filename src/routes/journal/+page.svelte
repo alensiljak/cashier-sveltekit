@@ -11,7 +11,6 @@
 	import { onMount } from 'svelte';
 	import { xact } from '$lib/data/mainStore';
 	import type { PageData } from './$types';
-	import { Modal } from '@skeletonlabs/skeleton-svelte';
 
 	Notifier.init();
 
@@ -104,27 +103,22 @@
 </article>
 
 <!-- "Delete All" dialog -->
-<Modal
-	open={isDeleteAllConfirmationOpen}
-	triggerBase="hidden"
-	contentBase="card bg-surface-100-900 p-4 space-y-4 shadow-xl max-w-(--breakpoint-sm)"
-	backdropClasses="backdrop-blur-xs"
->
-	{#snippet trigger()}Open Modal{/snippet}
-	{#snippet content()}
+<input type="checkbox" id="delete-all-journal-confirmation-modal" class="modal-toggle" bind:checked={isDeleteAllConfirmationOpen} />
+<div class="modal">
+	<div class="modal-box">
 		<header class="flex justify-between">
-			<h2 class="h4">Confirm Delete</h2>
+			<h2 class="text-lg font-bold">Confirm Delete</h2>
 		</header>
 		<article>
-			<p class="opacity-60">Do you want to delete all transactions?</p>
+			<p class="py-4 opacity-60">Do you want to delete all transactions?</p>
 		</article>
 		<footer class="flex justify-end gap-4">
-			<button type="button" class="preset-tonal btn" onclick={closeModal}>Cancel</button>
+			<button type="button" class="btn btn-ghost" onclick={closeModal}>Cancel</button>
 			<button
 				type="button"
-				class="btn-primary preset-filled-primary-500 btn text-tertiary-500"
+				class="btn btn-primary text-tertiary-500"
 				onclick={onDeleteAllConfirmed}>OK</button
 			>
 		</footer>
-	{/snippet}
-</Modal>
+	</div>
+</div>

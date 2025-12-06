@@ -1,24 +1,18 @@
 <script lang="ts">
-	import { getDrawerStore } from '@skeletonlabs/skeleton';
 	import { useSwipe, type SwipeCustomEvent } from 'svelte-gestures';
 	import Navigation from '$lib/components/navigation.svelte';
 	import { fade } from 'svelte/transition';
-
-	const drawerStore = getDrawerStore();
 
 	let alertVisible: boolean = false;
 
 	function handleSwipe(e: SwipeCustomEvent) {
 		if (e.detail.direction == 'right') {
 			alertVisible = true;
-			drawerStore.open();
 		}
 		if (e.detail.direction == 'left') {
 			alertVisible = false;
-			drawerStore.close();
 		}
 	}
-</script>
 
 <div class="grid grid-cols-[auto_1fr]" {...useSwipe(handleSwipe, () => ({}))}>
 	<!-- grid grid-cols-2 md:grid-cols-[auto_1fr] -->
@@ -35,7 +29,7 @@
 
 		{#if alertVisible}
 			<aside
-				class="alert preset-tonal border-surface-500 border"
+				class="alert alert-neutral border border-surface-500"
 				transition:fade={{ duration: 200 }}
 			>
 				<!-- Icon -->

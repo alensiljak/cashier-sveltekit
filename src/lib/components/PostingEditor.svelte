@@ -66,7 +66,7 @@
 		<div>
 			<button
 				type="button"
-				class="preset-outlined-surface-500 btn border-tertiary-200/50 w-12 grow-0 rounded-sm border px-1"
+				class="btn btn-outline btn-neutral w-12 grow-0 rounded-sm px-1"
 				onclick={changeSign}
 			>
 				<DiffIcon />

@@ -2,7 +2,6 @@
 	import Fab from '$lib/components/FAB.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { xact } from '$lib/data/mainStore';
-	import { Modal } from '@skeletonlabs/skeleton-svelte';
 	import { CheckIcon, TrashIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
@@ -74,27 +73,22 @@
 </article>
 
 <!-- "Delete All" dialog -->
-<Modal
-	open={isDeleteConfirmationOpen}
-	triggerBase="hidden"
-	contentBase="card bg-surface-100-900 p-4 space-y-4 shadow-xl max-w-(--breakpoint-sm)"
-	backdropClasses="backdrop-blur-xs"
->
-	{#snippet trigger()}Open Modal{/snippet}
-	{#snippet content()}
+<input type="checkbox" id="delete-posting-confirmation-modal" class="modal-toggle" bind:checked={isDeleteConfirmationOpen} />
+<div class="modal">
+	<div class="modal-box">
 		<header class="flex justify-between">
-			<h2 class="h4">Confirm Delete</h2>
+			<h2 class="text-lg font-bold">Confirm Delete</h2>
 		</header>
 		<article>
-			<p class="opacity-60">Do you want to delete the selected posting?</p>
+			<p class="py-4 opacity-60">Do you want to delete the selected posting?</p>
 		</article>
 		<footer class="flex justify-end gap-4">
-			<button type="button" class="preset-tonal btn" onclick={closeModal}>Cancel</button>
+			<button type="button" class="btn btn-ghost" onclick={closeModal}>Cancel</button>
 			<button
 				type="button"
-				class="btn-primary preset-filled-primary-500 btn text-tertiary-500"
+				class="btn btn-primary text-tertiary-500"
 				onclick={onDeleteConfirmed}>OK</button
 			>
 		</footer>
-	{/snippet}
-</Modal>
+	</div>
+</div>

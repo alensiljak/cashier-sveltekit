@@ -1,10 +1,7 @@
 <script lang="ts">
-	import { AppBar, Popover } from '@skeletonlabs/skeleton-svelte';
 	import { EllipsisVertical, Menu } from '@lucide/svelte';
 	import type { Snippet } from 'svelte';
 	import { drawerState } from '$lib/data/mainStore';
-
-	let menuOpenState = $state(false);
 
 	// Props
 	type Props = {
@@ -15,11 +12,6 @@
 
 	// methods
 
-	function onMenuClick() {
-		// automatically close the menu
-		menuOpenState = false;
-	}
-
 	function toggleSidebar() {
 		// toggle sidebar state.
 		drawerState.update((state) => !state);
@@ -28,57 +20,28 @@
 
 <!-- Toolbar for pages -->
 <div class="relative">
-	<AppBar
-		headlineClasses="sm:hidden"
-		centerClasses=""
-		toolbarClasses=""
-		padding="p-1.5"
-		background="bg-primary-500"
-		classes=""
-	>
-		{#snippet lead()}
-			<!-- <ArrowLeft size={24} /> -->
+	<div class="navbar bg-primary text-primary-content">
+		<div class="navbar-start">
 			<button class="btn btn-sm py-1 pr-0 pl-2 lg:hidden" onclick={toggleSidebar}>
 				<span>
 					<Menu size={24} />
 				</span>
 			</button>
-			<h5 class="h5 pl-0 leading-9">{title}</h5>
-		{/snippet}
-		<!-- {#snippet children()}
-	{/snippet} -->
-		{#snippet trail()}
-			<!-- Drop-down Menu -->
-			{#if menuItems}
-				<Popover
-					open={menuOpenState}
-					onOpenChange={(e) => (menuOpenState = e.open)}
-					positioning={{ placement: 'bottom-start' }}
-				>
-					{#snippet trigger()}
-						<div class="py-1 pr-2">
-							<EllipsisVertical size={20} />
-						</div>
-					{/snippet}
-					{#snippet content()}
-						<!-- svelte-ignore a11y_click_events_have_key_events -->
-						<!-- svelte-ignore a11y_no_static_element_interactions -->
-						<div
-							class="list-nav preset-filled-primary-500 min-w-52 shadow-sm"
-							onclick={onMenuClick}
-						>
-							{@render menuItems?.()}
-						</div>
-					{/snippet}
-				</Popover>
-			{/if}
-		{/snippet}
-		<!-- {#snippet headline()}
-			<h2 class="h2">Headline</h2>
-		{/snippet} -->
-
-		<!-- <h4 class="h4 leading-9">{title}</h4> -->
-	</AppBar>
+			<h5 class="text-lg font-semibold pl-0 leading-9">{title}</h5>
+		</div>
+		{#if menuItems}
+		<div class="navbar-end">
+			<div class="dropdown dropdown-end">
+				<div tabindex="0" role="button" class="btn btn-ghost btn-circle">
+					<EllipsisVertical size={20} />
+				</div>
+				<ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-primary rounded-box w-52">
+					{@render menuItems?.()}
+				</ul>
+			</div>
+		</div>
+		{/if}
+	</div>
 	<div class="gloss-effect absolute inset-0"></div>
 </div>
 

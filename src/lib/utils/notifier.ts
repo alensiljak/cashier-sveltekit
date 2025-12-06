@@ -28,23 +28,30 @@ const Notifier = {
 		// };
 		// toastStore.trigger(t);
 
-		toaster.create({
-			title: title,
-			description: message,
-			type: type
-		});
+		switch(type) {
+			case 'success':
+				toaster.success(message);
+				break;
+			case 'error':
+				toaster.error(message);
+				break;
+			case 'info':
+			default:
+				toaster.info(message);
+				break;
+		}
 	},
 
 	success(message: string) {
-		this.notify(message, 'success');
+		toaster.success(message);
 		// 'bg-positive-500'
 	},
 	error(message: string) {
-		this.notify(message, 'error');
+		toaster.error(message);
 		// 'bg-negative-500'
 	},
 	info(message: string) {
-		this.notify(message, 'info');
+		toaster.info(message);
 	}
 	// warn(message: string) {
 	//   this.notify(message, 'bg-tertiary-500 text-secondary-500')

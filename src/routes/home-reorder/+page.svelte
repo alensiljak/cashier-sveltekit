@@ -67,13 +67,13 @@
 				<span>{item.name}</span>
 			</div>
 			<button
-				class="preset-outlined-tertiary-500 btn-icon text-tertiary-500 aspect-square"
+				class="btn btn-outline btn-tertiary btn-icon text-tertiary aspect-square"
 				onclick={() => onItemDownClicked(index)}
 			>
 				<ChevronDownIcon /></button
 			>
 			<button
-				class="preset-outlined-tertiary-500 btn-icon text-tertiary-500 aspect-square"
+				class="btn btn-outline btn-tertiary btn-icon text-tertiary aspect-square"
 				onclick={() => onItemUpClicked(index)}
 			>
 				<ChevronUpIcon /></button

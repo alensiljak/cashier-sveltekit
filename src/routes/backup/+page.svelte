@@ -2,7 +2,6 @@
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import * as BackupService from '$lib/services/backupService';
 	import Notifier from '$lib/utils/notifier';
-	import { FileUpload, Modal } from '@skeletonlabs/skeleton-svelte';
 	import { FileDownIcon, Share2Icon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import type { FileChangeDetails } from '@zag-js/file-upload';
@@ -94,11 +93,11 @@
 		</div>
 
 		<center class="pt-4">
-			<button type="button" class="preset-filled-primary-500 btn" onclick={onBackupClick}>
+			<button type="button" class="btn btn-primary" onclick={onBackupClick}>
 				<FileDownIcon />
 				<span>Backup</span>
 			</button>
-			<button type="button" class="preset-filled-primary-500 btn" onclick={onShareClick}>
+			<button type="button" class="btn btn-primary" onclick={onShareClick}>
 				<Share2Icon />
 				<span>Share</span>
 			</button>
@@ -109,11 +108,10 @@
 		<h3 class="h3">Restore Backup</h3>
 		<div class="flex flex-row items-center space-x-4">
 			<p>To restore (overwriting any existing records!):</p>
-			<FileUpload name="files" onFileChange={onChangeHandler}>
-				<button class="btn preset-tonal-secondary">
-					<span>Click to choose the backup file</span>
-				</button>
-			</FileUpload>
+			<label class="btn btn-secondary">
+				<input type="file" name="files" accept=".json" on:change={(e) => onChangeHandler({ acceptedFiles: Array.from(e.target.files || []) })} />
+				<span>Click to choose the backup file</span>
+			</label>
 		</div>
 		<div>
 			<p>After restoring a backup, you should</p>
@@ -129,30 +127,25 @@
 </article>
 
 <!-- "Restore" dialog -->
-<Modal
-	open={isRestoreConfirmationOpen}
-	triggerBase="hidden"
-	contentBase="card bg-surface-100-900 p-4 space-y-4 shadow-xl max-w-(--breakpoint-sm)"
-	backdropClasses="backdrop-blur-xs"
->
-	{#snippet trigger()}Open Modal{/snippet}
-	{#snippet content()}
+<input type="checkbox" id="restore-confirmation-modal" class="modal-toggle" bind:checked={isRestoreConfirmationOpen} />
+<div class="modal">
+	<div class="modal-box">
 		<header class="flex justify-between">
-			<h2 class="h4">Confirm Restore</h2>
+			<h2 class="text-lg font-bold">Confirm Restore</h2>
 		</header>
 		<article>
-			<p class="opacity-60">
+			<p class="py-4 opacity-60">
 				Do you want to restore {files?.[0].name}?<br />
 				This will overwrite your existing records.
 			</p>
 		</article>
 		<footer class="flex justify-end gap-4">
-			<button type="button" class="preset-tonal btn" onclick={closeModal}>Cancel</button>
+			<button type="button" class="btn btn-ghost" onclick={closeModal}>Cancel</button>
 			<button
 				type="button"
-				class="btn-primary preset-filled-primary-500 btn text-tertiary-500"
+				class="btn btn-primary text-tertiary-500"
 				onclick={onRestoreConfirmed}>OK</button
 			>
 		</footer>
-	{/snippet}
-</Modal>
+	</div>
+</div>

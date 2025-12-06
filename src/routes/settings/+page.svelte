@@ -4,7 +4,6 @@
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { SettingKeys, settings } from '$lib/settings';
 	import Notifier from '$lib/utils/notifier';
-	import { FileUpload, Modal } from '@skeletonlabs/skeleton-svelte';
 	import db from '$lib/data/db';
 	import appService from '$lib/services/appService';
 	import { invalidateAll } from '$app/navigation';
@@ -188,7 +187,7 @@
 	</form>
 
 	<center>
-		<button class="preset-filled-error-500 btn text-warning-500! uppercase" onclick={saveSettings}>
+		<button class="btn btn-error text-warning uppercase" onclick={saveSettings}>
 			Save
 		</button>
 	</center>
@@ -198,11 +197,10 @@
 	<section>
 		<h3 class="h3">Asset Allocation</h3>
 		<center>
-			<FileUpload name="aa_file" onFileChange={onAaFileChanged}>
-				<button class="btn preset-tonal-primary">
-					<span>Select the AA definition</span>
-				</button>
-			</FileUpload>
+			<label class="btn btn-primary">
+				<input type="file" name="aa_file" accept=".json" on:change={(e) => onAaFileChanged({ acceptedFiles: Array.from(e.target.files || []) })} />
+				<span>Select the AA definition</span>
+			</label>
 		</center>
 	</section>
 
@@ -212,11 +210,10 @@
 			This functionality is now redundant. You can use Backup/Restore, which also includes Settings.
 		</p>
 		<center>
-			<FileUpload name="settings_file" onFileChange={onSettingsFileChangeHandler}>
-				<button class="btn preset-tonal-primary">
-					<span>Select the settings file</span>
-				</button></FileUpload
-			>
+			<label class="btn btn-primary">
+				<input type="file" name="settings_file" accept=".json" on:change={(e) => onSettingsFileChangeHandler({ acceptedFiles: Array.from(e.target.files || []) })} />
+				<span>Select the settings file</span>
+			</label>
 		</center>
 	</section>
 
@@ -226,52 +223,43 @@
 </main>
 
 <!-- "AA import" dialog -->
-<Modal
-	open={isAaConfirmationOpen}
-	triggerBase="hidden"
-	contentBase="card bg-surface-100-900 p-4 space-y-4 shadow-xl max-w-(--breakpoint-sm)"
-	backdropClasses="backdrop-blur-xs"
->
-	{#snippet trigger()}Open Modal{/snippet}
-	{#snippet content()}
+<input type="checkbox" id="aa-confirmation-modal" class="modal-toggle" bind:checked={isAaConfirmationOpen} />
+<div class="modal">
+	<div class="modal-box">
 		<header class="flex justify-between">
-			<h2 class="h4">Confirm Restore</h2>
+			<h2 class="text-lg font-bold">Confirm Restore</h2>
 		</header>
 		<article>
-			<p class="opacity-60">Do you want to import the selected Asset Allocation file?</p>
+			<p class="py-4 opacity-60">Do you want to import the selected Asset Allocation file?</p>
 		</article>
 		<footer class="flex justify-end gap-4">
-			<button type="button" class="preset-tonal btn" onclick={closeModal}>Cancel</button>
+			<button type="button" class="btn btn-ghost" onclick={closeModal}>Cancel</button>
 			<button
 				type="button"
-				class="btn-primary preset-filled-primary-500 btn text-tertiary-500"
+				class="btn btn-primary text-tertiary-500"
 				onclick={onAaImportConfirmed}>OK</button
 			>
 		</footer>
-	{/snippet}
-</Modal>
+	</div>
+</div>
+
 <!-- "Settings import" dialog -->
-<Modal
-	open={isSettingsConfirmationOpen}
-	triggerBase="hidden"
-	contentBase="card bg-surface-100-900 p-4 space-y-4 shadow-xl max-w-(--breakpoint-sm)"
-	backdropClasses="backdrop-blur-xs"
->
-	{#snippet trigger()}Open Modal{/snippet}
-	{#snippet content()}
+<input type="checkbox" id="settings-confirmation-modal" class="modal-toggle" bind:checked={isSettingsConfirmationOpen} />
+<div class="modal">
+	<div class="modal-box">
 		<header class="flex justify-between">
-			<h2 class="h4">Confirm Restore</h2>
+			<h2 class="text-lg font-bold">Confirm Restore</h2>
 		</header>
 		<article>
-			<p class="opacity-60">Do you want to restore the selected settings file?</p>
+			<p class="py-4 opacity-60">Do you want to restore the selected settings file?</p>
 		</article>
 		<footer class="flex justify-end gap-4">
-			<button type="button" class="preset-tonal btn" onclick={closeModal}>Cancel</button>
+			<button type="button" class="btn btn-ghost" onclick={closeModal}>Cancel</button>
 			<button
 				type="button"
-				class="btn-primary preset-filled-primary-500 btn text-tertiary-500"
+				class="btn btn-primary text-tertiary-500"
 				onclick={onSettingsRestoreConfirmed}>OK</button
 			>
 		</footer>
-	{/snippet}
-</Modal>
+	</div>
+</div>

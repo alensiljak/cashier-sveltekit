@@ -3,7 +3,6 @@
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import appService from '$lib/services/appService';
 	import Notifier from '$lib/utils/notifier';
-	import { FileUpload, Modal } from '@skeletonlabs/skeleton-svelte';
 	import type { FileChangeDetails } from '@zag-js/file-upload';
 
 	const itemType = page.params.itemType;
@@ -61,11 +60,10 @@
 		<p>Either select a backup file or paste the backup into the text box below.</p>
 
 		<center class="py-6">
-			<FileUpload name="files" onFileChange={onFileChanged}>
-				<button class="btn bg-primary-500">
-					<span>Select the backup file</span>
-				</button>
-			</FileUpload>
+			<label class="btn bg-primary-500">
+				<input type="file" name="files" accept=".json" on:change={(e) => onFileChanged({ acceptedFiles: Array.from(e.target.files || []) })} />
+				<span>Select the backup file</span>
+			</label>
 		</center>
 	</div>
 
@@ -83,30 +81,25 @@
 </main>
 
 <!-- "Restore" dialog -->
-<Modal
-	open={isRestoreConfirmationOpen}
-	triggerBase="hidden"
-	contentBase="card bg-surface-100-900 p-4 space-y-4 shadow-xl max-w-(--breakpoint-sm)"
-	backdropClasses="backdrop-blur-xs"
->
-	{#snippet trigger()}Open Modal{/snippet}
-	{#snippet content()}
+<input type="checkbox" id="restore-item-confirmation-modal" class="modal-toggle" bind:checked={isRestoreConfirmationOpen} />
+<div class="modal">
+	<div class="modal-box">
 		<header class="flex justify-between">
-			<h2 class="h4">Confirm Restore</h2>
+			<h2 class="text-lg font-bold">Confirm Restore</h2>
 		</header>
 		<article>
-			<p class="opacity-60">
+			<p class="py-4 opacity-60">
 				Do you want to restore the selected file?<br />
 				This will overwrite your current Scheduled Transactions.
 			</p>
 		</article>
 		<footer class="flex justify-end gap-4">
-			<button type="button" class="preset-tonal btn" onclick={closeModal}>Cancel</button>
+			<button type="button" class="btn btn-ghost" onclick={closeModal}>Cancel</button>
 			<button
 				type="button"
-				class="btn-primary preset-filled-primary-500 btn text-tertiary-500"
+				class="btn btn-primary text-tertiary-500"
 				onclick={onRestoreConfirmed}>OK</button
 			>
 		</footer>
-	{/snippet}
-</Modal>
+	</div>
+</div>

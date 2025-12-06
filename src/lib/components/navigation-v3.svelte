@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { Navigation } from '@skeletonlabs/skeleton-svelte';
 	import { drawerState } from '$lib/data/mainStore';
 	import { page } from '$app/state';
 	// Icons
@@ -17,152 +16,98 @@
 		UsersRoundIcon
 	} from '@lucide/svelte';
 
-	const hoverClass = 'hover:bg-primary-500/25';
-	const activeClass = 'bg-secondary-500/50';
-
-	let isExpanded = $state(true);
-
 	function closeDrawer(): void {
 		// the new drawer
 		drawerState.update((state) => false);
 	}
-
-	function toggleExpanded() {
-		isExpanded = !isExpanded;
-	}
 </script>
 
-<Navigation.Rail
-	expanded={isExpanded}
-	classes="w-full bg-surface-900 text-tertiary-100 preset-tonal-tertiary-900-100"
-	tilesJustify="top"
-	padding="p-0"
->
-	{#snippet header()}
-		<div class="bg-primary-500 w-full p-4">
-			<div class="flex w-full items-center justify-center">
-				<img src="/icons/icon-192.png" class="w-1/3 lg:w-1/2" alt="logo" />
-			</div>
-			<div class="pt-2 text-center">
-				<h5 class="h5">Cashier</h5>
-			</div>
+<div class="w-full bg-base-200 text-tertiary-100">
+	<div class="bg-primary-500 w-full p-4">
+		<div class="flex w-full items-center justify-center">
+			<img src="/icons/icon-192.png" class="w-1/3 lg:w-1/2" alt="logo" />
 		</div>
-	{/snippet}
-	{#snippet tiles()}
-		<Navigation.Tile
-			labelExpanded="Home"
-			href="/"
-			hover={hoverClass}
-			active={activeClass}
-			selected={page.url.pathname === '/'}
-			onclick={closeDrawer}
-		>
-			<HomeIcon />
-		</Navigation.Tile>
-		<Navigation.Tile
-			labelExpanded="Journal"
-			href="/journal"
-			hover={hoverClass}
-			active={activeClass}
-			selected={page.url.pathname === '/journal'}
-			onclick={closeDrawer}
-		>
-			<ScrollIcon />
-		</Navigation.Tile>
-		<Navigation.Tile
-			labelExpanded="Favourites"
-			href="/favourites"
-			hover={hoverClass}
-			active={activeClass}
-			selected={page.url.pathname === '/favourites'}
-			onclick={closeDrawer}
-		>
-			<StarIcon />
-		</Navigation.Tile>
-		<Navigation.Tile
-			labelExpanded="Accounts"
-			href="/accounts"
-			hover={hoverClass}
-			active={activeClass}
-			selected={page.url.pathname === '/accounts'}
-			onclick={closeDrawer}
-		>
-			<LandmarkIcon />
-		</Navigation.Tile>
-		<Navigation.Tile
-			labelExpanded="Payees"
-			href="/payees"
-			hover={hoverClass}
-			active={activeClass}
-			selected={page.url.pathname === '/payees'}
-			onclick={closeDrawer}
-		>
-			<UsersRoundIcon />
-		</Navigation.Tile>
-		<Navigation.Tile
-			labelExpanded="Asset Allocation"
-			href="/asset-allocation"
-			hover={hoverClass}
-			active={activeClass}
-			selected={page.url.pathname === '/asset-allocation'}
-			onclick={closeDrawer}
-		>
-			<ChartPieIcon />
-		</Navigation.Tile>
-		<Navigation.Tile
-			labelExpanded="Scheduled Transactions"
-			href="/scheduled-xacts"
-			hover={hoverClass}
-			active={activeClass}
-			selected={page.url.pathname === '/scheduled-xacts'}
-			onclick={closeDrawer}
-		>
-			<CalendarClockIcon />
-		</Navigation.Tile>
+		<div class="pt-2 text-center">
+			<h5 class="text-lg font-semibold">Cashier</h5>
+		</div>
+	</div>
 
-		<hr class="hr border-primary-500 border-t-2" />
+	<ul class="menu menu-lg">
+		<li>
+			<a href="/" class="{page.url.pathname === '/' ? 'active' : ''}" onclick={closeDrawer}>
+				<HomeIcon />
+				<span>Home</span>
+			</a>
+		</li>
+		<li>
+			<a href="/journal" class="{page.url.pathname === '/journal' ? 'active' : ''}" onclick={closeDrawer}>
+				<ScrollIcon />
+				<span>Journal</span>
+			</a>
+		</li>
+		<li>
+			<a href="/favourites" class="{page.url.pathname === '/favourites' ? 'active' : ''}" onclick={closeDrawer}>
+				<StarIcon />
+				<span>Favourites</span>
+			</a>
+		</li>
+		<li>
+			<a href="/accounts" class="{page.url.pathname === '/accounts' ? 'active' : ''}" onclick={closeDrawer}>
+				<LandmarkIcon />
+				<span>Accounts</span>
+			</a>
+		</li>
+		<li>
+			<a href="/payees" class="{page.url.pathname === '/payees' ? 'active' : ''}" onclick={closeDrawer}>
+				<UsersRoundIcon />
+				<span>Payees</span>
+			</a>
+		</li>
+		<li>
+			<a href="/asset-allocation" class="{page.url.pathname === '/asset-allocation' ? 'active' : ''}" onclick={closeDrawer}>
+				<ChartPieIcon />
+				<span>Asset Allocation</span>
+			</a>
+		</li>
+		<li>
+			<a href="/scheduled-xacts" class="{page.url.pathname === '/scheduled-xacts' ? 'active' : ''}" onclick={closeDrawer}>
+				<CalendarClockIcon />
+				<span>Scheduled Transactions</span>
+			</a>
+		</li>
+	</ul>
 
-		<Navigation.Tile
-			labelExpanded="Backup"
-			href="/backup"
-			hover={hoverClass}
-			active={activeClass}
-			selected={page.url.pathname === '/backup'}
-			onclick={closeDrawer}
-		>
-			<DatabaseIcon />
-		</Navigation.Tile>
-		<Navigation.Tile
-			labelExpanded="Help"
-			href="/help"
-			hover={hoverClass}
-			active={activeClass}
-			selected={page.url.pathname === '/help'}
-			onclick={closeDrawer}
-		>
-			<HelpCircleIcon />
-		</Navigation.Tile>
-		<Navigation.Tile
-			labelExpanded="About"
-			href="/about"
-			hover={hoverClass}
-			active={activeClass}
-			selected={page.url.pathname === '/about'}
-			onclick={closeDrawer}
-		>
-			<InfoIcon />
-		</Navigation.Tile>
-	{/snippet}
-	{#snippet footer()}
-		<Navigation.Tile
-			labelExpanded="Settings"
-			href="/settings"
-			hover={hoverClass}
-			active={activeClass}
-			selected={page.url.pathname === '/settings'}
-			onclick={closeDrawer}
-		>
-			<SettingsIcon />
-		</Navigation.Tile>
-	{/snippet}
-</Navigation.Rail>
+	<div class="divider"></div>
+
+	<ul class="menu menu-lg">
+		<li>
+			<a href="/backup" class="{page.url.pathname === '/backup' ? 'active' : ''}" onclick={closeDrawer}>
+				<DatabaseIcon />
+				<span>Backup</span>
+			</a>
+		</li>
+		<li>
+			<a href="/help" class="{page.url.pathname === '/help' ? 'active' : ''}" onclick={closeDrawer}>
+				<HelpCircleIcon />
+				<span>Help</span>
+			</a>
+		</li>
+		<li>
+			<a href="/about" class="{page.url.pathname === '/about' ? 'active' : ''}" onclick={closeDrawer}>
+				<InfoIcon />
+				<span>About</span>
+			</a>
+		</li>
+	</ul>
+
+	<div class="fixed bottom-0 w-full p-2">
+		<ul class="menu menu-lg">
+			<li>
+				<a href="/settings" class="{page.url.pathname === '/settings' ? 'active' : ''}" onclick={closeDrawer}>
+					<SettingsIcon />
+					<span>Settings</span>
+				</a>
+			</li>
+		</ul>
+	</div>
+</div>

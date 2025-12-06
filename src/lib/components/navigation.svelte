@@ -33,104 +33,76 @@
 	</div>
 </div>
 
-<nav class="list-nav p-4">
-	<ul>
-		<li>
-			<a href="/" onclick={drawerClose} class:active={page.url.pathname === '/'}>
-				<span><HomeIcon /></span>
-				<span>Home</span>
-			</a>
-		</li>
-		<li>
-			<a href="/journal" onclick={drawerClose} class:active={page.url.pathname === '/journal'}>
-				<span><ScrollIcon /></span>
-				<span>Journal</span>
-			</a>
-		</li>
-		<li>
-			<a
-				href="/favourites"
-				onclick={drawerClose}
-				class:active={page.url.pathname === '/favourites'}
-			>
-				<span><StarIcon /></span>
-				<span>Favourites</span>
-			</a>
-		</li>
-		<li>
-			<a href="/accounts" onclick={drawerClose} class:active={page.url.pathname === '/accounts'}>
-				<span><LandmarkIcon /></span>
-				<span>Accounts</span>
-			</a>
-		</li>
-		<li>
-			<a href="/payees" onclick={drawerClose} class:active={page.url.pathname === '/payees'}>
-				<span><UsersRoundIcon /></span>
-				<span>Payees</span>
-			</a>
-		</li>
-		<li>
-			<a
-				href="/asset-allocation"
-				onclick={drawerClose}
-				class:active={page.url.pathname === '/asset-allocation'}
-			>
-				<span><ChartPieIcon /></span>
-				<span>Asset Allocation</span>
-			</a>
-		</li>
-		<li>
-			<a
-				href="/scheduled-xacts"
-				onclick={drawerClose}
-				class:active={page.url.pathname === '/scheduled-xacts'}
-			>
-				<span><CalendarClockIcon /></span>
-				<span>Scheduled Transactions</span>
-			</a>
-		</li>
-		<hr class="bg-primary-500 h-1 border-none" />
-		<!-- <li>
-			<a
-				href="/cloud-backup"
-				onclick={drawerClose}
-				class:active={page.url.pathname === '/cloud-backup'}
-			>
-				<span><UploadCloudIcon /></span>
-				<span>Cloud Backup</span>
-			</a>
-		</li> -->
-		<li>
-			<a href="/backup" onclick={drawerClose} class:active={page.url.pathname === '/backup'}>
-				<span><DatabaseIcon /></span>
-				<span>Backup</span>
-			</a>
-		</li>
-		<li>
-			<a href="/settings" onclick={drawerClose} class:active={page.url.pathname === '/settings'}>
-				<span><SettingsIcon /></span>
-				<span class="flex-auto">Settings</span>
-			</a>
-		</li>
-		<li>
-			<a href="/help" onclick={drawerClose} class:active={page.url.pathname === '/help'}>
-				<span><HelpCircleIcon /></span>
-				<span class="flex-auto">Help</span>
-			</a>
-		</li>
-		<li>
-			<a href="/about" onclick={drawerClose} class:active={page.url.pathname === '/about'}>
-				<span><InfoIcon /></span>
-				<span>About</span>
-			</a>
-		</li>
-	</ul>
-</nav>
+<ul class="menu menu-lg p-4">
+	<li>
+		<a href="/" onclick={drawerClose} class="{page.url.pathname === '/' ? 'active' : ''}">
+			<HomeIcon />
+			<span>Home</span>
+		</a>
+	</li>
+	<li>
+		<a href="/journal" onclick={drawerClose} class="{page.url.pathname === '/journal' ? 'active' : ''}">
+			<ScrollIcon />
+			<span>Journal</span>
+		</a>
+	</li>
+	<li>
+		<a href="/favourites" onclick={drawerClose} class="{page.url.pathname === '/favourites' ? 'active' : ''}">
+			<StarIcon />
+			<span>Favourites</span>
+		</a>
+	</li>
+	<li>
+		<a href="/accounts" onclick={drawerClose} class="{page.url.pathname === '/accounts' ? 'active' : ''}">
+			<LandmarkIcon />
+			<span>Accounts</span>
+		</a>
+	</li>
+	<li>
+		<a href="/payees" onclick={drawerClose} class="{page.url.pathname === '/payees' ? 'active' : ''}">
+			<UsersRoundIcon />
+			<span>Payees</span>
+		</a>
+	</li>
+	<li>
+		<a href="/asset-allocation" onclick={drawerClose} class="{page.url.pathname === '/asset-allocation' ? 'active' : ''}">
+			<ChartPieIcon />
+			<span>Asset Allocation</span>
+		</a>
+	</li>
+	<li>
+		<a href="/scheduled-xacts" onclick={drawerClose} class="{page.url.pathname === '/scheduled-xacts' ? 'active' : ''}">
+			<CalendarClockIcon />
+			<span>Scheduled Transactions</span>
+		</a>
+	</li>
+</ul>
 
-<style>
-	/* active navigation item style */
-	/* replace @apply bg-secondary-500; */
-	.active {
-		background-color: var(--color-secondary-500);
-	}
-</style>
+<div class="divider"></div>
+
+<ul class="menu menu-lg p-4">
+	<li>
+		<a href="/backup" onclick={drawerClose} class="{page.url.pathname === '/backup' ? 'active' : ''}">
+			<DatabaseIcon />
+			<span>Backup</span>
+		</a>
+	</li>
+	<li>
+		<a href="/settings" onclick={drawerClose} class="{page.url.pathname === '/settings' ? 'active' : ''}">
+			<SettingsIcon />
+			<span class="flex-auto">Settings</span>
+		</a>
+	</li>
+	<li>
+		<a href="/help" onclick={drawerClose} class="{page.url.pathname === '/help' ? 'active' : ''}">
+			<HelpCircleIcon />
+			<span class="flex-auto">Help</span>
+		</a>
+	</li>
+	<li>
+		<a href="/about" onclick={drawerClose} class="{page.url.pathname === '/about' ? 'active' : ''}">
+			<InfoIcon />
+			<span>About</span>
+		</a>
+	</li>
+</ul>

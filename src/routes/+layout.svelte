@@ -8,11 +8,8 @@
 	import { pwaInfo } from 'virtual:pwa-info';
 	import { pwaAssetsHead } from 'virtual:pwa-assets/head';
 	import { onMount } from 'svelte';
-	import { Modal } from '@skeletonlabs/skeleton-svelte';
 	import { drawerState } from '$lib/data/mainStore';
 	import NavigationV3 from '$lib/components/navigation-v3.svelte';
-	import { Toaster } from '@skeletonlabs/skeleton-svelte';
-	import { toaster } from '../lib/toaster-svelte';
 
 	let { children } = $props();
 
@@ -58,37 +55,29 @@
 	{/each}
 </svelte:head>
 
-<Toaster {toaster}></Toaster>
-
-<div {...useSwipe(handleSwipe, () => ({}))}>
+<div {...useSwipe(handleSwipe, () => ({}))} class="drawer">
 	<!-- sidebar as modal -->
-	<Modal
-		open={$drawerState}
-		onOpenChange={(e) => drawerState.update((state) => e.open)}
-		triggerBase="hidden"
-		contentBase="bg-surface-500/95 shadow-xl w-[288px] h-screen overflow-y-auto"
-		positionerJustify="justify-start"
-		transitionsPositionerIn={{ x: -288, duration: 350 }}
-		transitionsPositionerOut={{ x: -288, duration: 350 }}
-	>
-		{#snippet trigger()}{/snippet}
-		{#snippet content()}
+	<input type="checkbox" id="drawer-modal" class="drawer-toggle" bind:checked={$drawerState} />
+	<div class="drawer-content">
+		<!-- former AppShell -->
+		<div class="grid grid-cols-1 lg:grid-cols-[288px_1fr]">
+			<aside class="sticky top-0 col-span-1 hidden h-screen overflow-y-auto lg:block">
+				<!-- bg-surface-500/5 -->
+				<!-- <Navigation /> -->
+				<NavigationV3 />
+			</aside>
+
+			<main class="col-span-1">
+				{@render children()}
+			</main>
+		</div>
+	</div>
+	<div class="drawer-side">
+		<label for="drawer-modal" class="drawer-overlay"></label>
+		<div class="bg-base-200 w-[288px] h-screen overflow-y-auto">
 			<!-- <Navigation /> -->
 			<NavigationV3 />
-		{/snippet}
-	</Modal>
-
-	<!-- former AppShell -->
-	<div class="grid grid-cols-1 lg:grid-cols-[288px_1fr]">
-		<aside class="sticky top-0 col-span-1 hidden h-screen overflow-y-auto lg:block">
-			<!-- bg-surface-500/5 -->
-			<!-- <Navigation /> -->
-			<NavigationV3 />
-		</aside>
-
-		<main class="col-span-1">
-			{@render children()}
-		</main>
+		</div>
 	</div>
 </div>
 

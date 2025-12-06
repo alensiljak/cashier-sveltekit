@@ -15,7 +15,7 @@
 	{/snippet}
 	{#snippet footer()}
 		<center>
-			<a href="/sync" class="btn preset-outlined-warning-500 uppercase">
+			<a href="/sync" class="btn btn-outline btn-warning uppercase">
 				<span><SettingsIcon /></span>
 				<span>Sync Settings</span>
 			</a>

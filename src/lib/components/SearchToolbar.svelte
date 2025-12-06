@@ -40,6 +40,6 @@
 			use:debounceAction={{ callback: handleSearch, delay: 400 }}
 			class="ig-input bg-surface-900"
 		/>
-		<div class="ig-cell preset-tonal"><SearchIcon /></div>
+		<div class="ig-cell bg-surface-900"><SearchIcon /></div>
 	</div>
 </search>

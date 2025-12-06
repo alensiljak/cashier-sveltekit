@@ -197,15 +197,15 @@
 		<div class="flex flex-row justify-center space-x-10">
 			<button
 				type="button"
-				class="preset-outlined-primary-500 btn-icon"
+				class="btn btn-outline btn-primary btn-icon"
 				onclick={onAddPostingClicked}
 			>
 				<PlusCircleIcon />
 			</button>
-			<a class="preset-outlined-primary-500 btn-icon" href="/postings-reorder">
+			<a class="btn btn-outline btn-primary btn-icon" href="/postings-reorder">
 				<ArrowUpDownIcon />
 			</a>
-			<a class="preset-outlined-primary-500 btn-icon" href="/postings-delete">
+			<a class="btn btn-outline btn-primary btn-icon" href="/postings-delete">
 				<TrashIcon />
 			</a>
 		</div>

@@ -3,7 +3,6 @@
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { SettingKeys, settings } from '$lib/settings';
 	import Notifier from '$lib/utils/notifier';
-	import { Modal } from '@skeletonlabs/skeleton-svelte';
 	import { CheckIcon, DeleteIcon, TrashIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 
@@ -59,7 +58,7 @@
 				<div class="pr-2">
 					<button
 						type="button"
-						class="preset-outline btn-icon bg-secondary-500 text-tertiary-500"
+						class="btn btn-outline btn-secondary btn-icon text-tertiary"
 						onclick={() => onDeleteClicked(i)}
 					>
 						<TrashIcon />
@@ -71,29 +70,24 @@
 </article>
 
 <!-- "Delete" dialog -->
-<Modal
-	open={isDeleteConfirmationOpen}
-	triggerBase="hidden"
-	contentBase="card bg-surface-100-900 p-4 space-y-4 shadow-xl max-w-(--breakpoint-sm)"
-	backdropClasses="backdrop-blur-xs"
->
-	{#snippet trigger()}Open Modal{/snippet}
-	{#snippet content()}
+<input type="checkbox" id="delete-fav-confirmation-modal" class="modal-toggle" bind:checked={isDeleteConfirmationOpen} />
+<div class="modal">
+	<div class="modal-box">
 		<header class="flex justify-between">
-			<h2 class="h4">Confirm Removal</h2>
+			<h2 class="text-lg font-bold">Confirm Removal</h2>
 		</header>
 		<article>
-			<p class="opacity-60">
-				Do you want to remove\n ${_accounts[indexToDelete]} \nfrom favourites?
+			<p class="py-4 opacity-60">
+				Do you want to remove { _accounts[indexToDelete] } from favourites?
 			</p>
 		</article>
 		<footer class="flex justify-end gap-4">
-			<button type="button" class="preset-tonal btn" onclick={closeModal}>Cancel</button>
+			<button type="button" class="btn btn-ghost" onclick={closeModal}>Cancel</button>
 			<button
 				type="button"
-				class="btn-primary preset-filled-primary-500 btn text-tertiary-500"
+				class="btn btn-primary text-tertiary-500"
 				onclick={onDeleteConfirmed}>OK</button
 			>
 		</footer>
-	{/snippet}
-</Modal>
+	</div>
+</div>

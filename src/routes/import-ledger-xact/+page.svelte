@@ -48,7 +48,7 @@
 		<textarea class="textarea grow" bind:value={inputText} bind:this={inputControl}></textarea>
 
 		<center class="py-6">
-			<button type="button" class="preset-filled-primary-500 btn" onclick={onImportClicked}>
+			<button type="button" class="btn btn-primary" onclick={onImportClicked}>
 				<span><ImportIcon /></span>
 				<span>Import</span>
 			</button>
