@@ -97,7 +97,7 @@
 					<!-- Leave date values only at the first occurrence. -->
 					{#if i === 0 || scx.nextDate !== filteredList[i - 1].nextDate}
 						<div
-							class={`border-base-content border-opacity-15 flex flex-row justify-center border-t py-1 ${getDateColour(scx.nextDate)}`}
+							class={`border-base-content/15 flex flex-row justify-center border-t py-1 ${getDateColour(scx.nextDate)}`}
 						>
 							<CalendarIcon />
 							<time class="ml-2">{scx.nextDate}</time>

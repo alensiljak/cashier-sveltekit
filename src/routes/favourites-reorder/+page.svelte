@@ -51,7 +51,7 @@
 	<section class="space-y-2 p-1">
 		{#each _favourites as item, index}
 			<div
-				class="border-base-content border-opacity-25 flex h-14 flex-row items-center space-x-3
+				class="border-base-content/25 flex h-14 flex-row items-center space-x-3
 				rounded-lg border-b px-2"
 			>
 				<div class="grow">

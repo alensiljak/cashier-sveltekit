@@ -51,7 +51,7 @@
 
 	<section class="grow overflow-auto p-1">
 		{#each _accounts as account, i}
-			<div class="border-base-content border-opacity-15 flex flex-row border-b py-1">
+			<div class="border-base-content/15 flex flex-row border-b py-1">
 				<data class="grow content-center">
 					{account}
 				</data>

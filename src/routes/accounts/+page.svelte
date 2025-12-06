@@ -89,7 +89,7 @@
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 			<div
-				class="border-base-content border-opacity-15 flex items-center justify-between border-b py-2 {getAccountColour(
+				class="border-base-content/15 flex items-center justify-between border-b py-2 {getAccountColour(
 					account.name
 				)}"
 				onclick={() => onAccountSelected(account.name)}
