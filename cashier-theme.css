@@ -295,7 +295,7 @@ Cashier Theme for DaisyUI
 	--color-base-100: oklch(23.76% 0 228.89deg); /* color-surface-500 */
 	--color-base-200: oklch(18.15% 0 247.95deg); /* color-surface-900 */
 	--color-base-300: oklch(16.77% 0 247.97deg); /* color-surface-950 */
-	--color-base-content: #f0e6d2; /* Original for dark theme */
+	--color-base-content: oklch(95.57% 0.09 98.61deg); /* Same as --color-tertiary-100 from Skeleton */
 	--color-info: #519390;
 	--color-info-content: #ffffff;
 	--color-success: #076461;
