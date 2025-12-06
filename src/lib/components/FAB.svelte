@@ -14,16 +14,16 @@
 	let {
 		onclick = clickHandler,
 		Icon = Check,
-		backgroundColor = 'bg-tertiary-500',
-		textColor = 'text-secondary-500'
+		backgroundColor = 'btn-accent',
+		textColor = ''
 	} = $props();
 </script>
 
 <button
-	class={`fixed right-7 bottom-7 rounded-full ${backgroundColor} hover:${backgroundColor}/75 p-4 ${textColor} shadow-lg transition duration-200`}
+	class={`btn btn-circle btn-xl !text-current ${backgroundColor} ${textColor} border-0 fixed right-7 bottom-7 shadow-lg transition duration-200`}
 	{onclick}
 >
 	<!-- absolute-->
 
-	<Icon />
+	<Icon class={textColor || 'text-[#92140c]'} />
 </button>
