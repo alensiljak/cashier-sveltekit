@@ -16,4 +16,5 @@ html,
 body {
 	/* @apply h-full; */
 	height: 100%;
+	@apply bg-base-300;
 }

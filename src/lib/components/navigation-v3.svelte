@@ -22,7 +22,7 @@
 	}
 </script>
 
-<div class="flex flex-col h-screen bg-base-300">
+<div class="flex flex-col h-screen bg-base-200">
 	<div class="bg-primary w-full p-4">
 		<div class="flex w-full items-center justify-center">
 			<img src="/icons/icon-192.png" class="w-1/3 lg:w-1/2" alt="logo" />

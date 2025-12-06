@@ -292,9 +292,9 @@ Cashier Theme for DaisyUI
 	--color-neutral: #2a2e37;
 	--color-neutral-focus: #2a2e37;
 	--color-neutral-content: #f0e6d2; /* Tan-like color for dark theme */
-	--color-base-100: #1d2025;
-	--color-base-200: #25282d;
-	--color-base-300: #2e3238;
+	--color-base-100: oklch(23.76% 0 228.89deg); /* color-surface-500 */
+	--color-base-200: oklch(18.15% 0 247.95deg); /* color-surface-900 */
+	--color-base-300: oklch(16.77% 0 247.97deg); /* color-surface-950 */
 	--color-base-content: #f0e6d2; /* Original for dark theme */
 	--color-info: #519390;
 	--color-info-content: #ffffff;

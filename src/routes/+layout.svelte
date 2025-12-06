@@ -79,7 +79,7 @@
 				<NavigationV3 />
 			</aside>
 
-			<main class="col-span-1">
+			<main class="col-span-1 bg-base-300">
 				{@render children()}
 			</main>
 		</div>
