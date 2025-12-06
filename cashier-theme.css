@@ -13,11 +13,11 @@ Cashier Theme for DaisyUI
 	--color-accent-content: #000000;
 	--color-neutral: #1d1f20;
 	--color-neutral-focus: #1d1f20;
-	--color-neutral-content: #ffffff;
+	--color-neutral-content: #d7ccc8; /* Changed to tan-like color */
 	--color-base-100: #ffffff;
 	--color-base-200: #f9fafb;
 	--color-base-300: #d1d5db;
-	--color-base-content: #1f2937;
+	--color-base-content: #5a4b45; /* Changed to warm tan color */
 	--color-info: #519390;
 	--color-info-content: #ffffff;
 	--color-success: #076461;
@@ -40,11 +40,11 @@ Cashier Theme for DaisyUI
 	--color-accent-content: #000000;
 	--color-neutral: #2a2e37;
 	--color-neutral-focus: #2a2e37;
-	--color-neutral-content: #e6e6e6;
+	--color-neutral-content: #f0e6d2; /* Changed to tan-like color for dark theme */
 	--color-base-100: #1d2025;
 	--color-base-200: #25282d;
 	--color-base-300: #2e3238;
-	--color-base-content: #e6e6e6;
+	--color-base-content: #e6d8c3; /* Changed to warmer light color */
 	--color-info: #519390;
 	--color-info-content: #ffffff;
 	--color-success: #076461;
