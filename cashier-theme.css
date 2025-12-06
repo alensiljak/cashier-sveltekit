@@ -2,7 +2,7 @@
 Cashier Theme for DaisyUI
 */
 [data-theme='cashiertheme'] {
-	--color-primary: #076461;
+    --color-primary: #076461;
 	--color-primary-focus: #076461;
 	--color-primary-content: #ffffff;
 	--color-secondary: #92140c;
@@ -13,11 +13,11 @@ Cashier Theme for DaisyUI
 	--color-accent-content: #000000;
 	--color-neutral: #1d1f20;
 	--color-neutral-focus: #1d1f20;
-	--color-neutral-content: #d7ccc8; /* Changed to tan-like color */
+	--color-neutral-content: #d7ccc8; /* Tan-like color */
 	--color-base-100: #ffffff;
 	--color-base-200: #f9fafb;
 	--color-base-300: #d1d5db;
-	--color-base-content: #5a4b45; /* Changed to warm tan color */
+	--color-base-content: #1f2937; /* Original dark gray for light theme */
 	--color-info: #519390;
 	--color-info-content: #ffffff;
 	--color-success: #076461;
@@ -29,9 +29,15 @@ Cashier Theme for DaisyUI
 }
 
 [data-theme='cashierthemedark'] {
-	--color-primary: #076461;
+    /*
+    --text-scaling: 1.067;
+    --color-primary-100: oklch(82.88% 0.03 191.56deg);
+    */
+
+    --color-primary: #076461;
 	--color-primary-focus: #076461;
-	--color-primary-content: #ffffff;
+	/*--color-primary-content: #ffffff;*/
+	--color-primary-content: oklch(82.88% 0.03 191.56deg);
 	--color-secondary: #92140c;
 	--color-secondary-focus: #92140c;
 	--color-secondary-content: #ffffff;
@@ -40,11 +46,11 @@ Cashier Theme for DaisyUI
 	--color-accent-content: #000000;
 	--color-neutral: #2a2e37;
 	--color-neutral-focus: #2a2e37;
-	--color-neutral-content: #f0e6d2; /* Changed to tan-like color for dark theme */
+	--color-neutral-content: #f0e6d2; /* Tan-like color for dark theme */
 	--color-base-100: #1d2025;
 	--color-base-200: #25282d;
 	--color-base-300: #2e3238;
-	--color-base-content: #e6d8c3; /* Changed to warmer light color */
+	--color-base-content: #f0e6d2; /* Original for dark theme */
 	--color-info: #519390;
 	--color-info-content: #ffffff;
 	--color-success: #076461;
