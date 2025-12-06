@@ -200,28 +200,28 @@
 		<div class="grid grid-cols-3 pt-3 lg:px-20">
 			<SquareButton
 				Icon={ScrollIcon}
-				classes="bg-tertiary-500 text-secondary-500"
+				classes="bg-neutral text-neutral-content"
 				onclick={onEnterClicked}
 			>
 				Enter
 			</SquareButton>
 			<SquareButton
 				Icon={ChevronsRightIcon}
-				classes="bg-primary-500 text-tertiary-500"
+				classes="bg-primary text-primary-content"
 				onclick={onSkipClicked}
 			>
 				Skip
 			</SquareButton>
 			<SquareButton
 				Icon={PenSquareIcon}
-				classes="bg-tertiary-500 text-secondary-500"
+				classes="bg-neutral text-neutral-content"
 				onclick={() => onEditClicked($ScheduledXact.id)}
 			>
 				Edit
 			</SquareButton>
 			<SquareButton
 				Icon={TrashIcon}
-				classes="bg-secondary-500 text-tertiary-500"
+				classes="bg-secondary text-secondary-content"
 				onclick={onDeleteClick}
 			>
 				Delete
@@ -244,7 +244,7 @@
 			<button type="button" class="btn btn-ghost" onclick={closeModal}>Cancel</button>
 			<button
 				type="button"
-				class="btn btn-primary text-tertiary-500"
+				class="btn btn-primary text-primary-content"
 				onclick={onEnterConfirmed}>OK</button
 			>
 		</footer>
@@ -265,7 +265,7 @@
 			<button type="button" class="btn btn-ghost" onclick={closeModal}>Cancel</button>
 			<button
 				type="button"
-				class="btn btn-primary text-tertiary-500"
+				class="btn btn-primary text-primary-content"
 				onclick={onSkipConfirmed}>OK</button
 			>
 		</footer>
@@ -288,7 +288,7 @@
 			<button type="button" class="btn btn-ghost" onclick={closeModal}>Cancel</button>
 			<button
 				type="button"
-				class="btn btn-primary text-tertiary-500"
+				class="btn btn-primary text-primary-content"
 				onclick={onDeleteConfirmed}>OK</button
 			>
 		</footer>

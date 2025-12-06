@@ -51,20 +51,20 @@
 	<section class="space-y-2 p-1">
 		{#each _favourites as item, index}
 			<div
-				class="border-tertiary-500/25 flex h-14 flex-row items-center space-x-3
+				class="border-base-content border-opacity-25 flex h-14 flex-row items-center space-x-3
 				rounded-lg border-b px-2"
 			>
 				<div class="grow">
 					<span>{item}</span>
 				</div>
 				<button
-					class="btn btn-outline btn-tertiary btn-icon text-tertiary aspect-square"
+					class="btn btn-outline btn-neutral btn-icon text-neutral-content aspect-square"
 					onclick={() => onItemDownClicked(index)}
 				>
 					<ChevronDownIcon /></button
 				>
 				<button
-					class="btn btn-outline btn-tertiary btn-icon text-tertiary aspect-square"
+					class="btn btn-outline btn-neutral btn-icon text-neutral-content aspect-square"
 					onclick={() => onItemUpClicked(index)}
 				>
 					<ChevronUpIcon /></button

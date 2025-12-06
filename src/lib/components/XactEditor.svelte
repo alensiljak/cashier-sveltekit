@@ -188,7 +188,7 @@
 
 	<!-- Postings -->
 	<!-- actions and sum -->
-	<div class="bg-primary-500/25 space-y-2 rounded-lg p-3">
+	<div class="bg-primary bg-opacity-25 space-y-2 rounded-lg p-3">
 		<div class="flex flex-row">
 			<span class="grow text-center">Postings</span>
 			<div><SigmaIcon /></div>

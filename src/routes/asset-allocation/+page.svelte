@@ -163,7 +163,7 @@
 			</thead>
 			<tbody>
 				{#each _allocation as item}
-					<tr class={`border-tertiary-200/15 border-b ${getRowColor(item)}`}>
+					<tr class={`border-base-content border-opacity-15 border-b ${getRowColor(item)}`}>
 						<td>
 							<span class={`pl-${item.depth * 2}`}>
 								<a class="underline" href={`/assetclass-detail/${item.fullname}`}>

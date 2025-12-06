@@ -18,8 +18,8 @@
 <div class="grid grid-cols-[auto_1fr]" {...useSwipe(handleSwipe, () => ({}))}>
 	<!-- grid grid-cols-2 md:grid-cols-[auto_1fr] -->
 	<!-- Hide the sidebar on small screens; show at the medium breakpoint or wider -->
-	<div class="bg-surface-500/5 w-0 lg:w-64">
-		<aside class="sticky top-0 col-span-1 h-screen bg-yellow-500 p-4">
+	<div class="bg-base-300 bg-opacity-5 w-0 lg:w-64">
+		<aside class="sticky top-0 col-span-1 h-screen bg-warning p-4">
 			<!-- <Drawer width="w-[300px]">Cashier</Drawer> -->
 			<Navigation />
 		</aside>
@@ -30,7 +30,7 @@
 
 		{#if alertVisible}
 			<aside
-				class="alert alert-neutral border border-surface-500"
+				class="alert alert-neutral border border-base-300"
 				transition:fade={{ duration: 200 }}
 			>
 				<!-- Icon -->

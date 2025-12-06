@@ -119,35 +119,35 @@
 	<div class="mt-4 inline-grid w-full grid-cols-3 gap-4 justify-self-center">
 		<SquareButton
 			Icon={PenSquareIcon}
-			classes="bg-tertiary-500 text-secondary-500"
+			classes="bg-neutral text-neutral-content"
 			onclick={onEditClicked}
 		>
 			Edit
 		</SquareButton>
 		<SquareButton
 			Icon={ClipboardIcon}
-			classes="bg-primary-500 text-tertiary-500"
+			classes="bg-primary text-primary-content"
 			onclick={onDuplicateClick}
 		>
 			Duplicate
 		</SquareButton>
 		<SquareButton
 			Icon={CalendarClockIcon}
-			classes="bg-tertiary-500 text-secondary-500"
+			classes="bg-neutral text-neutral-content"
 			onclick={onScheduleClick}
 		>
 			Schedule
 		</SquareButton>
 		<SquareButton
 			Icon={CopyIcon}
-			classes="bg-primary-500 text-tertiary-500"
+			classes="bg-primary text-primary-content"
 			onclick={onCopyClicked}
 		>
 			Copy
 		</SquareButton>
 		<SquareButton
 			Icon={TrashIcon}
-			classes="bg-secondary-500 text-tertiary-500"
+			classes="bg-secondary text-secondary-content"
 			onclick={onDeleteClicked}
 		>
 			Delete
@@ -168,7 +168,7 @@
 			<button type="button" class="btn btn-ghost" onclick={closeModal}>Cancel</button>
 			<button
 				type="button"
-				class="btn btn-primary text-tertiary-500"
+				class="btn btn-primary text-primary-content"
 				onclick={onDeleteConfirmed}>OK</button
 			>
 		</footer>

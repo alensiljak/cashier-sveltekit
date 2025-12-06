@@ -2,7 +2,7 @@
 	import { MenuIcon } from '@lucide/svelte';
 </script>
 
-<div class="toolbar bg-primary-800 relative flex p-2">
+<div class="toolbar bg-primary relative flex p-2">
 	<button class="btn btn-sm">
 		<MenuIcon />
 	</button>

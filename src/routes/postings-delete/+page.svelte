@@ -61,7 +61,7 @@
 						{posting.account}
 					</span>
 					<button
-						class="btn btn-outline btn-icon text-secondary-500 mr-2"
+						class="btn btn-outline btn-icon text-secondary-content mr-2"
 						onclick={() => onDeleteClicked(i)}
 					>
 						<TrashIcon />
@@ -86,7 +86,7 @@
 			<button type="button" class="btn btn-ghost" onclick={closeModal}>Cancel</button>
 			<button
 				type="button"
-				class="btn btn-primary text-tertiary-500"
+				class="btn btn-primary text-primary-content"
 				onclick={onDeleteConfirmed}>OK</button
 			>
 		</footer>

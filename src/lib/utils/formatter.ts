@@ -1,9 +1,9 @@
 import type { Money, Xact } from '$lib/data/model';
 import moment from 'moment';
 
-const RED = 'text-red-400';
-const YELLOW = 'text-yellow-500';
-const GREEN = 'text-green-500';
+const RED = 'text-error';
+const YELLOW = 'text-warning';
+const GREEN = 'text-success';
 
 /**
  *
@@ -58,15 +58,15 @@ export function getDateColour(dateString: string): string | undefined {
 
 	if (date < today) {
 		// red
-		return 'text-secondary-400';
+		return 'text-secondary-content';
 	}
 	if (date === today) {
 		// yellow
-		return 'text-base-400';
+		return 'text-base-content';
 	}
 	if (date > today) {
 		// green
-		return 'text-primary-400';
+		return 'text-primary-content';
 	}
 }
 

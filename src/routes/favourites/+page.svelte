@@ -162,7 +162,7 @@
 						<!-- svelte-ignore a11y_click_events_have_key_events -->
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
 						<div
-							class={`border-tertiary-200/15 hover:bg-surface-600 flex cursor-pointer flex-row
+							class={`border-base-content border-opacity-15 hover:bg-surface-600 flex cursor-pointer flex-row
 										border-b py-1 ${isGrayedOut(account) ? 'text-surface-300' : ''}`}
 							onclick={() => onAccountClick(account.name)}
 						>
@@ -210,7 +210,7 @@
 			<button type="button" class="btn btn-ghost" onclick={closeModal}>Cancel</button>
 			<button
 				type="button"
-				class="btn btn-primary text-tertiary-500"
+				class="btn btn-primary text-primary-content"
 				onclick={onDeleteAllConfirmed}>OK</button
 			>
 		</footer>

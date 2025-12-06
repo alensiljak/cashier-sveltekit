@@ -19,7 +19,7 @@
 
 	let amountInput: HTMLInputElement;
 	let amountFieldColor = $derived(
-		($xact?.postings[index].amount as number) < 0 ? 'bg-secondary-500/20!' : 'bg-primary-500/20!'
+		($xact?.postings[index].amount as number) < 0 ? 'bg-secondary bg-opacity-20' : 'bg-primary bg-opacity-20'
 	);
 
 	onMount(() => {
@@ -83,7 +83,7 @@
 			oninput={onAmountChanged}
 		/>
 		<!--
-		class={$xact.postings[index].amount as number >= 0 ? 'bg-primary-500/20!' : 'bg-secondary-500/20!'}
+		class={$xact.postings[index].amount as number >= 0 ? 'bg-primary bg-opacity-20!' : 'bg-secondary bg-opacity-20!'}
 		oninput={() => updateAmount($xact.postings[index].amount as number)}
 		onchange={onAmountChanged}
 	-->

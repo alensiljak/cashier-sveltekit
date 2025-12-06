@@ -24,7 +24,7 @@
 
 <!-- This is the navigation component. -->
 
-<div class="bg-primary-500 p-4">
+<div class="bg-primary p-4">
 	<div class="flex w-100 items-center justify-center">
 		<img src="/icons/icon-192.png" class="w-1/3 lg:w-1/2" alt="logo" />
 	</div>

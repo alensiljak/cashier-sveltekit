@@ -179,7 +179,7 @@
 	</div>
 
 	<center class="pt-10">
-		<button class="btn bg-tertiary-500 text-secondary-500 uppercase" onclick={onSyncClicked}>
+		<button class="btn bg-neutral text-neutral-content uppercase" onclick={onSyncClicked}>
 			<span><RefreshCcw class={rotationClass} style="animation-direction: reverse;" /></span>
 			<span>Sync</span>
 		</button>
@@ -188,13 +188,13 @@
 	<hr class="my-10" />
 
 	<center>
-		<button class="btn text-tertiary-500 bg-secondary-500 mr-5 uppercase" onclick={onShutdownClick}>
+		<button class="btn text-secondary-content bg-secondary mr-5 uppercase" onclick={onShutdownClick}>
 			<span><PowerIcon /></span>
 			<span>Server Shutdown</span>
 		</button>
 
 		<!-- reload data -->
-		<button class="btn bg-primary-500 text-tertiary-500 uppercase" onclick={reloadData}>
+		<button class="btn bg-primary text-primary-content uppercase" onclick={reloadData}>
 			<span><RefreshCcw class={rotationClass} style="animation-direction: reverse;" /></span>
 			<span>Reload Data</span>
 		</button>

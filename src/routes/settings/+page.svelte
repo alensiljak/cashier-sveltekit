@@ -237,7 +237,7 @@
 			<button type="button" class="btn btn-ghost" onclick={closeModal}>Cancel</button>
 			<button
 				type="button"
-				class="btn btn-primary text-tertiary-500"
+				class="btn btn-primary text-primary-content"
 				onclick={onAaImportConfirmed}>OK</button
 			>
 		</footer>
@@ -258,7 +258,7 @@
 			<button type="button" class="btn btn-ghost" onclick={closeModal}>Cancel</button>
 			<button
 				type="button"
-				class="btn btn-primary text-tertiary-500"
+				class="btn btn-primary text-primary-content"
 				onclick={onSettingsRestoreConfirmed}>OK</button
 			>
 		</footer>

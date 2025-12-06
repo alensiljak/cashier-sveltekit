@@ -28,7 +28,7 @@
 	}
 </script>
 
-<search class="bg-primary-500">
+<search class="bg-primary">
 	<div
 		class="input-group input-group-divider mx-auto w-5/6 grid-cols-[1fr_auto]
 		rounded-full lg:w-2/5"

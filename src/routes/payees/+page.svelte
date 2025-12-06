@@ -96,7 +96,7 @@
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 			<div
-				class="border-tertiary-200/15 border-b py-2"
+				class="border-base-content border-opacity-15 border-b py-2"
 				onclick={() => onPayeeSelected(payee.name)}
 				role="listitem"
 			>

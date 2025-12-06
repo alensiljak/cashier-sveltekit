@@ -30,13 +30,13 @@
 
 	function getDateColour(date: string) {
 		if (date < today) {
-			return 'text-secondary-500';
+			return 'text-secondary-content';
 		}
 		if (date === today) {
-			return 'text-tertiary-500';
+			return 'text-base-content';
 		}
 		if (date > today) {
-			return 'text-primary-500';
+			return 'text-primary-content';
 		}
 	}
 

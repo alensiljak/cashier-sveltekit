@@ -36,7 +36,7 @@
 		} else if (accountName.startsWith('Expenses:')) {
 			return 'text-secondary-200';
 		} else if (accountName.startsWith('Assets:')) {
-			return 'text-tertiary-100';
+			return 'text-base-content';
 		} else if (accountName.startsWith('Liabilities:')) {
 			return 'text-purple-200';
 		} else {
@@ -89,7 +89,7 @@
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 			<div
-				class="border-tertiary-200/15 flex items-center justify-between border-b py-2 {getAccountColour(
+				class="border-base-content border-opacity-15 flex items-center justify-between border-b py-2 {getAccountColour(
 					account.name
 				)}"
 				onclick={() => onAccountSelected(account.name)}

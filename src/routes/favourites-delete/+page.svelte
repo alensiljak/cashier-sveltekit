@@ -51,14 +51,14 @@
 
 	<section class="grow overflow-auto p-1">
 		{#each _accounts as account, i}
-			<div class="border-tertiary-200/15 flex flex-row border-b py-1">
+			<div class="border-base-content border-opacity-15 flex flex-row border-b py-1">
 				<data class="grow content-center">
 					{account}
 				</data>
 				<div class="pr-2">
 					<button
 						type="button"
-						class="btn btn-outline btn-secondary btn-icon text-tertiary"
+						class="btn btn-outline btn-secondary btn-icon text-secondary-content"
 						onclick={() => onDeleteClicked(i)}
 					>
 						<TrashIcon />
@@ -85,7 +85,7 @@
 			<button type="button" class="btn btn-ghost" onclick={closeModal}>Cancel</button>
 			<button
 				type="button"
-				class="btn btn-primary text-tertiary-500"
+				class="btn btn-primary text-primary-content"
 				onclick={onDeleteConfirmed}>OK</button
 			>
 		</footer>

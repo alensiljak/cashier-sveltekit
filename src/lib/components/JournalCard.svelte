@@ -71,7 +71,7 @@
 		{:else}
 			<div class="container space-y-1 text-sm">
 				{#each xacts as xact, index}
-					<div class="border-tertiary-200/15 flex space-x-2 border-b">
+					<div class="border-base-content border-opacity-15 flex space-x-2 border-b">
 						<time class="opacity-60">
 							{xact.date}
 						</time>

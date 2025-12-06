@@ -60,7 +60,7 @@
 		<p>Either select a backup file or paste the backup into the text box below.</p>
 
 		<center class="py-6">
-			<label class="btn bg-primary-500">
+			<label class="btn bg-primary">
 				<input type="file" name="files" accept=".json" onchange={(e) => {
 					const target = e.target as HTMLInputElement;
 					onFileChanged({ acceptedFiles: Array.from(target.files || []) });
@@ -77,7 +77,7 @@
 	<center class="py-6">
 		<button
 			type="button"
-			class="btn bg-warning-500 text-error-500 uppercase"
+			class="btn bg-warning text-error uppercase"
 			onclick={onRestoreClicked}>Restore</button
 		>
 	</center>
@@ -100,7 +100,7 @@
 			<button type="button" class="btn btn-ghost" onclick={closeModal}>Cancel</button>
 			<button
 				type="button"
-				class="btn btn-primary text-tertiary-500"
+				class="btn btn-primary text-primary-content"
 				onclick={onRestoreConfirmed}>OK</button
 			>
 		</footer>
