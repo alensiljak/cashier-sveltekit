@@ -32,45 +32,45 @@
 		</div>
 	</div>
 
-	<ul class="menu menu-lg">
-		<li>
-			<a href="/" class="{page.url.pathname === '/' ? 'active' : ''}" onclick={closeDrawer}>
+	<ul class="menu menu-lg w-full">
+		<li class="w-full">
+			<a href="/" class="w-full flex items-center gap-2 {page.url.pathname === '/' ? 'active bg-secondary text-secondary-content' : ''}" onclick={closeDrawer}>
 				<HomeIcon />
 				<span>Home</span>
 			</a>
 		</li>
-		<li>
-			<a href="/journal" class="{page.url.pathname === '/journal' ? 'active' : ''}" onclick={closeDrawer}>
+		<li class="w-full">
+			<a href="/journal" class="w-full flex items-center gap-2 {page.url.pathname === '/journal' ? 'active bg-secondary text-secondary-content' : ''}" onclick={closeDrawer}>
 				<ScrollIcon />
 				<span>Journal</span>
 			</a>
 		</li>
-		<li>
-			<a href="/favourites" class="{page.url.pathname === '/favourites' ? 'active' : ''}" onclick={closeDrawer}>
+		<li class="w-full">
+			<a href="/favourites" class="w-full flex items-center gap-2 {page.url.pathname === '/favourites' ? 'active bg-secondary text-secondary-content' : ''}" onclick={closeDrawer}>
 				<StarIcon />
 				<span>Favourites</span>
 			</a>
 		</li>
-		<li>
-			<a href="/accounts" class="{page.url.pathname === '/accounts' ? 'active' : ''}" onclick={closeDrawer}>
+		<li class="w-full">
+			<a href="/accounts" class="w-full flex items-center gap-2 {page.url.pathname === '/accounts' ? 'active bg-secondary text-secondary-content' : ''}" onclick={closeDrawer}>
 				<LandmarkIcon />
 				<span>Accounts</span>
 			</a>
 		</li>
-		<li>
-			<a href="/payees" class="{page.url.pathname === '/payees' ? 'active' : ''}" onclick={closeDrawer}>
+		<li class="w-full">
+			<a href="/payees" class="w-full flex items-center gap-2 {page.url.pathname === '/payees' ? 'active bg-secondary text-secondary-content' : ''}" onclick={closeDrawer}>
 				<UsersRoundIcon />
 				<span>Payees</span>
 			</a>
 		</li>
-		<li>
-			<a href="/asset-allocation" class="{page.url.pathname === '/asset-allocation' ? 'active' : ''}" onclick={closeDrawer}>
+		<li class="w-full">
+			<a href="/asset-allocation" class="w-full flex items-center gap-2 {page.url.pathname === '/asset-allocation' ? 'active bg-secondary text-secondary-content' : ''}" onclick={closeDrawer}>
 				<ChartPieIcon />
 				<span>Asset Allocation</span>
 			</a>
 		</li>
-		<li>
-			<a href="/scheduled-xacts" class="{page.url.pathname === '/scheduled-xacts' ? 'active' : ''}" onclick={closeDrawer}>
+		<li class="w-full">
+			<a href="/scheduled-xacts" class="w-full flex items-center gap-2 {page.url.pathname === '/scheduled-xacts' ? 'active bg-secondary text-secondary-content' : ''}" onclick={closeDrawer}>
 				<CalendarClockIcon />
 				<span>Scheduled Transactions</span>
 			</a>
@@ -79,21 +79,21 @@
 
 	<div class="divider"></div>
 
-	<ul class="menu menu-lg">
-		<li>
-			<a href="/backup" class="{page.url.pathname === '/backup' ? 'active' : ''}" onclick={closeDrawer}>
+	<ul class="menu menu-lg w-full">
+		<li class="w-full">
+			<a href="/backup" class="w-full flex items-center gap-2 {page.url.pathname === '/backup' ? 'active bg-secondary text-secondary-content' : ''}" onclick={closeDrawer}>
 				<DatabaseIcon />
 				<span>Backup</span>
 			</a>
 		</li>
-		<li>
-			<a href="/help" class="{page.url.pathname === '/help' ? 'active' : ''}" onclick={closeDrawer}>
+		<li class="w-full">
+			<a href="/help" class="w-full flex items-center gap-2 {page.url.pathname === '/help' ? 'active bg-secondary text-secondary-content' : ''}" onclick={closeDrawer}>
 				<HelpCircleIcon />
 				<span>Help</span>
 			</a>
 		</li>
-		<li>
-			<a href="/about" class="{page.url.pathname === '/about' ? 'active' : ''}" onclick={closeDrawer}>
+		<li class="w-full">
+			<a href="/about" class="w-full flex items-center gap-2 {page.url.pathname === '/about' ? 'active bg-secondary text-secondary-content' : ''}" onclick={closeDrawer}>
 				<InfoIcon />
 				<span>About</span>
 			</a>
@@ -101,9 +101,9 @@
 	</ul>
 
 	<div class="fixed bottom-0 w-full p-2">
-		<ul class="menu menu-lg">
-			<li>
-				<a href="/settings" class="{page.url.pathname === '/settings' ? 'active' : ''}" onclick={closeDrawer}>
+		<ul class="menu menu-lg w-full">
+			<li class="w-full">
+				<a href="/settings" class="w-full flex items-center gap-2 {page.url.pathname === '/settings' ? 'active bg-secondary text-secondary-content' : ''}" onclick={closeDrawer}>
 					<SettingsIcon />
 					<span>Settings</span>
 				</a>
