@@ -80,7 +80,7 @@
 		{:else}
 			{#each accounts as account: Account (account.name)}
 				<div class="bg-base-200 flex w-full flex-col px-0.5 text-sm">
-					<div class="border-base-content border-opacity-15 my-0.25 flex flex-row border-b py-0.5">
+					<div class="border-base-content/15 my-0.25 flex flex-row border-b py-0.5">
 						<div class={`cell grow ${isGrayedOut(account) ? 'text-base-content text-opacity-50' : ''}`}>
 							{account?.name}
 						</div>
