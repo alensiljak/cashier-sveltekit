@@ -2,8 +2,9 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
+@import '../cashier-theme.css';
 @plugin 'daisyui'{
-   themes: light, dark --prefersdark --default;
+   themes: cashiertheme, cashierthemedark, light, dark --prefersdark --default;
  };
 
 /* @custom-variant dark (&:is(.dark *)); */
