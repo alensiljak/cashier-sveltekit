@@ -4,7 +4,7 @@
 @plugin '@tailwindcss/typography';
 @import '../cashier-theme.css';
 @plugin 'daisyui'{
-   themes: cashiertheme, cashierthemedark, light, dark --prefersdark --default;
+   themes: cashiertheme, cashierthemedark --prefersdark --default;
  };
 
 /* @custom-variant dark (&:is(.dark *)); */

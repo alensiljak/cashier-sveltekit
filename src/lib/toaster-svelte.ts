@@ -10,7 +10,7 @@ class DaisyUIToaster {
 	show(options: ToastOptions) {
 		// Create a toast element and add it to the DOM
 		const toast = document.createElement('div');
-		toast.className = `toast toast-top toast-end`;
+		toast.className = `toast toast-bottom toast-center`;
 
 		let alertClass = 'alert';
 		switch(options.type) {
