@@ -29,13 +29,13 @@
 
 	function getDateColour(date: string) {
 		if (date < today) {
-			return 'text-error'; // Red for past dates
+			return 'text-secondary'; // Red for past dates
 		}
 		if (date === today) {
 			return 'text-warning'; // Yellow for today
 		}
 		if (date > today) {
-			return 'text-success'; // Green for future dates
+			return 'text-primary'; // Green for future dates
 		}
 	}
 

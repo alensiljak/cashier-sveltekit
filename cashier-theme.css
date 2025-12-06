@@ -298,11 +298,11 @@ Cashier Theme for DaisyUI
 	--color-base-content: oklch(95.57% 0.09 98.61deg); /* Same as --color-tertiary-100 from Skeleton */
 	--color-info: #519390;
 	--color-info-content: #ffffff;
-	--color-success: #076461;
+	--color-success: oklch(72.3% .219 149.579);; /* color-green-500 */
 	--color-success-content: #ffffff;
 	--color-warning: #ffd700;
 	--color-warning-content: #000000;
-	--color-error: #92140c;
+	--color-error: oklch(70.4% .191 22.216); /* text-red-400 */
 	--color-error-content: #ffffff;
 
 	/* Extended color scales from Skeleton theme */
