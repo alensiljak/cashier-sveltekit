@@ -32,6 +32,7 @@ Cashier Theme for DaisyUI
 	--spacing: 0.25rem;
 	--radius-base: 0.25rem;
 	--radius-container: 0.25rem;
+	--border: 1px;
 	--default-border-width: 1px;
 	--default-divide-width: 1px;
 	--default-ring-width: 1px;
@@ -166,7 +167,7 @@ Cashier Theme for DaisyUI
 	--color-success-contrast-950: var(--color-success-contrast-light);
 
 	--color-warning-50: oklch(97.86% 0.04 98.34deg);
-	--color-warning-100: oklch(95.57% 0.09 98.61deg);
+	--color-warning-100: var(--color-tertiary-100);
 	--color-warning-200: oklch(93.49% 0.13 98.76deg);
 	--color-warning-300: oklch(91.83% 0.16 98.78deg);
 	--color-warning-400: oklch(90.16% 0.18 97.56deg);
@@ -272,33 +273,34 @@ Cashier Theme for DaisyUI
 	--spacing: 0.25rem;
 	--radius-base: 0.25rem;
 	--radius-container: 0.25rem;
-	--default-border-width: 1px;
+	--border: 1px;
+	/*--default-border-width: 1px;
 	--default-divide-width: 1px;
-	--default-ring-width: 1px;
+	--default-ring-width: 1px;*/
 	--body-background-color: var(--color-surface-50);
 	--body-background-color-dark: var(--color-surface-950);
 
 	/* DaisyUI color variables for dark theme */
-	--color-primary: #076461;
-	--color-primary-focus: #076461;
+	--color-primary: var(--color-primary-500);
+	--color-primary-focus: var(--color-primary-500);
 	/*--color-primary-content: #ffffff;*/
-	--color-primary-content: oklch(95.57% 0.09 98.61deg);
-	--color-secondary: #92140c;
-	--color-secondary-focus: #92140c;
-	--color-secondary-content: oklch(95.57% 0.09 98.61deg);
-	--color-accent: #ffd700;
+	--color-primary-content: var(--color-tertiary-100);
+	--color-secondary: var(--color-secondary-500);
+	--color-secondary-focus: var(--color-secondary-500);
+	--color-secondary-content: var(--color-tertiary-100);
+	--color-accent: var(--color-tertiary-500);
 	--color-accent-focus: #ffd700;
 	--color-accent-content: #000000;
 	--color-neutral: #2a2e37;
 	--color-neutral-focus: #2a2e37;
-	--color-neutral-content: oklch(95.57% 0.09 98.61deg);
+	--color-neutral-content: var(--color-tertiary-100);
 	--color-base-100: oklch(23.76% 0 228.89deg); /* color-surface-500 */
 	--color-base-200: oklch(18.15% 0 247.95deg); /* color-surface-900 */
-	--color-base-300: oklch(16.77% 0 247.97deg); /* color-surface-950 */
-	--color-base-content: oklch(95.57% 0.09 98.61deg); /* Same as --color-tertiary-100 from Skeleton */
+	--color-base-300: var(--color-surface-950);
+	--color-base-content: var(--color-tertiary-100);
 	--color-info: #519390;
 	--color-info-content: #ffffff;
-	--color-success: oklch(72.3% .219 149.579);; /* color-green-500 */
+	--color-success: var(--color-green-500);
 	--color-success-content: #ffffff;
 	--color-warning: #ffd700;
 	--color-warning-content: #000000;
@@ -407,7 +409,7 @@ Cashier Theme for DaisyUI
 	--color-success-contrast-950: var(--color-success-contrast-light);
 
 	--color-warning-50: oklch(97.86% 0.04 98.34deg);
-	--color-warning-100: oklch(95.57% 0.09 98.61deg);
+	--color-warning-100: var(--color-tertiary-100);
 	--color-warning-200: oklch(93.49% 0.13 98.76deg);
 	--color-warning-300: oklch(91.83% 0.16 98.78deg);
 	--color-warning-400: oklch(90.16% 0.18 97.56deg);
@@ -480,4 +482,6 @@ Cashier Theme for DaisyUI
 	--color-surface-contrast-800: var(--color-surface-contrast-light);
 	--color-surface-contrast-900: var(--color-surface-contrast-light);
 	--color-surface-contrast-950: var(--color-surface-contrast-light);
+
+	--color-green-500: oklch(72.3% .219 149.579);
 }

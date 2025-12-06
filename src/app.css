@@ -18,3 +18,13 @@ body {
 	height: 100%;
 	@apply bg-base-300;
 }
+
+/* Override DaisyUI default hover effect for ghost buttons to use transparency instead of solid color */
+.btn.btn-ghost:hover {
+	background-color: color-mix(in srgb, currentColor 15%, transparent) !important;
+	border: 0;
+}
+
+.btn.btn-ghost:active {
+	background-color: color-mix(in srgb, currentColor 25%, transparent) !important;
+}

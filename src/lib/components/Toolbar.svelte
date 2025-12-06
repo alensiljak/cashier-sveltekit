@@ -20,20 +20,20 @@
 
 <!-- Toolbar for pages -->
 <div class="relative">
-	<div class="navbar bg-primary text-primary-content">
+	<div class="navbar bg-primary text-primary-content h-12 min-h-12 py-1">
 		<div class="navbar-start">
-			<button class="btn btn-sm py-1 pr-0 pl-2 lg:hidden" onclick={toggleSidebar}>
+			<button class="btn btn-sm btn-ghost hover-transparent px-1 mx-1 lg:hidden border-0 rounded" onclick={toggleSidebar}>
 				<span>
-					<Menu size={24} />
+					<Menu size={20} />
 				</span>
 			</button>
-			<h5 class="text-lg font-semibold pl-0 leading-9">{title}</h5>
+			<p class="text-lg font-semibold pl-0 leading-7">{title}</p>
 		</div>
 		{#if menuItems}
 		<div class="navbar-end">
 			<div class="dropdown dropdown-end">
-				<div tabindex="0" role="button" class="btn btn-ghost btn-circle">
-					<EllipsisVertical size={20} />
+				<div tabindex="0" role="button" class="btn btn-ghost btn-circle h-8 min-h-0">
+					<EllipsisVertical size={18} />
 				</div>
 				<ul role="menu" class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-primary rounded-box w-52">
 					{@render menuItems?.()}
@@ -46,6 +46,10 @@
 </div>
 
 <style>
+	.btn.btn-ghost.hover-transparent:hover {
+		background-color: rgba(255, 255, 255, 0.15); /* Light transparent overlay for primary text */
+	}
+
 	.gloss-effect {
 		background: linear-gradient(to bottom, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0));
 		pointer-events: none; /* Allows interaction with underlying elements */
