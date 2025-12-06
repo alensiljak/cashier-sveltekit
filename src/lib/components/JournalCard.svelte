@@ -91,7 +91,7 @@
 		<center>
 			<button
 				type="button"
-				class="btn btn-outline btn-warning uppercase"
+				class="btn btn-outline btn-warning uppercase rounded"
 				onclick={onExportClick}
 			>
 				<FileUpIcon />

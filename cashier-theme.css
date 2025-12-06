@@ -282,16 +282,16 @@ Cashier Theme for DaisyUI
 	--color-primary: #076461;
 	--color-primary-focus: #076461;
 	/*--color-primary-content: #ffffff;*/
-	--color-primary-content: oklch(82.88% 0.03 191.56deg);
+	--color-primary-content: oklch(95.57% 0.09 98.61deg);
 	--color-secondary: #92140c;
 	--color-secondary-focus: #92140c;
-	--color-secondary-content: #ffffff;
+	--color-secondary-content: oklch(95.57% 0.09 98.61deg);
 	--color-accent: #ffd700;
 	--color-accent-focus: #ffd700;
 	--color-accent-content: #000000;
 	--color-neutral: #2a2e37;
 	--color-neutral-focus: #2a2e37;
-	--color-neutral-content: #f0e6d2; /* Tan-like color for dark theme */
+	--color-neutral-content: oklch(95.57% 0.09 98.61deg);
 	--color-base-100: oklch(23.76% 0 228.89deg); /* color-surface-500 */
 	--color-base-200: oklch(18.15% 0 247.95deg); /* color-surface-900 */
 	--color-base-300: oklch(16.77% 0 247.97deg); /* color-surface-950 */

@@ -9,7 +9,6 @@
 	import { ISODATEFORMAT } from '$lib/constants';
 	import { XactAugmenter } from '$lib/utils/xactAugmenter';
 	import { formatAmount, getAmountColour, getXactAmountColour } from '$lib/utils/formatter';
-	import { preventDefault } from 'svelte/legacy';
 
 	let today: string = $state('');
 	let scxs: ScheduledTransaction[] = $state([]);
@@ -30,13 +29,13 @@
 
 	function getDateColour(date: string) {
 		if (date < today) {
-			return 'text-secondary';
+			return 'text-error'; // Red for past dates
 		}
 		if (date === today) {
-			return 'text-base';
+			return 'text-warning'; // Yellow for today
 		}
 		if (date > today) {
-			return 'text-primary';
+			return 'text-success'; // Green for future dates
 		}
 	}
 
