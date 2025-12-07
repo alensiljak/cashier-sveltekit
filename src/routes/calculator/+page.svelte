@@ -247,9 +247,9 @@
 			</button>
 
 			<button
-				class="btn btn-lg flex items-center justify-center rounded-lg border border-gray-500 bg-gray-900 text-lg font-bold text-gray-800 shadow-md hover:bg-gray-400"
+				class="btn btn-lg flex items-center justify-center rounded-lg border border-gray-900 bg-primary text-lg font-bold text-gray-800 shadow-md hover:bg-gray-400"
 			>
-				<img src="/icons/cashier-logo.svg" alt="Cashier Logo" width="20" height="20" />
+				<img src="/icons/cashier-logo.svg" alt="Cashier Logo" width="32" height="32" />
 			</button>
 			<button
 				class="btn btn-lg rounded-lg border border-gray-500 bg-gray-300 text-lg font-bold text-gray-800 shadow-md hover:bg-gray-400"
