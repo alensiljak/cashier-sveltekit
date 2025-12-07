@@ -5,18 +5,13 @@
 	import type { Money, ScheduledTransaction, Xact } from '$lib/data/model';
 	import { onMount } from 'svelte';
 	import db from '$lib/data/db';
-	// import moment from 'moment';
-	// import { ISODATEFORMAT } from '$lib/constants';
 	import { XactAugmenter } from '$lib/utils/xactAugmenter';
-	import { formatAmount, getAmountColour, getDateColour } from '$lib/utils/formatter';
+	import { formatAmount, getAmountColour, getDateColour, getReadableDate } from '$lib/utils/formatter';
 
-	// let today: string = $state('');
 	let scxs: ScheduledTransaction[] = $state([]);
 	let amounts: Money[] = $state([]);
 
 	onMount(async () => {
-		// today = moment().format(ISODATEFORMAT);
-
 		await loadData();
 
 		calculateAmounts();
@@ -27,18 +22,6 @@
 		amounts = XactAugmenter.calculateXactAmounts(xacts as Xact[]);
 	}
 
-	// function getDateColour(date: string) {
-	// 	if (date < today) {
-	// 		return 'text-secondary'; // Red for past dates
-	// 	}
-	// 	if (date === today) {
-	// 		return 'text-warning'; // Yellow for today
-	// 	}
-	// 	if (date > today) {
-	// 		return 'text-primary'; // Green for future dates
-	// 	}
-	// }
-
 	async function loadData() {
 		scxs = await db.scheduled.orderBy('nextDate').limit(5).toArray();
 	}
@@ -46,11 +29,6 @@
 	async function onClick() {
 		await goto('/scheduled-xacts');
 	}
-
-	// async function onExportClick(e: Event) {
-	// 	e.stopPropagation();
-	// 	await goto('/export/scheduled');
-	// }
 </script>
 
 <HomeCardTemplate onclick={onClick}>
@@ -65,12 +43,12 @@
 			<p>There are no scheduled transactions</p>
 		{:else}
 			<!-- list container -->
-			<div class="space-y-1 text-sm">
+			<div class="space-y-1 text-base">
 				{#each scxs as scx, index (scx)}
 					<!-- row -->
 					<div class="flex flex-row space-x-2">
 						<time class={`${getDateColour(scx.nextDate)}`}>
-							{scx.nextDate}
+							{getReadableDate(scx.nextDate)}
 						</time>
 						<data class="grow">
 							{scx.transaction?.payee}

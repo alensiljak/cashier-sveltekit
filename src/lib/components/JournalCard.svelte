@@ -7,7 +7,7 @@
 	import { Money, type Xact } from '$lib/data/model';
 	import { XactAugmenter } from '$lib/utils/xactAugmenter';
 	import Notifier from '$lib/utils/notifier';
-	import { formatAmount, getXactAmountColour } from '$lib/utils/formatter';
+	import { formatAmount, getReadableDate, getXactAmountColour } from '$lib/utils/formatter';
 
 	Notifier.init();
 
@@ -69,11 +69,11 @@
 		{#if xacts.length == 0}
 			<p>The device journal is empty</p>
 		{:else}
-			<div class="container space-y-1 text-sm">
-				{#each xacts as xact, index}
+			<div class="container space-y-1 text-base">
+				{#each xacts as xact, index (index)}
 					<div class="border-base-content/15 flex space-x-2 border-b">
 						<time class="opacity-60">
-							{xact.date}
+							{getReadableDate(xact.date)}
 						</time>
 						<div class="grow">
 							{xact.payee}
