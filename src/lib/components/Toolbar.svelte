@@ -20,9 +20,10 @@
 
 <!-- Toolbar for pages -->
 <div class="relative">
-	<div class="navbar bg-primary text-primary-content h-12 min-h-12 py-1">
+	<div class="navbar bg-primary text-base-content h-12 min-h-12 py-1">
 		<div class="navbar-start">
-			<button class="btn btn-sm btn-ghost hover-transparent px-1 mx-1 lg:hidden border-0 rounded" onclick={toggleSidebar}>
+			<button
+			    class="btn btn-sm btn-ghost hover-transparent px-1 mx-1 lg:hidden border-0 rounded" onclick={toggleSidebar}>
 				<span>
 					<Menu size={20} />
 				</span>
@@ -35,7 +36,8 @@
 				<div tabindex="0" role="button" class="btn btn-ghost btn-circle h-8 min-h-0">
 					<EllipsisVertical size={18} />
 				</div>
-				<ul role="menu" class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-primary rounded-box w-52">
+				<ul role="menu"
+				    class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-primary rounded-box w-52">
 					{@render menuItems?.()}
 				</ul>
 			</div>

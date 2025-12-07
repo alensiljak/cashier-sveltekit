@@ -2,10 +2,10 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
-@import '../cashier-theme.css';
-@plugin 'daisyui'{
-   themes: cashiertheme, cashierthemedark --prefersdark --default;
- };
+/*@import '../cashier-theme.css';*/
+/*themes: cashiertheme, cashierthemedark --prefersdark --default;*/
+@plugin 'daisyui';
+@import '../cashier-theme-daisy.css';
 
 /* @custom-variant dark (&:is(.dark *)); */
 /*@custom-variant dark (&:where(.dark, .dark *));*/
@@ -14,17 +14,15 @@
 
 html,
 body {
-	/* @apply h-full; */
 	height: 100%;
-	@apply bg-base-300;
 }
 
 /* Override DaisyUI default hover effect for ghost buttons to use transparency instead of solid color */
-.btn.btn-ghost:hover {
+/*.btn.btn-ghost:hover {
 	background-color: color-mix(in srgb, currentColor 15%, transparent) !important;
 	border: 0;
 }
 
 .btn.btn-ghost:active {
 	background-color: color-mix(in srgb, currentColor 25%, transparent) !important;
-}
+}*/
