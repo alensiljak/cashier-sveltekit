@@ -1,21 +1,21 @@
 <script lang="ts">
-	import { CalendarClockIcon, FileUpIcon } from '@lucide/svelte';
+	import { CalendarClockIcon } from '@lucide/svelte';
 	import HomeCardTemplate from './HomeCardTemplate.svelte';
 	import { goto } from '$app/navigation';
 	import type { Money, ScheduledTransaction, Xact } from '$lib/data/model';
 	import { onMount } from 'svelte';
 	import db from '$lib/data/db';
-	import moment from 'moment';
-	import { ISODATEFORMAT } from '$lib/constants';
+	// import moment from 'moment';
+	// import { ISODATEFORMAT } from '$lib/constants';
 	import { XactAugmenter } from '$lib/utils/xactAugmenter';
-	import { formatAmount, getAmountColour, getXactAmountColour } from '$lib/utils/formatter';
+	import { formatAmount, getAmountColour, getDateColour } from '$lib/utils/formatter';
 
-	let today: string = $state('');
+	// let today: string = $state('');
 	let scxs: ScheduledTransaction[] = $state([]);
 	let amounts: Money[] = $state([]);
 
 	onMount(async () => {
-		today = moment().format(ISODATEFORMAT);
+		// today = moment().format(ISODATEFORMAT);
 
 		await loadData();
 
@@ -27,17 +27,17 @@
 		amounts = XactAugmenter.calculateXactAmounts(xacts as Xact[]);
 	}
 
-	function getDateColour(date: string) {
-		if (date < today) {
-			return 'text-secondary'; // Red for past dates
-		}
-		if (date === today) {
-			return 'text-warning'; // Yellow for today
-		}
-		if (date > today) {
-			return 'text-primary'; // Green for future dates
-		}
-	}
+	// function getDateColour(date: string) {
+	// 	if (date < today) {
+	// 		return 'text-secondary'; // Red for past dates
+	// 	}
+	// 	if (date === today) {
+	// 		return 'text-warning'; // Yellow for today
+	// 	}
+	// 	if (date > today) {
+	// 		return 'text-primary'; // Green for future dates
+	// 	}
+	// }
 
 	async function loadData() {
 		scxs = await db.scheduled.orderBy('nextDate').limit(5).toArray();
@@ -47,10 +47,10 @@
 		await goto('/scheduled-xacts');
 	}
 
-	async function onExportClick(e: Event) {
-		e.stopPropagation();
-		await goto('/export/scheduled');
-	}
+	// async function onExportClick(e: Event) {
+	// 	e.stopPropagation();
+	// 	await goto('/export/scheduled');
+	// }
 </script>
 
 <HomeCardTemplate onclick={onClick}>
@@ -66,7 +66,7 @@
 		{:else}
 			<!-- list container -->
 			<div class="space-y-1 text-sm">
-				{#each scxs as scx, index}
+				{#each scxs as scx, index (scx)}
 					<!-- row -->
 					<div class="flex flex-row space-x-2">
 						<time class={`${getDateColour(scx.nextDate)}`}>
