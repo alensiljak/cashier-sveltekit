@@ -1,8 +1,10 @@
 <script lang="ts">
-	import { xact } from '$lib/data/mainStore';
+	import { xact, selectionMetadata } from '$lib/data/mainStore';
 	import { DiffIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import type { EventHandler } from 'svelte/elements';
+	import { goto } from '$app/navigation';
+	import { SelectionModeMetadata } from '$lib/settings';
 
 	type Props = {
 		index: number;
@@ -24,6 +26,20 @@
 	let currencyInput: HTMLInputElement;
 
 	onMount(() => {});
+
+	/**
+	 * Open calculator to enter amount
+	 */
+	async function onAmountClicked() {
+		// Set selection mode for amount calculation
+		const meta = new SelectionModeMetadata();
+		meta.postingIndex = index;
+		meta.selectionType = 'amount';
+		selectionMetadata.set(meta);
+
+		// Navigate to calculator
+		await goto('/calculator');
+	}
 
 	/**
 	 * Change amount sign.
@@ -69,6 +85,7 @@
 			bind:this={amountInput}
 			onfocus={() => amountInput.select()}
 			oninput={onAmountChanged}
+			onclick={onAmountClicked}
 		/>
 		<input
 			title="Currency"

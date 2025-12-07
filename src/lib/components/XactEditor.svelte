@@ -74,6 +74,13 @@
 				// todo: recalculateSum();
 				// todo: validateCurrencies();
 				break;
+
+			case 'amount':
+				// Amount is already set in the calculator
+				// The calculator handles setting the amount value directly
+				// Just recalculate the sum
+				recalculateSum();
+				break;
 		}
 
 		// reset the selection mode

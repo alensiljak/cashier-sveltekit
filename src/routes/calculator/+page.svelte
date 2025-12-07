@@ -2,12 +2,18 @@
 	// For complex expressions with parentheses, we'll use a more sophisticated approach
 	import Fab from '$lib/components/FAB.svelte';
 	import { Check } from '@lucide/svelte';
-	import { selectionMetadata } from '$lib/data/mainStore';
+	import { selectionMetadata, xact } from '$lib/data/mainStore';
+	import { goto } from '$app/navigation';
 
+	let isInSelectionMode = $state(false);
 	let displayValue = $state('0');
 	let expression = $state('');
 	let currentExpression = $state('');
 	let lastExpression = $state('');
+
+	$effect(() => {
+		isInSelectionMode = $selectionMetadata !== undefined;
+	});
 
 	const inputNumber = (num: string) => {
 		// If the display currently shows the result of a previous calculation, start a new expression
@@ -185,17 +191,25 @@
 	 */
 	function onFabClicked() {
 		if (isInSelectionMode) {
-			// store the value.
-			if ($selectionMetadata) {
-				$selectionMetadata.selectedId = name;
+			// store the calculated value in the transaction posting
+			if ($selectionMetadata && $xact) {
+				const amount = parseFloat(displayValue);
+				if (!isNaN(amount)) {
+					const postingIndex = $selectionMetadata.postingIndex;
+					if (postingIndex !== undefined && $xact.postings[postingIndex]) {
+						$xact.postings[postingIndex].amount = amount;
+					}
+				}
 			}
 
+			// Reset selection mode
+			selectionMetadata.set(undefined);
+
+			// Go back to the xact editor
 			history.back();
 		} else {
 			goto('/account'); // todo: show account details
 		}
-
-		history.back();
 	}
 </script>
 
