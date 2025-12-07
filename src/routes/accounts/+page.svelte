@@ -10,7 +10,6 @@
 	import { getAccountBalance } from '$lib/services/accountsService';
 	import { getAmountColour } from '$lib/utils/formatter';
 	import appService from '$lib/services/appService';
-	import Notifier from '$lib/utils/notifier';
 
 	let { data }: { data: PageData } = $props();
 
