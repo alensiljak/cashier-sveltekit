@@ -4,7 +4,7 @@
 	import SearchToolbar from '$lib/components/SearchToolbar.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
-	import { ISODATEFORMAT } from '$lib/constants';
+	// import { ISODATEFORMAT } from '$lib/constants';
 	import { ScheduledXact, xact } from '$lib/data/mainStore';
 	import { ScheduledTransaction, Xact, type Money } from '$lib/data/model';
 	import appService from '$lib/services/appService';
@@ -13,11 +13,11 @@
 	import Notifier from '$lib/utils/notifier';
 	import { XactAugmenter } from '$lib/utils/xactAugmenter';
 	import { CalendarIcon, PackageIcon, PackageOpenIcon, PlusIcon } from '@lucide/svelte';
-	import moment from 'moment';
+	// import moment from 'moment';
 	import { onMount } from 'svelte';
 	import type { PageData } from './$types';
 
-	const today = moment().format(ISODATEFORMAT);
+	// const today = moment().format(ISODATEFORMAT);
 	let { data }: { data: PageData } = $props();
 
 	Notifier.init();
@@ -55,7 +55,7 @@
 
 	async function onItemClicked(id: number) {
 		// show details page
-		let scx = await appService.loadScheduledXact(id);
+		// let scx = await appService.loadScheduledXact(id);
 
 		await goto(`/scx-actions/${id}`);
 	}
@@ -93,7 +93,7 @@
 		{:else}
 			<!-- list -->
 			<div class="space-y-1">
-				{#each filteredList as scx, i (scx)}
+				{#each filteredList as scx: ScheduledTransaction, i (scx)}
 					<!-- Leave date values only at the first occurrence. -->
 					{#if i === 0 || scx.nextDate !== filteredList[i - 1].nextDate}
 						<div
