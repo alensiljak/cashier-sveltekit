@@ -11,9 +11,8 @@
 	import Notifier from '$lib/utils/notifier';
 	import { calculateNextIteration } from '$lib/scheduledTransactions';
 	import {
-		CheckIcon,
 		ChevronsRightIcon,
-		PenSquareIcon,
+		SquarePenIcon,
 		ScrollIcon,
 		TrashIcon
 	} from '@lucide/svelte';
@@ -193,35 +192,35 @@
 		<!-- remarks -->
 		<div>
 			<p>Remarks:</p>
-			<textarea class="textarea" rows="5" readonly>{$ScheduledXact.remarks}</textarea>
+			<textarea class="textarea w-full rounded border-0" rows="5" readonly>{$ScheduledXact.remarks}</textarea>
 		</div>
 
 		<!-- actions -->
 		<div class="grid grid-cols-3 pt-3 lg:px-20">
 			<SquareButton
 				Icon={ScrollIcon}
-				classes="bg-neutral text-neutral-content"
+				classes="bg-accent text-secondary"
 				onclick={onEnterClicked}
 			>
 				Enter
 			</SquareButton>
 			<SquareButton
 				Icon={ChevronsRightIcon}
-				classes="bg-primary text-primary-content"
+				classes="bg-primary text-accent"
 				onclick={onSkipClicked}
 			>
 				Skip
 			</SquareButton>
 			<SquareButton
-				Icon={PenSquareIcon}
-				classes="bg-neutral text-neutral-content"
+				Icon={SquarePenIcon}
+				classes="bg-accent text-secondary"
 				onclick={() => onEditClicked($ScheduledXact.id)}
 			>
 				Edit
 			</SquareButton>
 			<SquareButton
 				Icon={TrashIcon}
-				classes="bg-secondary text-secondary-content"
+				classes="bg-secondary text-accent"
 				onclick={onDeleteClick}
 			>
 				Delete

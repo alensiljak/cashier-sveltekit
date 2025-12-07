@@ -78,9 +78,9 @@
 	</div>
 	{#if hasRecurrence}
 		<div class="flex flex-row">
-			<input type="number" class="input text-center" bind:value={$ScheduledXact.count} />
-			<select class="select" bind:value={$ScheduledXact.period}>
-				{#each _periods as period}
+			<input type="number" class="input text-center rounded" bind:value={$ScheduledXact.count} />
+			<select class="select rounded" bind:value={$ScheduledXact.period}>
+				{#each _periods as period (period)}
 					<option value={period}>{period}</option>
 				{/each}
 			</select>
@@ -110,12 +110,12 @@
 		</label>
 	</div>
 	{#if hasEndDate}
-		<input type="date" class="input" bind:value={$ScheduledXact.endDate} />
+		<input type="date" class="input rounded" bind:value={$ScheduledXact.endDate} />
 	{/if}
 </div>
 
 <!-- Remarks -->
 <div class="mb-10">
 	<p>Remarks</p>
-	<textarea class="textarea" bind:value={$ScheduledXact.remarks} rows="5"></textarea>
+	<textarea class="textarea rounded w-full" bind:value={$ScheduledXact.remarks} rows="5"></textarea>
 </div>

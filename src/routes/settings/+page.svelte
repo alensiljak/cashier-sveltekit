@@ -155,7 +155,11 @@
 
 	<!-- last transaction -->
 	<label class="flex items-center space-x-2">
-		<input class="checkbox" type="checkbox" bind:checked={rememberLastTransaction} />
+		<input
+			class="checkbox checkbox-primary rounded"
+			type="checkbox"
+			bind:checked={rememberLastTransaction}
+		/>
 		<p>Remember last transaction for payees.</p>
 	</label>
 
@@ -164,7 +168,7 @@
 	<form class="space-y-2">
 		<label class="flex items-center space-x-2">
 			<input
-				class="radio"
+				class="radio radio-primary bg-base-100"
 				type="radio"
 				name="radio-direct"
 				value="beancount"
@@ -174,7 +178,7 @@
 		</label>
 		<label class="flex items-center space-x-2">
 			<input
-				class="radio"
+				class="radio radio-primary bg-base-100"
 				type="radio"
 				checked
 				name="radio-direct"
@@ -186,7 +190,7 @@
 	</form>
 
 	<center>
-		<button class="btn btn-secondary text-accent uppercase rounded" onclick={saveSettings}>
+		<button class="btn btn-secondary text-accent rounded uppercase" onclick={saveSettings}>
 			Save
 		</button>
 	</center>
@@ -201,7 +205,7 @@
 					type="file"
 					name="aa_file"
 					accept=".json"
-					class="file-input file-input-primary file-input-ghost rounded"
+					class="file-input file-input-primary rounded"
 					onchange={(e) => {
 						const target = e.target as HTMLInputElement;
 						onAaFileChanged({ acceptedFiles: Array.from(target.files || []) });
@@ -223,15 +227,13 @@
 					type="file"
 					name="settings_file"
 					accept=".json"
-					class="file-input file-input-primary file-input-ghost rounded"
+					class="file-input file-input-primary rounded"
 					onchange={(e) => {
 						const target = e.target as HTMLInputElement;
 						onSettingsFileChangeHandler({ acceptedFiles: Array.from(target.files || []) });
 					}}
 				/>
-				<label class="label">
-					Select the settings file
-				</label>
+				<label class="label"> Select the settings file </label>
 			</center>
 		</fieldset>
 	</section>

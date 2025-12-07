@@ -78,7 +78,7 @@
 <article>
 	<Toolbar title="Backup"></Toolbar>
 	<section class="p-1">
-		<h3 class="h3">Create Backup</h3>
+		<h3 class="text-3xl font-semibold">Create Backup</h3>
 
 		<p>You can backup all local data:</p>
 		<ul class="list mx-8">
@@ -93,11 +93,11 @@
 		</div>
 
 		<center class="pt-4">
-			<button type="button" class="btn btn-primary" onclick={onBackupClick}>
+			<button type="button" class="btn btn-primary rounded" onclick={onBackupClick}>
 				<FileDownIcon />
 				<span>Backup</span>
 			</button>
-			<button type="button" class="btn btn-primary" onclick={onShareClick}>
+			<button type="button" class="btn btn-primary rounded" onclick={onShareClick}>
 				<Share2Icon />
 				<span>Share</span>
 			</button>
@@ -105,14 +105,20 @@
 	</section>
 	<hr class="my-8" />
 	<section class="p-1">
-		<h3 class="h3">Restore Backup</h3>
+		<h3 class="text-3xl font-semibold">Restore Backup</h3>
 		<div class="flex flex-row items-center space-x-4">
 			<p>To restore (overwriting any existing records!):</p>
-			<label class="btn btn-secondary">
-				<input type="file" name="files" accept=".json" onchange={(e) => {
+			<input
+				type="file"
+				name="files"
+				accept=".json"
+				class="file-input file-input-secondary rounded"
+				onchange={(e) => {
 					const target = e.target as HTMLInputElement;
 					onChangeHandler({ acceptedFiles: Array.from(target.files || []) });
-				}} />
+				}}
+			/>
+			<label class="label">
 				<span>Click to choose the backup file</span>
 			</label>
 		</div>
@@ -130,7 +136,12 @@
 </article>
 
 <!-- "Restore" dialog -->
-<input type="checkbox" id="restore-confirmation-modal" class="modal-toggle" bind:checked={isRestoreConfirmationOpen} />
+<input
+	type="checkbox"
+	id="restore-confirmation-modal"
+	class="modal-toggle"
+	bind:checked={isRestoreConfirmationOpen}
+/>
 <div class="modal">
 	<div class="modal-box">
 		<header class="flex justify-between">

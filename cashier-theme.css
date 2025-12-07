@@ -42,7 +42,7 @@ Cashier Theme for DaisyUI
 	/* DaisyUI color variables */
 	--color-primary: #076461;
 	--color-primary-focus: #076461;
-	--color-primary-content: #ffffff;
+	--color-primary-content: var(--color-tertiary-100);
 	--color-secondary: #92140c;
 	--color-secondary-focus: #92140c;
 	--color-secondary-content: #ffffff;
@@ -296,13 +296,13 @@ Cashier Theme for DaisyUI
 	--color-base-300: var(--color-surface-950);
 	--color-base-content: var(--color-tertiary-100);
 	--color-info: #519390;
-	--color-info-content: #ffffff;
+	--color-info-content: var(--color-tertiary-100);
 	--color-success: var(--color-green-500);
-	--color-success-content: #ffffff;
+	--color-success-content: var(--color-tertiary-100);
 	--color-warning: #ffd700;
 	--color-warning-content: #000000;
 	--color-error:var(--color-red-400));
-	--color-error-content: #ffffff;
+	--color-error-content: var(--color-tertiary-100);
 
 	/* Extended color scales from Skeleton theme */
 	--color-primary-50: oklch(92.02% 0.01 191.63deg);

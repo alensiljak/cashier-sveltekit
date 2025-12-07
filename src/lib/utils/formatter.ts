@@ -58,15 +58,15 @@ export function getDateColour(dateString: string): string | undefined {
 
 	if (date < today) {
 		// red
-		return 'text-secondary-content';
+		return 'text-red-500';
 	}
 	if (date === today) {
 		// yellow
-		return 'text-base-content';
+		return 'text-neutral';
 	}
 	if (date > today) {
 		// green
-		return 'text-primary-content';
+		return 'text-green-800';
 	}
 }
 
