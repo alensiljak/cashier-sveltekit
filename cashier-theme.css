@@ -301,7 +301,7 @@ Cashier Theme for DaisyUI
 	--color-success-content: var(--color-tertiary-100);
 	--color-warning: #ffd700;
 	--color-warning-content: #000000;
-	--color-error:var(--color-red-400));
+	--color-error: var(--color-red-400);
 	--color-error-content: var(--color-tertiary-100);
 
 	/* Extended color scales from Skeleton theme */

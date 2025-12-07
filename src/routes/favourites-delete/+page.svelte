@@ -50,7 +50,7 @@
 	<Fab Icon={CheckIcon} onclick={onFabClicked} />
 
 	<section class="grow overflow-auto p-1">
-		{#each _accounts as account, i}
+		{#each _accounts as account, i (account)}
 			<div class="border-base-content/15 flex flex-row border-b py-1">
 				<data class="grow content-center">
 					{account}
@@ -71,7 +71,7 @@
 
 <!-- "Delete" dialog -->
 <input type="checkbox" id="delete-fav-confirmation-modal" class="modal-toggle" bind:checked={isDeleteConfirmationOpen} />
-<div class="modal">
+<dialog class="modal">
 	<div class="modal-box">
 		<header class="flex justify-between">
 			<h2 class="text-lg font-bold">Confirm Removal</h2>
@@ -90,4 +90,4 @@
 			>
 		</footer>
 	</div>
-</div>
+</dialog>

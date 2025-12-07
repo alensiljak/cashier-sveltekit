@@ -93,7 +93,7 @@
 		{#if data.xacts?.length == 0}
 			<p>The device journal is empty</p>
 		{:else}
-			{#each data.xacts as xact}
+			{#each data.xacts as xact (xact)}
 				<JournalXactRow {xact} onclick={onRowClick} />
 			{/each}
 		{/if}
@@ -104,7 +104,7 @@
 
 <!-- "Delete All" dialog -->
 <input type="checkbox" id="delete-all-journal-confirmation-modal" class="modal-toggle" bind:checked={isDeleteAllConfirmationOpen} />
-<div class="modal">
+<dialog class="modal">
 	<div class="modal-box">
 		<header class="flex justify-between">
 			<h2 class="text-lg font-bold">Confirm Delete</h2>
@@ -121,4 +121,4 @@
 			>
 		</footer>
 	</div>
-</div>
+</dialog>

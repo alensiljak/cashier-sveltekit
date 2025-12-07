@@ -61,10 +61,15 @@
 
 		<center class="py-6">
 			<label class="btn bg-primary">
-				<input type="file" name="files" accept=".json" onchange={(e) => {
-					const target = e.target as HTMLInputElement;
-					onFileChanged({ acceptedFiles: Array.from(target.files || []) });
-				}} />
+				<input
+					type="file"
+					name="files"
+					accept=".json"
+					onchange={(e) => {
+						const target = e.target as HTMLInputElement;
+						onFileChanged({ acceptedFiles: Array.from(target.files || []) });
+					}}
+				/>
 				<span>Select the backup file</span>
 			</label>
 		</center>
@@ -75,17 +80,20 @@
 	</div>
 
 	<center class="py-6">
-		<button
-			type="button"
-			class="btn bg-warning text-error uppercase"
-			onclick={onRestoreClicked}>Restore</button
+		<button type="button" class="btn bg-warning text-error uppercase" onclick={onRestoreClicked}
+			>Restore</button
 		>
 	</center>
 </main>
 
 <!-- "Restore" dialog -->
-<input type="checkbox" id="restore-item-confirmation-modal" class="modal-toggle" bind:checked={isRestoreConfirmationOpen} />
-<div class="modal">
+<input
+	type="checkbox"
+	id="restore-item-confirmation-modal"
+	class="modal-toggle"
+	bind:checked={isRestoreConfirmationOpen}
+/>
+<dialog class="modal">
 	<div class="modal-box">
 		<header class="flex justify-between">
 			<h2 class="text-lg font-bold">Confirm Restore</h2>
@@ -105,4 +113,4 @@
 			>
 		</footer>
 	</div>
-</div>
+</dialog>

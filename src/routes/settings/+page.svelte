@@ -250,7 +250,7 @@
 	class="modal-toggle"
 	bind:checked={isAaConfirmationOpen}
 />
-<div class="modal">
+<dialog class="modal">
 	<div class="modal-box">
 		<header class="flex justify-between">
 			<h2 class="text-lg font-bold">Confirm Restore</h2>
@@ -267,7 +267,7 @@
 			>
 		</footer>
 	</div>
-</div>
+</dialog>
 
 <!-- "Settings import" dialog -->
 <input
@@ -276,7 +276,7 @@
 	class="modal-toggle"
 	bind:checked={isSettingsConfirmationOpen}
 />
-<div class="modal">
+<dialog class="modal">
 	<div class="modal-box">
 		<header class="flex justify-between">
 			<h2 class="text-lg font-bold">Confirm Restore</h2>
@@ -293,4 +293,4 @@
 			>
 		</footer>
 	</div>
-</div>
+</dialog>

@@ -231,7 +231,7 @@
 
 <!-- "Enter" dialog -->
 <input type="checkbox" id="enter-confirmation-modal" class="modal-toggle" bind:checked={isEnterConfirmationOpen} />
-<div class="modal">
+<dialog class="modal">
 	<div class="modal-box">
 		<header class="flex justify-between">
 			<h2 class="text-lg font-bold">Confirm Creation</h2>
@@ -248,11 +248,11 @@
 			>
 		</footer>
 	</div>
-</div>
+</dialog>
 
 <!-- "Skip" dialog -->
 <input type="checkbox" id="skip-confirmation-modal" class="modal-toggle" bind:checked={isSkipConfirmationOpen} />
-<div class="modal">
+<dialog class="modal">
 	<div class="modal-box">
 		<header class="flex justify-between">
 			<h2 class="text-lg font-bold">Confirm Skip</h2>
@@ -269,11 +269,11 @@
 			>
 		</footer>
 	</div>
-</div>
+</dialog>
 
 <!-- "Delete" dialog -->
 <input type="checkbox" id="delete-scx-confirmation-modal" class="modal-toggle" bind:checked={isDeleteConfirmationOpen} />
-<div class="modal">
+<dialog class="modal">
 	<div class="modal-box">
 		<header class="flex justify-between">
 			<h2 class="text-lg font-bold">Confirm Delete</h2>
@@ -292,4 +292,4 @@
 			>
 		</footer>
 	</div>
-</div>
+</dialog>

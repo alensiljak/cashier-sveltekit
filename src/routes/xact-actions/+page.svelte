@@ -25,7 +25,7 @@
 	let ptaSystem = $state('');
 
 	if (!$xact) {
-	  goto('/');
+		goto('/');
 	}
 
 	onMount(async () => {
@@ -121,18 +121,10 @@
 
 	<!-- button grid -->
 	<div class="mt-4 inline-grid w-full grid-cols-3 gap-4 justify-self-center">
-		<SquareButton
-			Icon={SquarePenIcon}
-			classes="bg-accent text-secondary"
-			onclick={onEditClicked}
-		>
+		<SquareButton Icon={SquarePenIcon} classes="bg-accent text-secondary" onclick={onEditClicked}>
 			Edit
 		</SquareButton>
-		<SquareButton
-			Icon={ClipboardIcon}
-			classes="bg-primary text-accent"
-			onclick={onDuplicateClick}
-		>
+		<SquareButton Icon={ClipboardIcon} classes="bg-primary text-accent" onclick={onDuplicateClick}>
 			Duplicate
 		</SquareButton>
 		<SquareButton
@@ -142,25 +134,22 @@
 		>
 			Schedule
 		</SquareButton>
-		<SquareButton
-			Icon={CopyIcon}
-			classes="bg-primary text-accent"
-			onclick={onCopyClicked}
-		>
+		<SquareButton Icon={CopyIcon} classes="bg-primary text-accent" onclick={onCopyClicked}>
 			Copy
 		</SquareButton>
-		<SquareButton
-			Icon={TrashIcon}
-			classes="bg-secondary text-accent"
-			onclick={onDeleteClicked}
-		>
+		<SquareButton Icon={TrashIcon} classes="bg-secondary text-accent" onclick={onDeleteClicked}>
 			Delete
 		</SquareButton>
 	</div>
 </main>
 <!-- "Delete" dialog -->
-<input type="checkbox" id="delete-confirmation-modal" class="modal-toggle" bind:checked={isDeleteConfirmationOpen} />
-<div class="modal">
+<input
+	type="checkbox"
+	id="delete-confirmation-modal"
+	class="modal-toggle"
+	bind:checked={isDeleteConfirmationOpen}
+/>
+<dialog class="modal">
 	<div class="modal-box">
 		<header class="flex justify-between">
 			<h2 class="text-lg font-bold">Confirm Delete</h2>
@@ -170,11 +159,9 @@
 		</article>
 		<footer class="flex justify-end gap-4">
 			<button type="button" class="btn btn-ghost" onclick={closeModal}>Cancel</button>
-			<button
-				type="button"
-				class="btn btn-primary text-primary-content"
-				onclick={onDeleteConfirmed}>OK</button
+			<button type="button" class="btn btn-primary text-primary-content" onclick={onDeleteConfirmed}
+				>OK</button
 			>
 		</footer>
 	</div>
-</div>
+</dialog>

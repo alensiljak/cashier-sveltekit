@@ -1,51 +1,51 @@
-@plugin "daisyui/theme" {
-  name: "cashier";
-  default: true;
-  prefersdark: true;
-  color-scheme: "dark";
+@plugin 'daisyui/theme' {
+	name: 'cashier';
+	default: true;
+	prefersdark: true;
+	color-scheme: 'dark';
 
-  /*--color-base-100: oklch(14% 0 0);*/
-  --color-base-100: oklch(22.47% 0 0);
-  /*--color-base-200: oklch(20% 0 0);*/
-  --color-base-200: oklch(18.15% 0 0);
-  /*--color-base-300: oklch(26% 0 0);*/
-  --color-base-300: oklch(16% 0 0);
-  --color-base-content: var(--color-tertiary-100);
-  --color-primary: #076461;
-  /*--color-primary-content: oklch(28% 0.066 53.813);*/
-  --color-primary-content: var(--color-tertiary-100);
-  --color-secondary: #92140c;
-  --color-secondary-content: #ffd700;
-  --color-accent: #ffd700;
-  /*--color-accent-content: oklch(28% 0.109 3.907);*/
-  --color-accent-content: #000000;
-  --color-neutral: #1d1f20;
-  --color-neutral-content: oklch(98% 0 0);
-  --color-info: oklch(58% 0.158 241.966);
-  --color-info-content: oklch(97% 0.013 236.62);
-  --color-success: var(--color-green-500);
-  --color-success-content: oklch(98% 0.031 120.757);
-  --color-warning: #ffd700;
-  --color-warning-content: var(--color-secondary);
-  --color-error: var(--color-red-400);
-  --color-error-content: oklch(97% 0.013 17.38);
+	/*--color-base-100: oklch(14% 0 0);*/
+	--color-base-100: oklch(22.47% 0 0);
+	/*--color-base-200: oklch(20% 0 0);*/
+	--color-base-200: oklch(18.15% 0 0);
+	/*--color-base-300: oklch(26% 0 0);*/
+	--color-base-300: oklch(16% 0 0);
+	--color-base-content: var(--color-tertiary-100);
+	--color-primary: #076461;
+	/*--color-primary-content: oklch(28% 0.066 53.813);*/
+	--color-primary-content: var(--color-tertiary-100);
+	--color-secondary: #92140c;
+	--color-secondary-content: #ffd700;
+	--color-accent: #ffd700;
+	/*--color-accent-content: oklch(28% 0.109 3.907);*/
+	--color-accent-content: #000000;
+	--color-neutral: #1d1f20;
+	--color-neutral-content: oklch(98% 0 0);
+	--color-info: oklch(58% 0.158 241.966);
+	--color-info-content: oklch(97% 0.013 236.62);
+	--color-success: var(--color-green-500);
+	--color-success-content: oklch(98% 0.031 120.757);
+	--color-warning: #ffd700;
+	--color-warning-content: var(--color-secondary);
+	--color-error: var(--color-red-400);
+	--color-error-content: oklch(97% 0.013 17.38);
 
-  /* custom colours */
-  --color-tertiary-100: oklch(95.57% 0.09 98.61deg);
+	/* custom colours */
+	--color-tertiary-100: oklch(95.57% 0.09 98.61deg);
 
-  /* border radius */
-  --radius-selector: 0.25rem;
-  --radius-field: 0.5rem;
-  --radius-box: 0.25rem;
+	/* border radius */
+	--radius-selector: 0.25rem;
+	--radius-field: 0.5rem;
+	--radius-box: 0.25rem;
 
-  /* base sizes */
-  --size-selector: 0.25rem;
-  --size-field: 0.25rem;
+	/* base sizes */
+	--size-selector: 0.25rem;
+	--size-field: 0.25rem;
 
-  /* border size */
-  --border: 1px;
+	/* border size */
+	--border: 1px;
 
-  /* effects */
-  --depth: 1;
-  --noise: 1;
+	/* effects */
+	--depth: 1;
+	--noise: 1;
 }

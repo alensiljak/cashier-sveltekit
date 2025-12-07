@@ -142,7 +142,7 @@
 	class="modal-toggle"
 	bind:checked={isRestoreConfirmationOpen}
 />
-<div class="modal">
+<dialog class="modal">
 	<div class="modal-box">
 		<header class="flex justify-between">
 			<h2 class="text-lg font-bold">Confirm Restore</h2>
@@ -162,4 +162,4 @@
 			>
 		</footer>
 	</div>
-</div>
+</dialog>

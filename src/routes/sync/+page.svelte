@@ -144,7 +144,7 @@
 	{/snippet}
 </Toolbar>
 
-<main class="container space-y-4 p-1 lg:p-10 max-w-6xl mx-auto">
+<main class="container mx-auto max-w-6xl space-y-4 p-1 lg:p-10">
 	<p>To update data from Ledger, the Cashier Server must be running and accessible.</p>
 	<p>You can run the Cashier Server locally.</p>
 
@@ -165,24 +165,36 @@
 
 	<div class="flex flex-col space-y-8 pt-6">
 		<label class="flex items-center space-x-2">
-			<input class="checkbox checkbox-primary rounded" type="checkbox"
-			    bind:checked={syncAccounts} onchange={saveSettings} />
+			<input
+				class="checkbox checkbox-primary rounded"
+				type="checkbox"
+				bind:checked={syncAccounts}
+				onchange={saveSettings}
+			/>
 			<p>Sync account list with balances</p>
 		</label>
 		<label class="flex items-center space-x-2">
-			<input class="checkbox checkbox-primary rounded" type="checkbox"
-			    bind:checked={syncAaValues} onchange={saveSettings} />
+			<input
+				class="checkbox checkbox-primary rounded"
+				type="checkbox"
+				bind:checked={syncAaValues}
+				onchange={saveSettings}
+			/>
 			<p>Sync account balances in base currency, for asset allocation.</p>
 		</label>
 		<label class="flex items-center space-x-2">
-			<input class="checkbox checkbox-primary rounded" type="checkbox"
-			    bind:checked={syncPayees} onchange={saveSettings} />
+			<input
+				class="checkbox checkbox-primary rounded"
+				type="checkbox"
+				bind:checked={syncPayees}
+				onchange={saveSettings}
+			/>
 			<p>Sync Payees</p>
 		</label>
 	</div>
 
 	<center class="pt-10">
-		<button class="btn bg-accent text-secondary uppercase rounded" onclick={onSyncClicked}>
+		<button class="btn bg-accent text-secondary rounded uppercase" onclick={onSyncClicked}>
 			<span><RefreshCcw class={rotationClass} style="animation-direction: reverse;" /></span>
 			<span>Sync</span>
 		</button>
@@ -191,13 +203,13 @@
 	<hr class="my-10" />
 
 	<center>
-		<button class="btn text-accent bg-secondary mr-5 uppercase rounded" onclick={onShutdownClick}>
+		<button class="btn text-accent bg-secondary mr-5 rounded uppercase" onclick={onShutdownClick}>
 			<span><PowerIcon /></span>
 			<span>Server Shutdown</span>
 		</button>
 
 		<!-- reload data -->
-		<button class="btn bg-primary text-accent uppercase rounded" onclick={reloadData}>
+		<button class="btn bg-primary text-accent rounded uppercase" onclick={reloadData}>
 			<span><RefreshCcw class={rotationClass} style="animation-direction: reverse;" /></span>
 			<span>Reload Data</span>
 		</button>

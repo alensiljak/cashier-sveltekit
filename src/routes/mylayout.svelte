@@ -19,7 +19,7 @@
 	<!-- grid grid-cols-2 md:grid-cols-[auto_1fr] -->
 	<!-- Hide the sidebar on small screens; show at the medium breakpoint or wider -->
 	<div class="bg-base-300 bg-opacity-5 w-0 lg:w-64">
-		<aside class="sticky top-0 col-span-1 h-screen bg-warning p-4">
+		<aside class="bg-warning sticky top-0 col-span-1 h-screen p-4">
 			<!-- <Drawer width="w-[300px]">Cashier</Drawer> -->
 			<Navigation />
 		</aside>
@@ -29,10 +29,7 @@
 		<slot></slot>
 
 		{#if alertVisible}
-			<aside
-				class="alert alert-neutral border border-base-300"
-				transition:fade={{ duration: 200 }}
-			>
+			<aside class="alert alert-neutral border-base-300 border" transition:fade={{ duration: 200 }}>
 				<!-- Icon -->
 				<div>(icon)</div>
 				<!-- Message -->

@@ -156,7 +156,7 @@
 		{:else}
 			<!-- list -->
 			<div>
-				{#each accounts as account}
+				{#each accounts as account (account)}
 					<div class="flex w-full flex-col px-0.5 text-sm">
 						<!-- row -->
 						<!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -198,7 +198,7 @@
 
 <!-- "Delete All" dialog -->
 <input type="checkbox" id="delete-all-fav-confirmation-modal" class="modal-toggle" bind:checked={isDeleteAllConfirmationOpen} />
-<div class="modal">
+<dialog class="modal">
 	<div class="modal-box">
 		<header class="flex justify-between">
 			<h2 class="text-lg font-bold">Confirm Delete</h2>
@@ -215,4 +215,4 @@
 			>
 		</footer>
 	</div>
-</div>
+</dialog>
