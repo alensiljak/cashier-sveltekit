@@ -93,7 +93,7 @@
 		{:else}
 			<!-- list -->
 			<div class="space-y-1">
-				{#each filteredList as scx, i}
+				{#each filteredList as scx, i (scx)}
 					<!-- Leave date values only at the first occurrence. -->
 					{#if i === 0 || scx.nextDate !== filteredList[i - 1].nextDate}
 						<div
