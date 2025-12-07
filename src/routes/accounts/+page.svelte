@@ -79,25 +79,25 @@
 	}
 </script>
 
-<main class="flex h-screen flex-col">
+<main class="flex flex-col flex-1">
 	<Toolbar title="Accounts" />
 	<!-- search toolbar -->
 	<SearchToolbar focus {onSearch} />
 	<!-- Account list -->
-	<div class="h-screen overflow-y-scroll p-1">
-		{#each filteredAccounts as account}
+	<div class="flex-1 overflow-y-auto px-1">
+		{#each filteredAccounts as account (account.name)}
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 			<div
-				class="border-base-content/15 flex items-center justify-between border-b py-2 {getAccountColour(
+				class="border-base-content/15 flex items-center justify-between border-b py-2 px-1 {getAccountColour(
 					account.name
 				)}"
 				onclick={() => onAccountSelected(account.name)}
 				role="listitem"
 			>
-				<div>{account.name}</div>
+				<div class="flex-1 pl-1">{account.name}</div>
 				{#if getBalance(account).quantity !== 0}
-					<data class={`text-right ${getAmountColour(getBalance(account).quantity)}`}>
+					<data class={`text-right pr-1 ${getAmountColour(getBalance(account).quantity)}`}>
 						{getBalance(account).quantity}
 						{getBalance(account).currency}
 					</data>
