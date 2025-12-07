@@ -4,6 +4,7 @@
 	import { Check } from '@lucide/svelte';
 	import { selectionMetadata, xact } from '$lib/data/mainStore';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 
 	let isInSelectionMode = $state(false);
 	let displayValue = $state('0');
@@ -208,13 +209,13 @@
 			// Go back to the xact editor
 			history.back();
 		} else {
-			goto('/account'); // todo: show account details
+			goto(resolve('/account')); // todo: show account details
 		}
 	}
 </script>
 
 <article
-	class="flex h-screen flex-col items-center justify-center bg-gradient-to-b from-gray-700 to-gray-900 p-4"
+	class="flex h-screen flex-col items-center justify-center bg-base-300 p-4"
 >
 	<div
 		class="w-full max-w-xs rounded-2xl border-2 border-gray-500 bg-gradient-to-b from-gray-400 to-gray-600 p-5 shadow-2xl"

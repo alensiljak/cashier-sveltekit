@@ -91,7 +91,7 @@
 			title="Currency"
 			placeholder="Currency"
 			type="text"
-			class="input rounded text-center text-lg uppercase w-24"
+			class="input rounded text-center uppercase w-24"
 			bind:value={$xact.postings[index].currency}
 			bind:this={currencyInput}
 			onfocus={() => currencyInput.select()}
