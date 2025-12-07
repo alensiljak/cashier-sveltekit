@@ -20,28 +20,37 @@
 
 <!-- Toolbar for pages -->
 <div class="relative">
-	<div class="navbar bg-primary text-base-content h-12 min-h-12 py-1">
-		<div class="navbar-start">
+	<div class="navbar bg-primary text-base-content h-12 min-h-12 py-1 shadow-sm">
+		<div class="flex-none">
 			<button
-			    class="btn btn-sm btn-ghost hover-transparent px-1 mx-1 lg:hidden border-0 rounded" onclick={toggleSidebar}>
+				class="btn btn-square btn-ghost hover-transparent rounded border-0 lg:hidden"
+				onclick={toggleSidebar}
+			>
 				<span>
 					<Menu size={20} />
 				</span>
 			</button>
-			<p class="text-xl font-bold pl-0 leading-7">{title}</p>
+		</div>
+		<div class="flex-1">
+			<p class="w-full pl-0 text-xl leading-7 font-bold">{title}</p>
 		</div>
 		{#if menuItems}
-		<div class="navbar-end">
-			<div class="dropdown dropdown-end">
-				<div tabindex="0" role="button" class="btn btn-ghost btn-circle h-8 min-h-0">
-					<EllipsisVertical size={18} />
+			<div class="flex-none">
+				<div class="dropdown dropdown-end">
+					<button
+						tabindex="0"
+						class="btn btn-ghost btn-circle hover-transparent"
+					>
+						<EllipsisVertical size={18} />
+					</button>
+					<ul
+						role="menu"
+						class="menu menu-sm dropdown-content bg-primary rounded-box z-1 mt-1 w-52 p-2 shadow"
+					>
+						{@render menuItems?.()}
+					</ul>
 				</div>
-				<ul role="menu"
-				    class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-primary rounded-box w-52">
-					{@render menuItems?.()}
-				</ul>
 			</div>
-		</div>
 		{/if}
 	</div>
 	<div class="gloss-effect absolute inset-0"></div>
