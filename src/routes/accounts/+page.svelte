@@ -31,9 +31,9 @@
 	 */
 	function getAccountColour(accountName: string): string {
 		if (accountName.startsWith('Income:')) {
-			return 'text-emerald-200';
+			return 'text-primary-200';
 		} else if (accountName.startsWith('Expenses:')) {
-			return 'text-red-200';
+			return 'text-secondary-200';
 		} else if (accountName.startsWith('Assets:')) {
 			return 'text-base-content';
 		} else if (accountName.startsWith('Liabilities:')) {
