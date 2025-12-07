@@ -20,6 +20,9 @@ export class SelectionModeMetadata {
 
 	// The id of the selected item.
 	selectedId: unknown;
+
+	// Initial value to populate the calculator with
+	initialValue?: number;
 }
 
 export const Constants = {

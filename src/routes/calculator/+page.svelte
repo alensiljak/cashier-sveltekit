@@ -14,6 +14,14 @@
 
 	$effect(() => {
 		isInSelectionMode = $selectionMetadata !== undefined;
+
+		// Initialize calculator with the initial value if provided
+		if ($selectionMetadata && $selectionMetadata.initialValue !== undefined) {
+			const initialValue = $selectionMetadata.initialValue;
+			displayValue = initialValue.toString();
+			currentExpression = initialValue.toString();
+			lastExpression = initialValue.toString();
+		}
 	});
 
 	const inputNumber = (num: string) => {

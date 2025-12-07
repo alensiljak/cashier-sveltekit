@@ -11,7 +11,13 @@ export default {
 			borderRadius: {
 				lg: '8px',
 				xl: '8px'
-			}
+			},
+			// colors: {
+			// 	'my-primary': {
+			// 		50: 'oklch(0.959 0.06 192.33)',
+			// 		200: 'oklch(0.828 0.139 190.76)'
+			// 	}
+			// }
 		}
 	}
 };

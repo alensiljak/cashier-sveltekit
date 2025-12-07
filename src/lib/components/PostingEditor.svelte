@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { xact, selectionMetadata } from '$lib/data/mainStore';
-	import { DiffIcon } from '@lucide/svelte';
+	import { CalculatorIcon, DiffIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import type { EventHandler } from 'svelte/elements';
 	import { goto } from '$app/navigation';
@@ -30,11 +30,18 @@
 	/**
 	 * Open calculator to enter amount
 	 */
-	async function onAmountClicked() {
+	async function openCalculator() {
 		// Set selection mode for amount calculation
 		const meta = new SelectionModeMetadata();
 		meta.postingIndex = index;
 		meta.selectionType = 'amount';
+
+		// Store the current amount value to initialize the calculator
+		const currentAmount = $xact.postings[index].amount;
+		if (currentAmount !== undefined && currentAmount !== null) {
+			meta.initialValue = currentAmount;
+		}
+
 		selectionMetadata.set(meta);
 
 		// Navigate to calculator
@@ -85,13 +92,21 @@
 			bind:this={amountInput}
 			onfocus={() => amountInput.select()}
 			oninput={onAmountChanged}
-			onclick={onAmountClicked}
 		/>
+		<!-- calculator button -->
+		<button
+			type="button"
+			class="btn btn-outline btn-primary-content w-12 grow-0 rounded px-1 mx-1"
+			onclick={openCalculator}
+			title="Open calculator"
+		>
+			<CalculatorIcon />
+		</button>
 		<input
 			title="Currency"
 			placeholder="Currency"
 			type="text"
-			class="input rounded text-center uppercase w-24"
+			class="input rounded text-center uppercase w-22 p-1"
 			bind:value={$xact.postings[index].currency}
 			bind:this={currencyInput}
 			onfocus={() => currencyInput.select()}
