@@ -10,6 +10,7 @@
 	import { getAccountBalance } from '$lib/services/accountsService';
 	import { getAmountColour } from '$lib/utils/formatter';
 	import appService from '$lib/services/appService';
+	import { resolve } from '$app/paths';
 
 	let { data }: { data: PageData } = $props();
 
@@ -56,7 +57,7 @@
 
 			history.back();
 		} else {
-			goto('/account'); // todo: show account details
+			goto(resolve('/account')); // todo: show account details
 		}
 	}
 

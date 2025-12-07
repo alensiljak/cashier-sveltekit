@@ -5,6 +5,7 @@
 	import { selectionMetadata, xact } from '$lib/data/mainStore';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import Notifier from '$lib/utils/notifier';
 
 	let isInSelectionMode = $state(false);
 	let displayValue = $state('0');
@@ -230,33 +231,27 @@
 	/**
 	 * Function to execute when the FAB is clicked
 	 */
-	function onFabClicked() {
+	async function onFabClicked() {
 		if (isInSelectionMode) {
-			// store the calculated value in the transaction posting
-			if ($selectionMetadata && $xact) {
+			// Store the calculated value in the selection metadata
+			if ($selectionMetadata) {
 				const amount = parseFloat(displayValue);
 				if (!isNaN(amount)) {
-					const postingIndex = $selectionMetadata.postingIndex;
-					if (postingIndex !== undefined && $xact.postings[postingIndex]) {
-						$xact.postings[postingIndex].amount = amount;
-					}
+					$selectionMetadata.selectedId = amount; // Store the calculated amount in selectedId
+				} else {
+				    Notifier.error('The value is not a number!');
 				}
 			}
-
-			// Reset selection mode
-			selectionMetadata.set(undefined);
 
 			// Go back to the xact editor
 			history.back();
 		} else {
-			goto(resolve('/account')); // todo: show account details
+			Notifier.info('Not in selection mode?');
 		}
 	}
 </script>
 
-<article
-	class="flex h-screen flex-col items-center justify-center bg-base-300 p-4"
->
+<article class="bg-base-300 flex h-screen flex-col items-center justify-center p-4">
 	<div
 		class="w-full max-w-xs rounded-2xl border-2 border-gray-500 bg-gradient-to-b from-gray-400 to-gray-600 p-5 shadow-2xl"
 	>
@@ -302,7 +297,7 @@
 			</button>
 
 			<button
-				class="btn btn-lg flex items-center justify-center rounded-lg border border-gray-900 bg-primary text-lg font-bold text-gray-800 shadow-md hover:bg-gray-400"
+				class="btn btn-lg bg-primary flex items-center justify-center rounded-lg border border-gray-900 text-lg font-bold text-gray-800 shadow-md hover:bg-gray-400"
 			>
 				<img src="/icons/cashier-logo.svg" alt="Cashier Logo" width="32" height="32" />
 			</button>

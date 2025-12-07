@@ -54,7 +54,7 @@
 				}
 				break;
 
-			case 'account':
+			case 'account': {
 				// get the posting
 				var index = null;
 				if (typeof $selectionMetadata.postingIndex === 'number') {
@@ -66,7 +66,7 @@
 
 				// load the account
 				const account = await appService.db.accounts.get(id);
-				const acctBalance = await getAccountBalance(account, defaultCurrency);
+				const acctBalance = getAccountBalance(account, defaultCurrency);
 
 				$xact.postings[index].account = account.name;
 				$xact.postings[index].currency = acctBalance.currency;
@@ -74,11 +74,20 @@
 				// todo: recalculateSum();
 				// todo: validateCurrencies();
 				break;
+			}
 
 			case 'amount':
-				// Amount is already set in the calculator
-				// The calculator handles setting the amount value directly
-				// Just recalculate the sum
+				// Handle amount selection from calculator
+				if ($selectionMetadata.selectedId !== undefined && typeof $selectionMetadata.selectedId === 'number') {
+					const amount = $selectionMetadata.selectedId as number;
+					const index = $selectionMetadata.postingIndex;
+
+					if (index !== undefined && $xact?.postings[index]) {
+						$xact.postings[index].amount = amount;
+					}
+				}
+
+				// Recalculate the sum
 				recalculateSum();
 				break;
 		}
