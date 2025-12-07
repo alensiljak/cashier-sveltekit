@@ -55,19 +55,19 @@
 	{/each}
 </svelte:head>
 
-<div {...useSwipe(handleSwipe, () => ({}))} class="drawer">
+<div class="drawer" {...useSwipe(handleSwipe, () => ({}))}>
 	<!-- sidebar as modal -->
 	<input type="checkbox" id="drawer-modal" class="drawer-toggle" bind:checked={$drawerState} />
-	<div class="drawer-content">
+	<div class="drawer-content h-screen">
 		<!-- former AppShell -->
-		<div class="grid grid-cols-1 lg:grid-cols-[288px_1fr]">
+		<div class="grid grid-cols-1 lg:grid-cols-[288px_1fr] h-screen">
 			<aside class="sticky top-0 col-span-1 hidden h-screen overflow-y-auto lg:block">
 				<!-- bg-surface-500/5 -->
 				<!-- <Navigation /> -->
 				<NavigationV3 />
 			</aside>
 
-			<main class="col-span-1 bg-base-300">
+			<main class="col-span-1 bg-base-300 h-full overflow-auto">
 				{@render children()}
 			</main>
 		</div>
