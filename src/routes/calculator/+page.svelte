@@ -24,6 +24,42 @@
 		}
 	});
 
+	// Helper function to find the last operator index in an expression
+	const getLastOperatorIndex = (expression: string): number => {
+		return Math.max(
+			expression.lastIndexOf('+'),
+			expression.lastIndexOf('-'),
+			expression.lastIndexOf('×'),
+			expression.lastIndexOf('÷'),
+			expression.lastIndexOf('('),
+			expression.lastIndexOf(')')
+		);
+	};
+
+	// Helper function to get the current number being built (after the last operator)
+	const getCurrentNumber = (expression: string): string => {
+		const lastOpIndex = getLastOperatorIndex(expression);
+		if (lastOpIndex === -1) {
+			// No operators in the expression yet
+			return expression;
+		} else {
+			// Return the number after the last operator
+			return expression.substring(lastOpIndex + 1);
+		}
+	};
+
+	// Helper function to update current number in the expression
+	const updateCurrentNumber = (expression: string, newNumber: string): string => {
+		const lastOpIndex = getLastOperatorIndex(expression);
+		if (lastOpIndex === -1) {
+			// No operators in the expression yet
+			return newNumber;
+		} else {
+			// Replace the number after the last operator
+			return expression.substring(0, lastOpIndex + 1) + newNumber;
+		}
+	};
+
 	const inputNumber = (num: string) => {
 		// If the display currently shows the result of a previous calculation, start a new expression
 		if (currentExpression === displayValue && lastExpression !== '') {
@@ -33,30 +69,38 @@
 			currentExpression = num;
 			displayValue = num;
 		} else {
-			currentExpression += num;
-			// Show the full current number being typed
-			const parts = currentExpression.split(/[\+\-\×\÷\(\)]/);
-			const lastPart = parts[parts.length - 1];
-			displayValue = lastPart || num;
+			// Find the last operator in the current expression to determine the current number being built
+			const lastOpIndex = getLastOperatorIndex(currentExpression);
+
+			if (lastOpIndex === -1) {
+				// No operators in the expression yet, just building the first number
+				currentExpression += num;
+				displayValue = currentExpression;
+			} else {
+				// There are operators, we're adding to the number after the last operator
+				currentExpression += num;
+				const currentNumber = getCurrentNumber(currentExpression);
+				displayValue = currentNumber;
+			}
 		}
 	};
 
 	const inputDecimal = () => {
 		// If the display currently shows the result of a previous calculation, start a new expression
 		if (currentExpression === displayValue && lastExpression !== '') {
-			const parts = displayValue.split(/[\+\-\×\÷\(\)]/);
-			const lastPart = parts[parts.length - 1] || '';
-			if (!lastPart.includes('.')) {
-				currentExpression = displayValue + '.';
-				displayValue = lastPart + '.';
+			const currentNumber = getCurrentNumber(currentExpression);
+
+			if (!currentNumber.includes('.')) {
+				currentExpression += '.';
+				displayValue = getCurrentNumber(currentExpression);
 			}
 		} else {
 			// Only add decimal if the current number doesn't already have one
-			const parts = currentExpression.split(/[\+\-\×\÷\(\)]/);
-			const lastPart = parts[parts.length - 1] || '';
-			if (!lastPart.includes('.')) {
+			const currentNumber = getCurrentNumber(currentExpression);
+
+			if (!currentNumber.includes('.')) {
 				currentExpression += '.';
-				displayValue = lastPart + '.';
+				displayValue = getCurrentNumber(currentExpression);
 			}
 		}
 	};
@@ -75,10 +119,7 @@
 			if (currentExpression === '') {
 				displayValue = '0';
 			} else {
-				// Extract the last number after any operators
-				const parts = currentExpression.split(/[\+\-\×\÷\(\)]/);
-				const lastPart = parts[parts.length - 1];
-				displayValue = lastPart || '0';
+				displayValue = getCurrentNumber(currentExpression) || '0';
 			}
 		}
 	};
@@ -115,18 +156,13 @@
 			currentExpression += '-';
 			displayValue = '-'; // Show the minus sign that was just entered
 		} else {
-			// For now, we'll just add a minus at the start of the current number
-			const parts = currentExpression.split(/([+\-×÷()])/);
-			const lastPart = parts[parts.length - 1];
-			if (lastPart && !isNaN(parseFloat(lastPart))) {
-				// Replace the last number with its negative
-				const lastNum = parseFloat(lastPart);
+			// Toggle the sign of the current number (the number being built after the last operator)
+			const currentNumber = getCurrentNumber(currentExpression);
+			if (currentNumber && !isNaN(parseFloat(currentNumber))) {
+				const lastNum = parseFloat(currentNumber);
 				const newNum = (lastNum * -1).toString();
-				currentExpression = currentExpression.slice(0, -lastPart.length) + newNum;
-				// Update display to show the full current number
-				const displayParts = currentExpression.split(/[\+\-\×\÷\(\)]/);
-				const displayLastPart = displayParts[displayParts.length - 1];
-				displayValue = displayLastPart || newNum;
+				currentExpression = updateCurrentNumber(currentExpression, newNum);
+				displayValue = newNum;
 			}
 		}
 	};
@@ -141,17 +177,13 @@
 				displayValue = percentNum;
 			}
 		} else {
-			// Convert the last number to percentage
-			const parts = currentExpression.split(/([+\-×÷()])/);
-			const lastPart = parts[parts.length - 1];
-			if (lastPart && !isNaN(parseFloat(lastPart))) {
-				const lastNum = parseFloat(lastPart);
+			// Convert the current number to percentage (the number being built after the last operator)
+			const currentNumber = getCurrentNumber(currentExpression);
+			if (currentNumber && !isNaN(parseFloat(currentNumber))) {
+				const lastNum = parseFloat(currentNumber);
 				const newNum = (lastNum / 100).toString();
-				currentExpression = currentExpression.slice(0, -lastPart.length) + newNum;
-				// Update display to show the full current number
-				const displayParts = currentExpression.split(/[\+\-\×\÷\(\)]/);
-				const displayLastPart = displayParts[displayParts.length - 1];
-				displayValue = displayLastPart || newNum;
+				currentExpression = updateCurrentNumber(currentExpression, newNum);
+				displayValue = newNum;
 			}
 		}
 	};
