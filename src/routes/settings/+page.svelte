@@ -14,7 +14,11 @@
 		AssetAllocationStore,
 		DefaultCurrencyStore
 	} from '$lib/data/mainStore.js';
-	import type { FileChangeDetails } from '@zag-js/file-upload';
+	// import type { FileChangeDetails } from '@zag-js/file-upload';
+
+	type FileChangeDetails = {
+		acceptedFiles: File[];
+	};
 
 	Notifier.init();
 	let isAaConfirmationOpen = $state(false);
@@ -204,7 +208,7 @@
 				<input
 					type="file"
 					name="aa_file"
-					accept=".json"
+					accept=".toml"
 					class="file-input file-input-primary rounded"
 					onchange={(e) => {
 						const target = e.target as HTMLInputElement;

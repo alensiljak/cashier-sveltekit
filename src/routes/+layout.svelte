@@ -55,7 +55,7 @@
 	{/each}
 </svelte:head>
 
-<div class="drawer" {...useSwipe(handleSwipe, () => ({}))}>
+<div class="drawer" {...useSwipe(handleSwipe, () => ({ touchAction: 'pan-y' }))}>
 	<!-- sidebar as modal -->
 	<input type="checkbox" id="drawer-modal" class="drawer-toggle" bind:checked={$drawerState} />
 	<div class="drawer-content h-screen">

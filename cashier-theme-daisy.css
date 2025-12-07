@@ -23,7 +23,7 @@
 	--color-neutral-content: oklch(98% 0 0);
 	--color-info: oklch(58% 0.158 241.966);
 	--color-info-content: oklch(97% 0.013 236.62);
-	--color-success: var(--color-green-500);
+	--color-success: var(--color-green-600);
 	--color-success-content: oklch(98% 0.031 120.757);
 	--color-warning: #ffd700;
 	--color-warning-content: var(--color-secondary);

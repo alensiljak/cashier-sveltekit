@@ -13,9 +13,7 @@ declare global {
 		// interface PageData {}
 		// interface Platform {}
 	}
+	const __BUILD_DATE__: string;
 }
-
-// Declare the build date global variable
-declare const __BUILD_DATE__: string;
 
 export {};

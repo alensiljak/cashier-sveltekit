@@ -1,13 +1,11 @@
 /**
  * Displays a message to the user.
  */
-import { getContext } from 'svelte';
 import { toaster } from '../toaster-svelte';
 
 const Notifier = {
 	init() {
-		// toastStore = getToastStore();
-		// toast = getContext('toast');
+		// No initialization required for DaisyUI toaster
 	},
 	notify(
 		message: string,

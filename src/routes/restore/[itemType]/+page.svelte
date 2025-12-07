@@ -3,7 +3,11 @@
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import appService from '$lib/services/appService';
 	import Notifier from '$lib/utils/notifier';
-	import type { FileChangeDetails } from '@zag-js/file-upload';
+	// import type { FileChangeDetails } from '@zag-js/file-upload';
+
+	type FileChangeDetails = {
+		acceptedFiles: File[];
+	};
 
 	const itemType = page.params.itemType;
 	let _content = $state<string>();

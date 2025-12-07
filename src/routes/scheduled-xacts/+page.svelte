@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import Fab from '$lib/components/FAB.svelte';
 	import SearchToolbar from '$lib/components/SearchToolbar.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
-	// import { ISODATEFORMAT } from '$lib/constants';
 	import { ScheduledXact, xact } from '$lib/data/mainStore';
 	import { ScheduledTransaction, Xact, type Money } from '$lib/data/model';
 	import appService from '$lib/services/appService';
@@ -13,7 +13,6 @@
 	import Notifier from '$lib/utils/notifier';
 	import { XactAugmenter } from '$lib/utils/xactAugmenter';
 	import { CalendarIcon, PackageIcon, PackageOpenIcon, PlusIcon } from '@lucide/svelte';
-	// import moment from 'moment';
 	import { onMount } from 'svelte';
 	import type { PageData } from './$types';
 
@@ -54,10 +53,10 @@
 	}
 
 	async function onItemClicked(id: number) {
+	    // load Scheduled Transaction into state.
+	    await appService.loadScheduledXact(id);
 		// show details page
-		// let scx = await appService.loadScheduledXact(id);
-
-		await goto(`/scx-actions/${id}`);
+		await goto(resolve(`/scx-actions/${id}`));
 	}
 
 	async function onSearch(value: string) {

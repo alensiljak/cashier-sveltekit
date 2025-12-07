@@ -4,7 +4,11 @@
 	import Notifier from '$lib/utils/notifier';
 	import { FileDownIcon, Share2Icon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
-	import type { FileChangeDetails } from '@zag-js/file-upload';
+	// import type { FileChangeDetails } from '@zag-js/file-upload';
+
+	type FileChangeDetails = {
+		acceptedFiles: File[];
+	};
 
 	let isRestoreConfirmationOpen = $state(false);
 
