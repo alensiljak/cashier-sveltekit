@@ -107,7 +107,7 @@
 					<div class="flex flex-row" onclick={() => onItemClicked(scx.id as number)}>
 						<div class="grow">
 							<data>{scx.transaction?.payee}</data>
-							<div class="text-sm opacity-60">
+							<div class="text-base opacity-60">
 								{scx.remarks?.split('\n')[0]}
 							</div>
 						</div>

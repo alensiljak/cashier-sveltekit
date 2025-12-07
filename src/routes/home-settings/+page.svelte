@@ -103,27 +103,27 @@
 
 	<div class="flex flex-col space-y-4 p-4">
 		<label class="flex items-center space-x-2">
-			<input class="checkbox" type="checkbox" bind:checked={_showFavourites} />
+			<input class="checkbox checkbox-primary" type="checkbox" bind:checked={_showFavourites} />
 			<p>Favourites</p>
 		</label>
 
 		<label class="flex items-center space-x-2">
-			<input class="checkbox" type="checkbox" bind:checked={_showForecast} />
+			<input class="checkbox checkbox-primary" type="checkbox" bind:checked={_showForecast} />
 			<p>Financial Forecast</p>
 		</label>
 
 		<label class="flex items-center space-x-2">
-			<input class="checkbox" type="checkbox" bind:checked={_showJournal} />
+			<input class="checkbox checkbox-primary" type="checkbox" bind:checked={_showJournal} />
 			<p>Journal</p>
 		</label>
 
 		<label class="flex items-center space-x-2">
-			<input class="checkbox" type="checkbox" bind:checked={_showScheduled} />
+			<input class="checkbox checkbox-primary" type="checkbox" bind:checked={_showScheduled} />
 			<p>Scheduled Transactions</p>
 		</label>
 
 		<label class="flex items-center space-x-2">
-			<input class="checkbox" type="checkbox" bind:checked={_showSync} />
+			<input class="checkbox checkbox-primary" type="checkbox" bind:checked={_showSync} />
 			<p>Synchronization</p>
 		</label>
 	</div>

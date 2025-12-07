@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { goto } from '$app/navigation';
+    import { resolve } from '$app/paths';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import CashierDAL from '$lib/data/dal';
 	import type { Payee } from '$lib/data/model';
@@ -9,7 +11,6 @@
 	import SearchToolbar from '$lib/components/SearchToolbar.svelte';
 	import { ListSearch } from '$lib/utils/ListSearch';
 	import Notifier from '$lib/utils/notifier';
-	import { goto } from '$app/navigation';
 
 	Notifier.init();
 
@@ -57,7 +58,7 @@
 
 			history.back();
 		} else {
-			goto('/account'); // todo: show account details
+			goto(resolve('/account')); // todo: show account details
 		}
 	}
 
@@ -92,7 +93,7 @@
 	<SearchToolbar focus {onSearch} />
 
 	<div class="h-screen overflow-auto p-1">
-		{#each filteredPayees as payee}
+		{#each filteredPayees as payee:Payee (payee.name)}
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 			<div

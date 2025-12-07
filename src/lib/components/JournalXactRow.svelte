@@ -38,8 +38,8 @@
 
 	<!-- postings -->
 	{#if xact.postings}
-		<div class="pl-6 text-sm leading-4">
-			{#each xact.postings as posting}
+		<div class="pl-6 text-base leading-4">
+			{#each xact.postings as posting (posting)}
 				<div class="flex flex-row opacity-60">
 					<data class="grow">{posting.account}</data>
 					<data class={`${getAmountColour(posting.amount as number)}`}>
