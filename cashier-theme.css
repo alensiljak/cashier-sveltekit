@@ -30,8 +30,8 @@ Cashier Theme for DaisyUI
 	--anchor-text-decoration-active: none;
 	--anchor-text-decoration-focus: none;
 	--spacing: 0.25rem;
-	--radius-base: 0.25rem;
-	--radius-container: 0.25rem;
+	--radius-base: 0.5rem;
+	--radius-container: 0.5rem;
 	--border: 1px;
 	--default-border-width: 1px;
 	--default-divide-width: 1px;
@@ -271,19 +271,15 @@ Cashier Theme for DaisyUI
 	--anchor-text-decoration-active: none;
 	--anchor-text-decoration-focus: none;
 	--spacing: 0.25rem;
-	--radius-base: 0.25rem;
-	--radius-container: 0.25rem;
-	--border: 1px;
-	/*--default-border-width: 1px;
-	--default-divide-width: 1px;
-	--default-ring-width: 1px;*/
+	--radius-base: 0.5rem;
+	--radius-container: 0.5rem;
+	--border: 0.5px;
 	--body-background-color: var(--color-surface-50);
 	--body-background-color-dark: var(--color-surface-950);
 
 	/* DaisyUI color variables for dark theme */
 	--color-primary: var(--color-primary-500);
 	--color-primary-focus: var(--color-primary-500);
-	/*--color-primary-content: #ffffff;*/
 	--color-primary-content: var(--color-tertiary-100);
 	--color-secondary: var(--color-secondary-500);
 	--color-secondary-focus: var(--color-secondary-500);
@@ -294,8 +290,8 @@ Cashier Theme for DaisyUI
 	--color-neutral: #2a2e37;
 	--color-neutral-focus: #2a2e37;
 	--color-neutral-content: var(--color-tertiary-100);
-	--color-base-100: oklch(23.76% 0 228.89deg); /* color-surface-500 */
-	--color-base-200: oklch(18.15% 0 247.95deg); /* color-surface-900 */
+	--color-base-100: var(--color-surface-500);
+	--color-base-200: var(--color-surface-900);
 	--color-base-300: var(--color-surface-950);
 	--color-base-content: var(--color-tertiary-100);
 	--color-info: #519390;

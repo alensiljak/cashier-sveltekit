@@ -27,7 +27,7 @@
 					<Menu size={20} />
 				</span>
 			</button>
-			<p class="text-lg font-semibold pl-0 leading-7">{title}</p>
+			<p class="text-xl font-semibold pl-0 leading-7">{title}</p>
 		</div>
 		{#if menuItems}
 		<div class="navbar-end">

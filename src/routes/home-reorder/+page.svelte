@@ -57,7 +57,7 @@
 <Toolbar title="Reorder Cards" />
 <Fab Icon={CheckIcon} onclick={onFabClicked} />
 
-<section class="container space-y-2 p-1">
+<section class="space-y-2 p-1 max-w-6xl mx-auto">
 	{#each items as item, index (item.id)}
 		<div
 			class="border-base-content/25 flex h-14 flex-row items-center space-x-3 rounded-lg
@@ -67,17 +67,15 @@
 				<span>{item.name}</span>
 			</div>
 			<button
-				class="btn btn-outline btn-neutral btn-icon text-neutral-content aspect-square"
+				class="btn btn-outline btn-neutral btn-icon text-accent aspect-square border-accent p-1.5 rounded"
 				onclick={() => onItemDownClicked(index)}
 			>
-				<ChevronDownIcon /></button
-			>
+				<ChevronDownIcon /></button>
 			<button
-				class="btn btn-outline btn-neutral btn-icon text-neutral-content aspect-square"
+				class="btn btn-outline btn-neutral btn-icon text-accent aspect-square border-accent p-1.5 rounded"
 				onclick={() => onItemUpClicked(index)}
 			>
-				<ChevronUpIcon /></button
-			>
+				<ChevronUpIcon /></button>
 		</div>
 	{/each}
 

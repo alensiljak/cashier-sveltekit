@@ -28,7 +28,7 @@
 			<img src="/icons/icon-192.png" class="w-1/3 lg:w-1/2" alt="logo" />
 		</div>
 		<div class="pt-2 text-center">
-			<p class="text-xl font-semibold">Cashier</p>
+			<p class="text-2xl font-semibold">Cashier</p>
 		</div>
 	</div>
 

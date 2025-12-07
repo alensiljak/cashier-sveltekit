@@ -49,7 +49,7 @@
 	<Fab Icon={CheckIcon} onclick={onFabClicked} />
 
 	<section class="space-y-2 p-1">
-		{#each _favourites as item, index}
+		{#each _favourites as item, index (item)}
 			<div
 				class="border-base-content/25 flex h-14 flex-row items-center space-x-3
 				rounded-lg border-b px-2"
@@ -58,13 +58,13 @@
 					<span>{item}</span>
 				</div>
 				<button
-					class="btn btn-outline btn-neutral btn-icon text-neutral-content aspect-square"
+					class="btn btn-outline btn-icon text-accent border-accent/80 aspect-square p-1.5 rounded"
 					onclick={() => onItemDownClicked(index)}
 				>
 					<ChevronDownIcon /></button
 				>
 				<button
-					class="btn btn-outline btn-neutral btn-icon text-neutral-content aspect-square"
+					class="btn btn-outline btn-icon text-accent border-accent/80 aspect-square p-1.5 rounded"
 					onclick={() => onItemUpClicked(index)}
 				>
 					<ChevronUpIcon /></button

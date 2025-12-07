@@ -68,7 +68,7 @@
 	</Toolbar>
 
 	<!-- Main -->
-	<section class="container mx-auto space-y-2 overflow-auto px-1 py-1 lg:max-w-(--breakpoint-sm)">
+	<section class="container mx-auto space-y-2 overflow-auto px-1 py-1 lg:max-w-screen-sm max-w-full">
 		<!-- Cards are displayed dynamically, in the selected order. -->
 		{#each cards as Card}
 			<Card></Card>

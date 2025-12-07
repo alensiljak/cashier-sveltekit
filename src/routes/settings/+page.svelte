@@ -132,22 +132,26 @@
 
 <Toolbar title="Settings" />
 
-<main class="container space-y-4 p-1">
+<main class="mx-auto max-w-6xl space-y-4 p-1">
 	<!-- currency -->
-	<label class="label">
-		<span>Main Currency</span>
-		<input class="input" type="text" placeholder="Main Currency" bind:value={currency} />
-	</label>
+	<div class="form-control w-full">
+		<label class="label">
+			<span class="label-text">Main Currency</span>
+		</label>
+		<input class="input rounded" type="text" placeholder="Main Currency" bind:value={currency} />
+	</div>
 	<!-- investment account -->
-	<label class="label">
-		<span>Investment account root</span>
+	<div class="form-control w-full">
+		<label class="label">
+			<span class="label-text">Investment account root</span>
+		</label>
 		<input
-			class="input"
+			class="input rounded"
 			type="text"
 			placeholder="Investment account root"
 			bind:value={rootInvestmentAccount}
 		/>
-	</label>
+	</div>
 
 	<!-- last transaction -->
 	<label class="flex items-center space-x-2">
@@ -182,7 +186,7 @@
 	</form>
 
 	<center>
-		<button class="btn btn-error text-warning uppercase" onclick={saveSettings}>
+		<button class="btn btn-secondary text-accent uppercase rounded" onclick={saveSettings}>
 			Save
 		</button>
 	</center>
@@ -190,32 +194,46 @@
 	<hr />
 
 	<section>
-		<h3 class="h3">Asset Allocation</h3>
-		<center>
-			<label class="btn btn-primary">
-				<input type="file" name="aa_file" accept=".json" onchange={(e) => {
-					const target = e.target as HTMLInputElement;
-					onAaFileChanged({ acceptedFiles: Array.from(target.files || []) });
-				}} />
-				<span>Select the AA definition</span>
-			</label>
-		</center>
+		<h3 class="mb-2 text-2xl font-semibold">Asset Allocation</h3>
+		<fieldset class="fieldset">
+			<center>
+				<input
+					type="file"
+					name="aa_file"
+					accept=".json"
+					class="file-input file-input-primary file-input-ghost rounded"
+					onchange={(e) => {
+						const target = e.target as HTMLInputElement;
+						onAaFileChanged({ acceptedFiles: Array.from(target.files || []) });
+					}}
+				/>
+				<label class="label"> Select the AA definition </label>
+			</center>
+		</fieldset>
 	</section>
 
 	<section>
-		<h3 class="h3">Restore Settings</h3>
+		<h3 class="mb-2 text-2xl font-semibold">Restore Settings</h3>
 		<p>
 			This functionality is now redundant. You can use Backup/Restore, which also includes Settings.
 		</p>
-		<center>
-			<label class="btn btn-primary">
-				<input type="file" name="settings_file" accept=".json" onchange={(e) => {
-					const target = e.target as HTMLInputElement;
-					onSettingsFileChangeHandler({ acceptedFiles: Array.from(target.files || []) });
-				}} />
-				<span>Select the settings file</span>
-			</label>
-		</center>
+		<fieldset>
+			<center>
+				<input
+					type="file"
+					name="settings_file"
+					accept=".json"
+					class="file-input file-input-primary file-input-ghost rounded"
+					onchange={(e) => {
+						const target = e.target as HTMLInputElement;
+						onSettingsFileChangeHandler({ acceptedFiles: Array.from(target.files || []) });
+					}}
+				/>
+				<label class="label">
+					Select the settings file
+				</label>
+			</center>
+		</fieldset>
 	</section>
 
 	<!-- <section>
@@ -224,7 +242,12 @@
 </main>
 
 <!-- "AA import" dialog -->
-<input type="checkbox" id="aa-confirmation-modal" class="modal-toggle" bind:checked={isAaConfirmationOpen} />
+<input
+	type="checkbox"
+	id="aa-confirmation-modal"
+	class="modal-toggle"
+	bind:checked={isAaConfirmationOpen}
+/>
 <div class="modal">
 	<div class="modal-box">
 		<header class="flex justify-between">
@@ -245,7 +268,12 @@
 </div>
 
 <!-- "Settings import" dialog -->
-<input type="checkbox" id="settings-confirmation-modal" class="modal-toggle" bind:checked={isSettingsConfirmationOpen} />
+<input
+	type="checkbox"
+	id="settings-confirmation-modal"
+	class="modal-toggle"
+	bind:checked={isSettingsConfirmationOpen}
+/>
 <div class="modal">
 	<div class="modal-box">
 		<header class="flex justify-between">

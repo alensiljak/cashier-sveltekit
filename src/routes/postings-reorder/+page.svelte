@@ -72,13 +72,13 @@
 						{posting.account}
 					</span>
 					<button
-						class="btn btn-outline btn-neutral btn-icon text-neutral-content aspect-square"
+						class="btn btn-outline btn-neutral btn-icon text-neutral-content aspect-square p-1.5 rounded"
 						onclick={() => onItemDownClicked(i)}
 					>
 						<ChevronDownIcon /></button
 					>
 					<button
-						class="btn btn-outline btn-neutral btn-icon text-neutral-content aspect-square"
+						class="btn btn-outline btn-neutral btn-icon text-neutral-content aspect-square p-1.5 rounded"
 						onclick={() => onItemUpClicked(i)}
 					>
 						<ChevronUpIcon /></button

@@ -123,35 +123,35 @@
 	<div class="mt-4 inline-grid w-full grid-cols-3 gap-4 justify-self-center">
 		<SquareButton
 			Icon={SquarePenIcon}
-			classes="bg-neutral text-neutral-content"
+			classes="bg-accent text-secondary"
 			onclick={onEditClicked}
 		>
 			Edit
 		</SquareButton>
 		<SquareButton
 			Icon={ClipboardIcon}
-			classes="bg-primary text-primary-content"
+			classes="bg-primary text-accent"
 			onclick={onDuplicateClick}
 		>
 			Duplicate
 		</SquareButton>
 		<SquareButton
 			Icon={CalendarClockIcon}
-			classes="bg-neutral text-neutral-content"
+			classes="bg-accent text-secondary"
 			onclick={onScheduleClick}
 		>
 			Schedule
 		</SquareButton>
 		<SquareButton
 			Icon={CopyIcon}
-			classes="bg-primary text-primary-content"
+			classes="bg-primary text-accent"
 			onclick={onCopyClicked}
 		>
 			Copy
 		</SquareButton>
 		<SquareButton
 			Icon={TrashIcon}
-			classes="bg-secondary text-secondary-content"
+			classes="bg-secondary text-accent"
 			onclick={onDeleteClicked}
 		>
 			Delete
