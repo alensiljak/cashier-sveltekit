@@ -19,8 +19,9 @@
 
 	let amountInput: HTMLInputElement;
 	let amountFieldColor = $derived(
-		($xact?.postings[index].amount as number) < 0 ? 'bg-secondary bg-opacity-20' : 'bg-primary bg-opacity-20'
+		($xact?.postings[index].amount as number) < 0 ? 'bg-secondary/20' : 'bg-primary/20'
 	);
+	let currencyInput: HTMLInputElement;
 
 	onMount(() => {
 		// bind to the Posting from the store.
@@ -50,23 +51,23 @@
 	}
 </script>
 
-<section>
+<section class="w-full">
 	<input
 		title="Account"
 		placeholder="Account"
 		type="text"
-		class="input"
+		class="input w-full rounded"
 		readonly
 		bind:value={$xact.postings[index].account}
 		onclick={onAccountClicked}
 	/>
 
-	<div class="flex flex-row">
+	<div class="flex flex-row mb-2">
 		<!-- amount sign -->
 		<div>
 			<button
 				type="button"
-				class="btn btn-outline btn-neutral w-12 grow-0 px-1 rounded"
+				class="btn btn-outline btn-primary-content w-12 grow-0 px-1 rounded"
 				onclick={changeSign}
 			>
 				<DiffIcon />
@@ -76,7 +77,7 @@
 			title="Amount"
 			placeholder="Amount"
 			type="number"
-			class={`input grow text-right ${amountFieldColor} px-1`}
+			class={`input grow text-lg text-right ${amountFieldColor} px-1 rounded`}
 			bind:value={$xact.postings[index].amount}
 			bind:this={amountInput}
 			onfocus={() => amountInput.select()}
@@ -86,14 +87,16 @@
 		class={$xact.postings[index].amount as number >= 0 ? 'bg-primary bg-opacity-20!' : 'bg-secondary bg-opacity-20!'}
 		oninput={() => updateAmount($xact.postings[index].amount as number)}
 		onchange={onAmountChanged}
-	-->
+		-->
 		<div class="min-w-24 shrink">
 			<input
 				title="Currency"
 				placeholder="Currency"
 				type="text"
-				class="input px-1 text-center"
+				class="input text-lg px-1 text-center rounded"
 				bind:value={$xact.postings[index].currency}
+				bind:this={currencyInput}
+				onfocus={() => currencyInput.select()}
 			/>
 		</div>
 		<!--

@@ -9,7 +9,7 @@
 	import { SelectionModeMetadata, SettingKeys, settings } from '$lib/settings';
 	import { getEmptyPostingIndex } from '$lib/utils/xactUtils';
 	import { Posting } from '$lib/data/model';
-	import { ArrowUpDownIcon, PlusCircleIcon, SigmaIcon, TrashIcon } from '@lucide/svelte';
+	import { ArrowUpDownIcon, PlusCircleIcon, SigmaIcon, TrashIcon, UserIcon, CalendarIcon, FileTextIcon } from '@lucide/svelte';
 	import { Big } from 'big.js';
 
 	Notifier.init();
@@ -162,33 +162,42 @@
 </script>
 
 <div class="flex h-full flex-col space-y-3 py-2">
-	<input
-		title="Date"
-		placeholder="Date"
-		type="date"
-		class="input"
-		bind:value={$xact.date}
-	/>
-	<input
-		title="Payee"
-		placeholder="Payee"
-		type="text"
-		class="input"
-		readonly
-		bind:value={$xact.payee}
-		onclick={onPayeeClicked}
-	/>
-	<input
-		title="Note"
-		placeholder="Note"
-		type="text"
-		class="input"
-		bind:value={$xact.note}
-	/>
+	<div class="flex items-center">
+		<CalendarIcon class="h-5 w-5 mr-2 opacity-70" />
+		<input
+			title="Date"
+			placeholder="Date"
+			type="date"
+			class="input rounded"
+			bind:value={$xact.date}
+		/>
+	</div>
+	<div class="flex items-center">
+		<UserIcon class="h-5 w-5 mr-2 opacity-70" />
+		<input
+			title="Payee"
+			placeholder="Payee"
+			type="text"
+			class="input w-full rounded"
+			readonly
+			bind:value={$xact.payee}
+			onclick={onPayeeClicked}
+		/>
+	</div>
+	<div class="flex items-center">
+		<FileTextIcon class="h-5 w-5 mr-2 opacity-70" />
+		<input
+			title="Note"
+			placeholder="Note"
+			type="text"
+			class="input w-full rounded"
+			bind:value={$xact.note}
+		/>
+	</div>
 
 	<!-- Postings -->
 	<!-- actions and sum -->
-	<div class="bg-primary bg-opacity-25 space-y-2 rounded-lg p-3">
+	<div class="bg-primary/25 space-y-2 rounded-lg p-3">
 		<div class="flex flex-row">
 			<span class="grow text-center">Postings</span>
 			<div><SigmaIcon /></div>
@@ -197,15 +206,15 @@
 		<div class="flex flex-row justify-center space-x-10">
 			<button
 				type="button"
-				class="btn btn-outline btn-primary btn-icon"
+				class="btn btn-outline btn-accent btn-icon rounded"
 				onclick={onAddPostingClicked}
 			>
 				<PlusCircleIcon />
 			</button>
-			<a class="btn btn-outline btn-primary btn-icon" href="/postings-reorder">
+			<a class="btn btn-outline btn-accent btn-icon rounded" href="/postings-reorder">
 				<ArrowUpDownIcon />
 			</a>
-			<a class="btn btn-outline btn-primary btn-icon" href="/postings-delete">
+			<a class="btn btn-outline btn-accent btn-icon rounded" href="/postings-delete">
 				<TrashIcon />
 			</a>
 		</div>

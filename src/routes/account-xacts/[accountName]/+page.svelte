@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import Toolbar from '$lib/components/Toolbar.svelte';
-	import { Posting } from '$lib/data/model';
+	import { Posting, Xact } from '$lib/data/model';
 	import * as Formatter from '$lib/utils/formatter';
 </script>
 
@@ -10,21 +10,21 @@
 	<section class="h-full space-y-2 overflow-auto p-1">
 		<header>
 			<p>{page.data.account.getParentName()}</p>
-			<div class="flex flex-row">
-				<data class="h2 grow">
+			<div class="flex flex-row text-3xl font-bold">
+				<data class="grow">
 					{page.data.account.getAccountName()}
 				</data>
-				<data class={`h3 ${Formatter.getAmountColour(page.data.total.quantity)}`}>
+				<data class={`${Formatter.getAmountColour(page.data.total.quantity)}`}>
 					{Formatter.formatAmount(page.data.total.quantity)}
 					{page.data.total.currency}
 				</data>
 			</div>
 		</header>
 
-		<hr class="hr" />
+		<hr class="hr text-gray-600" />
 
 		<div class="space-y-1">
-			{#each page.data.xacts as xact}
+			{#each page.data.xacts as xact: Xact (xact)}
 				{@const posting = xact.postings?.find((p: Posting) => p.account === page.data.account.name)}
 
 				<div class="flex flex-row px-2">

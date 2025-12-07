@@ -31,7 +31,7 @@
 
 	<!-- note -->
 	{#if xact.note}
-		<div class="text-primary-400 pl-6 leading-4">
+		<div class="text-primary pl-6 leading-4">
 			<small>; {xact.note}</small>
 		</div>
 	{/if}

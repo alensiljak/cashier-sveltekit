@@ -1,6 +1,6 @@
 <script lang="ts">
 	import JournalCard from '$lib/components/JournalCard.svelte';
-	import { ArrowDownUpIcon, DatabaseIcon, PlusIcon, SettingsIcon } from '@lucide/svelte';
+	import { ArrowDownUpIcon, PlusIcon, SettingsIcon } from '@lucide/svelte';
 	import Toolbar from '../lib/components/Toolbar.svelte';
 	import { goto } from '$app/navigation';
 	import { xact } from '$lib/data/mainStore';
@@ -70,7 +70,7 @@
 	<!-- Main -->
 	<section class="container mx-auto space-y-2 overflow-auto px-1 py-1 lg:max-w-screen-sm max-w-full">
 		<!-- Cards are displayed dynamically, in the selected order. -->
-		{#each cards as Card}
+		{#each cards as Card (Card)}
 			<Card></Card>
 		{/each}
 

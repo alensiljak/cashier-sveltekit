@@ -61,7 +61,7 @@
 						{posting.account}
 					</span>
 					<button
-						class="btn btn-outline btn-icon text-secondary-content mr-2"
+						class="btn btn-outline btn-icon btn-secondary mr-2 rounded"
 						onclick={() => onDeleteClicked(i)}
 					>
 						<TrashIcon />
@@ -83,10 +83,10 @@
 			<p class="py-4 opacity-60">Do you want to delete the selected posting?</p>
 		</article>
 		<footer class="flex justify-end gap-4">
-			<button type="button" class="btn btn-ghost" onclick={closeModal}>Cancel</button>
+			<button type="button" class="btn btn-ghost rounded" onclick={closeModal}>Cancel</button>
 			<button
 				type="button"
-				class="btn btn-primary text-primary-content"
+				class="btn btn-primary text-primary-content rounded"
 				onclick={onDeleteConfirmed}>OK</button
 			>
 		</footer>

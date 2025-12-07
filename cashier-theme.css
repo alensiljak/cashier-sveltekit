@@ -274,6 +274,7 @@ Cashier Theme for DaisyUI
 	--radius-base: 0.5rem;
 	--radius-container: 0.5rem;
 	--border: 0.5px;
+	--btn-shadow: var(--color-gray-500);
 	--body-background-color: var(--color-surface-50);
 	--body-background-color-dark: var(--color-surface-950);
 
@@ -290,7 +291,7 @@ Cashier Theme for DaisyUI
 	--color-neutral: #2a2e37;
 	--color-neutral-focus: #2a2e37;
 	--color-neutral-content: var(--color-tertiary-100);
-	--color-base-100: var(--color-surface-500);
+	--color-base-100: var(--color-surface-600);
 	--color-base-200: var(--color-surface-900);
 	--color-base-300: var(--color-surface-950);
 	--color-base-content: var(--color-tertiary-100);
@@ -300,7 +301,7 @@ Cashier Theme for DaisyUI
 	--color-success-content: #ffffff;
 	--color-warning: #ffd700;
 	--color-warning-content: #000000;
-	--color-error: oklch(70.4% .191 22.216); /* text-red-400 */
+	--color-error:var(--color-red-400));
 	--color-error-content: #ffffff;
 
 	/* Extended color scales from Skeleton theme */
@@ -478,6 +479,4 @@ Cashier Theme for DaisyUI
 	--color-surface-contrast-800: var(--color-surface-contrast-light);
 	--color-surface-contrast-900: var(--color-surface-contrast-light);
 	--color-surface-contrast-950: var(--color-surface-contrast-light);
-
-	--color-green-500: oklch(72.3% .219 149.579);
 }

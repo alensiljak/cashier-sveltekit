@@ -28,7 +28,7 @@
 	}
 </script>
 
-<div class="bg-primary p-3">
+<div class="bg-primary p-0.5">
 	<div class="relative mx-auto w-5/6 lg:w-2/5">
 		<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 z-10">
 			<SearchIcon class="text-gray-400 h-4 w-4" />
