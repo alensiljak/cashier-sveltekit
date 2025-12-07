@@ -157,7 +157,7 @@
 			<!-- list -->
 			<div>
 				{#each accounts as account (account)}
-					<div class="flex w-full flex-col px-0.5 text-base">
+					<div class="flex w-full flex-col px-0.5">
 						<!-- row -->
 						<!-- svelte-ignore a11y_click_events_have_key_events -->
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
