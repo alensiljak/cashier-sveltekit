@@ -9,7 +9,7 @@
 	import { pwaAssetsHead } from 'virtual:pwa-assets/head';
 	import { onMount } from 'svelte';
 	import { drawerState } from '$lib/data/mainStore';
-	import NavigationV3 from '$lib/components/navigation-v3.svelte';
+	import NavigationV3 from '$lib/components/navigation.svelte';
 
 	let { children } = $props();
 
