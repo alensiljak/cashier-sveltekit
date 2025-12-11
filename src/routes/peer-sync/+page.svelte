@@ -1,6 +1,8 @@
 <script lang="ts">
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { onMount, onDestroy } from 'svelte';
+	import { SettingKeys, settings } from '$lib/settings';
+	import Notifier from '$lib/utils/notifier';
 
 	// Import PeerJS
 	import Peer from 'peerjs';
@@ -17,6 +19,10 @@
 	let errorMessage: string = '';
 	let isPeerReady: boolean = false;
 	let connectionStatus: string = 'Disconnected';
+	let savedPeerId: string = '';
+	let isPeerIdSaved: boolean = false;
+	let isEditingPeerId: boolean = false;
+	let editablePeerId: string = '';
 
 	// Generate a random peer ID
 	function generatePeerId(): string {
@@ -30,7 +36,12 @@
 				peer.destroy();
 			}
 
-			myPeerId = generatePeerId();
+			// Use existing myPeerId if available, otherwise generate new one
+			if (!myPeerId) {
+				myPeerId = generatePeerId();
+				editablePeerId = myPeerId;
+			}
+
 			peer = new Peer(myPeerId, {
 				host: '0.peerjs.com',
 				port: 443,
@@ -151,6 +162,71 @@
 		return timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 	}
 
+	// Load saved peer ID
+	async function loadSavedPeerId() {
+		savedPeerId = await settings.get<string>(SettingKeys.peerId);
+		isPeerIdSaved = !!savedPeerId;
+		if (savedPeerId) {
+			myPeerId = savedPeerId;
+			editablePeerId = savedPeerId;
+		}
+	}
+
+	// Save current peer ID
+	async function savePeerId() {
+		if (!myPeerId) {
+			return;
+		}
+
+		try {
+			await settings.set(SettingKeys.peerId, myPeerId);
+			isPeerIdSaved = true;
+			savedPeerId = myPeerId;
+			Notifier.success('Peer ID saved');
+		} catch (err) {
+			console.error('Error saving peer ID:', err);
+			Notifier.error('Error saving peer ID');
+		}
+	}
+
+	// Generate a new random peer ID
+	function generateNewPeerId() {
+		myPeerId = generatePeerId();
+		isPeerIdSaved = false;
+		editablePeerId = myPeerId;
+	}
+
+	// Start editing peer ID
+	function startEditingPeerId() {
+		isEditingPeerId = true;
+		editablePeerId = myPeerId;
+	}
+
+	// Cancel editing peer ID
+	function cancelEditingPeerId() {
+		isEditingPeerId = false;
+		editablePeerId = '';
+	}
+
+	// Apply custom peer ID
+	function applyCustomPeerId() {
+		if (!editablePeerId.trim()) {
+			errorMessage = 'Peer ID cannot be empty';
+			return;
+		}
+
+		// Check if peer ID is valid (basic validation)
+		if (!/^[a-zA-Z0-9_-]+$/.test(editablePeerId)) {
+			errorMessage = 'Peer ID can only contain letters, numbers, underscores, and hyphens';
+			return;
+		}
+
+		myPeerId = editablePeerId;
+		isEditingPeerId = false;
+		isPeerIdSaved = false;
+		errorMessage = '';
+	}
+
 	// Cleanup on component destroy
 	onDestroy(() => {
 		if (connection) {
@@ -162,8 +238,15 @@
 	});
 
 	// Initialize peer on mount
-	onMount(() => {
-		initPeer();
+	onMount(async () => {
+		await loadSavedPeerId();
+		if (savedPeerId) {
+			// Use saved peer ID if available
+			initPeer();
+		} else {
+			// Generate new peer ID if none saved
+			initPeer();
+		}
 	});
 </script>
 
@@ -181,20 +264,49 @@
 			<div class="form-control mb-4">
 				<label class="label">
 					<span class="label-text">Your Peer ID</span>
+					{#if isPeerIdSaved}
+						<span class="label-text-alt text-success">Saved</span>
+					{/if}
 				</label>
-				<div class="input-group">
-					<input type="text" value={myPeerId} readonly class="input input-bordered w-full" />
-					<button class="btn btn-square" on:click={initPeer} title="Generate new ID">
-						<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h5M20 20v-5h-5M4 20h5v-5M20 4h-5v5" />
-						</svg>
-					</button>
-					<button class="btn btn-square" on:click={() => navigator.clipboard.writeText(myPeerId)} disabled={!myPeerId} title="Copy to clipboard">
-						<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-						</svg>
-					</button>
-				</div>
+				{#if isEditingPeerId}
+					<div class="input-group">
+						<input type="text" bind:value={editablePeerId} class="input input-bordered w-full" placeholder="Enter custom peer ID" />
+						<button class="btn btn-square btn-success" on:click={applyCustomPeerId} title="Apply custom ID">
+							<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+							</svg>
+						</button>
+						<button class="btn btn-square btn-error" on:click={cancelEditingPeerId} title="Cancel">
+							<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+							</svg>
+						</button>
+					</div>
+				{:else}
+					<div class="input-group">
+						<input type="text" value={myPeerId} readonly class="input input-bordered w-full" />
+						<button class="btn btn-square" on:click={generateNewPeerId} title="Generate new ID">
+							<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h5M20 20v-5h-5M4 20h5v-5M20 4h-5v5" />
+							</svg>
+						</button>
+						<button class="btn btn-square" on:click={() => navigator.clipboard.writeText(myPeerId)} disabled={!myPeerId} title="Copy to clipboard">
+							<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+							</svg>
+						</button>
+						<button class="btn btn-square {isPeerIdSaved ? 'btn-success' : 'btn-outline'}" on:click={savePeerId} disabled={!myPeerId} title="{isPeerIdSaved ? 'Already saved' : 'Save this peer ID'}">
+							<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />
+							</svg>
+						</button>
+						<button class="btn btn-square" on:click={startEditingPeerId} title="Edit peer ID">
+							<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+							</svg>
+						</button>
+					</div>
+				{/if}
 				<div class="mt-2">
 					<span class="badge {isPeerReady ? 'badge-success' : 'badge-warning'}">
 						{connectionStatus}

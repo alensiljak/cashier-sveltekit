@@ -53,7 +53,9 @@ export const SettingKeys = {
 	syncAaValues: 'syncAaValues',
 	syncPayees: 'syncPayees',
 	// Home cards
-	visibleCards: 'homeCardNames'
+	visibleCards: 'homeCardNames',
+	// Peer sync
+	peerId: 'peerId'
 };
 
 export const CardNames = {
