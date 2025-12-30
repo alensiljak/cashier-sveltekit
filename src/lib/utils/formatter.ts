@@ -1,9 +1,9 @@
 import type { Money, Xact } from '$lib/data/model';
 import moment from 'moment';
 
-const RED = 'text-red-600';
+const RED = 'text-red-500';
 const YELLOW = 'text-yellow-200';
-const GREEN = 'text-green-600';
+const GREEN = 'text-green-500';
 
 /**
  *
