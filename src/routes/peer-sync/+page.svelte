@@ -3,6 +3,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { SettingKeys, settings } from '$lib/settings';
 	import Notifier from '$lib/utils/notifier';
+	import { PeerDiscovery } from '$lib/utils/peerDiscovery';
 
 	// Import PeerJS
 	import Peer from 'peerjs';
@@ -23,6 +24,8 @@
 	let isPeerIdSaved: boolean = false;
 	let isEditingPeerId: boolean = false;
 	let editablePeerId: string = '';
+	let discoveredPeers: Array<{peerId: string, deviceName: string}> = [];
+	let peerDiscovery: PeerDiscovery | null = null;
 
 	// Generate a random peer ID
 	function generatePeerId(): string {
@@ -54,6 +57,9 @@
 				isPeerReady = true;
 				connectionStatus = 'Ready to connect';
 				errorMessage = '';
+				
+				// Start peer discovery once we have our peer ID
+				initPeerDiscovery();
 			});
 
 			peer.on('error', (err: any) => {
@@ -227,6 +233,19 @@
 		errorMessage = '';
 	}
 
+	// Handle clicking on a discovered peer
+	function selectDiscoveredPeer(peerId: string) {
+		remotePeerId = peerId;
+		
+		// Auto-focus the connect button for better UX
+		setTimeout(() => {
+			const connectButton = document.querySelector('button[on:click*=connectToPeer]');
+			if (connectButton) {
+				(connectButton as HTMLElement).focus();
+			}
+		}, 100);
+	}
+
 	// Cleanup on component destroy
 	onDestroy(() => {
 		if (connection) {
@@ -235,7 +254,25 @@
 		if (peer) {
 			peer.destroy();
 		}
+		if (peerDiscovery) {
+			peerDiscovery.stopDiscovery();
+		}
 	});
+
+	// Initialize peer discovery
+	function initPeerDiscovery() {
+		if (peerDiscovery) {
+			peerDiscovery.stopDiscovery();
+		}
+		
+		if (myPeerId) {
+			peerDiscovery = new PeerDiscovery(myPeerId);
+			peerDiscovery.onPeersUpdatedCallback((peers) => {
+				discoveredPeers = peers.map(p => ({peerId: p.peerId, deviceName: p.deviceName}));
+			});
+			peerDiscovery.startDiscovery();
+		}
+	}
 
 	// Initialize peer on mount
 	onMount(async () => {
@@ -258,11 +295,11 @@
 			<h2 class="text-xl font-bold mb-4">Peer Connection</h2>
 			<div class="alert alert-info mb-4">
 				<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-				<span>1. Share your Peer ID with the remote device. 2. Enter their Peer ID and click Connect. 3. Start chatting!</span>
+				<span>1. Share your Peer ID with the remote device. 2. Enter their Peer ID and click Connect. 3. Start chatting! {#if discoveredPeers.length > 0}Discovered peers will appear below for easy connection.{/if}</span>
 			</div>
 
 			<div class="form-control mb-4">
-				<label class="label">
+				<label class="label" for="your-peer-id">
 					<span class="label-text">Your Peer ID</span>
 					{#if isPeerIdSaved}
 						<span class="label-text-alt text-success">Saved</span>
@@ -270,7 +307,7 @@
 				</label>
 				{#if isEditingPeerId}
 					<div class="input-group">
-						<input type="text" bind:value={editablePeerId} class="input input-bordered w-full" placeholder="Enter custom peer ID" />
+						<input type="text" bind:value={editablePeerId} id="your-peer-id" class="input input-bordered w-full" placeholder="Enter custom peer ID" />
 						<button class="btn btn-square btn-success" on:click={applyCustomPeerId} title="Apply custom ID">
 							<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
@@ -284,7 +321,7 @@
 					</div>
 				{:else}
 					<div class="input-group">
-						<input type="text" value={myPeerId} readonly class="input input-bordered w-full" />
+						<input type="text" value={myPeerId} readonly id="your-peer-id" class="input input-bordered w-full" />
 						<button class="btn btn-square" on:click={generateNewPeerId} title="Generate new ID">
 							<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h5M20 20v-5h-5M4 20h5v-5M20 4h-5v5" />
@@ -326,12 +363,28 @@
 				{/if}
 			</div>
 
+			{#if discoveredPeers.length > 0}
+				<div class="form-control mb-4">
+					<label class="label" for="discovered-peers">
+						<span class="label-text">Discovered Peers on LAN</span>
+					</label>
+					<div class="space-y-2" id="discovered-peers">
+						{#each discoveredPeers as peer}
+							<button class="btn btn-sm btn-outline w-full justify-start" on:click={() => selectDiscoveredPeer(peer.peerId)} aria-label="Connect to {peer.deviceName} ({peer.peerId})">
+								<span class="truncate">{peer.deviceName}</span>
+								<span class="ml-auto text-xs opacity-60">{peer.peerId}</span>
+							</button>
+						{/each}
+					</div>
+				</div>
+			{/if}
+
 			<div class="form-control mb-4">
-				<label class="label">
+				<label class="label" for="remote-peer-id">
 					<span class="label-text">Remote Peer ID</span>
 				</label>
 				<div class="input-group">
-					<input type="text" bind:value={remotePeerId} placeholder="Enter remote peer ID" class="input input-bordered w-full" />
+					<input type="text" bind:value={remotePeerId} id="remote-peer-id" placeholder="Enter remote peer ID" class="input input-bordered w-full" />
 					<button class="btn {isConnected ? 'btn-success' : 'btn-primary'}" on:click={connectToPeer} disabled={!remotePeerId || !isPeerReady}>
 						{isConnected ? 'Connected' : 'Connect'}
 					</button>
