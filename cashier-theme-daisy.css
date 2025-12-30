@@ -18,11 +18,11 @@
 	--color-neutral-content: var(--color-accent-300);
 	--color-info: var(--color-neutral);
 	--color-info-content: var(--color-neutral-content);
-	--color-success: var(--color-primary-300);
+	--color-success: var(--color-primary-400);
 	--color-success-content: var(--color-primary-content);
-	--color-warning: var(--color-accent-300);
+	--color-warning: var(--color-accent-400);
 	--color-warning-content: var(--color-secondary);
-	--color-error: var(--color-secondary-300);
+	--color-error: var(--color-secondary-400);
 	--color-error-content: var(--color-accent-300);
 
 	/* border radius */
