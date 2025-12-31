@@ -7,7 +7,7 @@
 	--color-base-100: oklch(22.47% 0 0);
 	--color-base-200: oklch(18.15% 0 0);
 	--color-base-300: oklch(16% 0 0);
-	--color-base-content: var(--color-accent-300);
+	--color-base-content: var(--color-accent-200);
 	--color-primary: #076461;
 	--color-primary-content: var(--color-accent-400);
 	--color-secondary: #92140c;
