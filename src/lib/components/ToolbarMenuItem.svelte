@@ -29,7 +29,7 @@ Example usage:
 <ToolbarMenuItem text="Restore Settings" targetNav="/settings" Icon={ArrowBigUpIcon} />
 -->
 
-<div class="hover:bg-accent">
+<div>
 	<button type="button" class="btn btn-primary flex w-full flex-row border-0" onclick={onMenuClicked}>
 		<span class="grow text-start">{text}</span>
 		<span class="badge bg-primary/80 border-0">
