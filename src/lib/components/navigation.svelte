@@ -88,12 +88,12 @@
 					<span>Backup</span>
 				</a>
 			</li>
-			<li>
+			<!-- <li>
 				<a href="/peer-sync" class="w-full flex items-center gap-2 py-2 {page.url.pathname === '/peer-sync' ? 'active bg-secondary text-secondary-content' : ''}" onclick={closeDrawer}>
 					<RefreshCw />
 					<span>Peer Sync</span>
 				</a>
-			</li>
+			</li> -->
 			<li>
 				<a href="/help" class="w-full flex items-center gap-2 py-2 {page.url.pathname === '/help' ? 'active bg-secondary text-secondary-content' : ''}" onclick={closeDrawer}>
 					<HelpCircleIcon />
