@@ -5,6 +5,7 @@
 	import { AssetClass } from '$lib/assetAllocation/AssetClass.js';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
+	import AssetClassRow from '$lib/components/AssetClassRow.svelte';
 	import { NUMBER_FORMAT } from '$lib/constants.js';
 	import { AaStocksStore, AssetAllocationStore } from '$lib/data/mainStore.js';
 	import Notifier from '$lib/utils/notifier.js';
@@ -16,6 +17,8 @@
 
 	export let data;
 	let _allocation: AssetClass[];
+	let childrenIndex: Map<string, AssetClass[]> = new Map();
+	let collapsedState: Record<string, boolean> = {};
 
 	onMount(() => {
 		if (!data.aa) {
@@ -24,7 +27,35 @@
 		}
 
 		_allocation = data.assetClasses as AssetClass[];
+		// Build children index for hierarchical rendering
+		buildChildrenIndex(_allocation);
 	});
+
+	function buildChildrenIndex(assetClasses: AssetClass[]) {
+		const index = new Map<string, AssetClass[]>();
+
+		for (let i = 0; i < assetClasses.length; i++) {
+			const ac = assetClasses[i];
+			const parentName = ac.parentName;
+
+			if (!index.has(parentName)) {
+				index.set(parentName, []);
+			}
+
+			index.get(parentName)?.push(ac);
+		}
+
+		childrenIndex = index;
+	}
+
+	function toggleCollapse(fullname: string) {
+		collapsedState[fullname] = !collapsedState[fullname];
+		collapsedState = { ...collapsedState }; // Trigger reactivity
+	}
+
+	function getChildren(fullname: string): AssetClass[] {
+		return childrenIndex.get(fullname) || [];
+	}
 
 	function downloadAsFile(content: string) {
 		// filename
@@ -146,7 +177,7 @@
 	</Toolbar>
 
 	<section class="overflow-auto p-3">
-		<table class="mx-auto max-w-2xl">
+		<table class="mx-auto max-w-4xl">
 			<thead>
 				<tr>
 					<th colspan="1"></th>
@@ -164,35 +195,22 @@
 				</tr>
 			</thead>
 			<tbody>
-				{#each _allocation as item}
-					<tr class={`border-base-content/15 border-b ${getRowColor(item)}`}>
-						<td>
-							<span class={`pl-${item.depth * 2}`}>
-								<a class="underline" href={`/assetclass-detail/${item.fullname}`}>
-									{item.name}
-								</a>
-							</span>
-						</td>
-						<td class="text-end">
-							{numeral(item.allocation).format(NUMBER_FORMAT)}
-						</td>
-						<td class="text-end">
-							{numeral(item.currentAllocation).format(NUMBER_FORMAT)}
-						</td>
-						<td class={`text-end ${getOffsetColor(item.diffPerc)}`}>
-							{numeral(item.diffPerc).format(NUMBER_FORMAT)}
-						</td>
-						<td class="text-end">
-							{numeral(item.allocatedValue).format(NUMBER_FORMAT)}
-						</td>
-						<td class="text-end">
-							{numeral(item.currentValue).format(NUMBER_FORMAT)}
-						</td>
-						<td class={`text-end ${getOffsetColor(item.diffPerc)}`}>
-							{numeral(item.diffAmount).format(NUMBER_FORMAT)}
-						</td>
+				{#if _allocation && _allocation.length > 0}
+					{#each _allocation.filter((item) => item.depth === 0) as rootItem}
+						<AssetClassRow
+							assetClass={rootItem}
+							children={getChildren(rootItem.fullname)}
+							depth={0}
+							{collapsedState}
+							onToggle={toggleCollapse}
+							{childrenIndex}
+						/>
+					{/each}
+				{:else}
+					<tr>
+						<td colspan="7" class="py-4 text-center"> No asset allocation data available </td>
 					</tr>
-				{/each}
+				{/if}
 			</tbody>
 		</table>
 	</section>
