@@ -16,7 +16,6 @@
 
 	export let data;
 	let _allocation: AssetClass[];
-	let buttonContainer: HTMLDivElement;
 
 	onMount(() => {
 		if (!data.aa) {
@@ -28,8 +27,6 @@
 	});
 
 	function downloadAsFile(content: string) {
-		var a = document.createElement('a');
-
 		// filename
 		// todo: let now = moment()
 		let now = new Date();
@@ -41,18 +38,23 @@
 		filename += ('' + now.getMinutes()).padStart(2, '0');
 		// filename += now.getTimezoneOffset()
 		filename += '.txt';
+
+		// Create blob with content
+		const blob = new Blob([content], { type: 'text/plain;charset=utf-8;' });
+		const url = URL.createObjectURL(blob);
+
+		// Create anchor element
+		const a = document.createElement('a');
+		a.href = url;
 		a.download = filename;
-
-		let encoded = btoa(content);
-		// a.href = "data:application/octet-stream;base64," + Base64.encode(this.output);
-		a.href = 'data:text/plain;base64,' + encoded;
-		// charset=UTF-8;
-
-		buttonContainer.appendChild(a);
+		document.body.appendChild(a);
 		a.click();
 
-		// cleanup?
-		buttonContainer.removeChild(a);
+		// Cleanup
+		setTimeout(() => {
+			document.body.removeChild(a);
+			URL.revokeObjectURL(url);
+		}, 100);
 	}
 
 	/**
@@ -194,8 +196,4 @@
 			</tbody>
 		</table>
 	</section>
-	<!-- The button is required for file export, to attach the event! -->
-	<div bind:this={buttonContainer} style="display:none;">
-		<button>Export</button>
-	</div>
 </article>
