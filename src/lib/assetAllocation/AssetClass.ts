@@ -3,7 +3,7 @@ import Big from 'big.js';
 import type { SecurityAnalysis } from './securityAnalysis';
 
 export class AssetClass {
-	fullname: string;
+	fullname: string = '';
 	allocation = 0;
 	allocatedValue = Big(0);
 	currentAllocation = 0;
@@ -15,7 +15,6 @@ export class AssetClass {
 	symbols: string[] = [];
 
 	constructor() {
-		this.fullname = '';
 		// this.level = null; // the depth level, with root Allocation = 0
 	}
 
