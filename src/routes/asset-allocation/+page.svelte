@@ -69,11 +69,14 @@
 		document.body.appendChild(a);
 		a.click();
 
-		// Cleanup
-		setTimeout(() => {
-			document.body.removeChild(a);
-			URL.revokeObjectURL(url);
-		}, 100);
+		// Cleanup when browser is idle (download completed)
+		requestIdleCallback(
+			() => {
+				document.body.removeChild(a);
+				URL.revokeObjectURL(url);
+			},
+			{ timeout: 2000 }
+		);
 	}
 
 	async function onClearCacheClick() {
