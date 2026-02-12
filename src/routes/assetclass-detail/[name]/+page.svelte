@@ -10,6 +10,8 @@
 	import { AaStocksStore } from '$lib/data/mainStore';
 	import { SettingKeys, settings } from '$lib/settings';
 	import * as Formatter from '$lib/utils/formatter.js';
+	import { processWithConcurrencyLimit } from '$lib/utils/concurrency.js';
+	import { Loader, X } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
 
@@ -29,15 +31,21 @@
 	async function fetchAnalysisFor(symbol: string): Promise<SecurityAnalysis> {
 		const svc = new SecurityAnalyser();
 
-		const result: SecurityAnalysis = {
-			yield: await svc.getYield(symbol),
-			gainloss: await svc.getGainLoss(symbol)
+		// Parallelize yield and gainloss API calls
+		const [yieldResult, gainlossResult] = await Promise.all([
+			svc.getYield(symbol),
+			svc.getGainLoss(symbol)
+		]);
+
+		return {
+			yield: yieldResult,
+			gainloss: gainlossResult
 		};
-		return result;
 	}
 
 	/**
 	 * Load security analysis for all symbols.
+	 * Processes stocks in batches of 3 for concurrent API calls.
 	 */
 	async function loadSecurityAnalysis(
 		serverUrl: string,
@@ -52,21 +60,31 @@
 			return symbols;
 		}
 
-		for (let stock of symbols) {
-			let symbol = stock.name;
+		// Filter stocks that need analysis
+		const stocksToLoad = symbols.filter((stock) => !stock.analysis);
+
+		// Process with concurrency limit of 10, showing results as each completes
+		await processWithConcurrencyLimit(stocksToLoad, 10, async (stock) => {
+			const symbol = stock.name;
 			if (!stock) {
-				throw new Error(`Stock ${symbol} not found!`);
+				console.error(`Stock ${symbol} not found!`);
+				return;
 			}
 
-			// update the values
-			if (!stock.analysis) {
-				let analysis = await fetchAnalysisFor(symbol);
-				stock.analysis = analysis;
+			// Mark as loading
+			stock.loading = true;
+			stock.error = undefined;
+			// Trigger reactivity
+			data.stocks = [...data.stocks];
 
-				// update cache
+			try {
+				const analysis = await fetchAnalysisFor(symbol);
+				stock.analysis = analysis;
+				stock.loading = false;
+
+				// Update cache sequentially after successful fetch
 				AaStocksStore.update((cache) => {
-					if (!cache) return;
-					// create a new object with the field.
+					if (!cache) return cache;
 					return {
 						...cache,
 						[symbol]: {
@@ -75,8 +93,15 @@
 						}
 					};
 				});
+			} catch (err) {
+				console.error(`Error loading analysis for ${symbol}:`, err);
+				stock.loading = false;
+				stock.error = err instanceof Error ? err.message : 'Failed to load';
 			}
-		}
+
+			// Trigger reactivity after state change
+			data.stocks = [...data.stocks];
+		});
 
 		return symbols;
 	}
@@ -102,12 +127,20 @@
 			<ul class="ms-4 mt-4">
 				{#each data.stocks || [] as stock}
 					<li class="mt-3">
-						<h6 class="h6">
+						<h6 class="h6 flex items-center gap-2">
 							• {stock.name}
+							{#if stock.loading}
+								<Loader class="h-4 w-4 animate-spin" />
+							{/if}
 						</h6>
 
 						<!-- Analysis -->
-						{#if stock.analysis}
+						{#if stock.error}
+							<div class="text-error ms-3 flex items-center gap-1">
+								<X class="h-4 w-4" />
+								<span class="text-sm">Error loading analysis</span>
+							</div>
+						{:else if stock.analysis}
 							<div class="ms-3">
 								Yield: <span class={`${Formatter.getColourForYield(stock.analysis.yield)}`}
 									>{stock.analysis.yield}</span

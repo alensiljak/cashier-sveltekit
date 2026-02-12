@@ -64,6 +64,8 @@ export interface StockSymbol {
 	name: string;
 	accounts: Account[];
 	analysis?: SecurityAnalysis;
+	loading?: boolean;
+	error?: string;
 }
 
 /**
