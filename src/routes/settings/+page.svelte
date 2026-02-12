@@ -9,6 +9,8 @@
 	import { invalidateAll } from '$app/navigation';
 	import * as OpfsLib from '$lib/utils/opfslib.js';
 	import { AssetAllocationFilename } from '$lib/constants.js';
+	import { AssetAllocationEngine } from '$lib/assetAllocation/AssetAllocation';
+	import { validate } from '$lib/assetAllocation/assetAllocationValidation';
 	import {
 		AaStocksStore,
 		AssetAllocationStore,
@@ -87,6 +89,22 @@
 		const contents: any = await appService.readFileAsync(file as Blob);
 
 		// save to OPFS
+		try {
+			const engine = new AssetAllocationEngine();
+			engine.assetClasses = engine.parseDefinition(contents);
+			engine.assetClassIndex = engine.buildAssetClassIndex(engine.assetClasses);
+			engine.childrenIndex = engine.buildChildrenIndex(engine.assetClasses);
+
+			const errors = validate(engine);
+			if (errors.length > 0) {
+				Notifier.error('Invalid Asset Allocation: ' + errors.join(' '));
+				return;
+			}
+		} catch (error) {
+			Notifier.error(`Failed to parse Asset Allocation file: ${error}`);
+			return;
+		}
+
 		await OpfsLib.saveFile(AssetAllocationFilename, contents);
 
 		// reset AA cache
