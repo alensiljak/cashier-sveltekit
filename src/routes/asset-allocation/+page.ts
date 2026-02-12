@@ -5,6 +5,7 @@ import { AssetAllocationStore } from '$lib/data/mainStore';
 import Notifier from '$lib/utils/notifier';
 import * as OpfsLib from '$lib/utils/opfslib.js';
 import { get } from 'svelte/store';
+import { formatErrorForDisplay, AppError } from '$lib/utils/errors';
 
 const aa = new AssetAllocationEngine();
 
@@ -20,10 +21,31 @@ export async function load() {
 			AssetAllocationStore.set(assetClasses);
 		}
 
+		// Show warnings if any commodities are not mapped
+		if (aa.warnings.length > 0) {
+			const warningMsg =
+				aa.warnings.length === 1
+					? aa.warnings[0]
+					: `${aa.warnings.length} commodities not mapped to asset classes. Check console for details.`;
+			Notifier.warning(warningMsg);
+			console.warn('Asset Allocation warnings:', aa.warnings);
+		}
+
 		return { aa, assetClasses };
 	} catch (error) {
 		console.error(error);
-		Notifier.error(`Could not load Asset Allocation. ${error}`);
+
+		// Use improved error formatting for better user messages
+		if (error instanceof AppError) {
+			const { title, message, action } = formatErrorForDisplay(error);
+			const fullMessage = action ? `${message}\n\n${action}` : message;
+			Notifier.error(`${title}: ${fullMessage}`);
+		} else {
+			Notifier.error(`Could not load Asset Allocation. ${error}`);
+		}
+
+		// Return empty data to prevent page crash
+		return { aa, assetClasses: [] };
 	}
 }
 

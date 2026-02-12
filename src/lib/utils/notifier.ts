@@ -12,7 +12,7 @@ const Notifier = {
 		type: 'info' | 'error' | 'success' | undefined,
 		title: string | undefined = undefined
 	) {
-		switch(type) {
+		switch (type) {
 			case 'success':
 				toaster.success(message);
 				break;
@@ -34,6 +34,9 @@ const Notifier = {
 	},
 	info(message: string) {
 		toaster.info(message);
+	},
+	warning(message: string) {
+		toaster.warning(message);
 	}
 };
 

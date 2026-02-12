@@ -5,6 +5,7 @@ import appService from '$lib/services/appService';
 import { getQueries } from '$lib/sync-queries';
 import * as BeancountParser from '$lib/utils/beancountParser';
 import * as LedgerParser from '$lib/utils/ledgerParser';
+import { UserError, NotFoundError, ApiError } from '$lib/utils/errors';
 
 const DATE_FORMAT = 'YYYY-MM-DD';
 
@@ -111,7 +112,11 @@ export class SecurityAnalyser {
 			return 'n/a';
 		}
 		if (report.length > 1) {
-			throw new Error('Multiple gainloss records found for symbol ' + symbol);
+			throw new UserError(
+				`Multiple gain/loss records found for ${symbol}`,
+				`Check your ${ptaSystem} data for duplicate entries for this symbol`,
+				'This usually happens when the same symbol exists in multiple accounts without proper cost basis tracking'
+			);
 		}
 		// With Beancount, the result is an array of all accounts with this column values.
 		const line: Array<string> = report[0];
@@ -154,7 +159,11 @@ export class SecurityAnalyser {
 			const line = report[0];
 			total = BeancountParser.getMoneyFromTupleString(line[0]).quantity;
 		} else {
-			throw new Error('Unknown PTA system: ' + ptaSystem);
+			throw new UserError(
+				`Unsupported accounting system: "${ptaSystem}"`,
+				'Please set a valid PTA system in settings (ledger or beancount)',
+				`Received: "${ptaSystem}". Supported systems are: ledger, beancount`
+			);
 		}
 
 		return total;
@@ -177,7 +186,11 @@ export class SecurityAnalyser {
 			const line = report[0];
 			return BeancountParser.getMoneyFromTupleString(line[0]).quantity;
 		} else {
-			throw new Error('Unknown PTA system: ' + ptaSystem);
+			throw new UserError(
+				`Unsupported accounting system: "${ptaSystem}"`,
+				'Please set a valid PTA system in settings (ledger or beancount)',
+				`Received: "${ptaSystem}". Supported systems are: ledger, beancount`
+			);
 		}
 	}
 
@@ -194,7 +207,11 @@ export class SecurityAnalyser {
 		// -1,139 EUR  Assets
 		const parts = line.split(' ');
 		if (parts.length != 4) {
-			throw new Error('wrong number of parts!');
+			throw new UserError(
+				'Unexpected response format from ledger',
+				'Please check that your ledger version is compatible',
+				`Expected format: "-1,139 EUR  Assets", got: "${line.substring(0, 50)}"`
+			);
 		}
 
 		let totalNumeric = parts[0];

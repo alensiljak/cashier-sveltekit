@@ -10,6 +10,12 @@ import Big from 'big.js';
 import type { Money } from '../data/model';
 import { NUMBER_FORMAT } from '../constants';
 import type { CurrentValuesDict } from '$lib/data/viewModels';
+import {
+	UserError,
+	NotFoundError,
+	ValidationError,
+	type ResultWithWarnings
+} from '$lib/utils/errors';
 
 /**
  * loadDefinition = loads the pre-set definition
@@ -20,11 +26,13 @@ export class AssetAllocationEngine {
 	assetClassIndex: Record<string, AssetClass>;
 	stockIndex: Record<string, string>;
 	childrenIndex: Map<string, AssetClass[]>;
+	warnings: string[] = [];
 
 	constructor() {
 		this.assetClassIndex = {};
 		this.stockIndex = {};
 		this.childrenIndex = new Map();
+		this.warnings = [];
 	}
 
 	async loadFullAssetAllocation(definition: string): Promise<AssetClass[]> {
@@ -244,7 +252,11 @@ export class AssetAllocationEngine {
 			// Update existing account.
 			const account = await appService.db.accounts.get(key);
 			if (!account) {
-				throw new Error('Invalid account ' + key);
+				throw new NotFoundError(
+					'Account',
+					key,
+					'Please check the account name or reload your data'
+				);
 			}
 			account.currentValue = balance.quantity;
 			account.currentCurrency = balance.currency;
@@ -301,7 +313,11 @@ export class AssetAllocationEngine {
 
 	parseDefinition(definition: string): AssetClass[] {
 		if (!definition) {
-			throw new Error('The AA definition not set.');
+			throw new ValidationError(
+				'Asset allocation definition is empty',
+				'definition',
+				'Please import or create an asset allocation definition file'
+			);
 		}
 
 		// read from TOML file.
@@ -314,8 +330,10 @@ export class AssetAllocationEngine {
 	/**
 	 * Load current balances from accounts.
 	 * Add the account balances to asset classes.
+	 * @returns Array of warning messages for unmapped commodities
 	 */
-	async loadCurrentValues() {
+	async loadCurrentValues(): Promise<string[]> {
+		this.warnings = [];
 		const defaultCurrency = await appService.getDefaultCurrency();
 		const invAccounts = await loadInvestmentAccounts();
 
@@ -338,26 +356,34 @@ export class AssetAllocationEngine {
 			// Now get the asset class for this commodity.
 			const assetClassName = this.stockIndex[commodity];
 			if (!assetClassName) {
-				throw new Error(`Asset class name not found for commodity ${commodity}`);
+				const warning = `Commodity "${commodity}" is not mapped to any asset class. Add it to your allocation definition to include it in calculations.`;
+				this.warnings.push(warning);
+				console.warn(warning);
+				return;
 			}
 			const assetClass = this.assetClassIndex[assetClassName];
 			if (!assetClass) {
-				throw new Error(`Asset class not found: ${assetClassName}`);
+				const warning = `Asset class "${assetClassName}" referenced by "${commodity}" was not found. Check your allocation definition.`;
+				this.warnings.push(warning);
+				console.warn(warning);
+				return;
 			}
 
-			// if (isNaN(assetClass.currentValue)) {
-			//   // typeof assetClass.currentValue === 'undefined' ||
-			//   assetClass.currentValue = 0
-			// }
 			assetClass.currentValue = assetClass.currentValue.plus(amount);
 		});
+
+		return this.warnings;
 	}
 
 	sumGroupBalances(acIndex: Record<string, AssetClass>) {
 		const root = acIndex['Allocation'];
 
 		if (root == null) {
-			throw new Error('Asset Allocation not defined. Please import the definition file.');
+			throw new UserError(
+				'Asset Allocation root not found',
+				'Please import a valid asset allocation definition file with an "Allocation" root entry',
+				'The allocation file should contain a top-level "Allocation" section'
+			);
 		}
 
 		const sum = this.sumChildren(acIndex, root);
