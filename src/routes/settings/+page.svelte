@@ -86,7 +86,7 @@
 			return;
 		}
 		let file = aa_files?.[0];
-		const contents: any = await appService.readFileAsync(file as Blob);
+		const contents: string = await appService.readFileAsync(file as Blob);
 
 		// save to OPFS
 		try {

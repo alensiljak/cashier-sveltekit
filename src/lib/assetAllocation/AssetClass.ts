@@ -81,6 +81,7 @@ export interface StockSymbol {
 export interface AssetClassDefinition {
 	allocation: number;
 	symbols: string[];
+	[key: string]: AssetClassDefinition | number | string[] | undefined;
 }
 
 export type StockCache = Record<string, StockSymbol>;

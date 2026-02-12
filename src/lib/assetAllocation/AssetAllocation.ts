@@ -264,9 +264,7 @@ export class AssetAllocationEngine {
 		// only use the children.
 
 		for (const propertyName in rootObject) {
-			// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-			// @ts-ignore
-			const child: AssetClassDefinition = rootObject[propertyName];
+			const child = rootObject[propertyName] as AssetClassDefinition;
 
 			// Only process the other definitions, not the properties (like allocation).
 			// symbols is an array, which is also an object. Skip.
