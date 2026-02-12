@@ -1,6 +1,11 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 	import { AssetAllocationEngine } from '$lib/assetAllocation/AssetAllocation.js';
+	import {
+		buildChildrenIndex,
+		getOffsetColor,
+		getRowColor
+	} from '$lib/assetAllocation/assetAllocationUtils.js';
 	import { validate } from '$lib/assetAllocation/assetAllocationValidation.js';
 	import { AssetClass } from '$lib/assetAllocation/AssetClass.js';
 	import Toolbar from '$lib/components/Toolbar.svelte';
@@ -28,25 +33,8 @@
 
 		_allocation = data.assetClasses as AssetClass[];
 		// Build children index for hierarchical rendering
-		buildChildrenIndex(_allocation);
+		childrenIndex = buildChildrenIndex(_allocation);
 	});
-
-	function buildChildrenIndex(assetClasses: AssetClass[]) {
-		const index = new Map<string, AssetClass[]>();
-
-		for (let i = 0; i < assetClasses.length; i++) {
-			const ac = assetClasses[i];
-			const parentName = ac.parentName;
-
-			if (!index.has(parentName)) {
-				index.set(parentName, []);
-			}
-
-			index.get(parentName)?.push(ac);
-		}
-
-		childrenIndex = index;
-	}
 
 	function toggleCollapse(fullname: string) {
 		collapsedState[fullname] = !collapsedState[fullname];
@@ -86,46 +74,6 @@
 			document.body.removeChild(a);
 			URL.revokeObjectURL(url);
 		}, 100);
-	}
-
-	/**
-	 * Colors the values with offset.
-	 * @param value
-	 */
-	function getOffsetColor(value: number) {
-		if (value <= -20) {
-			return 'text-red-700';
-		}
-		if (-20 < value && value < 0) {
-			return 'text-red-300';
-		}
-		if (0 < value && value < 20) {
-			return 'text-green-300';
-		}
-		if (value >= 20) {
-			return 'text-green-700';
-		}
-	}
-
-	function getRowColor(ac: AssetClass) {
-		// determine if this is an asset class by checking for symbols.
-		if (ac.symbols?.length) {
-			return '';
-		}
-
-		const depth = ac.depth;
-		// root
-		if (depth === 0) {
-			return 'bg-gray-600';
-		}
-		// equity/fixed/real
-		if (depth === 1) {
-			return 'bg-gray-700';
-		}
-		// area
-		if (depth === 2) {
-			return 'bg-gray-800';
-		}
 	}
 
 	async function onClearCacheClick() {

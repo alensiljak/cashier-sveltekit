@@ -61,6 +61,20 @@ export class AssetAllocationEngine {
 		return result;
 	}
 
+	/**
+	 * Parse the asset allocation definition without loading current values.
+	 * Used for validation during import without the full processing overhead.
+	 * This method sets up all internal indices required for validation.
+	 * @param definition - The TOML asset allocation definition
+	 */
+	parseForValidation(definition: string): void {
+		this.assetClasses = this.parseDefinition(definition);
+
+		this.assetClassIndex = this.buildAssetClassIndex(this.assetClasses);
+		this.childrenIndex = this.buildChildrenIndex(this.assetClasses);
+		this.stockIndex = this.buildStockIndex(this.assetClasses);
+	}
+
 	buildAssetClassIndex(assetClasses: AssetClass[]): Record<string, AssetClass> {
 		const index: Record<string, AssetClass> = {};
 
@@ -70,27 +84,6 @@ export class AssetAllocationEngine {
 		}
 
 		return index;
-	}
-
-	/**
-	 * Build a children index for efficient child lookups
-	 * @param {AssetClass[]} assetClasses
-	 */
-	buildChildrenIndex(assetClasses: AssetClass[]): Map<string, AssetClass[]> {
-		const childrenIndex = new Map<string, AssetClass[]>();
-
-		for (let i = 0; i < assetClasses.length; i++) {
-			const ac = assetClasses[i];
-			const parentName = ac.parentName;
-
-			if (!childrenIndex.has(parentName)) {
-				childrenIndex.set(parentName, []);
-			}
-
-			childrenIndex.get(parentName)?.push(ac);
-		}
-
-		return childrenIndex;
 	}
 
 	/**
@@ -112,6 +105,28 @@ export class AssetAllocationEngine {
 			}
 		}
 		return index;
+	}
+
+	/**
+	 * Builds a children index for efficient child lookups in hierarchical asset allocation data.
+	 * @param assetClasses - Array of AssetClass objects
+	 * @returns Map where keys are parent names and values are arrays of child AssetClasses
+	 */
+	private buildChildrenIndex(assetClasses: AssetClass[]): Map<string, AssetClass[]> {
+		const childrenIndex = new Map<string, AssetClass[]>();
+
+		for (let i = 0; i < assetClasses.length; i++) {
+			const ac = assetClasses[i];
+			const parentName = ac.parentName;
+
+			if (!childrenIndex.has(parentName)) {
+				childrenIndex.set(parentName, []);
+			}
+
+			childrenIndex.get(parentName)?.push(ac);
+		}
+
+		return childrenIndex;
 	}
 
 	/**

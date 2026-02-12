@@ -91,9 +91,7 @@
 		// save to OPFS
 		try {
 			const engine = new AssetAllocationEngine();
-			engine.assetClasses = engine.parseDefinition(contents);
-			engine.assetClassIndex = engine.buildAssetClassIndex(engine.assetClasses);
-			engine.childrenIndex = engine.buildChildrenIndex(engine.assetClasses);
+			engine.parseForValidation(contents);
 
 			const errors = validate(engine);
 			if (errors.length > 0) {

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { AssetClass } from '$lib/assetAllocation/AssetClass.js';
+	import { getOffsetColor, getRowColor } from '$lib/assetAllocation/assetAllocationUtils.js';
 	import { NUMBER_FORMAT } from '$lib/constants.js';
 	import numeral from 'numeral';
 	import { ChevronDown, ChevronRight } from '@lucide/svelte';
@@ -11,42 +12,6 @@
 	export let collapsedState: Record<string, boolean> = {};
 	export let onToggle: (fullname: string) => void;
 	export let childrenIndex: Map<string, AssetClass[]> = new Map();
-
-	function getOffsetColor(value: number) {
-		if (value <= -20) {
-			return 'text-red-700';
-		}
-		if (-20 < value && value < 0) {
-			return 'text-red-300';
-		}
-		if (0 < value && value < 20) {
-			return 'text-green-300';
-		}
-		if (value >= 20) {
-			return 'text-green-700';
-		}
-	}
-
-	function getRowColor(ac: AssetClass) {
-		// determine if this is an asset class by checking for symbols.
-		if (ac.symbols?.length) {
-			return '';
-		}
-
-		const depth = ac.depth;
-		// root
-		if (depth === 0) {
-			return 'bg-gray-600';
-		}
-		// equity/fixed/real
-		if (depth === 1) {
-			return 'bg-gray-700';
-		}
-		// area
-		if (depth === 2) {
-			return 'bg-gray-800';
-		}
-	}
 
 	function isCollapsible(ac: AssetClass): boolean {
 		// Asset classes with symbols are leaf nodes and not collapsible
