@@ -119,7 +119,7 @@
 		}
 
 		// confirm that the group allocations match the sum of the children's allocation.
-		let errors = validate(data.aa!.assetClassIndex);
+		let errors = validate(data.aa!);
 
 		if (errors.length > 0) {
 			let message = 'Errors: ';

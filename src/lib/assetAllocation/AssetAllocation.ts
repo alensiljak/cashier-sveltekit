@@ -16,12 +16,15 @@ import type { CurrentValuesDict } from '$lib/data/viewModels';
  */
 export class AssetAllocationEngine {
 	assetClasses: AssetClass[] = [];
+	// index of name:asset-class pairs
 	assetClassIndex: Record<string, AssetClass>;
 	stockIndex: Record<string, string>;
+	childrenIndex: Map<string, AssetClass[]>;
 
 	constructor() {
 		this.assetClassIndex = {};
 		this.stockIndex = {};
+		this.childrenIndex = new Map();
 	}
 
 	async loadFullAssetAllocation(definition: string): Promise<AssetClass[]> {
@@ -31,6 +34,9 @@ export class AssetAllocationEngine {
 		if (!this.assetClasses.length) return [];
 
 		this.assetClassIndex = this.buildAssetClassIndex(this.assetClasses);
+
+		// build the children index for efficient lookups
+		this.childrenIndex = this.buildChildrenIndex(this.assetClasses);
 
 		// build the stock index
 		this.stockIndex = this.buildStockIndex(this.assetClasses);
@@ -64,6 +70,27 @@ export class AssetAllocationEngine {
 		}
 
 		return index;
+	}
+
+	/**
+	 * Build a children index for efficient child lookups
+	 * @param {AssetClass[]} assetClasses
+	 */
+	buildChildrenIndex(assetClasses: AssetClass[]): Map<string, AssetClass[]> {
+		const childrenIndex = new Map<string, AssetClass[]>();
+
+		for (let i = 0; i < assetClasses.length; i++) {
+			const ac = assetClasses[i];
+			const parentName = ac.parentName;
+
+			if (!childrenIndex.has(parentName)) {
+				childrenIndex.set(parentName, []);
+			}
+
+			childrenIndex.get(parentName)?.push(ac);
+		}
+
+		return childrenIndex;
 	}
 
 	/**
@@ -326,8 +353,8 @@ export class AssetAllocationEngine {
 	}
 
 	sumChildren(dictionary: object, item: AssetClass): Big {
-		// find all children
-		const children = findChildren(dictionary, item);
+		// find all children using the pre-built index (O(1) lookup)
+		const children = this.childrenIndex.get(item.fullname) || [];
 		if (children.length === 0) {
 			return item.currentValue;
 		}
@@ -343,16 +370,4 @@ export class AssetAllocationEngine {
 
 		return sum;
 	}
-}
-
-export function findChildren(dictionary: object, parent: AssetClass) {
-	const children: AssetClass[] = [];
-
-	Object.values(dictionary).forEach((val) => {
-		if (parent.fullname === val.parentName) {
-			children.push(val);
-		}
-	});
-
-	return children;
 }

@@ -2,21 +2,22 @@
     validation
 */
 
-import { findChildren } from './AssetAllocation';
+import { AssetAllocationEngine } from './AssetAllocation';
 import type { AssetClass } from './AssetClass';
 
 /**
  * Validate Asset Allocation.
  * Currently checks the definition by comparing group sums.
- * @param assetClassList dictionary of asset classes
+ * @param engine AssetAllocationEngine instance
  */
-export function validate(assetClassList: Record<string, AssetClass>) {
+export function validate(engine: AssetAllocationEngine) {
 	const errors: string[] = [];
+	const assetClassList = engine.assetClassIndex;
 	const keys = Object.keys(assetClassList);
 
 	keys.forEach((acName) => {
 		const ac: AssetClass = assetClassList[acName];
-		const result = validateGroupAllocation(ac, assetClassList);
+		const result = validateGroupAllocation(ac, engine);
 		if (result) {
 			errors.push(result);
 		}
@@ -31,8 +32,8 @@ export function validate(assetClassList: Record<string, AssetClass>) {
  * Validate that the group's allocation matches the sum of the children classes.
  * @param {AssetClass} assetClass
  */
-function validateGroupAllocation(assetClass: AssetClass, list: Record<string, AssetClass>) {
-	const children = findChildren(list, assetClass);
+function validateGroupAllocation(assetClass: AssetClass, engine: AssetAllocationEngine) {
+	const children = engine.childrenIndex.get(assetClass.fullname) || [];
 	if (children.length === 0) return;
 
 	// sum the children's allocation.
