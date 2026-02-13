@@ -21,6 +21,9 @@
 	let isAcceptingAnswer: boolean = false;
 	let isAcceptingOffer: boolean = false;
 
+	// Panel visibility
+	let activePanel: 'generate' | 'accept' | null = null;
+
 	// Connection & Chat
 	let connectionManager: PeerConnectionManager | null = null;
 	let connectionStatus: 'disconnected' | 'connecting' | 'connected' | 'failed' = 'disconnected';
@@ -336,144 +339,151 @@
 			</div>
 		</div>
 
-		<!-- Create Offer Section -->
-		<div class="card bg-base-200 shadow-xl">
-			<div class="card-body p-4">
-				<h2 class="card-title text-lg">Create Offer</h2>
-				<p class="text-sm opacity-70">Generate an offer to connect to a remote peer.</p>
-
-				{#if isGeneratingOffer}
-					<div class="alert alert-info">
-						<span class="loading loading-spinner"></span>
-						Gathering ICE candidates...
-					</div>
-				{/if}
-
-				{#if offerText}
-					<div class="form-control mt-4">
-						<label class="label" for="offer-output">
-							<span class="label-text">Your Offer (copy and send to remote peer)</span>
-						</label>
-						<textarea
-							id="offer-output"
-							bind:value={offerText}
-							readonly
-							class="textarea textarea-bordered h-32 font-mono text-xs"
-						></textarea>
-						<button
-							class="btn btn-primary mt-2"
-							on:click={() => copyToClipboard(offerText, 'Offer copied to clipboard')}
-						>
-							Copy Offer to Clipboard
-						</button>
-					</div>
-				{:else}
-					<button
-						class="btn btn-primary mt-2"
-						on:click={generateOffer}
-						disabled={isGeneratingOffer || !myPeerId}
-					>
-						Generate Offer
-					</button>
-				{/if}
-			</div>
+		<!-- Panel Selection Buttons -->
+		<div class="flex gap-2">
+			<button
+				class="btn btn-primary flex-1"
+				class:btn-outline={activePanel !== 'generate'}
+				on:click={() => (activePanel = activePanel === 'generate' ? null : 'generate')}
+			>
+				Generate Offer
+			</button>
+			<button
+				class="btn btn-primary flex-1"
+				class:btn-outline={activePanel !== 'accept'}
+				on:click={() => (activePanel = activePanel === 'accept' ? null : 'accept')}
+			>
+				Accept Offer
+			</button>
 		</div>
 
-		<!-- Accept Offer Section -->
-		<div class="card bg-base-200 shadow-xl">
-			<div class="card-body p-4">
-				<h2 class="card-title text-lg">Accept Offer</h2>
-				<p class="text-sm opacity-70">Paste the offer received from a remote peer.</p>
+		<!-- Create Offer Panel -->
+		{#if activePanel === 'generate'}
+			<div class="card bg-base-200 shadow-xl">
+				<div class="card-body p-4">
+					<h2 class="card-title text-lg">Create Offer</h2>
+					<p class="text-sm opacity-70">Generate an offer to connect to a remote peer.</p>
 
-				{#if isGeneratingAnswer}
-					<div class="alert alert-info">
-						<span class="loading loading-spinner"></span>
-						Gathering ICE candidates...
-					</div>
-				{/if}
+					{#if isGeneratingOffer}
+						<div class="alert alert-info">
+							<span class="loading loading-spinner"></span>
+							Gathering ICE candidates...
+						</div>
+					{/if}
 
-				{#if answerText}
-					<div class="form-control mt-4">
-						<label class="label" for="answer-output">
-							<span class="label-text">Your Answer (copy and send back to remote peer)</span>
-						</label>
-						<textarea
-							id="answer-output"
-							bind:value={answerText}
-							readonly
-							class="textarea textarea-bordered h-32 font-mono text-xs"
-						></textarea>
+					{#if offerText}
+						<div class="form-control mt-4">
+							<label class="label" for="offer-output">
+								<span class="label-text">Your Offer (copy and send to remote peer)</span>
+							</label>
+							<textarea
+								id="offer-output"
+								bind:value={offerText}
+								readonly
+								class="textarea textarea-bordered h-32 font-mono text-xs"
+							></textarea>
+							<button
+								class="btn btn-primary mt-2"
+								on:click={() => copyToClipboard(offerText, 'Offer copied to clipboard')}
+							>
+								Copy Offer to Clipboard
+							</button>
+						</div>
+					{:else}
 						<button
 							class="btn btn-primary mt-2"
-							on:click={() => copyToClipboard(answerText, 'Answer copied to clipboard')}
+							on:click={generateOffer}
+							disabled={isGeneratingOffer || !myPeerId}
 						>
-							Copy Answer to Clipboard
+							Generate Offer
 						</button>
-					</div>
-				{:else}
-					<div class="form-control mt-4">
-						<label class="label" for="remote-offer-input">
-							<span class="label-text">Remote Peer's Offer</span>
-						</label>
-						<textarea
-							id="remote-offer-input"
-							bind:value={remoteOffer}
-							placeholder="Paste offer here..."
-							class="textarea textarea-bordered h-32 font-mono text-xs"
-						></textarea>
-						<button
-							class="btn btn-primary mt-2"
-							on:click={processOffer}
-							disabled={isGeneratingAnswer}
-						>
-							Enter Offer & Generate Answer
-						</button>
-					</div>
-				{/if}
-			</div>
-		</div>
-
-		<!-- Accept Answer Section -->
-		<div class="card bg-base-200 shadow-xl">
-			<div class="card-body p-4">
-				<h2 class="card-title text-lg">Accept Answer</h2>
-				<p class="text-sm opacity-70">Paste the answer received from the remote peer.</p>
-
-				{#if isAcceptingAnswer}
-					<div class="alert alert-info">
-						<span class="loading loading-spinner"></span>
-						Processing answer...
-					</div>
-				{/if}
-
-				<div class="form-control mt-4">
-					<label class="label" for="remote-answer-input">
-						<span class="label-text">Remote Peer's Answer</span>
-					</label>
-					<textarea
-						id="remote-answer-input"
-						bind:value={remoteAnswer}
-						placeholder="Paste answer here..."
-						class="textarea textarea-bordered h-32 font-mono text-xs"
-						disabled={isAcceptingAnswer || connectionStatus === 'connected'}
-					></textarea>
-					<button
-						class="btn btn-primary mt-2"
-						on:click={processAnswer}
-						disabled={isAcceptingAnswer || connectionStatus === 'connected'}
-					>
-						Accept Answer & Connect
-					</button>
+					{/if}
 				</div>
 			</div>
-		</div>
+		{/if}
+
+		<!-- Accept Offer Panel -->
+		{#if activePanel === 'accept'}
+			<div class="card bg-base-200 shadow-xl">
+				<div class="card-body p-4">
+					<h2 class="card-title text-lg">Accept Offer</h2>
+					<p class="text-sm opacity-70">
+						Paste the offer received from a remote peer and generate an answer.
+					</p>
+
+					{#if isGeneratingAnswer}
+						<div class="alert alert-info">
+							<span class="loading loading-spinner"></span>
+							Gathering ICE candidates...
+						</div>
+					{/if}
+
+					{#if answerText}
+						<div class="form-control mt-4">
+							<label class="label" for="answer-output">
+								<span class="label-text">Your Answer (copy and send back to remote peer)</span>
+							</label>
+							<textarea
+								id="answer-output"
+								bind:value={answerText}
+								readonly
+								class="textarea textarea-bordered h-32 font-mono text-xs"
+							></textarea>
+							<button
+								class="btn btn-primary mt-2"
+								on:click={() => copyToClipboard(answerText, 'Answer copied to clipboard')}
+							>
+								Copy Answer to Clipboard
+							</button>
+							<div class="mt-4">
+								<label class="label" for="remote-answer-input">
+									<span class="label-text">Remote Peer's Answer (to establish connection)</span>
+								</label>
+								<textarea
+									id="remote-answer-input"
+									bind:value={remoteAnswer}
+									placeholder="Paste answer here to establish connection..."
+									class="textarea textarea-bordered h-32 font-mono text-xs"
+									disabled={isAcceptingAnswer || connectionStatus === 'connected'}
+								></textarea>
+								<button
+									class="btn btn-primary mt-2"
+									on:click={processAnswer}
+									disabled={isAcceptingAnswer || connectionStatus === 'connected'}
+								>
+									Accept Answer & Connect
+								</button>
+							</div>
+						</div>
+					{:else}
+						<div class="form-control mt-4">
+							<label class="label" for="remote-offer-input">
+								<span class="label-text">Remote Peer's Offer</span>
+							</label>
+							<textarea
+								id="remote-offer-input"
+								bind:value={remoteOffer}
+								placeholder="Paste offer here..."
+								class="textarea textarea-bordered h-32 font-mono text-xs"
+							></textarea>
+							<button
+								class="btn btn-primary mt-2"
+								on:click={processOffer}
+								disabled={isGeneratingAnswer}
+							>
+								Enter Offer & Generate Answer
+							</button>
+						</div>
+					{/if}
+				</div>
+			</div>
+		{/if}
 
 		<!-- Chat Section -->
-		<div class="card bg-base-200 shadow-xl">
-			<div class="card-body p-4">
-				<h2 class="card-title text-lg">Chat</h2>
-
-				{#if connectionStatus === 'connected'}
+		{#if connectionStatus === 'connected'}
+			<div class="card bg-base-200 shadow-xl">
+				<div class="card-body p-4">
+					<h2 class="card-title text-lg">Chat</h2>
 					<div class="flex h-96 flex-col">
 						<!-- Messages -->
 						<div id="chat-messages" class="bg-base-300 mb-4 flex-1 overflow-y-auto rounded-lg p-3">
@@ -509,12 +519,8 @@
 							</button>
 						</div>
 					</div>
-				{:else}
-					<div class="bg-base-300 flex h-64 items-center justify-center rounded-lg">
-						<p class="opacity-60">Connect to a peer to start chatting</p>
-					</div>
-				{/if}
+				</div>
 			</div>
-		</div>
+		{/if}
 	</section>
 </article>
