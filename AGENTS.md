@@ -8,8 +8,7 @@ It is implemented as a PWA application using Svelte and DaisyUI frameworks.
 
 The application styling has recently been migrated from Skeleton v3 to DaisyUI and not all the visual aspects may have been migrated correctly.
 
-## Tasks
+## Dev Server
 
-### Publish the project
-
-Run `npm run publish` to build and deploy the app to production.
+Assume the local dev server is running at `http://localhost:5173/`.
+The user will maintain this.
