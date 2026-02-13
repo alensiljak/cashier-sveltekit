@@ -5,6 +5,7 @@ import { SvelteKitPWA } from '@vite-pwa/sveltekit';
 import { defineConfig } from 'vite';
 // import { svelte } from '@sveltejs/vite-plugin-svelte';
 import tailwindcss from '@tailwindcss/vite';
+import mkcert from 'vite-plugin-mkcert'
 
 // Generate build date in YYYYMMDD format
 const buildDate = new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -140,9 +141,13 @@ const config: UserConfig = defineConfig({
 			kit: {
 				includeVersionFile: true
 			}
-		})
+		}),
+		mkcert(),
 		//VitePWA({ registerType: 'autoUpdate' })
-	]
+	],
+	server: {
+		https: true,
+	},
 	// test: {
 	// 	environment: 'jsdom',
 	// 	globals: true,
