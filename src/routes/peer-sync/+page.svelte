@@ -388,6 +388,28 @@
 							>
 								Copy Offer to Clipboard
 							</button>
+
+							<div class="mt-4">
+								<label class="label" for="remote-answer-input">
+									<span class="label-text"
+										>Remote Peer's Answer (paste here to establish connection)</span
+									>
+								</label>
+								<textarea
+									id="remote-answer-input"
+									bind:value={remoteAnswer}
+									placeholder="Paste answer here to establish connection..."
+									class="textarea textarea-bordered h-32 font-mono text-xs"
+									disabled={isAcceptingAnswer || connectionStatus === 'connected'}
+								></textarea>
+								<button
+									class="btn btn-primary mt-2"
+									on:click={processAnswer}
+									disabled={isAcceptingAnswer || connectionStatus === 'connected'}
+								>
+									Accept Answer & Connect
+								</button>
+							</div>
 						</div>
 					{:else}
 						<button

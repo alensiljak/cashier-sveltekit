@@ -83,7 +83,7 @@ export class PeerConnectionManager {
 		await this.waitForIceGatheringComplete();
 
 		if (!this.peerConnection!.localDescription) {
-			throw new Error('Failed to generate answer: no local description');
+			throw new Error('Failed to generate offer: no local description');
 		}
 
 		const sdp = this.peerConnection!.localDescription.sdp;
