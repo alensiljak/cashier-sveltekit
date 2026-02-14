@@ -8,12 +8,14 @@ export class PeerConnectionManager {
 	private localPeerId: string;
 	private remotePeerId: string | null = null;
 	private _connectionState: 'new' | 'connecting' | 'connected' | 'disconnected' | 'failed' = 'new';
+	private iceCandidates: string[] = [];
 
 	// Event handlers
 	public onIceGatheringComplete: ((sdp: string) => void) | null = null;
 	public onConnectionStateChange: ((state: string) => void) | null = null;
 	public onMessage: ((message: string) => void) | null = null;
 	public onError: ((error: Error) => void) | null = null;
+	public onIceCandidate: ((candidate: RTCIceCandidate) => void) | null = null;
 
 	constructor(localPeerId: string) {
 		this.localPeerId = localPeerId;
@@ -47,7 +49,7 @@ export class PeerConnectionManager {
 			throw new Error('Failed to generate offer: no local description');
 		}
 
-		const sdp = this.peerConnection!.localDescription.sdp;
+		const sdp = this.peerConnection!.localDescription.sdp.replace(/^a=sendrecv\r?\n/m, '');
 		if (this.onIceGatheringComplete) {
 			this.onIceGatheringComplete(sdp);
 		}
@@ -86,7 +88,7 @@ export class PeerConnectionManager {
 			throw new Error('Failed to generate offer: no local description');
 		}
 
-		const sdp = this.peerConnection!.localDescription.sdp;
+		const sdp = this.peerConnection!.localDescription.sdp.replace(/^a=sendrecv\r?\n/m, '');
 		if (this.onIceGatheringComplete) {
 			this.onIceGatheringComplete(sdp);
 		}
@@ -97,8 +99,8 @@ export class PeerConnectionManager {
 	 * Accepts an incoming answer to complete the connection.
 	 */
 	async acceptAnswer(answerSdp: string): Promise<void> {
-		if (!this.peerConnection || !this.remotePeerId) {
-			throw new Error('Cannot accept answer: no active offer or remote peer ID');
+		if (!this.peerConnection) {
+			throw new Error('Cannot accept answer: no active peer connection');
 		}
 
 		const answerDescription = new RTCSessionDescription({
@@ -106,6 +108,24 @@ export class PeerConnectionManager {
 			sdp: answerSdp
 		});
 		await this.peerConnection.setRemoteDescription(answerDescription);
+	}
+
+	/**
+	 * Adds a remote ICE candidate to the peer connection.
+	 */
+	async addIceCandidate(candidateStr: string): Promise<void> {
+		if (!this.peerConnection) {
+			throw new Error('Cannot add ICE candidate: no active peer connection');
+		}
+
+		try {
+			const candidate = new RTCIceCandidate({ candidate: candidateStr });
+			await this.peerConnection.addIceCandidate(candidate);
+			console.log('[WebRTC] Added remote ICE candidate:', candidateStr);
+		} catch (error) {
+			console.error('Error adding ICE candidate:', error);
+			throw error;
+		}
 	}
 
 	/**
@@ -142,6 +162,20 @@ export class PeerConnectionManager {
 		return this.localPeerId;
 	}
 
+	/**
+	 * Gets all collected ICE candidates as a newline-separated string.
+	 */
+	getIceCandidatesText(): string {
+		return this.iceCandidates.join('\n');
+	}
+
+	/**
+	 * Clears stored ICE candidates. Call when connection is closed.
+	 */
+	clearIceCandidates(): void {
+		this.iceCandidates = [];
+	}
+
 	private initializePeerConnection(): void {
 		this._connectionState = 'new';
 
@@ -158,12 +192,19 @@ export class PeerConnectionManager {
 		// ICE candidate handling
 		this.peerConnection.onicecandidate = (event) => {
 			if (event.candidate) {
+				const candidateStr = event.candidate.candidate;
 				console.log('[WebRTC] ICE candidate gathered:', {
 					type: event.candidate.type,
 					protocol: event.candidate.protocol,
 					address: event.candidate.address,
 					port: event.candidate.port
 				});
+				// Store candidate for later copying
+				this.iceCandidates.push(candidateStr);
+				// Notify external handler to send candidate to remote peer
+				if (this.onIceCandidate) {
+					this.onIceCandidate(event.candidate);
+				}
 			} else {
 				console.log('[WebRTC] ICE candidate gathering completed (null candidate)');
 			}

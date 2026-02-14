@@ -21,6 +21,11 @@
 	let isAcceptingAnswer: boolean = false;
 	let isAcceptingOffer: boolean = false;
 
+	// ICE Candidates
+	let iceCandidatesText: string = '';
+	let remoteIceCandidates: string = '';
+	let isSendingIceCandidates: boolean = false;
+
 	// Panel visibility
 	let activePanel: 'generate' | 'accept' | null = null;
 
@@ -91,11 +96,17 @@
 			return;
 		}
 
+		if (isGeneratingOffer) {
+			return;
+		}
+
 		isGeneratingOffer = true;
 		offerText = '';
 		remoteOffer = '';
 		remoteAnswer = '';
 		answerText = '';
+		iceCandidatesText = '';
+		remoteIceCandidates = '';
 
 		try {
 			connectionManager = new PeerConnectionManager(myPeerId);
@@ -118,6 +129,12 @@
 
 			connectionManager.onMessage = (msg) => {
 				addMessage(msg, 'remote');
+			};
+
+			connectionManager.onIceCandidate = () => {
+				if (connectionManager) {
+					iceCandidatesText = connectionManager.getIceCandidatesText();
+				}
 			};
 
 			// Start generating offer (this triggers ICE gathering)
@@ -148,6 +165,8 @@
 
 		isGeneratingAnswer = true;
 		answerText = '';
+		iceCandidatesText = '';
+		remoteIceCandidates = '';
 
 		try {
 			// Create new connection manager if not exists
@@ -166,6 +185,12 @@
 					console.error('Connection error:', error);
 					Notifier.error('Connection error: ' + error.message);
 					isGeneratingAnswer = false;
+				};
+
+				connectionManager.onIceCandidate = () => {
+					if (connectionManager) {
+						iceCandidatesText = connectionManager.getIceCandidatesText();
+					}
 				};
 			}
 
@@ -229,6 +254,29 @@
 		}
 	}
 
+	// Add Remote ICE Candidates
+	async function addRemoteIceCandidates(): Promise<void> {
+		if (!connectionManager || !remoteIceCandidates.trim()) return;
+
+		isSendingIceCandidates = true;
+		try {
+			const lines = remoteIceCandidates.split('\n').filter((line) => line.trim());
+			for (const line of lines) {
+				try {
+					await connectionManager!.addIceCandidate(line.trim());
+				} catch (e) {
+					console.error('Failed to add ICE candidate:', line, e);
+				}
+			}
+			Notifier.success(`Added ${lines.length} ICE candidate(s)`);
+			remoteIceCandidates = '';
+		} catch (error) {
+			Notifier.error('Failed to add ICE candidates: ' + (error as Error).message);
+		} finally {
+			isSendingIceCandidates = false;
+		}
+	}
+
 	// Add message to chat history
 	function addMessage(text: string, sender: 'me' | 'remote') {
 		messages = [
@@ -266,6 +314,8 @@
 		answerText = '';
 		remoteOffer = '';
 		remoteAnswer = '';
+		iceCandidatesText = '';
+		remoteIceCandidates = '';
 		Notifier.info('Disconnected');
 	}
 
@@ -339,12 +389,66 @@
 			</div>
 		</div>
 
+		<!-- ICE Candidates Card -->
+		{#if connectionManager}
+			<div class="card bg-base-200 shadow-xl">
+				<div class="card-body p-4">
+					<h2 class="card-title text-lg">ICE Candidates</h2>
+					<p class="text-sm opacity-70">
+						Exchange ICE candidates with remote peer to establish connection.
+					</p>
+
+					<div class="form-control mt-2">
+						<label class="label">
+							<span class="label-text">Your ICE Candidates (copy and send to remote peer)</span>
+						</label>
+						<textarea
+							bind:value={iceCandidatesText}
+							readonly
+							class="textarea textarea-bordered h-24 font-mono text-xs"
+						></textarea>
+						<button
+							class="btn btn-primary btn-sm mt-2"
+							on:click={() => copyToClipboard(iceCandidatesText, 'ICE candidates copied')}
+						>
+							Copy ICE Candidates
+						</button>
+					</div>
+
+					<div class="form-control mt-4">
+						<label class="label">
+							<span class="label-text">Remote ICE Candidates (paste here and add)</span>
+						</label>
+						<textarea
+							bind:value={remoteIceCandidates}
+							placeholder="Paste remote ICE candidates here (one per line)..."
+							class="textarea textarea-bordered h-24 font-mono text-xs"
+						></textarea>
+						<button
+							class="btn btn-primary btn-sm mt-2"
+							on:click={addRemoteIceCandidates}
+							disabled={isSendingIceCandidates || !remoteIceCandidates.trim()}
+						>
+							Add Remote ICE Candidates
+						</button>
+					</div>
+				</div>
+			</div>
+		{/if}
+
 		<!-- Panel Selection Buttons -->
 		<div class="flex gap-2">
 			<button
 				class="btn btn-primary flex-1"
 				class:btn-outline={activePanel !== 'generate'}
-				on:click={() => (activePanel = activePanel === 'generate' ? null : 'generate')}
+				on:click={() => {
+					if (activePanel === 'generate') {
+						activePanel = null;
+					} else {
+						activePanel = 'generate';
+						generateOffer();
+					}
+				}}
 			>
 				Generate Offer
 			</button>
@@ -411,14 +515,6 @@
 								</button>
 							</div>
 						</div>
-					{:else}
-						<button
-							class="btn btn-primary mt-2"
-							on:click={generateOffer}
-							disabled={isGeneratingOffer || !myPeerId}
-						>
-							Generate Offer
-						</button>
 					{/if}
 				</div>
 			</div>
