@@ -1,39 +1,10 @@
-import { fileURLToPath } from 'node:url';
-import { includeIgnoreFile } from '@eslint/compat';
-import prettier from 'eslint-config-prettier';
-import js from '@eslint/js';
 import svelte from 'eslint-plugin-svelte';
-import globals from 'globals';
-import ts from 'typescript-eslint';
 import svelteConfig from './svelte.config.js';
-const gitignorePath = fileURLToPath(new URL('./.gitignore', import.meta.url));
 
-export default ts.config(
-	includeIgnoreFile(gitignorePath),
-	js.configs.recommended,
-	...ts.configs.recommended,
-	...svelte.configs.recommended,
-	prettier,
-	{
-		languageOptions: {
-			globals: {
-				...globals.browser,
-				...globals.node
-			}
-		}
-	},
-	{
-		files: ['**/*.svelte', '**/*.svelte.ts', '**/*.svelte.js'],
+// Note: JS/TS linting is handled by oxlint (see package.json lint script).
+// This ESLint config only covers Svelte template linting via eslint-plugin-svelte.
 
-		languageOptions: {
-			parserOptions: {
-				projectService: true,
-				extraFileExtensions: ['.svelte'],
-				parser: ts.parser,
-				svelteConfig
-			}
-		}
-	},
+export default [
 	{
 		ignores: [
 			'build/',
@@ -48,5 +19,15 @@ export default ts.config(
 			'package-lock.json',
 			'yarn.lock'
 		]
+	},
+	...svelte.configs.recommended,
+	{
+		files: ['**/*.svelte', '**/*.svelte.ts', '**/*.svelte.js'],
+		languageOptions: {
+			parserOptions: {
+				extraFileExtensions: ['.svelte'],
+				svelteConfig
+			}
+		}
 	}
-);
+];
