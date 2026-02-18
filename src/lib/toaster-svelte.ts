@@ -13,7 +13,7 @@ class DaisyUIToaster {
 		toast.className = `toast toast-bottom toast-center`;
 
 		let alertClass = 'alert';
-		switch(options.type) {
+		switch (options.type) {
 			case 'success':
 				alertClass += ' alert-success';
 				break;

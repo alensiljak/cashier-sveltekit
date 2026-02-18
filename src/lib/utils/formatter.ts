@@ -98,7 +98,7 @@ export function formatAmount(amount: number): string {
 	// const decimalPlaces = amountStr.split('.')[1]?.length || 0;
 
 	const numberOptions = {
-		minimumFractionDigits: 2,
+		minimumFractionDigits: 2
 		// maximumFractionDigits: Math.max(2, decimalPlaces)
 	};
 

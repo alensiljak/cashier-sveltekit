@@ -28,7 +28,7 @@ export function getBackupFilename(): string {
  * Generates backup file and sends it via download.
  */
 export async function createBackupFile(filename: string) {
-	const output: string = await createBackup()
+	const output: string = await createBackup();
 
 	downloadTextFile(output, filename);
 }
