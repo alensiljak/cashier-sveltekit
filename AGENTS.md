@@ -15,6 +15,7 @@ The user will maintain this.
 
 ## Tooling
 
-- **Formatting**: `oxfmt` (with Prettier as fallback for `.svelte` files via `prettier-plugin-svelte`)
-- **Linting**: `oxlint` for JS/TS; `eslint-plugin-svelte` via ESLint for Svelte templates
-- Run `npm run format` to format, `npm run lint` to lint
+- Use `rg` (ripgrep) for searching.
+- **Formatting**: `oxfmt` (with Prettier as fallback for `.svelte` files via `prettier-plugin-svelte`).
+- **Linting**: `oxlint` for JS/TS; `eslint-plugin-svelte` via ESLint for Svelte templates.
+- Run `npm run format` to format, `npm run lint` to lint.

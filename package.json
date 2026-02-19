@@ -18,7 +18,7 @@
 	},
 	"devDependencies": {
 		"@floating-ui/dom": "^1.6.13",
-		"@lucide/svelte": "^0.563.0",
+		"@lucide/svelte": "^0.575.0",
 		"@playwright/test": "^1.49.1",
 		"@rollup/wasm-node": "^4.34.0",
 		"@sveltejs/adapter-static": "^3.0.8",
