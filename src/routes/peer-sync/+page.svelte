@@ -7,7 +7,6 @@
 
 	// UI State
 	let myPeerId: string = '';
-	let remotePeerId: string = '';
 	let editablePeerId: string = '';
 	let isEditingPeerId: boolean = false;
 
@@ -19,7 +18,6 @@
 	let isGeneratingOffer: boolean = false;
 	let isGeneratingAnswer: boolean = false;
 	let isAcceptingAnswer: boolean = false;
-	let isAcceptingOffer: boolean = false;
 
 	// ICE Candidates
 	let iceCandidatesText: string = '';
@@ -109,6 +107,12 @@
 		remoteIceCandidates = '';
 
 		try {
+			// Close any existing connection before creating a new one
+			if (connectionManager) {
+				connectionManager.close();
+				connectionManager = null;
+			}
+
 			connectionManager = new PeerConnectionManager(myPeerId);
 
 			connectionManager.onConnectionStateChange = (state) => {
@@ -201,7 +205,7 @@
 			};
 
 			// Generate answer from offer
-			await connectionManager.acceptOffer(remoteOffer, myPeerId);
+			await connectionManager.acceptOffer(remoteOffer, 'remote-peer');
 		} catch (error) {
 			console.error('Answer generation error:', error);
 			Notifier.error('Failed to process offer: ' + (error as Error).message);
@@ -260,15 +264,8 @@
 
 		isSendingIceCandidates = true;
 		try {
-			const lines = remoteIceCandidates.split('\n').filter((line) => line.trim());
-			for (const line of lines) {
-				try {
-					await connectionManager!.addIceCandidate(line.trim());
-				} catch (e) {
-					console.error('Failed to add ICE candidate:', line, e);
-				}
-			}
-			Notifier.success(`Added ${lines.length} ICE candidate(s)`);
+			const added = await connectionManager.addIceCandidates(remoteIceCandidates.trim());
+			Notifier.success(`Added ${added} ICE candidate(s)`);
 			remoteIceCandidates = '';
 		} catch (error) {
 			Notifier.error('Failed to add ICE candidates: ' + (error as Error).message);
@@ -421,7 +418,7 @@
 						</label>
 						<textarea
 							bind:value={remoteIceCandidates}
-							placeholder="Paste remote ICE candidates here (one per line)..."
+							placeholder="Paste remote ICE candidates JSON here..."
 							class="textarea textarea-bordered h-24 font-mono text-xs"
 						></textarea>
 						<button

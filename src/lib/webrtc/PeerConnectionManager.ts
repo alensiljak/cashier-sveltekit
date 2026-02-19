@@ -8,7 +8,11 @@ export class PeerConnectionManager {
 	private localPeerId: string;
 	private remotePeerId: string | null = null;
 	private _connectionState: 'new' | 'connecting' | 'connected' | 'disconnected' | 'failed' = 'new';
-	private iceCandidates: string[] = [];
+	private iceCandidates: Array<{
+		candidate: string;
+		sdpMid: string | null;
+		sdpMLineIndex: number | null;
+	}> = [];
 
 	// Event handlers
 	public onIceGatheringComplete: ((sdp: string) => void) | null = null;
@@ -85,7 +89,7 @@ export class PeerConnectionManager {
 		await this.waitForIceGatheringComplete();
 
 		if (!this.peerConnection!.localDescription) {
-			throw new Error('Failed to generate offer: no local description');
+			throw new Error('Failed to generate answer: no local description');
 		}
 
 		const sdp = this.peerConnection!.localDescription.sdp.replace(/^a=sendrecv\r?\n/m, '');
@@ -111,19 +115,34 @@ export class PeerConnectionManager {
 	}
 
 	/**
-	 * Adds a remote ICE candidate to the peer connection.
+	 * Adds remote ICE candidates to the peer connection.
+	 * Accepts a JSON string containing an array of {candidate, sdpMid, sdpMLineIndex} objects.
 	 */
-	async addIceCandidate(candidateStr: string): Promise<void> {
+	async addIceCandidates(candidatesJson: string): Promise<number> {
 		if (!this.peerConnection) {
 			throw new Error('Cannot add ICE candidate: no active peer connection');
 		}
 
 		try {
-			const candidate = new RTCIceCandidate({ candidate: candidateStr });
-			await this.peerConnection.addIceCandidate(candidate);
-			console.log('[WebRTC] Added remote ICE candidate:', candidateStr);
+			const candidates = JSON.parse(candidatesJson) as Array<{
+				candidate: string;
+				sdpMid: string | null;
+				sdpMLineIndex: number | null;
+			}>;
+			let added = 0;
+			for (const c of candidates) {
+				const candidate = new RTCIceCandidate({
+					candidate: c.candidate,
+					sdpMid: c.sdpMid,
+					sdpMLineIndex: c.sdpMLineIndex
+				});
+				await this.peerConnection.addIceCandidate(candidate);
+				console.log('[WebRTC] Added remote ICE candidate:', c.candidate);
+				added++;
+			}
+			return added;
 		} catch (error) {
-			console.error('Error adding ICE candidate:', error);
+			console.error('Error adding ICE candidates:', error);
 			throw error;
 		}
 	}
@@ -163,10 +182,10 @@ export class PeerConnectionManager {
 	}
 
 	/**
-	 * Gets all collected ICE candidates as a newline-separated string.
+	 * Gets all collected ICE candidates as a JSON string for exchange with remote peer.
 	 */
 	getIceCandidatesText(): string {
-		return this.iceCandidates.join('\n');
+		return JSON.stringify(this.iceCandidates);
 	}
 
 	/**
@@ -177,6 +196,16 @@ export class PeerConnectionManager {
 	}
 
 	private initializePeerConnection(): void {
+		// Close any existing connection before creating a new one
+		if (this.peerConnection) {
+			this.peerConnection.close();
+			this.peerConnection = null;
+		}
+		if (this.dataChannel) {
+			this.dataChannel.close();
+			this.dataChannel = null;
+		}
+		this.iceCandidates = [];
 		this._connectionState = 'new';
 
 		const config: RTCConfiguration = {
@@ -192,15 +221,18 @@ export class PeerConnectionManager {
 		// ICE candidate handling
 		this.peerConnection.onicecandidate = (event) => {
 			if (event.candidate) {
-				const candidateStr = event.candidate.candidate;
 				console.log('[WebRTC] ICE candidate gathered:', {
 					type: event.candidate.type,
 					protocol: event.candidate.protocol,
 					address: event.candidate.address,
 					port: event.candidate.port
 				});
-				// Store candidate for later copying
-				this.iceCandidates.push(candidateStr);
+				// Store candidate with full metadata needed for addIceCandidate
+				this.iceCandidates.push({
+					candidate: event.candidate.candidate,
+					sdpMid: event.candidate.sdpMid,
+					sdpMLineIndex: event.candidate.sdpMLineIndex
+				});
 				// Notify external handler to send candidate to remote peer
 				if (this.onIceCandidate) {
 					this.onIceCandidate(event.candidate);
