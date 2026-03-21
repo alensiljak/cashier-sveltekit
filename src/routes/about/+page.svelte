@@ -45,4 +45,9 @@
 			Build Date: <code>{__BUILD_DATE__}</code>
 		</p>
 	</section>
+	<section>
+		<h3 class="text-3xl font-semibold">Experiments</h3>
+
+		<a class="link link-primary" href="/rledger">RustLedger demo</a>
+	</section>
 </article>

@@ -147,16 +147,14 @@ const config: UserConfig = defineConfig({
 	],
 	server: {
 		https: true
+	},
+	test: {
+		environment: 'jsdom',
+		globals: true,
+		// Include both src and tests directories for unit tests
+		include: ['src/**/*.{test,spec}.{js,ts}', 'tests/**/*.{test,spec}.{js,ts}'],
+		exclude: ['tests/ui/**/*'], // Exclude e2e tests from vitest
 	}
-	// test: {
-	// 	environment: 'jsdom',
-	// 	globals: true,
-	// 	// include: ['src/**/*.{test,spec}.{js,ts}']
-	// 	// include: ['tests/**/*.{test,spec}.{js,ts}']
-	// 	// include: ['tests/**/*.{test,spec}.{js,ts}']
-	// 	include: ['tests/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
-	// 	exclude: ['tests/ui/**/*'],
-	// }
 });
 
 export default config;
