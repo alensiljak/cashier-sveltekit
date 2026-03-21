@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import Toolbar from "$lib/components/Toolbar.svelte";
-	import rustledger, { lastParseBalanceSheetRowSource, lastParseCurrentValuesSource, lastGetMoneyFromTupleStringSource, isWasmAvailable, createParsedLedger } from '$lib/services/rustledger';
+	import rustledger, { createParsedLedger } from '$lib/services/rustledger';
 	import type { BeancountError } from '@rustledger/wasm';
 	import { Account, Money } from '$lib/data/model';
 	import appService from '$lib/services/appService';
@@ -24,18 +24,13 @@
 	// Parsed results
 	let parsedAccounts: Account[] = [];
 	let currentValues: Record<string, { quantity: number; currency: string }> = {};
+	const tupleSamples = ['(100.00 EUR)', '(500.50 USD)', '(-25.75 GBP)'];
+	let parsedMoneySamples: Array<{ tuple: string; money: Money }> = [];
 
-	// Track which implementation was used for each demo
-	let parseBalanceSheetSource: 'wasm' | 'js' | null = null;
-	let parseCurrentValuesSource: 'wasm' | 'js' | null = null;
-	let getMoneyFromTupleStringSource: 'wasm' | 'js' | null = null;
-	
 	// Validation state
 	let validationErrors: BeancountError[] = [];
 	let validationWarnings: BeancountError[] = [];
 	let isValid = false;
-	// Validation always uses WASM (no fallback)
-	let validationSource: 'wasm' = 'wasm';
 
 	// Initialize WASM
 	onMount(async () => {
@@ -46,9 +41,10 @@
 			// Initialize the WASM module
 			await rustledger.ensureInitialized();
 			initialized = true;
+			updateMoneySamples();
 
 			// Parse the default Beancount source
-			handleParse();
+			await handleParse();
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to initialize RustLedger';
 			console.error('RustLedger initialization error:', err);
@@ -56,6 +52,13 @@
 			isLoading = false;
 		}
 	});
+
+	function updateMoneySamples() {
+		parsedMoneySamples = tupleSamples.map((tuple) => ({
+			tuple,
+			money: rustledger.getMoneyFromTupleString(tuple)
+		}));
+	}
 
 	/**
 	 * Parse Beancount text and convert to array format expected by rustledger
@@ -108,10 +111,9 @@
 		try {
 			isLoading = true;
 			error = null;
-
-			// Reset source tracking
-			parseBalanceSheetSource = null;
-			parseCurrentValuesSource = null;
+			await rustledger.ensureInitialized();
+			initialized = true;
+			updateMoneySamples();
 
 			// Convert Beancount source to array format
 			const parsedData = parseBeancountToArray(beancountSource);
@@ -121,20 +123,16 @@
 				return;
 			}
 
-			// Parse balance sheet rows
+			// Parse balance sheet rows (WASM only - throws if unavailable)
 			parsedAccounts = parsedData
 				.map(row => rustledger.parseBalanceSheetRow(row))
 				.filter((account): account is Account => account !== null);
-			// Capture the source used for the last call
-			parseBalanceSheetSource = lastParseBalanceSheetRowSource;
 
-			// Parse current values using beancount format directly
+			// Parse current values using beancount format directly (WASM only)
 			currentValues = rustledger.parseCurrentValues(
 				parsedData,
 				'Assets'
 			);
-			// Capture the source used for the last call
-			parseCurrentValuesSource = lastParseCurrentValuesSource;
 
 			console.log('Parsed accounts:', parsedAccounts);
 			console.log('Current values:', currentValues);
@@ -180,6 +178,9 @@
 			error = null;
 			validationErrors = [];
 			validationWarnings = [];
+			await rustledger.ensureInitialized();
+			initialized = true;
+			updateMoneySamples();
 
 			// Use WASM for validation (validationSource is already set to 'wasm')
 			const ledger = createParsedLedger(beancountSource);
@@ -375,11 +376,7 @@
 		<div class="card-body">
 			<h2 class="card-title">
 				Parsed Accounts ({parsedAccounts.length})
-				{#if parseBalanceSheetSource}
-					<span class="badge {parseBalanceSheetSource === 'wasm' ? 'badge-success' : 'badge-neutral'} ml-2">
-						{parseBalanceSheetSource === 'wasm' ? 'WASM' : 'JS Fallback'}
-					</span>
-				{/if}
+				<span class="badge badge-success ml-2">WASM</span>
 			</h2>
 
 			{#if parsedAccounts.length === 0}
@@ -418,11 +415,7 @@
 		<div class="card-body">
 			<h2 class="card-title">
 				Current Values (Root: Assets)
-				{#if parseCurrentValuesSource}
-					<span class="badge {parseCurrentValuesSource === 'wasm' ? 'badge-success' : 'badge-neutral'} ml-2">
-						{parseCurrentValuesSource === 'wasm' ? 'WASM' : 'JS Fallback'}
-					</span>
-				{/if}
+				<span class="badge badge-success ml-2">WASM</span>
 			</h2>
 			<p class="text-sm text-base-content/70">
 				Parsed using parseCurrentValues() with root account "Assets"
@@ -460,46 +453,26 @@
 		<div class="card-body">
 			<h2 class="card-title">
 				Money Tuple Parsing Test
-				{#if getMoneyFromTupleStringSource}
-					<span class="badge {getMoneyFromTupleStringSource === 'wasm' ? 'badge-success' : 'badge-neutral'} ml-2">
-						{getMoneyFromTupleStringSource === 'wasm' ? 'WASM' : 'JS Fallback'}
-					</span>
-				{/if}
+				<span class="badge badge-success ml-2">WASM</span>
 			</h2>
 			<p class="text-sm text-base-content/70">
 				Testing getMoneyFromTupleString() with various formats
 			</p>
 
-			<div class="grid gap-2">
-				{#each ['(100.00 EUR)', '(500.50 USD)', '(-25.75 GBP)'] as tuple}
-					{@const money = rustledger.getMoneyFromTupleString(tuple)}
-					{@const source = getMoneyFromTupleStringSource || (lastGetMoneyFromTupleStringSource ? (lastGetMoneyFromTupleStringSource === 'wasm' ? 'wasm' : 'js') : null)}
+			{#if !initialized}
+				<p class="text-base-content/50">Money tuple samples will appear after the WASM module loads.</p>
+			{:else}
+				<div class="grid gap-2">
+					{#each parsedMoneySamples as { tuple, money }}
 					<div class="flex items-center gap-4 p-2 bg-base-200 rounded">
 						<span class="font-mono">{tuple}</span>
 						<span class="text-primary">→</span>
 						<span>{money.quantity.toFixed(2)} {money.currency}</span>
-						{#if source}
-							<span class="badge {source === 'wasm' ? 'badge-success' : 'badge-neutral'} ml-auto text-xs">
-								{source === 'wasm' ? 'WASM' : 'JS'}
-							</span>
-						{/if}
 					</div>
-				{/each}
-			</div>
+					{/each}
+				</div>
+			{/if}
 		</div>
 	</section>
 
-	<!-- Info Section -->
-	<section class="alert alert-info">
-		<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6">
-			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-		</svg>
-		<div>
-			<h3 class="font-bold">Integration Test</h3>
-			<div class="text-xs">
-				This page demonstrates the integration of @rustledger/wasm for Beancount parsing.
-				The service automatically falls back to JavaScript implementations if WASM functions are unavailable.
-			</div>
-		</div>
-	</section>
 </main>
