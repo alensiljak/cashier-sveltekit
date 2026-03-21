@@ -34,7 +34,8 @@
 	let validationErrors: BeancountError[] = [];
 	let validationWarnings: BeancountError[] = [];
 	let isValid = false;
-	let validationSource: 'wasm' | 'js' | null = null;
+	// Validation always uses WASM (no fallback)
+	let validationSource: 'wasm' = 'wasm';
 
 	// Initialize WASM
 	onMount(async () => {
@@ -171,7 +172,7 @@
 	}
 
 	/**
-	 * Validate the Beancount source using WASM or JS fallback
+	 * Validate the Beancount source using WASM only
 	 */
 	async function handleValidate() {
 		try {
@@ -180,31 +181,18 @@
 			validationErrors = [];
 			validationWarnings = [];
 
-			if (!isWasmAvailable()) {
-				// Use JS fallback for validation
-				validationSource = 'js';
-				const ledger = createLedgerJS(beancountSource);
-				const parseErrors = ledger.getParseErrors();
-				const validationErrorsJS = ledger.getValidationErrors();
-				
-				validationErrors = [...parseErrors, ...validationErrorsJS].filter(err => err.severity === 'error');
-				validationWarnings = [...parseErrors, ...validationErrorsJS].filter(err => err.severity === 'warning');
-				isValid = validationErrors.length === 0;
-			} else {
-				// Use WASM for validation
-				validationSource = 'wasm';
-				const ledger = createParsedLedger(beancountSource);
-				if (!ledger) {
-					throw new Error('Failed to create ParsedLedger');
-				}
-				const parseErrors = ledger.getParseErrors();
-				const validationErrorsWasm = ledger.getValidationErrors();
-				
-				validationErrors = [...parseErrors, ...validationErrorsWasm].filter(err => err.severity === 'error');
-				validationWarnings = [...parseErrors, ...validationErrorsWasm].filter(err => err.severity === 'warning');
-				isValid = ledger.isValid();
-				ledger.free();
+			// Use WASM for validation (validationSource is already set to 'wasm')
+			const ledger = createParsedLedger(beancountSource);
+			if (!ledger) {
+				throw new Error('Failed to create ParsedLedger - WASM module not available');
 			}
+			const parseErrors = ledger.getParseErrors();
+			const validationErrorsWasm = ledger.getValidationErrors();
+			
+			validationErrors = [...parseErrors, ...validationErrorsWasm].filter(err => err.severity === 'error');
+			validationWarnings = [...parseErrors, ...validationErrorsWasm].filter(err => err.severity === 'warning');
+			isValid = ledger.isValid();
+			ledger.free();
 
 			console.log('Validation complete:', { isValid, errors: validationErrors, warnings: validationWarnings });
 
@@ -214,59 +202,6 @@
 		} finally {
 			isLoading = false;
 		}
-	}
-
-	/**
-	 * Create a ledger instance using JavaScript implementation
-	 */
-	function createLedgerJS(source: string): any {
-		// Simple JS validation: check for basic syntax errors
-		const errors: BeancountError[] = [];
-		const lines = source.split('\n');
-		
-		for (let i = 0; i < lines.length; i++) {
-			const line = lines[i];
-			const trimmed = line.trim();
-			
-			// Skip empty lines and comments
-			if (!trimmed || trimmed.startsWith(';') || trimmed.startsWith('option ') || trimmed.startsWith('include ')) {
-				continue;
-			}
-			
-			// Check for transaction lines (should start with a date)
-			if (trimmed.match(/^\d{4}-\d{2}-\d{2}/)) {
-				// Transaction header - should have flag and description
-				const parts = trimmed.split(/\s+/);
-				if (parts.length < 3) {
-					errors.push({
-						message: 'Invalid transaction format: expected date, flag, and description',
-						line: i + 1,
-						column: 0,
-						severity: 'error'
-					});
-				}
-			}
-			// Check for balance assertions
-			else if (trimmed.startsWith('balance ')) {
-				// Balance line should have account and amount
-				const parts = trimmed.split(/\s+/);
-				if (parts.length < 3) {
-					errors.push({
-						message: 'Invalid balance assertion: expected account and amount',
-						line: i + 1,
-						column: 0,
-						severity: 'error'
-					});
-				}
-			}
-		}
-		
-		// Return a simple object with methods compatible with the interface
-		return {
-			getParseErrors: () => errors.filter(e => e.severity === 'error'),
-			getValidationErrors: () => [],
-			isValid: () => errors.length === 0
-		};
 	}
 </script>
 
@@ -359,11 +294,7 @@
 		<div class="card-body">
 			<h2 class="card-title">
 				Validation Results
-				{#if validationSource}
-					<span class="badge {validationSource === 'wasm' ? 'badge-success' : 'badge-neutral'} ml-2">
-						{validationSource === 'wasm' ? 'WASM' : 'JS Fallback'}
-					</span>
-				{/if}
+				<span class="badge badge-success ml-2">WASM</span>
 			</h2>
 
 			{#if validationErrors.length === 0 && validationWarnings.length === 0}
