@@ -3,6 +3,7 @@
 	import Toolbar from "$lib/components/Toolbar.svelte";
 	import rustledger from '$lib/services/rustledger';
 	import { Account, Money } from '$lib/data/model';
+	import appService from '$lib/services/appService';
 
 	// State
 	let isLoading = false;
@@ -124,6 +125,30 @@
 			isLoading = false;
 		}
 	}
+
+	/**
+	 * Import current journal from database into the text area
+	 */
+	async function handleImportJournal() {
+		try {
+			isLoading = true;
+			error = null;
+
+			// Get all transactions in Beancount format
+			const journalSource = await appService.getExportTransactions();
+			
+			// Update the textarea
+			beancountSource = journalSource;
+
+			console.log('Journal imported successfully');
+
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Failed to import journal';
+			console.error('Import error:', err);
+		} finally {
+			isLoading = false;
+		}
+	}
 </script>
 
 <Toolbar title="RustLedger Demo" />
@@ -163,7 +188,7 @@
 				></textarea>
 			</div>
 
-			<div class="mt-4">
+			<div class="mt-4 flex gap-2">
 				<button
 					class="btn btn-primary"
 					on:click={handleParse}
@@ -175,6 +200,14 @@
 					{:else}
 						Parse
 					{/if}
+				</button>
+	
+				<button
+					class="btn btn-secondary"
+					on:click={handleImportJournal}
+					disabled={isLoading}
+				>
+					Import Journal
 				</button>
 			</div>
 
@@ -209,7 +242,7 @@
 							{#each parsedAccounts as account}
 								<tr>
 									<td>{account.name}</td>
-									<td>
+									<td class="text-right">
 										{#if account.balances}
 											{Object.entries(account.balances).map(([currency, amount]) =>
 												`${amount.toFixed(2)} ${currency}`
@@ -249,7 +282,7 @@
 							{#each Object.entries(currentValues) as [account, data]}
 								<tr>
 									<td>{account}</td>
-									<td>{data.quantity.toFixed(2)}</td>
+									<td class="text-right">{data.quantity.toFixed(2)}</td>
 									<td>{data.currency}</td>
 								</tr>
 							{/each}

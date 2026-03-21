@@ -232,4 +232,4 @@ export default {
 	parseCurrentValues,
 	getMoneyFromTupleString,
 	getNumberFromBalanceRow
-}
+};

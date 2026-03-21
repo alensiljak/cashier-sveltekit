@@ -153,7 +153,7 @@ const config: UserConfig = defineConfig({
 		globals: true,
 		// Include both src and tests directories for unit tests
 		include: ['src/**/*.{test,spec}.{js,ts}', 'tests/**/*.{test,spec}.{js,ts}'],
-		exclude: ['tests/ui/**/*'], // Exclude e2e tests from vitest
+		exclude: ['tests/ui/**/*'] // Exclude e2e tests from vitest
 	}
 });
 

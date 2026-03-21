@@ -10,8 +10,7 @@ The application styling has recently been migrated from Skeleton v3 to DaisyUI a
 
 ## Dev Server
 
-Assume the local dev server is running at `http://localhost:5173/`.
-The user will maintain this.
+The local dev server is running at `http://localhost:5173/`. It is started by the user.
 
 ## Tooling
 
