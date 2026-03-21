@@ -354,6 +354,91 @@
 		</div>
 	</section>
 
+	<!-- Validation Results Section -->
+	<section class="card bg-base-100 shadow-xl">
+		<div class="card-body">
+			<h2 class="card-title">
+				Validation Results
+				{#if validationSource}
+					<span class="badge {validationSource === 'wasm' ? 'badge-success' : 'badge-neutral'} ml-2">
+						{validationSource === 'wasm' ? 'WASM' : 'JS Fallback'}
+					</span>
+				{/if}
+			</h2>
+
+			{#if validationErrors.length === 0 && validationWarnings.length === 0}
+				<p class="text-base-content/50">No validation results yet. Click "Validate" to check the Beancount source.</p>
+			{:else}
+				<!-- Overall Status -->
+				<div class="mb-4">
+					<div class="alert {isValid ? 'alert-success' : 'alert-error'}">
+						<svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{isValid ? 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' : 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z'}" />
+						</svg>
+						<span>
+							<strong>{isValid ? 'Valid' : 'Invalid'}</strong>
+							- {validationErrors.length} error(s), {validationWarnings.length} warning(s)
+						</span>
+					</div>
+				</div>
+
+				<!-- Errors Section -->
+				{#if validationErrors.length > 0}
+					<div class="mb-4">
+						<h3 class="text-lg font-bold text-error">Errors ({validationErrors.length})</h3>
+						<div class="overflow-x-auto">
+							<table class="table table-zebra table-sm">
+								<thead>
+									<tr>
+										<th>Line</th>
+										<th>Column</th>
+										<th>Message</th>
+									</tr>
+								</thead>
+								<tbody>
+									{#each validationErrors as err}
+										<tr class="text-error">
+											<td>{err.line}</td>
+											<td>{err.column}</td>
+											<td>{err.message}</td>
+										</tr>
+									{/each}
+								</tbody>
+							</table>
+						</div>
+					</div>
+				{/if}
+
+				<!-- Warnings Section -->
+				{#if validationWarnings.length > 0}
+					<div>
+						<h3 class="text-lg font-bold text-warning">Warnings ({validationWarnings.length})</h3>
+						<div class="overflow-x-auto">
+							<table class="table table-zebra table-sm">
+								<thead>
+									<tr>
+										<th>Line</th>
+										<th>Column</th>
+										<th>Message</th>
+									</tr>
+								</thead>
+								<tbody>
+									{#each validationWarnings as warn}
+										<tr class="text-warning">
+											<td>{warn.line}</td>
+											<td>{warn.column}</td>
+											<td>{warn.message}</td>
+										</tr>
+									{/each}
+								</tbody>
+							</table>
+						</div>
+					</div>
+				{/if}
+			{/if}
+		</div>
+	</section>
+
 	<!-- Parsed Accounts Section -->
 	<section class="card bg-base-100 shadow-xl">
 		<div class="card-body">
