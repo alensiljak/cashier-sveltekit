@@ -13,9 +13,13 @@ import {
 import { Account } from '$lib/data/model';
 
 describe('RustLedger Service', () => {
-	beforeEach(() => {
+	beforeEach(async () => {
 		// Reset module state between tests
-		vi.resetModules();
+		await vi.resetModules();
+		// Re-initialize WASM for each test
+		await import('$lib/services/rustledger').then(module => {
+			module.default.ensureInitialized();
+		});
 	});
 
 	describe('ensureInitialized', () => {

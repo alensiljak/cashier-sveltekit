@@ -5,10 +5,17 @@
 
 import type { CurrentValuesDict } from '$lib/data/viewModels';
 import { Account, Money } from '$lib/data/model';
+import wasmUrl from '@rustledger/wasm/rustledger_wasm_bg.wasm?url';
 
 // WASM module instance
 let wasmModule: any = null;
 let initPromise: Promise<void> | null = null;
+
+// Track which implementation was used for each function
+export let lastParseBalanceSheetRowSource: 'wasm' | 'js' | null = null;
+export let lastParseCurrentValuesSource: 'wasm' | 'js' | null = null;
+export let lastGetMoneyFromTupleStringSource: 'wasm' | 'js' | null = null;
+export let lastGetNumberFromBalanceRowSource: 'wasm' | 'js' | null = null;
 
 /**
  * Initialize the WASM module
@@ -21,8 +28,14 @@ async function initWasm(): Promise<void> {
 		try {
 			// Dynamically import the WASM package
 			const rustledger = await import('@rustledger/wasm');
+
+			// Let Vite resolve the package asset URL.
+			// In dev this is served from node_modules, and in production it is emitted
+			// as a build asset with the correct final URL.
+			await rustledger.default({ module_or_path: wasmUrl });
+
 			wasmModule = rustledger;
-			console.log('RustLedger WASM module loaded successfully');
+			console.log('RustLedger WASM module loaded and initialized successfully');
 		} catch (error) {
 			console.error('Failed to load RustLedger WASM module:', error);
 			throw error;
@@ -40,28 +53,65 @@ export async function ensureInitialized(): Promise<void> {
 }
 
 /**
- * Parse Beancount balance sheet output
+ * Check if WASM module is available
+ */
+export function isWasmAvailable(): boolean {
+	return wasmModule !== null && wasmModule.ParsedLedger !== undefined;
+}
+
+/**
+ * Create a ParsedLedger instance if WASM is available
+ */
+export function createParsedLedger(source: string): any {
+	if (!wasmModule || !wasmModule.ParsedLedger) {
+		return null;
+	}
+	return new wasmModule.ParsedLedger(source);
+}
+
+/**
+ * Parse Beancount balance sheet output using WASM ParsedLedger
  * Expected format: array of rows, each row is [amount, currency, account_name]
  */
 export function parseBalanceSheetRow(record: string[]): Account | null {
-	if (!wasmModule) {
+	if (!wasmModule || !wasmModule.ParsedLedger) {
+		lastParseBalanceSheetRowSource = 'js';
 		return parseBalanceSheetRowJS(record);
 	}
 
 	try {
-		// Use WASM parsing if available, otherwise fallback to JS implementation
-		if (wasmModule.parse_balance_sheet_row) {
-			const result = wasmModule.parse_balance_sheet_row(record);
-			const account = new Account('');
-			account.name = result.account_name;
-			account.balances = { [result.currency]: result.amount };
-			return account;
+		// Build a minimal Beancount source from the record
+		// Format: <date> * "Transaction" "Description"
+		//        <account> <amount> <currency>
+		const source = `2024-01-01 * "Generated" "From record"
+    ${record[2]} ${record[0]} ${record[1]}`;
+
+		const ledger = new wasmModule.ParsedLedger(source);
+		const directives = ledger.getDirectives();
+
+		// Find the transaction and extract the posting for our account
+		for (const directive of directives) {
+			if (directive.type === 'transaction') {
+				for (const posting of directive.postings) {
+					if (posting.account === record[2]) {
+						const account = new Account('');
+						account.name = posting.account;
+						account.balances = { [posting.units.currency]: parseFloat(posting.units.number) };
+						ledger.free();
+						lastParseBalanceSheetRowSource = 'wasm';
+						return account;
+					}
+				}
+			}
 		}
+
+		ledger.free();
 	} catch (error) {
 		console.warn('WASM parse failed, falling back to JS:', error);
 	}
 
 	// Fallback to JavaScript implementation
+	lastParseBalanceSheetRowSource = 'js';
 	return parseBalanceSheetRowJS(record);
 }
 
@@ -84,38 +134,86 @@ function parseBalanceSheetRowJS(record: string[]): Account | null {
 }
 
 /**
- * Parse Beancount current values
+ * Parse Beancount current values using WASM ParsedLedger
  * Expected format: array of rows, each row is [amount_string, currency, account_name]
  * The function filters accounts under the specified rootAccount.
- * JavaScript fallback also supports tuple format [account, "(amount currency)"] for compatibility.
  */
 export function parseCurrentValues(lines: Array<any>, rootAccount: string): CurrentValuesDict {
-	if (!wasmModule) {
+	if (!wasmModule || !wasmModule.ParsedLedger) {
+		lastParseCurrentValuesSource = 'js';
 		return parseCurrentValuesJS(lines, rootAccount);
 	}
 
 	const result: CurrentValuesDict = {};
 
 	try {
-		// Use WASM parsing if available
-		if (wasmModule.parse_current_values) {
-			const parsed = wasmModule.parse_current_values(lines, rootAccount);
-			for (const [account, data] of Object.entries(parsed)) {
-				// Type assertion for WASM return data
-				const moneyData = data as { quantity: number; currency: string };
+		// Build Beancount source from lines
+		const source = buildBeancountSourceFromLines(lines);
+
+		const ledger = new wasmModule.ParsedLedger(source);
+		const directives = ledger.getDirectives();
+
+		// Process all transactions to extract balances
+		for (const directive of directives) {
+			if (directive.type === 'transaction') {
+				for (const posting of directive.postings) {
+					const account = posting.account;
+					if (rootAccount && !account.startsWith(rootAccount)) {
+						continue;
+					}
+					if (posting.units) {
+						result[account] = {
+							quantity: parseFloat(posting.units.number),
+							currency: posting.units.currency
+						};
+					}
+				}
+			} else if (directive.type === 'balance') {
+				const account = directive.account;
+				if (rootAccount && !account.startsWith(rootAccount)) {
+					continue;
+				}
 				result[account] = {
-					quantity: moneyData.quantity,
-					currency: moneyData.currency
+					quantity: parseFloat(directive.amount.number),
+					currency: directive.amount.currency
 				};
 			}
-			return result;
 		}
+
+		ledger.free();
+		lastParseCurrentValuesSource = 'wasm';
+		return result;
 	} catch (error) {
 		console.warn('WASM parse failed, falling back to JS:', error);
 	}
 
 	// Fallback to JavaScript implementation
+	lastParseCurrentValuesSource = 'js';
 	return parseCurrentValuesJS(lines, rootAccount);
+}
+
+/**
+ * Build a Beancount source string from parsed lines
+ */
+function buildBeancountSourceFromLines(lines: Array<any>): string {
+	const sourceLines: string[] = [];
+
+	for (let i = 0; i < lines.length; i++) {
+		const row = lines[i];
+		if (Array.isArray(row) && row.length >= 3) {
+			// Format: [amount, currency, account]
+			const [amount, currency, account] = row;
+			sourceLines.push(`2024-01-01 * "Transaction ${i}" "Generated"`);
+			sourceLines.push(`    ${account} ${amount} ${currency}`);
+		} else if (Array.isArray(row) && row.length === 2) {
+			// Tuple format: [account, "(amount currency)"]
+			const [account, amountStr] = row;
+			sourceLines.push(`2024-01-01 * "Transaction ${i}" "Generated"`);
+			sourceLines.push(`    ${account} ${amountStr}`);
+		}
+	}
+
+	return sourceLines.join('\n');
 }
 
 /**
@@ -163,24 +261,37 @@ function parseCurrentValuesJS(lines: Array<any>, rootAccount: string): CurrentVa
  * Example: "(594.52 USD)" -> Money object
  */
 export function getMoneyFromTupleString(value: string): Money {
-	if (!wasmModule) {
+	if (!wasmModule || !wasmModule.ParsedLedger) {
+		lastGetMoneyFromTupleStringSource = 'js';
 		return getMoneyFromTupleStringJS(value);
 	}
 
 	try {
-		// Use WASM parsing if available
-		if (wasmModule.parse_money_tuple) {
-			const result = wasmModule.parse_money_tuple(value);
-			const money = new Money();
-			money.quantity = result.quantity;
-			money.currency = result.currency;
-			return money;
+		// Use ParsedLedger to parse the amount
+		const source = `2024-01-01 * "Test" "Parse amount"
+    Assets:Test ${value}`;
+		const ledger = new wasmModule.ParsedLedger(source);
+		const directives = ledger.getDirectives();
+
+		if (directives.length > 0 && directives[0].type === 'transaction') {
+			const posting = directives[0].postings[0];
+			if (posting && posting.units) {
+				const money = new Money();
+				money.quantity = parseFloat(posting.units.number);
+				money.currency = posting.units.currency;
+				ledger.free();
+				lastGetMoneyFromTupleStringSource = 'wasm';
+				return money;
+			}
 		}
+
+		ledger.free();
 	} catch (error) {
 		console.warn('WASM parse failed, falling back to JS:', error);
 	}
 
 	// Fallback to JavaScript implementation
+	lastGetMoneyFromTupleStringSource = 'js';
 	return getMoneyFromTupleStringJS(value);
 }
 
@@ -197,20 +308,38 @@ function getMoneyFromTupleStringJS(value: string): Money {
  * Get the numeric value from a balance row
  */
 export function getNumberFromBalanceRow(row: Array<Array<string>>): number {
-	if (!wasmModule) {
+	if (!wasmModule || !wasmModule.ParsedLedger) {
+		lastGetNumberFromBalanceRowSource = 'js';
 		return getNumberFromBalanceRowJS(row);
 	}
 
 	try {
-		// Use WASM parsing if available
-		if (wasmModule.get_number_from_balance_row) {
-			return wasmModule.get_number_from_balance_row(row);
+		// Use ParsedLedger to parse
+		if (row.length > 0) {
+			const tuple = row[0][0];
+			const source = `2024-01-01 * "Test" "Parse amount"
+    Assets:Test ${tuple}`;
+			const ledger = new wasmModule.ParsedLedger(source);
+			const directives = ledger.getDirectives();
+
+			if (directives.length > 0 && directives[0].type === 'transaction') {
+				const posting = directives[0].postings[0];
+				if (posting && posting.units) {
+					const result = parseFloat(posting.units.number);
+					ledger.free();
+					lastGetNumberFromBalanceRowSource = 'wasm';
+					return result;
+				}
+			}
+
+			ledger.free();
 		}
 	} catch (error) {
 		console.warn('WASM parse failed, falling back to JS:', error);
 	}
 
 	// Fallback to JavaScript implementation
+	lastGetNumberFromBalanceRowSource = 'js';
 	return getNumberFromBalanceRowJS(row);
 }
 
@@ -231,5 +360,7 @@ export default {
 	parseBalanceSheetRow,
 	parseCurrentValues,
 	getMoneyFromTupleString,
-	getNumberFromBalanceRow
+	getNumberFromBalanceRow,
+	isWasmAvailable,
+	createParsedLedger
 };

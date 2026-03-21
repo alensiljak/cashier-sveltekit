@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import Toolbar from "$lib/components/Toolbar.svelte";
-	import rustledger from '$lib/services/rustledger';
+	import rustledger, { lastParseBalanceSheetRowSource, lastParseCurrentValuesSource, lastGetMoneyFromTupleStringSource, isWasmAvailable, createParsedLedger } from '$lib/services/rustledger';
+	import type { BeancountError } from '@rustledger/wasm';
 	import { Account, Money } from '$lib/data/model';
 	import appService from '$lib/services/appService';
 
@@ -23,6 +24,17 @@
 	// Parsed results
 	let parsedAccounts: Account[] = [];
 	let currentValues: Record<string, { quantity: number; currency: string }> = {};
+
+	// Track which implementation was used for each demo
+	let parseBalanceSheetSource: 'wasm' | 'js' | null = null;
+	let parseCurrentValuesSource: 'wasm' | 'js' | null = null;
+	let getMoneyFromTupleStringSource: 'wasm' | 'js' | null = null;
+	
+	// Validation state
+	let validationErrors: BeancountError[] = [];
+	let validationWarnings: BeancountError[] = [];
+	let isValid = false;
+	let validationSource: 'wasm' | 'js' | null = null;
 
 	// Initialize WASM
 	onMount(async () => {
@@ -96,6 +108,10 @@
 			isLoading = true;
 			error = null;
 
+			// Reset source tracking
+			parseBalanceSheetSource = null;
+			parseCurrentValuesSource = null;
+
 			// Convert Beancount source to array format
 			const parsedData = parseBeancountToArray(beancountSource);
 
@@ -108,12 +124,16 @@
 			parsedAccounts = parsedData
 				.map(row => rustledger.parseBalanceSheetRow(row))
 				.filter((account): account is Account => account !== null);
+			// Capture the source used for the last call
+			parseBalanceSheetSource = lastParseBalanceSheetRowSource;
 
 			// Parse current values using beancount format directly
 			currentValues = rustledger.parseCurrentValues(
 				parsedData,
 				'Assets'
 			);
+			// Capture the source used for the last call
+			parseCurrentValuesSource = lastParseCurrentValuesSource;
 
 			console.log('Parsed accounts:', parsedAccounts);
 			console.log('Current values:', currentValues);
@@ -148,6 +168,105 @@
 		} finally {
 			isLoading = false;
 		}
+	}
+
+	/**
+	 * Validate the Beancount source using WASM or JS fallback
+	 */
+	async function handleValidate() {
+		try {
+			isLoading = true;
+			error = null;
+			validationErrors = [];
+			validationWarnings = [];
+
+			if (!isWasmAvailable()) {
+				// Use JS fallback for validation
+				validationSource = 'js';
+				const ledger = createLedgerJS(beancountSource);
+				const parseErrors = ledger.getParseErrors();
+				const validationErrorsJS = ledger.getValidationErrors();
+				
+				validationErrors = [...parseErrors, ...validationErrorsJS].filter(err => err.severity === 'error');
+				validationWarnings = [...parseErrors, ...validationErrorsJS].filter(err => err.severity === 'warning');
+				isValid = validationErrors.length === 0;
+			} else {
+				// Use WASM for validation
+				validationSource = 'wasm';
+				const ledger = createParsedLedger(beancountSource);
+				if (!ledger) {
+					throw new Error('Failed to create ParsedLedger');
+				}
+				const parseErrors = ledger.getParseErrors();
+				const validationErrorsWasm = ledger.getValidationErrors();
+				
+				validationErrors = [...parseErrors, ...validationErrorsWasm].filter(err => err.severity === 'error');
+				validationWarnings = [...parseErrors, ...validationErrorsWasm].filter(err => err.severity === 'warning');
+				isValid = ledger.isValid();
+				ledger.free();
+			}
+
+			console.log('Validation complete:', { isValid, errors: validationErrors, warnings: validationWarnings });
+
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Failed to validate Beancount source';
+			console.error('Validation error:', err);
+		} finally {
+			isLoading = false;
+		}
+	}
+
+	/**
+	 * Create a ledger instance using JavaScript implementation
+	 */
+	function createLedgerJS(source: string): any {
+		// Simple JS validation: check for basic syntax errors
+		const errors: BeancountError[] = [];
+		const lines = source.split('\n');
+		
+		for (let i = 0; i < lines.length; i++) {
+			const line = lines[i];
+			const trimmed = line.trim();
+			
+			// Skip empty lines and comments
+			if (!trimmed || trimmed.startsWith(';') || trimmed.startsWith('option ') || trimmed.startsWith('include ')) {
+				continue;
+			}
+			
+			// Check for transaction lines (should start with a date)
+			if (trimmed.match(/^\d{4}-\d{2}-\d{2}/)) {
+				// Transaction header - should have flag and description
+				const parts = trimmed.split(/\s+/);
+				if (parts.length < 3) {
+					errors.push({
+						message: 'Invalid transaction format: expected date, flag, and description',
+						line: i + 1,
+						column: 0,
+						severity: 'error'
+					});
+				}
+			}
+			// Check for balance assertions
+			else if (trimmed.startsWith('balance ')) {
+				// Balance line should have account and amount
+				const parts = trimmed.split(/\s+/);
+				if (parts.length < 3) {
+					errors.push({
+						message: 'Invalid balance assertion: expected account and amount',
+						line: i + 1,
+						column: 0,
+						severity: 'error'
+					});
+				}
+			}
+		}
+		
+		// Return a simple object with methods compatible with the interface
+		return {
+			getParseErrors: () => errors.filter(e => e.severity === 'error'),
+			getValidationErrors: () => [],
+			isValid: () => errors.length === 0
+		};
 	}
 </script>
 
@@ -209,6 +328,19 @@
 				>
 					Import Journal
 				</button>
+
+				<button
+					class="btn btn-accent"
+					on:click={handleValidate}
+					disabled={isLoading}
+				>
+					{#if isLoading}
+						<span class="loading loading-spinner"></span>
+						Validating...
+					{:else}
+						Validate
+					{/if}
+				</button>
 			</div>
 
 			{#if error}
@@ -225,7 +357,14 @@
 	<!-- Parsed Accounts Section -->
 	<section class="card bg-base-100 shadow-xl">
 		<div class="card-body">
-			<h2 class="card-title">Parsed Accounts ({parsedAccounts.length})</h2>
+			<h2 class="card-title">
+				Parsed Accounts ({parsedAccounts.length})
+				{#if parseBalanceSheetSource}
+					<span class="badge {parseBalanceSheetSource === 'wasm' ? 'badge-success' : 'badge-neutral'} ml-2">
+						{parseBalanceSheetSource === 'wasm' ? 'WASM' : 'JS Fallback'}
+					</span>
+				{/if}
+			</h2>
 
 			{#if parsedAccounts.length === 0}
 				<p class="text-base-content/50">No accounts parsed yet.</p>
@@ -261,7 +400,14 @@
 	<!-- Current Values Section -->
 	<section class="card bg-base-100 shadow-xl">
 		<div class="card-body">
-			<h2 class="card-title">Current Values (Root: Assets)</h2>
+			<h2 class="card-title">
+				Current Values (Root: Assets)
+				{#if parseCurrentValuesSource}
+					<span class="badge {parseCurrentValuesSource === 'wasm' ? 'badge-success' : 'badge-neutral'} ml-2">
+						{parseCurrentValuesSource === 'wasm' ? 'WASM' : 'JS Fallback'}
+					</span>
+				{/if}
+			</h2>
 			<p class="text-sm text-base-content/70">
 				Parsed using parseCurrentValues() with root account "Assets"
 			</p>
@@ -296,7 +442,14 @@
 	<!-- Money Tuple Parsing Test -->
 	<section class="card bg-base-100 shadow-xl">
 		<div class="card-body">
-			<h2 class="card-title">Money Tuple Parsing Test</h2>
+			<h2 class="card-title">
+				Money Tuple Parsing Test
+				{#if getMoneyFromTupleStringSource}
+					<span class="badge {getMoneyFromTupleStringSource === 'wasm' ? 'badge-success' : 'badge-neutral'} ml-2">
+						{getMoneyFromTupleStringSource === 'wasm' ? 'WASM' : 'JS Fallback'}
+					</span>
+				{/if}
+			</h2>
 			<p class="text-sm text-base-content/70">
 				Testing getMoneyFromTupleString() with various formats
 			</p>
@@ -304,10 +457,16 @@
 			<div class="grid gap-2">
 				{#each ['(100.00 EUR)', '(500.50 USD)', '(-25.75 GBP)'] as tuple}
 					{@const money = rustledger.getMoneyFromTupleString(tuple)}
+					{@const source = getMoneyFromTupleStringSource || (lastGetMoneyFromTupleStringSource ? (lastGetMoneyFromTupleStringSource === 'wasm' ? 'wasm' : 'js') : null)}
 					<div class="flex items-center gap-4 p-2 bg-base-200 rounded">
 						<span class="font-mono">{tuple}</span>
 						<span class="text-primary">→</span>
 						<span>{money.quantity.toFixed(2)} {money.currency}</span>
+						{#if source}
+							<span class="badge {source === 'wasm' ? 'badge-success' : 'badge-neutral'} ml-auto text-xs">
+								{source === 'wasm' ? 'WASM' : 'JS'}
+							</span>
+						{/if}
 					</div>
 				{/each}
 			</div>

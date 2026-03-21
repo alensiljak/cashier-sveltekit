@@ -14,6 +14,12 @@ const config: UserConfig = defineConfig({
 	define: {
 		__BUILD_DATE__: JSON.stringify(buildDate)
 	},
+	server: {
+		// Ensure WASM files are served correctly in dev mode
+		fs: {
+			allow: ['..']
+		}
+	},
 	build: {
 		//sourcemap: process.env.SOURCE_MAP === 'true',
 		sourcemap: false
@@ -124,11 +130,11 @@ const config: UserConfig = defineConfig({
 				]
 			},
 			injectManifest: {
-				globPatterns: ['client/**/*.{js,css,ico,png,svg,webp,woff,woff2}']
+				globPatterns: ['client/**/*.{js,css,ico,png,svg,webp,woff,woff2,wasm}']
 			},
 			workbox: {
 				globPatterns: [
-					'client/**/*.{js,css,ico,png,svg,txt,webp,webmanifest}',
+					'client/**/*.{js,css,ico,png,svg,txt,webp,webmanifest,wasm}',
 					'prerendered/**/*.html'
 				]
 			},
@@ -144,17 +150,9 @@ const config: UserConfig = defineConfig({
 		}),
 		mkcert()
 		//VitePWA({ registerType: 'autoUpdate' })
-	],
-	server: {
-		https: true
-	},
-	test: {
-		environment: 'jsdom',
-		globals: true,
-		// Include both src and tests directories for unit tests
-		include: ['src/**/*.{test,spec}.{js,ts}', 'tests/**/*.{test,spec}.{js,ts}'],
-		exclude: ['tests/ui/**/*'] // Exclude e2e tests from vitest
-	}
+	]
 });
+
+// Vitest configuration is separate - see vitest.config.ts or package.json
 
 export default config;
