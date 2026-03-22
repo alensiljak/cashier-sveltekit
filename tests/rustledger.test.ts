@@ -17,7 +17,7 @@ describe('RustLedger Service', () => {
 		// Reset module state between tests
 		await vi.resetModules();
 		// Re-initialize WASM for each test
-		await import('$lib/services/rustledger').then(module => {
+		await import('$lib/services/rustledger').then((module) => {
 			module.default.ensureInitialized();
 		});
 	});

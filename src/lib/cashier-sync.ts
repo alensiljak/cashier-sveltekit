@@ -198,11 +198,14 @@ export class CashierSync {
 
 	/**
 	 * Read infrastructure Beancount file content from Cashier server.
+	 * Uses the unified /infrastructure endpoint with file_path parameter.
 	 */
-	async readInfrastructureFile(endpoint: string): Promise<string> {
-		const response = await this.get(endpoint);
+	async readInfrastructureFile(filePath: string): Promise<string> {
+		const url = new URL(`${this.serverUrl}/infrastructure`);
+		url.searchParams.append('file_path', filePath);
+		const response = await fetch(url);
 		if (!response.ok) {
-			throw new Error(`Error reading infrastructure file: ${endpoint}`);
+			throw new Error(`Error reading infrastructure file: ${filePath}`);
 		}
 
 		const json = await response.json();
@@ -210,15 +213,15 @@ export class CashierSync {
 	}
 
 	async readInfrastructureConfig(): Promise<string> {
-		return this.readInfrastructureFile('/infrastructure/config');
+		return this.readInfrastructureFile('config.bean');
 	}
 
 	async readInfrastructureCommodities(): Promise<string> {
-		return this.readInfrastructureFile('/infrastructure/commodities');
+		return this.readInfrastructureFile('commodities.bean');
 	}
 
 	async readInfrastructureAccounts(): Promise<string> {
-		return this.readInfrastructureFile('/infrastructure/accounts');
+		return this.readInfrastructureFile('accounts.bean');
 	}
 
 	/**

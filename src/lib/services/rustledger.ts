@@ -100,7 +100,10 @@ export function parseBalanceSheetRow(record: string[]): Account | null {
  * Accepts either Beancount source directly or array format for backward compatibility.
  * The function filters accounts under the specified rootAccount.
  */
-export function parseCurrentValues(sourceOrLines: string | Array<any>, rootAccount: string): CurrentValuesDict {
+export function parseCurrentValues(
+	sourceOrLines: string | Array<any>,
+	rootAccount: string
+): CurrentValuesDict {
 	if (!wasmModule || !wasmModule.ParsedLedger) {
 		throw new Error('WASM module not available. RustLedger requires WASM to be initialized.');
 	}
@@ -108,9 +111,10 @@ export function parseCurrentValues(sourceOrLines: string | Array<any>, rootAccou
 	const result: CurrentValuesDict = {};
 
 	// Build Beancount source from lines if array is provided (backward compatibility)
-	const source = typeof sourceOrLines === 'string'
-		? sourceOrLines
-		: buildBeancountSourceFromLines(sourceOrLines);
+	const source =
+		typeof sourceOrLines === 'string'
+			? sourceOrLines
+			: buildBeancountSourceFromLines(sourceOrLines);
 
 	const ledger = new wasmModule.ParsedLedger(source);
 	const directives = ledger.getDirectives();
@@ -193,7 +197,7 @@ export function parseAllAccounts(source: string): Account[] {
 	// Convert to Account objects with balances, sorted by name
 	const accounts: Account[] = Array.from(accountSet)
 		.sort((a, b) => a.localeCompare(b))
-		.map(name => {
+		.map((name) => {
 			const account = new Account('');
 			account.name = name;
 			// Assign balances if available
@@ -237,7 +241,10 @@ function buildBeancountSourceFromLines(lines: Array<any>): string {
 }
 
 function normalizeTupleAmountString(value: string): string {
-	return value.trim().replace(/^\((.*)\)$/, '$1').trim();
+	return value
+		.trim()
+		.replace(/^\((.*)\)$/, '$1')
+		.trim();
 }
 
 /**

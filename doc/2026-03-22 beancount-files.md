@@ -25,3 +25,4 @@ They will be used later, to feed RustLedger WASM along with the local transactio
 - [x] Store the synced files into OPFS. Simply overwrite. These files will never be modified in Cashier.
 - [x] Extract plain text from the JSON response.
 - [x] Create a page that lists all files in OPFS storage.
+- [ ] modify the sync to use one endpoint `/infrastructure` with a parameter `file_path`.

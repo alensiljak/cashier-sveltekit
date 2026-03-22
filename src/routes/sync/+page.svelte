@@ -9,11 +9,7 @@
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import { CashierSync } from '$lib/cashier-sync';
 	import * as OpfsLib from '$lib/utils/opfslib.js';
-	import {
-		InfrastructureAccountsFilename,
-		InfrastructureCommoditiesFilename,
-		InfrastructureConfigFilename
-	} from '$lib/constants';
+	import { InfrastructureFiles } from '$lib/constants';
 
 	Notifier.init();
 
@@ -152,17 +148,16 @@
 	async function synchronizeInfrastructureFiles() {
 		const sync = new CashierSync(serverUrl, _ptaSystem);
 
-		const [configFile, commoditiesFile, accountsFile] = await Promise.all([
-			sync.readInfrastructureConfig(),
-			sync.readInfrastructureCommodities(),
-			sync.readInfrastructureAccounts()
-		]);
+		// Fetch all infrastructure files using the generic method
+		const fileContents = await Promise.all(
+			InfrastructureFiles.map(fileName => sync.readInfrastructureFile(fileName))
+		);
 
-		await Promise.all([
-			OpfsLib.saveFile(InfrastructureConfigFilename, configFile),
-			OpfsLib.saveFile(InfrastructureCommoditiesFilename, commoditiesFile),
-			OpfsLib.saveFile(InfrastructureAccountsFilename, accountsFile)
-		]);
+		await Promise.all(
+			InfrastructureFiles.map((fileName, index) =>
+				OpfsLib.saveFile(fileName, fileContents[index])
+			)
+		);
 
 		Notifier.success('Infrastructure files synchronized');
 	}
@@ -228,7 +223,7 @@
 				bind:checked={syncInfrastructureFiles}
 				onchange={saveSettings}
 			/>
-			<p>Sync infrastructure files (config, commodities, accounts)</p>
+			<p>Sync infrastructure files (book, config, commodities, accounts)</p>
 		</label>
 	</div>
 

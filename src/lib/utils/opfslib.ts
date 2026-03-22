@@ -66,7 +66,7 @@ export async function listFiles(): Promise<string[]> {
 	try {
 		const root = await navigator.storage.getDirectory();
 		const files: string[] = [];
-		
+
 		// Iterate through directory entries using the async iterator
 		// @ts-expect-error - FileSystemDirectoryHandle.entries() is part of the File System Access API
 		for await (const [name, handle] of root.entries()) {
@@ -74,7 +74,7 @@ export async function listFiles(): Promise<string[]> {
 				files.push(name);
 			}
 		}
-		
+
 		return files;
 	} catch (error) {
 		console.error('Error listing files:', error);
