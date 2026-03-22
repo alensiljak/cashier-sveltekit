@@ -205,7 +205,8 @@ export class CashierSync {
 			throw new Error(`Error reading infrastructure file: ${endpoint}`);
 		}
 
-		return response.text();
+		const json = await response.json();
+		return json.content;
 	}
 
 	async readInfrastructureConfig(): Promise<string> {

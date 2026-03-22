@@ -23,4 +23,5 @@ They will be used later, to feed RustLedger WASM along with the local transactio
 
 - [x] Add a new option to the Sync page, to synchronize all infrastructure files. This can later be separated into individual files, if required.
 - [x] Store the synced files into OPFS. Simply overwrite. These files will never be modified in Cashier.
-- [ ] Create a page that lists all files in OPFS storage.
+- [x] Extract plain text from the JSON response.
+- [x] Create a page that lists all files in OPFS storage.

@@ -48,6 +48,13 @@
 	<section>
 		<h3 class="text-3xl font-semibold">Experiments</h3>
 
-		<a class="link link-primary" href="/rledger">RustLedger demo</a>
+		<ul>
+			<li>
+				<a class="link link-primary" href="/rledger">RustLedger demo</a>
+			</li>
+			<li>
+				<a class="link link-primary" href="/opfs">OPFS demo</a>
+			</li>
+		</ul>
 	</section>
 </article>
