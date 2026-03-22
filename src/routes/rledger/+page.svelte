@@ -245,19 +245,6 @@
 
 			<div class="mt-4 flex gap-2">
 				<button
-					class="btn btn-primary"
-					on:click={handleParse}
-					disabled={isLoading}
-				>
-					{#if isLoading}
-						<span class="loading loading-spinner"></span>
-						Parsing...
-					{:else}
-						Parse
-					{/if}
-				</button>
-	
-				<button
 					class="btn btn-secondary"
 					on:click={handleImportJournal}
 					disabled={isLoading}
@@ -275,6 +262,19 @@
 						Validating...
 					{:else}
 						Validate
+					{/if}
+				</button>
+
+				<button
+					class="btn btn-primary"
+					on:click={handleParse}
+					disabled={isLoading}
+				>
+					{#if isLoading}
+						<span class="loading loading-spinner"></span>
+						Parsing...
+					{:else}
+						Parse
 					{/if}
 				</button>
 			</div>

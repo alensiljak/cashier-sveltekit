@@ -155,22 +155,27 @@ export function parseCurrentValues(lines: Array<any>, rootAccount: string): Curr
  * Build a Beancount source string from parsed lines
  */
 function buildBeancountSourceFromLines(lines: Array<any>): string {
-	const sourceLines: string[] = [];
+	const transactionHeader = (i: number) => `2024-01-01 * "Transaction ${i}" "Generated"`;
 
-	for (let i = 0; i < lines.length; i++) {
-		const row = lines[i];
-		if (Array.isArray(row) && row.length >= 3) {
+	const sourceLines = lines.flatMap((row, i) => {
+		if (!Array.isArray(row) || row.length < 2) return [];
+
+		let account: string;
+		let amount: string;
+
+		if (row.length >= 3) {
 			// Format: [amount, currency, account]
-			const [amount, currency, account] = row;
-			sourceLines.push(`2024-01-01 * "Transaction ${i}" "Generated"`);
-			sourceLines.push(`    ${account} ${amount} ${currency}`);
-		} else if (Array.isArray(row) && row.length === 2) {
+			const [amountVal, currency, accountVal] = row;
+			account = accountVal;
+			amount = `${amountVal} ${currency}`;
+		} else {
 			// Tuple format: [account, "(amount currency)"]
-			const [account, amountStr] = row;
-			sourceLines.push(`2024-01-01 * "Transaction ${i}" "Generated"`);
-			sourceLines.push(`    ${account} ${normalizeTupleAmountString(amountStr)}`);
+			[account, amount] = row;
+			amount = normalizeTupleAmountString(amount);
 		}
-	}
+
+		return [transactionHeader(i), `    ${account} ${amount}`];
+	});
 
 	return sourceLines.join('\n');
 }
