@@ -24,6 +24,10 @@
 
 	// UI state
 	let showFullSource = false;
+	
+	// Source display
+	let sourceContainer: HTMLDivElement;
+	$: sourceLines = fullBeancountSource ? fullBeancountSource.split('\n') : [];
 
 	// Parsed results
 	let parsedAccounts: Account[] = [];
@@ -35,6 +39,7 @@
 	let validationErrors: BeancountError[] = [];
 	let validationWarnings: BeancountError[] = [];
 	let isValid = false;
+	let hasValidated = false;
 
 	// Reactive: update full source when components change
 	$: fullBeancountSource = infrastructureSource && transactionSource
@@ -203,6 +208,7 @@
 			console.error('Validation error:', err);
 		} finally {
 			isLoading = false;
+			hasValidated = true;
 		}
 	}
 </script>
@@ -309,11 +315,20 @@
 
 			{#if showFullSource}
 				<div class="form-control mt-4">
-					<textarea
-						readonly
-						class="textarea textarea-bordered h-96 font-mono text-sm w-full bg-base-200"
-						value={fullBeancountSource}
-					></textarea>
+					<div class="border border-base-300 rounded-lg overflow-hidden bg-base-200 font-mono text-sm">
+						<div class="h-96 overflow-auto p-4" bind:this={sourceContainer}>
+							{#each sourceLines as line, i}
+								<div class="flex">
+									<div class="flex-shrink-0 bg-base-300 text-base-content/50 text-right select-none px-3 py-1 border-r border-base-300 min-w-[3rem] leading-relaxed">
+										{i + 1}
+									</div>
+									<div class="flex-1 px-4 py-1 whitespace-pre leading-relaxed">
+										{line}
+									</div>
+								</div>
+							{/each}
+						</div>
+					</div>
 				</div>
 				<div class="mt-2 text-sm text-base-content/50">
 					Infrastructure: {infrastructureSource.length} chars | Transactions: {transactionSource.length} chars | Total: {fullBeancountSource.length} chars
@@ -329,7 +344,16 @@
 				Validation Results
 			</h2>
 
-			{#if validationErrors.length === 0 && validationWarnings.length === 0}
+			{#if hasValidated && validationErrors.length === 0 && validationWarnings.length === 0}
+				<div class="alert alert-success">
+					<svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+					</svg>
+					<span>
+						<strong>Validation Successful!</strong> The Beancount source is valid with no errors or warnings.
+					</span>
+				</div>
+			{:else if !hasValidated}
 				<p class="text-base-content/50">No validation results yet. Click "Validate" to check the Beancount source.</p>
 			{:else}
 				<!-- Overall Status -->
