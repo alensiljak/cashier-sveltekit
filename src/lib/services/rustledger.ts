@@ -157,15 +157,30 @@ export function parseAllAccounts(source: string): Account[] {
 	const ledger = new wasmModule.ParsedLedger(source);
 	const directives = ledger.getDirectives();
 	const accountSet = new Set<string>();
+	const balancesByAccount: Record<string, Record<string, number>> = {};
 
-	// Collect all unique account names from transactions and balance directives
+	// Collect all unique account names and their balances from transactions and balance directives
 	for (const directive of directives) {
 		if (directive.type === 'transaction') {
 			for (const posting of directive.postings) {
-				accountSet.add(posting.account);
+				const account = posting.account;
+				accountSet.add(account);
+				if (posting.units) {
+					if (!balancesByAccount[account]) {
+						balancesByAccount[account] = {};
+					}
+					balancesByAccount[account][posting.units.currency] = parseFloat(posting.units.number);
+				}
 			}
 		} else if (directive.type === 'balance') {
-			accountSet.add(directive.account);
+			const account = directive.account;
+			accountSet.add(account);
+			if (directive.amount) {
+				if (!balancesByAccount[account]) {
+					balancesByAccount[account] = {};
+				}
+				balancesByAccount[account][directive.amount.currency] = parseFloat(directive.amount.number);
+			}
 		} else if (directive.type === 'account' && directive.name) {
 			accountSet.add(directive.name);
 		} else if (directive.type === 'open' && directive.account) {
@@ -175,12 +190,16 @@ export function parseAllAccounts(source: string): Account[] {
 		}
 	}
 
-	// Convert to Account objects and sort by name
+	// Convert to Account objects with balances, sorted by name
 	const accounts: Account[] = Array.from(accountSet)
 		.sort((a, b) => a.localeCompare(b))
 		.map(name => {
 			const account = new Account('');
 			account.name = name;
+			// Assign balances if available
+			if (balancesByAccount[name]) {
+				account.balances = balancesByAccount[name];
+			}
 			return account;
 		});
 
