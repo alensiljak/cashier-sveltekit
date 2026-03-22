@@ -49,13 +49,6 @@ export async function ensureInitialized(): Promise<void> {
 }
 
 /**
- * Check if WASM module is available
- */
-export function isWasmAvailable(): boolean {
-	return wasmModule !== null && wasmModule.ParsedLedger !== undefined;
-}
-
-/**
  * Create a ParsedLedger instance if WASM is available
  */
 export function createParsedLedger(source: string): any {
@@ -253,6 +246,5 @@ export default {
 	parseCurrentValues,
 	getMoneyFromTupleString,
 	getNumberFromBalanceRow,
-	isWasmAvailable,
 	createParsedLedger
 };
