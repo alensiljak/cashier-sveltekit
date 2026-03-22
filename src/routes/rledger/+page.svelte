@@ -436,7 +436,7 @@
 			{#if parsedAccounts.length === 0}
 				<p class="text-base-content/50">No accounts parsed yet.</p>
 			{:else}
-				<div class="overflow-x-auto">
+				<div class="overflow-x-auto overflow-y-auto max-h-[400px]">
 					<table class="table table-zebra">
 						<thead>
 							<tr>
