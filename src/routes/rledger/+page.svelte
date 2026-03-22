@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import Toolbar from "$lib/components/Toolbar.svelte";
-	import rustledger, { createParsedLedger } from '$lib/services/rustledger';
+	import rustledger, { createParsedLedger, parseAllAccounts } from '$lib/services/rustledger';
 	import type { BeancountError } from '@rustledger/wasm';
 	import { Account, Money } from '$lib/data/model';
 	import appService from '$lib/services/appService';
@@ -68,19 +68,14 @@
 			isLoading = true;
 			error = null;
 
-			// Parse current values directly from Beancount source
+			// Parse all accounts from Beancount source (unfiltered)
+			parsedAccounts = parseAllAccounts(beancountSource);
+
+			// Parse current values filtered by root account "Assets"
 			currentValues = rustledger.parseCurrentValues(
 				beancountSource,
 				'Assets'
 			);
-
-			// Extract accounts from current values for display
-			parsedAccounts = Object.entries(currentValues).map(([name, data]) => {
-				const account = new Account('');
-				account.name = name;
-				account.balances = { [data.currency]: data.quantity };
-				return account;
-			});
 
 			console.log('Parsed accounts:', parsedAccounts);
 			console.log('Current values:', currentValues);

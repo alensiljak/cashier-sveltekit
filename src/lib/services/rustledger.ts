@@ -147,6 +147,48 @@ export function parseCurrentValues(sourceOrLines: string | Array<any>, rootAccou
 }
 
 /**
+ * Parse all unique accounts from Beancount source without filtering
+ */
+export function parseAllAccounts(source: string): Account[] {
+	if (!wasmModule || !wasmModule.ParsedLedger) {
+		throw new Error('WASM module not available. RustLedger requires WASM to be initialized.');
+	}
+
+	const ledger = new wasmModule.ParsedLedger(source);
+	const directives = ledger.getDirectives();
+	const accountSet = new Set<string>();
+
+	// Collect all unique account names from transactions and balance directives
+	for (const directive of directives) {
+		if (directive.type === 'transaction') {
+			for (const posting of directive.postings) {
+				accountSet.add(posting.account);
+			}
+		} else if (directive.type === 'balance') {
+			accountSet.add(directive.account);
+		} else if (directive.type === 'account' && directive.name) {
+			accountSet.add(directive.name);
+		} else if (directive.type === 'open' && directive.account) {
+			accountSet.add(directive.account);
+		} else if (directive.type === 'close' && directive.account) {
+			accountSet.add(directive.account);
+		}
+	}
+
+	// Convert to Account objects and sort by name
+	const accounts: Account[] = Array.from(accountSet)
+		.sort((a, b) => a.localeCompare(b))
+		.map(name => {
+			const account = new Account('');
+			account.name = name;
+			return account;
+		});
+
+	ledger.free();
+	return accounts;
+}
+
+/**
  * Build a Beancount source string from parsed lines
  */
 function buildBeancountSourceFromLines(lines: Array<any>): string {
