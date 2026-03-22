@@ -97,18 +97,20 @@ export function parseBalanceSheetRow(record: string[]): Account | null {
 
 /**
  * Parse Beancount current values using WASM ParsedLedger
- * Expected format: array of rows, each row is [amount_string, currency, account_name]
+ * Accepts either Beancount source directly or array format for backward compatibility.
  * The function filters accounts under the specified rootAccount.
  */
-export function parseCurrentValues(lines: Array<any>, rootAccount: string): CurrentValuesDict {
+export function parseCurrentValues(sourceOrLines: string | Array<any>, rootAccount: string): CurrentValuesDict {
 	if (!wasmModule || !wasmModule.ParsedLedger) {
 		throw new Error('WASM module not available. RustLedger requires WASM to be initialized.');
 	}
 
 	const result: CurrentValuesDict = {};
 
-	// Build Beancount source from lines
-	const source = buildBeancountSourceFromLines(lines);
+	// Build Beancount source from lines if array is provided (backward compatibility)
+	const source = typeof sourceOrLines === 'string'
+		? sourceOrLines
+		: buildBeancountSourceFromLines(sourceOrLines);
 
 	const ledger = new wasmModule.ParsedLedger(source);
 	const directives = ledger.getDirectives();

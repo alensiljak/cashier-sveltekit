@@ -61,78 +61,26 @@
 	}
 
 	/**
-	 * Parse Beancount text and convert to array format expected by rustledger
-	 * Extracts postings and converts to [amount, currency, account] format
-	 */
-	function parseBeancountToArray(source: string): Array<[string, string, string]> {
-		const result: Array<[string, string, string]> = [];
-		const lines = source.split('\n');
-
-		for (const line of lines) {
-			// Skip empty lines and non-posting lines (transactions start with date)
-			const trimmed = line.trim();
-			if (!trimmed || trimmed.startsWith(';') || trimmed.startsWith('option ') || trimmed.startsWith('include ')) {
-				continue;
-			}
-
-			// Check if this is a posting line (starts with whitespace or tab)
-			// Beancount postings are indented with at least 2 spaces or a tab
-			if (line.match(/^\s+\S/)) {
-				// This is a posting line
-				// Remove leading whitespace and split
-				const posting = line.trim();
-
-				// Split by whitespace, but account names can contain spaces
-				// Format: <amount> <currency> <account>
-				// Amount can be negative, positive, or in parentheses
-				const parts = posting.split(/\s+/);
-
-				if (parts.length >= 3) {
-				// Beancount posting format: account amount currency
-				const account = parts[0];
-				const amount = parts[1];
-				const currency = parts[2];
-
-				// Only include if it looks like a valid posting
-				if (/^[-()0-9.]+$/.test(amount) && /^[A-Z]{3}$/i.test(currency)) {
-						result.push([amount, currency, account]);
-					}
-				}
-			}
-		}
-
-		return result;
-	}
-
-	/**
 	 * Handle parse button click
 	 */
 	async function handleParse() {
 		try {
 			isLoading = true;
 			error = null;
-			await rustledger.ensureInitialized();
-			initialized = true;
-			updateMoneySamples();
 
-			// Convert Beancount source to array format
-			const parsedData = parseBeancountToArray(beancountSource);
-
-			if (parsedData.length === 0) {
-				error = 'No valid postings found in the Beancount source';
-				return;
-			}
-
-			// Parse balance sheet rows (WASM only - throws if unavailable)
-			parsedAccounts = parsedData
-				.map(row => rustledger.parseBalanceSheetRow(row))
-				.filter((account): account is Account => account !== null);
-
-			// Parse current values using beancount format directly (WASM only)
+			// Parse current values directly from Beancount source
 			currentValues = rustledger.parseCurrentValues(
-				parsedData,
+				beancountSource,
 				'Assets'
 			);
+
+			// Extract accounts from current values for display
+			parsedAccounts = Object.entries(currentValues).map(([name, data]) => {
+				const account = new Account('');
+				account.name = name;
+				account.balances = { [data.currency]: data.quantity };
+				return account;
+			});
 
 			console.log('Parsed accounts:', parsedAccounts);
 			console.log('Current values:', currentValues);
@@ -178,9 +126,6 @@
 			error = null;
 			validationErrors = [];
 			validationWarnings = [];
-			await rustledger.ensureInitialized();
-			initialized = true;
-			updateMoneySamples();
 
 			// Use WASM for validation (validationSource is already set to 'wasm')
 			const ledger = createParsedLedger(beancountSource);
@@ -295,7 +240,6 @@
 		<div class="card-body">
 			<h2 class="card-title">
 				Validation Results
-				<span class="badge badge-success ml-2">WASM</span>
 			</h2>
 
 			{#if validationErrors.length === 0 && validationWarnings.length === 0}
@@ -376,7 +320,6 @@
 		<div class="card-body">
 			<h2 class="card-title">
 				Parsed Accounts ({parsedAccounts.length})
-				<span class="badge badge-success ml-2">WASM</span>
 			</h2>
 
 			{#if parsedAccounts.length === 0}
@@ -415,7 +358,6 @@
 		<div class="card-body">
 			<h2 class="card-title">
 				Current Values (Root: Assets)
-				<span class="badge badge-success ml-2">WASM</span>
 			</h2>
 			<p class="text-sm text-base-content/70">
 				Parsed using parseCurrentValues() with root account "Assets"
@@ -453,7 +395,6 @@
 		<div class="card-body">
 			<h2 class="card-title">
 				Money Tuple Parsing Test
-				<span class="badge badge-success ml-2">WASM</span>
 			</h2>
 			<p class="text-sm text-base-content/70">
 				Testing getMoneyFromTupleString() with various formats
