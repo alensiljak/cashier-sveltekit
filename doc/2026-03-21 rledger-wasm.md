@@ -10,4 +10,4 @@ The route `/rledger` contains a demo page for RustLedger WASM integration.
 - [x] Add 'validate' section with a button for manuall validation and display for validation result.
 - [x] Ensure that WASM functions can be called. It seems that only JS Fallback is executed every time.
 - [x] load journal on start. If empty, have a button for "create demo entries".
-- [ ] merge beancount infrastructure files (in OPFS) with the transactions.
+- [x] merge beancount infrastructure files (in OPFS) with the transactions.

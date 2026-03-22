@@ -5,14 +5,25 @@
 	import type { BeancountError } from '@rustledger/wasm';
 	import { Account, Money } from '$lib/data/model';
 	import appService from '$lib/services/appService';
+	import * as OpfsLib from '$lib/utils/opfslib.js';
+	import { InfrastructureFiles } from '$lib/constants';
 
 	// State
 	let isLoading = false;
 	let error: string | null = null;
 	let initialized = false;
 
-	// Editable Beancount source
-	let beancountSource = '';
+	// Editable transaction source (only transactions, not infrastructure)
+	let transactionSource = '';
+
+	// Infrastructure source (book.bean from OPFS)
+	let infrastructureSource = '';
+
+	// Combined full Beancount source (infrastructure + transactions)
+	let fullBeancountSource = '';
+
+	// UI state
+	let showFullSource = false;
 
 	// Parsed results
 	let parsedAccounts: Account[] = [];
@@ -25,6 +36,11 @@
 	let validationWarnings: BeancountError[] = [];
 	let isValid = false;
 
+	// Reactive: update full source when components change
+	$: fullBeancountSource = infrastructureSource && transactionSource
+		? `${infrastructureSource}\n\n${transactionSource}`
+		: infrastructureSource || transactionSource || '';
+
 	// Initialize WASM
 	onMount(async () => {
 		try {
@@ -36,12 +52,15 @@
 			initialized = true;
 			updateMoneySamples();
 
+			// Load infrastructure file from OPFS
+			await loadInfrastructure();
+			
 			await importJournal(); // Load current journal into textarea on startup
-			if (!beancountSource) {
+			if (!transactionSource) {
 				createDemoEntries(); // If journal is empty, create demo entries
 			}
 
-			// Parse the default Beancount source
+			// Parse the combined Beancount source
 			await handleParse();
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to initialize RustLedger';
@@ -59,7 +78,7 @@
 	}
 
 	function createDemoEntries() {
-			beancountSource = `2024-01-01 * "Opening Balance" "Initial balances"
+			transactionSource = `2024-01-01 * "Opening Balance" "Initial balances"
     Assets:Bank:Checking   1000.00 EUR
     Assets:Bank:Savings    500.00 EUR
     Liabilities:CreditCard -200.00 EUR
@@ -70,6 +89,37 @@
 	}
 
 	/**
+	 * Load all infrastructure files from OPFS and concatenate them
+	 */
+	async function loadInfrastructure() {
+		try {
+			const files = InfrastructureFiles; // ['book.bean', 'config.bean', 'commodities.bean', 'accounts.bean']
+			const contents: string[] = [];
+			
+			for (const filename of files) {
+				try {
+					const content = await OpfsLib.readFile(filename);
+					if (content) {
+						contents.push(content);
+						console.log(`Loaded ${filename} from OPFS`);
+					} else {
+						console.warn(`${filename} not found in OPFS`);
+					}
+				} catch (err) {
+					console.warn(`Could not load ${filename}:`, err);
+				}
+			}
+			
+			// Concatenate all files with double newline separation
+			infrastructureSource = contents.join('\n\n');
+			console.log(`Infrastructure loaded: ${contents.length}/${files.length} files`);
+		} catch (err) {
+			console.warn('Could not load infrastructure files:', err);
+			infrastructureSource = '';
+		}
+	}
+
+	/**
 	 * Handle parse button click
 	 */
 	async function handleParse() {
@@ -77,12 +127,12 @@
 			isLoading = true;
 			error = null;
 
-			// Parse all accounts from Beancount source (unfiltered)
-			parsedAccounts = parseAllAccounts(beancountSource);
+			// Parse all accounts from combined Beancount source (unfiltered)
+			parsedAccounts = parseAllAccounts(fullBeancountSource);
 
 			// Parse current values filtered by root account "Assets"
 			currentValues = rustledger.parseCurrentValues(
-				beancountSource,
+				fullBeancountSource,
 				'Assets'
 			);
 
@@ -109,7 +159,9 @@
 			const journalSource = await appService.getExportTransactions();
 			
 			// Update the textarea
-			beancountSource = journalSource;
+			transactionSource = journalSource;
+
+			// fullBeancountSource updates reactively
 
 			console.log('Journal imported successfully');
 
@@ -132,7 +184,7 @@
 			validationWarnings = [];
 
 			// Use WASM for validation (validationSource is already set to 'wasm')
-			const ledger = createParsedLedger(beancountSource);
+			const ledger = createParsedLedger(fullBeancountSource);
 			if (!ledger) {
 				throw new Error('Failed to create ParsedLedger - WASM module not available');
 			}
@@ -176,19 +228,19 @@
 		</div>
 	</section>
 
-	<!-- Beancount Source Section -->
+	<!-- Transaction Source Section -->
 	<section class="card bg-base-100 shadow-xl">
 		<div class="card-body">
-			<h2 class="card-title">Beancount Source</h2>
+			<h2 class="card-title">Transaction Source</h2>
 			<p class="text-sm text-base-content/70">
-				Edit the Beancount source below and click "Parse" to process it with RustLedger.
+				Edit the transactions below. The full Beancount source combines these transactions with the infrastructure file (book.bean) from OPFS.
 			</p>
 
 			<div class="form-control">
 				<textarea
-					bind:value={beancountSource}
+					bind:value={transactionSource}
 					class="textarea textarea-bordered h-64 font-mono text-sm w-full"
-					placeholder="Enter Beancount source..."
+					placeholder="Enter transactions..."
 				></textarea>
 			</div>
 
@@ -224,7 +276,7 @@
 					on:click={createDemoEntries}
 					disabled={isLoading}
 				>
-					Create Demo Ledger
+					Create Demo Transactions
 				</button>
 			</div>
 
@@ -234,6 +286,37 @@
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
 					</svg>
 					<span>{error}</span>
+				</div>
+			{/if}
+		</div>
+	</section>
+
+	<!-- Full Beancount Source Section (Expandable) -->
+	<section class="card bg-base-100 shadow-xl">
+		<div class="card-body">
+			<div class="flex items-center justify-between">
+				<h2 class="card-title">Full Beancount Source</h2>
+				<button
+					class="btn btn-sm btn-outline"
+					on:click={() => showFullSource = !showFullSource}
+				>
+					{showFullSource ? 'Hide' : 'Show'} Full Source
+				</button>
+			</div>
+			<p class="text-sm text-base-content/70">
+				Combined infrastructure (book.bean) and transactions. This is what gets validated and parsed.
+			</p>
+
+			{#if showFullSource}
+				<div class="form-control mt-4">
+					<textarea
+						readonly
+						class="textarea textarea-bordered h-96 font-mono text-sm w-full bg-base-200"
+						value={fullBeancountSource}
+					></textarea>
+				</div>
+				<div class="mt-2 text-sm text-base-content/50">
+					Infrastructure: {infrastructureSource.length} chars | Transactions: {transactionSource.length} chars | Total: {fullBeancountSource.length} chars
 				</div>
 			{/if}
 		</div>
