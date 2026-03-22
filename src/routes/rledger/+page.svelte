@@ -12,14 +12,7 @@
 	let initialized = false;
 
 	// Editable Beancount source
-	let beancountSource = `2024-01-01 * "Opening Balance" "Initial balances"
-    Assets:Bank:Checking   1000.00 EUR
-    Assets:Bank:Savings    500.00 EUR
-    Liabilities:CreditCard -200.00 EUR
-
-2024-01-02 * "Transfer" "Moving money"
-    Assets:Bank:Checking   -100.00 EUR
-    Assets:Bank:Savings     100.00 EUR`;
+	let beancountSource = '';
 
 	// Parsed results
 	let parsedAccounts: Account[] = [];
@@ -43,6 +36,11 @@
 			initialized = true;
 			updateMoneySamples();
 
+			await importJournal(); // Load current journal into textarea on startup
+			if (!beancountSource) {
+				createDemoEntries(); // If journal is empty, create demo entries
+			}
+
 			// Parse the default Beancount source
 			await handleParse();
 		} catch (err) {
@@ -58,6 +56,17 @@
 			tuple,
 			money: rustledger.getMoneyFromTupleString(tuple)
 		}));
+	}
+
+	function createDemoEntries() {
+			beancountSource = `2024-01-01 * "Opening Balance" "Initial balances"
+    Assets:Bank:Checking   1000.00 EUR
+    Assets:Bank:Savings    500.00 EUR
+    Liabilities:CreditCard -200.00 EUR
+
+2024-01-02 * "Transfer" "Moving money"
+    Assets:Bank:Checking   -100.00 EUR
+    Assets:Bank:Savings     100.00 EUR`;
 	}
 
 	/**
@@ -91,7 +100,7 @@
 	/**
 	 * Import current journal from database into the text area
 	 */
-	async function handleImportJournal() {
+	async function importJournal() {
 		try {
 			isLoading = true;
 			error = null;
@@ -185,14 +194,6 @@
 
 			<div class="mt-4 flex gap-2">
 				<button
-					class="btn btn-secondary"
-					on:click={handleImportJournal}
-					disabled={isLoading}
-				>
-					Import Journal
-				</button>
-
-				<button
 					class="btn btn-accent"
 					on:click={handleValidate}
 					disabled={isLoading}
@@ -216,6 +217,14 @@
 					{:else}
 						Parse
 					{/if}
+				</button>
+
+				<button
+					class="btn btn-secondary"
+					on:click={createDemoEntries}
+					disabled={isLoading}
+				>
+					Create Demo Ledger
 				</button>
 			</div>
 
