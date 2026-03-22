@@ -136,7 +136,8 @@ const config: UserConfig = defineConfig({
 				globPatterns: [
 					'client/**/*.{js,css,ico,png,svg,txt,webp,webmanifest,wasm}',
 					'prerendered/**/*.html'
-				]
+				],
+				maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10 MB (adjust as needed)
 			},
 			devOptions: {
 				enabled: process.env.SW_DEV === 'true',
