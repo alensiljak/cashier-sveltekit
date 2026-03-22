@@ -197,6 +197,30 @@ export class CashierSync {
 	}
 
 	/**
+	 * Read infrastructure Beancount file content from Cashier server.
+	 */
+	async readInfrastructureFile(endpoint: string): Promise<string> {
+		const response = await this.get(endpoint);
+		if (!response.ok) {
+			throw new Error(`Error reading infrastructure file: ${endpoint}`);
+		}
+
+		return response.text();
+	}
+
+	async readInfrastructureConfig(): Promise<string> {
+		return this.readInfrastructureFile('/infrastructure/config');
+	}
+
+	async readInfrastructureCommodities(): Promise<string> {
+		return this.readInfrastructureFile('/infrastructure/commodities');
+	}
+
+	async readInfrastructureAccounts(): Promise<string> {
+		return this.readInfrastructureFile('/infrastructure/accounts');
+	}
+
+	/**
 	 * This no longer exists.
 	 * @param searchParams
 	 * @returns

@@ -8,6 +8,12 @@
 	import CashierDAL from '$lib/data/dal';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import { CashierSync } from '$lib/cashier-sync';
+	import * as OpfsLib from '$lib/utils/opfslib.js';
+	import {
+		InfrastructureAccountsFilename,
+		InfrastructureCommoditiesFilename,
+		InfrastructureConfigFilename
+	} from '$lib/constants';
 
 	Notifier.init();
 
@@ -19,6 +25,7 @@
 	let syncAccounts = $state(false);
 	let syncAaValues = $state(false);
 	let syncPayees = $state(false);
+	let syncInfrastructureFiles = $state(false);
 
 	let rotationClass = $state('');
 
@@ -34,6 +41,7 @@
 		syncAccounts = await settings.get(SettingKeys.syncAccounts);
 		syncAaValues = await settings.get(SettingKeys.syncAaValues);
 		syncPayees = await settings.get(SettingKeys.syncPayees);
+		syncInfrastructureFiles = await settings.get(SettingKeys.syncInfrastructureFiles);
 	}
 
 	async function reloadData() {
@@ -69,6 +77,9 @@
 			if (syncPayees) {
 				await synchronizePayees();
 			}
+			if (syncInfrastructureFiles) {
+				await synchronizeInfrastructureFiles();
+			}
 		} catch (error: any) {
 			console.error(error);
 			Notifier.error(error.message);
@@ -81,6 +92,7 @@
 		await settings.set(SettingKeys.syncAccounts, syncAccounts);
 		await settings.set(SettingKeys.syncAaValues, syncAaValues);
 		await settings.set(SettingKeys.syncPayees, syncPayees);
+		await settings.set(SettingKeys.syncInfrastructureFiles, syncInfrastructureFiles);
 	}
 
 	async function saveSyncServerUrl() {
@@ -136,6 +148,24 @@
 
 		Notifier.success('Payees fetched from Ledger');
 	}
+
+	async function synchronizeInfrastructureFiles() {
+		const sync = new CashierSync(serverUrl, _ptaSystem);
+
+		const [configFile, commoditiesFile, accountsFile] = await Promise.all([
+			sync.readInfrastructureConfig(),
+			sync.readInfrastructureCommodities(),
+			sync.readInfrastructureAccounts()
+		]);
+
+		await Promise.all([
+			OpfsLib.saveFile(InfrastructureConfigFilename, configFile),
+			OpfsLib.saveFile(InfrastructureCommoditiesFilename, commoditiesFile),
+			OpfsLib.saveFile(InfrastructureAccountsFilename, accountsFile)
+		]);
+
+		Notifier.success('Infrastructure files synchronized');
+	}
 </script>
 
 <Toolbar title="Cashier Sync">
@@ -190,6 +220,15 @@
 				onchange={saveSettings}
 			/>
 			<p>Sync Payees</p>
+		</label>
+		<label class="flex items-center space-x-2">
+			<input
+				class="checkbox checkbox-primary rounded"
+				type="checkbox"
+				bind:checked={syncInfrastructureFiles}
+				onchange={saveSettings}
+			/>
+			<p>Sync infrastructure files (config, commodities, accounts)</p>
 		</label>
 	</div>
 
