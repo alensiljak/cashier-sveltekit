@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Toolbar from '$lib/components/Toolbar.svelte';
-	import { RefreshCcwIcon } from '@lucide/svelte';
+	import { RefreshCcwIcon, SaveIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import * as OpfsLib from '$lib/utils/opfslib.js';
 	import Notifier from '$lib/utils/notifier';
@@ -12,6 +12,9 @@
 	let selectedFile = $state<string | null>(null);
 	let fileContent = $state<string>('');
 	let isContentLoading = $state(false);
+	let isSaving = $state(false);
+	let originalContent = $state<string>('');
+	let hasUnsavedChanges = $state(false);
 
 	onMount(async () => {
 		await loadFiles();
@@ -38,14 +41,46 @@
 			const content = await OpfsLib.readFile(filename);
 			if (content !== undefined) {
 				fileContent = content;
+				originalContent = content;
+				hasUnsavedChanges = false;
 			} else {
 				fileContent = 'File is empty or could not be read.';
+				originalContent = '';
+				hasUnsavedChanges = false;
 			}
 		} catch (error: any) {
 			Notifier.error(error.message || 'Failed to read file');
 			fileContent = `Error: ${error.message || 'Failed to read file'}`;
+			originalContent = '';
+			hasUnsavedChanges = false;
 		} finally {
 			isContentLoading = false;
+		}
+	}
+
+	async function saveFile() {
+		if (!selectedFile || !hasUnsavedChanges) return;
+		
+		isSaving = true;
+		try {
+			await OpfsLib.saveFile(selectedFile, fileContent);
+			originalContent = fileContent;
+			hasUnsavedChanges = false;
+			Notifier.success('File saved successfully');
+		} catch (error: any) {
+			Notifier.error(error.message || 'Failed to save file');
+		} finally {
+			isSaving = false;
+		}
+	}
+
+	function onFileContentChange(event: Event) {
+		const target = event.target as HTMLTextAreaElement;
+		fileContent = target.value;
+		if (fileContent !== originalContent) {
+			hasUnsavedChanges = true;
+		} else {
+			hasUnsavedChanges = false;
 		}
 	}
 </script>
@@ -99,14 +134,25 @@
 
 			{#if selectedFile}
 				<div class="mt-6">
-					<h3 class="mb-2 text-lg font-semibold">Content of: {selectedFile}</h3>
+					<div class="flex items-center justify-between mb-2">
+						<h3 class="text-lg font-semibold">Content of: {selectedFile}</h3>
+						<div class="flex items-center gap-2">
+							<button class="btn btn-sm btn-primary" onclick={saveFile} disabled={isSaving || !hasUnsavedChanges}>
+								<SaveIcon class="w-4 h-4" />
+								{isSaving ? 'Saving...' : 'Save'}
+							</button>
+							{#if hasUnsavedChanges}
+								<span class="text-warning text-sm">*Unsaved changes</span>
+							{/if}
+						</div>
+					</div>
 					{#if isContentLoading}
 						<div class="flex justify-center items-center p-4">
 							<span class="loading loading-spinner loading-md"></span>
 						</div>
 					{:else}
-						<textarea class="textarea textarea-bordered w-full font-mono text-sm" rows="20" readonly
-							>{fileContent}</textarea>
+						<textarea class="textarea textarea-bordered w-full font-mono text-sm" rows="20"
+							oninput={onFileContentChange}>{fileContent}</textarea>
 					{/if}
 				</div>
 			{/if}
