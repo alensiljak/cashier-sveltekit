@@ -35,6 +35,8 @@
 	let parsedAccounts: Account[] = [];
 	let parseResult: ParseResult | null = null;
 	let parsedDirectives: Directive[] = [];
+	let lastTransactionDirective: Directive | null = null;
+	let transactionAnatomy = '';
 	const tupleSamples = ['(100.00 EUR)', '(500.50 USD)', '(-25.75 GBP)'];
 	let parsedMoneySamples: Array<{ tuple: string; money: Money }> = [];
 
@@ -50,6 +52,9 @@
 		: infrastructureSource && transactionSource
 			? `${infrastructureSource}\n\n${transactionSource}`
 			: infrastructureSource || transactionSource || '';
+
+	$: lastTransactionDirective = findLastTransactionDirective(parsedDirectives);
+	$: transactionAnatomy = lastTransactionDirective ? formatTransactionAnatomy(lastTransactionDirective) : '';
 
 	async function handleSourceOnlyToggle() {
 		await handleParse();
@@ -132,6 +137,136 @@
 			default:
 				return '';
 		}
+	}
+
+	function quoteString(value: unknown): string {
+		const text = String(value ?? '');
+		return `"${text.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+	}
+
+	function formatAmount(value: unknown): string {
+		if (!value || typeof value !== 'object') {
+			return String(value ?? '');
+		}
+
+		const record = value as Record<string, unknown>;
+		if (typeof record.number === 'string' || typeof record.number === 'number') {
+			const currency = typeof record.currency === 'string' ? ` ${record.currency}` : '';
+			return `${record.number}${currency}`.trim();
+		}
+
+		return JSON.stringify(value);
+	}
+
+	function formatMetaValue(value: unknown): string {
+		if (typeof value === 'string') {
+			return quoteString(value);
+		}
+		if (typeof value === 'number' || typeof value === 'boolean') {
+			return String(value);
+		}
+		if (value == null) {
+			return 'null';
+		}
+		if (Array.isArray(value) || typeof value === 'object') {
+			return quoteString(JSON.stringify(value));
+		}
+		return quoteString(String(value));
+	}
+
+	function formatCost(cost: unknown): string {
+		if (!cost || typeof cost !== 'object') {
+			return '';
+		}
+
+		const record = cost as Record<string, unknown>;
+		if (record.number != null) {
+			return ` {${formatAmount(cost)}}`;
+		}
+
+		return ` {${JSON.stringify(cost)}}`;
+	}
+
+	function formatPrice(price: unknown): string {
+		if (!price) {
+			return '';
+		}
+		return ` @ ${formatAmount(price)}`;
+	}
+
+	function formatExtraFields(record: Record<string, unknown>, knownKeys: Set<string>, indent: string): string[] {
+		const lines: string[] = [];
+		for (const [key, value] of Object.entries(record)) {
+			if (knownKeys.has(key) || value == null) {
+				continue;
+			}
+			lines.push(`${indent}; ${key}: ${JSON.stringify(value)}`);
+		}
+		return lines;
+	}
+
+	function findLastTransactionDirective(directives: Directive[]): Directive | null {
+		for (let i = directives.length - 1; i >= 0; i -= 1) {
+			if (directives[i].type === 'transaction') {
+				return directives[i];
+			}
+		}
+		return null;
+	}
+
+	function formatTransactionAnatomy(directive: Directive): string {
+		if (directive.type !== 'transaction') {
+			return '';
+		}
+
+		const tx = directive as unknown as Record<string, unknown>;
+		const txMeta = (tx.meta ?? {}) as Record<string, unknown>;
+		const tags = Array.isArray(tx.tags) ? tx.tags : [];
+		const links = Array.isArray(tx.links) ? tx.links : [];
+		const postings = Array.isArray(tx.postings) ? tx.postings : [];
+		//const flag = typeof tx.flag === 'string' ? tx.flag : '*';
+		const flag = tx.flag;
+		const payee = tx.payee != null && tx.payee !== '' ? quoteString(tx.payee) : '';
+		const narration = tx.narration != null && tx.narration !== '' ? quoteString(tx.narration) : '""';
+
+		const tagTokens = tags
+			.map((tag) => String(tag))
+			.filter(Boolean)
+			.map((tag) => (tag.startsWith('#') ? tag : `#${tag}`));
+		const linkTokens = links
+			.map((link) => String(link))
+			.filter(Boolean)
+			.map((link) => (link.startsWith('^') ? link : `^${link}`));
+
+		const headerParts = [String(tx.date ?? ''), flag, payee, narration, ...tagTokens, ...linkTokens].filter(Boolean);
+		const lines = [headerParts.join(' ')];
+
+		for (const [key, value] of Object.entries(txMeta)) {
+			lines.push(`    ${key}: ${formatMetaValue(value)}`);
+		}
+
+		for (const postingValue of postings) {
+			const posting = postingValue as Record<string, unknown>;
+			const postingFlag = typeof posting.flag === 'string' ? `${posting.flag} ` : '';
+			const account = String(posting.account ?? '');
+			const units = posting.units ? `  ${formatAmount(posting.units)}` : '';
+			const cost = formatCost(posting.cost);
+			const price = formatPrice(posting.price);
+			const comment = typeof posting.comment === 'string' ? `  ; ${posting.comment}` : '';
+
+			lines.push(`    ${postingFlag}${account}${units}${cost}${price}${comment}`);
+
+			if (posting.meta && typeof posting.meta === 'object') {
+				for (const [key, value] of Object.entries(posting.meta as Record<string, unknown>)) {
+					lines.push(`        ${key}: ${formatMetaValue(value)}`);
+				}
+			}
+
+			lines.push(...formatExtraFields(posting, new Set(['account', 'flag', 'units', 'cost', 'price', 'comment', 'meta']), '        '));
+		}
+
+		lines.push(...formatExtraFields(tx, new Set(['type', 'date', 'flag', 'payee', 'narration', 'tags', 'links', 'meta', 'postings']), '    '));
+		return lines.join('\n');
 	}
 
 	/**
@@ -552,6 +687,26 @@
 							{/each}
 						</tbody>
 					</table>
+				</div>
+			{/if}
+		</div>
+	</section>
+
+	<!-- Transaction Anatomy Section -->
+	<section class="card bg-base-100 shadow-xl">
+		<div class="card-body">
+			<h2 class="card-title">Transaction Anatomy</h2>
+			<p class="text-sm text-base-content/70">
+				Formatted Beancount view of the last parsed <span class="font-mono">transaction</span> directive for comparison with the source string.
+			</p>
+
+			{#if !parseResult}
+				<p class="text-base-content/50">No parse result yet. Click "Parse" to inspect transaction anatomy.</p>
+			{:else if !lastTransactionDirective}
+				<p class="text-base-content/50">No transaction directive found in parsed directives.</p>
+			{:else}
+				<div class="mt-3 rounded-lg border border-base-300 bg-base-200 p-4">
+					<pre class="whitespace-pre-wrap break-all font-mono text-xs leading-relaxed">{transactionAnatomy}</pre>
 				</div>
 			{/if}
 		</div>
