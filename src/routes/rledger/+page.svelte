@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import Toolbar from "$lib/components/Toolbar.svelte";
-	import rustledger, { createParsedLedger, parseAllAccounts } from '$lib/services/rustledger';
+	import rustledger, { createParsedLedger, parseAllAccounts, version } from '$lib/services/rustledger';
 	import type { BeancountError } from '@rustledger/wasm';
 	import { Account, Money } from '$lib/data/model';
 	import appService from '$lib/services/appService';
@@ -12,6 +12,7 @@
 	let isLoading = false;
 	let error: string | null = null;
 	let initialized = false;
+	let wasmVersion = '';
 
 	// Editable transaction source (only transactions, not infrastructure)
 	let transactionSource = '';
@@ -55,6 +56,7 @@
 			// Initialize the WASM module
 			await rustledger.ensureInitialized();
 			initialized = true;
+			wasmVersion = version();
 			updateMoneySamples();
 
 			// Load infrastructure file from OPFS
@@ -225,6 +227,12 @@
 				<div class="badge" class:badge-success={initialized} class:badge-error={!initialized && !isLoading}>
 					{initialized ? 'WASM Loaded' : 'Not Loaded'}
 				</div>
+
+				{#if initialized && wasmVersion}
+					<span class="text-sm text-base-content/70">
+						Version: {wasmVersion}
+					</span>
+				{/if}
 
 				{#if isLoading}
 					<span class="loading loading-spinner"></span>

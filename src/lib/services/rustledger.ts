@@ -309,6 +309,16 @@ export function getNumberFromBalanceRow(row: Array<Array<string>>): number {
 	throw new Error('Failed to parse number from balance row using WASM');
 }
 
+/**
+ * Get the WASM library version
+ */
+export function version(): string {
+	if (!wasmModule || !wasmModule.version) {
+		throw new Error('WASM module not available or version() not supported');
+	}
+	return wasmModule.version();
+}
+
 // Default export
 export default {
 	ensureInitialized,
@@ -316,5 +326,6 @@ export default {
 	parseCurrentValues,
 	getMoneyFromTupleString,
 	getNumberFromBalanceRow,
-	createParsedLedger
+	createParsedLedger,
+	version
 };
