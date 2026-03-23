@@ -56,7 +56,9 @@ export const SettingKeys = {
 	// Home cards
 	visibleCards: 'homeCardNames',
 	// Peer sync
-	peerId: 'peerId'
+	peerId: 'peerId',
+	syncServers: 'syncServers',
+	syncActiveServerId: 'syncActiveServerId'
 };
 
 export const CardNames = {
