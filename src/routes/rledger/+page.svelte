@@ -27,6 +27,28 @@
 	let showFullSource = false;
 	let sourceOnly = false;
 	
+	// Accordion state - track which sections are expanded
+	let expandedSections = new Set<string>([
+		'status',
+		'transaction-source',
+		'full-source',
+		'validation',
+		'accounts',
+		'directives',
+		'anatomy',
+		'money-tuple'
+	]);
+	
+	function toggleSection(sectionId: string) {
+		if (expandedSections.has(sectionId)) {
+			expandedSections.delete(sectionId);
+		} else {
+			expandedSections.add(sectionId);
+		}
+		// Trigger reactivity
+		expandedSections = new Set(expandedSections);
+	}
+	
 	// Source display
 	let sourceContainer: HTMLDivElement;
 	$: sourceLines = fullBeancountSource ? fullBeancountSource.split('\n') : [];
@@ -391,119 +413,135 @@
 <main class="mx-auto max-w-6xl space-y-4 p-4">
 	<!-- Status Section -->
 	<section class="card bg-base-100 shadow-xl">
-		<div class="card-body">
-			<h2 class="card-title">Integration Status</h2>
-
-			<div class="flex items-center gap-4">
-				<div class="badge" class:badge-success={initialized} class:badge-error={!initialized && !isLoading}>
-					{initialized ? 'WASM Loaded' : 'Not Loaded'}
-				</div>
-
-				{#if initialized && wasmVersion}
-					<span class="text-sm text-base-content/70">
-						Version: {wasmVersion}
-					</span>
-				{/if}
-
-				{#if isLoading}
-					<span class="loading loading-spinner"></span>
-					<span>Processing...</span>
-				{/if}
+		<div class="card-body p-4" on:click={() => toggleSection('status')} class:cursor-pointer={true}>
+			<div class="flex items-center justify-between">
+				<h2 class="card-title m-0">Integration Status</h2>
+				<svg class="w-6 h-6 transition-transform duration-200" class:rotate-90={expandedSections.has('status')} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+				</svg>
 			</div>
 		</div>
+		{#if expandedSections.has('status')}
+			<div class="px-4 pb-4">
+				<div class="flex items-center gap-4">
+					<div class="badge" class:badge-success={initialized} class:badge-error={!initialized && !isLoading}>
+						{initialized ? 'WASM Loaded' : 'Not Loaded'}
+					</div>
+
+					{#if initialized && wasmVersion}
+						<span class="text-sm text-base-content/70">
+							Version: {wasmVersion}
+						</span>
+					{/if}
+
+					{#if isLoading}
+						<span class="loading loading-spinner"></span>
+						<span>Processing...</span>
+					{/if}
+				</div>
+			</div>
+		{/if}
 	</section>
 
 	<!-- Transaction Source Section -->
 	<section class="card bg-base-100 shadow-xl">
-		<div class="card-body">
-			<h2 class="card-title">Transaction Source</h2>
-			<p class="text-sm text-base-content/70">
-				Edit the transactions below. The full Beancount source combines these transactions with the infrastructure file (book.bean) from OPFS.
-			</p>
-
-			<div class="form-control">
-				<textarea
-					bind:value={transactionSource}
-					class="textarea textarea-bordered h-64 font-mono text-sm w-full"
-					placeholder="Enter transactions..."
-				></textarea>
+		<div class="card-body p-4" on:click={() => toggleSection('transaction-source')} class:cursor-pointer={true}>
+			<div class="flex items-center justify-between">
+				<h2 class="card-title m-0">Transaction Source</h2>
+				<svg class="w-6 h-6 transition-transform duration-200" class:rotate-90={expandedSections.has('transaction-source')} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+				</svg>
 			</div>
-
-			<div class="mt-4 flex gap-2">
-				<button
-					class="btn btn-accent"
-					on:click={handleValidate}
-					disabled={isLoading}
-				>
-					{#if isLoading}
-						<span class="loading loading-spinner"></span>
-						Validating...
-					{:else}
-						Validate
-					{/if}
-				</button>
-
-				<button
-					class="btn btn-primary"
-					on:click={handleParse}
-					disabled={isLoading}
-				>
-					{#if isLoading}
-						<span class="loading loading-spinner"></span>
-						Parsing...
-					{:else}
-						Parse
-					{/if}
-				</button>
-
-				<label class="label cursor-pointer gap-2">
-					<span class="label-text">Source only</span>
-					<input
-						type="checkbox"
-						class="checkbox checkbox-sm"
-						bind:checked={sourceOnly}
-						on:change={handleSourceOnlyToggle}
-						disabled={isLoading}
-					/>
-				</label>
-
-				<button
-					class="btn btn-secondary ml-auto"
-					on:click={createDemoEntries}
-					disabled={isLoading}
-				>
-					Create Demo Transactions
-				</button>
-			</div>
-
-			{#if error}
-				<div class="alert alert-error mt-4">
-					<svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-					</svg>
-					<span>{error}</span>
-				</div>
-			{/if}
 		</div>
+		{#if expandedSections.has('transaction-source')}
+			<div class="px-4 pb-4">
+				<p class="text-sm text-base-content/70">
+					Edit the transactions below. The full Beancount source combines these transactions with the infrastructure file (book.bean) from OPFS.
+				</p>
+
+				<div class="form-control">
+					<textarea
+						bind:value={transactionSource}
+						class="textarea textarea-bordered h-64 font-mono text-sm w-full"
+						placeholder="Enter transactions..."
+					></textarea>
+				</div>
+
+				<div class="mt-4 flex gap-2">
+					<button
+						class="btn btn-accent"
+						on:click={handleValidate}
+						disabled={isLoading}
+					>
+						{#if isLoading}
+							<span class="loading loading-spinner"></span>
+							Validating...
+						{:else}
+							Validate
+						{/if}
+					</button>
+
+					<button
+						class="btn btn-primary"
+						on:click={handleParse}
+						disabled={isLoading}
+					>
+						{#if isLoading}
+							<span class="loading loading-spinner"></span>
+							Parsing...
+						{:else}
+							Parse
+						{/if}
+					</button>
+
+					<label class="label cursor-pointer gap-2">
+						<span class="label-text">Source only</span>
+						<input
+							type="checkbox"
+							class="checkbox checkbox-sm"
+							bind:checked={sourceOnly}
+							on:change={handleSourceOnlyToggle}
+							disabled={isLoading}
+						/>
+					</label>
+
+					<button
+						class="btn btn-secondary ml-auto"
+						on:click={createDemoEntries}
+						disabled={isLoading}
+					>
+						Create Demo Transactions
+					</button>
+				</div>
+
+				{#if error}
+					<div class="alert alert-error mt-4">
+						<svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+						</svg>
+						<span>{error}</span>
+					</div>
+				{/if}
+			</div>
+		{/if}
 	</section>
 
-	<!-- Full Beancount Source Section (Expandable) -->
+	<!-- Full Beancount Source Section -->
 	<section class="card bg-base-100 shadow-xl">
-		<div class="card-body">
+		<div class="card-body p-4" on:click={() => toggleSection('full-source')} class:cursor-pointer={true}>
 			<div class="flex items-center justify-between">
-				<h2 class="card-title">Full Beancount Source</h2>
-				<button
-					class="btn btn-sm btn-outline"
-					on:click={() => showFullSource = !showFullSource}
-				>
-					{showFullSource ? 'Hide' : 'Show'} Full Source
-				</button>
+				<h2 class="card-title m-0">Full Beancount Source</h2>
+				<svg class="w-6 h-6 transition-transform duration-200" class:rotate-90={expandedSections.has('full-source')} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+				</svg>
 			</div>
-			<p class="text-sm text-base-content/70">
-				Combined infrastructure (book.bean) and transactions. This is what gets validated and parsed.
-			</p>
+		</div>
+		{#if expandedSections.has('full-source')}
+			<div class="px-4 pb-4">
+				<p class="text-sm text-base-content/70">
+					Combined infrastructure (book.bean) and transactions. This is what gets validated and parsed.
+				</p>
 
-			{#if showFullSource}
 				<div class="form-control mt-4">
 					<div class="border border-base-300 rounded-lg overflow-hidden bg-base-200 font-mono text-sm">
 						<div class="h-96 overflow-auto p-4" bind:this={sourceContainer}>
@@ -523,219 +561,259 @@
 				<div class="mt-2 text-sm text-base-content/50">
 					Infrastructure: {infrastructureSource.length} chars | Transactions: {transactionSource.length} chars | Total: {fullBeancountSource.length} chars
 				</div>
-			{/if}
-		</div>
+			</div>
+		{/if}
 	</section>
 
 	<!-- Validation Results Section -->
 	<section class="card bg-base-100 shadow-xl">
-		<div class="card-body">
-			<h2 class="card-title">
-				Validation Results
-			</h2>
-
-			{#if hasValidated && validationErrors.length === 0 && validationWarnings.length === 0}
-				<div class="alert alert-success">
-					<svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-					</svg>
-					<span>
-						<strong>Validation Successful!</strong> The Beancount source is valid with no errors or warnings.
-					</span>
-				</div>
-			{:else if !hasValidated}
-				<p class="text-base-content/50">No validation results yet. Click "Validate" to check the Beancount source.</p>
-			{:else}
-				<!-- Overall Status -->
-				<div class="mb-4">
-					<div class="alert {isValid ? 'alert-success' : 'alert-error'}">
+		<div class="card-body p-4" on:click={() => toggleSection('validation')} class:cursor-pointer={true}>
+			<div class="flex items-center justify-between">
+				<h2 class="card-title m-0">Validation Results</h2>
+				<svg class="w-6 h-6 transition-transform duration-200" class:rotate-90={expandedSections.has('validation')} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+				</svg>
+			</div>
+		</div>
+		{#if expandedSections.has('validation')}
+			<div class="px-4 pb-4">
+				{#if hasValidated && validationErrors.length === 0 && validationWarnings.length === 0}
+					<div class="alert alert-success">
 						<svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{isValid ? 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' : 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z'}" />
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
 						</svg>
 						<span>
-							<strong>{isValid ? 'Valid' : 'Invalid'}</strong>
-							- {validationErrors.length} error(s), {validationWarnings.length} warning(s)
+							<strong>Validation Successful!</strong> The Beancount source is valid with no errors or warnings.
 						</span>
 					</div>
-				</div>
-
-				<!-- Errors Section -->
-				{#if validationErrors.length > 0}
+				{:else if !hasValidated}
+					<p class="text-base-content/50">No validation results yet. Click "Validate" to check the Beancount source.</p>
+				{:else}
+					<!-- Overall Status -->
 					<div class="mb-4">
-						<h3 class="text-lg font-bold text-error">Errors ({validationErrors.length})</h3>
-						<div class="overflow-x-auto">
-							<table class="table table-zebra table-sm">
-								<thead>
-									<tr>
-										<th>Line</th>
-										<th>Column</th>
-										<th>Message</th>
-									</tr>
-								</thead>
-								<tbody>
-									{#each validationErrors as err}
-										<tr class="text-error">
-											<td>{err.line}</td>
-											<td>{err.column}</td>
-											<td>{err.message}</td>
-										</tr>
-									{/each}
-								</tbody>
-							</table>
+						<div class="alert {isValid ? 'alert-success' : 'alert-error'}">
+							<svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{isValid ? 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' : 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z'}" />
+							</svg>
+							<span>
+								<strong>{isValid ? 'Valid' : 'Invalid'}</strong>
+								- {validationErrors.length} error(s), {validationWarnings.length} warning(s)
+							</span>
 						</div>
 					</div>
-				{/if}
 
-				<!-- Warnings Section -->
-				{#if validationWarnings.length > 0}
-					<div>
-						<h3 class="text-lg font-bold text-warning">Warnings ({validationWarnings.length})</h3>
-						<div class="overflow-x-auto">
-							<table class="table table-zebra table-sm">
-								<thead>
-									<tr>
-										<th>Line</th>
-										<th>Column</th>
-										<th>Message</th>
-									</tr>
-								</thead>
-								<tbody>
-									{#each validationWarnings as warn}
-										<tr class="text-warning">
-											<td>{warn.line}</td>
-											<td>{warn.column}</td>
-											<td>{warn.message}</td>
+					<!-- Errors Section -->
+					{#if validationErrors.length > 0}
+						<div class="mb-4">
+							<h3 class="text-lg font-bold text-error">Errors ({validationErrors.length})</h3>
+							<div class="overflow-x-auto">
+								<table class="table table-zebra table-sm">
+									<thead>
+										<tr>
+											<th>Line</th>
+											<th>Column</th>
+											<th>Message</th>
 										</tr>
-									{/each}
-								</tbody>
-							</table>
+									</thead>
+									<tbody>
+										{#each validationErrors as err}
+											<tr class="text-error">
+												<td>{err.line}</td>
+												<td>{err.column}</td>
+												<td>{err.message}</td>
+											</tr>
+										{/each}
+									</tbody>
+								</table>
+							</div>
 						</div>
-					</div>
+					{/if}
+
+					<!-- Warnings Section -->
+					{#if validationWarnings.length > 0}
+						<div>
+							<h3 class="text-lg font-bold text-warning">Warnings ({validationWarnings.length})</h3>
+							<div class="overflow-x-auto">
+								<table class="table table-zebra table-sm">
+									<thead>
+										<tr>
+											<th>Line</th>
+											<th>Column</th>
+											<th>Message</th>
+										</tr>
+									</thead>
+									<tbody>
+										{#each validationWarnings as warn}
+											<tr class="text-warning">
+												<td>{warn.line}</td>
+												<td>{warn.column}</td>
+												<td>{warn.message}</td>
+											</tr>
+										{/each}
+									</tbody>
+								</table>
+							</div>
+						</div>
+					{/if}
 				{/if}
-			{/if}
-		</div>
+			</div>
+		{/if}
 	</section>
 
 	<!-- Parsed Accounts Section -->
 	<section class="card bg-base-100 shadow-xl">
-		<div class="card-body">
-			<h2 class="card-title">
-				Parsed Accounts ({parsedAccounts.length})
-			</h2>
-
-			{#if parsedAccounts.length === 0}
-				<p class="text-base-content/50">No accounts parsed yet.</p>
-			{:else}
-				<div class="overflow-x-auto overflow-y-auto max-h-[400px]">
-					<table class="table table-zebra">
-						<thead>
-							<tr>
-								<th>Account Name</th>
-								<th>Balances</th>
-							</tr>
-						</thead>
-						<tbody>
-							{#each parsedAccounts as account}
-								<tr>
-									<td>{account.name}</td>
-									<td class="text-right">
-										{#if account.balances}
-											{Object.entries(account.balances).map(([currency, amount]) =>
-												`${amount.toFixed(2)} ${currency}`
-											).join(', ')}
-										{/if}
-									</td>
-								</tr>
-							{/each}
-						</tbody>
-					</table>
-				</div>
-			{/if}
+		<div class="card-body p-4" on:click={() => toggleSection('accounts')} class:cursor-pointer={true}>
+			<div class="flex items-center justify-between">
+				<h2 class="card-title m-0">
+					Parsed Accounts ({parsedAccounts.length})
+				</h2>
+				<svg class="w-6 h-6 transition-transform duration-200" class:rotate-90={expandedSections.has('accounts')} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+				</svg>
+			</div>
 		</div>
+		{#if expandedSections.has('accounts')}
+			<div class="px-4 pb-4">
+				{#if parsedAccounts.length === 0}
+					<p class="text-base-content/50">No accounts parsed yet.</p>
+				{:else}
+					<div class="overflow-x-auto overflow-y-auto max-h-[400px]">
+						<table class="table table-zebra">
+							<thead>
+								<tr>
+									<th>Account Name</th>
+									<th>Balances</th>
+								</tr>
+							</thead>
+							<tbody>
+								{#each parsedAccounts as account}
+									<tr>
+										<td>{account.name}</td>
+										<td class="text-right">
+											{#if account.balances}
+												{Object.entries(account.balances).map(([currency, amount]) =>
+													`${amount.toFixed(2)} ${currency}`
+												).join(', ')}
+											{/if}
+										</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+					</div>
+				{/if}
+			</div>
+		{/if}
 	</section>
 
 	<!-- Parsed Directives Section -->
 	<section class="card bg-base-100 shadow-xl">
-		<div class="card-body">
-			<h2 class="card-title">
-				Parsed Directives ({parsedDirectives.length})
-			</h2>
-
-			{#if !parseResult}
-				<p class="text-base-content/50">No parse result yet. Click "Parse" to load directives from ParseResult.</p>
-			{:else if parsedDirectives.length === 0}
-				<p class="text-base-content/50">No directives found in the parse result.</p>
-			{:else}
-				<div class="overflow-x-auto overflow-y-auto max-h-[400px]">
-					<table class="table table-zebra table-sm">
-						<thead>
-							<tr>
-								<th>#</th>
-								<th>Date</th>
-								<th>Type</th>
-								<th>Summary</th>
-							</tr>
-						</thead>
-						<tbody>
-							{#each parsedDirectives as directive, idx}
-								<tr>
-									<td>{idx + 1}</td>
-									<td>{(directive as Directive).date}</td>
-									<td><span class="badge badge-outline">{(directive as Directive).type}</span></td>
-									<td class="font-mono text-xs">{formatDirectiveSummary(directive as Directive)}</td>
-								</tr>
-							{/each}
-						</tbody>
-					</table>
-				</div>
-			{/if}
+		<div class="card-body p-4" on:click={() => toggleSection('directives')} class:cursor-pointer={true}>
+			<div class="flex items-center justify-between">
+				<h2 class="card-title m-0">
+					Parsed Directives ({parsedDirectives.length})
+				</h2>
+				<svg class="w-6 h-6 transition-transform duration-200" class:rotate-90={expandedSections.has('directives')} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+				</svg>
+			</div>
 		</div>
+		{#if expandedSections.has('directives')}
+			<div class="px-4 pb-4">
+				{#if !parseResult}
+					<p class="text-base-content/50">No parse result yet. Click "Parse" to load directives from ParseResult.</p>
+				{:else if parsedDirectives.length === 0}
+					<p class="text-base-content/50">No directives found in the parse result.</p>
+				{:else}
+					<div class="overflow-x-auto overflow-y-auto max-h-[400px]">
+						<table class="table table-zebra table-sm">
+							<thead>
+								<tr>
+									<th>#</th>
+									<th>Date</th>
+									<th>Type</th>
+									<th>Summary</th>
+								</tr>
+							</thead>
+							<tbody>
+								{#each parsedDirectives as directive, idx}
+									<tr>
+										<td>{idx + 1}</td>
+										<td>{(directive as Directive).date}</td>
+										<td><span class="badge badge-outline">{(directive as Directive).type}</span></td>
+										<td class="font-mono text-xs">{formatDirectiveSummary(directive as Directive)}</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+					</div>
+				{/if}
+			</div>
+		{/if}
 	</section>
 
 	<!-- Transaction Anatomy Section -->
 	<section class="card bg-base-100 shadow-xl">
-		<div class="card-body">
-			<h2 class="card-title">Transaction Anatomy</h2>
-			<p class="text-sm text-base-content/70">
-				Formatted Beancount view of the last parsed <span class="font-mono">transaction</span> directive for comparison with the source string.
-			</p>
-
-			{#if !parseResult}
-				<p class="text-base-content/50">No parse result yet. Click "Parse" to inspect transaction anatomy.</p>
-			{:else if !lastTransactionDirective}
-				<p class="text-base-content/50">No transaction directive found in parsed directives.</p>
-			{:else}
-				<div class="mt-3 rounded-lg border border-base-300 bg-base-200 p-4">
-					<pre class="whitespace-pre-wrap break-all font-mono text-xs leading-relaxed">{transactionAnatomy}</pre>
-				</div>
-			{/if}
+		<div class="card-body p-4" on:click={() => toggleSection('anatomy')} class:cursor-pointer={true}>
+			<div class="flex items-center justify-between">
+				<h2 class="card-title m-0">Transaction Anatomy</h2>
+				<svg class="w-6 h-6 transition-transform duration-200" class:rotate-90={expandedSections.has('anatomy')} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+				</svg>
+			</div>
 		</div>
+		{#if expandedSections.has('anatomy')}
+			<div class="px-4 pb-4">
+				<p class="text-sm text-base-content/70">
+					Formatted Beancount view of the last parsed <span class="font-mono">transaction</span> directive for comparison with the source string.
+				</p>
+
+				{#if !parseResult}
+					<p class="text-base-content/50">No parse result yet. Click "Parse" to inspect transaction anatomy.</p>
+				{:else if !lastTransactionDirective}
+					<p class="text-base-content/50">No transaction directive found in parsed directives.</p>
+				{:else}
+					<div class="mt-3 rounded-lg border border-base-300 bg-base-200 p-4">
+						<pre class="whitespace-pre-wrap break-all font-mono text-xs leading-relaxed">{transactionAnatomy}</pre>
+					</div>
+				{/if}
+			</div>
+		{/if}
 	</section>
 
 	<!-- Money Tuple Parsing Test -->
 	<section class="card bg-base-100 shadow-xl">
-		<div class="card-body">
-			<h2 class="card-title">
-				Money Tuple Parsing Test
-			</h2>
-			<p class="text-sm text-base-content/70">
-				Testing getMoneyFromTupleString() with various formats
-			</p>
-
-			{#if !initialized}
-				<p class="text-base-content/50">Money tuple samples will appear after the WASM module loads.</p>
-			{:else}
-				<div class="grid gap-2">
-					{#each parsedMoneySamples as { tuple, money }}
-					<div class="flex items-center gap-4 p-2 bg-base-200 rounded">
-						<span class="font-mono">{tuple}</span>
-						<span class="text-primary">→</span>
-						<span>{money.quantity.toFixed(2)} {money.currency}</span>
-					</div>
-					{/each}
-				</div>
-			{/if}
+		<div class="card-body p-4" on:click={() => toggleSection('money-tuple')} class:cursor-pointer={true}>
+			<div class="flex items-center justify-between">
+				<h2 class="card-title m-0">
+					Money Tuple Parsing Test
+				</h2>
+				<svg class="w-6 h-6 transition-transform duration-200" class:rotate-90={expandedSections.has('money-tuple')} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+				</svg>
+			</div>
 		</div>
+		{#if expandedSections.has('money-tuple')}
+			<div class="px-4 pb-4">
+				<p class="text-sm text-base-content/70">
+					Testing getMoneyFromTupleString() with various formats
+				</p>
+
+				{#if !initialized}
+					<p class="text-base-content/50">Money tuple samples will appear after the WASM module loads.</p>
+				{:else}
+					<div class="grid gap-2">
+						{#each parsedMoneySamples as { tuple, money }}
+						<div class="flex items-center gap-4 p-2 bg-base-200 rounded">
+							<span class="font-mono">{tuple}</span>
+							<span class="text-primary">→</span>
+							<span>{money.quantity.toFixed(2)} {money.currency}</span>
+						</div>
+						{/each}
+					</div>
+				{/if}
+			</div>
+		{/if}
 	</section>
 
 </main>
