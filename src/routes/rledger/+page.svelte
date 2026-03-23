@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import Toolbar from "$lib/components/Toolbar.svelte";
-	import rustledger, { createParsedLedger, format, parseAllAccounts, parseSource, version } from '$lib/services/rustledger';
-	import type { BeancountError, Directive, ParseResult } from '@rustledger/wasm';
+	import rustledger, { createParsedLedger, format, getAccountsFromLedger, version } from '$lib/services/rustledger';
+	import type { BeancountError, Directive } from '@rustledger/wasm';
 	import { Account, Money } from '$lib/data/model';
 	import appService from '$lib/services/appService';
 	import * as OpfsLib from '$lib/utils/opfslib.js';
@@ -44,9 +44,11 @@
 	let sourceContainer: HTMLDivElement;
 	$: sourceLines = fullBeancountSource ? fullBeancountSource.split('\n') : [];
 
+	// Single ParsedLedger instance — created on mount and on Parse button click
+	let parsedLedger: any | null = null;
+
 	// Parsed results
 	let parsedAccounts: Account[] = [];
-	let parseResult: ParseResult | null = null;
 	let parsedDirectives: Directive[] = [];
 	let lastTransactionDirective: Directive | null = null;
 	let transactionAnatomy = '';
@@ -343,23 +345,33 @@
 	}
 
 	/**
-	 * Handle parse button click
+	 * Handle parse button click — creates (or recreates) the single ParsedLedger
+	 * instance used by all subsequent queries on this page.
 	 */
 	async function handleParse() {
 		try {
 			isLoading = true;
 			error = null;
-			parseResult = parseSource(fullBeancountSource);
-			parsedDirectives = parseResult.ledger?.directives ?? [];
 
-			// Parse all accounts from combined Beancount source (unfiltered)
-			parsedAccounts = parseAllAccounts(fullBeancountSource);
+			// Free previous instance before creating a new one
+			if (parsedLedger) {
+				parsedLedger.free();
+				parsedLedger = null;
+			}
+
+			parsedLedger = createParsedLedger(fullBeancountSource);
+			if (!parsedLedger) {
+				throw new Error('Failed to create ParsedLedger — WASM module not available');
+			}
+
+			parsedDirectives = parsedLedger.getDirectives();
+			parsedAccounts = getAccountsFromLedger(parsedLedger);
 
 			console.log('Parsed accounts:', parsedAccounts);
-
 		} catch (err) {
-			parseResult = null;
+			if (parsedLedger) { parsedLedger.free(); parsedLedger = null; }
 			parsedDirectives = [];
+			parsedAccounts = [];
 			error = err instanceof Error ? err.message : 'Failed to parse Beancount source';
 			console.error('Parse error:', err);
 		} finally {
@@ -394,7 +406,8 @@
 	}
 
 	/**
-	 * Validate the Beancount source using WASM only
+	 * Validate using the existing ParsedLedger — no new instance created.
+	 * Call Parse first if the source has changed.
 	 */
 	async function handleValidate() {
 		try {
@@ -403,21 +416,18 @@
 			validationErrors = [];
 			validationWarnings = [];
 
-			// Use WASM for validation (validationSource is already set to 'wasm')
-			const ledger = createParsedLedger(fullBeancountSource);
-			if (!ledger) {
-				throw new Error('Failed to create ParsedLedger - WASM module not available');
+			if (!parsedLedger) {
+				throw new Error('No parsed ledger available — click Parse first.');
 			}
-			const parseErrors = ledger.getParseErrors();
-			const validationErrorsWasm = ledger.getValidationErrors();
-			
+
+			const parseErrors = parsedLedger.getParseErrors();
+			const validationErrorsWasm = parsedLedger.getValidationErrors();
+
 			validationErrors = [...parseErrors, ...validationErrorsWasm].filter(err => err.severity === 'error');
 			validationWarnings = [...parseErrors, ...validationErrorsWasm].filter(err => err.severity === 'warning');
-			isValid = ledger.isValid();
-			ledger.free();
+			isValid = parsedLedger.isValid();
 
 			console.log('Validation complete:', { isValid, errors: validationErrors, warnings: validationWarnings });
-
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to validate Beancount source';
 			console.error('Validation error:', err);
@@ -728,8 +738,8 @@
 		</div>
 		{#if expandedSections.has('directives')}
 			<div class="px-4 pb-4">
-				{#if !parseResult}
-					<p class="text-base-content/50">No parse result yet. Click "Parse" to load directives from ParseResult.</p>
+			{#if !parsedLedger}
+				<p class="text-base-content/50">No parsed ledger yet. Click "Parse" to load directives.</p>
 				{:else if parsedDirectives.length === 0}
 					<p class="text-base-content/50">No directives found in the parse result.</p>
 				{:else}
@@ -776,8 +786,8 @@
 					Formatted Beancount view of the last parsed <span class="font-mono">transaction</span> directive for comparison with the source string.
 				</p>
 
-				{#if !parseResult}
-					<p class="text-base-content/50">No parse result yet. Click "Parse" to inspect transaction anatomy.</p>
+			{#if !parsedLedger}
+				<p class="text-base-content/50">No parsed ledger yet. Click "Parse" to inspect transaction anatomy.</p>
 				{:else if !lastTransactionDirective}
 					<p class="text-base-content/50">No transaction directive found in parsed directives.</p>
 				{:else}

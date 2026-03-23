@@ -149,6 +149,36 @@ export function parseBalanceSheetRow(record: string[]): Account | null {
 }
 
 /**
+ * Query all accounts and balances from an existing ParsedLedger instance.
+ * The caller is responsible for the lifecycle of the passed ledger.
+ */
+export function getAccountsFromLedger(ledger: any): Account[] {
+	const query = 'SELECT account, sum(position) AS balance GROUP BY account ORDER BY account';
+	const result = ledger.query(query);
+	if (result.errors.length > 0) {
+		throw new Error(getQueryErrorsMessage(query, result.errors));
+	}
+
+	const accountColumnIndex = result.columns.indexOf('account');
+	if (accountColumnIndex === -1) {
+		throw new Error('BQL query did not return an "account" column.');
+	}
+	const balanceColumnIndex = result.columns.indexOf('balance');
+
+	return result.rows.map((row: QueryRow) => {
+		const account = new Account('');
+		account.name = getStringCell(row, accountColumnIndex, 'account');
+		if (balanceColumnIndex !== -1) {
+			const balances = extractAccountBalances(row[balanceColumnIndex]);
+			if (Object.keys(balances).length > 0) {
+				account.balances = balances;
+			}
+		}
+		return account;
+	});
+}
+
+/**
  * Parse all unique accounts from Beancount source without filtering
  */
 export function parseAllAccounts(source: string): Account[] {
@@ -284,6 +314,7 @@ export default {
 	getMoneyFromTupleString,
 	getNumberFromBalanceRow,
 	createParsedLedger,
+	getAccountsFromLedger,
 	parseSource,
 	format,
 	version
