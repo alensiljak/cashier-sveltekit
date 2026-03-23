@@ -32,7 +32,6 @@
 
 	// Parsed results
 	let parsedAccounts: Account[] = [];
-	let currentValues: Record<string, { quantity: number; currency: string }> = {};
 	const tupleSamples = ['(100.00 EUR)', '(500.50 USD)', '(-25.75 GBP)'];
 	let parsedMoneySamples: Array<{ tuple: string; money: Money }> = [];
 
@@ -137,14 +136,7 @@
 			// Parse all accounts from combined Beancount source (unfiltered)
 			parsedAccounts = parseAllAccounts(fullBeancountSource);
 
-			// Parse current values filtered by root account "Assets"
-			currentValues = rustledger.parseCurrentValues(
-				fullBeancountSource,
-				'Assets'
-			);
-
 			console.log('Parsed accounts:', parsedAccounts);
-			console.log('Current values:', currentValues);
 
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to parse Beancount source';
@@ -463,43 +455,6 @@
 											).join(', ')}
 										{/if}
 									</td>
-								</tr>
-							{/each}
-						</tbody>
-					</table>
-				</div>
-			{/if}
-		</div>
-	</section>
-
-	<!-- Current Values Section -->
-	<section class="card bg-base-100 shadow-xl">
-		<div class="card-body">
-			<h2 class="card-title">
-				Current Values (Root: Assets)
-			</h2>
-			<p class="text-sm text-base-content/70">
-				Parsed using parseCurrentValues() with root account "Assets"
-			</p>
-
-			{#if Object.keys(currentValues).length === 0}
-				<p class="text-base-content/50">No current values parsed yet.</p>
-			{:else}
-				<div class="overflow-x-auto">
-					<table class="table table-zebra">
-						<thead>
-							<tr>
-								<th>Account</th>
-								<th>Quantity</th>
-								<th>Currency</th>
-							</tr>
-						</thead>
-						<tbody>
-							{#each Object.entries(currentValues) as [account, data]}
-								<tr>
-									<td>{account}</td>
-									<td class="text-right">{data.quantity.toFixed(2)}</td>
-									<td>{data.currency}</td>
 								</tr>
 							{/each}
 						</tbody>

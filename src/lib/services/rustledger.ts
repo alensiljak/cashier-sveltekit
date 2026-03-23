@@ -3,7 +3,6 @@
  * Provides Beancount parsing functionality using @rustledger/wasm
  */
 
-import type { CurrentValuesDict } from '$lib/data/viewModels';
 import { Account, Money } from '$lib/data/model';
 import wasmUrl from '@rustledger/wasm/rustledger_wasm_bg.wasm?url';
 
@@ -58,6 +57,48 @@ export function createParsedLedger(source: string): any {
 	return new wasmModule.ParsedLedger(source);
 }
 
+type QueryRow = Array<any>;
+
+function getQueryErrorsMessage(query: string, errors: Array<{ message: string }>): string {
+	return `BQL query failed for "${query}": ${errors.map((error) => error.message).join('; ')}`;
+}
+
+function getStringCell(row: QueryRow, columnIndex: number, columnName: string): string {
+	const value = row[columnIndex];
+	if (typeof value !== 'string') {
+		throw new Error(`Expected string value for BQL column "${columnName}".`);
+	}
+	return value;
+}
+
+function extractAccountBalances(cell: any): Record<string, number> {
+	const balances: Record<string, number> = {};
+
+	if (!cell || typeof cell !== 'object') {
+		return balances;
+	}
+
+	if (Array.isArray(cell.positions)) {
+		for (const position of cell.positions) {
+			if (position?.units?.currency && position.units.number != null) {
+				balances[position.units.currency] = parseFloat(position.units.number);
+			}
+		}
+		return balances;
+	}
+
+	if (cell.units?.currency && cell.units.number != null) {
+		balances[cell.units.currency] = parseFloat(cell.units.number);
+		return balances;
+	}
+
+	if (cell.currency && cell.number != null) {
+		balances[cell.currency] = parseFloat(cell.number);
+	}
+
+	return balances;
+}
+
 /**
  * Parse Beancount balance sheet output using WASM ParsedLedger
  * Expected format: array of rows, each row is [amount, currency, account_name]
@@ -96,61 +137,6 @@ export function parseBalanceSheetRow(record: string[]): Account | null {
 }
 
 /**
- * Parse Beancount current values using WASM ParsedLedger
- * Accepts either Beancount source directly or array format for backward compatibility.
- * The function filters accounts under the specified rootAccount.
- */
-export function parseCurrentValues(
-	sourceOrLines: string | Array<any>,
-	rootAccount: string
-): CurrentValuesDict {
-	if (!wasmModule || !wasmModule.ParsedLedger) {
-		throw new Error('WASM module not available. RustLedger requires WASM to be initialized.');
-	}
-
-	const result: CurrentValuesDict = {};
-
-	// Build Beancount source from lines if array is provided (backward compatibility)
-	const source =
-		typeof sourceOrLines === 'string'
-			? sourceOrLines
-			: buildBeancountSourceFromLines(sourceOrLines);
-
-	const ledger = new wasmModule.ParsedLedger(source);
-	const directives = ledger.getDirectives();
-
-	// Process all transactions to extract balances
-	for (const directive of directives) {
-		if (directive.type === 'transaction') {
-			for (const posting of directive.postings) {
-				const account = posting.account;
-				if (rootAccount && !account.startsWith(rootAccount)) {
-					continue;
-				}
-				if (posting.units) {
-					result[account] = {
-						quantity: parseFloat(posting.units.number),
-						currency: posting.units.currency
-					};
-				}
-			}
-		} else if (directive.type === 'balance') {
-			const account = directive.account;
-			if (rootAccount && !account.startsWith(rootAccount)) {
-				continue;
-			}
-			result[account] = {
-				quantity: parseFloat(directive.amount.number),
-				currency: directive.amount.currency
-			};
-		}
-	}
-
-	ledger.free();
-	return result;
-}
-
-/**
  * Parse all unique accounts from Beancount source without filtering
  */
 export function parseAllAccounts(source: string): Account[] {
@@ -159,85 +145,53 @@ export function parseAllAccounts(source: string): Account[] {
 	}
 
 	const ledger = new wasmModule.ParsedLedger(source);
-	const directives = ledger.getDirectives();
-	const accountSet = new Set<string>();
-	const balancesByAccount: Record<string, Record<string, number>> = {};
 
-	// Collect all unique account names and their balances from transactions and balance directives
-	for (const directive of directives) {
-		if (directive.type === 'transaction') {
-			for (const posting of directive.postings) {
-				const account = posting.account;
-				accountSet.add(account);
-				if (posting.units) {
-					if (!balancesByAccount[account]) {
-						balancesByAccount[account] = {};
-					}
-					balancesByAccount[account][posting.units.currency] = parseFloat(posting.units.number);
-				}
-			}
-		} else if (directive.type === 'balance') {
-			const account = directive.account;
-			accountSet.add(account);
-			if (directive.amount) {
-				if (!balancesByAccount[account]) {
-					balancesByAccount[account] = {};
-				}
-				balancesByAccount[account][directive.amount.currency] = parseFloat(directive.amount.number);
-			}
-		} else if (directive.type === 'account' && directive.name) {
-			accountSet.add(directive.name);
-		} else if (directive.type === 'open' && directive.account) {
-			accountSet.add(directive.account);
-		} else if (directive.type === 'close' && directive.account) {
-			accountSet.add(directive.account);
+	try {
+		const accountsQuery = 'SELECT DISTINCT account';
+		const accountsResult = ledger.query(accountsQuery);
+		if (accountsResult.errors.length > 0) {
+			throw new Error(getQueryErrorsMessage(accountsQuery, accountsResult.errors));
 		}
+
+		const accountColumnIndex = accountsResult.columns.indexOf('account');
+		if (accountColumnIndex === -1) {
+			throw new Error('BQL accounts query did not return an "account" column.');
+		}
+
+		const balancesQuery = 'BALANCES';
+		const balancesResult = ledger.query(balancesQuery);
+		if (balancesResult.errors.length > 0) {
+			throw new Error(getQueryErrorsMessage(balancesQuery, balancesResult.errors));
+		}
+
+		const balanceAccountColumnIndex = balancesResult.columns.indexOf('account');
+		const balanceValueColumnIndex = balancesResult.columns.indexOf('balance');
+		const balancesByAccount: Record<string, Record<string, number>> = {};
+
+		if (balanceAccountColumnIndex !== -1 && balanceValueColumnIndex !== -1) {
+			for (const row of balancesResult.rows) {
+				const accountName = getStringCell(row, balanceAccountColumnIndex, 'account');
+				const balances = extractAccountBalances(row[balanceValueColumnIndex]);
+				if (Object.keys(balances).length > 0) {
+					balancesByAccount[accountName] = balances;
+				}
+			}
+		}
+
+		return accountsResult.rows
+			.map((row: QueryRow) => getStringCell(row, accountColumnIndex, 'account'))
+			.sort((a: string, b: string) => a.localeCompare(b))
+			.map((name: string) => {
+				const account = new Account('');
+				account.name = name;
+				if (balancesByAccount[name]) {
+					account.balances = balancesByAccount[name];
+				}
+				return account;
+			});
+	} finally {
+		ledger.free();
 	}
-
-	// Convert to Account objects with balances, sorted by name
-	const accounts: Account[] = Array.from(accountSet)
-		.sort((a, b) => a.localeCompare(b))
-		.map((name) => {
-			const account = new Account('');
-			account.name = name;
-			// Assign balances if available
-			if (balancesByAccount[name]) {
-				account.balances = balancesByAccount[name];
-			}
-			return account;
-		});
-
-	ledger.free();
-	return accounts;
-}
-
-/**
- * Build a Beancount source string from parsed lines
- */
-function buildBeancountSourceFromLines(lines: Array<any>): string {
-	const transactionHeader = (i: number) => `2024-01-01 * "Transaction ${i}" "Generated"`;
-
-	const sourceLines = lines.flatMap((row, i) => {
-		if (!Array.isArray(row) || row.length < 2) return [];
-
-		let account: string;
-		let amount: string;
-
-		if (row.length >= 3) {
-			// Format: [amount, currency, account]
-			const [amountVal, currency, accountVal] = row;
-			account = accountVal;
-			amount = `${amountVal} ${currency}`;
-		} else {
-			// Tuple format: [account, "(amount currency)"]
-			[account, amount] = row;
-			amount = normalizeTupleAmountString(amount);
-		}
-
-		return [transactionHeader(i), `    ${account} ${amount}`];
-	});
-
-	return sourceLines.join('\n');
 }
 
 function normalizeTupleAmountString(value: string): string {
@@ -323,7 +277,6 @@ export function version(): string {
 export default {
 	ensureInitialized,
 	parseBalanceSheetRow,
-	parseCurrentValues,
 	getMoneyFromTupleString,
 	getNumberFromBalanceRow,
 	createParsedLedger,
