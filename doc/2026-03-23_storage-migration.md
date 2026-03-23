@@ -15,3 +15,5 @@ With a fast Rust parser, it should be easy and convenient to
 ## Tasks
 
 - [ ] Store ledger in a .bean file in OPFS
+- [ ] append new transactions to the .bean file
+- [ ] display transaction list, accounts, and balances by parsing the file
