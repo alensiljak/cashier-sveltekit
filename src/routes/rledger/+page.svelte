@@ -25,6 +25,7 @@
 
 	// UI state
 	let showFullSource = false;
+	let sourceOnly = false;
 	
 	// Source display
 	let sourceContainer: HTMLDivElement;
@@ -44,9 +45,15 @@
 	let hasValidated = false;
 
 	// Reactive: update full source when components change
-	$: fullBeancountSource = infrastructureSource && transactionSource
-		? `${infrastructureSource}\n\n${transactionSource}`
-		: infrastructureSource || transactionSource || '';
+	$: fullBeancountSource = sourceOnly
+		? transactionSource
+		: infrastructureSource && transactionSource
+			? `${infrastructureSource}\n\n${transactionSource}`
+			: infrastructureSource || transactionSource || '';
+
+	async function handleSourceOnlyToggle() {
+		await handleParse();
+	}
 
 	// Initialize WASM
 	onMount(async () => {
@@ -314,8 +321,19 @@
 					{/if}
 				</button>
 
+				<label class="label cursor-pointer gap-2">
+					<span class="label-text">Source only</span>
+					<input
+						type="checkbox"
+						class="checkbox checkbox-sm"
+						bind:checked={sourceOnly}
+						on:change={handleSourceOnlyToggle}
+						disabled={isLoading}
+					/>
+				</label>
+
 				<button
-					class="btn btn-secondary"
+					class="btn btn-secondary ml-auto"
 					on:click={createDemoEntries}
 					disabled={isLoading}
 				>
