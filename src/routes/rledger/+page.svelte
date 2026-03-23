@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import Toolbar from "$lib/components/Toolbar.svelte";
-	import rustledger, { createParsedLedger, parseAllAccounts, parseSource, version } from '$lib/services/rustledger';
+	import rustledger, { createParsedLedger, format, parseAllAccounts, parseSource, version } from '$lib/services/rustledger';
 	import type { BeancountError, Directive, ParseResult } from '@rustledger/wasm';
 	import { Account, Money } from '$lib/data/model';
 	import appService from '$lib/services/appService';
@@ -28,16 +28,7 @@
 	let sourceOnly = false;
 	
 	// Accordion state - track which sections are expanded
-	let expandedSections = new Set<string>([
-		'status',
-		'transaction-source',
-		'full-source',
-		'validation',
-		'accounts',
-		'directives',
-		'anatomy',
-		'money-tuple'
-	]);
+	let expandedSections = new Set<string>();
 	
 	function toggleSection(sectionId: string) {
 		if (expandedSections.has(sectionId)) {
@@ -67,6 +58,11 @@
 	let validationWarnings: BeancountError[] = [];
 	let isValid = false;
 	let hasValidated = false;
+
+	// Format state
+	let formattedSource = '';
+	let formatErrors: BeancountError[] = [];
+	let hasFormatted = false;
 
 	// Reactive: update full source when components change
 	$: fullBeancountSource = sourceOnly
@@ -292,6 +288,30 @@
 	}
 
 	/**
+	 * Format the Beancount source using WASM format()
+	 */
+	async function handleFormat() {
+		try {
+			isLoading = true;
+			error = null;
+			formattedSource = '';
+			formatErrors = [];
+
+			const result = format(fullBeancountSource);
+			formattedSource = result.formatted ?? '';
+			formatErrors = result.errors ?? [];
+
+			console.log('Format complete:', { formattedSource, formatErrors });
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Failed to format Beancount source';
+			console.error('Format error:', err);
+		} finally {
+			isLoading = false;
+			hasFormatted = true;
+		}
+	}
+
+	/**
 	 * Load all infrastructure files from OPFS and concatenate them
 	 */
 	async function loadInfrastructure() {
@@ -413,47 +433,35 @@
 <main class="mx-auto max-w-6xl space-y-4 p-4">
 	<!-- Status Section -->
 	<section class="card bg-base-100 shadow-xl">
-		<div class="card-body p-4" on:click={() => toggleSection('status')} class:cursor-pointer={true}>
-			<div class="flex items-center justify-between">
-				<h2 class="card-title m-0">Integration Status</h2>
-				<svg class="w-6 h-6 transition-transform duration-200" class:rotate-90={expandedSections.has('status')} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-				</svg>
+		<div class="card-body p-4">
+			<h2 class="card-title m-0">Integration Status</h2>
+		</div>
+		<div class="px-4 pb-4">
+			<div class="flex items-center gap-4">
+				<div class="badge" class:badge-success={initialized} class:badge-error={!initialized && !isLoading}>
+					{initialized ? 'WASM Loaded' : 'Not Loaded'}
+				</div>
+
+				{#if initialized && wasmVersion}
+					<span class="text-sm text-base-content/70">
+						Version: {wasmVersion}
+					</span>
+				{/if}
+
+				{#if isLoading}
+					<span class="loading loading-spinner"></span>
+					<span>Processing...</span>
+				{/if}
 			</div>
 		</div>
-		{#if expandedSections.has('status')}
-			<div class="px-4 pb-4">
-				<div class="flex items-center gap-4">
-					<div class="badge" class:badge-success={initialized} class:badge-error={!initialized && !isLoading}>
-						{initialized ? 'WASM Loaded' : 'Not Loaded'}
-					</div>
-
-					{#if initialized && wasmVersion}
-						<span class="text-sm text-base-content/70">
-							Version: {wasmVersion}
-						</span>
-					{/if}
-
-					{#if isLoading}
-						<span class="loading loading-spinner"></span>
-						<span>Processing...</span>
-					{/if}
-				</div>
-			</div>
-		{/if}
 	</section>
 
 	<!-- Transaction Source Section -->
 	<section class="card bg-base-100 shadow-xl">
-		<div class="card-body p-4" on:click={() => toggleSection('transaction-source')} class:cursor-pointer={true}>
-			<div class="flex items-center justify-between">
-				<h2 class="card-title m-0">Transaction Source</h2>
-				<svg class="w-6 h-6 transition-transform duration-200" class:rotate-90={expandedSections.has('transaction-source')} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-				</svg>
-			</div>
+		<div class="card-body p-4">
+			<h2 class="card-title m-0">Transaction Source</h2>
 		</div>
-		{#if expandedSections.has('transaction-source')}
+		<div class="px-4 pb-4">
 			<div class="px-4 pb-4">
 				<p class="text-sm text-base-content/70">
 					Edit the transactions below. The full Beancount source combines these transactions with the infrastructure file (book.bean) from OPFS.
@@ -523,7 +531,7 @@
 					</div>
 				{/if}
 			</div>
-		{/if}
+
 	</section>
 
 	<!-- Full Beancount Source Section -->
@@ -811,6 +819,77 @@
 						</div>
 						{/each}
 					</div>
+				{/if}
+			</div>
+		{/if}
+	</section>
+	<!-- Format Output Section -->
+	<section class="card bg-base-100 shadow-xl">
+		<div class="card-body p-4" on:click={() => toggleSection('format')} class:cursor-pointer={true}>
+			<div class="flex items-center justify-between">
+				<h2 class="card-title m-0">Format Output</h2>
+				<svg class="w-6 h-6 transition-transform duration-200" class:rotate-90={expandedSections.has('format')} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+				</svg>
+			</div>
+		</div>
+		{#if expandedSections.has('format')}
+			<div class="px-4 pb-4">
+				<p class="text-sm text-base-content/70">
+					Reformats the full Beancount source using <span class="font-mono">format()</span> from WASM — consistent alignment and whitespace.
+				</p>
+
+				<div class="mt-4">
+					<button
+						class="btn btn-primary"
+						on:click={handleFormat}
+						disabled={isLoading}
+					>
+						{#if isLoading}
+							<span class="loading loading-spinner"></span>
+							Formatting...
+						{:else}
+							Format
+						{/if}
+					</button>
+				</div>
+
+				{#if hasFormatted}
+					{#if formatErrors.length > 0}
+						<div class="mt-4">
+							<h3 class="text-lg font-bold text-error">Format Errors ({formatErrors.length})</h3>
+							<div class="overflow-x-auto">
+								<table class="table table-zebra table-sm">
+									<thead>
+										<tr>
+											<th>Line</th>
+											<th>Column</th>
+											<th>Message</th>
+										</tr>
+									</thead>
+									<tbody>
+										{#each formatErrors as err}
+											<tr class="text-error">
+												<td>{err.line}</td>
+												<td>{err.column}</td>
+												<td>{err.message}</td>
+											</tr>
+										{/each}
+									</tbody>
+								</table>
+							</div>
+						</div>
+					{/if}
+
+					{#if formattedSource}
+						<div class="mt-4 rounded-lg border border-base-300 bg-base-200 p-4">
+							<pre class="whitespace-pre-wrap break-all font-mono text-xs leading-relaxed">{formattedSource}</pre>
+						</div>
+					{:else if formatErrors.length === 0}
+						<p class="mt-4 text-base-content/50">No formatted output returned.</p>
+					{/if}
+				{:else}
+					<p class="mt-4 text-base-content/50">Click "Format" to reformat the Beancount source.</p>
 				{/if}
 			</div>
 		{/if}
