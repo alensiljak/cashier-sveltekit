@@ -4,6 +4,7 @@
  */
 
 import { Account, Money } from '$lib/data/model';
+import type { ParseResult } from '@rustledger/wasm';
 import wasmUrl from '@rustledger/wasm/rustledger_wasm_bg.wasm?url';
 
 // WASM module instance
@@ -55,6 +56,17 @@ export function createParsedLedger(source: string): any {
 		return null;
 	}
 	return new wasmModule.ParsedLedger(source);
+}
+
+/**
+ * Parse source and return ParseResult from WASM.
+ */
+export function parseSource(source: string): ParseResult {
+	if (!wasmModule || !wasmModule.parse) {
+		throw new Error('WASM module not available. RustLedger requires WASM to be initialized.');
+	}
+
+	return wasmModule.parse(source) as ParseResult;
 }
 
 type QueryRow = Array<any>;
@@ -280,5 +292,6 @@ export default {
 	getMoneyFromTupleString,
 	getNumberFromBalanceRow,
 	createParsedLedger,
+	parseSource,
 	version
 };

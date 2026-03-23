@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import Toolbar from "$lib/components/Toolbar.svelte";
-	import rustledger, { createParsedLedger, parseAllAccounts, version } from '$lib/services/rustledger';
-	import type { BeancountError } from '@rustledger/wasm';
+	import rustledger, { createParsedLedger, parseAllAccounts, parseSource, version } from '$lib/services/rustledger';
+	import type { BeancountError, Directive, ParseResult } from '@rustledger/wasm';
 	import { Account, Money } from '$lib/data/model';
 	import appService from '$lib/services/appService';
 	import * as OpfsLib from '$lib/utils/opfslib.js';
@@ -32,6 +32,8 @@
 
 	// Parsed results
 	let parsedAccounts: Account[] = [];
+	let parseResult: ParseResult | null = null;
+	let parsedDirectives: Directive[] = [];
 	const tupleSamples = ['(100.00 EUR)', '(500.50 USD)', '(-25.75 GBP)'];
 	let parsedMoneySamples: Array<{ tuple: string; money: Money }> = [];
 
@@ -94,6 +96,37 @@
     Assets:Bank:Savings     100.00 EUR`;
 	}
 
+	function formatDirectiveSummary(directive: Directive): string {
+		switch (directive.type) {
+			case 'transaction':
+				return `${directive.narration || '(no narration)'} | ${directive.postings.length} posting(s)`;
+			case 'balance':
+				return `${directive.account} = ${directive.amount.number} ${directive.amount.currency}`;
+			case 'open':
+				return `${directive.account}${directive.currencies.length ? ` | ${directive.currencies.join(', ')}` : ''}`;
+			case 'close':
+				return directive.account;
+			case 'commodity':
+				return directive.currency;
+			case 'pad':
+				return `${directive.account} <= ${directive.source_account}`;
+			case 'event':
+				return `${directive.event_type}: ${directive.value}`;
+			case 'note':
+				return `${directive.account}: ${directive.comment}`;
+			case 'document':
+				return `${directive.account}: ${directive.path}`;
+			case 'price':
+				return `${directive.currency} ${directive.amount.number} ${directive.amount.currency}`;
+			case 'query':
+				return `${directive.name}: ${directive.query_string}`;
+			case 'custom':
+				return directive.custom_type;
+			default:
+				return '';
+		}
+	}
+
 	/**
 	 * Load all infrastructure files from OPFS and concatenate them
 	 */
@@ -132,6 +165,8 @@
 		try {
 			isLoading = true;
 			error = null;
+			parseResult = parseSource(fullBeancountSource);
+			parsedDirectives = parseResult.ledger?.directives ?? [];
 
 			// Parse all accounts from combined Beancount source (unfiltered)
 			parsedAccounts = parseAllAccounts(fullBeancountSource);
@@ -139,6 +174,8 @@
 			console.log('Parsed accounts:', parsedAccounts);
 
 		} catch (err) {
+			parseResult = null;
+			parsedDirectives = [];
 			error = err instanceof Error ? err.message : 'Failed to parse Beancount source';
 			console.error('Parse error:', err);
 		} finally {
@@ -455,6 +492,44 @@
 											).join(', ')}
 										{/if}
 									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+			{/if}
+		</div>
+	</section>
+
+	<!-- Parsed Directives Section -->
+	<section class="card bg-base-100 shadow-xl">
+		<div class="card-body">
+			<h2 class="card-title">
+				Parsed Directives ({parsedDirectives.length})
+			</h2>
+
+			{#if !parseResult}
+				<p class="text-base-content/50">No parse result yet. Click "Parse" to load directives from ParseResult.</p>
+			{:else if parsedDirectives.length === 0}
+				<p class="text-base-content/50">No directives found in the parse result.</p>
+			{:else}
+				<div class="overflow-x-auto overflow-y-auto max-h-[400px]">
+					<table class="table table-zebra table-sm">
+						<thead>
+							<tr>
+								<th>#</th>
+								<th>Date</th>
+								<th>Type</th>
+								<th>Summary</th>
+							</tr>
+						</thead>
+						<tbody>
+							{#each parsedDirectives as directive, idx}
+								<tr>
+									<td>{idx + 1}</td>
+									<td>{(directive as Directive).date}</td>
+									<td><span class="badge badge-outline">{(directive as Directive).type}</span></td>
+									<td class="font-mono text-xs">{formatDirectiveSummary(directive as Directive)}</td>
 								</tr>
 							{/each}
 						</tbody>
