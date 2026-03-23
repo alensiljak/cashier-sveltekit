@@ -159,48 +159,29 @@ export function parseAllAccounts(source: string): Account[] {
 	const ledger = new wasmModule.ParsedLedger(source);
 
 	try {
-		const accountsQuery = 'SELECT DISTINCT account';
-		const accountsResult = ledger.query(accountsQuery);
-		if (accountsResult.errors.length > 0) {
-			throw new Error(getQueryErrorsMessage(accountsQuery, accountsResult.errors));
+		const query = 'SELECT account, sum(position) AS balance GROUP BY account ORDER BY account';
+		const result = ledger.query(query);
+		if (result.errors.length > 0) {
+			throw new Error(getQueryErrorsMessage(query, result.errors));
 		}
 
-		const accountColumnIndex = accountsResult.columns.indexOf('account');
+		const accountColumnIndex = result.columns.indexOf('account');
 		if (accountColumnIndex === -1) {
-			throw new Error('BQL accounts query did not return an "account" column.');
+			throw new Error('BQL query did not return an "account" column.');
 		}
+		const balanceColumnIndex = result.columns.indexOf('balance');
 
-		const balancesQuery = 'BALANCES';
-		const balancesResult = ledger.query(balancesQuery);
-		if (balancesResult.errors.length > 0) {
-			throw new Error(getQueryErrorsMessage(balancesQuery, balancesResult.errors));
-		}
-
-		const balanceAccountColumnIndex = balancesResult.columns.indexOf('account');
-		const balanceValueColumnIndex = balancesResult.columns.indexOf('balance');
-		const balancesByAccount: Record<string, Record<string, number>> = {};
-
-		if (balanceAccountColumnIndex !== -1 && balanceValueColumnIndex !== -1) {
-			for (const row of balancesResult.rows) {
-				const accountName = getStringCell(row, balanceAccountColumnIndex, 'account');
-				const balances = extractAccountBalances(row[balanceValueColumnIndex]);
+		return result.rows.map((row: QueryRow) => {
+			const account = new Account('');
+			account.name = getStringCell(row, accountColumnIndex, 'account');
+			if (balanceColumnIndex !== -1) {
+				const balances = extractAccountBalances(row[balanceColumnIndex]);
 				if (Object.keys(balances).length > 0) {
-					balancesByAccount[accountName] = balances;
+					account.balances = balances;
 				}
 			}
-		}
-
-		return accountsResult.rows
-			.map((row: QueryRow) => getStringCell(row, accountColumnIndex, 'account'))
-			.sort((a: string, b: string) => a.localeCompare(b))
-			.map((name: string) => {
-				const account = new Account('');
-				account.name = name;
-				if (balancesByAccount[name]) {
-					account.balances = balancesByAccount[name];
-				}
-				return account;
-			});
+			return account;
+		});
 	} finally {
 		ledger.free();
 	}
@@ -285,6 +266,17 @@ export function version(): string {
 	return wasmModule.version();
 }
 
+/**
+ * Format a Beancount source string using WASM.
+ * Parses and reformats with consistent alignment.
+ */
+export function format(source: string): { formatted?: string; errors: any[] } {
+	if (!wasmModule || !wasmModule.format) {
+		throw new Error('WASM module not available or format() not supported');
+	}
+	return wasmModule.format(source);
+}
+
 // Default export
 export default {
 	ensureInitialized,
@@ -293,5 +285,6 @@ export default {
 	getNumberFromBalanceRow,
 	createParsedLedger,
 	parseSource,
+	format,
 	version
 };
