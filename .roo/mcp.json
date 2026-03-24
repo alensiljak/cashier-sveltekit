@@ -1,0 +1,21 @@
+{
+	"mcpServers": {
+		"github.com/oraios/serena": {
+			"command": "uvx",
+			"args": [
+				"--from",
+				"git+https://github.com/oraios/serena",
+				"serena",
+				"start-mcp-server",
+				"--context",
+				"ide-assistant"
+			],
+			"disabled": false,
+			"alwaysAllow": [
+				"check_onboarding_performed",
+				"onboarding",
+				"think_about_collected_information"
+			]
+		}
+	}
+}
