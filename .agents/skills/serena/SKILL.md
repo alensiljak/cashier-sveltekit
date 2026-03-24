@@ -21,16 +21,17 @@ Serena provides LSP-backed, IDE-grade tools for semantic code navigation. The go
 
 Use these in preference to reading full files or running grep:
 
-| Tool | When to use |
-|---|---|
-| `find_symbol` | Look up a class, function, method, or variable by name |
-| `find_referencing_symbols` | Find all symbols that reference a given symbol (callers, importers) |
-| `find_referencing_code_snippets` | Find raw code snippets referencing a symbol at a given location |
-| `get_symbols_in_file` | List all top-level symbols in a file — use before reading it |
-| `get_symbol_body` | Retrieve the full body of a specific symbol |
-| `search_for_pattern` | Fallback text/regex search when symbol-level tools are insufficient |
+| Tool                             | When to use                                                         |
+| -------------------------------- | ------------------------------------------------------------------- |
+| `find_symbol`                    | Look up a class, function, method, or variable by name              |
+| `find_referencing_symbols`       | Find all symbols that reference a given symbol (callers, importers) |
+| `find_referencing_code_snippets` | Find raw code snippets referencing a symbol at a given location     |
+| `get_symbols_in_file`            | List all top-level symbols in a file — use before reading it        |
+| `get_symbol_body`                | Retrieve the full body of a specific symbol                         |
+| `search_for_pattern`             | Fallback text/regex search when symbol-level tools are insufficient |
 
 **Preferred navigation flow:**
+
 1. `get_symbols_in_file` → understand the file's surface area
 2. `find_symbol` → locate the specific symbol
 3. `get_symbol_body` → read its implementation
@@ -45,6 +46,7 @@ Serena persists project knowledge in `.serena/memories/` as Markdown files. Use 
 - Memory files are read selectively at the start of future sessions, so write high-signal entries: key architectural patterns, domain concepts, important conventions
 
 **What to write to memory:**
+
 - Module responsibilities and boundaries
 - Non-obvious dependencies or coupling
 - Business logic that isn't clear from code alone
@@ -81,13 +83,13 @@ Call `think_about_collected_information` before making any edit. Call `think_abo
 
 Only use these after thorough exploration:
 
-| Tool | Use for |
-|---|---|
-| `replace_symbol_body` | Replace the full body of a function/class |
-| `insert_after_symbol` | Add new code after a symbol |
-| `delete_lines` | Remove specific lines |
-| `create_text_file` | Create or overwrite a file |
-| `summarize_changes` | Document what was changed at the end of a session |
+| Tool                  | Use for                                           |
+| --------------------- | ------------------------------------------------- |
+| `replace_symbol_body` | Replace the full body of a function/class         |
+| `insert_after_symbol` | Add new code after a symbol                       |
+| `delete_lines`        | Remove specific lines                             |
+| `create_text_file`    | Create or overwrite a file                        |
+| `summarize_changes`   | Document what was changed at the end of a session |
 
 **Always call `summarize_changes` at the end of an editing session.**
 
@@ -98,7 +100,7 @@ If edits were made outside Serena (e.g., in the VS Code editor directly), call `
 `execute_shell_command` is **disabled by default** in `ide-assistant` context (the IDE client already provides this). If you need it (e.g., for running tests), enable it explicitly in `.serena/project.yml`:
 
 ```yaml
-excluded_tools: []  # remove execute_shell_command from this list if present
+excluded_tools: [] # remove execute_shell_command from this list if present
 ```
 
 ## Performance Tips

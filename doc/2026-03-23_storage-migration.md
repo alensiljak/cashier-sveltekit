@@ -14,13 +14,13 @@ With a fast Rust parser, it should be easy and convenient to
 
 ## File Layout
 
-| File | Source | Description |
-| ------ | -------- | ------------- |
-| `cashier.bean` | device | Device transactions — the only file written locally |
-| `book.bean` | desktop sync | Top-level `include` directives and options |
-| `config.bean` | desktop sync | Beancount option/plugin directives |
-| `accounts.bean` | desktop sync | `open` / `close` directives |
-| `commodities.bean` | desktop sync | Commodity definitions |
+| File               | Source       | Description                                         |
+| ------------------ | ------------ | --------------------------------------------------- |
+| `cashier.bean`     | device       | Device transactions — the only file written locally |
+| `book.bean`        | desktop sync | Top-level `include` directives and options          |
+| `config.bean`      | desktop sync | Beancount option/plugin directives                  |
+| `accounts.bean`    | desktop sync | `open` / `close` directives                         |
+| `commodities.bean` | desktop sync | Commodity definitions                               |
 
 On every parse, infrastructure files (synced from desktop) are concatenated with `cashier.bean` to form the **full ledger source**. Only `cashier.bean` is ever written to on the device.
 
@@ -51,30 +51,30 @@ Create `src/lib/services/ledgerService.ts` as a module-level singleton:
 
 ```ts
 class LedgerService {
-  private ledger: ParsedLedger | null = null;
-  private _version = writable(0);          // reactive change signal
-  readonly version = derived(this._version, v => v);
+	private ledger: ParsedLedger | null = null;
+	private _version = writable(0); // reactive change signal
+	readonly version = derived(this._version, (v) => v);
 
-  /** Read OPFS → combine → create ParsedLedger. */
-  async load(): Promise<void>;
+	/** Read OPFS → combine → create ParsedLedger. */
+	async load(): Promise<void>;
 
-  /** Free old ledger, re-read cashier.bean, recombine, create new ParsedLedger, bump version. */
-  async invalidate(): Promise<void>;
+	/** Free old ledger, re-read cashier.bean, recombine, create new ParsedLedger, bump version. */
+	async invalidate(): Promise<void>;
 
-  /** Run a BQL query, return { columns, rows }. */
-  query(bql: string): QueryResult;
+	/** Run a BQL query, return { columns, rows }. */
+	query(bql: string): QueryResult;
 
-  /** Return parsed directives (transactions, balances, opens, …). */
-  getDirectives(): Directive[];
+	/** Return parsed directives (transactions, balances, opens, …). */
+	getDirectives(): Directive[];
 
-  /** Parse + validation errors from the current ledger. */
-  getErrors(): { parse: Error[]; validation: Error[] };
+	/** Parse + validation errors from the current ledger. */
+	getErrors(): { parse: Error[]; validation: Error[] };
 
-  /** Stateless: format a Beancount source string. */
-  format(source: string): string;
+	/** Stateless: format a Beancount source string. */
+	format(source: string): string;
 
-  /** Append a formatted transaction to cashier.bean → invalidate. */
-  async appendTransaction(beancountText: string): Promise<void>;
+	/** Append a formatted transaction to cashier.bean → invalidate. */
+	async appendTransaction(beancountText: string): Promise<void>;
 }
 
 export default new LedgerService();
@@ -149,30 +149,19 @@ Add static utility methods to `LedgerService` for one-off parsing of `cashier.be
 
 ```ts
 class LedgerService {
-  /** Parse cashier.bean source and return all transaction directives with their line ranges. */
-  static async getTransactionsWithRanges(
-    source: string
-  ): Promise<Array<{ directive: Directive; range: { startLine: number; endLine: number } }>>;
+	/** Parse cashier.bean source and return all transaction directives with their line ranges. */
+	static async getTransactionsWithRanges(
+		source: string
+	): Promise<Array<{ directive: Directive; range: { startLine: number; endLine: number } }>>;
 
-  /** Extract a single transaction from cashier.bean by line range. */
-  static extractTransaction(
-    source: string,
-    startLine: number,
-    endLine: number
-  ): Directive;
+	/** Extract a single transaction from cashier.bean by line range. */
+	static extractTransaction(source: string, startLine: number, endLine: number): Directive;
 
-  /** Replace lines [startLine, endLine] in cashier.bean with `newText`, then re-read and return updated source. */
-  static async replaceLines(
-    startLine: number,
-    endLine: number,
-    newText: string
-  ): Promise<string>;
+	/** Replace lines [startLine, endLine] in cashier.bean with `newText`, then re-read and return updated source. */
+	static async replaceLines(startLine: number, endLine: number, newText: string): Promise<string>;
 
-  /** Delete lines [startLine, endLine] in cashier.bean, then re-read and return updated source. */
-  static async deleteLines(
-    startLine: number,
-    endLine: number
-  ): Promise<string>;
+	/** Delete lines [startLine, endLine] in cashier.bean, then re-read and return updated source. */
+	static async deleteLines(startLine: number, endLine: number): Promise<string>;
 }
 ```
 
