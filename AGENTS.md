@@ -20,3 +20,4 @@ The local dev server is running at `http://localhost:5173/`. It is started by th
 - **Formatting**: `oxfmt` (with Prettier as fallback for `.svelte` files via `prettier-plugin-svelte`).
 - **Linting**: `oxlint` for JS/TS; `eslint-plugin-svelte` via ESLint for Svelte templates.
 - Run `npm run format` to format, `npm run lint` to lint.
+- Use Serena MCP for codebase navigation.
