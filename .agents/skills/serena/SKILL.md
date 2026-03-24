@@ -1,6 +1,6 @@
 ---
 name: serena
-description: Use Serena MCP tools for codebase navigation, symbol-level understanding, and semantic code retrieval. Apply this skill whenever working with an unfamiliar codebase, performing cross-file navigation, looking up symbol definitions or references, or onboarding to a new project via Serena. Triggers include: "explore the codebase", "find where X is defined", "understand the project structure", "navigate to", "find references to", or any task requiring deep code understanding beyond what file reading alone provides.
+description: Use Serena MCP tools for codebase navigation, symbol-level understanding, and semantic code retrieval. Apply this skill whenever working with an unfamiliar codebase, performing cross-file navigation, looking up symbol definitions or references, or onboarding to a new project via Serena. Triggers include "explore the codebase", "find where X is defined", "understand the project structure", "navigate to", "find references to", or any task requiring deep code understanding beyond what file reading alone provides.
 ---
 
 Serena provides LSP-backed, IDE-grade tools for semantic code navigation. The goal is to let you find and understand code at the symbol level — without reading entire files or using grep-style search.
