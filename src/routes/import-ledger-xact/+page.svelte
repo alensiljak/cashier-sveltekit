@@ -10,7 +10,7 @@
 	Notifier.init();
 
 	let inputText = $state('');
-	let inputControl: HTMLTextAreaElement;
+	let inputControl: HTMLTextAreaElement | undefined = undefined;
 
 	onMount(() => {
 		inputControl.focus();
