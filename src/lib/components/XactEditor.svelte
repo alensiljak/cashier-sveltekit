@@ -56,7 +56,7 @@
 
 			case 'account': {
 				// get the posting
-				var index = null;
+				let index = null;
 				if (typeof $selectionMetadata.postingIndex === 'number') {
 					index = $selectionMetadata.postingIndex;
 				} else {

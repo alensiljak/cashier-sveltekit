@@ -81,7 +81,7 @@
 
 		// start from today
 		const today = moment().startOf('day');
-		for (var scx of scxs) {
+		for (let scx of scxs) {
 			let diff = moment(scx.nextDate).diff(today, 'days');
 			// Handle overdue payments (negative days).
 			if (diff < 0) diff = 0;
@@ -91,7 +91,7 @@
 
 			// add all the posting amounts
 			let dailyAmount = 0;
-			for (var posting of postings) {
+			for (let posting of postings) {
 				if (!posting.amount) continue;
 				dailyAmount += posting.amount;
 			}
@@ -177,7 +177,7 @@
 		dataset.label = account.getAccountName();
 
 		// add default values.
-		for (var i = 0; i < dataset.data.length; i++) {
+		for (let i = 0; i < dataset.data.length; i++) {
 			dataset.data[i] = 0;
 		}
 

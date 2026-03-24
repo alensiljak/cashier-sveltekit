@@ -52,7 +52,7 @@
 
 	async function onFab() {
 		// create a new transaction in the app store
-		var tx = Xact.create();
+		const tx = Xact.create();
 		xact.set(tx);
 
 		await goto('/tx');

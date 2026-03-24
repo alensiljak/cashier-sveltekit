@@ -44,7 +44,7 @@
 	}
 
 	async function onAddAccountClicked() {
-		var meta = new SelectionModeMetadata();
+		const meta = new SelectionModeMetadata();
 		meta.selectionType = SelectionType.ACCOUNT;
 		selectionMetadata.set(meta);
 

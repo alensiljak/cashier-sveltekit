@@ -59,7 +59,7 @@
 		const blob = new Blob([output], { type: 'text/plain' });
 		const url = URL.createObjectURL(blob);
 
-		var link = document.createElement('a');
+		const link = document.createElement('a');
 		link.download = fileName;
 		// link.href = "data:text/plain;charset=utf-8," + encodeURIComponent(content);
 		link.href = url;
