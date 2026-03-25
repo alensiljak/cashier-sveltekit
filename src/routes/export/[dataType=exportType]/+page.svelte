@@ -24,6 +24,10 @@
 			return false;
 		}
 
+		if (!window.isSecureContext) {
+			return false;
+		}
+
 		if (typeof navigator.canShare !== 'function') {
 			return true;
 		}
@@ -62,7 +66,7 @@
 	}
 
 	async function onDownloadClick() {
-		let fileName = getFilenameForBackup(dataType);
+		let fileName = getFilenameForBackup(dataType as string);
 
 		// Save file
 		const blob = new Blob([output], { type: 'text/plain' });
@@ -84,17 +88,44 @@
 			return;
 		}
 
-		let fileName = getFilenameForBackup(dataType);
+		let fileName = getFilenameForBackup(dataType as string);
 		const file = new File([output], fileName, { type: 'text/plain' });
 
-		if (navigator.canShare && navigator.canShare({ files: [file] })) {
+		if (!window.isSecureContext) {
+			Notifier.error('Sharing requires a secure context (HTTPS or localhost). Please use Download instead.');
+			return;
+		}
+
+		if (navigator.canShare && !navigator.canShare({ files: [file] })) {
+			Notifier.error('This browser cannot share files from this page. Please use Download instead.');
+			return;
+		}
+
+		try {
 			await navigator.share({
 				files: [file],
 				title: `Cashier ${dataType} export`,
 				text: `Cashier ${dataType} export`
 			});
-		} else {
-			Notifier.error('Web Share API not supported.');
+		} catch (error: unknown) {
+			if (error instanceof DOMException) {
+				switch (error.name) {
+					case 'AbortError':
+						Notifier.info('Share canceled.');
+						return;
+					case 'NotAllowedError':
+						Notifier.error(
+							'Sharing was blocked by browser permissions. In Vivaldi, allow sharing prompts for this site or use Download instead.'
+						);
+						return;
+					case 'InvalidStateError':
+						Notifier.error('A share operation is already in progress. Please try again in a moment.');
+						return;
+				}
+			}
+
+			console.error('Share failed', error);
+			Notifier.error('Unable to share in this browser. Please use Download instead.');
 		}
 	}
 </script>
