@@ -12,16 +12,25 @@
 	const dataType = page.params.dataType;
 
 	let output = $state('');
-
-	if (navigator.share !== undefined) {
-		console.log('can share');
-	} else {
-		console.log('native sharing not supported');
-	}
+	let canUseWebShare = $state(false);
 
 	onMount(async () => {
+		canUseWebShare = supportsWebShare();
 		await loadData();
 	});
+
+	function supportsWebShare() {
+		if (typeof navigator === 'undefined' || typeof navigator.share !== 'function') {
+			return false;
+		}
+
+		if (typeof navigator.canShare !== 'function') {
+			return true;
+		}
+
+		const shareFile = new File([''], 'cashier-export.txt', { type: 'text/plain' });
+		return navigator.canShare({ files: [shareFile] });
+	}
 
 	async function loadData() {
 		switch (dataType) {
@@ -104,20 +113,26 @@
 		></textarea>
 
 		<!-- action buttons -->
-		<div class="my-3 flex flex-row justify-around py-3">
+		<div
+			class="my-3 grid gap-3 py-3"
+			class:grid-cols-3={canUseWebShare}
+			class:grid-cols-2={!canUseWebShare}
+		>
 			<!-- copy to clipboard -->
-			<button class="btn btn-primary" onclick={onCopyClick}>
+			<button class="btn btn-primary w-full" onclick={onCopyClick}>
 				<CopyIcon />
 				<span>Copy</span>
 			</button>
 			<!-- pCloud Save ?-->
 			<!-- WebShare -->
-			<!-- <button class="btn btn-primary" onclick={onShareClick}>
-				<Share2Icon />
-				<span>Share</span>
-			</button> -->
+			{#if canUseWebShare}
+				<button class="btn btn-primary w-full" onclick={onShareClick}>
+					<Share2Icon />
+					<span>Share</span>
+				</button>
+			{/if}
 			<!-- Download -->
-			<button class="btn btn-primary" onclick={onDownloadClick}>
+			<button class="btn btn-primary w-full" onclick={onDownloadClick}>
 				<FileDownIcon />
 				<span>Download</span>
 			</button>
