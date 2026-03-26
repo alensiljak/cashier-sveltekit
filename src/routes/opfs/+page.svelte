@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Toolbar from '$lib/components/Toolbar.svelte';
-	import { RefreshCcwIcon, SaveIcon, FilePlusIcon } from '@lucide/svelte';
+	import { RefreshCcwIcon, SaveIcon, FilePlusIcon, TrashIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import * as OpfsLib from '$lib/utils/opfslib.js';
 	import Notifier from '$lib/utils/notifier';
@@ -17,6 +17,9 @@
 	let hasUnsavedChanges = $state(false);
 	let showNewFileDialog = $state(false);
 	let newFileName = $state('');
+	let showDeleteConfirm = $state(false);
+	let isDeleting = $state(false);
+	let fileToDelete = $state<string | null>(null);
 
 	onMount(async () => {
 		await loadFiles();
@@ -57,6 +60,42 @@
 			hasUnsavedChanges = false;
 		} finally {
 			isContentLoading = false;
+		}
+	}
+
+	function confirmDelete(filename: string) {
+		fileToDelete = filename;
+		showDeleteConfirm = true;
+	}
+
+	async function deleteFile() {
+		if (!fileToDelete) return;
+
+		isDeleting = true;
+		try {
+			const success = await OpfsLib.deleteFile(fileToDelete);
+
+			if (success) {
+				Notifier.success(`File "${fileToDelete}" deleted successfully`);
+			} else {
+				Notifier.error(`Failed to delete file "${fileToDelete}"`);
+			}
+
+			showDeleteConfirm = false;
+			fileToDelete = null;
+
+			if (selectedFile === fileToDelete) {
+				selectedFile = null;
+				fileContent = '';
+				originalContent = '';
+				hasUnsavedChanges = false;
+			}
+
+			await loadFiles();
+		} catch (error: any) {
+			Notifier.error(error.message || 'Failed to delete file');
+		} finally {
+			isDeleting = false;
 		}
 	}
 
@@ -162,6 +201,9 @@
 								<td>—</td>
 								<td>
 									<button class="btn btn-sm btn-primary" onclick={() => onFileClick(filename)}>View</button>
+									<button class="btn btn-sm btn-error btn-outline gap-2" onclick={() => confirmDelete(filename)}>
+										<TrashIcon class="w-4 h-4" />
+									</button>
 								</td>
 							</tr>
 						{/each}
@@ -195,6 +237,22 @@
 			{/if}
 		{/if}
 	</section>
+
+	<!-- Delete Confirmation Modal -->
+	{#if showDeleteConfirm}
+		<div class="modal modal-open">
+			<div class="modal-box">
+				<h3 class="font-bold text-lg">Confirm Deletion</h3>
+				<p>Are you sure you want to delete "{fileToDelete}"?</p>
+				<div class="modal-action">
+					<button class="btn" onclick={() => showDeleteConfirm = false} disabled={isDeleting}>Cancel</button>
+					<button class="btn btn-error" onclick={deleteFile} disabled={isDeleting}>
+						{isDeleting ? 'Deleting...' : 'Delete'}
+					</button>
+				</div>
+			</div>
+		</div>
+	{/if}
 
 	<!-- New File Dialog Modal -->
 	{#if showNewFileDialog}

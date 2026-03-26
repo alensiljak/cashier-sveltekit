@@ -81,3 +81,32 @@ export async function listFiles(): Promise<string[]> {
 		return [];
 	}
 }
+
+export async function deleteFile(filename: string): Promise<boolean> {
+	try {
+		const root = await navigator.storage.getDirectory();
+		await root.removeEntry(filename, { recursive: false });
+		return true;
+	} catch (error) {
+		console.error('Error deleting file:', error);
+		return false;
+	}
+}
+
+export async function deleteFiles(
+	filenames: string[]
+): Promise<{ deleted: number; failed: number }> {
+	let deleted = 0;
+	let failed = 0;
+
+	for (const filename of filenames) {
+		const success = await deleteFile(filename);
+		if (success) {
+			deleted++;
+		} else {
+			failed++;
+		}
+	}
+
+	return { deleted, failed };
+}
