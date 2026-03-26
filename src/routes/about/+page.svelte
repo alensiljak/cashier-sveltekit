@@ -44,8 +44,7 @@
 		<p>
 			Build Date: <code>{__BUILD_DATE__}</code>
 		</p>
-	</section>
-	<section>
+
 		<h3 class="text-3xl font-semibold">Experiments</h3>
 
 		<ul>
