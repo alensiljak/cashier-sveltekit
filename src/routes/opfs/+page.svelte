@@ -191,7 +191,7 @@
 						<tr>
 							<th>Filename</th>
 							<th>Size</th>
-							<th>Actions</th>
+							<th class="text-center">Actions</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -199,10 +199,9 @@
 							<tr class:bg-secondary={selectedFile === filename}>
 								<td class="font-mono text-sm">{filename}</td>
 								<td>—</td>
-								<td>
-									<button class="btn btn-sm btn-primary gap-2" onclick={() => onFileClick(filename)}>
+								<td class="text-right">
+									<button class="btn btn-sm btn-primary gap-2 mr-2" onclick={() => onFileClick(filename)}>
 										<PencilIcon class="w-4 h-4" />
-										<span>Edit</span>
 									</button>
 									<button class="btn btn-sm btn-error btn-outline gap-2" onclick={() => confirmDelete(filename)}>
 										<TrashIcon class="w-4 h-4" />
@@ -284,4 +283,3 @@
 		</div>
 	{/if}
 </article>
-
