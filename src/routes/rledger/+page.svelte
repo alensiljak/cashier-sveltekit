@@ -82,31 +82,38 @@
 
 	// Initialize WASM
 	onMount(async () => {
-		try {
-			isLoading = true;
-			error = null;
+		   try {
+			   isLoading = true;
+			   error = null;
 
-			// WASM is now initialized globally in +layout.svelte
-			initialized = true;
-			wasmVersion = version();
-			updateMoneySamples();
+			   // WASM is now initialized globally in +layout.svelte
+			   // Only set initialized=true if version() works
+			   try {
+				   wasmVersion = version();
+				   initialized = true;
+			   } catch (e) {
+				   initialized = false;
+				   wasmVersion = '';
+				   throw new Error('WASM module not available or version() not supported');
+			   }
+			   updateMoneySamples();
 
-			// Load infrastructure file from OPFS
-			await loadInfrastructure();
-			
-			await importJournal(); // Load current journal into textarea on startup
-			if (!transactionSource) {
-				createDemoEntries(); // If journal is empty, create demo entries
-			}
+			   // Load infrastructure file from OPFS
+			   await loadInfrastructure();
 
-			// Parse the combined Beancount source
-			await handleParse();
-		} catch (err) {
-			error = err instanceof Error ? err.message : 'Failed to initialize RustLedger';
-			console.error('RustLedger initialization error:', err);
-		} finally {
-			isLoading = false;
-		}
+			   await importJournal(); // Load current journal into textarea on startup
+			   if (!transactionSource) {
+				   createDemoEntries(); // If journal is empty, create demo entries
+			   }
+
+			   // Parse the combined Beancount source
+			   await handleParse();
+		   } catch (err) {
+			   error = err instanceof Error ? err.message : 'Failed to initialize RustLedger';
+			   console.error('RustLedger initialization error:', err);
+		   } finally {
+			   isLoading = false;
+		   }
 	});
 
 	function updateMoneySamples() {
@@ -540,12 +547,12 @@
 					</div>
 				{/if}
 			</div>
-
+		</div>
 	</section>
 
 	<!-- Full Beancount Source Section -->
 	<section class="card bg-base-100 shadow-xl">
-		<div class="card-body p-4" on:click={() => toggleSection('full-source')} class:cursor-pointer={true}>
+		<div role="button" tabindex="0" aria-pressed={expandedSections.has('full-source')} class="card-body p-4" on:click={() => toggleSection('full-source')} on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { toggleSection('full-source'); } }} class:cursor-pointer={true}>
 			<div class="flex items-center justify-between">
 				<h2 class="card-title m-0">Full Beancount Source</h2>
 				<svg class="w-6 h-6 transition-transform duration-200" class:rotate-90={expandedSections.has('full-source')} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -584,7 +591,7 @@
 
 	<!-- Validation Results Section -->
 	<section class="card bg-base-100 shadow-xl">
-		<div class="card-body p-4" on:click={() => toggleSection('validation')} class:cursor-pointer={true}>
+		<div role="button" tabindex="0" aria-pressed={expandedSections.has('validation')} class="card-body p-4" on:click={() => toggleSection('validation')} on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { toggleSection('validation'); } }} class:cursor-pointer={true}>
 			<div class="flex items-center justify-between">
 				<h2 class="card-title m-0">Validation Results</h2>
 				<svg class="w-6 h-6 transition-transform duration-200" class:rotate-90={expandedSections.has('validation')} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -679,7 +686,7 @@
 
 	<!-- Parsed Accounts Section -->
 	<section class="card bg-base-100 shadow-xl">
-		<div class="card-body p-4" on:click={() => toggleSection('accounts')} class:cursor-pointer={true}>
+		<div role="button" tabindex="0" aria-pressed={expandedSections.has('accounts')} class="card-body p-4" on:click={() => toggleSection('accounts')} on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { toggleSection('accounts'); } }} class:cursor-pointer={true}>
 			<div class="flex items-center justify-between">
 				<h2 class="card-title m-0">
 					Parsed Accounts ({parsedAccounts.length})
@@ -725,7 +732,7 @@
 
 	<!-- Parsed Directives Section -->
 	<section class="card bg-base-100 shadow-xl">
-		<div class="card-body p-4" on:click={() => toggleSection('directives')} class:cursor-pointer={true}>
+		<div role="button" tabindex="0" aria-pressed={expandedSections.has('directives')} class="card-body p-4" on:click={() => toggleSection('directives')} on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { toggleSection('directives'); } }} class:cursor-pointer={true}>
 			<div class="flex items-center justify-between">
 				<h2 class="card-title m-0">
 					Parsed Directives ({parsedDirectives.length})
@@ -771,7 +778,7 @@
 
 	<!-- Transaction Anatomy Section -->
 	<section class="card bg-base-100 shadow-xl">
-		<div class="card-body p-4" on:click={() => toggleSection('anatomy')} class:cursor-pointer={true}>
+		<div role="button" tabindex="0" aria-pressed={expandedSections.has('anatomy')} class="card-body p-4" on:click={() => toggleSection('anatomy')} on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { toggleSection('anatomy'); } }} class:cursor-pointer={true}>
 			<div class="flex items-center justify-between">
 				<h2 class="card-title m-0">Transaction Anatomy</h2>
 				<svg class="w-6 h-6 transition-transform duration-200" class:rotate-90={expandedSections.has('anatomy')} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -800,7 +807,7 @@
 
 	<!-- Money Tuple Parsing Test -->
 	<section class="card bg-base-100 shadow-xl">
-		<div class="card-body p-4" on:click={() => toggleSection('money-tuple')} class:cursor-pointer={true}>
+		<div role="button" tabindex="0" aria-pressed={expandedSections.has('money-tuple')} class="card-body p-4" on:click={() => toggleSection('money-tuple')} on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { toggleSection('money-tuple'); } }} class:cursor-pointer={true}>
 			<div class="flex items-center justify-between">
 				<h2 class="card-title m-0">
 					Money Tuple Parsing Test
@@ -834,7 +841,7 @@
 	</section>
 	<!-- Format Output Section -->
 	<section class="card bg-base-100 shadow-xl">
-		<div class="card-body p-4" on:click={() => toggleSection('format')} class:cursor-pointer={true}>
+		<div role="button" tabindex="0" aria-pressed={expandedSections.has('format')} class="card-body p-4" on:click={() => toggleSection('format')} on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { toggleSection('format'); } }} class:cursor-pointer={true}>
 			<div class="flex items-center justify-between">
 				<h2 class="card-title m-0">Format Output</h2>
 				<svg class="w-6 h-6 transition-transform duration-200" class:rotate-90={expandedSections.has('format')} fill="none" stroke="currentColor" viewBox="0 0 24 24">
