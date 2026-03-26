@@ -6,7 +6,6 @@
 import db from '$lib/data/db';
 import {
 	Account,
-	//Money,
 	LastXact,
 	Payee,
 	Posting,
@@ -486,10 +485,6 @@ class AppService {
 
 		return txs;
 	}
-
-	// loadAssetClass(fullname: string) {
-	//   return db.assetAllocation.get(fullname)
-	// }
 
 	/**
 	 * Loads the favourite accounts.

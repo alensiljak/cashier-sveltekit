@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Toolbar from '$lib/components/Toolbar.svelte';
-	import { RefreshCcwIcon, SaveIcon, FilePlusIcon, TrashIcon } from '@lucide/svelte';
+	import { RefreshCcwIcon, SaveIcon, FilePlusIcon, TrashIcon, PencilIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import * as OpfsLib from '$lib/utils/opfslib.js';
 	import Notifier from '$lib/utils/notifier';
@@ -281,3 +281,4 @@
 		</div>
 	{/if}
 </article>
+

@@ -20,11 +20,6 @@
 	let { data }: { data: PageData } = $props();
 
 	onMount(async () => {
-		// Scroll to the end of the list
-		// window.scrollTo({
-		// 	top: document.body.scrollHeight,
-		// 	behavior: 'smooth'
-		// });
 		listContainer.scrollTop = listContainer.scrollHeight;
 	});
 
@@ -94,6 +89,9 @@
 			<p>The device journal is empty</p>
 		{:else}
 			{#each data.xacts as xact (xact)}
+				<JournalXactRow {xact} onclick={onRowClick} />
+			{/each}
+			{#each data.opfsXacts as xact (xact)}
 				<JournalXactRow {xact} onclick={onRowClick} />
 			{/each}
 		{/if}
