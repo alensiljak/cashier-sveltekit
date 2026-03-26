@@ -3,7 +3,7 @@
  * Provides Beancount parsing functionality using @rustledger/wasm
  */
 
-import { Account, Money } from '$lib/data/model';
+import { Account } from '$lib/data/model';
 import type { ParseResult } from '@rustledger/wasm';
 import wasmUrl from '@rustledger/wasm/rustledger_wasm_bg.wasm?url';
 
@@ -217,75 +217,6 @@ export function parseAllAccounts(source: string): Account[] {
 	}
 }
 
-function normalizeTupleAmountString(value: string): string {
-	return value
-		.trim()
-		.replace(/^\((.*)\)$/, '$1')
-		.trim();
-}
-
-/**
- * Extract numeric value from a balance row tuple string
- * Example: "(594.52 USD)" -> Money object
- */
-export function getMoneyFromTupleString(value: string): Money {
-	if (!wasmModule || !wasmModule.ParsedLedger) {
-		throw new Error('WASM module not available. RustLedger requires WASM to be initialized.');
-	}
-
-	// Use ParsedLedger to parse the amount
-	const normalizedValue = normalizeTupleAmountString(value);
-	const source = `2024-01-01 * "Test" "Parse amount"
-    Assets:Test ${normalizedValue}`;
-	const ledger = new wasmModule.ParsedLedger(source);
-	const directives = ledger.getDirectives();
-
-	if (directives.length > 0 && directives[0].type === 'transaction') {
-		const posting = directives[0].postings[0];
-		if (posting && posting.units) {
-			const money = new Money();
-			money.quantity = parseFloat(posting.units.number);
-			money.currency = posting.units.currency;
-			ledger.free();
-			return money;
-		}
-	}
-
-	ledger.free();
-	throw new Error('Failed to parse money from tuple string using WASM');
-}
-
-/**
- * Get the numeric value from a balance row
- */
-export function getNumberFromBalanceRow(row: Array<Array<string>>): number {
-	if (!wasmModule || !wasmModule.ParsedLedger) {
-		throw new Error('WASM module not available. RustLedger requires WASM to be initialized.');
-	}
-
-	// Use ParsedLedger to parse
-	if (row.length > 0) {
-		const tuple = normalizeTupleAmountString(row[0][0]);
-		const source = `2024-01-01 * "Test" "Parse amount"
-    Assets:Test ${tuple}`;
-		const ledger = new wasmModule.ParsedLedger(source);
-		const directives = ledger.getDirectives();
-
-		if (directives.length > 0 && directives[0].type === 'transaction') {
-			const posting = directives[0].postings[0];
-			if (posting && posting.units) {
-				const result = parseFloat(posting.units.number);
-				ledger.free();
-				return result;
-			}
-		}
-
-		ledger.free();
-	}
-
-	throw new Error('Failed to parse number from balance row using WASM');
-}
-
 /**
  * Get the WASM library version
  */
@@ -311,8 +242,6 @@ export function format(source: string): { formatted?: string; errors: any[] } {
 export default {
 	ensureInitialized,
 	parseBalanceSheetRow,
-	getMoneyFromTupleString,
-	getNumberFromBalanceRow,
 	createParsedLedger,
 	getAccountsFromLedger,
 	parseSource,

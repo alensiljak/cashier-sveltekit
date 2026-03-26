@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import Toolbar from "$lib/components/Toolbar.svelte";
-	import rustledger, { createParsedLedger, format, getAccountsFromLedger, version } from '$lib/services/rustledger';
+	import ledgerService from '$lib/services/ledgerService';
 	import type { BeancountError, Directive } from '@rustledger/wasm';
-	import { Account, Money } from '$lib/data/model';
+	import { Account } from '$lib/data/model';
 	import appService from '$lib/services/appService';
 	import * as OpfsLib from '$lib/utils/opfslib.js';
 	import { InfrastructureFiles } from '$lib/constants';
@@ -13,6 +13,7 @@
 	let error: string | null = null;
 	let initialized = false;
 	let wasmVersion = '';
+	let isLedgerServiceReady = false;
 
 	// Editable transaction source (only transactions, not infrastructure)
 	let transactionSource = '';
@@ -30,30 +31,18 @@
 	// Accordion state - track which sections are expanded
 	let expandedSections = new Set<string>();
 	
-	function toggleSection(sectionId: string) {
-		if (expandedSections.has(sectionId)) {
-			expandedSections.delete(sectionId);
-		} else {
-			expandedSections.add(sectionId);
-		}
-		// Trigger reactivity
-		expandedSections = new Set(expandedSections);
-	}
-	
 	// Source display
 	let sourceContainer: HTMLDivElement;
 	$: sourceLines = fullBeancountSource ? fullBeancountSource.split('\n') : [];
 
 	// Single ParsedLedger instance — created on mount and on Parse button click
-	let parsedLedger: any | null = null;
+	let parsedLedger: any = null;
 
 	// Parsed results
 	let parsedAccounts: Account[] = [];
 	let parsedDirectives: Directive[] = [];
 	let lastTransactionDirective: Directive | null = null;
 	let transactionAnatomy = '';
-	const tupleSamples = ['(100.00 EUR)', '(500.50 USD)', '(-25.75 GBP)'];
-	let parsedMoneySamples: Array<{ tuple: string; money: Money }> = [];
 
 	// Validation state
 	let validationErrors: BeancountError[] = [];
@@ -80,48 +69,35 @@
 		await handleParse();
 	}
 
-	// Initialize WASM
+	// Initialize
 	onMount(async () => {
-		   try {
-			   isLoading = true;
-			   error = null;
+		try {
+			isLoading = true;
+			error = null;
 
-			   // WASM is now initialized globally in +layout.svelte
-			   // Only set initialized=true if version() works
-			   try {
-				   wasmVersion = version();
-				   initialized = true;
-			   } catch (e) {
-				   initialized = false;
-				   wasmVersion = '';
-				   throw new Error('WASM module not available or version() not supported');
-			   }
-			   updateMoneySamples();
+			// Wait for ledgerService to be ready (WASM initialized)
+			await ledgerService.ensureInitialized();
+			wasmVersion = ledgerService.getWasmVersion();
+			initialized = true;
+			isLedgerServiceReady = true;
 
-			   // Load infrastructure file from OPFS
-			   await loadInfrastructure();
+			// Load infrastructure file from OPFS
+			await loadInfrastructure();
 
-			   await importJournal(); // Load current journal into textarea on startup
-			   if (!transactionSource) {
-				   createDemoEntries(); // If journal is empty, create demo entries
-			   }
+			await importJournal(); // Load current journal into textarea on startup
+			if (!transactionSource) {
+				createDemoEntries(); // If journal is empty, create demo entries
+			}
 
-			   // Parse the combined Beancount source
-			   await handleParse();
-		   } catch (err) {
-			   error = err instanceof Error ? err.message : 'Failed to initialize RustLedger';
-			   console.error('RustLedger initialization error:', err);
-		   } finally {
-			   isLoading = false;
-		   }
+			// Parse the combined Beancount source
+			await handleParse();
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Failed to initialize RustLedger';
+			console.error('RustLedger initialization error:', err);
+		} finally {
+			isLoading = false;
+		}
 	});
-
-	function updateMoneySamples() {
-		parsedMoneySamples = tupleSamples.map((tuple) => ({
-			tuple,
-			money: rustledger.getMoneyFromTupleString(tuple)
-		}));
-	}
 
 	function createDemoEntries() {
 			transactionSource = `2024-01-01 * "Opening Balance" "Initial balances"
@@ -305,7 +281,7 @@
 			formattedSource = '';
 			formatErrors = [];
 
-			const result = format(fullBeancountSource);
+			const result = ledgerService.format(fullBeancountSource);
 			formattedSource = result.formatted ?? '';
 			formatErrors = result.errors ?? [];
 
@@ -365,13 +341,13 @@
 				parsedLedger = null;
 			}
 
-			parsedLedger = createParsedLedger(fullBeancountSource);
+			parsedLedger = ledgerService.createParsedLedger(fullBeancountSource);
 			if (!parsedLedger) {
 				throw new Error('Failed to create ParsedLedger — WASM module not available');
 			}
 
 			parsedDirectives = parsedLedger.getDirectives();
-			parsedAccounts = getAccountsFromLedger(parsedLedger);
+			parsedAccounts = ledgerService.getAccountsFromLedger(parsedLedger);
 
 			console.log('Parsed accounts:', parsedAccounts);
 		} catch (err) {
@@ -442,6 +418,17 @@
 			hasValidated = true;
 		}
 	}
+
+	function toggleSection(sectionId: string) {
+		if (expandedSections.has(sectionId)) {
+			expandedSections.delete(sectionId);
+		} else {
+			expandedSections.add(sectionId);
+		}
+		// Trigger reactivity
+		expandedSections = new Set(expandedSections);
+	}
+
 </script>
 
 <Toolbar title="RustLedger Demo" />
@@ -804,41 +791,6 @@
 			</div>
 		{/if}
 	</section>
-
-	<!-- Money Tuple Parsing Test -->
-	<section class="card bg-base-100 shadow-xl">
-		<div role="button" tabindex="0" aria-pressed={expandedSections.has('money-tuple')} class="card-body p-4" on:click={() => toggleSection('money-tuple')} on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { toggleSection('money-tuple'); } }} class:cursor-pointer={true}>
-			<div class="flex items-center justify-between">
-				<h2 class="card-title m-0">
-					Money Tuple Parsing Test
-				</h2>
-				<svg class="w-6 h-6 transition-transform duration-200" class:rotate-90={expandedSections.has('money-tuple')} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-				</svg>
-			</div>
-		</div>
-		{#if expandedSections.has('money-tuple')}
-			<div class="px-4 pb-4">
-				<p class="text-sm text-base-content/70">
-					Testing getMoneyFromTupleString() with various formats
-				</p>
-
-				{#if !initialized}
-					<p class="text-base-content/50">Money tuple samples will appear after the WASM module loads.</p>
-				{:else}
-					<div class="grid gap-2">
-						{#each parsedMoneySamples as { tuple, money }}
-						<div class="flex items-center gap-4 p-2 bg-base-200 rounded">
-							<span class="font-mono">{tuple}</span>
-							<span class="text-primary">→</span>
-							<span>{money.quantity.toFixed(2)} {money.currency}</span>
-						</div>
-						{/each}
-					</div>
-				{/if}
-			</div>
-		{/if}
-	</section>
 	<!-- Format Output Section -->
 	<section class="card bg-base-100 shadow-xl">
 		<div role="button" tabindex="0" aria-pressed={expandedSections.has('format')} class="card-body p-4" on:click={() => toggleSection('format')} on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { toggleSection('format'); } }} class:cursor-pointer={true}>
@@ -910,5 +862,4 @@
 			</div>
 		{/if}
 	</section>
-
 </main>

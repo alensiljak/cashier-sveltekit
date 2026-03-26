@@ -8,19 +8,21 @@
 	import { pwaInfo } from 'virtual:pwa-info';
 	import { pwaAssetsHead } from 'virtual:pwa-assets/head';
 	import { onMount } from 'svelte';
-	import { ensureInitialized } from '$lib/services/rustledger';
+	import ledgerService from '$lib/services/ledgerService';
+	import { writable } from 'svelte/store';
 	import { drawerState } from '$lib/data/mainStore';
 	import NavigationV3 from '$lib/components/navigation.svelte';
 
 	let { children } = $props();
 
+	const ledgerReady = writable(false);
 	onMount(async () => {
-		// Initialize RustLedger WASM globally on app startup
 		try {
-			await ensureInitialized();
-			console.log('RustLedger WASM initialized globally');
+			await ledgerService.load();
+			ledgerReady.set(true);
+			console.log('LedgerService loaded and ready');
 		} catch (err) {
-			console.error('Failed to initialize RustLedger WASM:', err);
+			console.error('Failed to initialize LedgerService:', err);
 		}
 
 		if (pwaInfo) {
