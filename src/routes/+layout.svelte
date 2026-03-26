@@ -8,12 +8,21 @@
 	import { pwaInfo } from 'virtual:pwa-info';
 	import { pwaAssetsHead } from 'virtual:pwa-assets/head';
 	import { onMount } from 'svelte';
+	import { ensureInitialized } from '$lib/services/rustledger';
 	import { drawerState } from '$lib/data/mainStore';
 	import NavigationV3 from '$lib/components/navigation.svelte';
 
 	let { children } = $props();
 
 	onMount(async () => {
+		// Initialize RustLedger WASM globally on app startup
+		try {
+			await ensureInitialized();
+			console.log('RustLedger WASM initialized globally');
+		} catch (err) {
+			console.error('Failed to initialize RustLedger WASM:', err);
+		}
+
 		if (pwaInfo) {
 			const { useRegisterSW } = await import('virtual:pwa-register/svelte');
 			useRegisterSW({

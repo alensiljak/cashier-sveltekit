@@ -9,7 +9,7 @@ The infrastructure files are:
 
 Cashier server contains new endpoints:
 
-```
+```txt
 /infrastructure/config
 /infrastructure/commodities
 /infrastructure/accounts

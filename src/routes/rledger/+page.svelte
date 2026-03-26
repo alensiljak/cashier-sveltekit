@@ -86,8 +86,7 @@
 			isLoading = true;
 			error = null;
 
-			// Initialize the WASM module
-			await rustledger.ensureInitialized();
+			// WASM is now initialized globally in +layout.svelte
 			initialized = true;
 			wasmVersion = version();
 			updateMoneySamples();

@@ -26,7 +26,7 @@ On every parse, infrastructure files (synced from desktop) are concatenated with
 
 ## Plan
 
-### 1. WASM Initialization
+### 1. WASM Initialization ✅
 
 - Initialize `@rustledger/wasm` once at app startup in `+layout.svelte` `onMount`.
 - The module binary is already cached as a singleton in `rustledger.ts` via `initWasm()` — no changes needed there.
