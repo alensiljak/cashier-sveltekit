@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Toolbar from '$lib/components/Toolbar.svelte';
-	import { RefreshCcwIcon, SaveIcon } from '@lucide/svelte';
+	import { RefreshCcwIcon, SaveIcon, FilePlusIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import * as OpfsLib from '$lib/utils/opfslib.js';
 	import Notifier from '$lib/utils/notifier';
@@ -15,6 +15,8 @@
 	let isSaving = $state(false);
 	let originalContent = $state<string>('');
 	let hasUnsavedChanges = $state(false);
+	let showNewFileDialog = $state(false);
+	let newFileName = $state('');
 
 	onMount(async () => {
 		await loadFiles();
@@ -74,6 +76,34 @@
 		}
 	}
 
+	async function createNewFile() {
+		if (!newFileName.trim()) {
+			Notifier.error('Please enter a filename');
+			return;
+		}
+
+		try {
+			// Create an empty file
+			await OpfsLib.saveFile(newFileName.trim(), '');
+			Notifier.success(`File "${newFileName}" created successfully`);
+			newFileName = '';
+			showNewFileDialog = false;
+			await loadFiles();
+		} catch (error: any) {
+			Notifier.error(error.message || 'Failed to create file');
+		}
+	}
+
+	function openNewFileDialog() {
+		showNewFileDialog = true;
+		newFileName = '';
+	}
+
+	function closeNewFileDialog() {
+		showNewFileDialog = false;
+		newFileName = '';
+	}
+
 	function onFileContentChange(event: Event) {
 		const target = event.target as HTMLTextAreaElement;
 		fileContent = target.value;
@@ -92,6 +122,12 @@
 				<button class="btn btn-sm btn-ghost gap-2" onclick={loadFiles} disabled={isLoading}>
 					<RefreshCcwIcon class="w-5 h-5 {isLoading ? 'animate-spin' : ''}" />
 					<span>Refresh</span>
+				</button>
+			</li>
+			<li>
+				<button class="btn btn-sm btn-ghost gap-2" onclick={openNewFileDialog}>
+					<FilePlusIcon class="w-5 h-5" />
+					<span>New File</span>
 				</button>
 			</li>
 		{/snippet}
@@ -159,4 +195,31 @@
 			{/if}
 		{/if}
 	</section>
+
+	<!-- New File Dialog Modal -->
+	{#if showNewFileDialog}
+		<div class="modal modal-open">
+			<div class="modal-box">
+				<h3 class="font-bold text-lg">Create New Text File</h3>
+				<div class="form-control">
+					<label class="label">
+						<span class="label-text">Filename</span>
+					</label>
+					<input type="text"
+						class="input input-bordered w-full"
+						placeholder="Enter filename..."
+						bind:value={newFileName}
+						onkeydown={(e) => {
+							if (e.key === 'Enter') {
+								createNewFile();
+							}
+						}} />
+				</div>
+				<div class="modal-action">
+					<button class="btn" onclick={closeNewFileDialog}>Cancel</button>
+					<button class="btn btn-primary" onclick={createNewFile}>Create</button>
+				</div>
+			</div>
+		</div>
+	{/if}
 </article>
