@@ -89,8 +89,9 @@
 	<Toolbar title="OPFS Files">
 		{#snippet menuItems()}
 			<li>
-				<button class="btn btn-sm btn-circle btn-ghost" onclick={loadFiles} disabled={isLoading}>
+				<button class="btn btn-sm btn-ghost gap-2" onclick={loadFiles} disabled={isLoading}>
 					<RefreshCcwIcon class="w-5 h-5 {isLoading ? 'animate-spin' : ''}" />
+					<span>Refresh</span>
 				</button>
 			</li>
 		{/snippet}
