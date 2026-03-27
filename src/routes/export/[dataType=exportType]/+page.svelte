@@ -104,10 +104,12 @@
 		// 	return;
 		// }
 
+		const today = new Date().toISOString().slice(0, 10);
+
 		try {
 			await navigator.share({
 				// files: [file],
-				title: `Cashier ${dataType} export`,
+				title: `Cashier ${dataType} export (${today})`,
 				// text: `Cashier ${dataType} export`
 				text: output
 			});
