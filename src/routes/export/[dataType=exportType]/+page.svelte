@@ -88,24 +88,28 @@
 			return;
 		}
 
-		let fileName = getFilenameForBackup(dataType as string);
-		const file = new File([output], fileName, { type: 'text/plain' });
+		// let fileName = getFilenameForBackup(dataType as string);
+		// const file = new File([output], fileName, { type: 'text/plain' });
 
 		if (!window.isSecureContext) {
 			Notifier.error('Sharing requires a secure context (HTTPS or localhost). Please use Download instead.');
 			return;
 		}
-
-		if (navigator.canShare && !navigator.canShare({ files: [file] })) {
-			Notifier.error('This browser cannot share files from this page. Please use Download instead.');
+		if (!navigator.canShare) {
+			Notifier.error('This browser does not support sharing. Please use Download instead.');
 			return;
 		}
+		// if (!navigator.canShare({ files: [file] })) {
+		// 	Notifier.error('This browser cannot share files from this page. Please use Download instead.');
+		// 	return;
+		// }
 
 		try {
 			await navigator.share({
-				files: [file],
+				// files: [file],
 				title: `Cashier ${dataType} export`,
-				text: `Cashier ${dataType} export`
+				// text: `Cashier ${dataType} export`
+				text: output
 			});
 		} catch (error: unknown) {
 			if (error instanceof DOMException) {
