@@ -199,14 +199,14 @@
 		<div class="grid grid-cols-3 pt-3 lg:px-20">
 			<SquareButton
 				Icon={ScrollIcon}
-				classes="bg-accent text-secondary"
+				classes="bg-primary text-accent"
 				onclick={onEnterClicked}
 			>
 				Enter
 			</SquareButton>
 			<SquareButton
 				Icon={ChevronsRightIcon}
-				classes="bg-primary text-accent"
+				classes="bg-accent text-secondary"
 				onclick={onSkipClicked}
 			>
 				Skip
