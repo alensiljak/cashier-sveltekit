@@ -121,7 +121,7 @@
 						return;
 					case 'NotAllowedError':
 						Notifier.error(
-							'Sharing was blocked by browser permissions. In Vivaldi, allow sharing prompts for this site or use Download instead.'
+							'File sharing is not supported in this browser. Please use Download instead.'
 						);
 						return;
 					case 'InvalidStateError':
