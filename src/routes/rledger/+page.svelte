@@ -588,14 +588,6 @@
 						Create Demo Transactions
 					</button>
 
-					<button
-						class="btn btn-accent ml-2"
-						on:click={handleFormatAll}
-						disabled={isLoading || !parsedLedger}
-					>
-						Format All (Directive-based)
-					</button>
-
 					{#if sourceOnly && parsedDirectives.length >= 2}
 					<button
 						class="btn btn-info ml-2"
