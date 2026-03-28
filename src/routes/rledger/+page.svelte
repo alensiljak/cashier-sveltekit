@@ -50,6 +50,7 @@
 	// Parsed results
 	let parsedAccounts: Account[] = [];
 	let parsedDirectives: Directive[] = [];
+	let parsedPayees: Array<{payee: string, descriptions: string[]}> = [];
 	let lastTransactionDirective: Directive | null = null;
 	let transactionAnatomy = '';
 	
@@ -97,7 +98,6 @@
 			// Parse the combined Beancount source
 			await handleParse();
 
-			console.log(parsedLedger);
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to initialize RustLedger';
 			console.error('RustLedger initialization error:', err);
@@ -216,50 +216,8 @@
 	}
 
 	/**
-		* Format all directives (infrastructure + transactions) by:
-		* 1. Getting all directives from parsedLedger
-		* 2. Converting each to string using DirectiveFormatter
-		* 3. Joining with double newlines
-		* This demonstrates the "dump all Directives into string with format()" concept.
-		*/
-	async function handleFormatAll() {
-		try {
-			isLoading = true;
-			error = null;
-			formatErrors = [];
-			formattedSource = '';
-
-			if (!parsedLedger) {
-				throw new Error('No parsed ledger available — click Parse first.');
-			}
-
-			// Get all directives from the parsed ledger (includes infrastructure)
-			const allDirectives = parsedLedger.getDirectives();
-			
-			// Convert each directive to its string representation
-			const formattedDirectives = allDirectives.map(directive =>
-				DirectiveFormatter.toString(directive)
-			);
-			
-			// Join with double newlines to create the formatted source
-			formattedSource = formattedDirectives.join('\n\n');
-			
-			console.log('Format complete:', {
-				directiveCount: allDirectives.length,
-				formattedSourceLength: formattedSource.length
-			});
-		} catch (err) {
-			error = err instanceof Error ? err.message : 'Failed to format Beancount source';
-			console.error('Format error:', err);
-		} finally {
-			isLoading = false;
-			hasFormatted = true;
-		}
-	}
-
-	/**
-		* Load all infrastructure files from OPFS and concatenate them
-		*/
+	 * Load all infrastructure files from OPFS and concatenate them
+	 */
 	async function loadInfrastructure() {
 		try {
 			const files = InfrastructureFiles; // ['book.bean', 'config.bean', 'commodities.bean', 'accounts.bean']
@@ -310,20 +268,39 @@
 
 			parsedDirectives = parsedLedger.getDirectives();
 			parsedAccounts = ledgerService.getAccountsFromLedger(parsedLedger);
+			
+			// Extract unique payees with their descriptions from transaction directives
+			// Also include entries without payees (only narration) - one of them is mandatory
+			const payeeMap = new Map<string, Set<string>>();
+			for (const directive of parsedDirectives) {
+				if (directive.type === 'transaction') {
+					const payee = directive.payee || '(no payee)';
+					const descriptions = payeeMap.get(payee) || new Set();
+					if (directive.narration) {
+						descriptions.add(directive.narration);
+					}
+					payeeMap.set(payee, descriptions);
+				}
+			}
+			parsedPayees = Array.from(payeeMap.entries())
+				.map(([payee, descriptions]) => ({
+					payee,
+					descriptions: Array.from(descriptions).sort()
+				}))
+				.sort((a, b) => a.payee.localeCompare(b.payee));
 
-			console.log('Parsed accounts:', parsedAccounts);
+			console.log('parsed ledger:', parsedLedger);
+
 		} catch (err) {
 			if (parsedLedger) { parsedLedger.free(); parsedLedger = null; }
 			parsedDirectives = [];
 			parsedAccounts = [];
+			parsedPayees = [];
 			error = err instanceof Error ? err.message : 'Failed to parse Beancount source';
 			console.error('Parse error:', err);
 		} finally {
 			isLoading = false;
 		}
-
-		// console.log('references:', parsedLedger?.getReferences());
-		// console.log('properties', Object.getOwnPropertyNames(parsedLedger));
 	}
 
 	/**
@@ -836,6 +813,56 @@
 												{Object.entries(account.balances).map(([currency, amount]) =>
 													`${amount.toFixed(2)} ${currency}`
 												).join(', ')}
+											{/if}
+										</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+					</div>
+				{/if}
+			</div>
+		{/if}
+	</section>
+
+	<!-- Parsed Payees Section -->
+	<section class="card bg-base-100 shadow-xl">
+		<div role="button" tabindex="0" aria-pressed={expandedSections.has('payees')} class="card-body p-4" on:click={() => toggleSection('payees')} on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { toggleSection('payees'); } }} class:cursor-pointer={true}>
+			<div class="flex items-center justify-between">
+				<h2 class="card-title m-0">
+					Parsed Payees ({parsedPayees.length})
+				</h2>
+				<svg class="w-6 h-6 transition-transform duration-200" class:rotate-90={expandedSections.has('payees')} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+				</svg>
+			</div>
+		</div>
+		{#if expandedSections.has('payees')}
+			<div class="px-4 pb-4">
+				{#if parsedPayees.length === 0}
+					<p class="text-base-content/50">No payees parsed yet.</p>
+				{:else}
+					<div class="overflow-x-auto overflow-y-auto max-h-[400px]">
+						<table class="table table-zebra">
+							<thead>
+								<tr>
+									<th>Payee</th>
+									<th>Description (Note)</th>
+								</tr>
+							</thead>
+							<tbody>
+								{#each parsedPayees as {payee, descriptions}}
+									<tr>
+										<td>{payee}</td>
+										<td>
+											{#if descriptions.length > 0}
+												<ul class="list-disc list-inside">
+													{#each descriptions as desc}
+														<li>{desc}</li>
+													{/each}
+												</ul>
+											{:else}
+												<span class="text-base-content/50">(no description)</span>
 											{/if}
 										</td>
 									</tr>
