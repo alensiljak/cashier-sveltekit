@@ -34,11 +34,11 @@
 	let expandedSections = new Set<string>();
 	
 	// Transaction editing POC state
-	let editTransactionIndex = 1; // 0-based index, so 1 = second transaction
+	let editingDirectiveIndex = -1; // Index in parsedDirectives array, -1 = not editing
 	let isEditingTransaction = false;
 	let editedTransactionText = '';
-	let originalTransactionText = ''; // The original transaction source text
-	let transactionLocationInfo = { lineStart: 0, columnStart: 0, lineEnd: 0, columnEnd: 0 };
+	// We maintain an editable copy of directives separate from the parsedLedger
+	let editableDirectives: Directive[] = [];
 	
 	// Source display
 	let sourceContainer: HTMLDivElement;
@@ -216,8 +216,50 @@
 	}
 
 	/**
-	 * Load all infrastructure files from OPFS and concatenate them
-	 */
+		* Format all directives (infrastructure + transactions) by:
+		* 1. Getting all directives from parsedLedger
+		* 2. Converting each to string using DirectiveFormatter
+		* 3. Joining with double newlines
+		* This demonstrates the "dump all Directives into string with format()" concept.
+		*/
+	async function handleFormatAll() {
+		try {
+			isLoading = true;
+			error = null;
+			formatErrors = [];
+			formattedSource = '';
+
+			if (!parsedLedger) {
+				throw new Error('No parsed ledger available — click Parse first.');
+			}
+
+			// Get all directives from the parsed ledger (includes infrastructure)
+			const allDirectives = parsedLedger.getDirectives();
+			
+			// Convert each directive to its string representation
+			const formattedDirectives = allDirectives.map(directive =>
+				DirectiveFormatter.toString(directive)
+			);
+			
+			// Join with double newlines to create the formatted source
+			formattedSource = formattedDirectives.join('\n\n');
+			
+			console.log('Format complete:', {
+				directiveCount: allDirectives.length,
+				formattedSourceLength: formattedSource.length
+			});
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Failed to format Beancount source';
+			console.error('Format error:', err);
+		} finally {
+			isLoading = false;
+			hasFormatted = true;
+		}
+	}
+
+	/**
+		* Load all infrastructure files from OPFS and concatenate them
+		*/
 	async function loadInfrastructure() {
 		try {
 			const files = InfrastructureFiles; // ['book.bean', 'config.bean', 'commodities.bean', 'accounts.bean']
@@ -357,90 +399,98 @@
 	}
 
 	/**
-	 * POC: Edit the second transaction directive in the source. 
+	 * POC: Edit the second transaction directive in the source.
 	 * This demonstrates how to take a Directive from the ParsedLedger,
 	 * format it, and allow the user to edit it in the UI.
+	 * Now uses directive index tracking instead of fragile string replacement.
 	 */
 	function handleEditSecondTransaction() {
 		isEditingTransaction = true;
-		// Get the second transaction (index 1)
-		const secondTx = parsedDirectives[1];
-		// console.log('secondTx object (for bug report):', JSON.stringify(secondTx, null, 2));
-		// todo: replace the source Directive object.
-		// parsedDirectives
-		// parsedLedger is not modifiable.
-
-		if (secondTx && secondTx.type === 'transaction') {
-			// Use formatted transaction since source location info is not available
-			editedTransactionText = DirectiveFormatter.toString(secondTx);
+		// Use the second transaction (index 1) as the editing target
+		const targetIndex = 1;
+		const targetDirective = parsedDirectives[targetIndex];
+		
+		if (targetDirective && targetDirective.type === 'transaction') {
+			// Store the index of the directive we're editing
+			editingDirectiveIndex = targetIndex;
 			
-			// Store the original transaction text for later replacement
-			const transactions = splitTransactions(transactionSource);
-			if (editTransactionIndex < transactions.length) {
-				originalTransactionText = transactions[editTransactionIndex];
-			} else {
-				originalTransactionText = '';
-			}
+			// Initialize editableDirectives as a copy of parsedDirectives
+			editableDirectives = [...parsedDirectives];
 			
-			transactionLocationInfo = { lineStart: 0, columnStart: 0, lineEnd: 0, columnEnd: 0 };
+			// Format the directive for editing
+			editedTransactionText = DirectiveFormatter.toString(targetDirective);
 		} else {
 			// No second transaction
+			editingDirectiveIndex = -1;
+			editableDirectives = [];
 			editedTransactionText = '';
-			originalTransactionText = '';
-			transactionLocationInfo = { lineStart: 0, columnStart: 0, lineEnd: 0, columnEnd: 0 };
 		}
+	}
+	
+	/**
+	 * Rebuild the transaction source from editableDirectives array.
+	 * Only includes transaction directives (non-infrastructure).
+	 */
+	function rebuildTransactionSource(): string {
+		if (editableDirectives.length === 0) {
+			return transactionSource;
+		}
+		
+		// Convert all directives back to source strings
+		const directiveStrings = editableDirectives.map(directive =>
+			DirectiveFormatter.toString(directive)
+		);
+		
+		// Join with double newlines (standard Beancount separation)
+		return directiveStrings.join('\n\n');
 	}
 
 	/**
 	 * Save edited transaction back to the source.
+	 * Uses directive index tracking to replace the directive in editableDirectives,
+	 * then rebuilds the transaction source from all directives.
 	 */
 	function handleSaveTransaction() {
-		if (!isEditingTransaction) return;
-		
-		// parse edited transaction
-		const tempParseResult = rustledger.parseSource(editedTransactionText);
-		// console.log('parsed edited:', tempParseResult);
-		const editedXact = tempParseResult.ledger?.directives[0];
-		console.log('edited:', editedXact);
-
-		// Replace the transaction in transactionSource
-		if (originalTransactionText) {
-			// Try to find by string matching
-			const index = transactionSource.indexOf(originalTransactionText);
-			if (index !== -1) {
-				transactionSource =
-					transactionSource.substring(0, index) +
-					editedTransactionText +
-					transactionSource.substring(index + originalTransactionText.length);
-				console.log('Transaction replaced using stored original text');
-			} else {
-				// Original text not found, try to rebuild by splitting transactions
-				const transactions = splitTransactions(transactionSource);
-				if (editTransactionIndex < transactions.length) {
-					transactions[editTransactionIndex] = editedTransactionText;
-					transactionSource = transactions.join('\n\n');
-					console.log('Transaction replaced by rebuilding source');
-				} else {
-					console.error('Cannot locate transaction to replace');
-					return;
-				}
-			}
-		} else {
-			console.error('No original transaction text stored');
+		if (!isEditingTransaction || editingDirectiveIndex === -1) {
+			console.error('No transaction is being edited');
 			return;
 		}
 		
+		// Parse the edited transaction text to get a Directive object
+		const tempParseResult = rustledger.parseSource(editedTransactionText);
+		const editedDirective = tempParseResult.ledger?.directives[0];
+		
+		if (!editedDirective) {
+			console.error('Failed to parse edited transaction');
+			return;
+		}
+		
+		// Validate that it's still a transaction
+		if (editedDirective.type !== 'transaction') {
+			console.error('Edited directive is not a transaction');
+			return;
+		}
+		
+		console.log('Replacing directive at index', editingDirectiveIndex, 'with', editedDirective);
+		
+		// Replace the directive in editableDirectives array
+		editableDirectives[editingDirectiveIndex] = editedDirective;
+		
+		// Rebuild the transaction source from all editable directives
+		transactionSource = rebuildTransactionSource();
+		
+		// Reset editing state
 		isEditingTransaction = false;
+		editingDirectiveIndex = -1;
 		editedTransactionText = '';
-		originalTransactionText = '';
-		// Re-parse to update the view
+		
+		// Re-parse to update parsedDirectives and the UI
 		handleParse();
 	}
 
 	function handleCancelEdit() {
 		isEditingTransaction = false;
 		editedTransactionText = '';
-		originalTransactionText = '';
 	}
 
 </script>
@@ -538,6 +588,14 @@
 						Create Demo Transactions
 					</button>
 
+					<button
+						class="btn btn-accent ml-2"
+						on:click={handleFormatAll}
+						disabled={isLoading || !parsedLedger}
+					>
+						Format All (Directive-based)
+					</button>
+
 					{#if sourceOnly && parsedDirectives.length >= 2}
 					<button
 						class="btn btn-info ml-2"
@@ -571,6 +629,7 @@
 					class="btn btn-sm btn-circle btn-ghost"
 					on:click={handleCancelEdit}
 					disabled={isLoading}
+					aria-label="Cancel editing"
 				>
 					<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -579,7 +638,7 @@
 			</div>
 			
 			<p class="text-sm text-base-content/70 mb-4">
-				Editing second transaction {#if transactionLocationInfo.lineStart > 0}(at lines {transactionLocationInfo.lineStart}-{transactionLocationInfo.lineEnd}){/if}.
+				Editing transaction at index {editingDirectiveIndex}.
 				Make your changes below and click Save to update.
 			</p>
 			
