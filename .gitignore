@@ -16,13 +16,14 @@ Thumbs.db
 !.env.example
 !.env.test
 
-# Vite
-vite.config.js.timestamp-*
-vite.config.ts.timestamp-*
-
 # Local Netlify folder
 .netlify
+
 # Tests
 test-results
 package-lock.json
 .aider*
+
+# Assistants
+vite.config.*.timestamp-*
+.claude/settings.local.json
