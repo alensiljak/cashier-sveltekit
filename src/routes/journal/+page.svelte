@@ -91,9 +91,6 @@
 			{#each data.xacts as xact (xact)}
 				<JournalXactRow {xact} onclick={onRowClick} />
 			{/each}
-			{#each data.opfsXacts as xact (xact)}
-				<JournalXactRow {xact} onclick={onRowClick} />
-			{/each}
 		{/if}
 	</section>
 

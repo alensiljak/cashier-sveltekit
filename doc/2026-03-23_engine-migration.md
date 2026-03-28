@@ -1,4 +1,16 @@
-# Storage Migration
+# Engine Migration
+
+## Summary
+
+- use Rust Ledger WASM engine to provide main functionality
+  - load and parse on start
+  - run queries to fetch data
+  - re-parse after editing records
+- use .beancount files in OPFS for storage
+  - utilize the original files from the book repository
+  - import or sync the original files
+  - keep cashier.bean for transactions
+  - combine with accounts etc. into a whole book for validation
 
 ## Rationale
 

@@ -14,6 +14,12 @@ interface QueryResult {
 	rows: any[];
 }
 
+/**
+ * LedgerService manages the lifecycle of the ParsedLedger instance, 
+ * provides methods to load/invalidate/query the ledger, 
+ * and exposes a version store for reactive updates. 
+ * It also includes helper methods for formatting and parsing Beancount source strings.
+ */
 class LedgerService {
 	private ledger: any = null;
 	private _version = writable(0);
