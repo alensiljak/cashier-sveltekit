@@ -4,14 +4,7 @@
     https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/export
 */
 import db from '$lib/data/db';
-import {
-	Account,
-	LastXact,
-	Payee,
-	Posting,
-	ScheduledTransaction,
-	Xact
-} from '$lib/data/model';
+import { Account, LastXact, Payee, Posting, ScheduledTransaction, Xact } from '$lib/data/model';
 import { settings, SettingKeys } from '$lib/settings';
 import { XactAugmenter } from '$lib/utils/xactAugmenter';
 import { HomeCardNames } from '$lib/enums';

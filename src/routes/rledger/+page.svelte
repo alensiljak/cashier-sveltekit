@@ -14,16 +14,16 @@
 	let initialized = false;
 	let wasmVersion = '';
 	let isLedgerServiceReady = false;
-
+	
 	// Editable transaction source (only transactions, not infrastructure)
 	let transactionSource = '';
-
+	
 	// Infrastructure source (book.bean from OPFS)
 	let infrastructureSource = '';
-
+	
 	// Combined full Beancount source (infrastructure + transactions)
 	let fullBeancountSource = '';
-
+	
 	// UI state
 	let showFullSource = false;
 	let sourceOnly = false;
@@ -34,34 +34,34 @@
 	// Source display
 	let sourceContainer: HTMLDivElement;
 	$: sourceLines = fullBeancountSource ? fullBeancountSource.split('\n') : [];
-
+	
 	// Single ParsedLedger instance — created on mount and on Parse button click
 	let parsedLedger: any = null;
-
+	
 	// Parsed results
 	let parsedAccounts: Account[] = [];
 	let parsedDirectives: Directive[] = [];
 	let lastTransactionDirective: Directive | null = null;
 	let transactionAnatomy = '';
-
+	
 	// Validation state
 	let validationErrors: BeancountError[] = [];
 	let validationWarnings: BeancountError[] = [];
 	let isValid = false;
 	let hasValidated = false;
-
+	
 	// Format state
 	let formattedSource = '';
 	let formatErrors: BeancountError[] = [];
 	let hasFormatted = false;
-
+	
 	// Reactive: update full source when components change
 	$: fullBeancountSource = sourceOnly
 		? transactionSource
 		: infrastructureSource && transactionSource
 			? `${infrastructureSource}\n\n${transactionSource}`
 			: infrastructureSource || transactionSource || '';
-
+	
 	$: lastTransactionDirective = findLastTransactionDirective(parsedDirectives);
 	$: transactionAnatomy = lastTransactionDirective ? formatTransactionAnatomy(lastTransactionDirective) : '';
 
