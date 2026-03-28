@@ -222,9 +222,9 @@ Export is done by providing `cashier.bean` file contents in the Export page - ei
 
 | #  | Task                                                                                                                                     | Depends on | Status |
 |----|------------------------------------------------------------------------------------------------------------------------------------------|------------|--------|
-| 1  | Implement `readAndCombineSources()` in LedgerService — read OPFS infra files + cashier.bean, concatenate                                 | —          | todo   |
-| 2  | Gate app startup on ledger ready — `+layout.svelte`: init WASM, `ledgerService.load()`, gate `<slot/>`                                   | 1          | todo   |
-| 3  | Rewrite save/edit/delete targeting `cashier.bean` — use `sourceEditor.ts` for splicing, `appendTransaction` for new, call `invalidate()` | 1          | todo   |
+| 1  | Implement `readAndCombineSources()` in LedgerService — read OPFS infra files + cashier.bean, concatenate                                 | —          | ✅      |
+| 2  | Gate app startup on ledger ready — `+layout.svelte`: init WASM, `ledgerService.load()`, gate `<slot/>`                                   | 1          | ✅      |
+| 3  | Rewrite save/edit/delete targeting `cashier.bean` — use `sourceEditor.ts` for splicing, `appendTransaction` for new, call `invalidate()` | 1          | partial |
 | 4  | Migrate journal page to BQL queries via `LedgerService`                                                                                  | 2          | todo   |
 | 5  | Migrate accounts page to BQL queries via `LedgerService`                                                                                 | 2          | todo   |
 | 6  | Migrate remaining pages (payees, favourites, tx editor, etc.) to `LedgerService`                                                         | 4, 5       | todo   |
@@ -242,3 +242,9 @@ Export is done by providing `cashier.bean` file contents in the Export page - ei
 - [x] Directive formatting — `directiveFormatter.ts` with `DirectiveFormatter.toString()`
 - [x] OPFS file utilities — `opfslib.ts` with `readFile`, `saveFile`, `listFiles`, `deleteFile`
 - [x] RLedger demo page proving all concepts end-to-end
+- [x] LedgerService write methods — `appendTransaction`, `editTransaction(span)`, `deleteTransaction(span)` using `sourceEditor.ts` for span-based splicing
+
+### Design Decisions
+
+- **Xact stays as view/edit model.** `TransactionDirective` from WASM is richer (flag, tags, links, posting cost/price) but replacing Xact would touch 40+ files. Xact remains the UI model; conversion happens at the LedgerService boundary. Revisit after migration is complete and new features are planned.
+- **Transaction identity via `DirectiveSpan`.** Transactions in `cashier.bean` are identified by their line range (`startLine`/`endLine`), not a numeric ID. The `xactSpan` store (to be added to `mainStore.ts`) will carry this alongside the `xact` store when editing existing transactions.

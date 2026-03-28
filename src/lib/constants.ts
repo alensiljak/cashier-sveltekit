@@ -1,4 +1,5 @@
 export const AssetAllocationFilename = 'asset-allocation.toml';
+export const CashierFilename = 'cashier.bean';
 
 /**
  * List of all infrastructure files to synchronize.

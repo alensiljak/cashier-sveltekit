@@ -77,7 +77,13 @@
 			</aside>
 
 			<main class="col-span-1 bg-base-300 h-full overflow-auto">
-				{@render children()}
+				{#if $ledgerReady}
+					{@render children()}
+				{:else}
+					<div class="flex items-center justify-center h-full">
+						<span class="loading loading-spinner loading-lg"></span>
+					</div>
+				{/if}
 			</main>
 		</div>
 	</div>

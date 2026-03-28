@@ -1,16 +1,15 @@
 # Cashier
 
 Cashier is a mobile assistant for Beancount personal finance management.
+It is implemented as a PWA using Svelte and DaisyUI frameworks.
 
-It is implemented as a PWA application using Svelte and DaisyUI frameworks.
+## Projects
 
-## Styling
-
-The application styling has recently been migrated from Skeleton v3 to DaisyUI and not all the visual aspects may have been migrated correctly.
+- Project plans are stored in `/docs/projects` folder.
 
 ## Dev Server
 
-The local dev server is running at `http://localhost:5173/`. It is started by the user.
+- Assume the local dev server is running at `http://localhost:5173/`. It is started by the user.
 
 ## Tools
 
