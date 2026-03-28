@@ -206,7 +206,7 @@ class AppService {
 
 		// transaction
 		output += tx.date;
-		output += ' txn "' + tx.payee + '"';
+		output += ' * "' + tx.payee + '"';
 		// note
 		if (tx.note) {
 			output += ' "' + tx.note + '"';
