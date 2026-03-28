@@ -4,11 +4,11 @@
  */
 
 import { Account } from '$lib/data/model';
-import type { ParseResult } from '@rustledger/wasm';
+import type { ParsedLedger, ParseResult } from '@rustledger/wasm';
 import wasmUrl from '@rustledger/wasm/rustledger_wasm_bg.wasm?url';
 
 // WASM module instance
-let wasmModule: any = null;
+let wasmModule: typeof import('@rustledger/wasm') | null = null;
 let initPromise: Promise<void> | null = null;
 
 /**
@@ -51,7 +51,7 @@ export async function ensureInitialized(): Promise<void> {
 /**
  * Create a ParsedLedger instance if WASM is available
  */
-export function createParsedLedger(source: string): any {
+export function createParsedLedger(source: string): ParsedLedger | null {
 	if (!wasmModule || !wasmModule.ParsedLedger) {
 		return null;
 	}

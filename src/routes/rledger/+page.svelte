@@ -2,11 +2,13 @@
 	import { onMount } from 'svelte';
 	import Toolbar from "$lib/components/Toolbar.svelte";
 	import ledgerService from '$lib/services/ledgerService';
-	import type { BeancountError, Directive } from '@rustledger/wasm';
+	import type { BeancountError, Directive, ParsedLedger } from '@rustledger/wasm';
+	import { DirectiveFormatter } from '$lib/rledger/directiveFormatter';
 	import { Account } from '$lib/data/model';
 	import appService from '$lib/services/appService';
 	import * as OpfsLib from '$lib/utils/opfslib.js';
 	import { InfrastructureFiles } from '$lib/constants';
+	import rustledger from '$lib/services/rustledger';
 
 	// State
 	let isLoading = false;
@@ -31,12 +33,19 @@
 	// Accordion state - track which sections are expanded
 	let expandedSections = new Set<string>();
 	
+	// Transaction editing POC state
+	let editTransactionIndex = 1; // 0-based index, so 1 = second transaction
+	let isEditingTransaction = false;
+	let editedTransactionText = '';
+	let originalTransactionText = ''; // The original transaction source text
+	let transactionLocationInfo = { lineStart: 0, columnStart: 0, lineEnd: 0, columnEnd: 0 };
+	
 	// Source display
 	let sourceContainer: HTMLDivElement;
 	$: sourceLines = fullBeancountSource ? fullBeancountSource.split('\n') : [];
 	
 	// Single ParsedLedger instance — created on mount and on Parse button click
-	let parsedLedger: any = null;
+	let parsedLedger: ParsedLedger | null = null;
 	
 	// Parsed results
 	let parsedAccounts: Account[] = [];
@@ -63,11 +72,7 @@
 			: infrastructureSource || transactionSource || '';
 	
 	$: lastTransactionDirective = findLastTransactionDirective(parsedDirectives);
-	$: transactionAnatomy = lastTransactionDirective ? formatTransactionAnatomy(lastTransactionDirective) : '';
-
-	async function handleSourceOnlyToggle() {
-		await handleParse();
-	}
+	$: transactionAnatomy = lastTransactionDirective ? DirectiveFormatter.toString(lastTransactionDirective) : '';
 
 	// Initialize
 	onMount(async () => {
@@ -91,6 +96,8 @@
 
 			// Parse the combined Beancount source
 			await handleParse();
+
+			console.log(parsedLedger);
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to initialize RustLedger';
 			console.error('RustLedger initialization error:', err);
@@ -141,72 +148,6 @@
 		}
 	}
 
-	function quoteString(value: unknown): string {
-		const text = String(value ?? '');
-		return `"${text.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
-	}
-
-	function formatAmount(value: unknown): string {
-		if (!value || typeof value !== 'object') {
-			return String(value ?? '');
-		}
-
-		const record = value as Record<string, unknown>;
-		if (typeof record.number === 'string' || typeof record.number === 'number') {
-			const currency = typeof record.currency === 'string' ? ` ${record.currency}` : '';
-			return `${record.number}${currency}`.trim();
-		}
-
-		return JSON.stringify(value);
-	}
-
-	function formatMetaValue(value: unknown): string {
-		if (typeof value === 'string') {
-			return quoteString(value);
-		}
-		if (typeof value === 'number' || typeof value === 'boolean') {
-			return String(value);
-		}
-		if (value == null) {
-			return 'null';
-		}
-		if (Array.isArray(value) || typeof value === 'object') {
-			return quoteString(JSON.stringify(value));
-		}
-		return quoteString(String(value));
-	}
-
-	function formatCost(cost: unknown): string {
-		if (!cost || typeof cost !== 'object') {
-			return '';
-		}
-
-		const record = cost as Record<string, unknown>;
-		if (record.number != null) {
-			return ` {${formatAmount(cost)}}`;
-		}
-
-		return ` {${JSON.stringify(cost)}}`;
-	}
-
-	function formatPrice(price: unknown): string {
-		if (!price) {
-			return '';
-		}
-		return ` @ ${formatAmount(price)}`;
-	}
-
-	function formatExtraFields(record: Record<string, unknown>, knownKeys: Set<string>, indent: string): string[] {
-		const lines: string[] = [];
-		for (const [key, value] of Object.entries(record)) {
-			if (knownKeys.has(key) || value == null) {
-				continue;
-			}
-			lines.push(`${indent}; ${key}: ${JSON.stringify(value)}`);
-		}
-		return lines;
-	}
-
 	function findLastTransactionDirective(directives: Directive[]): Directive | null {
 		for (let i = directives.length - 1; i >= 0; i -= 1) {
 			if (directives[i].type === 'transaction') {
@@ -216,59 +157,38 @@
 		return null;
 	}
 
-	function formatTransactionAnatomy(directive: Directive): string {
-		if (directive.type !== 'transaction') {
-			return '';
-		}
-
-		const tx = directive as unknown as Record<string, unknown>;
-		const txMeta = (tx.meta ?? {}) as Record<string, unknown>;
-		const tags = Array.isArray(tx.tags) ? tx.tags : [];
-		const links = Array.isArray(tx.links) ? tx.links : [];
-		const postings = Array.isArray(tx.postings) ? tx.postings : [];
-		//const flag = typeof tx.flag === 'string' ? tx.flag : '*';
-		const flag = tx.flag;
-		const payee = tx.payee != null && tx.payee !== '' ? quoteString(tx.payee) : '';
-		const narration = tx.narration != null && tx.narration !== '' ? quoteString(tx.narration) : '""';
-
-		const tagTokens = tags
-			.map((tag) => String(tag))
-			.filter(Boolean)
-			.map((tag) => (tag.startsWith('#') ? tag : `#${tag}`));
-		const linkTokens = links
-			.map((link) => String(link))
-			.filter(Boolean)
-			.map((link) => (link.startsWith('^') ? link : `^${link}`));
-
-		const headerParts = [String(tx.date ?? ''), flag, payee, narration, ...tagTokens, ...linkTokens].filter(Boolean);
-		const lines = [headerParts.join(' ')];
-
-		for (const [key, value] of Object.entries(txMeta)) {
-			lines.push(`    ${key}: ${formatMetaValue(value)}`);
-		}
-
-		for (const postingValue of postings) {
-			const posting = postingValue as Record<string, unknown>;
-			const postingFlag = typeof posting.flag === 'string' ? `${posting.flag} ` : '';
-			const account = String(posting.account ?? '');
-			const units = posting.units ? `  ${formatAmount(posting.units)}` : '';
-			const cost = formatCost(posting.cost);
-			const price = formatPrice(posting.price);
-			const comment = typeof posting.comment === 'string' ? `  ; ${posting.comment}` : '';
-
-			lines.push(`    ${postingFlag}${account}${units}${cost}${price}${comment}`);
-
-			if (posting.meta && typeof posting.meta === 'object') {
-				for (const [key, value] of Object.entries(posting.meta as Record<string, unknown>)) {
-					lines.push(`        ${key}: ${formatMetaValue(value)}`);
+	/**
+	 * Split transaction source into individual transactions by double newlines
+	 * Returns array of transaction strings
+	 */
+	function splitTransactions(source: string): string[] {
+		// Split by double newlines (or more) to separate transactions
+		const blocks = source.split(/\n{2,}/).filter(block => block.trim());
+		// Further split blocks that contain multiple transactions (separated by single newlines with dates)
+		const transactions: string[] = [];
+		
+		for (const block of blocks) {
+			const lines = block.split('\n');
+			let currentTx: string[] = [];
+			
+			for (const line of lines) {
+				// Check if line starts a new transaction (date at beginning)
+				if (/^\d{4}-\d{2}-\d{2}/.test(line.trim()) && currentTx.length > 0) {
+					// Save current transaction and start new one
+					transactions.push(currentTx.join('\n'));
+					currentTx = [line];
+				} else {
+					currentTx.push(line);
 				}
 			}
-
-			lines.push(...formatExtraFields(posting, new Set(['account', 'flag', 'units', 'cost', 'price', 'comment', 'meta']), '        '));
+			
+			// Don't forget the last transaction in the block
+			if (currentTx.length > 0) {
+				transactions.push(currentTx.join('\n'));
+			}
 		}
-
-		lines.push(...formatExtraFields(tx, new Set(['type', 'date', 'flag', 'payee', 'narration', 'tags', 'links', 'meta', 'postings']), '    '));
-		return lines.join('\n');
+		
+		return transactions;
 	}
 
 	/**
@@ -359,6 +279,9 @@
 		} finally {
 			isLoading = false;
 		}
+
+		// console.log('references:', parsedLedger?.getReferences());
+		// console.log('properties', Object.getOwnPropertyNames(parsedLedger));
 	}
 
 	/**
@@ -427,6 +350,97 @@
 		}
 		// Trigger reactivity
 		expandedSections = new Set(expandedSections);
+	}
+
+	async function handleSourceOnlyToggle() {
+		await handleParse();
+	}
+
+	/**
+	 * POC: Edit the second transaction directive in the source. 
+	 * This demonstrates how to take a Directive from the ParsedLedger,
+	 * format it, and allow the user to edit it in the UI.
+	 */
+	function handleEditSecondTransaction() {
+		isEditingTransaction = true;
+		// Get the second transaction (index 1)
+		const secondTx = parsedDirectives[1];
+		// console.log('secondTx object (for bug report):', JSON.stringify(secondTx, null, 2));
+		// todo: replace the source Directive object.
+		// parsedDirectives
+		// parsedLedger is not modifiable.
+
+		if (secondTx && secondTx.type === 'transaction') {
+			// Use formatted transaction since source location info is not available
+			editedTransactionText = DirectiveFormatter.toString(secondTx);
+			
+			// Store the original transaction text for later replacement
+			const transactions = splitTransactions(transactionSource);
+			if (editTransactionIndex < transactions.length) {
+				originalTransactionText = transactions[editTransactionIndex];
+			} else {
+				originalTransactionText = '';
+			}
+			
+			transactionLocationInfo = { lineStart: 0, columnStart: 0, lineEnd: 0, columnEnd: 0 };
+		} else {
+			// No second transaction
+			editedTransactionText = '';
+			originalTransactionText = '';
+			transactionLocationInfo = { lineStart: 0, columnStart: 0, lineEnd: 0, columnEnd: 0 };
+		}
+	}
+
+	/**
+	 * Save edited transaction back to the source.
+	 */
+	function handleSaveTransaction() {
+		if (!isEditingTransaction) return;
+		
+		// parse edited transaction
+		const tempParseResult = rustledger.parseSource(editedTransactionText);
+		// console.log('parsed edited:', tempParseResult);
+		const editedXact = tempParseResult.ledger?.directives[0];
+		console.log('edited:', editedXact);
+
+		// Replace the transaction in transactionSource
+		if (originalTransactionText) {
+			// Try to find by string matching
+			const index = transactionSource.indexOf(originalTransactionText);
+			if (index !== -1) {
+				transactionSource =
+					transactionSource.substring(0, index) +
+					editedTransactionText +
+					transactionSource.substring(index + originalTransactionText.length);
+				console.log('Transaction replaced using stored original text');
+			} else {
+				// Original text not found, try to rebuild by splitting transactions
+				const transactions = splitTransactions(transactionSource);
+				if (editTransactionIndex < transactions.length) {
+					transactions[editTransactionIndex] = editedTransactionText;
+					transactionSource = transactions.join('\n\n');
+					console.log('Transaction replaced by rebuilding source');
+				} else {
+					console.error('Cannot locate transaction to replace');
+					return;
+				}
+			}
+		} else {
+			console.error('No original transaction text stored');
+			return;
+		}
+		
+		isEditingTransaction = false;
+		editedTransactionText = '';
+		originalTransactionText = '';
+		// Re-parse to update the view
+		handleParse();
+	}
+
+	function handleCancelEdit() {
+		isEditingTransaction = false;
+		editedTransactionText = '';
+		originalTransactionText = '';
 	}
 
 </script>
@@ -523,6 +537,16 @@
 					>
 						Create Demo Transactions
 					</button>
+
+					{#if sourceOnly && parsedDirectives.length >= 2}
+					<button
+						class="btn btn-info ml-2"
+						on:click={handleEditSecondTransaction}
+						disabled={isLoading || !parsedLedger}
+					>
+						Edit Second Transaction
+					</button>
+					{/if}
 				</div>
 
 				{#if error}
@@ -536,6 +560,62 @@
 			</div>
 		</div>
 	</section>
+
+	<!-- Edit Transaction Section -->
+	{#if isEditingTransaction}
+	<section class="card bg-base-100 shadow-xl border-2 border-info">
+		<div class="card-body p-4">
+			<div class="flex items-center justify-between mb-4">
+				<h2 class="card-title m-0">Edit Transaction</h2>
+				<button
+					class="btn btn-sm btn-circle btn-ghost"
+					on:click={handleCancelEdit}
+					disabled={isLoading}
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+					</svg>
+				</button>
+			</div>
+			
+			<p class="text-sm text-base-content/70 mb-4">
+				Editing second transaction {#if transactionLocationInfo.lineStart > 0}(at lines {transactionLocationInfo.lineStart}-{transactionLocationInfo.lineEnd}){/if}.
+				Make your changes below and click Save to update.
+			</p>
+			
+			<div class="form-control">
+				<textarea
+					bind:value={editedTransactionText}
+					class="textarea textarea-bordered h-64 font-mono text-sm w-full"
+					placeholder="Edit transaction..."
+				></textarea>
+			</div>
+			
+			<div class="mt-4 flex gap-2">
+				<button
+					class="btn btn-primary"
+					on:click={handleSaveTransaction}
+					disabled={isLoading}
+				>
+					{#if isLoading}
+						<span class="loading loading-spinner"></span>
+						Saving...
+					{:else}
+						Save
+					{/if}
+				</button>
+				
+				<button
+					class="btn btn-ghost"
+					on:click={handleCancelEdit}
+					disabled={isLoading}
+				>
+					Cancel
+				</button>
+			</div>
+		</div>
+	</section>
+	{/if}
 
 	<!-- Full Beancount Source Section -->
 	<section class="card bg-base-100 shadow-xl">
