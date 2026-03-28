@@ -1,21 +1,11 @@
 # Engine Migration
 
-## Summary
-
-- use Rust Ledger WASM engine to provide main functionality
-  - load and parse on start
-  - run queries to fetch data
-  - re-parse after editing records
-- use .beancount files in OPFS for storage
-  - utilize the original files from the book repository
-  - import or sync the original files
-  - keep cashier.bean for transactions
-  - combine with accounts etc. into a whole book for validation
-
 ## Rationale
 
-By adding Rust Ledger in WASM to Cashier, full Beancount functionality has been achieved on all (but particularly mobile) devices.
-Taking that into consideration, the need for a JSON storage in IndexedDB makes less sense, in comparison.
+By adding Rust Ledger in WASM to Cashier, full Beancount functionality has been achieved on all (but particularly mobile) devices. The rledger demo page has proven all required concepts — parsing, editing, saving, and using .beancount files directly. Performance is excellent.
+
+Transitioning to the Rust Ledger WASM engine is a viable alternative to IndexedDB with JavaScript parsing. The transition allows using .beancount files directly without unnecessary format conversions, and provides full reports via the BQL query engine.
+
 With a fast Rust parser, it should be easy and convenient to
 
 - store all transactions in a .beancount file in OPFS
@@ -23,6 +13,18 @@ With a fast Rust parser, it should be easy and convenient to
 - extract individual transactions for editing
 - formatting the full content for storage in OPFS
 - export of the device ledger (.bean file)
+
+## Proven Concepts (rledger demo)
+
+The following have been validated on the rledger page and can be relied upon during migration:
+
+- WASM initialization and `ParsedLedger` creation (`rustledger.ts`)
+- BQL queries for accounts and balances (`getAccountsFromLedger`)
+- `getDocumentSymbols()` for mapping directives to line ranges (`sourceEditor.ts`)
+- Surgical text replacement via `replaceDirectiveBySpan()` (`sourceEditor.ts`)
+- `DirectiveFormatter.toString()` for generating beancount text
+- OPFS read/write for infrastructure files (`opfslib.ts`)
+- Parse + validation error reporting
 
 ## File Layout
 
@@ -57,40 +59,34 @@ Lifecycle: `create → query … query … query → free → create (on invalid
 
 This replaces the idea of pre-populating typed Svelte stores. BQL is the data-access layer.
 
-### 3. LedgerService
+### 3. LedgerService ✅
 
-Create `src/lib/services/ledgerService.ts` as a module-level singleton:
+`src/lib/services/ledgerService.ts` exists as a module-level singleton with the core API:
 
 ```ts
 class LedgerService {
 	private ledger: ParsedLedger | null = null;
 	private _version = writable(0); // reactive change signal
-	readonly version = derived(this._version, (v) => v);
+	readonly version: Readable<number>;
 
-	/** Read OPFS → combine → create ParsedLedger. */
-	async load(): Promise<void>;
-
-	/** Free old ledger, re-read cashier.bean, recombine, create new ParsedLedger, bump version. */
-	async invalidate(): Promise<void>;
-
-	/** Run a BQL query, return { columns, rows }. */
-	query(bql: string): QueryResult;
-
-	/** Return parsed directives (transactions, balances, opens, …). */
-	getDirectives(): Directive[];
-
-	/** Parse + validation errors from the current ledger. */
-	getErrors(): { parse: Error[]; validation: Error[] };
-
-	/** Stateless: format a Beancount source string. */
-	format(source: string): string;
-
-	/** Append a formatted transaction to cashier.bean → invalidate. */
-	async appendTransaction(beancountText: string): Promise<void>;
+	async load(): Promise<void>;          // Read OPFS → combine → create ParsedLedger
+	async invalidate(): Promise<void>;    // Free old, reload, bump version
+	query(bql: string): QueryResult;      // Synchronous BQL query
+	getDirectives(): Directive[];         // Parsed directives
+	getParseErrors(): BeancountError[];   // Parse errors
+	getValidationErrors(): BeancountError[]; // Validation errors
+	isValid(): boolean;                   // Combined validity check
+	format(source: string): FormatResult; // Stateless formatting
+	parseSource(source: string): void;    // Parse and set as current ledger
+	async appendTransaction(beancountText: string): Promise<void>; // TODO
+	free(): void;                         // Cleanup
 }
-
-export default new LedgerService();
 ```
+
+**Remaining work:**
+
+- `readAndCombineSources()` is a TODO returning `''` — needs to read OPFS infrastructure files + `cashier.bean` and concatenate (logic already proven in the rledger page `loadInfrastructure()`).
+- `appendTransaction()` is a TODO — needs to read `cashier.bean` from OPFS, append text, write back, then `invalidate()`.
 
 Key points:
 
@@ -142,7 +138,7 @@ Gate the `<slot />` behind a loading check so child pages don't render before th
 All writes target `cashier.bean` in OPFS only:
 
 1. Format the new/edited transaction with the stateless `format(source)` function.
-2. Validate with the stateless `validate(source)` function. These are direct WASM calls — no `ParsedLedger` instance needed for one-off formatting or validation of individual entries. Block save on errors.
+2. Validate by parsing the replacement text into a temporary `ParsedLedger` and checking for errors. There is no standalone `validate()` WASM call — validation always requires `parse → isValid() / getParseErrors() / getValidationErrors()`. The rledger page already does this correctly. Block save on errors.
 3. Write formatted text to `cashier.bean` (append for new, rewrite for edit/delete).
 4. Call `ledgerService.invalidate()` — frees old ParsedLedger, re-reads OPFS, creates new one, bumps `version`.
 5. Every subscribed page re-queries automatically via the reactive `version` dependency.
@@ -155,71 +151,51 @@ To extract and edit individual transactions, parse `cashier.bean` independently 
 
 Transactions are identified by their **line range in `cashier.bean`** (`startLine`, `endLine`). When the journal page lists transactions, each row carries these coordinates. Tapping a row passes the line range to the editor.
 
-#### Static parsing methods
+#### Source editing via `sourceEditor.ts` ✅
 
-Add static utility methods to `LedgerService` for one-off parsing of `cashier.bean`:
+The editing layer is already implemented in `src/lib/rledger/sourceEditor.ts` and proven on the rledger page. It provides:
 
-```ts
-class LedgerService {
-	/** Parse cashier.bean source and return all transaction directives with their line ranges. */
-	static async getTransactionsWithRanges(
-		source: string
-	): Promise<Array<{ directive: Directive; range: { startLine: number; endLine: number } }>>;
+- **`mapDirectiveSpans(source, ledger): DirectiveSpan[]`** — maps each directive to its exact line range using `getDocumentSymbols()`.
+- **`replaceDirectiveBySpan(source, spans, spanIndex, newText): string`** — surgical text replacement of a single directive while preserving all other content.
+- **`findSpanForDirective(spans, directiveIndex, source, directives): number`** — resolves a directive index to its span index (handles cases where symbols and directives don't align 1:1).
 
-	/** Extract a single transaction from cashier.bean by line range. */
-	static extractTransaction(source: string, startLine: number, endLine: number): Directive;
-
-	/** Replace lines [startLine, endLine] in cashier.bean with `newText`, then re-read and return updated source. */
-	static async replaceLines(startLine: number, endLine: number, newText: string): Promise<string>;
-
-	/** Delete lines [startLine, endLine] in cashier.bean, then re-read and return updated source. */
-	static async deleteLines(startLine: number, endLine: number): Promise<string>;
-}
-```
-
-These methods:
-
-- Work entirely on `cashier.bean` content (passed as a string argument).
-- Use the same WASM parser to extract line ranges — no complex mapping logic.
-- Return both structured `Directive` objects (for form binding) and raw line content (for editing).
-- Are stateless: they take source as input and return the result without touching `LedgerService` state.
+`LedgerService` delegates to `sourceEditor.ts` for all text-level editing. No duplicate static methods needed on `LedgerService` itself.
 
 #### Edit flow
 
-1. **List** — Call `LedgerService.getTransactionsWithRanges(source)` to populate the journal. Each row stores `startLine` and `endLine`.
-2. **Open** — The editor receives `(startLine, endLine)` from the row tap. Call `LedgerService.extractTransaction(source, startLine, endLine)` to get the parsed `Directive` for form binding.
-3. **Modify** — The user edits fields. On save the editor produces replacement Beancount text via `format()`.
-4. **Validate** — Run the stateless `validate()` WASM call on the replacement text. Block save on errors.
-5. **Splice** — Call `LedgerService.replaceLines(startLine, endLine, newText)` to update `cashier.bean` in OPFS.
+1. **List** — Call `mapDirectiveSpans(source, ledger)` to get line ranges for all directives. Each journal row stores its `DirectiveSpan`.
+2. **Open** — The editor receives the span. The `sourceText` field contains the original beancount text for form binding.
+3. **Modify** — The user edits fields. On save the editor produces replacement Beancount text via `DirectiveFormatter.toString()` or `format()`.
+4. **Validate** — Parse the replacement text into a temporary `ParsedLedger` and check for errors. Block save on errors.
+5. **Splice** — Call `replaceDirectiveBySpan(source, spans, spanIndex, newText)` to produce updated source, then write to `cashier.bean` in OPFS.
 6. **Invalidate** — Call `ledgerService.invalidate()` to rebuild the full `ParsedLedger`. All subscribed pages re-query automatically via `version`.
 
-Delete follows the same flow but calls `LedgerService.deleteLines()` instead.
+Delete follows the same flow — replace the span with an empty string (or omit the span lines entirely).
 
 #### Edge cases
 
 - **Concurrent edits** — The app is single-user and single-tab (PWA). No locking needed; writes to `cashier.bean` are atomic from the OPFS perspective.
 - **Multiline metadata / comments** — The WASM parser's `getDocumentSymbols()` covers the full extent of a directive including tags, links, and metadata lines. Comments on their own line above a transaction are not part of its range, which is acceptable since the migration writer does not emit detached comments.
-- **Newly appended transactions** — A new transaction is appended to `cashier.bean` (no splice needed). Its line range is available after calling `LedgerService.getTransactionsWithRanges()` on the updated source.
+- **Newly appended transactions** — A new transaction is appended to `cashier.bean` (no splice needed). Its line range is available after calling `mapDirectiveSpans()` on the updated source.
 
 ### 8. Storage Migration Strategy
 
-End state: `cashier.bean` in OPFS is the single source of truth for device transactions.
+End state: `cashier.bean` in OPFS is the single source of truth for device transactions. IndexedDB is not used for journal data.
 
 Steps:
 
-1. **One-time import** — on first run with the new code, serialize all existing IndexedDB transactions to Beancount format (via `appService.getExportTransactions()` or equivalent) and write them to `cashier.bean` in OPFS. Mark migration complete in a `Setting`.
-2. **Switch reads and writes together** — once the import is complete, all new transactions are appended directly to OPFS. `LedgerService` reads exclusively from OPFS. IndexedDB is no longer touched for transaction/account data.
-3. **Remove IndexedDB transaction tables** — after the migration is confirmed stable, delete the Dexie `xacts`, `accounts`, `payees`, `lastXact` tables and related DAL/service code. Keep `settings` and `scheduled` tables (they are not part of the ledger).
+1. **Switch reads and writes** — all new transactions are appended directly to `cashier.bean` in OPFS. `LedgerService` reads exclusively from OPFS. IndexedDB is no longer touched for transaction/account data.
+2. **Remove IndexedDB transaction tables** — delete the Dexie `xacts`, `accounts`, `payees` tables and related DAL/service code. Keep `settings` and `scheduled` tables (they are not part of the ledger).
 
-There is no dual-write period: the migration is atomic from the user's perspective (happens once on startup), after which OPFS is the only store.
+There is no dual-write period. OPFS is the only store from the start.
 
 ### 9. AppService Audit
 
 After migration, most `AppService` read methods become dead code (replaced by BQL queries). Write methods need refactoring:
 
-- **Remove**: `loadAccount()`, `loadFavouriteAccounts()`, `loadTransaction()`, `getExportTransactions()`, `importBalanceSheet()`, `importPayees()` — all replaced by BQL or direct OPFS writes.
-- **Refactor**: `saveTransaction()`, `deleteTransaction()`, `duplicateTransaction()` — rewrite to modify `cashier.bean` in OPFS and call `ledgerService.invalidate()`.
-- **Keep**: `getDefaultCurrency()`, `getInvestmentCommodities()`, settings-related methods, `translateToBeancount()` (useful for migration), formatting helpers.
+- **Remove**: `loadAccount()`, `loadFavouriteAccounts()`, `loadTransaction()`, `getExportTransactions()`, `importBalanceSheet()`, `importPayees()` — all replaced by BQL or direct OPFS reads.
+- **Refactor**: `saveTransaction()`, `deleteTransaction()`, `duplicateTransaction()` — rewrite to modify `cashier.bean` in OPFS (using `sourceEditor.ts` for splicing) and call `ledgerService.invalidate()`.
+- **Keep**: `getDefaultCurrency()`, `getInvestmentCommodities()`, settings-related methods, formatting helpers.
 
 ### 10. Sync Interaction
 
@@ -229,7 +205,11 @@ When infrastructure files are updated via Cashier Server sync:
 2. Call `ledgerService.invalidate()` to rebuild the combined source with fresh infrastructure.
 3. Pages reactively pick up new accounts, commodities, etc.
 
-### 11. Verification
+### 11. Export
+
+Export is done by providing `cashier.bean` file contents in the Export page - either for clipboard copy, Web Share, or file download.
+
+### 12. Verification
 
 1. WASM initialized once per session — no repeated binary loads across page navigation.
 2. Accounts, balances, and transactions match expected ledger output after parse.
@@ -240,13 +220,25 @@ When infrastructure files are updated via Cashier Server sync:
 
 ## Tasks
 
-- [ ] Create `LedgerService` singleton with live ParsedLedger, `query()`, `invalidate()`, `version` store
-- [ ] Initialize WASM + `ledgerService.load()` in `+layout.svelte` `onMount`, gate `<slot />` on ready
-- [ ] One-time migration: serialize IndexedDB transactions → `cashier.bean` in OPFS
-- [ ] Rewrite transaction save/edit/delete to target `cashier.bean` + `invalidate()`
-- [ ] Migrate journal page to BQL queries via `LedgerService`
-- [ ] Migrate accounts page to BQL queries via `LedgerService`
-- [ ] Migrate remaining pages (payees, favourites, tx editor, etc.) to `LedgerService`
-- [ ] Wire sync flow: after infrastructure files update → `invalidate()`
-- [ ] Audit and remove dead `AppService` read methods + IndexedDB transaction tables
-- [ ] Verify on mobile device: parse + query latency, memory, PWA offline
+| #  | Task                                                                                                                                     | Depends on | Status |
+|----|------------------------------------------------------------------------------------------------------------------------------------------|------------|--------|
+| 1  | Implement `readAndCombineSources()` in LedgerService — read OPFS infra files + cashier.bean, concatenate                                 | —          | todo   |
+| 2  | Gate app startup on ledger ready — `+layout.svelte`: init WASM, `ledgerService.load()`, gate `<slot/>`                                   | 1          | todo   |
+| 3  | Rewrite save/edit/delete targeting `cashier.bean` — use `sourceEditor.ts` for splicing, `appendTransaction` for new, call `invalidate()` | 1          | todo   |
+| 4  | Migrate journal page to BQL queries via `LedgerService`                                                                                  | 2          | todo   |
+| 5  | Migrate accounts page to BQL queries via `LedgerService`                                                                                 | 2          | todo   |
+| 6  | Migrate remaining pages (payees, favourites, tx editor, etc.) to `LedgerService`                                                         | 4, 5       | todo   |
+| 7  | Wire sync flow: after infrastructure files update → `invalidate()`                                                                       | 2          | todo   |
+| 8  | Update export to serve `cashier.bean` contents directly from OPFS                                                                        | 2          | todo   |
+| 9  | Audit and remove dead `AppService` read methods + IndexedDB transaction tables                                                           | 4–8        | todo   |
+| 10 | Verify on mobile device: parse + query latency, memory, PWA offline                                                                      | 9          | todo   |
+| 11 | Handle `lastXact` table and memorized transactions                                                                                       |            | todo   |
+
+### Completed
+
+- [x] WASM initialization — singleton in `rustledger.ts`, `ensureInitialized()` available
+- [x] `LedgerService` singleton with `query()`, `invalidate()`, `version` store
+- [x] Source editing layer — `sourceEditor.ts` with `mapDirectiveSpans`, `replaceDirectiveBySpan`, `findSpanForDirective`
+- [x] Directive formatting — `directiveFormatter.ts` with `DirectiveFormatter.toString()`
+- [x] OPFS file utilities — `opfslib.ts` with `readFile`, `saveFile`, `listFiles`, `deleteFile`
+- [x] RLedger demo page proving all concepts end-to-end
