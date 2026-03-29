@@ -5,6 +5,7 @@ App Service that operates on .beancount files in OPFS
 import { Xact, Posting } from '$lib/data/model';
 import { ensureInitialized, createParsedLedger } from '$lib/services/rustledger';
 import * as opfslib from '$lib/utils/opfslib';
+import type { TransactionDirective } from '@rustledger/wasm';
 
 class AppServiceOpfs {
 	async loadXacts(): Promise<Xact[]> {
@@ -49,7 +50,7 @@ class AppServiceOpfs {
 	/**
 	 * Convert a rustledger transaction directive to an Xact object
 	 */
-	private directiveToXact(directive: any): Xact {
+	private directiveToXact(directive: TransactionDirective): Xact {
 		const xact = new Xact();
 
 		// Set date (format: YYYY-MM-DD)
