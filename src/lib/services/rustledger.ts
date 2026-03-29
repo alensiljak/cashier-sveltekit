@@ -4,7 +4,7 @@
  */
 
 import { Account } from '$lib/data/model';
-import type { ParsedLedger, ParseResult } from '@rustledger/wasm';
+import type { ParsedLedger, ParseResult, ValidationResult } from '@rustledger/wasm';
 import wasmUrl from '@rustledger/wasm/rustledger_wasm_bg.wasm?url';
 
 // WASM module instance
@@ -228,6 +228,17 @@ export function version(): string {
 }
 
 /**
+ * Validate a Beancount source string using WASM.
+ * Parses, interpolates, and validates in one step without allocating a full ParsedLedger.
+ */
+export function validateSource(source: string): ValidationResult {
+	if (!wasmModule || !wasmModule.validateSource) {
+		throw new Error('WASM module not available or validateSource() not supported');
+	}
+	return wasmModule.validateSource(source) as ValidationResult;
+}
+
+/**
  * Format a Beancount source string using WASM.
  * Parses and reformats with consistent alignment.
  */
@@ -245,6 +256,7 @@ export default {
 	createParsedLedger,
 	getAccountsFromLedger,
 	parseSource,
+	validateSource,
 	format,
 	version
 };
