@@ -2,15 +2,16 @@
 	import Fab from '$lib/components/FAB.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { Check } from '@lucide/svelte';
-	import { xact } from '$lib/data/mainStore';
+	import { xact, xactSpan } from '$lib/data/mainStore';
 	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import { afterNavigate, goto } from '$app/navigation';
 	import Notifier from '$lib/utils/notifier';
-	import CashierDAL from '$lib/data/dal';
 	import { SettingKeys, settings } from '$lib/settings';
 	import appService from '$lib/services/appService';
+	import ledgerService from '$lib/services/ledgerService';
+	import { xactToBeancountText } from '$lib/utils/xactUtils';
 	import { base } from '$app/paths';
 	import TransactionEditor from '$lib/components/XactEditor.svelte';
 
@@ -42,11 +43,16 @@
 	 * save transaction
 	 */
 	async function saveXact() {
-		// create a deep copy
 		const clonedXact = JSON.parse(JSON.stringify($xact));
-		const dal = new CashierDAL();
+		const beancountText = xactToBeancountText(clonedXact);
+		const span = get(xactSpan);
 
-		await dal.saveXact(clonedXact);
+		if (span) {
+			await ledgerService.editTransaction(span, beancountText);
+		} else {
+			await ledgerService.appendTransaction(beancountText);
+		}
+		xactSpan.set(undefined);
 
 		// Remember Last Transaction?
 		const remember = await settings.get(SettingKeys.rememberLastTransaction);

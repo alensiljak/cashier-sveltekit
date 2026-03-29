@@ -3,11 +3,11 @@
 	import JournalXactRow from '$lib/components/JournalXactRow.svelte';
 	import SquareButton from '$lib/components/SquareButton.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
-	import CashierDAL from '$lib/data/dal';
-	import db from '$lib/data/db';
-	import { ScheduledXact, xact } from '$lib/data/mainStore';
+	import { ScheduledXact, xact, xactSpan } from '$lib/data/mainStore';
 	import { ScheduledTransaction, Xact } from '$lib/data/model';
 	import appService from '$lib/services/appService';
+	import ledgerService from '$lib/services/ledgerService';
+	import { xactToBeancountText } from '$lib/utils/xactUtils';
 	import Notifier from '$lib/utils/notifier';
 	import {
 		CalendarClockIcon,
@@ -68,8 +68,13 @@
 	async function onDeleteConfirmed() {
 		closeModal();
 
-		await db.xacts.delete($xact.id);
-
+		const span = $xactSpan;
+		if (!span) {
+			Notifier.error('Cannot delete: transaction location unknown');
+			return;
+		}
+		await ledgerService.deleteTransaction(span);
+		xactSpan.set(undefined);
 		xact.set(Xact.create());
 
 		Notifier.success('Transaction deleted');
@@ -83,18 +88,16 @@
 			return;
 		}
 
-		// create the transaction
 		const newXact = appService.createXactFrom($xact);
-		// save
-		const dal = new CashierDAL();
-		await dal.saveXact(newXact);
+		const beancountText = xactToBeancountText(newXact);
+		await ledgerService.appendTransaction(beancountText);
 
 		Notifier.success('Transaction copied');
 
-		// load the new tx for editing
+		// load the new tx for editing (no span — it's a new transaction)
 		xact.set(newXact);
+		xactSpan.set(undefined);
 
-		// navigate to the editor for the new transaction, resetting the navigation?
 		goto('/tx', { replaceState: true });
 	}
 
