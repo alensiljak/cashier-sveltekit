@@ -87,12 +87,12 @@
 	<Fab Icon={CheckIcon} onclick={onFabClick} />
 {/if}
 
-<section class="flex h-screen flex-col">
+<section class="flex flex-col h-full">
 	<Toolbar title="Payees" />
 	<!-- search toolbar -->
 	<SearchToolbar focus {onSearch} />
 
-	<div class="h-screen overflow-auto p-1">
+	<div class="flex-1 overflow-y-auto px-1">
 		{#each filteredPayees as payee:Payee (payee.name)}
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
