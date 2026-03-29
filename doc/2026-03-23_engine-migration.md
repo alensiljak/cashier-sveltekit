@@ -246,7 +246,7 @@ Export is done by providing `cashier.bean` file contents in the Export page - ei
 | 2  | Gate app startup on ledger ready — `+layout.svelte`: init WASM, `ledgerService.load()`, gate `<slot/>`                                   | 1          | ✅      |
 | 3  | Rewrite save/edit/delete targeting `cashier.bean` — use `sourceEditor.ts` for splicing, `appendTransaction` for new, call `invalidate()` | 1          | ✅      |
 | 4  | Migrate journal page to BQL queries via `LedgerService`                                                                                  | 2          | ✅      |
-| 5  | Migrate accounts page to BQL queries via `LedgerService`                                                                                 | 2          | todo   |
+| 5  | Migrate accounts page to BQL queries via `LedgerService`                                                                                 | 2          | ✅      |
 | 6  | Migrate remaining pages (payees, favourites, tx editor, etc.) to `LedgerService`                                                         | 4, 5       | todo   |
 | 7  | Wire sync flow: after infrastructure files update → `invalidate()`                                                                       | 2          | todo   |
 | 8  | Update export to serve `cashier.bean` contents directly from OPFS                                                                        | 2          | todo   |

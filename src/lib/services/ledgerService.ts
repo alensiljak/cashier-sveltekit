@@ -165,6 +165,49 @@ class LedgerService {
 		return createParsedLedger(source);
 	}
 
+	/** Get all accounts with balances from the current ledger. */
+	getAccounts(): Account[] {
+		if (!this.ledger) return [];
+		return getAccountsFromLedger(this.ledger);
+	}
+
+	/**
+	 * Get all declared accounts from the current ledger, including those with no transactions.
+	 * Merges open-directive accounts with BQL balance results.
+	 */
+	getAllAccounts(): Account[] {
+		if (!this.ledger) return [];
+
+		// Collect all accounts declared via `open` directives, excluding closed ones.
+		const directives: any[] = this.ledger.getDirectives();
+		const closedAccountNames = new Set<string>(
+			directives.filter((d) => d.type === 'close').map((d) => d.account)
+		);
+		const openAccountNames = new Set<string>(
+			directives
+				.filter((d) => d.type === 'open' && !closedAccountNames.has(d.account))
+				.map((d) => d.account)
+		);
+
+		// Get accounts that have transactions (with balances).
+		const txAccounts = getAccountsFromLedger(this.ledger);
+		const txAccountMap = new Map<string, Account>(txAccounts.map((a) => [a.name, a]));
+
+		// Merge: start from all open accounts, overlay balances where present.
+		const all = new Map<string, Account>();
+		for (const name of openAccountNames) {
+			all.set(name, txAccountMap.get(name) ?? new Account(name));
+		}
+		// Also include any accounts in transactions that lack an open directive (but aren't closed).
+		for (const account of txAccounts) {
+			if (!all.has(account.name) && !closedAccountNames.has(account.name)) {
+				all.set(account.name, account);
+			}
+		}
+
+		return Array.from(all.values()).sort((a, b) => a.name.localeCompare(b.name));
+	}
+
 	/** Get accounts from a ParsedLedger instance */
 	getAccountsFromLedger(ledger: any): Account[] {
 		return getAccountsFromLedger(ledger);

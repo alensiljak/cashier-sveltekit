@@ -6,23 +6,32 @@
 	import type { Account } from '$lib/data/model';
 	import { ListSearch } from '$lib/utils/ListSearch';
 	import { onMount } from 'svelte';
-	import type { PageData } from './$types';
 	import { getAccountBalance } from '$lib/services/accountsService';
 	import { getAmountColour } from '$lib/utils/formatter';
 	import appService from '$lib/services/appService';
+	import ledgerService from '$lib/services/ledgerService';
 	import { resolve } from '$app/paths';
 
-	let { data }: { data: PageData } = $props();
+	const lsVersion = ledgerService.version;
 
-	let accounts: Array<Account> = [];
-	let filteredAccounts: Array<Account> = $state([]);
+	let allAccounts: Array<Account> = $state([]);
+	let searchValue = $state('');
 	let isInSelectionMode = false;
 	let defaultCurrency: string;
 
-	onMount(async () => {
-		accounts = data.accounts;
-		filteredAccounts = accounts;
+	$effect(() => {
+		const _v = $lsVersion;
+		allAccounts = ledgerService.getAllAccounts();
+	});
 
+	const filteredAccounts = $derived.by(() => {
+		if (!searchValue) return allAccounts;
+		const search = new ListSearch();
+		const regex = search.getRegex(searchValue);
+		return allAccounts.filter((account) => regex.test(account.name));
+	});
+
+	onMount(async () => {
 		isInSelectionMode = $selectionMetadata !== undefined;
 		defaultCurrency = await appService.getDefaultCurrency();
 	});
@@ -65,17 +74,8 @@
 	 * Apply filtering when the user types something in the search bar.
 	 * @param value The search term
 	 */
-	async function onSearch(value: string) {
-		if (value) {
-			// Apply filter
-			let search = new ListSearch();
-			let regex = search.getRegex(value);
-
-			filteredAccounts = accounts.filter((account) => regex.test(account.name));
-		} else {
-			// Clear filter. Use all records.
-			filteredAccounts = accounts;
-		}
+	function onSearch(value: string) {
+		searchValue = value;
 	}
 </script>
 

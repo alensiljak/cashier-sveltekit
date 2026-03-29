@@ -7,7 +7,6 @@ export const CashierFilename = 'cashier.bean';
  */
 export const InfrastructureFiles = [
 	'book.bean',
-	'config.bean',
 	'commodities.bean',
 	'accounts.bean'
 ] as const;
