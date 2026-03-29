@@ -161,11 +161,31 @@ The editing layer is already implemented in `src/lib/rledger/sourceEditor.ts` an
 
 `LedgerService` delegates to `sourceEditor.ts` for all text-level editing. No duplicate static methods needed on `LedgerService` itself.
 
+#### `TransactionDirective` → `Xact` field mapping
+
+`TransactionDirective` (from WASM) carries all parsed fields needed to populate `Xact` directly — no text re-parsing required. `mapDirectiveSpans()` is called in parallel to get the line ranges; the two arrays are zipped by index.
+
+| `TransactionDirective` field | `Xact` / `Posting` field | Notes                                                |
+|------------------------------|--------------------------|------------------------------------------------------|
+| `date`                       | `Xact.date`              | ISO date string — identical format                   |
+| `payee`                      | `Xact.payee`             | Optional in both                                     |
+| `narration`                  | `Xact.note`              | Different name                                       |
+| `flag`                       | —                        | Not represented in `Xact`; default `*` on write      |
+| `tags`                       | —                        | Not represented in `Xact`; preserved via span splice |
+| `links`                      | —                        | Not represented in `Xact`; preserved via span splice |
+| `postings[n].account`        | `Posting.account`        | Direct                                               |
+| `postings[n].units.number`   | `Posting.amount`         | `string` → `number` conversion needed                |
+| `postings[n].units.currency` | `Posting.currency`       | Direct                                               |
+| `postings[n].cost`           | —                        | Not represented in `Xact`                            |
+| `postings[n].price`          | —                        | Not represented in `Xact`                            |
+
+Fields with no `Xact` equivalent (`flag`, `tags`, `links`, `cost`, `price`) are preserved automatically by the span-splice approach — the original source lines are kept intact for anything the UI doesn't touch.
+
 #### Edit flow
 
-1. **List** — Call `mapDirectiveSpans(source, ledger)` to get line ranges for all directives. Each journal row stores its `DirectiveSpan`.
-2. **Open** — The editor receives the span. The `sourceText` field contains the original beancount text for form binding.
-3. **Modify** — The user edits fields. On save the editor produces replacement Beancount text via `DirectiveFormatter.toString()` or `format()`.
+1. **List** — Call `getDirectives()` and `mapDirectiveSpans(source, ledger)` together. Map each `TransactionDirective` onto an `Xact` using the table above. Zip directives and spans by index so each row carries both its `Xact` and its `DirectiveSpan`.
+2. **Open** — The editor receives the `Xact` (pre-populated from the directive) and its `DirectiveSpan`. No text re-parsing needed.
+3. **Modify** — The user edits fields. On save the editor produces replacement Beancount text via `DirectiveFormatter.toString()`.
 4. **Validate** — Parse the replacement text into a temporary `ParsedLedger` and check for errors. Block save on errors.
 5. **Splice** — Call `replaceDirectiveBySpan(source, spans, spanIndex, newText)` to produce updated source, then write to `cashier.bean` in OPFS.
 6. **Invalidate** — Call `ledgerService.invalidate()` to rebuild the full `ParsedLedger`. All subscribed pages re-query automatically via `version`.
@@ -246,5 +266,5 @@ Export is done by providing `cashier.bean` file contents in the Export page - ei
 
 ### Design Decisions
 
-- **Xact stays as view/edit model.** `TransactionDirective` from WASM is richer (flag, tags, links, posting cost/price) but replacing Xact would touch 40+ files. Xact remains the UI model; conversion happens at the LedgerService boundary. Revisit after migration is complete and new features are planned.
+- **Xact stays as view/edit model.** `TransactionDirective` from WASM is richer (flag, tags, links, posting cost/price) but replacing Xact would touch 40+ files. Xact remains the UI model; conversion from `TransactionDirective` happens at the LedgerService boundary using the field mapping table in §7. Fields not represented in `Xact` (flag, tags, links, cost, price) are preserved automatically by the span-splice approach. Revisit after migration is complete and new features are planned.
 - **Transaction identity via `DirectiveSpan`.** Transactions in `cashier.bean` are identified by their line range (`startLine`/`endLine`), not a numeric ID. The `xactSpan` store (to be added to `mainStore.ts`) will carry this alongside the `xact` store when editing existing transactions.

@@ -27,3 +27,4 @@ package-lock.json
 # Assistants
 vite.config.*.timestamp-*
 .claude/settings.local.json
+.claude/worktrees/
