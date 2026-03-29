@@ -116,7 +116,7 @@ For filtered / derived views (e.g. transactions for one account, distinct payees
 
 `+page.ts` load functions that currently read IndexedDB are deleted for any data that comes from the ledger. Non-ledger data (settings, scheduled transactions, asset allocation) can stay in IndexedDB/stores as-is.
 
-### 5. App Startup
+### 5. App Startup ✅
 
 In `+layout.svelte` `onMount`:
 
