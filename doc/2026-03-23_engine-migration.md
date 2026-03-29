@@ -138,7 +138,7 @@ Gate the `<slot />` behind a loading check so child pages don't render before th
 All writes target `cashier.bean` in OPFS only:
 
 1. Format the new/edited transaction with the stateless `format(source)` function.
-2. Validate by parsing the replacement text into a temporary `ParsedLedger` and checking for errors. There is no standalone `validate()` WASM call — validation always requires `parse → isValid() / getParseErrors() / getValidationErrors()`. The rledger page already does this correctly. Block save on errors.
+2. Validate by calling `validateSource()` directly on the transaction string. This is a lightweight WASM call that returns parse/validation errors without allocating a full `ParsedLedger`. Block save on errors.
 3. Write formatted text to `cashier.bean` (append for new, rewrite for edit/delete).
 4. Call `ledgerService.invalidate()` — frees old ParsedLedger, re-reads OPFS, creates new one, bumps `version`.
 5. Every subscribed page re-queries automatically via the reactive `version` dependency.
@@ -166,7 +166,7 @@ The editing layer is already implemented in `src/lib/rledger/sourceEditor.ts` an
 1. **List** — Call `mapDirectiveSpans(source, ledger)` to get line ranges for all directives. Each journal row stores its `DirectiveSpan`.
 2. **Open** — The editor receives the span. The `sourceText` field contains the original beancount text for form binding.
 3. **Modify** — The user edits fields. On save the editor produces replacement Beancount text via `DirectiveFormatter.toString()` or `format()`.
-4. **Validate** — Parse the replacement text into a temporary `ParsedLedger` and check for errors. Block save on errors.
+4. **Validate** — Call `validateSource()` directly on the replacement text. Block save on errors.
 5. **Splice** — Call `replaceDirectiveBySpan(source, spans, spanIndex, newText)` to produce updated source, then write to `cashier.bean` in OPFS.
 6. **Invalidate** — Call `ledgerService.invalidate()` to rebuild the full `ParsedLedger`. All subscribed pages re-query automatically via `version`.
 
