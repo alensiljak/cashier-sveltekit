@@ -10,6 +10,7 @@
 	import { CashierSync } from '$lib/cashier-sync';
 	import * as OpfsLib from '$lib/utils/opfslib.js';
 	import { InfrastructureFiles } from '$lib/constants';
+	import ledgerService from '$lib/services/ledgerService';
 
 	Notifier.init();
 
@@ -323,6 +324,8 @@
 			)
 		);
 
+		await ledgerService.invalidate();
+
 		Notifier.success('Infrastructure files synchronized');
 	}
 </script>
@@ -403,7 +406,7 @@
 				bind:checked={syncInfrastructureFiles}
 				onchange={saveSettings}
 			/>
-			<p>Sync infrastructure files (book, config, commodities, accounts)</p>
+			<p>Sync infrastructure files (book, commodities, accounts)</p>
 		</label>
 	</div>
 
