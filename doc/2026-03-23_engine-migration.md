@@ -249,7 +249,7 @@ Export is done by providing `cashier.bean` file contents in the Export page - ei
 | 5  | Migrate accounts page to BQL queries via `LedgerService`                                                                                 | 2          | pending Accounts table |
 | 6  | Migrate remaining pages (payees, favourites, tx editor, etc.) to `LedgerService`                                                         | 4, 5       | todo                   |
 | 7  | Wire sync flow: after infrastructure files update → `invalidate()`                                                                       | 2          | ✅                      |
-| 8  | Update export to serve `cashier.bean` contents directly from OPFS                                                                        | 2          | todo                   |
+| 8  | Update export to serve `cashier.bean` contents directly from OPFS                                                                        | 2          | ✅                      |
 | 9  | Audit and remove dead `AppService` read methods + IndexedDB transaction tables                                                           | 4–8        | todo                   |
 | 10 | Verify on mobile device: parse + query latency, memory, PWA offline                                                                      | 9          | todo                   |
 | 11 | Handle `lastXact` table and memorized transactions                                                                                       |            | todo                   |
