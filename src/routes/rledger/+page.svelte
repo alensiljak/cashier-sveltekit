@@ -151,7 +151,7 @@
 			}
 
 			parsedDirectives = parsedLedger.getDirectives();
-			parsedAccounts = ledgerService.getAccountsFromLedger(parsedLedger);
+			parsedAccounts = ledgerService.getAccountsFromTransactions(parsedLedger);
 			parsedPayees = extractPayees(parsedDirectives);
 		} catch (err) {
 			if (parsedLedger) { parsedLedger.free(); parsedLedger = null; }

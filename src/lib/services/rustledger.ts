@@ -150,9 +150,9 @@ export function parseBalanceSheetRow(record: string[]): Account | null {
 
 /**
  * Query all accounts and balances from an existing ParsedLedger instance.
- * The caller is responsible for the lifecycle of the passed ledger.
+ * This includes only accounts from the existing transactions!
  */
-export function getAccountsFromLedger(ledger: any): Account[] {
+export function getAccountsFromTransactions(ledger: any): Account[] {
 	const query = 'SELECT account, sum(position) AS balance GROUP BY account ORDER BY account';
 	const result = ledger.query(query);
 	if (result.errors.length > 0) {
@@ -254,7 +254,7 @@ export default {
 	ensureInitialized,
 	parseBalanceSheetRow,
 	createParsedLedger,
-	getAccountsFromLedger,
+	getAccountsFromTransactions,
 	parseSource,
 	validateSource,
 	format,

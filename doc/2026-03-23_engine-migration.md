@@ -19,7 +19,7 @@ With a fast Rust parser, it should be easy and convenient to
 The following have been validated on the rledger page and can be relied upon during migration:
 
 - WASM initialization and `ParsedLedger` creation (`rustledger.ts`)
-- BQL queries for accounts and balances (`getAccountsFromLedger`)
+- BQL queries for accounts and balances (`getAccountsFromTransactions`)
 - `getDocumentSymbols()` for mapping directives to line ranges (`sourceEditor.ts`)
 - Surgical text replacement via `replaceDirectiveBySpan()` (`sourceEditor.ts`)
 - `DirectiveFormatter.toString()` for generating beancount text

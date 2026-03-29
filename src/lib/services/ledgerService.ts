@@ -3,7 +3,7 @@ import {
 	ensureInitialized,
 	createParsedLedger,
 	format as formatWasm,
-	getAccountsFromLedger,
+	getAccountsFromTransactions,
 	version as wasmVersion
 } from './rustledger';
 import type { Directive, BeancountError } from '@rustledger/wasm';
@@ -168,7 +168,7 @@ class LedgerService {
 	/** Get all accounts with balances from the current ledger. */
 	getAccounts(): Account[] {
 		if (!this.ledger) return [];
-		return getAccountsFromLedger(this.ledger);
+		return getAccountsFromTransactions(this.ledger);
 	}
 
 	/**
@@ -190,7 +190,7 @@ class LedgerService {
 		);
 
 		// Get accounts that have transactions (with balances).
-		const txAccounts = getAccountsFromLedger(this.ledger);
+		const txAccounts = getAccountsFromTransactions(this.ledger);
 		const txAccountMap = new Map<string, Account>(txAccounts.map((a) => [a.name, a]));
 
 		// Merge: start from all open accounts, overlay balances where present.
@@ -209,8 +209,8 @@ class LedgerService {
 	}
 
 	/** Get accounts from a ParsedLedger instance */
-	getAccountsFromLedger(ledger: any): Account[] {
-		return getAccountsFromLedger(ledger);
+	getAccountsFromTransactions(ledger: any): Account[] {
+		return getAccountsFromTransactions(ledger);
 	}
 
 	/** Read and combine all .bean sources from OPFS: infrastructure files + cashier.bean */
