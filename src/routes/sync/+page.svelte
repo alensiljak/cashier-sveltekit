@@ -379,7 +379,7 @@
 				bind:checked={syncAccounts}
 				onchange={saveSettings}
 			/>
-			<p>Sync account list with balances</p>
+			<p>Sync accounts and balances</p>
 		</label>
 		<label class="flex items-center space-x-2">
 			<input
