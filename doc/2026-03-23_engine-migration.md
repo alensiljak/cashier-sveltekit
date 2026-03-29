@@ -244,7 +244,7 @@ Export is done by providing `cashier.bean` file contents in the Export page - ei
 |----|------------------------------------------------------------------------------------------------------------------------------------------|------------|--------|
 | 1  | Implement `readAndCombineSources()` in LedgerService — read OPFS infra files + cashier.bean, concatenate                                 | —          | ✅      |
 | 2  | Gate app startup on ledger ready — `+layout.svelte`: init WASM, `ledgerService.load()`, gate `<slot/>`                                   | 1          | ✅      |
-| 3  | Rewrite save/edit/delete targeting `cashier.bean` — use `sourceEditor.ts` for splicing, `appendTransaction` for new, call `invalidate()` | 1          | partial |
+| 3  | Rewrite save/edit/delete targeting `cashier.bean` — use `sourceEditor.ts` for splicing, `appendTransaction` for new, call `invalidate()` | 1          | ✅      |
 | 4  | Migrate journal page to BQL queries via `LedgerService`                                                                                  | 2          | todo   |
 | 5  | Migrate accounts page to BQL queries via `LedgerService`                                                                                 | 2          | todo   |
 | 6  | Migrate remaining pages (payees, favourites, tx editor, etc.) to `LedgerService`                                                         | 4, 5       | todo   |
@@ -263,6 +263,10 @@ Export is done by providing `cashier.bean` file contents in the Export page - ei
 - [x] OPFS file utilities — `opfslib.ts` with `readFile`, `saveFile`, `listFiles`, `deleteFile`
 - [x] RLedger demo page proving all concepts end-to-end
 - [x] LedgerService write methods — `appendTransaction`, `editTransaction(span)`, `deleteTransaction(span)` using `sourceEditor.ts` for span-based splicing
+- [x] `xactSpan` store in `mainStore.ts` — carries `DirectiveSpan` for the transaction being edited; `undefined` for new transactions
+- [x] `xactToBeancountText(xact)` helper in `xactUtils.ts` — converts `Xact` to Beancount text via `DirectiveFormatter`
+- [x] `tx/+page.svelte` save flow — uses `ledgerService.editTransaction(span)` or `appendTransaction` based on `xactSpan`
+- [x] `xact-actions/+page.svelte` delete and duplicate — use `ledgerService.deleteTransaction(span)` and `appendTransaction`
 
 ### Design Decisions
 
