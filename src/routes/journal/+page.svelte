@@ -1,48 +1,50 @@
 <script lang="ts">
-	import { goto, invalidateAll } from '$app/navigation';
+	import { goto } from '$app/navigation';
+	import { tick } from 'svelte';
 	import Fab from '$lib/components/FAB.svelte';
 	import JournalXactRow from '$lib/components/JournalXactRow.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
-	import db from '$lib/data/db';
 	import { Xact } from '$lib/data/model';
+	import { xact, xactSpan } from '$lib/data/mainStore';
+	import ledgerService from '$lib/services/ledgerService';
+	import type { DirectiveSpan } from '$lib/rledger/sourceEditor';
+	import * as opfslib from '$lib/utils/opfslib';
+	import { CashierFilename } from '$lib/constants';
 	import Notifier from '$lib/utils/notifier';
 	import { FileDownIcon, ImportIcon, PlusIcon, TrashIcon } from '@lucide/svelte';
-	import { onMount } from 'svelte';
-	import { xact } from '$lib/data/mainStore';
-	import type { PageData } from './$types';
 
 	Notifier.init();
 
 	let isDeleteAllConfirmationOpen = $state(false);
-
 	let listContainer: any;
-	let { data }: { data: PageData } = $props();
 
-	onMount(async () => {
-		listContainer.scrollTop = listContainer.scrollHeight;
+	const lsVersion = ledgerService.version;
+	let xactsWithSpans: Array<{ xact: Xact; span: DirectiveSpan }> = $state([]);
+
+	$effect(() => {
+		const _v = $lsVersion;
+		ledgerService.getXactsWithSpans().then((result) => {
+			xactsWithSpans = result;
+			tick().then(() => {
+				if (listContainer) listContainer.scrollTop = listContainer.scrollHeight;
+			});
+		});
 	});
 
-	/**
-	 * Close all dialogs.
-	 */
 	function closeModal() {
 		isDeleteAllConfirmationOpen = false;
 	}
 
 	async function onDeleteAllClicked() {
-		// show confirmation dialog
 		isDeleteAllConfirmationOpen = true;
 	}
 
 	async function onDeleteAllConfirmed() {
 		closeModal();
-
-		// delete all Xacts
-		await db.xacts.clear();
+		await opfslib.saveFile(CashierFilename, '');
+		await ledgerService.invalidate();
 		Notifier.success('All local transactions deleted.');
-		// Reload data.
-		await invalidateAll();
 	}
 
 	async function onExportClick() {
@@ -50,21 +52,15 @@
 	}
 
 	async function onFab() {
-		// create a new transaction in the app store
 		const tx = Xact.create();
 		xact.set(tx);
-
+		xactSpan.set(undefined);
 		await goto('/tx');
 	}
 
-	/**
-	 * When the Xact row is clicked, open the details page.
-	 * @param tx
-	 */
-	async function onRowClick(tx: Xact) {
-		// store into state
+	async function onRowClick(tx: Xact, span: DirectiveSpan) {
 		xact.set(tx);
-
+		xactSpan.set(span);
 		goto('/xact-actions');
 	}
 </script>
@@ -85,11 +81,14 @@
 	</Toolbar>
 
 	<section class="grow space-y-2 overflow-auto p-1 pb-3" bind:this={listContainer}>
-		{#if data.xacts?.length == 0}
+		{#if xactsWithSpans.length === 0}
 			<p>The device journal is empty</p>
 		{:else}
-			{#each data.xacts as xact (xact)}
-				<JournalXactRow {xact} onclick={onRowClick} />
+			{#each xactsWithSpans as item (item.span.startLine)}
+				<JournalXactRow
+					xact={item.xact}
+					onclick={() => onRowClick(item.xact, item.span)}
+				/>
 			{/each}
 		{/if}
 	</section>

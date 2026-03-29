@@ -2,20 +2,22 @@
 	import { FileUpIcon, ScrollIcon } from '@lucide/svelte';
 	import HomeCardTemplate from './HomeCardTemplate.svelte';
 	import { goto } from '$app/navigation';
-	import { onMount } from 'svelte';
-	import db from '$lib/data/db';
 	import { Money, type Xact } from '$lib/data/model';
 	import { XactAugmenter } from '$lib/utils/xactAugmenter';
 	import Notifier from '$lib/utils/notifier';
 	import { formatAmount, getReadableDate, getXactAmountColour } from '$lib/utils/formatter';
+	import ledgerService from '$lib/services/ledgerService';
 
 	Notifier.init();
 
 	let xacts: Xact[] = $state([]);
 	let xactBalances: Money[] = $state([]);
 
-	onMount(async () => {
-		await loadData();
+	const lsVersion = ledgerService.version;
+
+	$effect(() => {
+		const _v = $lsVersion;
+		loadData();
 	});
 
 	/**
@@ -34,10 +36,11 @@
 	}
 
 	async function loadData() {
-		// Get the latest 5 transactions.
-		xacts = await db.xacts.orderBy('date').reverse().limit(5).toArray();
-		// now order from oldest to newest. <- no, keep the latest on top
-		// xacts.reverse()
+		const all = await ledgerService.getXactsWithSpans();
+		// Newest first, limited to 5
+		const latest = all.slice().reverse().slice(0, 5);
+		xacts = latest.map((item) => item.xact);
+		xactBalances = [];
 
 		try {
 			const amounts = XactAugmenter.calculateXactAmounts(xacts);

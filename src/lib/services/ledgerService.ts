@@ -7,7 +7,7 @@ import {
 	version as wasmVersion
 } from './rustledger';
 import type { Directive, BeancountError } from '@rustledger/wasm';
-import { Account } from '$lib/data/model';
+import { Account, Xact, Posting } from '$lib/data/model';
 import * as opfslib from '$lib/utils/opfslib';
 import { CashierFilename, InfrastructureFiles } from '$lib/constants';
 import { mapDirectiveSpans, replaceDirectiveBySpan, type DirectiveSpan } from '$lib/rledger/sourceEditor';
@@ -195,6 +195,51 @@ class LedgerService {
 		parts.push(cashier);
 
 		return parts.join('\n\n');
+	}
+
+	/**
+	 * Read cashier.bean, parse it independently, and return all transaction directives
+	 * zipped with their DirectiveSpans (line ranges). Used by the journal page to populate
+	 * the list and supply the span needed for editing.
+	 */
+	async getXactsWithSpans(): Promise<Array<{ xact: Xact; span: DirectiveSpan }>> {
+		const source = await opfslib.readFile(CashierFilename) ?? '';
+		if (!source.trim()) return [];
+
+		const tempLedger = createParsedLedger(source);
+		if (!tempLedger) return [];
+
+		try {
+			const directives: any[] = tempLedger.getDirectives();
+			const spans = mapDirectiveSpans(source, tempLedger);
+
+			// cashier.bean contains only transaction directives, so directives and spans
+			// are aligned 1:1 by index.
+			return directives
+				.filter((d) => d.type === 'transaction')
+				.map((directive, i) => ({
+					xact: this.directiveToXact(directive),
+					span: spans[i]
+				}));
+		} finally {
+			tempLedger.free();
+		}
+	}
+
+	/** Convert a WASM TransactionDirective to an Xact view model. */
+	private directiveToXact(directive: any): Xact {
+		const tx = new Xact();
+		tx.date = directive.date;
+		tx.payee = directive.payee ?? '';
+		tx.note = directive.narration ?? '';
+		tx.postings = (directive.postings ?? []).map((p: any) => {
+			const posting = new Posting();
+			posting.account = p.account ?? '';
+			if (p.units?.number != null) posting.amount = parseFloat(p.units.number);
+			if (p.units?.currency) posting.currency = p.units.currency;
+			return posting;
+		});
+		return tx;
 	}
 
 	/** Free the current ledger instance */
