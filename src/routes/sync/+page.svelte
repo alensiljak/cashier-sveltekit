@@ -265,7 +265,7 @@
 	async function synchronizeAccounts(activeUrl: string) {
 		const sync = new CashierSync(activeUrl, _ptaSystem);
 
-		const report = await sync.readAccounts();
+		const report = await sync.readAccounts(_ptaSystem);
 		if (!report || report.length == 0) {
 			Notifier.error('No accounts received: ' + report);
 			return;

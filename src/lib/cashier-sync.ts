@@ -10,6 +10,7 @@ import { getQueries } from './sync-queries';
 import type { Queries } from './sync-queries';
 import * as LedgerParser from '$lib/utils/ledgerParser';
 import * as BeancountParser from '$lib/utils/beancountParser';
+import * as RledgerParser from '$lib/utils/rledgerParser';
 import type { CurrentValuesDict } from '$lib/data/viewModels';
 
 /**
@@ -88,16 +89,24 @@ export class CashierSync {
 
 	/**
 	 * Retrieve the list of accounts with their balances.
-	 * @returns array of Account objects
+	 * @returns response from the corresponding system (array of Account objects)
 	 */
-	async readAccounts(): Promise<string[]> {
+	async readAccounts(ptaSystem: string): Promise<Record<string, unknown>> {
 		const accountsQuery = this.queries.accounts();
 		const response = await this.send(accountsQuery);
 		if (!response.ok) {
 			throw new Error('Error reading accounts!');
 		}
 
-		const content: string[] = await response.json();
+		let content: any;
+
+		if (ptaSystem === 'rledger') {
+			content = await response.json();
+		} else if (ptaSystem === 'beancount') {
+			content = await response.json();
+		} else if (ptaSystem === 'ledger') {
+			throw new Error('Not supported!');
+		}
 
 		return content;
 	}
@@ -134,12 +143,14 @@ export class CashierSync {
 		const query = this.queries.currentValues(rootAccount, currency);
 
 		const response = await this.send(query);
-		const result: Array<string> = await response.json();
+		const result: any = await response.json();
 
 		// parse
 		let currentValues: CurrentValuesDict;
 		if (ptaSystem === 'beancount') {
 			currentValues = BeancountParser.parseCurrentValues(result, rootAccount);
+		} else if (ptaSystem === 'rledger') {
+			currentValues = RledgerParser.parseCurrentValues(result, rootAccount);
 		} else if (ptaSystem === 'ledger') {
 			currentValues = LedgerParser.parseCurrentValues(result, rootAccount);
 		} else {

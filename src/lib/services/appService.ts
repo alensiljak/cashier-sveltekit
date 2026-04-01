@@ -1,7 +1,7 @@
 /*
-    Provide service layer for the application.
+	Provide service layer for the application.
 
-    https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/export
+	https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/export
 */
 import db from '$lib/data/db';
 import { Account, LastXact, Payee, Posting, ScheduledTransaction, Xact } from '$lib/data/model';
@@ -13,6 +13,7 @@ import { loadInvestmentAccounts } from './accountsService';
 import { get } from 'svelte/store';
 import * as LedgerParser from '$lib/utils/ledgerParser';
 import * as BeancountParser from '$lib/utils/beancountParser';
+import * as RledgerParser from '$lib/utils/rledgerParser';
 import { formatAmount } from '$lib/utils/formatter';
 
 interface AccountIndex {
@@ -359,8 +360,9 @@ class AppService {
 	 * @param lines Output of `ledger balance --flat`
 	 * @returns The promise resolving to the id of the last record updated (Dexie default)
 	 */
-	async importBalanceSheet(ptaSystem: string, lines: string[]): Promise<unknown> {
-		if (!lines || !lines.length) {
+	async importBalanceSheet(ptaSystem: string, response: any): Promise<unknown> {
+		if (!response) {
+			// !response.length
 			throw new Error('No balance records received for import!');
 		}
 
@@ -370,18 +372,37 @@ class AppService {
 		}
 
 		const accountBalances: AccountIndex = {};
+		let account;
+
+		let items;
+		switch (ptaSystem) {
+			case 'rledger':
+				items = response.rows;
+				break;
+			case 'beancount':
+			case 'ledger':
+				items = response;
+				break;
+			default:
+				throw new Error('Unknown PTA system: ' + ptaSystem);
+		}
 
 		// read and parse the balance sheet entries
-		for (let i = 0; i < lines.length; i++) {
-			const line = lines[i];
-			if (line === '') continue;
+		for (let i = 0; i < items.length; i++) {
+			const item = items[i];
+			console.log('Balance sheet item:', item);
+			if (item === '') continue;
 
 			// parse
-			let account;
 			if (ptaSystem === 'ledger') {
-				account = LedgerParser.parseBalanceSheetRow(line);
+				account = LedgerParser.parseBalanceSheetRow(item);
 			} else if (ptaSystem === 'beancount') {
-				account = BeancountParser.parseBalanceSheetRow(line);
+				account = BeancountParser.parseBalanceSheetRow(item);
+			} else if (ptaSystem === 'rledger') {
+				account = RledgerParser.parseBalanceSheetRow(item);
+				console.log('Parsed account from rledger:', account);
+			} else {
+				throw new Error('Unknown PTA system: ' + ptaSystem);
 			}
 
 			if (!account) {
@@ -399,6 +420,7 @@ class AppService {
 					accountBalances[account.name] = account;
 				}
 			}
+			// }
 		}
 
 		// the array of accounts to be updated.

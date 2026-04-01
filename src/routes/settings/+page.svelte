@@ -191,6 +191,17 @@
 				class="radio radio-primary bg-base-100"
 				type="radio"
 				name="radio-direct"
+				value="rledger"
+				bind:group={ptaSystem}
+			/>
+			<p>Rust Ledger</p>
+		</label>
+
+		<label class="flex items-center space-x-2">
+			<input
+				class="radio radio-primary bg-base-100"
+				type="radio"
+				name="radio-direct"
 				value="beancount"
 				bind:group={ptaSystem}
 			/>
