@@ -187,7 +187,7 @@ export class CashierSync {
 	 * @returns array of Payee objects
 	 */
 	async readPayees(): Promise<string[]> {
-		// Limit the payees to the last 5 years, otherwise there's a high risk of
+		// Limit the payees to the last n years, otherwise there's a high risk of
 		// crashing. This command is somehow very memory hungry on Android.
 		const from = moment().subtract(20, 'years').format(ISODATEFORMAT);
 
@@ -202,6 +202,9 @@ export class CashierSync {
 		if (this.ptaSystem === 'beancount') {
 			// beancount result requires some massaging
 			content = content.map((subArray) => subArray[0]);
+		} else if (this.ptaSystem === 'rledger') {
+			// rledger result requires some massaging
+			content = content.map((item) => item.payee);
 		}
 
 		return content;
