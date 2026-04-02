@@ -265,15 +265,15 @@
 	async function synchronizeAccounts(activeUrl: string) {
 		const sync = new CashierSync(activeUrl, _ptaSystem);
 
-		const report = await sync.readAccounts(_ptaSystem);
-		if (!report || report.length == 0) {
-			Notifier.error('No accounts received: ' + report);
+		const response = await sync.readAccounts(_ptaSystem);
+		if (!response || Object.keys(response).length === 0) {
+			Notifier.error('No accounts received: ' + JSON.stringify(response));
 			return;
 		}
 
 		// delete all accounts only after we have retrieved the new ones.
 		await appService.deleteAccounts();
-		await appService.importBalanceSheet(_ptaSystem, report);
+		await appService.importBalanceSheet(_ptaSystem, response);
 
 		Notifier.success('Accounts fetched from Ledger');
 	}
@@ -297,7 +297,7 @@
 		const response = await sync.readPayees();
 
 		if (!response || response.length == 0) {
-			Notifier.error('Invalid response received: ' + response);
+			Notifier.error('Invalid response received: ' + JSON.stringify(response));
 			return;
 		}
 
