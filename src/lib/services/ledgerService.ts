@@ -12,9 +12,17 @@ import * as opfslib from '$lib/utils/opfslib';
 import { CashierFilename, InfrastructureFiles } from '$lib/constants';
 import { mapDirectiveSpans, replaceDirectiveBySpan, type DirectiveSpan } from '$lib/rledger/sourceEditor';
 
+interface QueryError {
+	message: string;
+	severity: string;
+	line: number;
+	column: number;
+}
+
 interface QueryResult {
 	columns: string[];
 	rows: any[];
+	errors: QueryError[];
 }
 
 /**

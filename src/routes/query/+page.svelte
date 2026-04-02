@@ -5,18 +5,30 @@
 	let bql = $state('SELECT account, sum(number) as balance, currency ORDER BY account');
 	let columns: string[] = $state([]);
 	let rows: any[] = $state([]);
-	let error = $state('');
+	interface QueryError { message: string; severity: string; line: number; column: number; }
+	let errors: QueryError[] = $state([]);
 
 	function runQuery() {
-		error = '';
+		errors = [];
 		try {
+            console.log('Running BQL query:', bql);
+
 			const result = ledgerService.query(bql);
-			columns = result?.columns ?? [];
-			rows = result?.rows ?? [];
+
+            console.log('BQL query result:', result);
+
+			errors = result?.errors ?? [];
+			if (errors.length === 0) {
+				columns = result?.columns ?? [];
+				rows = result?.rows ?? [];
+			} else {
+				columns = [];
+				rows = [];
+			}
 		} catch (e: any) {
 			columns = [];
 			rows = [];
-			error = e?.message ?? String(e);
+			errors = [{ message: e?.message ?? String(e), severity: 'error', line: 0, column: 0 }];
 		}
 	}
 </script>
@@ -39,8 +51,14 @@
 			{/if}
 		</div>
 
-		{#if error}
-			<div class="alert alert-error text-sm">{error}</div>
+		{#if errors.length > 0}
+			<div class="border border-error rounded-lg bg-error/10 p-3 flex flex-col gap-1">
+				{#each errors as err}
+					<div class="text-error text-sm font-mono">
+						{#if err.line}<span class="opacity-60">{err.severity} {err.line}:{err.column} — </span>{/if}{err.message}
+					</div>
+				{/each}
+			</div>
 		{/if}
 
 		{#if columns.length > 0}
@@ -56,8 +74,8 @@
 					<tbody>
 						{#each rows as row}
 							<tr>
-								{#each columns as col}
-									<td class="font-mono text-xs">{row[col] ?? ''}</td>
+								{#each columns as _col, i}
+									<td class="font-mono">{row[i] ?? ''}</td>
 								{/each}
 							</tr>
 						{/each}
