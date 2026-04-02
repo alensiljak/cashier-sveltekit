@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Toolbar from '$lib/components/Toolbar.svelte';
-	import { RefreshCcwIcon, SaveIcon, FilePlusIcon, TrashIcon, PencilIcon } from '@lucide/svelte';
+	import { RefreshCcwIcon, SaveIcon, FilePlusIcon, TrashIcon, PencilIcon, UploadIcon } from '@lucide/svelte';
 	import { onMount, onDestroy } from 'svelte';
 	import * as OpfsLib from '$lib/utils/opfslib.js';
 	import Notifier from '$lib/utils/notifier';
@@ -29,6 +29,7 @@
 	let showDropConflict = $state(false);
 	let dropConflictFileName = $state('');
 	let dropConflictContent = $state('');
+	let fileUploadInput = $state<HTMLInputElement | null>(null);
 
 	onMount(async () => {
 		document.addEventListener('dragover', preventDefaultDrag);
@@ -226,6 +227,27 @@
 		await loadFiles();
 	}
 
+	async function onUploadFileSelected(event: Event) {
+		const input = event.target as HTMLInputElement;
+		const file = input.files?.[0];
+		if (!file) return;
+
+		const content = await file.text();
+		const exists = await OpfsLib.fileExists(file.name);
+
+		if (exists) {
+			dropConflictFileName = file.name;
+			dropConflictContent = content;
+			showDropConflict = true;
+		} else {
+			await OpfsLib.saveFile(file.name, content);
+			Notifier.success(`File "${file.name}" saved to OPFS`);
+			await loadFiles();
+		}
+
+		input.value = '';
+	}
+
 	function onFileContentChange(event: Event) {
 		const target = event.target as HTMLTextAreaElement;
 		fileContent = target.value;
@@ -252,8 +274,16 @@
 					<span>New File</span>
 				</button>
 			</li>
+			<li>
+				<button class="btn btn-sm btn-ghost gap-2" onclick={() => fileUploadInput?.click()}>
+					<UploadIcon class="w-5 h-5" />
+					<span>Upload File</span>
+				</button>
+			</li>
 		{/snippet}
 	</Toolbar>
+
+	<input type="file" bind:this={fileUploadInput} class="hidden" onchange={onUploadFileSelected} />
 
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<section class="p-4 rounded-lg transition-all duration-200"
