@@ -2,9 +2,9 @@
 
 ## Goals
 
-- Use OPFS for storage.
-- Store all Beancount files.
-- Base all logic on Beancount files.
+- [x] Use OPFS for storage.
+- [x] Store all Beancount files.
+- [ ] Base all logic on Beancount files.
 
 ## Specifics
 

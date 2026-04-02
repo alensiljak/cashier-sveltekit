@@ -82,6 +82,11 @@ export async function listFiles(): Promise<string[]> {
 	}
 }
 
+export async function fileExists(filename: string): Promise<boolean> {
+	const handle = await getHandle(filename, false);
+	return handle !== undefined;
+}
+
 export async function deleteFile(filename: string): Promise<boolean> {
 	try {
 		const root = await navigator.storage.getDirectory();

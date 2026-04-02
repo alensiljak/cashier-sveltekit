@@ -1,11 +1,15 @@
 <script lang="ts">
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { RefreshCcwIcon, SaveIcon, FilePlusIcon, TrashIcon, PencilIcon } from '@lucide/svelte';
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import * as OpfsLib from '$lib/utils/opfslib.js';
 	import Notifier from '$lib/utils/notifier';
 
 	Notifier.init();
+
+	function preventDefaultDrag(e: DragEvent) {
+		e.preventDefault();
+	}
 
 	let files = $state<string[]>([]);
 	let isLoading = $state(false);
@@ -20,9 +24,20 @@
 	let showDeleteConfirm = $state(false);
 	let isDeleting = $state(false);
 	let fileToDelete = $state<string | null>(null);
+	let isDragOver = $state(false);
+	let showDropConflict = $state(false);
+	let dropConflictFileName = $state('');
+	let dropConflictContent = $state('');
 
 	onMount(async () => {
+		document.addEventListener('dragover', preventDefaultDrag);
+		document.addEventListener('drop', preventDefaultDrag);
 		await loadFiles();
+	});
+
+	onDestroy(() => {
+		document.removeEventListener('dragover', preventDefaultDrag);
+		document.removeEventListener('drop', preventDefaultDrag);
 	});
 
 	async function loadFiles() {
@@ -143,6 +158,61 @@
 		newFileName = '';
 	}
 
+	function onDragOver(event: DragEvent) {
+		event.preventDefault();
+		isDragOver = true;
+	}
+
+	function onDragLeave() {
+		isDragOver = false;
+	}
+
+	async function onDrop(event: DragEvent) {
+		event.preventDefault();
+		isDragOver = false;
+
+		const droppedFiles = event.dataTransfer?.files;
+		if (!droppedFiles || droppedFiles.length === 0) return;
+
+		const file = droppedFiles[0];
+		const content = await file.text();
+		const exists = await OpfsLib.fileExists(file.name);
+
+		if (exists) {
+			dropConflictFileName = file.name;
+			dropConflictContent = content;
+			showDropConflict = true;
+		} else {
+			await OpfsLib.saveFile(file.name, content);
+			Notifier.success(`File "${file.name}" saved to OPFS`);
+			await loadFiles();
+		}
+	}
+
+	async function resolveDropConflict(action: 'overwrite' | 'copy' | 'cancel') {
+		if (action === 'cancel') {
+			showDropConflict = false;
+			return;
+		}
+
+		let targetName = dropConflictFileName;
+		if (action === 'copy') {
+			const dotIndex = dropConflictFileName.lastIndexOf('.');
+			if (dotIndex > 0) {
+				const name = dropConflictFileName.substring(0, dotIndex);
+				const ext = dropConflictFileName.substring(dotIndex);
+				targetName = `${name} (1)${ext}`;
+			} else {
+				targetName = `${dropConflictFileName} (1)`;
+			}
+		}
+
+		await OpfsLib.saveFile(targetName, dropConflictContent);
+		Notifier.success(`File "${targetName}" saved to OPFS`);
+		showDropConflict = false;
+		await loadFiles();
+	}
+
 	function onFileContentChange(event: Event) {
 		const target = event.target as HTMLTextAreaElement;
 		fileContent = target.value;
@@ -172,8 +242,21 @@
 		{/snippet}
 	</Toolbar>
 
-	<section class="p-4">
-		{#if isLoading}
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<section class="p-4 rounded-lg transition-all duration-200"
+		class:border-2={isDragOver}
+		class:border-dashed={isDragOver}
+		class:border-primary={isDragOver}
+		class:bg-base-200={isDragOver}
+		ondragover={onDragOver}
+		ondragleave={onDragLeave}
+		ondrop={onDrop}
+	>
+		{#if isDragOver}
+			<div class="flex justify-center items-center p-8 text-primary font-semibold">
+				Drop file here to save to OPFS
+			</div>
+		{:else if isLoading}
 			<div class="flex justify-center items-center p-8">
 				<span class="loading loading-spinner loading-lg"></span>
 			</div>
@@ -182,7 +265,7 @@
 				<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6">
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
 				</svg>
-				<span>No files found in OPFS storage.</span>
+				<span>No files found in OPFS storage. Drag and drop a text file here to add one.</span>
 			</div>
 		{:else}
 			<div class="mb-4 overflow-x-auto">
@@ -278,6 +361,25 @@
 				<div class="modal-action">
 					<button class="btn" onclick={closeNewFileDialog}>Cancel</button>
 					<button class="btn btn-primary" onclick={createNewFile}>Create</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+
+	<!-- Drop Conflict Modal -->
+	{#if showDropConflict}
+		<div class="modal modal-open">
+			<div class="modal-box">
+				<h3 class="font-bold text-lg">File Already Exists</h3>
+				<p>A file named "{dropConflictFileName}" already exists in OPFS. What would you like to do?</p>
+				<div class="modal-action flex-wrap gap-2">
+					<button class="btn" onclick={() => resolveDropConflict('cancel')}>Cancel</button>
+					<button class="btn btn-warning" onclick={() => resolveDropConflict('copy')}>
+						Create Copy (1)
+					</button>
+					<button class="btn btn-error" onclick={() => resolveDropConflict('overwrite')}>
+						Overwrite
+					</button>
 				</div>
 			</div>
 		</div>
