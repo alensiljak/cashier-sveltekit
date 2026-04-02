@@ -203,8 +203,8 @@ export class CashierSync {
 			// beancount result requires some massaging
 			content = content.map((subArray) => subArray[0]);
 		} else if (this.ptaSystem === 'rledger') {
-			// rledger result requires some massaging
-			content = content.map((item) => item.payee);
+			// TODO: adjust when DISTINCT is resolved.
+			content = content.rows.map((item) => item.payee);
 		}
 
 		return content;
