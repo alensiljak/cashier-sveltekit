@@ -25,6 +25,7 @@
 	let isDeleting = $state(false);
 	let fileToDelete = $state<string | null>(null);
 	let isDragOver = $state(false);
+	let fileMetadata = $state<OpfsLib.FileMetadata | null>(null);
 	let showDropConflict = $state(false);
 	let dropConflictFileName = $state('');
 	let dropConflictContent = $state('');
@@ -53,12 +54,24 @@
 		}
 	}
 
+	function formatFileSize(bytes: number): string {
+		if (bytes === 0) return '0 B';
+		const units = ['B', 'KB', 'MB', 'GB'];
+		const i = Math.floor(Math.log(bytes) / Math.log(1024));
+		return `${(bytes / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+	}
+
 	async function onFileClick(filename: string) {
 		selectedFile = filename;
 		isContentLoading = true;
 		fileContent = '';
+		fileMetadata = null;
 		try {
-			const content = await OpfsLib.readFile(filename);
+			const [content, meta] = await Promise.all([
+				OpfsLib.readFile(filename),
+				OpfsLib.getFileMetadata(filename)
+			]);
+			fileMetadata = meta ?? null;
 			if (content !== undefined) {
 				fileContent = content;
 				originalContent = content;
@@ -310,6 +323,15 @@
 							{/if}
 						</div>
 					</div>
+					{#if fileMetadata}
+						<div class="text-sm text-base-content/60 mb-2 flex gap-4">
+							<span>Size: {formatFileSize(fileMetadata.size)}</span>
+							<span>Modified: {new Date(fileMetadata.lastModified).toLocaleString()}</span>
+							{#if fileMetadata.type}
+								<span>Type: {fileMetadata.type}</span>
+							{/if}
+						</div>
+					{/if}
 					{#if isContentLoading}
 						<div class="flex justify-center items-center p-4">
 							<span class="loading loading-spinner loading-md"></span>

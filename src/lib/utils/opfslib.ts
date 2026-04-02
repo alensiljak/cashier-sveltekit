@@ -87,6 +87,24 @@ export async function fileExists(filename: string): Promise<boolean> {
 	return handle !== undefined;
 }
 
+export interface FileMetadata {
+	size: number;
+	lastModified: number;
+	type: string;
+}
+
+export async function getFileMetadata(filename: string): Promise<FileMetadata | undefined> {
+	const fileHandle = await getHandle(filename);
+	if (!fileHandle) return undefined;
+
+	const file = await fileHandle.getFile();
+	return {
+		size: file.size,
+		lastModified: file.lastModified,
+		type: file.type
+	};
+}
+
 export async function deleteFile(filename: string): Promise<boolean> {
 	try {
 		const root = await navigator.storage.getDirectory();
