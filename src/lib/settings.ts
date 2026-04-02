@@ -58,7 +58,9 @@ export const SettingKeys = {
 	// Peer sync
 	peerId: 'peerId',
 	syncServers: 'syncServers',
-	syncActiveServerId: 'syncActiveServerId'
+	syncActiveServerId: 'syncActiveServerId',
+	// Storage backend
+	storageBackend: 'storageBackend'
 };
 
 export const CardNames = {

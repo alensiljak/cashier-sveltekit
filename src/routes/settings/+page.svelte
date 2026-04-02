@@ -16,6 +16,11 @@
 		AssetAllocationStore,
 		DefaultCurrencyStore
 	} from '$lib/data/mainStore.js';
+	import {
+		getFileSystemBackend,
+		invalidateStorageBackendCache
+	} from '$lib/storage/index.js';
+	import type { StorageBackendType } from '$lib/storage/storageBackend.js';
 	// import type { FileChangeDetails } from '@zag-js/file-upload';
 
 	type FileChangeDetails = {
@@ -32,6 +37,9 @@
 	let currency = $state<string>();
 	let ptaSystem = $state<string>();
 
+	let storageBackend = $state<StorageBackendType>('opfs');
+	let fsDirName = $state<string | null>(null);
+
 	let settings_files = $state<File[]>();
 	let aa_files = $state<File[]>();
 
@@ -41,6 +49,13 @@
 		rootInvestmentAccount = await settings.get<string>(SettingKeys.rootInvestmentAccount);
 		rememberLastTransaction = await settings.get<boolean>(SettingKeys.rememberLastTransaction);
 		ptaSystem = await settings.get<string>(SettingKeys.ptaSystem);
+		storageBackend =
+			(await settings.get<StorageBackendType>(SettingKeys.storageBackend)) ?? 'opfs';
+
+		// Show current FS directory name if filesystem backend has a persisted handle
+		if (storageBackend === 'filesystem') {
+			fsDirName = await getFileSystemBackend().getDirectoryName();
+		}
 	});
 
 	/**
@@ -144,7 +159,20 @@
 
 		await settings.set(SettingKeys.ptaSystem, ptaSystem);
 
+		await settings.set(SettingKeys.storageBackend, storageBackend);
+		invalidateStorageBackendCache();
+
 		Notifier.success('Settings saved');
+	}
+
+	async function pickFsDirectory() {
+		const fsBackend = getFileSystemBackend();
+		const handle = await fsBackend.pickDirectory();
+		if (handle) {
+			fsDirName = handle.name;
+			storageBackend = 'filesystem';
+			Notifier.success(`Directory selected: ${handle.name}`);
+		}
 	}
 </script>
 
@@ -219,6 +247,54 @@
 			<p>Ledger-cli</p>
 		</label>
 	</form>
+
+	<!-- storage backend -->
+	<p>Storage backend:</p>
+	<form class="space-y-2">
+		<label class="flex items-center space-x-2">
+			<input
+				class="radio radio-primary bg-base-100"
+				type="radio"
+				name="storage-backend"
+				value="opfs"
+				bind:group={storageBackend}
+			/>
+			<p>OPFS (Origin Private File System)</p>
+		</label>
+		<label class="flex items-center space-x-2">
+			<input
+				class="radio radio-primary bg-base-100"
+				type="radio"
+				name="storage-backend"
+				value="filesystem"
+				bind:group={storageBackend}
+			/>
+			<p>File System (local directory)</p>
+		</label>
+		<label class="flex items-center space-x-2">
+			<input
+				class="radio radio-primary bg-base-100"
+				type="radio"
+				name="storage-backend"
+				value="indexeddb"
+				bind:group={storageBackend}
+			/>
+			<p>IndexedDB (not yet implemented)</p>
+		</label>
+	</form>
+
+	{#if storageBackend === 'filesystem'}
+		<div class="mt-2 flex items-center gap-2">
+			<button class="btn btn-outline btn-sm rounded" onclick={pickFsDirectory}>
+				Select Directory
+			</button>
+			{#if fsDirName}
+				<span class="font-mono text-sm opacity-70">{fsDirName}/</span>
+			{:else}
+				<span class="text-sm opacity-50">No directory selected</span>
+			{/if}
+		</div>
+	{/if}
 
 	<center>
 		<button class="btn btn-secondary text-accent rounded uppercase" onclick={saveSettings}>
