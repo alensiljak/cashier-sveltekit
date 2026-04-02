@@ -116,6 +116,6 @@ Some MCP clients do not resolve the server name, so referring to "use Serena's t
 ## Supported Languages
 
 Direct LSP support: **C#, TypeScript, JavaScript, Python, Java**
-Indirect/community support: Ruby, Go, Swift, Bash (check current release notes for additions)
+Indirect/community support: Rust, Ruby, Go, Swift, Bash (check current release notes for additions)
 
 For Svelte/TypeScript projects: Serena uses the TypeScript LSP, which covers `.ts`, `.js`, and `.svelte` files. Symbol navigation works across component boundaries — `find_referencing_symbols` is particularly useful for tracking prop usage and store subscriptions across components. Type annotations significantly improve symbol resolution quality, so prefer explicit types over `any` in files you want Serena to navigate well.
