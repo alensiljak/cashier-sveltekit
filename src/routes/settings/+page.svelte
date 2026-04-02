@@ -16,10 +16,7 @@
 		AssetAllocationStore,
 		DefaultCurrencyStore
 	} from '$lib/data/mainStore.js';
-	import {
-		getFileSystemBackend,
-		invalidateStorageBackendCache
-	} from '$lib/storage/index.js';
+	import { getFileSystemBackend, invalidateStorageBackendCache } from '$lib/storage/index.js';
 	import type { StorageBackendType } from '$lib/storage/storageBackend.js';
 	// import type { FileChangeDetails } from '@zag-js/file-upload';
 
@@ -49,8 +46,7 @@
 		rootInvestmentAccount = await settings.get<string>(SettingKeys.rootInvestmentAccount);
 		rememberLastTransaction = await settings.get<boolean>(SettingKeys.rememberLastTransaction);
 		ptaSystem = await settings.get<string>(SettingKeys.ptaSystem);
-		storageBackend =
-			(await settings.get<StorageBackendType>(SettingKeys.storageBackend)) ?? 'opfs';
+		storageBackend = (await settings.get<StorageBackendType>(SettingKeys.storageBackend)) ?? 'opfs';
 
 		// Show current FS directory name if filesystem backend has a persisted handle
 		if (storageBackend === 'filesystem') {
@@ -183,17 +179,24 @@
 <main class="mx-auto max-w-6xl space-y-4 p-1">
 	<!-- currency -->
 	<div class="form-control w-full">
-		<label class="label">
+		<label for="currency" class="label">
 			<span class="label-text">Main Currency</span>
 		</label>
-		<input class="input rounded" type="text" placeholder="Main Currency" bind:value={currency} />
+		<input
+			id="currency"
+			class="input rounded"
+			type="text"
+			placeholder="Main Currency"
+			bind:value={currency}
+		/>
 	</div>
 	<!-- investment account -->
 	<div class="form-control w-full">
-		<label class="label">
+		<label for="investment-account-root" class="label">
 			<span class="label-text">Investment account root</span>
 		</label>
 		<input
+			id="investment-account-root"
 			class="input rounded"
 			type="text"
 			placeholder="Investment account root"
@@ -202,8 +205,9 @@
 	</div>
 
 	<!-- last transaction -->
-	<label class="flex items-center space-x-2">
+	<label for="remember-last-transaction" class="flex items-center space-x-2">
 		<input
+			id="remember-last-transaction"
 			class="checkbox checkbox-primary rounded"
 			type="checkbox"
 			bind:checked={rememberLastTransaction}
@@ -308,7 +312,7 @@
 		<h3 class="mb-2 text-2xl font-semibold">Asset Allocation</h3>
 		<fieldset class="fieldset">
 			<center>
-				<input
+				<input id="aa-file-input"
 					type="file"
 					name="aa_file"
 					accept=".toml"
@@ -318,7 +322,9 @@
 						onAaFileChanged({ acceptedFiles: Array.from(target.files || []) });
 					}}
 				/>
-				<label class="label"> Select the AA definition </label>
+				<label for="aa-file-input" class="label">
+					Select the AA definition
+				</label>
 			</center>
 		</fieldset>
 	</section>
@@ -328,19 +334,22 @@
 		<p>
 			This functionality is now redundant. You can use Backup/Restore, which also includes Settings.
 		</p>
-		<fieldset>
+		<fieldset class="fieldset">
 			<center>
 				<input
 					type="file"
 					name="settings_file"
 					accept=".json"
+					id="settings-file-input"
 					class="file-input file-input-primary rounded"
 					onchange={(e) => {
 						const target = e.target as HTMLInputElement;
 						onSettingsFileChangeHandler({ acceptedFiles: Array.from(target.files || []) });
 					}}
 				/>
-				<label class="label"> Select the settings file </label>
+				<label for="settings-file-input" class="label">
+					Select the settings file
+				</label>
 			</center>
 		</fieldset>
 	</section>

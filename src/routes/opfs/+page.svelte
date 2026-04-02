@@ -397,10 +397,10 @@
 			<div class="modal-box">
 				<h3 class="font-bold text-lg">Create New Text File</h3>
 				<div class="form-control">
-					<label class="label">
+					<label for="newFileNameInput" class="label">
 						<span class="label-text">Filename</span>
 					</label>
-					<input type="text"
+					<input id="newFileNameInput" type="text"
 						class="input input-bordered w-full"
 						placeholder="Enter filename..."
 						bind:value={newFileName}
