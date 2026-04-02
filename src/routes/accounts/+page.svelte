@@ -23,20 +23,32 @@
 	const allAccounts: AccountRow[] = $derived.by(() => {
 		const _v = $lsVersion; // reactive dependency
 		const result = ledgerService.query('select * from accounts');
-		return (result?.rows ?? []) as AccountRow[];
+
+		return (result?.rows ?? []).map((row: any[]) => ({
+			account: row[0],
+			open: row[1],
+			close: row[2],
+			currencies: row[3],
+			booking: row[4]
+		}));
 	});
 
 	const filteredAccounts: AccountRow[] = $derived.by(() => {
 		if (!searchTerm) return allAccounts;
+
 		const search = new ListSearch();
 		const regex = search.getRegex(searchTerm);
-		return allAccounts.filter((row) => regex.test(row.account));
+		return allAccounts.filter((row) => regex.test(row.account ?? ''));
 	});
 
 	/**
 	 * Colour the account names based on the account type.
 	 */
-	function getAccountColour(accountName: string): string {
+	function getAccountColour(accountName: string | undefined): string {
+		if (!accountName) {
+			console.warn('Account record has undefined accountName. Please check and adjust the underlying data.');
+			return '';
+		}
 		if (accountName.startsWith('Income:')) {
 			return 'text-primary-200';
 		} else if (accountName.startsWith('Expenses:')) {
@@ -72,7 +84,7 @@
 	<SearchToolbar focus {onSearch} />
 	<!-- Account list -->
 	<div class="flex-1 overflow-y-auto px-1">
-		{#each filteredAccounts as row (row.account)}
+		{#each filteredAccounts as row, i (row.account ?? `undefined-${i}`)}
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 			<div
