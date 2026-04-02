@@ -52,9 +52,6 @@
 				<a class="link link-primary" href="/rledger">RustLedger demo</a>
 			</li>
 			<li>
-				<a class="link link-primary" href="/opfs">OPFS demo</a>
-			</li>
-			<li>
 				<a class="link link-primary" href="/book">Book demo</a>
 			</li>
 			<li>

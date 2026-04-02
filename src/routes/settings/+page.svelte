@@ -1,12 +1,11 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	// import GlossToolbar from '$lib/components/gloss-toolbar.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { SettingKeys, settings } from '$lib/settings';
 	import Notifier from '$lib/utils/notifier';
 	import db from '$lib/data/db';
 	import appService from '$lib/services/appService';
-	import { invalidateAll } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
 	import * as OpfsLib from '$lib/utils/opfslib.js';
 	import { AssetAllocationFilename } from '$lib/constants.js';
 	import { AssetAllocationEngine } from '$lib/assetAllocation/AssetAllocation';
@@ -18,7 +17,8 @@
 	} from '$lib/data/mainStore.js';
 	import { getFileSystemBackend, invalidateStorageBackendCache } from '$lib/storage/index.js';
 	import type { StorageBackendType } from '$lib/storage/storageBackend.js';
-	// import type { FileChangeDetails } from '@zag-js/file-upload';
+	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
+	import { BoxIcon, PowerIcon } from '@lucide/svelte';
 
 	type FileChangeDetails = {
 		acceptedFiles: File[];
@@ -28,7 +28,6 @@
 	let isAaConfirmationOpen = $state(false);
 	let isSettingsConfirmationOpen = $state(false);
 
-	// let data: PageData = $props();
 	let rememberLastTransaction = $state<boolean>();
 	let rootInvestmentAccount = $state<string>();
 	let currency = $state<string>();
@@ -72,6 +71,11 @@
 		closeModal();
 
 		await restoreAssetAllocation();
+	}
+
+	async function onOpfsClick() {
+		// navigate to OPFS page
+		await goto('/opfs');
 	}
 
 	/**
@@ -172,9 +176,11 @@
 	}
 </script>
 
-<!-- <GlossToolbar /> -->
-
-<Toolbar title="Settings" />
+<Toolbar title="Settings">
+	{#snippet menuItems()}
+		<ToolbarMenuItem text="OPFS Storage" Icon={BoxIcon} onclick={onOpfsClick} />
+	{/snippet}
+</Toolbar>
 
 <main class="mx-auto max-w-6xl space-y-4 p-1">
 	<!-- currency -->
@@ -253,7 +259,7 @@
 	</form>
 
 	<!-- storage backend -->
-	<p>Storage backend:</p>
+	<!-- <p>Storage backend:</p>
 	<form class="space-y-2">
 		<label class="flex items-center space-x-2">
 			<input
@@ -285,7 +291,7 @@
 			/>
 			<p>IndexedDB (not yet implemented)</p>
 		</label>
-	</form>
+	</form> -->
 
 	{#if storageBackend === 'filesystem'}
 		<div class="mt-2 flex items-center gap-2">
