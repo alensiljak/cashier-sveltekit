@@ -6,7 +6,7 @@ import {
 	getAccountsFromTransactions,
 	version as wasmVersion
 } from './rustledger';
-import type { Directive, BeancountError } from '@rustledger/wasm';
+import type { Directive, BeancountError, ParsedLedger } from '@rustledger/wasm';
 import { Account, Xact, Posting } from '$lib/data/model';
 import * as opfslib from '$lib/utils/opfslib';
 import { CashierFilename, InfrastructureFiles } from '$lib/constants';
@@ -42,7 +42,9 @@ class LedgerService {
 	async load(): Promise<void> {
 		await ensureInitialized();
 		const combinedSource = await this.readAndCombineSources();
+
 		this.ledger = createParsedLedger(combinedSource);
+
 		this._version.update((v) => v + 1);
 	}
 
@@ -161,7 +163,7 @@ class LedgerService {
 	}
 
 	/** Create a new ParsedLedger instance from source (does not set as current ledger) */
-	createParsedLedger(source: string): any {
+	createParsedLedger(source: string): ParsedLedger | null {
 		return createParsedLedger(source);
 	}
 
