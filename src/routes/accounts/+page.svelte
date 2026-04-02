@@ -3,36 +3,34 @@
 	import SearchToolbar from '$lib/components/SearchToolbar.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { selectionMetadata } from '$lib/data/mainStore';
-	import type { Account } from '$lib/data/model';
 	import { ListSearch } from '$lib/utils/ListSearch';
-	import { onMount } from 'svelte';
-	import type { PageData } from './$types';
-	import { getAccountBalance } from '$lib/services/accountsService';
-	import { getAmountColour } from '$lib/utils/formatter';
-	import appService from '$lib/services/appService';
-	// import ledgerService from '$lib/services/ledgerService';
+	import ledgerService from '$lib/services/ledgerService';
 	import { resolve } from '$app/paths';
 
-	let { data }: { data: PageData } = $props();
+	interface AccountRow {
+		account: string;
+		open: string | null;
+		close: string | null;
+		currencies: string[] | null;
+		booking: string | null;
+	}
 
-	// const lsVersion = ledgerService.version;
+	const lsVersion = ledgerService.version;
 
-	let accounts: Array<Account> = [];
-	let filteredAccounts: Array<Account> = $state([]);
-	let isInSelectionMode = false;
-	let defaultCurrency: string;
+	let searchTerm = $state('');
+	let isInSelectionMode = $derived($selectionMetadata !== undefined);
 
-	// $effect(() => {
-	// 	const _v = $lsVersion;
-	// 	allAccounts = ledgerService.getAllAccounts();
-	// });
+	const allAccounts: AccountRow[] = $derived.by(() => {
+		const _v = $lsVersion; // reactive dependency
+		const result = ledgerService.query('select * from accounts');
+		return (result?.rows ?? []) as AccountRow[];
+	});
 
-	onMount(async () => {
-		accounts = data.accounts;
-		filteredAccounts = accounts;
-
-		isInSelectionMode = $selectionMetadata !== undefined;
-		defaultCurrency = await appService.getDefaultCurrency();
+	const filteredAccounts: AccountRow[] = $derived.by(() => {
+		if (!searchTerm) return allAccounts;
+		const search = new ListSearch();
+		const regex = search.getRegex(searchTerm);
+		return allAccounts.filter((row) => regex.test(row.account));
 	});
 
 	/**
@@ -52,38 +50,19 @@
 		}
 	}
 
-	function getBalance(account: Account) {
-		return getAccountBalance(account, defaultCurrency);
-	}
-
 	function onAccountSelected(name: string) {
 		if (isInSelectionMode) {
-			// store the selection.
 			if ($selectionMetadata) {
 				$selectionMetadata.selectedId = name;
 			}
-
 			history.back();
 		} else {
 			goto(resolve('/account')); // todo: show account details
 		}
 	}
 
-	/**
-	 * Apply filtering when the user types something in the search bar.
-	 * @param value The search term
-	 */
-	async function onSearch(value: string) {
-		if (value) {
-			// Apply filter
-			let search = new ListSearch();
-			let regex = search.getRegex(value);
-
-			filteredAccounts = accounts.filter((account) => regex.test(account.name));
-		} else {
-			// Clear filter. Use all records.
-			filteredAccounts = accounts;
-		}
+	function onSearch(value: string) {
+		searchTerm = value;
 	}
 </script>
 
@@ -93,22 +72,21 @@
 	<SearchToolbar focus {onSearch} />
 	<!-- Account list -->
 	<div class="flex-1 overflow-y-auto px-1">
-		{#each filteredAccounts as account (account.name)}
+		{#each filteredAccounts as row (row.account)}
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 			<div
 				class="border-base-content/15 flex items-center justify-between border-b py-2 px-1 {getAccountColour(
-					account.name
+					row.account
 				)}"
-				onclick={() => onAccountSelected(account.name)}
+				onclick={() => onAccountSelected(row.account)}
 				role="listitem"
 			>
-				<div class="flex-1 pl-1">{account.name}</div>
-				{#if getBalance(account).quantity !== 0}
-					<data class={`text-right pr-1 ${getAmountColour(getBalance(account).quantity)}`}>
-						{getBalance(account).quantity}
-						{getBalance(account).currency}
-					</data>
+				<div class="flex-1 pl-1">{row.account}</div>
+				{#if row.currencies?.length}
+					<span class="text-sm opacity-60 pr-1">
+						{row.currencies.join(', ')}
+					</span>
 				{/if}
 			</div>
 		{/each}

@@ -46,7 +46,7 @@ On every parse, infrastructure files (synced from desktop) are concatenated with
 - The module binary is already cached as a singleton in `rustledger.ts` via `initWasm()` — no changes needed there.
 - Calling `ensureInitialized()` early removes first-use latency on any subsequent page.
 
-### 2. Live ParsedLedger — the Query Engine
+### 2. Live ParsedLedger — the Query Engine ✅
 
 Since parsing is extremely fast and the device ledger is small, keep **one long-lived `ParsedLedger`** instance that serves as the query engine for the entire app:
 
@@ -143,7 +143,7 @@ All writes target `cashier.bean` in OPFS only:
 4. Call `ledgerService.invalidate()` — frees old ParsedLedger, re-reads OPFS, creates new one, bumps `version`.
 5. Every subscribed page re-queries automatically via the reactive `version` dependency.
 
-### 7. Locating and Editing Individual Transactions
+### 7. Locating and Editing Individual Transactions ✅
 
 To extract and edit individual transactions, parse `cashier.bean` independently — since all device-writable transactions live in that file, there is no need to resolve line numbers through the combined ledger.
 
