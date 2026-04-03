@@ -16,6 +16,7 @@
 	} from '@lucide/svelte';
 	import Notifier from '$lib/utils/notifier';
 	import { settings, SettingKeys } from '$lib/settings';
+	import * as cashierFsSync from '$lib/cashier-fs-sync';
 
 	Notifier.init();
 
@@ -23,53 +24,6 @@
 	const IDB_NAME = 'cashier-fs-handles';
 	const IDB_STORE = 'handles';
 	const HANDLE_KEY = 'fsSyncDirectoryHandle';
-
-	function openIdb(): Promise<IDBDatabase> {
-		return new Promise((resolve, reject) => {
-			const req = indexedDB.open(IDB_NAME, 1);
-			req.onupgradeneeded = () => {
-				req.result.createObjectStore(IDB_STORE);
-			};
-			req.onsuccess = () => resolve(req.result);
-			req.onerror = () => reject(req.error);
-		});
-	}
-
-	async function persistHandle(handle: FileSystemDirectoryHandle): Promise<void> {
-		const db = await openIdb();
-		return new Promise((resolve, reject) => {
-			const tx = db.transaction(IDB_STORE, 'readwrite');
-			tx.objectStore(IDB_STORE).put(handle, HANDLE_KEY);
-			tx.oncomplete = () => {
-				db.close();
-				resolve();
-			};
-			tx.onerror = () => {
-				db.close();
-				reject(tx.error);
-			};
-		});
-	}
-
-	async function loadPersistedHandle(): Promise<FileSystemDirectoryHandle | null> {
-		try {
-			const db = await openIdb();
-			return new Promise((resolve, reject) => {
-				const tx = db.transaction(IDB_STORE, 'readonly');
-				const req = tx.objectStore(IDB_STORE).get(HANDLE_KEY);
-				req.onsuccess = () => {
-					db.close();
-					resolve(req.result ?? null);
-				};
-				req.onerror = () => {
-					db.close();
-					reject(req.error);
-				};
-			});
-		} catch {
-			return null;
-		}
-	}
 
 	interface EntryInfo {
 		name: string;
@@ -87,8 +41,14 @@
 	let isPreviewLoading = $state(false);
 	let fileMeta = $state<Record<string, string>>({});
 	let showPreviewPanel = $state(false);
+	let bookRootFileName = $state('');
 
 	onMount(async () => {
+		const fullBookRoot = await settings.get<string>(SettingKeys.fullBookRoot);
+		if (fullBookRoot) {
+			bookRootFileName = fullBookRoot.split('/').pop() ?? '';
+		}
+
 		const stored = await loadPersistedHandle();
 		if (stored) {
 			try {
@@ -173,11 +133,42 @@
 
 	function isTextFile(name: string): boolean {
 		const textExtensions = [
-            '.beancount', '.bean', '.ledger', '.journal',
-			'.txt', '.md', '.csv', '.json', '.xml', '.html', '.css', '.js', '.ts',
-			'.svelte', '.yaml', '.yml', '.toml', '.ini', '.cfg', '.conf', '.log',
-			'.sh', '.bat', '.py', '.rs', '.go', '.java', '.c', '.cpp', '.h',
-			'.ledger', '.journal', '.dat', '.env', '.gitignore', '.editorconfig'
+			'.beancount',
+			'.bean',
+			'.ledger',
+			'.journal',
+			'.txt',
+			'.md',
+			'.csv',
+			'.json',
+			'.xml',
+			'.html',
+			'.css',
+			'.js',
+			'.ts',
+			'.svelte',
+			'.yaml',
+			'.yml',
+			'.toml',
+			'.ini',
+			'.cfg',
+			'.conf',
+			'.log',
+			'.sh',
+			'.bat',
+			'.py',
+			'.rs',
+			'.go',
+			'.java',
+			'.c',
+			'.cpp',
+			'.h',
+			'.ledger',
+			'.journal',
+			'.dat',
+			'.env',
+			'.gitignore',
+			'.editorconfig'
 		];
 		const lower = name.toLowerCase();
 		return textExtensions.some((ext) => lower.endsWith(ext)) || !lower.includes('.');
@@ -226,11 +217,67 @@
 		}
 	}
 
+	function openIdb(): Promise<IDBDatabase> {
+		return new Promise((resolve, reject) => {
+			const req = indexedDB.open(IDB_NAME, 1);
+			req.onupgradeneeded = () => {
+				req.result.createObjectStore(IDB_STORE);
+			};
+			req.onsuccess = () => resolve(req.result);
+			req.onerror = () => reject(req.error);
+		});
+	}
+
+	async function persistHandle(handle: FileSystemDirectoryHandle): Promise<void> {
+		const db = await openIdb();
+		return new Promise((resolve, reject) => {
+			const tx = db.transaction(IDB_STORE, 'readwrite');
+			tx.objectStore(IDB_STORE).put(handle, HANDLE_KEY);
+			tx.oncomplete = () => {
+				db.close();
+				resolve();
+			};
+			tx.onerror = () => {
+				db.close();
+				reject(tx.error);
+			};
+		});
+	}
+
+	async function loadPersistedHandle(): Promise<FileSystemDirectoryHandle | null> {
+		try {
+			const db = await openIdb();
+			return new Promise((resolve, reject) => {
+				const tx = db.transaction(IDB_STORE, 'readonly');
+				const req = tx.objectStore(IDB_STORE).get(HANDLE_KEY);
+				req.onsuccess = () => {
+					db.close();
+					resolve(req.result ?? null);
+				};
+				req.onerror = () => {
+					db.close();
+					reject(req.error);
+				};
+			});
+		} catch {
+			return null;
+		}
+	}
+
 	async function selectBookFile() {
 		if (!selectedEntry || selectedEntry.kind !== 'file') return;
 		const path = `${dirName}/${selectedEntry.name}`;
 		await settings.set(SettingKeys.fullBookRoot, path);
+		bookRootFileName = selectedEntry.name;
 		Notifier.success(`Book file set to: ${selectedEntry.name}`);
+	}
+
+	async function synchronize() {
+		Notifier.info('Synchronization started (not implemented)');
+
+		// TODO: Implement synchronization logic here.
+		// See comments in src/lib/cashier-fs-sync.ts for the intended approach.
+		await cashierFsSync.synchronize();
 	}
 </script>
 
@@ -245,11 +292,7 @@
 			</li>
 			{#if dirHandle}
 				<li>
-					<button
-						class="btn btn-sm btn-ghost gap-2"
-						onclick={loadEntries}
-						disabled={isLoading}
-					>
+					<button class="btn btn-sm btn-ghost gap-2" onclick={loadEntries} disabled={isLoading}>
 						<RefreshCcwIcon class="w-5 h-5 {isLoading ? 'animate-spin' : ''}" />
 						<span>Refresh</span>
 					</button>
@@ -292,6 +335,7 @@
 				({entries.length} entries)
 			</p>
 
+			<!-- Filesystem Treeview -->
 			<div class="mb-4 overflow-x-auto overflow-y-auto" style="height: 400px;">
 				<table class="table table-zebra table-sm">
 					<thead>
@@ -307,6 +351,8 @@
 							<tr
 								class="cursor-pointer hover"
 								class:bg-secondary={selectedEntry?.name === entry.name}
+								class:book-root-row={bookRootFileName === entry.name &&
+									selectedEntry?.name !== entry.name}
 								onclick={() => onEntryClick(entry)}
 							>
 								<td class="w-8">
@@ -328,46 +374,59 @@
 			{#if selectedEntry && showPreviewPanel}
 				<div class="mt-6 border border-base-300 rounded-lg">
 					<!-- Panel header -->
-					<div class="flex items-center justify-between px-4 py-2 border-b border-base-300 bg-base-200 rounded-t-lg">
+					<div
+						class="flex items-center justify-between px-4 py-2 border-b border-base-300 bg-base-200 rounded-t-lg"
+					>
 						<h3 class="text-lg font-semibold">{selectedEntry.name}</h3>
 						<button
 							class="btn btn-sm btn-ghost btn-square"
-							onclick={() => { showPreviewPanel = false; selectedEntry = null; }}
+							onclick={() => {
+								showPreviewPanel = false;
+								selectedEntry = null;
+							}}
 							aria-label="Close preview"
 						>
 							<XIcon class="w-4 h-4" />
 						</button>
 					</div>
 					<div class="p-4">
-
-					{#if isPreviewLoading}
-						<div class="flex justify-center items-center p-4">
-							<span class="loading loading-spinner loading-md"></span>
-						</div>
-					{:else}
-						{#if Object.keys(fileMeta).length > 0}
-							<div class="mb-4">
-								<table class="table table-sm w-auto">
-									<tbody>
-										{#each Object.entries(fileMeta) as [key, value]}
-											<tr>
-												<td class="font-semibold opacity-70 pr-4">{key}</td>
-												<td class="font-mono text-sm">{value}</td>
-											</tr>
-										{/each}
-									</tbody>
-								</table>
+						{#if isPreviewLoading}
+							<div class="flex justify-center items-center p-4">
+								<span class="loading loading-spinner loading-md"></span>
 							</div>
-						{/if}
+						{:else}
+							{#if Object.keys(fileMeta).length > 0}
+								<div class="mb-4">
+									<table class="table table-sm w-auto">
+										<tbody>
+											{#each Object.entries(fileMeta) as [key, value]}
+												<tr>
+													<td class="font-semibold opacity-70 pr-4">{key}</td>
+													<td class="font-mono text-sm">{value}</td>
+												</tr>
+											{/each}
+										</tbody>
+									</table>
+								</div>
+							{/if}
 
-						<h4 class="text-sm font-semibold opacity-70 mb-1">Preview (first 20 lines)</h4>
-						<pre
-							class="bg-base-200 rounded-lg p-4 overflow-x-auto text-sm font-mono whitespace-pre-wrap"
-						>{preview}</pre>
-					{/if}
+							<h4 class="text-sm font-semibold opacity-70 mb-1">Preview (first 20 lines)</h4>
+							<pre
+								class="bg-base-200 rounded-lg p-4 overflow-x-auto text-sm font-mono whitespace-pre-wrap">{preview}</pre>
+						{/if}
+					</div>
 				</div>
-			</div>
 			{/if}
+
+			<div class="text-center py-3">
+				<button class="btn btn-primary" onclick={synchronize}> Synchronize </button>
+			</div>
 		{/if}
 	</section>
 </article>
+
+<style>
+	.book-root-row {
+		background-color: color-mix(in oklch, var(--color-primary) 25%, transparent);
+	}
+</style>

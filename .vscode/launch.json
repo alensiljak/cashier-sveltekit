@@ -36,6 +36,14 @@
 			"request": "launch",
 			"reAttach": true,
 			"addonPath": "${workspaceFolder}"
+		},
+		{
+			"type": "chrome",
+			"request": "attach",
+			"name": "Attach to Vivaldi",
+			"port": 9222,
+			"urlFilter": "http://localhost:*",
+			"webRoot": "${workspaceFolder}"
 		}
 	]
 }

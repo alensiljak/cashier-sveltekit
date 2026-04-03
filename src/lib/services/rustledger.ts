@@ -59,6 +59,18 @@ export function createParsedLedger(source: string): ParsedLedger | null {
 }
 
 /**
+ * Parse multiple Beancount files with include resolution.
+ * @param files - Map of filename → file contents
+ * @param entryPoint - The main file to start from (must be a key in files)
+ */
+export function parseMultiFile(files: Record<string, string>, entryPoint: string): ParseResult {
+	if (!wasmModule || !wasmModule.parseMultiFile) {
+		throw new Error('WASM module not available or parseMultiFile() not supported');
+	}
+	return wasmModule.parseMultiFile(files, entryPoint) as ParseResult;
+}
+
+/**
  * Parse source and return ParseResult from WASM.
  */
 export function parseSource(source: string): ParseResult {
@@ -256,6 +268,7 @@ export default {
 	createParsedLedger,
 	getAccountsFromTransactions,
 	parseSource,
+	parseMultiFile,
 	validateSource,
 	format,
 	version
