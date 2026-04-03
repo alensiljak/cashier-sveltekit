@@ -14,6 +14,13 @@ import ledgerService from '$lib/services/ledgerService';
 import type { CurrentValuesDict } from '$lib/data/viewModels';
 import { PtaSystems } from '$lib/constants';
 
+export interface SyncOptions {
+	syncAccounts?: boolean;
+	syncAaValues?: boolean;
+	syncPayees?: boolean;
+	syncInfrastructureFiles?: boolean;
+}
+
 /**
  * Delete existing accounts and import new ones from a balance sheet response.
  */

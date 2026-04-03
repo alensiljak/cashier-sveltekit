@@ -5,7 +5,7 @@
 	import { SettingKeys, settings } from '$lib/settings';
 	import Notifier from '$lib/utils/notifier';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
-	import * as CashierSync from '$lib/sync/sync-beancount';
+	import * as SyncBeancount from '$lib/sync/sync-beancount';
 	import { InfrastructureFiles, PtaSystems } from '$lib/constants';
 	import {
 		syncAccounts as doSyncAccounts,
@@ -69,18 +69,18 @@
 	}
 
 	async function reloadData() {
-		const activeUrl = getActiveServerUrlOrNotify();
+		const activeUrl = SyncBeancount.getActiveServerUrlOrNotify();
 		if (!activeUrl) return;
 
-		const sync = new CashierSync(activeUrl, _ptaSystem);
+		const sync = new SyncBeancount.CashierSync(activeUrl, _ptaSystem);
 		await sync.reloadData();
 	}
 
 	async function onShutdownClick() {
-		const activeUrl = getActiveServerUrlOrNotify();
+		const activeUrl = SyncBeancount.getActiveServerUrlOrNotify();
 		if (!activeUrl) return;
 
-		const sync = new CashierSync(activeUrl, _ptaSystem);
+		const sync = new SyncBeancount.CashierSync(activeUrl, _ptaSystem);
 		try {
 			await sync.shutdown();
 		} catch (error: any) {
@@ -97,21 +97,24 @@
 		rotationClass = rotationClass == '' ? 'animate-[spin_2s_linear_infinite]' : '';
 
 		try {
+			let syncOptions: SyncBeancount.SyncOptions = {
+				syncAccounts,
+				syncAaValues,
+				syncPayees,
+				syncInfrastructureFiles
+			};
+
 			// check which backend to synchronize with.
 			switch (configSource) {
 				case 'filesystem':
-					await cashierFsSync.synchronize();
+					await cashierFsSync.synchronize(syncOptions);
 					break;
 				case PtaSystems.beancount:
-					let syncOptions: CashierSync.SyncOptions = {
-						syncAccounts,
-						syncAaValues,
-						syncPayees,
-						syncInfrastructureFiles
-					};
-					await CashierSync.synchronize(syncOptions);
+					// cashier-server-python
+					await SyncBeancount.synchronize(syncOptions);
 					break;
 				case PtaSystems.rledger:
+					// cashier-server-rust
 					Notifier.warning(
 						'Synchronization with Cashier Server (Rust Ledger) not implemented yet.'
 					);
@@ -165,7 +168,7 @@
 						class="radio radio-primary bg-base-100"
 						type="radio"
 						name="config-source"
-						value="{PtaSystems.rledger}"
+						value={PtaSystems.rledger}
 						bind:group={configSource}
 						onchange={onConfigSourceChanged}
 					/>
@@ -176,7 +179,7 @@
 						class="radio radio-primary bg-base-100"
 						type="radio"
 						name="config-source"
-						value="{PtaSystems.beancount}"
+						value={PtaSystems.beancount}
 						bind:group={configSource}
 						onchange={onConfigSourceChanged}
 					/>
@@ -187,7 +190,7 @@
 						class="radio radio-primary bg-base-100"
 						type="radio"
 						name="config-source"
-						value="{PtaSystems.ledger}"
+						value={PtaSystems.ledger}
 						bind:group={configSource}
 						onchange={onConfigSourceChanged}
 					/>

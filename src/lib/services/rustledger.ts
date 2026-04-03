@@ -161,7 +161,9 @@ export function parseBalanceSheetRow(record: string[]): Account | null {
 				if (posting.account === record[2]) {
 					const account = new Account('');
 					account.name = posting.account;
-					account.balances = { [posting.units.currency]: parseFloat(posting.units.number) };
+					account.balances = {
+						[posting?.units?.currency as string]: parseFloat(posting?.units?.number as string) 
+					};
 					ledger.free();
 					return account;
 				}

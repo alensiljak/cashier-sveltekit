@@ -13,7 +13,6 @@ import { loadInvestmentAccounts } from './accountsService';
 import { get } from 'svelte/store';
 import * as LedgerParser from '$lib/utils/ledgerParser';
 import * as BeancountParser from '$lib/utils/beancountParser';
-import * as RledgerParser from '$lib/utils/rledgerParser';
 import { formatAmount } from '$lib/utils/formatter';
 import { PtaSystems } from '$lib/constants';
 
@@ -377,9 +376,9 @@ class AppService {
 
 		let items;
 		switch (ptaSystem) {
-			case PtaSystems.rledger:
-				items = response.rows;
-				break;
+			// case PtaSystems.rledger:
+			// 	items = response.rows;
+			// 	break;
 			case PtaSystems.beancount:
 			case PtaSystems.ledger:
 				items = response;
@@ -399,9 +398,9 @@ class AppService {
 				account = LedgerParser.parseBalanceSheetRow(item);
 			} else if (ptaSystem === PtaSystems.beancount) {
 				account = BeancountParser.parseBalanceSheetRow(item);
-			} else if (ptaSystem === PtaSystems.rledger) {
-				account = RledgerParser.parseBalanceSheetRow(item);
-				console.log('Parsed account from rledger:', account);
+			// } else if (ptaSystem === PtaSystems.rledger) {
+			// 	account = RledgerParser.parseBalanceSheetRow(item);
+			// 	console.log('Parsed account from rledger:', account);
 			} else {
 				throw new Error('Unknown PTA system: ' + ptaSystem);
 			}

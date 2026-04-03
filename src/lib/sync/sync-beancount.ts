@@ -9,6 +9,7 @@ import { getQueries } from './sync-queries';
 import type { Queries } from './sync-queries';
 import Notifier from '$lib/utils/notifier';
 import * as SyncCommon from '$lib/sync/sync-common';
+import type { SyncOptions } from '$lib/sync/sync-common';
 
 Notifier.init();
 
@@ -92,9 +93,10 @@ class CashierSync {
 
 		let content: any;
 
-		if (ptaSystem === PtaSystems.rledger) {
-			content = await response.json();
-		} else if (ptaSystem === PtaSystems.beancount) {
+		// if (ptaSystem === PtaSystems.rledger) {
+		// 	content = await response.json();
+		// } else 
+		if (ptaSystem === PtaSystems.beancount) {
 			content = await response.json();
 		} else if (ptaSystem === PtaSystems.ledger) {
 			throw new Error('Not supported!');
@@ -234,16 +236,9 @@ class CashierSync {
 	}
 }
 
-interface SyncOptions {
-	syncAccounts?: boolean;
-	syncAaValues?: boolean;
-	syncPayees?: boolean;
-	syncInfrastructureFiles?: boolean;
-}
-
 /**
  * Entry point
- * @returns 
+ * @returns
  */
 async function synchronize(syncOptions?: SyncOptions) {
 	// Cashier Sync synchronization
@@ -251,21 +246,24 @@ async function synchronize(syncOptions?: SyncOptions) {
 	const activeUrl = getActiveServerUrlOrNotify();
 	if (!activeUrl) return;
 
+	const _ptaSystem = await settings.get(SettingKeys.ptaSystem) as PtaSystems;
+	const sync = new CashierSync(activeUrl, _ptaSystem);
+
 	if (syncOptions?.syncAccounts) {
-		await synchronizeAccounts(activeUrl);
+		await synchronizeAccounts(sync);
 	}
 	if (syncOptions?.syncAaValues) {
-		await synchronizeAaValues(activeUrl);
+		await synchronizeAaValues(sync);
 	}
 	if (syncOptions?.syncPayees) {
-		await synchronizePayees(activeUrl);
+		await synchronizePayees(sync);
 	}
 	if (syncOptions?.syncInfrastructureFiles) {
-		await synchronizeInfrastructureFiles(activeUrl);
+		await synchronizeInfrastructureFiles(sync);
 	}
 }
 
-function getActiveServerUrlOrNotify(serverUrl?: string): string | null {
+export function getActiveServerUrlOrNotify(serverUrl?: string): string | null {
 	const url = serverUrl?.trim();
 
 	if (!url) {
@@ -276,30 +274,25 @@ function getActiveServerUrlOrNotify(serverUrl?: string): string | null {
 	return url;
 }
 
-async function synchronizeAccounts(activeUrl: string) {
-	const sync = new CashierSync(activeUrl, _ptaSystem);
-	const response = await sync.readAccounts(_ptaSystem);
-	await SyncCommon.syncAccounts(_ptaSystem, response);
+async function synchronizeAccounts(sync: CashierSync) {
+	const response = await sync.readAccounts(sync.ptaSystem);
+	await SyncCommon.syncAccounts(sync.ptaSystem, response);
 	Notifier.success('Accounts fetched from Ledger');
 }
 
-async function synchronizeAaValues(activeUrl: string) {
-	const sync = new CashierSync(activeUrl, _ptaSystem);
+async function synchronizeAaValues(sync: CashierSync) {
 	const result = await sync.readCurrentValues();
-	await SyncCommon.syncCurrentValues(_ptaSystem, result);
+	await SyncCommon.syncCurrentValues(sync.ptaSystem, result);
 	Notifier.success('Asset Allocation values loaded');
 }
 
-async function synchronizePayees(activeUrl: string) {
-	const sync = new CashierSync(activeUrl, _ptaSystem);
+async function synchronizePayees(sync: CashierSync) {
 	const response = await sync.readPayees();
-	await SyncCommon.syncPayees(_ptaSystem, response);
+	await SyncCommon.syncPayees(response);
 	Notifier.success('Payees fetched from Ledger');
 }
 
-async function synchronizeInfrastructureFiles(activeUrl: string) {
-	const sync = new CashierSync(activeUrl, _ptaSystem);
-
+async function synchronizeInfrastructureFiles(sync: CashierSync) {
 	const fileContents = await Promise.all(
 		InfrastructureFiles.map((fileName) => sync.readInfrastructureFile(fileName))
 	);

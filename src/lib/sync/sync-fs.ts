@@ -8,8 +8,11 @@ import { settings, SettingKeys } from '$lib/settings';
 import { ensureInitialized, parseMultiFile, queryMultiFile } from '$lib/services/rustledger';
 import { getQueries } from './sync-queries';
 import moment from 'moment';
-import { ISODATEFORMAT } from '$lib/constants';
+import { ISODATEFORMAT, PtaSystems } from '$lib/constants';
 import * as syncCommon from '$lib/sync/sync-common';
+import appService from '$lib/services/appService';
+import * as RledgerParser from '$lib/utils/rledgerParser';
+import db from '$lib/data/db';
 
 // IndexedDB persistence for directory handle
 const IDB_NAME = 'cashier-fs-handles';
@@ -132,7 +135,7 @@ async function loadFileMap(): Promise<{ fileMap: Record<string, string>; mainFil
     return { fileMap, mainFileName };
 }
 
-async function synchronize() {
+async function synchronize(syncOptions: syncCommon.SyncOptions): Promise<void> {
     console.log('Synchronization starting...');
 
     try {
@@ -148,17 +151,22 @@ async function synchronize() {
         }
 
         // Run queries and store results via sync-common.
-        const ptaSystem = await settings.get<string>(SettingKeys.ptaSystem) || 'rledger';
-        const queries = getQueries(ptaSystem);
+        const queries = getQueries(PtaSystems.rledger);
 
-        // - payees
-        await syncPayeesFromFs(queries, fileMap, mainFileName);
+        if (syncOptions.syncAccounts) {
+            // - accounts with balances
+            await syncAccountsFromFs(queries, fileMap, mainFileName);
+        }
 
         // - opening balances
         // TODO
+        if (syncOptions.syncAaValues) {
+        }
 
-        // - accounts with balances
-        await syncAccountsFromFs(queries, fileMap, mainFileName);
+        if (syncOptions.syncPayees) {
+            // - payees
+            await syncPayeesFromFs(queries, fileMap, mainFileName);
+        }
 
         // Asset Allocation definition (.toml)
         // TODO
@@ -172,9 +180,23 @@ async function synchronize() {
 async function syncAccountsFromFs(queries: ReturnType<typeof getQueries>,
     fileMap: Record<string, string>, mainFileName: string) {
     // const balancesQuery = queries.balances();
-    // const response = queryMultiFile(fileMap, mainFileName, balancesQuery);
-    // const content: Record<string, unknown> = response.json();
-    // await syncCommon.syncAccounts(queries.ptaSystem, content);
+    const query = queries.accounts();
+    const result = queryMultiFile(fileMap, mainFileName, query);
+
+    // parse accounts: [account, balance, currency]
+    const accounts = result.rows.map((row: any) => ({
+        balance: row[0],
+        currency: row[1],
+        account: row[2],
+    }));
+
+    const entities = accounts.map((item: any) => 
+        RledgerParser.parseBalanceSheetRow(item));
+    
+    await appService.deleteAccounts();
+
+    // insert accounts
+    await db.accounts.bulkPut(entities);
 }
 
 async function syncPayeesFromFs(queries: ReturnType<typeof getQueries>,
