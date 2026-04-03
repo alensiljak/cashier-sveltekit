@@ -7,30 +7,47 @@ type ToastOptions = {
 };
 
 class DaisyUIToaster {
-	show(options: ToastOptions) {
-		// Create a toast element and add it to the DOM
-		const toast = document.createElement('div');
-		toast.className = `toast toast-bottom toast-center`;
+	private toastContainer: HTMLElement | null = null;
 
-		let alertClass = 'alert';
+	constructor() {
+		// Create a container for all toasts if it doesn't exist
+		this.toastContainer = document.getElementById('toast-container');
+		if (!this.toastContainer) {
+			this.toastContainer = document.createElement('div');
+			this.toastContainer.id = 'toast-container';
+			this.toastContainer.className = 'fixed bottom-8 left-1/2 -translate-x-1/2 z-[1000] pointer-events-none w-[90%] max-w-md flex flex-col items-center gap-2';
+			document.body.appendChild(this.toastContainer);
+		}
+	}
+
+	show(options: ToastOptions) {
+		if (!this.toastContainer) {
+			console.error('Toast container not initialized');
+			return;
+		}
+
+		// Create a toast element and add it to the container
+		const toast = document.createElement('div');
+		toast.className = 'alert w-full'; // Full width within container
+
 		switch (options.type) {
 			case 'success':
-				alertClass += ' alert-success';
+				toast.classList.add('alert-success');
 				break;
 			case 'error':
-				alertClass += ' alert-error';
+				toast.classList.add('alert-error');
 				break;
 			case 'warning':
-				alertClass += ' alert-warning';
+				toast.classList.add('alert-warning');
 				break;
 			case 'info':
 			default:
-				alertClass += ' alert-info';
+				toast.classList.add('alert-info');
 				break;
 		}
 
-		toast.innerHTML = `<div class="${alertClass}"><span>${options.message}</span></div>`;
-		document.body.appendChild(toast);
+		toast.innerHTML = `<span>${options.message}</span>`;
+		this.toastContainer.appendChild(toast);
 
 		// Remove the toast after the specified duration
 		setTimeout(() => {

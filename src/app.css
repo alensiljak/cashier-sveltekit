@@ -17,12 +17,7 @@ body {
 	height: 100%;
 }
 
-/* Override DaisyUI default hover effect for ghost buttons to use transparency instead of solid color */
-/*.btn.btn-ghost:hover {
-	background-color: color-mix(in srgb, currentColor 15%, transparent) !important;
-	border: 0;
+/* Toast container styling - only need pointer-events since positioning is handled by Tailwind */
+#toast-container .alert {
+	pointer-events: auto;
 }
-
-.btn.btn-ghost:active {
-	background-color: color-mix(in srgb, currentColor 25%, transparent) !important;
-}*/
