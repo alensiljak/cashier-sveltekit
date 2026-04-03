@@ -1,4 +1,7 @@
 export const AssetAllocationFilename = 'asset-allocation.toml';
+/**
+ * Filename for transactions.
+ */
 export const CashierFilename = 'cashier.bean';
 
 /**
@@ -10,7 +13,7 @@ export const InfrastructureFiles = [
 	// 'commodities.bean',
 	'accounts.bean',
 	'opening-balances.bean',
-	'cashier.bean'
+	CashierFilename
 ] as const;
 
 export enum PtaSystems {

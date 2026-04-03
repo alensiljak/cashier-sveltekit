@@ -8,12 +8,11 @@ import { settings, SettingKeys } from '$lib/settings';
 import { ensureInitialized, parseMultiFile, queryMultiFile } from '$lib/services/rustledger';
 import { getQueries } from './sync-queries';
 import moment from 'moment';
-import { ISODATEFORMAT, PtaSystems } from '$lib/constants';
+import { AssetAllocationFilename, ISODATEFORMAT, PtaSystems } from '$lib/constants';
 import * as syncCommon from '$lib/sync/sync-common';
 import * as RledgerParser from '$lib/utils/rledgerParser';
 import type { Account } from '$lib/data/model';
 import { OPFSBackend } from '$lib/storage';
-import Notifier from '$lib/utils/notifier';
 import type { CurrentValuesDict } from '$lib/data/viewModels';
 import { AssetAllocationEngine } from '$lib/assetAllocation/AssetAllocation';
 import {
@@ -329,8 +328,8 @@ function createOpeningBalancesDirective(accounts: Account[]): string {
  * store into OPFS.
  */
 async function syncAssetAllocation() {
-	const assetAllocationFile = await settings.get<string>(SettingKeys.externalAssetAllocation);
-	if (!assetAllocationFile) {
+	const source = await settings.get<string>(SettingKeys.externalAssetAllocation);
+	if (!source) {
 		throw new Error(
 			'No asset allocation file configured. Please select a file in the Configuration.'
 		);
@@ -347,12 +346,12 @@ async function syncAssetAllocation() {
 	}
 
 	// Extract relative path from the stored full path (which includes directory name)
-	const parts = assetAllocationFile.split('/');
+	const parts = source.split('/');
 	const relativePath = parts.slice(1).join('/'); // Remove the directory name prefix
 
 	const content = await readFileFromDir(dirHandle, relativePath);
 	const opfs = new OPFSBackend();
-	await opfs.writeFile('asset-allocation.toml', content);
+	await opfs.writeFile(AssetAllocationFilename, content);
 }
 
 /**

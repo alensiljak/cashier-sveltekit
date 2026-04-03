@@ -11,6 +11,7 @@ import { Account, Money } from '$lib/data/model';
 import db from '$lib/data/db';
 import { SettingKeys, settings } from '$lib/settings';
 import appService from './appService';
+import ledgerService from './ledgerService';
 
 export async function createDefaultAccounts() {
 	const accountsList = getDefaultChartOfAccounts();
@@ -36,20 +37,6 @@ async function createAccounts(accountsList: string) {
 	});
 	await db.accounts.bulkAdd(accounts);
 }
-
-// async getAccountsFromCache() {
-//   // This version simply retrieves the cached version of /accounts response.
-//   const serverUrl = await settings.get(SettingKeys.syncServerUrl)
-//   const cashierSync = new CashierSync(serverUrl)
-//   const cache = await caches.open(Constants.CacheName)
-//   const accountsResponse = await cache.match(cashierSync.getAccountsUrl())
-//   if (!accountsResponse) {
-//     throw new Error('Accounts not cached!')
-//   }
-//   const accounts = await accountsResponse.json()
-//   // they should be already sorted by name.
-//   console.debug(accounts)
-// }
 
 function getDefaultChartOfAccounts() {
 	const accountsList = `
@@ -194,21 +181,50 @@ export function getShortAccountName(accountName: string): string {
  * @returns Promise with investment accounts collection
  */
 export async function loadInvestmentAccounts(): Promise<Account[]> {
-	// get the root investment account.
-	const rootAccount: string = await settings.get(SettingKeys.rootInvestmentAccount);
+	const rootAccount = await settings.get(SettingKeys.rootInvestmentAccount);
 	if (!rootAccount) {
 		throw new Error('Root investment account not set!');
 	}
+	const currency = await appService.getDefaultCurrency();
 
-	let accounts: Account[] = await db.accounts
-		.where('name')
-		.startsWithIgnoreCase(rootAccount)
-		.toArray();
+	const bql = `SELECT account, str(value(sum(position), '${currency}')) as value,
+        sum(position) as balances
+		WHERE account ~ '^${rootAccount}'
+		GROUP BY account
+		HAVING NOT empty(sum(position))
+		ORDER BY account`;
 
-	// Get only the accounts with a current value.
-	accounts = accounts.filter((account) => account.currentValue);
+	const result = ledgerService.query(bql);
+	if (result.errors.length > 0) {
+		throw new Error(result.errors.map((e: any) => e.message).join('; '));
+	}
 
-	return accounts;
+	const accountIdx = result.columns.indexOf('account');
+	const balancesIdx = result.columns.indexOf('balances');
+	const valueIdx = result.columns.indexOf('value');
+
+	return result.rows.map((row: any) => {
+		const account = new Account(row[accountIdx]);
+        // Source:
+        // row[balancesIdx].positions is an array containing
+        // { units: { number, currency } }
+        // Destination:
+        // account.balances: { EUR: 100, USD: 200 }
+        account.balances = row[balancesIdx].positions
+            .reduce((acc: any, balance: any) => {
+                acc[balance.units.currency] = balance.units.number;
+                return acc;
+            }, {});
+        // current value
+		if (valueIdx !== -1 && row[valueIdx]) {
+			const parts = String(row[valueIdx]).split(' ');
+			if (parts.length === 2) {
+				account.currentValue = parseFloat(parts[0]);
+				account.currentCurrency = parts[1];
+			}
+		}
+		return account;
+	});
 }
 
 export async function populateAccountBalances(accounts: Account[]) {

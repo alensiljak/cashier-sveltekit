@@ -14,7 +14,6 @@ import {
 	UserError,
 	NotFoundError,
 	ValidationError,
-	type ResultWithWarnings
 } from '$lib/utils/errors';
 
 /**
@@ -338,21 +337,22 @@ export class AssetAllocationEngine {
 		const invAccounts = await loadInvestmentAccounts();
 
 		invAccounts.forEach((account) => {
-			// Current Value is populated from Ledger. Only the active accounts will have a value.
+			// Current Value is populated from Ledger. 
+			// Only the active accounts will have a value.
 			if (!account.currentValue) return;
 
 			const amount = Big(account.currentValue);
 
-			// add the account balance.
+			// Get the balance symbol/commodity, to determine the asset class.
 			const acctBalance: Money = getAccountBalance(account, defaultCurrency);
 			account.balance = acctBalance;
-
 			if (acctBalance.quantity == 0) {
 				// skip adding to the sum.
 				return;
 			}
 
 			const commodity = account.balance.currency;
+
 			// Now get the asset class for this commodity.
 			const assetClassName = this.stockIndex[commodity];
 			if (!assetClassName) {

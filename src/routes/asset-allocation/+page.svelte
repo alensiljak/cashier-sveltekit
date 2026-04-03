@@ -11,11 +11,9 @@
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import AssetClassRow from '$lib/components/AssetClassRow.svelte';
-	import { NUMBER_FORMAT } from '$lib/constants.js';
 	import { AaStocksStore, AssetAllocationStore } from '$lib/data/mainStore.js';
 	import Notifier from '$lib/utils/notifier.js';
 	import { DatabaseZapIcon, FileDownIcon, ScaleIcon } from '@lucide/svelte';
-	import numeral from 'numeral';
 	import { onMount } from 'svelte';
 
 	Notifier.init();

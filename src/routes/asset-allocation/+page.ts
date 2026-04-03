@@ -1,11 +1,12 @@
 import { AssetAllocationEngine } from '$lib/assetAllocation/AssetAllocation';
 import type { AssetClass } from '$lib/assetAllocation/AssetClass';
-import { AssetAllocationFilename } from '$lib/constants.js';
 import { AssetAllocationStore } from '$lib/data/mainStore';
 import Notifier from '$lib/utils/notifier';
 import * as OpfsLib from '$lib/utils/opfslib.js';
 import { get } from 'svelte/store';
 import { formatErrorForDisplay, AppError } from '$lib/utils/errors';
+import { SettingKeys, settings } from '$lib/settings';
+import { AssetAllocationFilename } from '$lib/constants';
 
 const aa = new AssetAllocationEngine();
 
@@ -32,6 +33,7 @@ export async function load() {
 		}
 
 		return { aa, assetClasses };
+
 	} catch (error) {
 		console.error(error);
 
@@ -50,9 +52,11 @@ export async function load() {
 }
 
 async function loadAaFromFile() {
-	const definition = await OpfsLib.readFile(AssetAllocationFilename);
+	// get the asset allocation filename from settings.
+	const filename = AssetAllocationFilename;
+	const definition = await OpfsLib.readFile(filename);
 	if (!definition) {
-		throw new Error('Could not load AA definition!');
+		throw new Error(`Could not load AA definition from ${filename}!`);
 	}
 
 	await aa.loadFullAssetAllocation(definition);
