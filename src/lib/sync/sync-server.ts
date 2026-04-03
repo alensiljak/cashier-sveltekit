@@ -167,7 +167,7 @@ export class CashierSync {
 		if (this.ptaSystem === 'beancount') {
 			content = content.map((subArray) => subArray[0]);
 		} else if (this.ptaSystem === 'rledger') {
-			content = content.rows.map((item) => item.payee);
+			// content = content.rows.map((item) => item.payee);
 		}
 
 		return content;

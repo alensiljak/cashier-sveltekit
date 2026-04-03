@@ -276,6 +276,8 @@
 		Notifier.info('Synchronization starting...');
 
 		await cashierFsSync.synchronize();
+
+		Notifier.success('Synchronization completed successfully!');
 	}
 </script>
 

@@ -7,7 +7,12 @@
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import { CashierSync } from '$lib/sync/sync-server';
 	import { InfrastructureFiles } from '$lib/constants';
-	import { syncAccounts as doSyncAccounts, syncCurrentValues as doSyncCurrentValues, syncPayees as doSyncPayees, syncInfrastructureFiles as doSyncInfrastructureFiles } from '$lib/sync/sync-common';
+	import {
+		syncAccounts as doSyncAccounts,
+		syncCurrentValues as doSyncCurrentValues,
+		syncPayees as doSyncPayees,
+		syncInfrastructureFiles as doSyncInfrastructureFiles
+	} from '$lib/sync/sync-common';
 
 	Notifier.init();
 
@@ -43,14 +48,12 @@
 	});
 
 	async function loadSettings() {
-		const storedServers = (await settings.get<SyncServerEntry[]>(
-			SettingKeys.syncServers
-		)) as SyncServerEntry[] | null;
+		const storedServers = (await settings.get<SyncServerEntry[]>(SettingKeys.syncServers)) as
+			| SyncServerEntry[]
+			| null;
 		syncServers = storedServers ?? [];
 
-		const legacySyncUrl = (await settings.get<string>(SettingKeys.syncServerUrl)) as
-			| string
-			| null;
+		const legacySyncUrl = (await settings.get<string>(SettingKeys.syncServerUrl)) as string | null;
 
 		if (syncServers.length === 0 && legacySyncUrl) {
 			const migratedEntry = {
@@ -284,7 +287,7 @@
 		const sync = new CashierSync(activeUrl, _ptaSystem);
 
 		const fileContents = await Promise.all(
-			InfrastructureFiles.map(fileName => sync.readInfrastructureFile(fileName))
+			InfrastructureFiles.map((fileName) => sync.readInfrastructureFile(fileName))
 		);
 
 		const files: Record<string, string> = {};
@@ -400,7 +403,12 @@
 	</center>
 </main>
 
-<input type="checkbox" id="sync-server-modal" class="modal-toggle" bind:checked={isServerDialogOpen} />
+<input
+	type="checkbox"
+	id="sync-server-modal"
+	class="modal-toggle"
+	bind:checked={isServerDialogOpen}
+/>
 <dialog class="modal">
 	<div class="modal-box">
 		<header class="flex justify-between">
@@ -431,7 +439,9 @@
 		<footer class="flex items-center justify-between gap-4">
 			<div>
 				{#if serverDialogMode === 'edit'}
-					<button type="button" class="btn btn-error" onclick={deleteServerFromDialog}>Delete</button>
+					<button type="button" class="btn btn-error" onclick={deleteServerFromDialog}
+						>Delete</button
+					>
 				{/if}
 			</div>
 			<div class="flex gap-4">

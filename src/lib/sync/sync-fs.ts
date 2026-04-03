@@ -9,7 +9,7 @@ import { ensureInitialized, parseMultiFile, queryMultiFile } from '$lib/services
 import { getQueries } from './sync-queries';
 import moment from 'moment';
 import { ISODATEFORMAT } from '$lib/constants';
-import { syncPayees } from './sync-common';
+import * as syncCommon from '$lib/sync/sync-common';
 
 // IndexedDB persistence for directory handle
 const IDB_NAME = 'cashier-fs-handles';
@@ -133,7 +133,7 @@ async function loadFileMap(): Promise<{ fileMap: Record<string, string>; mainFil
 }
 
 async function synchronize() {
-    console.log('Synchronization started');
+    console.log('Synchronization starting...');
 
     try {
         const { fileMap, mainFileName } = await loadFileMap();
@@ -175,8 +175,9 @@ async function syncPayeesFromFs(queries: ReturnType<typeof getQueries>,
     console.log('Payees result:', payeesResult);
 
     // Parse the result into a string[] of payee names, then store via common.
-    // TODO: adapt parsing based on the query result shape from rust ledger.
-    // await syncPayees(payeeNames);
+    const payees = payeesResult.rows.map((row: any) => row);
+
+    await syncCommon.syncPayees(payees);
 }
 
 export { synchronize };
