@@ -180,8 +180,7 @@ async function synchronize(syncOptions: syncCommon.SyncOptions): Promise<void> {
 
 		// - current values in the base currency (for asset allocation)
 		if (syncOptions.syncAaValues) {
-			console.log('Syncing AA values from filesystem is not implemented yet');
-			Notifier.warning('Syncing AA values from filesystem is not implemented yet');
+            await syncCurrentValues();
 		}
 
 		if (syncOptions.syncPayees) {
@@ -194,12 +193,17 @@ async function synchronize(syncOptions: syncCommon.SyncOptions): Promise<void> {
 	}
 }
 
+/**
+ * The list of open accounts with opening dates.
+ * @param queries 
+ * @param fileMap 
+ * @param mainFileName 
+ */
 async function syncAccountsFromFs(
 	queries: ReturnType<typeof getQueries>,
 	fileMap: Record<string, string>,
 	mainFileName: string
 ) {
-	// const balancesQuery = queries.balances();
 	const query = queries.openAccounts();
 	const result = queryMultiFile(fileMap, mainFileName, query);
 
@@ -215,6 +219,12 @@ async function syncAccountsFromFs(
 	await opfs.writeFile(filename, accountDirectives);
 }
 
+/**
+ * Balances can only be retrieved from #transactions.
+ * @param queries 
+ * @param fileMap 
+ * @param mainFileName 
+ */
 async function syncAccountBalances(
 	queries: ReturnType<typeof getQueries>,
 	fileMap: Record<string, string>,
@@ -313,6 +323,15 @@ async function syncAssetAllocation() {
 	const content = await readFileFromDir(dirHandle, relativePath);
 	const opfs = new OPFSBackend();
 	await opfs.writeFile('asset-allocation.toml', content);
+}
+
+async function syncCurrentValues(queries: ReturnType<typeof getQueries>,
+    fileMap: Record<string, string>, mainFileName: string) {
+    // currentValues query
+	const query = queries.openAccounts();
+	const result = queryMultiFile(fileMap, mainFileName, query);
+
+    console.log(result);
 }
 
 async function syncPayeesFromFs(

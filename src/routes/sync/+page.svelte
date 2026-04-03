@@ -144,6 +144,16 @@
 		await settings.set(SettingKeys.syncPayees, syncPayees);
 		await settings.set(SettingKeys.syncInfrastructureFiles, syncInfrastructureFiles);
 	}
+
+	function toggleAllCheckboxes(checked: boolean) {
+		syncAccounts = checked;
+		syncAaValues = checked;
+		syncAssetAllocation = checked;
+		syncPayees = checked;
+		syncOpeningBalances = checked;
+		syncInfrastructureFiles = checked;
+		saveSettings();
+	}
 </script>
 
 <Toolbar title="Cashier Sync">
@@ -215,51 +225,76 @@
 	</center>
 
 	<div class="flex flex-col space-y-8 pt-6">
-		<label class="flex items-center space-x-2">
-			<input
-				class="checkbox checkbox-primary rounded"
-				type="checkbox"
-				bind:checked={syncAccounts}
-				onchange={saveSettings}
-			/>
-			<p>Sync accounts</p>
-		</label>
-		<label class="flex items-center space-x-2">
-			<input
-				class="checkbox checkbox-primary rounded"
-				type="checkbox"
-				bind:checked={syncOpeningBalances}
-				onchange={saveSettings}
-			/>
-			<p>Sync opening balances</p>
-		</label>
-		<label class="flex items-center space-x-2">
-			<input
-				class="checkbox checkbox-primary rounded"
-				type="checkbox"
-				bind:checked={syncAssetAllocation}
-				onchange={saveSettings}
-			/>
-			<p>Asset Allocation definition</p>
-		</label>
-		<label class="flex items-center space-x-2">
-			<input
-				class="checkbox checkbox-primary rounded"
-				type="checkbox"
-				bind:checked={syncAaValues}
-				onchange={saveSettings}
-			/>
-			<p>Sync account balances in base currency, for asset allocation.</p>
-		</label>
-		<label class="flex items-center space-x-2">
-			<input
-				class="checkbox checkbox-primary rounded"
-				type="checkbox"
-				bind:checked={syncPayees}
-				onchange={saveSettings}
-			/>
-			<p>Sync Payees</p>
-		</label>
+		<div class="border border-base-200 rounded-lg p-4">
+			<div class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-4">
+				<div class="flex items-center">
+					<input
+						class="checkbox checkbox-primary rounded"
+						type="checkbox"
+						bind:checked={syncInfrastructureFiles}
+						onchange={(e) => toggleAllCheckboxes(e.target.checked)}
+					/>
+				</div>
+				<div class="flex items-center">
+					<p><strong></strong></p>
+				</div>
+				<div class="flex items-center">
+					<input
+						class="checkbox checkbox-primary rounded"
+						type="checkbox"
+						bind:checked={syncAccounts}
+						onchange={saveSettings}
+					/>
+				</div>
+				<div class="flex items-center">
+					<p>Sync accounts</p>
+				</div>
+				<div class="flex items-center">
+					<input
+						class="checkbox checkbox-primary rounded"
+						type="checkbox"
+						bind:checked={syncOpeningBalances}
+						onchange={saveSettings}
+					/>
+				</div>
+				<div class="flex items-center">
+					<p>Sync opening balances</p>
+				</div>
+				<div class="flex items-center">
+					<input
+						class="checkbox checkbox-primary rounded"
+						type="checkbox"
+						bind:checked={syncAssetAllocation}
+						onchange={saveSettings}
+					/>
+				</div>
+				<div class="flex items-center">
+					<p>Asset Allocation definition</p>
+				</div>
+				<div class="flex items-center">
+					<input
+						class="checkbox checkbox-primary rounded"
+						type="checkbox"
+						bind:checked={syncAaValues}
+						onchange={saveSettings}
+					/>
+				</div>
+				<div class="flex items-center">
+					<p>Sync account balances in base currency, for asset allocation.</p>
+				</div>
+				<div class="flex items-center">
+					<input
+						class="checkbox checkbox-primary rounded"
+						type="checkbox"
+						bind:checked={syncPayees}
+						onchange={saveSettings}
+					/>
+				</div>
+				<div class="flex items-center">
+					<p>Sync Payees</p>
+				</div>
+			</div>
+		</div>
 	</div>
 
 	<center class="pt-10">
