@@ -11,7 +11,8 @@
 		FolderOpenIcon,
 		FileIcon,
 		FolderIcon,
-		BookOpenIcon
+		BookOpenIcon,
+		XIcon
 	} from '@lucide/svelte';
 	import Notifier from '$lib/utils/notifier';
 	import { settings, SettingKeys } from '$lib/settings';
@@ -85,6 +86,7 @@
 	let preview = $state('');
 	let isPreviewLoading = $state(false);
 	let fileMeta = $state<Record<string, string>>({});
+	let showPreviewPanel = $state(false);
 
 	onMount(async () => {
 		const stored = await loadPersistedHandle();
@@ -123,6 +125,7 @@
 		selectedEntry = null;
 		preview = '';
 		fileMeta = {};
+		showPreviewPanel = false;
 
 		try {
 			const list: EntryInfo[] = [];
@@ -188,6 +191,7 @@
 		isPreviewLoading = true;
 		preview = '';
 		fileMeta = {};
+		showPreviewPanel = true;
 
 		try {
 			const fileHandle = await dirHandle.getFileHandle(entry.name);
@@ -321,10 +325,20 @@
 				</table>
 			</div>
 
-			{#if selectedEntry}
-				<div class="mt-6">
-					<!-- File metadata -->
-					<h3 class="text-lg font-semibold mb-2">{selectedEntry.name}</h3>
+			{#if selectedEntry && showPreviewPanel}
+				<div class="mt-6 border border-base-300 rounded-lg">
+					<!-- Panel header -->
+					<div class="flex items-center justify-between px-4 py-2 border-b border-base-300 bg-base-200 rounded-t-lg">
+						<h3 class="text-lg font-semibold">{selectedEntry.name}</h3>
+						<button
+							class="btn btn-sm btn-ghost btn-square"
+							onclick={() => { showPreviewPanel = false; selectedEntry = null; }}
+							aria-label="Close preview"
+						>
+							<XIcon class="w-4 h-4" />
+						</button>
+					</div>
+					<div class="p-4">
 
 					{#if isPreviewLoading}
 						<div class="flex justify-center items-center p-4">
@@ -352,6 +366,7 @@
 						>{preview}</pre>
 					{/if}
 				</div>
+			</div>
 			{/if}
 		{/if}
 	</section>
