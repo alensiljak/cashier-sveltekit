@@ -49,10 +49,10 @@
 	let aaDefinitionFileName = $state(''); // same
 
 	onMount(async () => {
-		const fullBookRoot = await settings.get<string>(SettingKeys.fullBookRoot);
-		bookRootFileName = fullBookRoot ?? '';
+		const externalBook = await settings.get<string>(SettingKeys.externalBook);
+		bookRootFileName = externalBook ?? '';
 
-		const aaDef = await settings.get<string>(SettingKeys.assetAllocationDefinition);
+		const aaDef = await settings.get<string>(SettingKeys.externalAssetAllocation);
 		aaDefinitionFileName = aaDef ?? '';
 
 		const stored = await loadPersistedHandle();
@@ -346,7 +346,7 @@
 	async function selectBookFile() {
 		if (!selectedEntry || selectedEntry.kind !== 'file') return;
 		const fullPath = `${dirName}/${selectedEntry.path}`;
-		await settings.set(SettingKeys.fullBookRoot, fullPath);
+		await settings.set(SettingKeys.externalBook, fullPath);
 		bookRootFileName = fullPath;
 		Notifier.success(`Book file set to: ${selectedEntry.path}`);
 	}
@@ -354,7 +354,7 @@
 	async function selectAssetAllocationFile() {
 		if (!selectedEntry || selectedEntry.kind !== 'file') return;
 		const fullPath = `${dirName}/${selectedEntry.path}`;
-		await settings.set(SettingKeys.assetAllocationDefinition, fullPath);
+		await settings.set(SettingKeys.externalAssetAllocation, fullPath);
 		aaDefinitionFileName = fullPath;
 		Notifier.success(`Asset Allocation file set to: ${selectedEntry.path}`);
 	}
@@ -503,7 +503,7 @@
 							<span>Book set: {bookRootFileName}</span>
 							<button class="btn btn-xs btn-ghost border border-warning" onclick={() => {
 								bookRootFileName = '';
-								settings.set(SettingKeys.fullBookRoot, null);
+								settings.set(SettingKeys.externalBook, null);
 							}}>
 								<XIcon class="w-4 h-4" /> Unset
 							</button>
@@ -515,7 +515,7 @@
 							<span>Asset Allocation set: {aaDefinitionFileName}</span>
 							<button class="btn btn-xs btn-ghost border border-warning" onclick={() => {
 								aaDefinitionFileName = '';
-								settings.set(SettingKeys.assetAllocationDefinition, null);
+												settings.set(SettingKeys.externalAssetAllocation, null);
 							}}>
 								<XIcon class="w-4 h-4" /> Unset
 							</button>

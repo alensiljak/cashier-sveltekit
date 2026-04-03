@@ -9,16 +9,14 @@ import { settings, SettingKeys } from '$lib/settings';
 import * as LedgerParser from '$lib/utils/ledgerParser';
 import * as BeancountParser from '$lib/utils/beancountParser';
 import * as RledgerParser from '$lib/utils/rledgerParser';
-import * as OpfsLib from '$lib/utils/opfslib';
-import ledgerService from '$lib/services/ledgerService';
 import type { CurrentValuesDict } from '$lib/data/viewModels';
 import { PtaSystems } from '$lib/constants';
 
 export interface SyncOptions {
 	syncAccounts?: boolean;
 	syncAaValues?: boolean;
+	syncAssetAllocation?: boolean;
 	syncPayees?: boolean;
-	syncInfrastructureFiles?: boolean;
 	syncOpeningBalances?: boolean;
 }
 
@@ -69,17 +67,4 @@ export async function syncPayees(payeeNames: string[]): Promise<void> {
 	const dal = new CashierDAL();
 	await dal.deletePayees();
 	await appService.importPayees(payeeNames);
-}
-
-/**
- * Save infrastructure files to OPFS and invalidate the ledger cache.
- */
-export async function syncInfrastructureFiles(files: Record<string, string>): Promise<void> {
-	await Promise.all(
-		Object.entries(files).map(([fileName, content]) =>
-			OpfsLib.saveFile(fileName, content)
-		)
-	);
-
-	await ledgerService.invalidate();
 }

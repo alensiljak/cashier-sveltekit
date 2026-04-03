@@ -52,15 +52,15 @@ async function loadPersistedHandle(): Promise<FileSystemDirectoryHandle | null> 
 }
 
 async function readMainBeancountFile(): Promise<{ fileName: string; content: string; dirHandle: FileSystemDirectoryHandle }> {
-    const fullBookRoot = await settings.get<string>(SettingKeys.fullBookRoot);
-    if (!fullBookRoot) {
+    const externalBook = await settings.get<string>(SettingKeys.externalBook);
+    if (!externalBook) {
         throw new Error('No book root file configured. Please select a file in the fs-sync page.');
     }
 
-    const parts = fullBookRoot.split('/');
+    const parts = externalBook.split('/');
     const fileName = parts.pop();
     if (!fileName) {
-        throw new Error('Invalid fullBookRoot path');
+        throw new Error('Invalid externalBook path');
     }
 
     const dirHandle = await loadPersistedHandle();
@@ -164,20 +164,21 @@ async function synchronize(syncOptions: syncCommon.SyncOptions): Promise<void> {
             await syncAccountBalances(queries, fileMap, mainFileName);
         }
 
-        // TODO
+        // Asset Allocation definition (.toml)
+        if (syncOptions.syncAssetAllocation) {
+            await syncAssetAllocation();
+        }
+
+        // - current values in the base currency (for asset allocation)
         if (syncOptions.syncAaValues) {
             console.log('Syncing AA values from filesystem is not implemented yet');
-            Notifier.info('Syncing AA values from filesystem is not implemented yet');
+            Notifier.warning('Syncing AA values from filesystem is not implemented yet');
         }
 
         if (syncOptions.syncPayees) {
             // - payees
             await syncPayeesFromFs(queries, fileMap, mainFileName);
         }
-
-        // Asset Allocation definition (.toml)
-        // TODO
-
     } catch (error) {
         console.error('Synchronization error:', error);
         throw error;
@@ -266,6 +267,31 @@ function createOpeningBalancesDirective(accounts: Account[]): string {
 
     const record = lines.join('\n');
     return record;
+}
+
+/**
+ * Read the marked Asset Allocation file from external filesystem and 
+ * store into OPFS.
+ */
+async function syncAssetAllocation() {
+    const assetAllocationFile = await settings.get<string>(SettingKeys.externalAssetAllocation);
+    if (!assetAllocationFile) {
+        throw new Error('No asset allocation file configured. Please select a file in the Configuration.');
+    }
+
+    const dirHandle = await loadPersistedHandle();
+    if (!dirHandle) {
+        throw new Error('No directory selected. Please open a directory in the fs-sync page.');
+    }
+
+    const permission = await (dirHandle as any).requestPermission({ mode: 'read' });
+    if (permission !== 'granted') {
+        throw new Error('Read permission denied for directory');
+    }
+
+    const content = await readFileFromDir(dirHandle, assetAllocationFile);
+    const opfs = new OPFSBackend();
+    await opfs.writeFile('asset-allocation.toml', content);
 }
 
 async function syncPayeesFromFs(queries: ReturnType<typeof getQueries>,

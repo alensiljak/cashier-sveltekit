@@ -7,13 +7,7 @@
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import * as SyncBeancount from '$lib/sync/sync-beancount';
 	import { InfrastructureFiles, PtaSystems } from '$lib/constants';
-	import {
-		syncAccounts as doSyncAccounts,
-		syncCurrentValues as doSyncCurrentValues,
-		syncPayees as doSyncPayees,
-		syncInfrastructureFiles as doSyncInfrastructureFiles
-	} from '$lib/sync/sync-common';
-	import { goto } from '$app/navigation';
+		import { goto } from '$app/navigation';
 	import * as cashierFsSync from '$lib/sync/sync-fs';
 	import ledgerService from '$lib/services/ledgerService';
 
@@ -21,6 +15,7 @@
 
 	let syncAccounts = $state(false);
 	let syncAaValues = $state(false);
+	let syncAssetAllocation = $state(false);
 	let syncPayees = $state(false);
 	let syncInfrastructureFiles = $state(false);
 	let syncOpeningBalances = $state(false);
@@ -44,6 +39,7 @@
 
 		syncAccounts = (await settings.get(SettingKeys.syncAccounts)) ?? false;
 		syncAaValues = (await settings.get(SettingKeys.syncAaValues)) ?? false;
+		syncAssetAllocation = (await settings.get(SettingKeys.syncAssetAllocation)) ?? false;
 		syncPayees = (await settings.get(SettingKeys.syncPayees)) ?? false;
 		syncInfrastructureFiles = (await settings.get(SettingKeys.syncInfrastructureFiles)) ?? false;
 		syncOpeningBalances = (await settings.get(SettingKeys.syncOpeningBalances)) ?? false;
@@ -103,8 +99,8 @@
 			let syncOptions: SyncBeancount.SyncOptions = {
 				syncAccounts,
 				syncAaValues,
+				syncAssetAllocation,
 				syncPayees,
-				syncInfrastructureFiles,
 				syncOpeningBalances
 			};
 
@@ -144,6 +140,7 @@
 		await settings.set(SettingKeys.syncAccounts, syncAccounts);
 		await settings.set(SettingKeys.syncOpeningBalances, syncOpeningBalances);
 		await settings.set(SettingKeys.syncAaValues, syncAaValues);
+		await settings.set(SettingKeys.syncAssetAllocation, syncAssetAllocation);
 		await settings.set(SettingKeys.syncPayees, syncPayees);
 		await settings.set(SettingKeys.syncInfrastructureFiles, syncInfrastructureFiles);
 	}
@@ -240,6 +237,15 @@
 			<input
 				class="checkbox checkbox-primary rounded"
 				type="checkbox"
+				bind:checked={syncAssetAllocation}
+				onchange={saveSettings}
+			/>
+			<p>Asset Allocation definition</p>
+		</label>
+		<label class="flex items-center space-x-2">
+			<input
+				class="checkbox checkbox-primary rounded"
+				type="checkbox"
 				bind:checked={syncAaValues}
 				onchange={saveSettings}
 			/>
@@ -254,15 +260,6 @@
 			/>
 			<p>Sync Payees</p>
 		</label>
-		<!-- <label class="flex items-center space-x-2">
-			<input
-				class="checkbox checkbox-primary rounded"
-				type="checkbox"
-				bind:checked={syncInfrastructureFiles}
-				onchange={saveSettings}
-			/>
-			<p>Sync infrastructure files (book, commodities, accounts)</p>
-		</label> -->
 	</div>
 
 	<center class="pt-10">

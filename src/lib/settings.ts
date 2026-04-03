@@ -51,6 +51,7 @@ export const SettingKeys = {
 	// synchronization choices
 	syncAccounts: 'syncAccounts',
 	syncAaValues: 'syncAaValues',
+	syncAssetAllocation: 'syncAssetAllocation',
 	syncPayees: 'syncPayees',
 	syncInfrastructureFiles: 'syncInfrastructureFiles',
 	syncOpeningBalances: 'syncOpeningBalances',
@@ -63,7 +64,8 @@ export const SettingKeys = {
 	// Storage backend
 	storageBackend: 'storageBackend',
 	// Full path to the main book/journal file (set via fs-sync page)
-	fullBookRoot: 'fullBookRoot'
+	externalBook: 'externalBook',
+	externalAssetAllocation: 'externalAssetAllocation'
 };
 
 export const CardNames = {
