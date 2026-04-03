@@ -131,13 +131,13 @@
 			// invalidate cache and reload data
 			await ledgerService.invalidate();
 
+			rotationClass = '';
 			Notifier.success('Synchronization completed successfully!');
 		} catch (error: any) {
+			rotationClass = '';
 			console.error(error);
 			Notifier.error(error.message);
 		}
-
-		rotationClass = '';
 	}
 
 	async function saveSettings() {
