@@ -60,7 +60,9 @@ export const SettingKeys = {
 	syncServers: 'syncServers',
 	syncActiveServerId: 'syncActiveServerId',
 	// Storage backend
-	storageBackend: 'storageBackend'
+	storageBackend: 'storageBackend',
+	// Full path to the main book/journal file (set via fs-sync page)
+	fullBookRoot: 'fullBookRoot'
 };
 
 export const CardNames = {
@@ -77,7 +79,7 @@ class Settings {
 	 * @param {any} key
 	 * @returns Promise with the Setting object
 	 */
-	async get<T>(key: unknown): Promise<T> {
+	async get<T>(key: unknown): Promise<T | null> {
 		const setting = await db.settings.get(key);
 
 		if (!setting) return null;

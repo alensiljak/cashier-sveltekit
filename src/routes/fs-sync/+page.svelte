@@ -1,19 +1,74 @@
-<!-- 
+<!--
 * Synchronization of the OPFS ledger storage with a directory on the
 * current device. This requires File System API access, provided by
 * Chromium-based browsers.
 -->
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import {
 		RefreshCcwIcon,
 		FolderOpenIcon,
 		FileIcon,
-		FolderIcon
+		FolderIcon,
+		BookOpenIcon
 	} from '@lucide/svelte';
 	import Notifier from '$lib/utils/notifier';
+	import { settings, SettingKeys } from '$lib/settings';
 
 	Notifier.init();
+
+	// IndexedDB persistence for directory handle (same mechanism as settings page)
+	const IDB_NAME = 'cashier-fs-handles';
+	const IDB_STORE = 'handles';
+	const HANDLE_KEY = 'fsSyncDirectoryHandle';
+
+	function openIdb(): Promise<IDBDatabase> {
+		return new Promise((resolve, reject) => {
+			const req = indexedDB.open(IDB_NAME, 1);
+			req.onupgradeneeded = () => {
+				req.result.createObjectStore(IDB_STORE);
+			};
+			req.onsuccess = () => resolve(req.result);
+			req.onerror = () => reject(req.error);
+		});
+	}
+
+	async function persistHandle(handle: FileSystemDirectoryHandle): Promise<void> {
+		const db = await openIdb();
+		return new Promise((resolve, reject) => {
+			const tx = db.transaction(IDB_STORE, 'readwrite');
+			tx.objectStore(IDB_STORE).put(handle, HANDLE_KEY);
+			tx.oncomplete = () => {
+				db.close();
+				resolve();
+			};
+			tx.onerror = () => {
+				db.close();
+				reject(tx.error);
+			};
+		});
+	}
+
+	async function loadPersistedHandle(): Promise<FileSystemDirectoryHandle | null> {
+		try {
+			const db = await openIdb();
+			return new Promise((resolve, reject) => {
+				const tx = db.transaction(IDB_STORE, 'readonly');
+				const req = tx.objectStore(IDB_STORE).get(HANDLE_KEY);
+				req.onsuccess = () => {
+					db.close();
+					resolve(req.result ?? null);
+				};
+				req.onerror = () => {
+					db.close();
+					reject(req.error);
+				};
+			});
+		} catch {
+			return null;
+		}
+	}
 
 	interface EntryInfo {
 		name: string;
@@ -31,10 +86,27 @@
 	let isPreviewLoading = $state(false);
 	let fileMeta = $state<Record<string, string>>({});
 
+	onMount(async () => {
+		const stored = await loadPersistedHandle();
+		if (stored) {
+			try {
+				const permission = await (stored as any).requestPermission({ mode: 'read' });
+				if (permission === 'granted') {
+					dirHandle = stored;
+					dirName = stored.name;
+					await loadEntries();
+				}
+			} catch {
+				// Permission denied or unavailable
+			}
+		}
+	});
+
 	async function pickDirectory() {
 		try {
 			dirHandle = await (window as any).showDirectoryPicker({ mode: 'read' });
 			dirName = dirHandle!.name;
+			await persistHandle(dirHandle!);
 			await loadEntries();
 		} catch (error: any) {
 			if (error.name !== 'AbortError') {
@@ -149,10 +221,17 @@
 			isPreviewLoading = false;
 		}
 	}
+
+	async function selectBookFile() {
+		if (!selectedEntry || selectedEntry.kind !== 'file') return;
+		const path = `${dirName}/${selectedEntry.name}`;
+		await settings.set(SettingKeys.fullBookRoot, path);
+		Notifier.success(`Book file set to: ${selectedEntry.name}`);
+	}
 </script>
 
 <article>
-	<Toolbar title="File System">
+	<Toolbar title="File System Synchronization">
 		{#snippet menuItems()}
 			<li>
 				<button class="btn btn-sm btn-ghost gap-2" onclick={pickDirectory}>
@@ -169,6 +248,16 @@
 					>
 						<RefreshCcwIcon class="w-5 h-5 {isLoading ? 'animate-spin' : ''}" />
 						<span>Refresh</span>
+					</button>
+				</li>
+				<li>
+					<button
+						class="btn btn-sm btn-ghost gap-2"
+						onclick={selectBookFile}
+						disabled={!selectedEntry || selectedEntry.kind !== 'file'}
+					>
+						<BookOpenIcon class="w-5 h-5" />
+						<span>Set book file</span>
 					</button>
 				</li>
 			{/if}
@@ -199,7 +288,7 @@
 				({entries.length} entries)
 			</p>
 
-			<div class="mb-4 overflow-x-auto">
+			<div class="mb-4 overflow-x-auto overflow-y-auto" style="height: 400px;">
 				<table class="table table-zebra table-sm">
 					<thead>
 						<tr>
