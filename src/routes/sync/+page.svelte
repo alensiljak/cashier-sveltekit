@@ -23,6 +23,7 @@ import { syncProgress } from '$lib/stores/syncProgressStore';
 
 	let rotationClass = $state('');
 	let syncStarted = $state(false);
+	let syncing = $state(false);
 
 	type ConfigSource = 'filesystem' | 'rledger' | 'beancount' | 'ledger';
 	let configSource = $state<ConfigSource>('filesystem');
@@ -95,6 +96,7 @@ import { syncProgress } from '$lib/stores/syncProgressStore';
 	async function onSyncClicked() {
 		Notifier.info('Synchronization starting...');
 
+		syncing = true;
 		syncStarted = true;
 		rotationClass = rotationClass == '' ? 'animate-[spin_2s_linear_infinite]' : '';
 
@@ -131,9 +133,11 @@ import { syncProgress } from '$lib/stores/syncProgressStore';
 			await ledgerService.invalidate();
 
 			rotationClass = '';
+			syncing = false;
 			Notifier.success('Synchronization completed successfully!');
 		} catch (error: any) {
 			rotationClass = '';
+			syncing = false;
 			console.error(error);
 			Notifier.error(error.message);
 		}
@@ -300,7 +304,7 @@ import { syncProgress } from '$lib/stores/syncProgressStore';
 	</div>
 
 	<center class="pt-10">
-		<button class="btn bg-accent text-secondary rounded uppercase" onclick={onSyncClicked}>
+		<button class="btn bg-accent text-secondary rounded uppercase" onclick={onSyncClicked} disabled={syncing}>
 			<span><RefreshCcw class={rotationClass} style="animation-direction: reverse;" /></span>
 			<span>Synchronize</span>
 		</button>
