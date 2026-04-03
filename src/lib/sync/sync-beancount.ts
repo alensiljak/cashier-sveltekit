@@ -4,7 +4,7 @@
  */
 import { settings, SettingKeys } from '$lib/settings';
 import moment from 'moment';
-import { InfrastructureFiles, ISODATEFORMAT, PtaSystems } from '$lib/constants';
+import { ISODATEFORMAT, PtaSystems } from '$lib/constants';
 import { getQueries } from './sync-queries';
 import type { Queries } from './sync-queries';
 import Notifier from '$lib/utils/notifier';
