@@ -234,18 +234,19 @@ class LedgerService {
 				if (content) {
 					parts.push(content);
 				}
-			} catch {
+			} catch (e) {
 				// Infrastructure file not yet synced — that's fine.
+				console.warn(`Could not read ${filename} from OPFS, skipping.`, e);
 			}
 		}
 
 		// Read or create cashier.bean (device transactions).
-		let cashier = await opfslib.readFile(CashierFilename);
-		if (cashier === undefined) {
-			await opfslib.saveFile(CashierFilename, '');
-			cashier = '';
-		}
-		parts.push(cashier);
+		// let cashier = await opfslib.readFile(CashierFilename);
+		// if (cashier === undefined) {
+		// 	await opfslib.saveFile(CashierFilename, '');
+		// 	cashier = '';
+		// }
+		// parts.push(cashier);
 
 		return parts.join('\n\n');
 	}

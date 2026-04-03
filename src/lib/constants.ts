@@ -7,8 +7,9 @@ export const CashierFilename = 'cashier.bean';
  */
 export const InfrastructureFiles = [
 	'book.bean',
-	'commodities.bean',
-	'accounts.bean'
+	// 'commodities.bean',
+	'accounts.bean',
+	'cashier.bean'
 ] as const;
 
 export enum PtaSystems {

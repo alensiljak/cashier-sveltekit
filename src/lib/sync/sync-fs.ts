@@ -5,7 +5,7 @@
  */
 
 import { settings, SettingKeys } from '$lib/settings';
-import { ensureInitialized, parseMultiFile, queryMultiFile } from '$lib/services/rustledger';
+import { ensureInitialized, parseMultiFile, queryMultiFile, createParsedLedger } from '$lib/services/rustledger';
 import { getQueries } from './sync-queries';
 import moment from 'moment';
 import { ISODATEFORMAT, PtaSystems } from '$lib/constants';
@@ -13,6 +13,9 @@ import * as syncCommon from '$lib/sync/sync-common';
 import appService from '$lib/services/appService';
 import * as RledgerParser from '$lib/utils/rledgerParser';
 import db from '$lib/data/db';
+import type { Account } from '$lib/data/model';
+import { OPFSBackend } from '$lib/storage';
+import { mapDirectiveSpans, replaceDirectiveBySpan } from '$lib/rledger/sourceEditor';
 
 // IndexedDB persistence for directory handle
 const IDB_NAME = 'cashier-fs-handles';
@@ -192,11 +195,76 @@ async function syncAccountsFromFs(queries: ReturnType<typeof getQueries>,
 
     const entities = accounts.map((item: any) => 
         RledgerParser.parseBalanceSheetRow(item));
-    
-    await appService.deleteAccounts();
 
+    const record = createOpeningBalances(entities);
+
+    // await appService.deleteAccounts();
     // insert accounts
-    await db.accounts.bulkPut(entities);
+    // await db.accounts.bulkPut(entities);
+
+    // Instead of saving to the database, save to the initialization file.
+    await saveOpeningBalances(record);
+}
+
+/**
+ * Save opening balances record to the book.bean file in OPFS.
+ * Replaces the existing opening balances transaction in place, preserving
+ * all other directives (options, plugins, etc.). If none exists, appends.
+ * Creates the file if it does not exist.
+ */
+async function saveOpeningBalances(record: string) {
+    const opfs = new OPFSBackend();
+    const existing = await opfs.readFile('book.bean');
+
+    if (!existing) {
+        await opfs.writeFile('book.bean', record);
+        return;
+    }
+
+    const ledger = createParsedLedger(existing);
+    if (!ledger) {
+        // WASM unavailable — fall back to appending a replacement marker
+        await opfs.writeFile('book.bean', existing + '\n\n' + record);
+        return;
+    }
+
+    const spans = mapDirectiveSpans(existing, ledger);
+    ledger.free();
+
+    // Find the span whose source text starts with the opening balances date
+    const OPENING_DATE = '1970-01-01';
+    const spanIndex = spans.findIndex(s => s.sourceText.startsWith(OPENING_DATE));
+
+    let newContent: string;
+    if (spanIndex !== -1) {
+        newContent = replaceDirectiveBySpan(existing, spans, spanIndex, record);
+    } else {
+        newContent = existing.trimEnd() + '\n\n' + record;
+    }
+
+    await opfs.writeFile('book.bean', newContent);
+}
+
+/**
+ * Creates transaction directives for opening balances based on the list of accounts.
+ * @param accounts List of accounts with balances.
+ */
+function createOpeningBalances(accounts: Account[]): string {
+    const date = '1970-01-01';
+    const lines: string[] = [`${date} * "Opening Balances"`];
+
+    for (const account of accounts) {
+        if (!account.balances) continue;
+        for (const [currency, amount] of Object.entries(account.balances)) {
+            if (amount === 0) continue;
+            lines.push(`    ${account.name}  ${amount} ${currency}`);
+        }
+    }
+
+    lines.push(`    Equity:OpeningBalances`);
+
+    const record = lines.join('\n');
+    return record;
 }
 
 async function syncPayeesFromFs(queries: ReturnType<typeof getQueries>,

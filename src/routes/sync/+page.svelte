@@ -15,6 +15,7 @@
 	} from '$lib/sync/sync-common';
 	import { goto } from '$app/navigation';
 	import * as cashierFsSync from '$lib/sync/sync-fs';
+	import ledgerService from '$lib/services/ledgerService';
 
 	Notifier.init();
 
@@ -123,6 +124,10 @@
 					Notifier.warning('Synchronization with Cashier Server (Ledger-cli) not implemented yet.');
 					break;
 			}
+
+			// invalidate cache and reload data
+			await ledgerService.invalidate();
+
 		} catch (error: any) {
 			console.error(error);
 			Notifier.error(error.message);
