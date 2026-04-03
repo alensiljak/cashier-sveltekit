@@ -8,7 +8,10 @@
  */
 
 import { settings, SettingKeys } from '$lib/settings';
-import { ensureInitialized, parseMultiFile } from '$lib/services/rustledger';
+import { ensureInitialized, parseMultiFile, queryMultiFile } from '$lib/services/rustledger';
+import { getQueries } from './sync-queries';
+import moment from 'moment';
+import { ISODATEFORMAT } from './constants';
 
 // IndexedDB persistence for directory handle
 const IDB_NAME = 'cashier-fs-handles';
@@ -55,7 +58,7 @@ async function readMainBeancountFile(): Promise<{ fileName: string; content: str
     // Parse the path: "dirName/filename.beancount"
     const parts = fullBookRoot.split('/');
     const fileName = parts.pop();
-    console.log('Full book root:', fullBookRoot, 'Parsed file name:', fileName);
+    // console.log('Full book root:', fullBookRoot, 'Parsed file name:', fileName);
     if (!fileName) {
         throw new Error('Invalid fullBookRoot path');
     }
@@ -101,6 +104,29 @@ async function readFileFromDir(dirHandle: FileSystemDirectoryHandle, filename: s
     return file.text();
 }
 
+function resolveIncludePath(parentPath: string, includePath: string): string {
+    const dir = parentPath.includes('/') ? parentPath.substring(0, parentPath.lastIndexOf('/') + 1) : '';
+    return dir + includePath;
+}
+
+async function collectAllFiles(
+    dirHandle: FileSystemDirectoryHandle,
+    filePath: string,
+    content: string,
+    fileMap: Record<string, string>
+): Promise<void> {
+    fileMap[filePath] = content;
+    const includes = parseIncludeFilenames(content);
+    await Promise.all(
+        includes.map(async (inc) => {
+            const resolved = resolveIncludePath(filePath, inc);
+            if (resolved in fileMap) return;
+            const incContent = await readFileFromDir(dirHandle, resolved);
+            await collectAllFiles(dirHandle, resolved, incContent, fileMap);
+        })
+    );
+}
+
 async function synchronize() {
     console.log('Synchronization started');
 
@@ -109,38 +135,50 @@ async function synchronize() {
         const { fileName: mainFileName, content: mainContent, dirHandle } = await readMainBeancountFile();
         // console.log('Main beancount file loaded, size:', mainContent.length);
 
-        // Extract include filenames from the main file using regex.
-        const includeFilenames = parseIncludeFilenames(mainContent);
-        // console.log('Include files found:', includeFilenames);
-
-        // Read included files and build the FileMap for parseMultiFile.
-        const includedContents = await Promise.all(
-            includeFilenames.map(filename => readFileFromDir(dirHandle, filename))
-        );
-        const fileMap: Record<string, string> = { [mainFileName]: mainContent };
-        for (let i = 0; i < includeFilenames.length; i++) {
-            fileMap[includeFilenames[i]] = includedContents[i];
-        }
-        console.log('All beancount files loaded, total size:', Object.values(fileMap).reduce((sum, c) => sum + c.length, 0));
+        // Recursively collect all included files into fileMap.
+        const fileMap: Record<string, string> = {};
+        await collectAllFiles(dirHandle, mainFileName, mainContent, fileMap);
+        // console.log('All beancount files loaded, total size:', Object.values(fileMap).reduce((sum, c) => sum + c.length, 0));
 
         // Parse all files together with include resolution.
         await ensureInitialized();
         const parseResult = parseMultiFile(fileMap, mainFileName);
-        console.log('Parse errors:', parseResult.errors);
 
-        // TODO: validate
+        // validate
+        if (parseResult.errors.length > 0) {
+            console.log('Parse errors:', parseResult.errors);
+            throw new Error('Parsing errors occurred. See console for details.');
+        }
 
-        // run queries
+        // run queries and cache results:
+        const ptaSystem = await settings.get<string>(SettingKeys.ptaSystem) || 'rledger';
+        const queries = getQueries(ptaSystem);
 
-        // cache results:
         // - payees
-        // - commodities
+        await syncPayees(queries, fileMap, mainFileName);
+        
         // - opening balances
+
         // - accounts with balances?
+
     } catch (error) {
         console.error('Synchronization error:', error);
         throw error;
     }
+}
+
+async function syncPayees(queries: ReturnType<typeof getQueries>, 
+    fileMap: Record<string, string>, mainFileName: string) {
+    // Cut-off date: same as cashier-sync, 20 years back
+    const from = moment().subtract(20, 'years').format(ISODATEFORMAT);
+    const payeesQuery = queries.payees(from);
+
+    const payeesResult = queryMultiFile(fileMap, mainFileName, payeesQuery);
+    // console.log('Payees query:', payeesQuery);
+    console.log('Payees result:', payeesResult);
+
+    // TODO: Cache payees.
+
 }
 
 export { synchronize };

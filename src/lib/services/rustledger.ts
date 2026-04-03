@@ -4,7 +4,7 @@
  */
 
 import { Account } from '$lib/data/model';
-import type { ParsedLedger, ParseResult, ValidationResult } from '@rustledger/wasm';
+import type { ParsedLedger, ParseResult, QueryResult, ValidationResult } from '@rustledger/wasm';
 import wasmUrl from '@rustledger/wasm/rustledger_wasm_bg.wasm?url';
 
 // WASM module instance
@@ -68,6 +68,19 @@ export function parseMultiFile(files: Record<string, string>, entryPoint: string
 		throw new Error('WASM module not available or parseMultiFile() not supported');
 	}
 	return wasmModule.parseMultiFile(files, entryPoint) as ParseResult;
+}
+
+/**
+ * Run a BQL query across multiple Beancount files with include resolution.
+ * @param files - Map of filename → file contents
+ * @param entryPoint - The main file to start from (must be a key in files)
+ * @param queryStr - The BQL query string
+ */
+export function queryMultiFile(files: Record<string, string>, entryPoint: string, queryStr: string): QueryResult {
+	if (!wasmModule || !wasmModule.queryMultiFile) {
+		throw new Error('WASM module not available or queryMultiFile() not supported');
+	}
+	return wasmModule.queryMultiFile(files, entryPoint, queryStr) as QueryResult;
 }
 
 /**
