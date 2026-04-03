@@ -69,7 +69,8 @@
 			}
 			history.back();
 		} else {
-			goto(resolve('/account')); // todo: show account details
+			// TODO: navigate to account details page
+			// goto(resolve('/account')); // todo: show account details
 		}
 	}
 

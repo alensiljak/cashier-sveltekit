@@ -23,6 +23,7 @@
 	let syncAaValues = $state(false);
 	let syncPayees = $state(false);
 	let syncInfrastructureFiles = $state(false);
+	let syncOpeningBalances = $state(false);
 
 	let rotationClass = $state('');
 
@@ -45,6 +46,7 @@
 		syncAaValues = (await settings.get(SettingKeys.syncAaValues)) ?? false;
 		syncPayees = (await settings.get(SettingKeys.syncPayees)) ?? false;
 		syncInfrastructureFiles = (await settings.get(SettingKeys.syncInfrastructureFiles)) ?? false;
+		syncOpeningBalances = (await settings.get(SettingKeys.syncOpeningBalances)) ?? false;
 	}
 
 	async function onConfigSourceChanged() {
@@ -102,7 +104,8 @@
 				syncAccounts,
 				syncAaValues,
 				syncPayees,
-				syncInfrastructureFiles
+				syncInfrastructureFiles,
+				syncOpeningBalances
 			};
 
 			// check which backend to synchronize with.
@@ -128,18 +131,18 @@
 			// invalidate cache and reload data
 			await ledgerService.invalidate();
 
+			Notifier.success('Synchronization completed successfully!');
 		} catch (error: any) {
 			console.error(error);
 			Notifier.error(error.message);
 		}
 
 		rotationClass = '';
-
-		Notifier.success('Synchronization completed successfully!');
 	}
 
 	async function saveSettings() {
 		await settings.set(SettingKeys.syncAccounts, syncAccounts);
+		await settings.set(SettingKeys.syncOpeningBalances, syncOpeningBalances);
 		await settings.set(SettingKeys.syncAaValues, syncAaValues);
 		await settings.set(SettingKeys.syncPayees, syncPayees);
 		await settings.set(SettingKeys.syncInfrastructureFiles, syncInfrastructureFiles);
@@ -222,7 +225,16 @@
 				bind:checked={syncAccounts}
 				onchange={saveSettings}
 			/>
-			<p>Sync accounts and balances</p>
+			<p>Sync accounts</p>
+		</label>
+		<label class="flex items-center space-x-2">
+			<input
+				class="checkbox checkbox-primary rounded"
+				type="checkbox"
+				bind:checked={syncOpeningBalances}
+				onchange={saveSettings}
+			/>
+			<p>Sync opening balances</p>
 		</label>
 		<label class="flex items-center space-x-2">
 			<input

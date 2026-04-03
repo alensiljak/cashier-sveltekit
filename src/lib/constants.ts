@@ -9,6 +9,7 @@ export const InfrastructureFiles = [
 	'book.bean',
 	// 'commodities.bean',
 	'accounts.bean',
+	'opening-balances.bean',
 	'cashier.bean'
 ] as const;
 

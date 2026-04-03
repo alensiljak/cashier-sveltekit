@@ -14,10 +14,12 @@
 		expandedSections[id] = !expandedSections[id];
 	}
 
-	function loadLedger() {
+	async function loadLedger() {
 		try {
 			isLoading = true;
 			error = null;
+
+			await ledgerService.invalidate();
 
 			ledgerData = {
 				isValid: ledgerService.isValid(),
@@ -94,7 +96,7 @@
 		<AccordionSection
 			title="Directives"
 			badge={(ledgerData.directives as unknown[]).length}
-			expanded={expandedSections['directives'] ?? true}
+			expanded={expandedSections['directives'] ?? false}
 			onToggle={() => toggleSection('directives')}
 		>
 			<div class="overflow-x-auto overflow-y-auto max-h-[600px] bg-base-200 rounded-lg p-3">

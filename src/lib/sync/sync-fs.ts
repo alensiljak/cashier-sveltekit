@@ -5,17 +5,14 @@
  */
 
 import { settings, SettingKeys } from '$lib/settings';
-import { ensureInitialized, parseMultiFile, queryMultiFile, createParsedLedger } from '$lib/services/rustledger';
+import { ensureInitialized, parseMultiFile, queryMultiFile } from '$lib/services/rustledger';
 import { getQueries } from './sync-queries';
 import moment from 'moment';
 import { ISODATEFORMAT, PtaSystems } from '$lib/constants';
 import * as syncCommon from '$lib/sync/sync-common';
-import appService from '$lib/services/appService';
 import * as RledgerParser from '$lib/utils/rledgerParser';
-import db from '$lib/data/db';
 import type { Account } from '$lib/data/model';
 import { OPFSBackend } from '$lib/storage';
-import { mapDirectiveSpans, replaceDirectiveBySpan } from '$lib/rledger/sourceEditor';
 
 // IndexedDB persistence for directory handle
 const IDB_NAME = 'cashier-fs-handles';
@@ -162,6 +159,10 @@ async function synchronize(syncOptions: syncCommon.SyncOptions): Promise<void> {
         }
 
         // - opening balances
+        if (syncOptions.syncOpeningBalances) {
+            await syncAccountBalances(queries, fileMap, mainFileName);
+        }
+
         // TODO
         if (syncOptions.syncAaValues) {
         }
@@ -183,6 +184,25 @@ async function synchronize(syncOptions: syncCommon.SyncOptions): Promise<void> {
 async function syncAccountsFromFs(queries: ReturnType<typeof getQueries>,
     fileMap: Record<string, string>, mainFileName: string) {
     // const balancesQuery = queries.balances();
+    const query = queries.openAccounts();
+    const result = queryMultiFile(fileMap, mainFileName, query);
+
+    console.log('Open accounts result:', result);
+
+    const entities = result.rows.map((item: any) => {
+        const accountName = item[0];
+        const openDate = item[1];
+        return { name: accountName, openDate };
+    });
+
+    const accountDirectives = await createAccountDirectives(entities);
+    const filename = 'accounts.bean';
+    const opfs = new OPFSBackend();
+    await opfs.writeFile(filename, accountDirectives);
+}
+
+async function syncAccountBalances(queries: ReturnType<typeof getQueries>,
+    fileMap: Record<string, string>, mainFileName: string) {
     const query = queries.accounts();
     const result = queryMultiFile(fileMap, mainFileName, query);
 
@@ -193,17 +213,22 @@ async function syncAccountsFromFs(queries: ReturnType<typeof getQueries>,
         account: row[2],
     }));
 
-    const entities = accounts.map((item: any) => 
+    const entities = accounts.map((item: any) =>
         RledgerParser.parseBalanceSheetRow(item));
-
-    const record = createOpeningBalances(entities);
-
-    // await appService.deleteAccounts();
-    // insert accounts
-    // await db.accounts.bulkPut(entities);
+    const record = createOpeningBalancesDirective(entities);
 
     // Instead of saving to the database, save to the initialization file.
     await saveOpeningBalances(record);
+
+}
+
+async function createAccountDirectives(entities: { name: string; openDate: string }[]): Promise<string> {
+    const lines: string[] = [];
+    for (const entity of entities) {
+        lines.push(`${entity.openDate} open ${entity.name}`);
+    }
+    const content = lines.join('\n');
+    return content;
 }
 
 /**
@@ -214,54 +239,29 @@ async function syncAccountsFromFs(queries: ReturnType<typeof getQueries>,
  */
 async function saveOpeningBalances(record: string) {
     const opfs = new OPFSBackend();
-    const existing = await opfs.readFile('book.bean');
+    const filename = 'opening-balances.bean';
 
-    if (!existing) {
-        await opfs.writeFile('book.bean', record);
-        return;
-    }
-
-    const ledger = createParsedLedger(existing);
-    if (!ledger) {
-        // WASM unavailable — fall back to appending a replacement marker
-        await opfs.writeFile('book.bean', existing + '\n\n' + record);
-        return;
-    }
-
-    const spans = mapDirectiveSpans(existing, ledger);
-    ledger.free();
-
-    // Find the span whose source text starts with the opening balances date
-    const OPENING_DATE = '1970-01-01';
-    const spanIndex = spans.findIndex(s => s.sourceText.startsWith(OPENING_DATE));
-
-    let newContent: string;
-    if (spanIndex !== -1) {
-        newContent = replaceDirectiveBySpan(existing, spans, spanIndex, record);
-    } else {
-        newContent = existing.trimEnd() + '\n\n' + record;
-    }
-
-    await opfs.writeFile('book.bean', newContent);
+    await opfs.writeFile(filename, record);
 }
 
 /**
  * Creates transaction directives for opening balances based on the list of accounts.
  * @param accounts List of accounts with balances.
  */
-function createOpeningBalances(accounts: Account[]): string {
-    const date = '1970-01-01';
+function createOpeningBalancesDirective(accounts: Account[]): string {
+    const date = moment().format(ISODATEFORMAT);
     const lines: string[] = [`${date} * "Opening Balances"`];
 
     for (const account of accounts) {
         if (!account.balances) continue;
         for (const [currency, amount] of Object.entries(account.balances)) {
             if (amount === 0) continue;
-            lines.push(`    ${account.name}  ${amount} ${currency}`);
+            const formatted = amount.toFixed(8).replace(/\.?0+$/, '');
+            lines.push(`    ${account.name}  ${formatted} ${currency}`);
         }
     }
 
-    lines.push(`    Equity:OpeningBalances`);
+    lines.push(`    Equity:Opening-Balances`);
 
     const record = lines.join('\n');
     return record;

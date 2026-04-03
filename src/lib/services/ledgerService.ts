@@ -51,6 +51,8 @@ class LedgerService {
 		await ensureInitialized();
 		const combinedSource = await this.readAndCombineSources();
 
+		console.log('Loading ledger with combined source:', combinedSource);
+
 		this.ledger = createParsedLedger(combinedSource);
 
 		this._version.update((v) => v + 1);
@@ -182,7 +184,8 @@ class LedgerService {
 	}
 
 	/**
-	 * Get all declared accounts from the current ledger, including those with no transactions.
+	 * Get all declared accounts from the current ledger, including those with 
+	 * no transactions.
 	 * Merges open-directive accounts with BQL balance results.
 	 */
 	getAllAccounts(): Account[] {

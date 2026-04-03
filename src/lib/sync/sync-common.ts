@@ -19,6 +19,7 @@ export interface SyncOptions {
 	syncAaValues?: boolean;
 	syncPayees?: boolean;
 	syncInfrastructureFiles?: boolean;
+	syncOpeningBalances?: boolean;
 }
 
 /**
