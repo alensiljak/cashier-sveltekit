@@ -369,7 +369,7 @@
 			/>
 			<p>Sync Payees</p>
 		</label>
-		<label class="flex items-center space-x-2">
+		<!-- <label class="flex items-center space-x-2">
 			<input
 				class="checkbox checkbox-primary rounded"
 				type="checkbox"
@@ -377,7 +377,7 @@
 				onchange={saveSettings}
 			/>
 			<p>Sync infrastructure files (book, commodities, accounts)</p>
-		</label>
+		</label> -->
 	</div>
 
 	<center class="pt-10">

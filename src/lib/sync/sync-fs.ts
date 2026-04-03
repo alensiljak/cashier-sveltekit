@@ -160,6 +160,9 @@ async function synchronize() {
         // - accounts with balances
         // TODO
 
+        // Asset Allocation definition (.toml)
+        // TODO
+
     } catch (error) {
         console.error('Synchronization error:', error);
         throw error;
@@ -172,7 +175,7 @@ async function syncPayeesFromFs(queries: ReturnType<typeof getQueries>,
     const payeesQuery = queries.payees(from);
 
     const payeesResult = queryMultiFile(fileMap, mainFileName, payeesQuery);
-    console.log('Payees result:', payeesResult);
+    // console.log('Payees result:', payeesResult);
 
     // Parse the result into a string[] of payee names, then store via common.
     const payees = payeesResult.rows.map((row: any) => row);
