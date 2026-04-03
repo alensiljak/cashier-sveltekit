@@ -58,7 +58,7 @@
 
 			history.back();
 		} else {
-			goto(resolve('/account')); // todo: show account details
+			// goto(resolve('/payee')); // todo: show payee details
 		}
 	}
 
@@ -97,11 +97,11 @@
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 			<div
-				class="border-base-content/15 border-b py-2"
+				class="border-base-content/15 border-b py-2 min-h-[44px] flex items-center"
 				onclick={() => onPayeeSelected(payee.name)}
 				role="listitem"
 			>
-				{payee.name}
+				{payee.name || ' '}
 			</div>
 		{/each}
 	</div>
