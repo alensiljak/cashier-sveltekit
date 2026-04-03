@@ -51,8 +51,6 @@ class LedgerService {
 		await ensureInitialized();
 		const combinedSource = await this.readAndCombineSources();
 
-		console.log('Loading ledger with combined source:', combinedSource);
-
 		this.ledger = createParsedLedger(combinedSource);
 
 		this._version.update((v) => v + 1);

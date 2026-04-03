@@ -13,6 +13,7 @@ import * as syncCommon from '$lib/sync/sync-common';
 import * as RledgerParser from '$lib/utils/rledgerParser';
 import type { Account } from '$lib/data/model';
 import { OPFSBackend } from '$lib/storage';
+import Notifier from '$lib/utils/notifier';
 
 // IndexedDB persistence for directory handle
 const IDB_NAME = 'cashier-fs-handles';
@@ -136,8 +137,6 @@ async function loadFileMap(): Promise<{ fileMap: Record<string, string>; mainFil
 }
 
 async function synchronize(syncOptions: syncCommon.SyncOptions): Promise<void> {
-    console.log('Synchronization starting...');
-
     try {
         const { fileMap, mainFileName } = await loadFileMap();
 
@@ -153,8 +152,10 @@ async function synchronize(syncOptions: syncCommon.SyncOptions): Promise<void> {
         // Run queries and store results via sync-common.
         const queries = getQueries(PtaSystems.rledger);
 
+        // Synchronization steps:
+
+        // - accounts list
         if (syncOptions.syncAccounts) {
-            // - accounts with balances
             await syncAccountsFromFs(queries, fileMap, mainFileName);
         }
 
@@ -165,6 +166,8 @@ async function synchronize(syncOptions: syncCommon.SyncOptions): Promise<void> {
 
         // TODO
         if (syncOptions.syncAaValues) {
+            console.log('Syncing AA values from filesystem is not implemented yet');
+            Notifier.info('Syncing AA values from filesystem is not implemented yet');
         }
 
         if (syncOptions.syncPayees) {
@@ -186,8 +189,6 @@ async function syncAccountsFromFs(queries: ReturnType<typeof getQueries>,
     // const balancesQuery = queries.balances();
     const query = queries.openAccounts();
     const result = queryMultiFile(fileMap, mainFileName, query);
-
-    console.log('Open accounts result:', result);
 
     const entities = result.rows.map((item: any) => {
         const accountName = item[0];
@@ -273,7 +274,6 @@ async function syncPayeesFromFs(queries: ReturnType<typeof getQueries>,
     const payeesQuery = queries.payees(from);
 
     const payeesResult = queryMultiFile(fileMap, mainFileName, payeesQuery);
-    // console.log('Payees result:', payeesResult);
 
     // Parse the result into a string[] of payee names, then store via common.
     const payees = payeesResult.rows.map((row: any) => row);
