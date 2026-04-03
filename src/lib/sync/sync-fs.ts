@@ -306,7 +306,11 @@ async function syncAssetAllocation() {
 		throw new Error('Read permission denied for directory');
 	}
 
-	const content = await readFileFromDir(dirHandle, assetAllocationFile);
+	// Extract relative path from the stored full path (which includes directory name)
+	const parts = assetAllocationFile.split('/');
+	const relativePath = parts.slice(1).join('/'); // Remove the directory name prefix
+
+	const content = await readFileFromDir(dirHandle, relativePath);
 	const opfs = new OPFSBackend();
 	await opfs.writeFile('asset-allocation.toml', content);
 }
