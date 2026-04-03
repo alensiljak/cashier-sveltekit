@@ -13,7 +13,7 @@ import type { ParsedLedger, EditorDocumentSymbol } from '@rustledger/wasm';
 export interface DirectiveSpan {
 	symbolIndex: number;
 	startLine: number; // 0-based inclusive
-	endLine: number;   // 0-based inclusive
+	endLine: number; // 0-based inclusive
 	sourceText: string;
 }
 
@@ -21,10 +21,7 @@ export interface DirectiveSpan {
  * Map each top-level document symbol to its source line range.
  * Uses getDocumentSymbols() for accurate positions from the WASM parser.
  */
-export function mapDirectiveSpans(
-	source: string,
-	ledger: ParsedLedger
-): DirectiveSpan[] {
+export function mapDirectiveSpans(source: string, ledger: ParsedLedger): DirectiveSpan[] {
 	const lines = source.split('\n');
 	const symbols: EditorDocumentSymbol[] = ledger.getDocumentSymbols();
 
@@ -116,10 +113,10 @@ export function findSpanForDirective(
 			// Count how many spans before this also start with the same date
 			const precedingWithSameDate = spans
 				.slice(0, i)
-				.filter(s => s.sourceText.startsWith(directive.date)).length;
+				.filter((s) => s.sourceText.startsWith(directive.date)).length;
 			const directivePrecedingWithSameDate = directives
 				.slice(0, directiveIndex)
-				.filter(d => d.date === directive.date).length;
+				.filter((d) => d.date === directive.date).length;
 
 			if (precedingWithSameDate === directivePrecedingWithSameDate) {
 				return i;

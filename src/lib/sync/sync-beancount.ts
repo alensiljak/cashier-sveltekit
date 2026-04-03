@@ -95,7 +95,7 @@ class CashierSync {
 
 		// if (ptaSystem === PtaSystems.rledger) {
 		// 	content = await response.json();
-		// } else 
+		// } else
 		if (ptaSystem === PtaSystems.beancount) {
 			content = await response.json();
 		} else if (ptaSystem === PtaSystems.ledger) {
@@ -246,7 +246,7 @@ async function synchronize(syncOptions?: SyncOptions) {
 	const activeUrl = getActiveServerUrlOrNotify();
 	if (!activeUrl) return;
 
-	const _ptaSystem = await settings.get(SettingKeys.ptaSystem) as PtaSystems;
+	const _ptaSystem = (await settings.get(SettingKeys.ptaSystem)) as PtaSystems;
 	const sync = new CashierSync(activeUrl, _ptaSystem);
 
 	if (syncOptions?.syncAccounts) {

@@ -76,7 +76,11 @@ export function parseMultiFile(files: Record<string, string>, entryPoint: string
  * @param entryPoint - The main file to start from (must be a key in files)
  * @param queryStr - The BQL query string
  */
-export function queryMultiFile(files: Record<string, string>, entryPoint: string, queryStr: string): QueryResult {
+export function queryMultiFile(
+	files: Record<string, string>,
+	entryPoint: string,
+	queryStr: string
+): QueryResult {
 	if (!wasmModule || !wasmModule.queryMultiFile) {
 		throw new Error('WASM module not available or queryMultiFile() not supported');
 	}
@@ -162,7 +166,7 @@ export function parseBalanceSheetRow(record: string[]): Account | null {
 					const account = new Account('');
 					account.name = posting.account;
 					account.balances = {
-						[posting?.units?.currency as string]: parseFloat(posting?.units?.number as string) 
+						[posting?.units?.currency as string]: parseFloat(posting?.units?.number as string)
 					};
 					ledger.free();
 					return account;

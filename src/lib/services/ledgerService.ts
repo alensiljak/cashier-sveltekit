@@ -10,7 +10,11 @@ import type { Directive, BeancountError, ParsedLedger } from '@rustledger/wasm';
 import { Account, Xact, Posting } from '$lib/data/model';
 import * as opfslib from '$lib/utils/opfslib';
 import { CashierFilename, InfrastructureFiles } from '$lib/constants';
-import { mapDirectiveSpans, replaceDirectiveBySpan, type DirectiveSpan } from '$lib/rledger/sourceEditor';
+import {
+	mapDirectiveSpans,
+	replaceDirectiveBySpan,
+	type DirectiveSpan
+} from '$lib/rledger/sourceEditor';
 
 interface QueryError {
 	message: string;
@@ -102,7 +106,7 @@ class LedgerService {
 
 	/** Append a formatted transaction to cashier.bean → invalidate. */
 	async appendTransaction(beancountText: string): Promise<void> {
-		let content = await opfslib.readFile(CashierFilename) ?? '';
+		let content = (await opfslib.readFile(CashierFilename)) ?? '';
 
 		// Ensure a blank-line separator before the new entry.
 		if (content.length > 0 && !content.endsWith('\n\n')) {
@@ -120,14 +124,16 @@ class LedgerService {
 	 * splices in the new text, writes back, and invalidates.
 	 */
 	async editTransaction(span: DirectiveSpan, newBeancountText: string): Promise<void> {
-		const source = await opfslib.readFile(CashierFilename) ?? '';
+		const source = (await opfslib.readFile(CashierFilename)) ?? '';
 		const tempLedger = createParsedLedger(source);
 		if (!tempLedger) throw new Error('Failed to parse cashier.bean');
 		try {
 			const spans = mapDirectiveSpans(source, tempLedger);
-			const idx = spans.findIndex(s => s.startLine === span.startLine);
+			const idx = spans.findIndex((s) => s.startLine === span.startLine);
 			if (idx === -1) {
-				throw new Error(`Could not locate directive at line ${span.startLine} in ${CashierFilename}`);
+				throw new Error(
+					`Could not locate directive at line ${span.startLine} in ${CashierFilename}`
+				);
 			}
 			const updated = replaceDirectiveBySpan(source, spans, idx, newBeancountText.trimEnd());
 			await opfslib.saveFile(CashierFilename, updated);
@@ -142,14 +148,16 @@ class LedgerService {
 	 * Removes the span lines and collapses extra blank lines.
 	 */
 	async deleteTransaction(span: DirectiveSpan): Promise<void> {
-		const source = await opfslib.readFile(CashierFilename) ?? '';
+		const source = (await opfslib.readFile(CashierFilename)) ?? '';
 		const tempLedger = createParsedLedger(source);
 		if (!tempLedger) throw new Error('Failed to parse cashier.bean');
 		try {
 			const spans = mapDirectiveSpans(source, tempLedger);
-			const idx = spans.findIndex(s => s.startLine === span.startLine);
+			const idx = spans.findIndex((s) => s.startLine === span.startLine);
 			if (idx === -1) {
-				throw new Error(`Could not locate directive at line ${span.startLine} in ${CashierFilename}`);
+				throw new Error(
+					`Could not locate directive at line ${span.startLine} in ${CashierFilename}`
+				);
 			}
 			let updated = replaceDirectiveBySpan(source, spans, idx, '');
 			// Collapse runs of 3+ blank lines down to 2 (one visual separator).
@@ -182,7 +190,7 @@ class LedgerService {
 	}
 
 	/**
-	 * Get all declared accounts from the current ledger, including those with 
+	 * Get all declared accounts from the current ledger, including those with
 	 * no transactions.
 	 * Merges open-directive accounts with BQL balance results.
 	 */
@@ -258,7 +266,7 @@ class LedgerService {
 	 * the list and supply the span needed for editing.
 	 */
 	async getXactsWithSpans(): Promise<Array<{ xact: Xact; span: DirectiveSpan }>> {
-		const source = await opfslib.readFile(CashierFilename) ?? '';
+		const source = (await opfslib.readFile(CashierFilename)) ?? '';
 		if (!source.trim()) return [];
 
 		const tempLedger = createParsedLedger(source);

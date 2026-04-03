@@ -17,8 +17,7 @@ export function xactToBeancountText(tx: Xact): string {
 			.filter((p) => p.account)
 			.map((p) => ({
 				account: p.account,
-				units:
-					p.amount != null ? { number: String(p.amount), currency: p.currency } : undefined
+				units: p.amount != null ? { number: String(p.amount), currency: p.currency } : undefined
 			}))
 	};
 	return DirectiveFormatter.toString(directive as any);

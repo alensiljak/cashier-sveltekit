@@ -398,9 +398,9 @@ class AppService {
 				account = LedgerParser.parseBalanceSheetRow(item);
 			} else if (ptaSystem === PtaSystems.beancount) {
 				account = BeancountParser.parseBalanceSheetRow(item);
-			// } else if (ptaSystem === PtaSystems.rledger) {
-			// 	account = RledgerParser.parseBalanceSheetRow(item);
-			// 	console.log('Parsed account from rledger:', account);
+				// } else if (ptaSystem === PtaSystems.rledger) {
+				// 	account = RledgerParser.parseBalanceSheetRow(item);
+				// 	console.log('Parsed account from rledger:', account);
 			} else {
 				throw new Error('Unknown PTA system: ' + ptaSystem);
 			}

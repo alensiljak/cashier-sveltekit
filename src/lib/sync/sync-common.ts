@@ -23,7 +23,10 @@ export interface SyncOptions {
 /**
  * Delete existing accounts and import new ones from a balance sheet response.
  */
-export async function syncAccounts(ptaSystem: string, response: Record<string, unknown>): Promise<void> {
+export async function syncAccounts(
+	ptaSystem: string,
+	response: Record<string, unknown>
+): Promise<void> {
 	if (!response || Object.keys(response).length === 0) {
 		throw new Error('No accounts received');
 	}

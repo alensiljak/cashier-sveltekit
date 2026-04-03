@@ -69,17 +69,17 @@ class LedgerService {
 	private _version = writable(0); // reactive change signal
 	readonly version: Readable<number>;
 
-	async load(): Promise<void>;          // Read OPFS → combine → create ParsedLedger
-	async invalidate(): Promise<void>;    // Free old, reload, bump version
-	query(bql: string): QueryResult;      // Synchronous BQL query
-	getDirectives(): Directive[];         // Parsed directives
-	getParseErrors(): BeancountError[];   // Parse errors
+	async load(): Promise<void>; // Read OPFS → combine → create ParsedLedger
+	async invalidate(): Promise<void>; // Free old, reload, bump version
+	query(bql: string): QueryResult; // Synchronous BQL query
+	getDirectives(): Directive[]; // Parsed directives
+	getParseErrors(): BeancountError[]; // Parse errors
 	getValidationErrors(): BeancountError[]; // Validation errors
-	isValid(): boolean;                   // Combined validity check
+	isValid(): boolean; // Combined validity check
 	format(source: string): FormatResult; // Stateless formatting
-	parseSource(source: string): void;    // Parse and set as current ledger
+	parseSource(source: string): void; // Parse and set as current ledger
 	async appendTransaction(beancountText: string): Promise<void>; // TODO
-	free(): void;                         // Cleanup
+	free(): void; // Cleanup
 }
 ```
 
@@ -166,7 +166,7 @@ The editing layer is already implemented in `src/lib/rledger/sourceEditor.ts` an
 `TransactionDirective` (from WASM) carries all parsed fields needed to populate `Xact` directly — no text re-parsing required. `mapDirectiveSpans()` is called in parallel to get the line ranges; the two arrays are zipped by index.
 
 | `TransactionDirective` field | `Xact` / `Posting` field | Notes                                                |
-|------------------------------|--------------------------|------------------------------------------------------|
+| ---------------------------- | ------------------------ | ---------------------------------------------------- |
 | `date`                       | `Xact.date`              | ISO date string — identical format                   |
 | `payee`                      | `Xact.payee`             | Optional in both                                     |
 | `narration`                  | `Xact.note`              | Different name                                       |
@@ -240,19 +240,19 @@ Export is done by providing `cashier.bean` file contents in the Export page - ei
 
 ## Tasks
 
-| #  | Task                                                                                                                                     | Depends on | Status                 |
-|----|------------------------------------------------------------------------------------------------------------------------------------------|------------|------------------------|
-| 1  | Implement `readAndCombineSources()` in LedgerService — read OPFS infra files + cashier.bean, concatenate                                 | —          | ✅                      |
-| 2  | Gate app startup on ledger ready — `+layout.svelte`: init WASM, `ledgerService.load()`, gate `<slot/>`                                   | 1          | ✅                      |
-| 3  | Rewrite save/edit/delete targeting `cashier.bean` — use `sourceEditor.ts` for splicing, `appendTransaction` for new, call `invalidate()` | 1          | ✅                      |
-| 4  | Migrate journal page to BQL queries via `LedgerService`                                                                                  | 2          | ✅                      |
-| 5  | Migrate accounts page to BQL queries via `LedgerService`                                                                                 | 2          | pending Accounts table |
-| 6  | Migrate remaining pages (payees, favourites, tx editor, etc.) to `LedgerService`                                                         | 4, 5       | todo                   |
-| 7  | Wire sync flow: after infrastructure files update → `invalidate()`                                                                       | 2          | ✅                      |
-| 8  | Update export to serve `cashier.bean` contents directly from OPFS                                                                        | 2          | ✅                      |
-| 9  | Audit and remove dead `AppService` read methods + IndexedDB transaction tables                                                           | 4–8        | todo                   |
-| 10 | Verify on mobile device: parse + query latency, memory, PWA offline                                                                      | 9          | todo                   |
-| 11 | Handle `lastXact` table and memorized transactions                                                                                       |            | todo                   |
+| #   | Task                                                                                                                                     | Depends on | Status                 |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ---------------------- |
+| 1   | Implement `readAndCombineSources()` in LedgerService — read OPFS infra files + cashier.bean, concatenate                                 | —          | ✅                     |
+| 2   | Gate app startup on ledger ready — `+layout.svelte`: init WASM, `ledgerService.load()`, gate `<slot/>`                                   | 1          | ✅                     |
+| 3   | Rewrite save/edit/delete targeting `cashier.bean` — use `sourceEditor.ts` for splicing, `appendTransaction` for new, call `invalidate()` | 1          | ✅                     |
+| 4   | Migrate journal page to BQL queries via `LedgerService`                                                                                  | 2          | ✅                     |
+| 5   | Migrate accounts page to BQL queries via `LedgerService`                                                                                 | 2          | pending Accounts table |
+| 6   | Migrate remaining pages (payees, favourites, tx editor, etc.) to `LedgerService`                                                         | 4, 5       | todo                   |
+| 7   | Wire sync flow: after infrastructure files update → `invalidate()`                                                                       | 2          | ✅                     |
+| 8   | Update export to serve `cashier.bean` contents directly from OPFS                                                                        | 2          | ✅                     |
+| 9   | Audit and remove dead `AppService` read methods + IndexedDB transaction tables                                                           | 4–8        | todo                   |
+| 10  | Verify on mobile device: parse + query latency, memory, PWA offline                                                                      | 9          | todo                   |
+| 11  | Handle `lastXact` table and memorized transactions                                                                                       |            | todo                   |
 
 ### Completed
 

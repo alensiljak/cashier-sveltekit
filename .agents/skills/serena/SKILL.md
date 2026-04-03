@@ -26,7 +26,7 @@ Use these in preference to reading full files or running grep:
 | `find_symbol`                    | Look up a class, function, method, or variable by name              |
 | `find_referencing_symbols`       | Find all symbols that reference a given symbol (callers, importers) |
 | `find_referencing_code_snippets` | Find raw code snippets referencing a symbol at a given location     |
-| `get_symbols_overview`            | List all top-level symbols in a file — use before reading it        |
+| `get_symbols_overview`           | List all top-level symbols in a file — use before reading it        |
 | `get_symbol_body`                | Retrieve the full body of a specific symbol                         |
 | `search_for_pattern`             | Fallback text/regex search when symbol-level tools are insufficient |
 

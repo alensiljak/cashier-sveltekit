@@ -64,11 +64,11 @@ Conflict handling is manual. The conflicts should be marked and a diff displayed
 
 ```typescript
 interface SignallingChannel {
-  sendOffer(peerId: string, sdp: string): Promise<void>
-  sendAnswer(peerId: string, sdp: string): Promise<void>
-  sendCandidate(peerId: string, candidate: string): Promise<void>
-  onMessage(handler: (msg: SignalMessage) => void): void
-  cleanup(): Promise<void>
+	sendOffer(peerId: string, sdp: string): Promise<void>;
+	sendAnswer(peerId: string, sdp: string): Promise<void>;
+	sendCandidate(peerId: string, candidate: string): Promise<void>;
+	onMessage(handler: (msg: SignalMessage) => void): void;
+	cleanup(): Promise<void>;
 }
 ```
 

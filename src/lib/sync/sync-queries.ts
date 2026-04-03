@@ -2,7 +2,7 @@
  * Contains queries for the sync, PTA system.
  */
 
-import { PtaSystems } from "$lib/constants";
+import { PtaSystems } from '$lib/constants';
 
 export interface Queries {
 	accounts(): string;
