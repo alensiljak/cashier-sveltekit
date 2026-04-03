@@ -10,6 +10,7 @@
 		import { goto } from '$app/navigation';
 	import * as cashierFsSync from '$lib/sync/sync-fs';
 	import ledgerService from '$lib/services/ledgerService';
+import { syncProgress } from '$lib/stores/syncProgressStore';
 
 	Notifier.init();
 
@@ -21,6 +22,7 @@
 	let syncOpeningBalances = $state(false);
 
 	let rotationClass = $state('');
+	let syncStarted = $state(false);
 
 	type ConfigSource = 'filesystem' | 'rledger' | 'beancount' | 'ledger';
 	let configSource = $state<ConfigSource>('filesystem');
@@ -93,6 +95,7 @@
 	async function onSyncClicked() {
 		Notifier.info('Synchronization starting...');
 
+		syncStarted = true;
 		rotationClass = rotationClass == '' ? 'animate-[spin_2s_linear_infinite]' : '';
 
 		try {
@@ -224,75 +227,74 @@
 		<h3 class="text-3xl font-bold">Synchronization</h3>
 	</center>
 
+	{#snippet statusIcon(status: string | undefined)}
+		{#if status === 'in-progress'}
+			<span class="loading loading-spinner loading-sm"></span>
+		{:else if status === 'completed'}
+			<span class="text-success">✓</span>
+		{:else if status === 'error'}
+			<span class="text-error">✗</span>
+		{:else}
+			<span class="inline-block w-4"></span>
+		{/if}
+	{/snippet}
+
 	<div class="flex flex-col space-y-8 pt-6">
 		<div class="border border-base-200 rounded-lg p-4">
-			<div class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-4">
-				<div class="flex items-center">
-					<input
-						class="checkbox checkbox-primary rounded"
-						type="checkbox"
-						bind:checked={syncInfrastructureFiles}
-						onchange={(e) => toggleAllCheckboxes(e.target.checked)}
-					/>
-				</div>
-				<div class="flex items-center">
-					<p><strong></strong></p>
-				</div>
-				<div class="flex items-center">
-					<input
-						class="checkbox checkbox-primary rounded"
-						type="checkbox"
-						bind:checked={syncAccounts}
-						onchange={saveSettings}
-					/>
-				</div>
-				<div class="flex items-center">
-					<p>Sync accounts</p>
-				</div>
-				<div class="flex items-center">
-					<input
-						class="checkbox checkbox-primary rounded"
-						type="checkbox"
-						bind:checked={syncOpeningBalances}
-						onchange={saveSettings}
-					/>
-				</div>
-				<div class="flex items-center">
-					<p>Sync opening balances</p>
-				</div>
-				<div class="flex items-center">
-					<input
-						class="checkbox checkbox-primary rounded"
-						type="checkbox"
-						bind:checked={syncAssetAllocation}
-						onchange={saveSettings}
-					/>
-				</div>
-				<div class="flex items-center">
-					<p>Asset Allocation definition</p>
-				</div>
-				<div class="flex items-center">
-					<input
-						class="checkbox checkbox-primary rounded"
-						type="checkbox"
-						bind:checked={syncAaValues}
-						onchange={saveSettings}
-					/>
-				</div>
-				<div class="flex items-center">
-					<p>Sync account balances in base currency, for asset allocation.</p>
-				</div>
-				<div class="flex items-center">
-					<input
-						class="checkbox checkbox-primary rounded"
-						type="checkbox"
-						bind:checked={syncPayees}
-						onchange={saveSettings}
-					/>
-				</div>
-				<div class="flex items-center">
-					<p>Sync Payees</p>
-				</div>
+			<div class="grid items-center gap-x-4 gap-y-4" class:grid-cols-[auto_1fr_1.5rem]={syncStarted} class:grid-cols-[auto_1fr]={!syncStarted}>
+				<input
+					class="checkbox checkbox-primary rounded"
+					type="checkbox"
+					bind:checked={syncInfrastructureFiles}
+					onchange={(e) => toggleAllCheckboxes(e.target.checked)}
+				/>
+				<p><strong></strong></p>
+				{#if syncStarted}<div></div>{/if}
+
+				<input
+					class="checkbox checkbox-primary rounded"
+					type="checkbox"
+					bind:checked={syncAccounts}
+					onchange={saveSettings}
+				/>
+				<p>Sync accounts</p>
+				{#if syncStarted}{@render statusIcon($syncProgress.find((s) => s.id === 1)?.status)}{/if}
+
+				<input
+					class="checkbox checkbox-primary rounded"
+					type="checkbox"
+					bind:checked={syncOpeningBalances}
+					onchange={saveSettings}
+				/>
+				<p>Sync opening balances</p>
+				{#if syncStarted}{@render statusIcon($syncProgress.find((s) => s.id === 2)?.status)}{/if}
+
+				<input
+					class="checkbox checkbox-primary rounded"
+					type="checkbox"
+					bind:checked={syncAssetAllocation}
+					onchange={saveSettings}
+				/>
+				<p>Asset Allocation definition</p>
+				{#if syncStarted}{@render statusIcon($syncProgress.find((s) => s.id === 3)?.status)}{/if}
+
+				<input
+					class="checkbox checkbox-primary rounded"
+					type="checkbox"
+					bind:checked={syncAaValues}
+					onchange={saveSettings}
+				/>
+				<p>Sync account balances in base currency, for asset allocation.</p>
+				{#if syncStarted}{@render statusIcon($syncProgress.find((s) => s.id === 4)?.status)}{/if}
+
+				<input
+					class="checkbox checkbox-primary rounded"
+					type="checkbox"
+					bind:checked={syncPayees}
+					onchange={saveSettings}
+				/>
+				<p>Sync Payees</p>
+				{#if syncStarted}{@render statusIcon($syncProgress.find((s) => s.id === 5)?.status)}{/if}
 			</div>
 		</div>
 	</div>

@@ -10,6 +10,7 @@ import type { Queries } from './sync-queries';
 import Notifier from '$lib/utils/notifier';
 import * as SyncCommon from '$lib/sync/sync-common';
 import type { SyncOptions } from '$lib/sync/sync-common';
+import { initializeSyncProgress, updateSyncStep } from '$lib/stores/syncProgressStore';
 
 Notifier.init();
 
@@ -214,6 +215,9 @@ class CashierSync {
  * @returns
  */
 async function synchronize(syncOptions?: SyncOptions) {
+	// Initialize sync progress
+	initializeSyncProgress();
+
 	// Cashier Sync synchronization
 
 	const activeUrl = getActiveServerUrlOrNotify();
@@ -222,14 +226,35 @@ async function synchronize(syncOptions?: SyncOptions) {
 	const _ptaSystem = (await settings.get(SettingKeys.ptaSystem)) as PtaSystems;
 	const sync = new CashierSync(activeUrl, _ptaSystem);
 
-	if (syncOptions?.syncAccounts) {
-		await synchronizeAccounts(sync);
-	}
-	if (syncOptions?.syncAaValues) {
-		await synchronizeAaValues(sync);
-	}
-	if (syncOptions?.syncPayees) {
-		await synchronizePayees(sync);
+	try {
+		if (syncOptions?.syncAccounts) {
+			updateSyncStep(1, 'in-progress');
+			await synchronizeAccounts(sync);
+			updateSyncStep(1, 'completed');
+		}
+		if (syncOptions?.syncAaValues) {
+			updateSyncStep(4, 'in-progress');
+			await synchronizeAaValues(sync);
+			updateSyncStep(4, 'completed');
+		}
+		if (syncOptions?.syncPayees) {
+			updateSyncStep(5, 'in-progress');
+			await synchronizePayees(sync);
+			updateSyncStep(5, 'completed');
+		}
+	} catch (error: any) {
+		console.error(error);
+		Notifier.error(error.message);
+		// Update the current step to error
+		syncProgress.update(steps => {
+			const currentStep = steps.find(step => step.status === 'in-progress');
+			if (currentStep) {
+				return steps.map(step =>
+					step.id === currentStep.id ? { ...step, status: 'error' } : step
+				);
+			}
+			return steps;
+		});
 	}
 }
 

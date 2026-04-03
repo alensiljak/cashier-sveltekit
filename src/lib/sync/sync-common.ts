@@ -47,8 +47,8 @@ export async function syncCurrentValues(ptaSystem: string, result: any): Promise
 	let currentValues: CurrentValuesDict;
 	if (ptaSystem === PtaSystems.beancount) {
 		currentValues = BeancountParser.parseCurrentValues(result, rootAccount);
-	// } else if (ptaSystem === PtaSystems.rledger) {
-	// 	currentValues = RledgerParser.parseCurrentValues(result, rootAccount);
+		// } else if (ptaSystem === PtaSystems.rledger) {
+		// 	currentValues = RledgerParser.parseCurrentValues(result, rootAccount);
 	} else if (ptaSystem === PtaSystems.ledger) {
 		currentValues = LedgerParser.parseCurrentValues(result, rootAccount);
 	} else {
