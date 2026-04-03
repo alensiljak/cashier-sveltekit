@@ -12,11 +12,12 @@
 		FileIcon,
 		FolderIcon,
 		BookOpenIcon,
-		XIcon
+		XIcon,
+		TriangleAlertIcon
 	} from '@lucide/svelte';
 	import Notifier from '$lib/utils/notifier';
 	import { settings, SettingKeys } from '$lib/settings';
-	import * as cashierFsSync from '$lib/sync/sync-fs';
+	import Fab from '$lib/components/FAB.svelte';
 
 	Notifier.init();
 
@@ -28,8 +29,11 @@
 	interface EntryInfo {
 		name: string;
 		kind: 'file' | 'directory';
+		path: string; // relative path from dirHandle root, e.g. "subdir/file.beancount"
+		depth: number; // nesting level for indentation
 		size?: number;
 		lastModified?: number;
+		expanded?: boolean;
 	}
 
 	let dirHandle = $state<FileSystemDirectoryHandle | null>(null);
@@ -41,13 +45,15 @@
 	let isPreviewLoading = $state(false);
 	let fileMeta = $state<Record<string, string>>({});
 	let showPreviewPanel = $state(false);
-	let bookRootFileName = $state('');
+	let bookRootFileName = $state(''); // full path as stored in settings, e.g. "dirname/sub/file.beancount"
+	let aaDefinitionFileName = $state(''); // same
 
 	onMount(async () => {
 		const fullBookRoot = await settings.get<string>(SettingKeys.fullBookRoot);
-		if (fullBookRoot) {
-			bookRootFileName = fullBookRoot.split('/').pop() ?? '';
-		}
+		bookRootFileName = fullBookRoot ?? '';
+
+		const aaDef = await settings.get<string>(SettingKeys.assetAllocationDefinition);
+		aaDefinitionFileName = aaDef ?? '';
 
 		const stored = await loadPersistedHandle();
 		if (stored) {
@@ -91,7 +97,7 @@
 			const list: EntryInfo[] = [];
 
 			for await (const [name, handle] of (dirHandle as any).entries()) {
-				const info: EntryInfo = { name, kind: handle.kind };
+				const info: EntryInfo = { name, kind: handle.kind, path: name, depth: 0 };
 
 				if (handle.kind === 'file') {
 					try {
@@ -116,6 +122,75 @@
 			Notifier.error(error.message || 'Failed to read directory');
 		} finally {
 			isLoading = false;
+		}
+	}
+
+	async function getDirHandleAtPath(relPath: string): Promise<FileSystemDirectoryHandle> {
+		const parts = relPath.split('/');
+		let current = dirHandle!;
+		for (const part of parts) {
+			current = await current.getDirectoryHandle(part);
+		}
+		return current;
+	}
+
+	async function getFileHandleAtPath(relPath: string): Promise<FileSystemFileHandle> {
+		const parts = relPath.split('/');
+		let current = dirHandle!;
+		for (let i = 0; i < parts.length - 1; i++) {
+			current = await current.getDirectoryHandle(parts[i]);
+		}
+		return current.getFileHandle(parts[parts.length - 1]);
+	}
+
+	async function toggleDirectory(entry: EntryInfo) {
+		if (entry.expanded) {
+			// Collapse: remove all descendants whose path starts with this dir's path
+			const prefix = entry.path + '/';
+			entries = entries
+				.map((e) => (e.path === entry.path ? { ...e, expanded: false } : e))
+				.filter((e) => !e.path.startsWith(prefix));
+		} else {
+			// Expand: load children and insert after the directory row
+			const idx = entries.findIndex((e) => e.path === entry.path);
+			if (idx === -1) return;
+
+			try {
+				const subDir = await getDirHandleAtPath(entry.path);
+				const children: EntryInfo[] = [];
+
+				for await (const [name, handle] of (subDir as any).entries()) {
+					const info: EntryInfo = {
+						name,
+						kind: handle.kind,
+						path: `${entry.path}/${name}`,
+						depth: entry.depth + 1
+					};
+					if (handle.kind === 'file') {
+						try {
+							const file = await (handle as FileSystemFileHandle).getFile();
+							info.size = file.size;
+							info.lastModified = file.lastModified;
+						} catch {
+							// metadata unavailable
+						}
+					}
+					children.push(info);
+				}
+
+				children.sort((a, b) => {
+					if (a.kind !== b.kind) return a.kind === 'directory' ? -1 : 1;
+					return a.name.localeCompare(b.name);
+				});
+
+				const newEntries = [...entries];
+				newEntries[idx] = { ...newEntries[idx], expanded: true };
+				newEntries.splice(idx + 1, 0, ...children);
+				entries = newEntries;
+			} catch (error: any) {
+				console.error('Error reading directory:', error);
+				Notifier.error(error.message || 'Failed to read directory');
+			}
 		}
 	}
 
@@ -175,7 +250,10 @@
 	}
 
 	async function onEntryClick(entry: EntryInfo) {
-		if (entry.kind === 'directory') return;
+		if (entry.kind === 'directory') {
+			await toggleDirectory(entry);
+			return;
+		}
 		if (!dirHandle) return;
 
 		selectedEntry = entry;
@@ -185,12 +263,13 @@
 		showPreviewPanel = true;
 
 		try {
-			const fileHandle = await dirHandle.getFileHandle(entry.name);
+			const fileHandle = await getFileHandleAtPath(entry.path);
 			const file = await fileHandle.getFile();
 
 			// Collect metadata
 			const meta: Record<string, string> = {};
 			meta['Name'] = file.name;
+			meta['Path'] = entry.path;
 			meta['Size'] = formatSize(file.size);
 			meta['Type'] = file.type || '(unknown)';
 			meta['Last Modified'] = formatDate(file.lastModified);
@@ -266,18 +345,22 @@
 
 	async function selectBookFile() {
 		if (!selectedEntry || selectedEntry.kind !== 'file') return;
-		const path = `${dirName}/${selectedEntry.name}`;
-		await settings.set(SettingKeys.fullBookRoot, path);
-		bookRootFileName = selectedEntry.name;
-		Notifier.success(`Book file set to: ${selectedEntry.name}`);
+		const fullPath = `${dirName}/${selectedEntry.path}`;
+		await settings.set(SettingKeys.fullBookRoot, fullPath);
+		bookRootFileName = fullPath;
+		Notifier.success(`Book file set to: ${selectedEntry.path}`);
 	}
 
-	async function synchronize() {
-		Notifier.info('Synchronization starting...');
+	async function selectAssetAllocationFile() {
+		if (!selectedEntry || selectedEntry.kind !== 'file') return;
+		const fullPath = `${dirName}/${selectedEntry.path}`;
+		await settings.set(SettingKeys.assetAllocationDefinition, fullPath);
+		aaDefinitionFileName = fullPath;
+		Notifier.success(`Asset Allocation file set to: ${selectedEntry.path}`);
+	}
 
-		await cashierFsSync.synchronize();
-
-		Notifier.success('Synchronization completed successfully!');
+	function onFab() {
+		history.back();
 	}
 </script>
 
@@ -332,7 +415,7 @@
 		{:else}
 			<p class="text-sm opacity-60 mb-2">
 				Browsing: <span class="font-mono font-semibold">{dirName}/</span>
-				({entries.length} entries)
+				({entries.filter((e) => e.depth === 0).length} entries)
 			</p>
 
 			<!-- Filesystem Treeview -->
@@ -340,7 +423,6 @@
 				<table class="table table-zebra table-sm">
 					<thead>
 						<tr>
-							<th></th>
 							<th>Name</th>
 							<th>Size</th>
 							<th>Last Modified</th>
@@ -350,19 +432,28 @@
 						{#each entries as entry}
 							<tr
 								class="cursor-pointer hover"
-								class:bg-secondary={selectedEntry?.name === entry.name}
-								class:book-root-row={bookRootFileName === entry.name &&
-									selectedEntry?.name !== entry.name}
+								class:bg-secondary={selectedEntry?.path === entry.path}
+								class:book-root-row={`${dirName}/${entry.path}` === bookRootFileName &&
+									selectedEntry?.path !== entry.path}
 								onclick={() => onEntryClick(entry)}
 							>
-								<td class="w-8">
-									{#if entry.kind === 'directory'}
-										<FolderIcon class="w-4 h-4 opacity-60" />
-									{:else}
-										<FileIcon class="w-4 h-4 opacity-60" />
-									{/if}
+								<td class="font-mono text-sm">
+									<span
+										class="flex items-center gap-1"
+										style="padding-left: {entry.depth * 1.25}rem"
+									>
+										{#if entry.kind === 'directory'}
+											{#if entry.expanded}
+												<FolderOpenIcon class="w-4 h-4 opacity-60 shrink-0" />
+											{:else}
+												<FolderIcon class="w-4 h-4 opacity-60 shrink-0" />
+											{/if}
+										{:else}
+											<FileIcon class="w-4 h-4 opacity-60 shrink-0" />
+										{/if}
+										{entry.name}
+									</span>
 								</td>
-								<td class="font-mono text-sm">{entry.name}</td>
 								<td class="text-sm">{entry.kind === 'file' ? formatSize(entry.size) : '--'}</td>
 								<td class="text-sm">{formatDate(entry.lastModified)}</td>
 							</tr>
@@ -370,6 +461,40 @@
 					</tbody>
 				</table>
 			</div>
+
+			{#if !bookRootFileName || !aaDefinitionFileName}
+				<div class="flex flex-col gap-2 mt-4">
+					{#if !bookRootFileName}
+						<div role="alert" class="alert alert-warning">
+							<TriangleAlertIcon class="w-5 h-5 shrink-0" />
+							<span>Book not selected. Please select the book file from the list above.</span>
+							<button
+								class="btn btn-sm btn-warning"
+								onclick={selectBookFile}
+								disabled={!selectedEntry || selectedEntry.kind !== 'file'}
+							>
+								Set Book
+							</button>
+						</div>
+					{/if}
+					{#if !aaDefinitionFileName}
+						<div role="alert" class="alert alert-warning">
+							<TriangleAlertIcon class="w-5 h-5 shrink-0" />
+							<span
+								>Asset Allocation not set. Please select the Asset Allocation definition file from
+								the list above.</span
+							>
+							<button
+								class="btn btn-sm btn-warning"
+								onclick={selectAssetAllocationFile}
+								disabled={!selectedEntry || selectedEntry.kind !== 'file'}
+							>
+								Set Asset Allocation
+							</button>
+						</div>
+					{/if}
+				</div>
+			{/if}
 
 			{#if selectedEntry && showPreviewPanel}
 				<div class="mt-6 border border-base-300 rounded-lg">
@@ -417,12 +542,10 @@
 					</div>
 				</div>
 			{/if}
-
-			<div class="text-center py-3">
-				<button class="btn btn-primary" onclick={synchronize}> Synchronize </button>
-			</div>
 		{/if}
 	</section>
+
+	<Fab onclick={onFab} />
 </article>
 
 <style>

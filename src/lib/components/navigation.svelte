@@ -150,6 +150,18 @@
 			</li> -->
 			<li>
 				<a
+					href="/sync"
+					class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/sync'
+						? 'active bg-secondary text-secondary-content'
+						: ''}"
+					onclick={closeDrawer}
+				>
+					<RefreshCw />
+					<span>Sync</span>
+				</a>
+			</li>
+			<li>
+				<a
 					href="/help"
 					class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/help'
 						? 'active bg-secondary text-secondary-content'

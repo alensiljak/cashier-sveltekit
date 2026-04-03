@@ -5,7 +5,7 @@
 	import { SettingKeys, settings } from '$lib/settings';
 	import Notifier from '$lib/utils/notifier';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
-	import { CashierSync } from '$lib/sync/sync-server';
+	import * as CashierSync from '$lib/sync/sync-beancount';
 	import { InfrastructureFiles } from '$lib/constants';
 	import {
 		syncAccounts as doSyncAccounts,
@@ -13,27 +13,10 @@
 		syncPayees as doSyncPayees,
 		syncInfrastructureFiles as doSyncInfrastructureFiles
 	} from '$lib/sync/sync-common';
+	import { goto } from '$app/navigation';
+	import * as cashierFsSync from '$lib/sync/sync-fs';
 
 	Notifier.init();
-
-	type SyncServerEntry = {
-		id: string;
-		name: string;
-		url: string;
-	};
-
-	// let { data }: { data: PageData } = $props();
-
-	let serverUrl = $state('');
-	let _ptaSystem: string = '';
-	let syncServers = $state<SyncServerEntry[]>([]);
-	let activeSyncServerId = $state('');
-
-	let isServerDialogOpen = $state(false);
-	let serverDialogMode = $state<'add' | 'edit'>('add');
-	let serverFormId = $state('');
-	let serverFormName = $state('');
-	let serverFormUrl = $state('http://localhost:3000');
 
 	let syncAccounts = $state(false);
 	let syncAaValues = $state(false);
@@ -42,48 +25,20 @@
 
 	let rotationClass = $state('');
 
+	type ConfigSource = 'filesystem' | 'rledger' | 'beancount' | 'ledger';
+	let configSource = $state<ConfigSource>('filesystem');
+
+	let serverUrl = $state('');
+	let _ptaSystem = $state('');
+
 	onMount(async () => {
-		// load sync settings
 		await loadSettings();
 	});
 
 	async function loadSettings() {
-		const storedServers = (await settings.get<SyncServerEntry[]>(SettingKeys.syncServers)) as
-			| SyncServerEntry[]
-			| null;
-		syncServers = storedServers ?? [];
-
-		const legacySyncUrl = (await settings.get<string>(SettingKeys.syncServerUrl)) as string | null;
-
-		if (syncServers.length === 0 && legacySyncUrl) {
-			const migratedEntry = {
-				id: safeServerId(),
-				name: 'Default',
-				url: legacySyncUrl
-			};
-			syncServers = [migratedEntry];
-			activeSyncServerId = migratedEntry.id;
-			await persistServers();
-		}
-
-		const storedActiveSyncServerId = (await settings.get<string>(
-			SettingKeys.syncActiveServerId
-		)) as string | null;
-
-		if (syncServers.length > 0) {
-			const hasStoredSelection =
-				!!storedActiveSyncServerId &&
-				syncServers.some((entry) => entry.id === storedActiveSyncServerId);
-			activeSyncServerId = hasStoredSelection
-				? (storedActiveSyncServerId as string)
-				: syncServers[0].id;
-		} else {
-			activeSyncServerId = '';
-		}
-
-		await syncActiveServerSelection();
-
-		_ptaSystem = (await settings.get(SettingKeys.ptaSystem)) as string;
+		serverUrl = ((await settings.get<string>(SettingKeys.syncServerUrl)) as string | null) ?? '';
+		_ptaSystem = ((await settings.get(SettingKeys.ptaSystem)) as string) ?? '';
+		if (_ptaSystem) configSource = _ptaSystem as ConfigSource;
 
 		syncAccounts = (await settings.get(SettingKeys.syncAccounts)) ?? false;
 		syncAaValues = (await settings.get(SettingKeys.syncAaValues)) ?? false;
@@ -91,115 +46,37 @@
 		syncInfrastructureFiles = (await settings.get(SettingKeys.syncInfrastructureFiles)) ?? false;
 	}
 
-	function safeServerId() {
-		if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-			return crypto.randomUUID();
+	async function onConfigSourceChanged() {
+		_ptaSystem = configSource;
+		await settings.set(SettingKeys.ptaSystem, configSource);
+	}
+
+	function onConfigureClick() {
+		switch (configSource) {
+			case 'filesystem':
+				goto('/sync/filesystem');
+				break;
+			case 'beancount':
+				goto('/sync/beancount');
+				break;
+			case 'rledger':
+				Notifier.warning('Configure Cashier Server (Rust Ledger) - Not implemented yet.');
+				break;
+			case 'ledger':
+				Notifier.warning('Configure Cashier Server (Ledger-cli) - Not implemented yet.');
+				break;
 		}
-
-		return `sync-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
-	}
-
-	function getActiveServer() {
-		if (!activeSyncServerId) return null;
-
-		return syncServers.find((entry) => entry.id === activeSyncServerId) ?? null;
-	}
-
-	async function persistServers() {
-		await settings.set(SettingKeys.syncServers, syncServers);
-	}
-
-	async function syncActiveServerSelection() {
-		const activeServer = getActiveServer();
-		serverUrl = activeServer?.url?.trim() ?? '';
-
-		await settings.set(SettingKeys.syncActiveServerId, activeSyncServerId || null);
-		await settings.set(SettingKeys.syncServerUrl, serverUrl || null);
 	}
 
 	function getActiveServerUrlOrNotify() {
-		const activeServer = getActiveServer();
-		const activeUrl = activeServer?.url?.trim();
+		const url = serverUrl?.trim();
 
-		if (!activeServer || !activeUrl) {
-			Notifier.error('No sync server configured. Please add and select a sync server first.');
+		if (!url) {
+			Notifier.error('No sync server configured. Please configure a sync server first.');
 			return null;
 		}
 
-		return activeUrl;
-	}
-
-	async function onActiveServerChanged() {
-		await syncActiveServerSelection();
-	}
-
-	function openAddServerDialog() {
-		serverDialogMode = 'add';
-		serverFormId = '';
-		serverFormName = '';
-		serverFormUrl = 'http://localhost:3000';
-		isServerDialogOpen = true;
-	}
-
-	function openEditServerDialog() {
-		const activeServer = getActiveServer();
-		if (!activeServer) {
-			Notifier.error('Select a sync server first.');
-			return;
-		}
-
-		serverDialogMode = 'edit';
-		serverFormId = activeServer.id;
-		serverFormName = activeServer.name;
-		serverFormUrl = activeServer.url;
-		isServerDialogOpen = true;
-	}
-
-	function closeServerDialog() {
-		isServerDialogOpen = false;
-	}
-
-	async function saveServerFromDialog() {
-		const name = serverFormName.trim();
-		const url = serverFormUrl.trim();
-
-		if (!name || !url) {
-			Notifier.error('Both Name and URL are required.');
-			return;
-		}
-
-		if (serverDialogMode === 'add') {
-			const entry = { id: safeServerId(), name, url };
-			syncServers = [...syncServers, entry];
-			activeSyncServerId = entry.id;
-			Notifier.success('Sync server added.');
-		} else {
-			syncServers = syncServers.map((entry) =>
-				entry.id === serverFormId ? { ...entry, name, url } : entry
-			);
-			Notifier.success('Sync server updated.');
-		}
-
-		await persistServers();
-		await syncActiveServerSelection();
-		closeServerDialog();
-	}
-
-	async function deleteServerFromDialog() {
-		if (serverDialogMode !== 'edit' || !serverFormId) {
-			return;
-		}
-
-		syncServers = syncServers.filter((entry) => entry.id !== serverFormId);
-
-		if (!syncServers.some((entry) => entry.id === activeSyncServerId)) {
-			activeSyncServerId = syncServers[0]?.id ?? '';
-		}
-
-		await persistServers();
-		await syncActiveServerSelection();
-		closeServerDialog();
-		Notifier.success('Sync server deleted.');
+		return url;
 	}
 
 	async function reloadData() {
@@ -210,9 +87,6 @@
 		await sync.reloadData();
 	}
 
-	/**
-	 * shut the remote server down
-	 */
 	async function onShutdownClick() {
 		const activeUrl = getActiveServerUrlOrNotify();
 		if (!activeUrl) return;
@@ -229,30 +103,36 @@
 	}
 
 	async function onSyncClicked() {
-		const activeUrl = getActiveServerUrlOrNotify();
-		if (!activeUrl) return;
+		Notifier.info('Synchronization starting...');
 
 		rotationClass = rotationClass == '' ? 'animate-[spin_2s_linear_infinite]' : '';
 
 		try {
-			if (syncAccounts) {
-				await synchronizeAccounts(activeUrl);
-			}
-			if (syncAaValues) {
-				await synchronizeAaValues(activeUrl);
-			}
-			if (syncPayees) {
-				await synchronizePayees(activeUrl);
-			}
-			if (syncInfrastructureFiles) {
-				await synchronizeInfrastructureFiles(activeUrl);
+			// check which backend to synchronize with.
+			switch (configSource) {
+				case 'filesystem':
+					await cashierFsSync.synchronize();
+					break;
+				case 'beancount':
+					await CashierSync.synchronize();
+					break;
+				case 'rledger':
+					Notifier.warning(
+						'Synchronization with Cashier Server (Rust Ledger) not implemented yet.'
+					);
+					break;
+				case 'ledger':
+					Notifier.warning('Synchronization with Cashier Server (Ledger-cli) not implemented yet.');
+					break;
 			}
 		} catch (error: any) {
 			console.error(error);
 			Notifier.error(error.message);
 		}
-		// stop spinning indicator.
+
 		rotationClass = '';
+
+		Notifier.success('Synchronization completed successfully!');
 	}
 
 	async function saveSettings() {
@@ -307,38 +187,65 @@
 </Toolbar>
 
 <main class="container mx-auto max-w-6xl space-y-4 p-1 lg:p-10">
-	<p>To update data from Ledger, the Cashier Server must be running and accessible.</p>
-	<p>You can run the Cashier Server locally.</p>
-
-	<div class="space-y-2">
-		<label class="label" for="sync-server-select">
-			<span>Sync Server</span>
-		</label>
-		<div class="flex flex-col gap-3 md:flex-row md:items-center">
-			<select
-				id="sync-server-select"
-				class="select select-bordered w-full rounded"
-				bind:value={activeSyncServerId}
-				onchange={onActiveServerChanged}
-			>
-				<option value="">Select sync server</option>
-				{#each syncServers as entry (entry.id)}
-					<option value={entry.id}>{entry.name} ({entry.url})</option>
-				{/each}
-			</select>
-			<div class="flex gap-2">
-				<button class="btn btn-outline rounded" type="button" onclick={openEditServerDialog}
-					>Edit</button
-				>
-				<button class="btn btn-primary rounded" type="button" onclick={openAddServerDialog}
-					>Add</button
-				>
-			</div>
+	<div class="flex gap-6">
+		<div>
+			<p class="mb-2 font-medium">Select the data source:</p>
+			<form class="space-y-2">
+				<label class="flex items-center space-x-2">
+					<input
+						class="radio radio-primary bg-base-100"
+						type="radio"
+						name="config-source"
+						value="filesystem"
+						bind:group={configSource}
+						onchange={onConfigSourceChanged}
+					/>
+					<span>Local filesystem</span>
+				</label>
+				<label class="flex items-center space-x-2">
+					<input
+						class="radio radio-primary bg-base-100"
+						type="radio"
+						name="config-source"
+						value="rledger"
+						bind:group={configSource}
+						onchange={onConfigSourceChanged}
+					/>
+					<span>Cashier Server (Rust Ledger)</span>
+				</label>
+				<label class="flex items-center space-x-2">
+					<input
+						class="radio radio-primary bg-base-100"
+						type="radio"
+						name="config-source"
+						value="beancount"
+						bind:group={configSource}
+						onchange={onConfigSourceChanged}
+					/>
+					<span>Cashier Server (Beancount)</span>
+				</label>
+				<label class="flex items-center space-x-2">
+					<input
+						class="radio radio-primary bg-base-100"
+						type="radio"
+						name="config-source"
+						value="ledger"
+						bind:group={configSource}
+						onchange={onConfigSourceChanged}
+					/>
+					<span>Cashier Server (Ledger-cli)</span>
+				</label>
+			</form>
+		</div>
+		<div class="flex flex-1 items-center justify-center">
+			<button class="btn btn-outline btn-primary rounded" type="button" onclick={onConfigureClick}>
+				Configure
+			</button>
 		</div>
 	</div>
 
 	<center>
-		<h3 class="text-3xl font-bold">Synchronize</h3>
+		<h3 class="text-3xl font-bold">Synchronization</h3>
 	</center>
 
 	<div class="flex flex-col space-y-8 pt-6">
@@ -383,71 +290,23 @@
 	<center class="pt-10">
 		<button class="btn bg-accent text-secondary rounded uppercase" onclick={onSyncClicked}>
 			<span><RefreshCcw class={rotationClass} style="animation-direction: reverse;" /></span>
-			<span>Sync</span>
+			<span>Synchronize</span>
 		</button>
 	</center>
 
-	<hr class="my-10" />
+	{#if _ptaSystem !== 'filesystem'}
+		<hr class="my-10" />
 
-	<center>
-		<button class="btn text-accent bg-secondary mr-5 rounded uppercase" onclick={onShutdownClick}>
-			<span><PowerIcon /></span>
-			<span>Server Shutdown</span>
-		</button>
+		<center>
+			<button class="btn text-accent bg-secondary mr-5 rounded uppercase" onclick={onShutdownClick}>
+				<span><PowerIcon /></span>
+				<span>Server Shutdown</span>
+			</button>
 
-		<!-- reload data -->
-		<button class="btn bg-primary text-accent rounded uppercase" onclick={reloadData}>
-			<span><RefreshCcw class={rotationClass} style="animation-direction: reverse;" /></span>
-			<span>Reload Data</span>
-		</button>
-	</center>
+			<button class="btn bg-primary text-accent rounded uppercase" onclick={reloadData}>
+				<span><RefreshCcw class={rotationClass} style="animation-direction: reverse;" /></span>
+				<span>Reload Data</span>
+			</button>
+		</center>
+	{/if}
 </main>
-
-<input
-	type="checkbox"
-	id="sync-server-modal"
-	class="modal-toggle"
-	bind:checked={isServerDialogOpen}
-/>
-<dialog class="modal">
-	<div class="modal-box">
-		<header class="flex justify-between">
-			<h2 class="text-lg font-bold">
-				{serverDialogMode === 'add' ? 'Add Sync Server' : 'Edit Sync Server'}
-			</h2>
-		</header>
-		<article class="space-y-4 py-4">
-			<label class="label flex-col items-start gap-2">
-				<span>Name</span>
-				<input
-					type="text"
-					class="input input-bordered w-full rounded"
-					placeholder="Local Ledger"
-					bind:value={serverFormName}
-				/>
-			</label>
-			<label class="label flex-col items-start gap-2">
-				<span>URL</span>
-				<input
-					type="text"
-					class="input input-bordered w-full rounded"
-					placeholder="http://localhost:3000"
-					bind:value={serverFormUrl}
-				/>
-			</label>
-		</article>
-		<footer class="flex items-center justify-between gap-4">
-			<div>
-				{#if serverDialogMode === 'edit'}
-					<button type="button" class="btn btn-error" onclick={deleteServerFromDialog}
-						>Delete</button
-					>
-				{/if}
-			</div>
-			<div class="flex gap-4">
-				<button type="button" class="btn btn-ghost" onclick={closeServerDialog}>Cancel</button>
-				<button type="button" class="btn btn-primary" onclick={saveServerFromDialog}>Save</button>
-			</div>
-		</footer>
-	</div>
-</dialog>

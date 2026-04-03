@@ -158,7 +158,7 @@ async function synchronize() {
         // TODO
 
         // - accounts with balances
-        // TODO
+        await syncAccountsFromFs(queries, fileMap, mainFileName);
 
         // Asset Allocation definition (.toml)
         // TODO
@@ -167,6 +167,14 @@ async function synchronize() {
         console.error('Synchronization error:', error);
         throw error;
     }
+}
+
+async function syncAccountsFromFs(queries: ReturnType<typeof getQueries>,
+    fileMap: Record<string, string>, mainFileName: string) {
+    // const balancesQuery = queries.balances();
+    // const response = queryMultiFile(fileMap, mainFileName, balancesQuery);
+    // const content: Record<string, unknown> = response.json();
+    // await syncCommon.syncAccounts(queries.ptaSystem, content);
 }
 
 async function syncPayeesFromFs(queries: ReturnType<typeof getQueries>,

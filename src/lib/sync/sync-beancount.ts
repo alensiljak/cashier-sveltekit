@@ -13,7 +13,7 @@ import type { Queries } from './sync-queries';
  * The methods here represent the methods implemented by the server.
  * This is a proxy class for fetching Ledger data.
  */
-export class CashierSync {
+class CashierSync {
 	serverUrl: string;
 	queries: Queries;
 	ptaSystem: string;
@@ -229,3 +229,29 @@ export class CashierSync {
 		return this.get('/shutdown');
 	}
 }
+
+/**
+ * Entry point
+ * @returns 
+ */
+async function synchronize() {
+	// Cashier Sync synchronization
+
+	const activeUrl = getActiveServerUrlOrNotify();
+	if (!activeUrl) return;
+
+	if (syncAccounts) {
+		await synchronizeAccounts(activeUrl);
+	}
+	if (syncAaValues) {
+		await synchronizeAaValues(activeUrl);
+	}
+	if (syncPayees) {
+		await synchronizePayees(activeUrl);
+	}
+	if (syncInfrastructureFiles) {
+		await synchronizeInfrastructureFiles(activeUrl);
+	}
+}
+
+export { synchronize };

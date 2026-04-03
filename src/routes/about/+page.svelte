@@ -55,9 +55,6 @@
 				<a class="link link-primary" href="/book">Book demo</a>
 			</li>
 			<li>
-				<a class="link link-primary" href="/fs-sync">File System synchronization</a>
-			</li>
-			<li>
 				<a class="link link-primary" href="/p2p-sync">P2P synchronization</a>
 			</li>
 			<li>

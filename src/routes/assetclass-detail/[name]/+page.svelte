@@ -5,7 +5,7 @@
 		SecurityAnalyser,
 		type SecurityAnalysis
 	} from '$lib/assetAllocation/securityAnalysis.js';
-	import { CashierSync } from '$lib/sync/sync-server.js';
+	import { CashierSync } from '$lib/sync/sync-beancount.js';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { AaStocksStore } from '$lib/data/mainStore';
 	import { SettingKeys, settings } from '$lib/settings';
@@ -13,7 +13,6 @@
 	import { processWithConcurrencyLimit } from '$lib/utils/concurrency.js';
 	import { Loader, X } from '@lucide/svelte';
 	import { onMount } from 'svelte';
-	import { get } from 'svelte/store';
 
 	const name = page.params.name;
 	let data = $state(page.data);
