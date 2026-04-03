@@ -179,33 +179,6 @@ class CashierSync {
 		return content;
 	}
 
-	/**
-	 * Read infrastructure Beancount file content from Cashier server.
-	 */
-	async readInfrastructureFile(filePath: string): Promise<string> {
-		const url = new URL(`${this.serverUrl}/infrastructure`);
-		url.searchParams.append('file_path', filePath);
-		const response = await fetch(url);
-		if (!response.ok) {
-			throw new Error(`Error reading infrastructure file: ${filePath}`);
-		}
-
-		const json = await response.json();
-		return json.content;
-	}
-
-	async readInfrastructureConfig(): Promise<string> {
-		return this.readInfrastructureFile('config.bean');
-	}
-
-	async readInfrastructureCommodities(): Promise<string> {
-		return this.readInfrastructureFile('commodities.bean');
-	}
-
-	async readInfrastructureAccounts(): Promise<string> {
-		return this.readInfrastructureFile('accounts.bean');
-	}
-
 	async search(searchParams: object) {
 		const url = new URL(`${this.serverUrl}/search`);
 		const response = await fetch(url, {
@@ -258,9 +231,6 @@ async function synchronize(syncOptions?: SyncOptions) {
 	if (syncOptions?.syncPayees) {
 		await synchronizePayees(sync);
 	}
-	if (syncOptions?.syncInfrastructureFiles) {
-		await synchronizeInfrastructureFiles(sync);
-	}
 }
 
 export function getActiveServerUrlOrNotify(serverUrl?: string): string | null {
@@ -290,20 +260,6 @@ async function synchronizePayees(sync: CashierSync) {
 	const response = await sync.readPayees();
 	await SyncCommon.syncPayees(response);
 	Notifier.success('Payees fetched from Ledger');
-}
-
-async function synchronizeInfrastructureFiles(sync: CashierSync) {
-	const fileContents = await Promise.all(
-		InfrastructureFiles.map((fileName) => sync.readInfrastructureFile(fileName))
-	);
-
-	const files: Record<string, string> = {};
-	InfrastructureFiles.forEach((fileName, index) => {
-		files[fileName] = fileContents[index];
-	});
-
-	await SyncCommon.syncInfrastructureFiles(files);
-	Notifier.success('Infrastructure files synchronized');
 }
 
 export { CashierSync, type SyncOptions, synchronize };
