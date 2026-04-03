@@ -5,7 +5,7 @@
 		SecurityAnalyser,
 		type SecurityAnalysis
 	} from '$lib/assetAllocation/securityAnalysis.js';
-	import { CashierSync } from '$lib/cashier-sync.js';
+	import { CashierSync } from '$lib/sync/sync-server.js';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { AaStocksStore } from '$lib/data/mainStore';
 	import { SettingKeys, settings } from '$lib/settings';

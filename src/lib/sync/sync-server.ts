@@ -1,27 +1,19 @@
-/*
-  Synchronization with Cashier (Ledger/Beancount) server.
-*/
+/**
+ * Sync source: Cashier Server (network).
+ * Fetches data from the CashierSync server over HTTP.
+ */
 import { settings, SettingKeys } from '$lib/settings';
 import moment from 'moment';
-import { AssetAllocationEngine } from './assetAllocation/AssetAllocation';
-import appService from './services/appService';
-import { ISODATEFORMAT } from './constants';
+import { ISODATEFORMAT } from '$lib/constants';
 import { getQueries } from './sync-queries';
 import type { Queries } from './sync-queries';
-import * as LedgerParser from '$lib/utils/ledgerParser';
-import * as BeancountParser from '$lib/utils/beancountParser';
-import * as RledgerParser from '$lib/utils/rledgerParser';
-import type { CurrentValuesDict } from '$lib/data/viewModels';
 
 /**
  * Cashier Sync class communicates with the CashierSync server over network.
  * The methods here represent the methods implemented by the server.
- * This is a proxy class for fething Ledger data.
+ * This is a proxy class for fetching Ledger data.
  */
 export class CashierSync {
-	/**
-	 * This returns all the accounts and also includes the balances
-	 */
 	serverUrl: string;
 	queries: Queries;
 	ptaSystem: string;
@@ -57,11 +49,9 @@ export class CashierSync {
 
 	/**
 	 * Sends a ledger query to the Ledger server and returns the response.
-	 * @param {String} query
 	 */
 	async send(query: string, options?: object) {
 		const url = this.createUrl(query);
-
 		const response = await fetch(url, options);
 		return response;
 	}
@@ -70,7 +60,6 @@ export class CashierSync {
 	 * See if the server is running
 	 */
 	async healthCheck(): Promise<string> {
-		// HEAD is enough to check if the server is online.
 		const result = await this.get('/ping');
 		if (!result.ok) {
 			throw new Error('Error contacting Cashier server!');
@@ -89,7 +78,6 @@ export class CashierSync {
 
 	/**
 	 * Retrieve the list of accounts with their balances.
-	 * @returns response from the corresponding system (array of Account objects)
 	 */
 	async readAccounts(ptaSystem: string): Promise<Record<string, unknown>> {
 		const accountsQuery = this.queries.accounts();
@@ -113,12 +101,8 @@ export class CashierSync {
 
 	/**
 	 * Retrieve the account balances for all accounts.
-	 * @returns array of Account objects
 	 */
 	async readBalances(): Promise<string[]> {
-		//const currency = await appService.getDefaultCurrency()
-		// Get values in the default currency? In case of multi-currency accounts (i.e. expenses).
-
 		const balancesQuery = this.queries.balances();
 		const response = await this.send(balancesQuery);
 		const content: string[] = await response.json();
@@ -128,38 +112,22 @@ export class CashierSync {
 
 	/**
 	 * Get current account values in the base currency.
-	 * @returns Current account values
 	 */
-	async readCurrentValues(ptaSystem: string): Promise<string> {
+	async readCurrentValues(): Promise<any> {
 		const rootAccount = (await settings.get(SettingKeys.rootInvestmentAccount)) as string;
 		if (!rootAccount) {
 			throw new Error('No root investment account set!');
 		}
-		const currency = await appService.getDefaultCurrency();
+		const currency = await settings.get<string>(SettingKeys.currency);
 		if (!currency) {
 			throw new Error('No default currency set!');
 		}
 
 		const query = this.queries.currentValues(rootAccount, currency);
-
 		const response = await this.send(query);
 		const result: any = await response.json();
 
-		// parse
-		let currentValues: CurrentValuesDict;
-		if (ptaSystem === 'beancount') {
-			currentValues = BeancountParser.parseCurrentValues(result, rootAccount);
-		} else if (ptaSystem === 'rledger') {
-			currentValues = RledgerParser.parseCurrentValues(result, rootAccount);
-		} else if (ptaSystem === 'ledger') {
-			currentValues = LedgerParser.parseCurrentValues(result, rootAccount);
-		} else {
-			throw new Error('Unknown PTA system: ' + ptaSystem);
-		}
-
-		const aa = new AssetAllocationEngine();
-		await aa.importCurrentValues(currentValues);
-		return 'OK';
+		return result;
 	}
 
 	async readLots(symbol: string) {
@@ -184,11 +152,8 @@ export class CashierSync {
 
 	/**
 	 * Retrieve the list of Payees
-	 * @returns array of Payee objects
 	 */
 	async readPayees(): Promise<string[]> {
-		// Limit the payees to the last n years, otherwise there's a high risk of
-		// crashing. This command is somehow very memory hungry on Android.
 		const from = moment().subtract(20, 'years').format(ISODATEFORMAT);
 
 		const query = this.queries.payees(from);
@@ -200,10 +165,8 @@ export class CashierSync {
 		let content = (await response.json()) as string[];
 
 		if (this.ptaSystem === 'beancount') {
-			// beancount result requires some massaging
 			content = content.map((subArray) => subArray[0]);
 		} else if (this.ptaSystem === 'rledger') {
-			// TODO: adjust when DISTINCT is resolved.
 			content = content.rows.map((item) => item.payee);
 		}
 
@@ -212,7 +175,6 @@ export class CashierSync {
 
 	/**
 	 * Read infrastructure Beancount file content from Cashier server.
-	 * Uses the unified /infrastructure endpoint with file_path parameter.
 	 */
 	async readInfrastructureFile(filePath: string): Promise<string> {
 		const url = new URL(`${this.serverUrl}/infrastructure`);
@@ -238,20 +200,8 @@ export class CashierSync {
 		return this.readInfrastructureFile('accounts.bean');
 	}
 
-	/**
-	 * This no longer exists.
-	 * @param searchParams
-	 * @returns
-	 */
 	async search(searchParams: object) {
 		const url = new URL(`${this.serverUrl}/search`);
-
-		// For GET, use URL Search Params, for POST, use Form Data:
-		//const params = new URLSearchParams() // use params.set()
-		//Object.keys(searchParams).forEach(key => params.set(key, searchParams[key]))
-		//const params = new FormData(); // use params.append()
-		//Object.keys(searchParams).forEach(key => params.append(key, searchParams[key]))
-
 		const response = await fetch(url, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
@@ -268,7 +218,6 @@ export class CashierSync {
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify(parameters)
 		});
-		//const result = await response.json()
 		const result = await response.text();
 		return result;
 	}

@@ -4,13 +4,10 @@
 	import { onMount } from 'svelte';
 	import { SettingKeys, settings } from '$lib/settings';
 	import Notifier from '$lib/utils/notifier';
-	import appService from '$lib/services/appService';
-	import CashierDAL from '$lib/data/dal';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
-	import { CashierSync } from '$lib/cashier-sync';
-	import * as OpfsLib from '$lib/utils/opfslib.js';
+	import { CashierSync } from '$lib/sync/sync-server';
 	import { InfrastructureFiles } from '$lib/constants';
-	import ledgerService from '$lib/services/ledgerService';
+	import { syncAccounts as doSyncAccounts, syncCurrentValues as doSyncCurrentValues, syncPayees as doSyncPayees, syncInfrastructureFiles as doSyncInfrastructureFiles } from '$lib/sync/sync-common';
 
 	Notifier.init();
 
@@ -264,68 +261,38 @@
 
 	async function synchronizeAccounts(activeUrl: string) {
 		const sync = new CashierSync(activeUrl, _ptaSystem);
-
 		const response = await sync.readAccounts(_ptaSystem);
-		if (!response || Object.keys(response).length === 0) {
-			Notifier.error('No accounts received: ' + JSON.stringify(response));
-			return;
-		}
-
-		// delete all accounts only after we have retrieved the new ones.
-		await appService.deleteAccounts();
-		await appService.importBalanceSheet(_ptaSystem, response);
-
+		await doSyncAccounts(_ptaSystem, response);
 		Notifier.success('Accounts fetched from Ledger');
 	}
 
 	async function synchronizeAaValues(activeUrl: string) {
 		const sync = new CashierSync(activeUrl, _ptaSystem);
-
-		try {
-			await sync.readCurrentValues(_ptaSystem);
-
-			Notifier.success('Asset Allocation values loaded');
-		} catch (error: any) {
-			console.error(error);
-			Notifier.error(error.message);
-		}
+		const result = await sync.readCurrentValues();
+		await doSyncCurrentValues(_ptaSystem, result);
+		Notifier.success('Asset Allocation values loaded');
 	}
 
 	async function synchronizePayees(activeUrl: string) {
 		const sync = new CashierSync(activeUrl, _ptaSystem);
-
 		const response = await sync.readPayees();
-
-		if (!response || response.length == 0) {
-			Notifier.error('Invalid response received: ' + JSON.stringify(response));
-			return;
-		}
-
-		// delete all payees only after we have retrieved the new ones.
-		const dal = new CashierDAL();
-		await dal.deletePayees();
-
-		await appService.importPayees(response);
-
+		await doSyncPayees(response);
 		Notifier.success('Payees fetched from Ledger');
 	}
 
 	async function synchronizeInfrastructureFiles(activeUrl: string) {
 		const sync = new CashierSync(activeUrl, _ptaSystem);
 
-		// Fetch all infrastructure files using the generic method
 		const fileContents = await Promise.all(
 			InfrastructureFiles.map(fileName => sync.readInfrastructureFile(fileName))
 		);
 
-		await Promise.all(
-			InfrastructureFiles.map((fileName, index) =>
-				OpfsLib.saveFile(fileName, fileContents[index])
-			)
-		);
+		const files: Record<string, string> = {};
+		InfrastructureFiles.forEach((fileName, index) => {
+			files[fileName] = fileContents[index];
+		});
 
-		await ledgerService.invalidate();
-
+		await doSyncInfrastructureFiles(files);
 		Notifier.success('Infrastructure files synchronized');
 	}
 </script>

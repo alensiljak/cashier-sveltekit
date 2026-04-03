@@ -16,7 +16,7 @@
 	} from '@lucide/svelte';
 	import Notifier from '$lib/utils/notifier';
 	import { settings, SettingKeys } from '$lib/settings';
-	import * as cashierFsSync from '$lib/cashier-fs-sync';
+	import * as cashierFsSync from '$lib/sync/sync-fs';
 
 	Notifier.init();
 
@@ -273,10 +273,8 @@
 	}
 
 	async function synchronize() {
-		Notifier.info('Synchronization started (not implemented)');
+		Notifier.info('Synchronization starting...');
 
-		// TODO: Implement synchronization logic here.
-		// See comments in src/lib/cashier-fs-sync.ts for the intended approach.
 		await cashierFsSync.synchronize();
 	}
 </script>

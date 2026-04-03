@@ -2,7 +2,7 @@ import moment from 'moment';
 import { settings, SettingKeys } from '../settings';
 import { SyncApiClient } from './syncApiClient';
 import appService from '$lib/services/appService';
-import { getQueries } from '$lib/sync-queries';
+import { getQueries } from '$lib/sync/sync-queries';
 import * as BeancountParser from '$lib/utils/beancountParser';
 import * as LedgerParser from '$lib/utils/ledgerParser';
 import { UserError, NotFoundError, ApiError } from '$lib/utils/errors';
