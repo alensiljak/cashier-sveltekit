@@ -6,7 +6,7 @@
 	import Notifier from '$lib/utils/notifier';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import * as CashierSync from '$lib/sync/sync-beancount';
-	import { InfrastructureFiles } from '$lib/constants';
+	import { InfrastructureFiles, PtaSystems } from '$lib/constants';
 	import {
 		syncAccounts as doSyncAccounts,
 		syncCurrentValues as doSyncCurrentValues,
@@ -56,27 +56,16 @@
 			case 'filesystem':
 				goto('/sync/filesystem');
 				break;
-			case 'beancount':
+			case PtaSystems.beancount:
 				goto('/sync/beancount');
 				break;
-			case 'rledger':
+			case PtaSystems.rledger:
 				Notifier.warning('Configure Cashier Server (Rust Ledger) - Not implemented yet.');
 				break;
-			case 'ledger':
+			case PtaSystems.ledger:
 				Notifier.warning('Configure Cashier Server (Ledger-cli) - Not implemented yet.');
 				break;
 		}
-	}
-
-	function getActiveServerUrlOrNotify() {
-		const url = serverUrl?.trim();
-
-		if (!url) {
-			Notifier.error('No sync server configured. Please configure a sync server first.');
-			return null;
-		}
-
-		return url;
 	}
 
 	async function reloadData() {
@@ -113,15 +102,21 @@
 				case 'filesystem':
 					await cashierFsSync.synchronize();
 					break;
-				case 'beancount':
-					await CashierSync.synchronize();
+				case PtaSystems.beancount:
+					let syncOptions: CashierSync.SyncOptions = {
+						syncAccounts,
+						syncAaValues,
+						syncPayees,
+						syncInfrastructureFiles
+					};
+					await CashierSync.synchronize(syncOptions);
 					break;
-				case 'rledger':
+				case PtaSystems.rledger:
 					Notifier.warning(
 						'Synchronization with Cashier Server (Rust Ledger) not implemented yet.'
 					);
 					break;
-				case 'ledger':
+				case PtaSystems.ledger:
 					Notifier.warning('Synchronization with Cashier Server (Ledger-cli) not implemented yet.');
 					break;
 			}
@@ -140,43 +135,6 @@
 		await settings.set(SettingKeys.syncAaValues, syncAaValues);
 		await settings.set(SettingKeys.syncPayees, syncPayees);
 		await settings.set(SettingKeys.syncInfrastructureFiles, syncInfrastructureFiles);
-	}
-
-	async function synchronizeAccounts(activeUrl: string) {
-		const sync = new CashierSync(activeUrl, _ptaSystem);
-		const response = await sync.readAccounts(_ptaSystem);
-		await doSyncAccounts(_ptaSystem, response);
-		Notifier.success('Accounts fetched from Ledger');
-	}
-
-	async function synchronizeAaValues(activeUrl: string) {
-		const sync = new CashierSync(activeUrl, _ptaSystem);
-		const result = await sync.readCurrentValues();
-		await doSyncCurrentValues(_ptaSystem, result);
-		Notifier.success('Asset Allocation values loaded');
-	}
-
-	async function synchronizePayees(activeUrl: string) {
-		const sync = new CashierSync(activeUrl, _ptaSystem);
-		const response = await sync.readPayees();
-		await doSyncPayees(response);
-		Notifier.success('Payees fetched from Ledger');
-	}
-
-	async function synchronizeInfrastructureFiles(activeUrl: string) {
-		const sync = new CashierSync(activeUrl, _ptaSystem);
-
-		const fileContents = await Promise.all(
-			InfrastructureFiles.map((fileName) => sync.readInfrastructureFile(fileName))
-		);
-
-		const files: Record<string, string> = {};
-		InfrastructureFiles.forEach((fileName, index) => {
-			files[fileName] = fileContents[index];
-		});
-
-		await doSyncInfrastructureFiles(files);
-		Notifier.success('Infrastructure files synchronized');
 	}
 </script>
 
@@ -207,7 +165,7 @@
 						class="radio radio-primary bg-base-100"
 						type="radio"
 						name="config-source"
-						value="rledger"
+						value="{PtaSystems.rledger}"
 						bind:group={configSource}
 						onchange={onConfigSourceChanged}
 					/>
@@ -218,7 +176,7 @@
 						class="radio radio-primary bg-base-100"
 						type="radio"
 						name="config-source"
-						value="beancount"
+						value="{PtaSystems.beancount}"
 						bind:group={configSource}
 						onchange={onConfigSourceChanged}
 					/>
@@ -229,7 +187,7 @@
 						class="radio radio-primary bg-base-100"
 						type="radio"
 						name="config-source"
-						value="ledger"
+						value="{PtaSystems.ledger}"
 						bind:group={configSource}
 						onchange={onConfigSourceChanged}
 					/>

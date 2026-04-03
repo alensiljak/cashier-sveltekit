@@ -4,9 +4,13 @@
  */
 import { settings, SettingKeys } from '$lib/settings';
 import moment from 'moment';
-import { ISODATEFORMAT } from '$lib/constants';
+import { InfrastructureFiles, ISODATEFORMAT, PtaSystems } from '$lib/constants';
 import { getQueries } from './sync-queries';
 import type { Queries } from './sync-queries';
+import Notifier from '$lib/utils/notifier';
+import * as SyncCommon from '$lib/sync/sync-common';
+
+Notifier.init();
 
 /**
  * Cashier Sync class communicates with the CashierSync server over network.
@@ -88,11 +92,11 @@ class CashierSync {
 
 		let content: any;
 
-		if (ptaSystem === 'rledger') {
+		if (ptaSystem === PtaSystems.rledger) {
 			content = await response.json();
-		} else if (ptaSystem === 'beancount') {
+		} else if (ptaSystem === PtaSystems.beancount) {
 			content = await response.json();
-		} else if (ptaSystem === 'ledger') {
+		} else if (ptaSystem === PtaSystems.ledger) {
 			throw new Error('Not supported!');
 		}
 
@@ -164,9 +168,9 @@ class CashierSync {
 
 		let content = (await response.json()) as string[];
 
-		if (this.ptaSystem === 'beancount') {
+		if (this.ptaSystem === PtaSystems.beancount) {
 			content = content.map((subArray) => subArray[0]);
-		} else if (this.ptaSystem === 'rledger') {
+		} else if (this.ptaSystem === PtaSystems.rledger) {
 			// content = content.rows.map((item) => item.payee);
 		}
 
@@ -230,28 +234,83 @@ class CashierSync {
 	}
 }
 
+interface SyncOptions {
+	syncAccounts?: boolean;
+	syncAaValues?: boolean;
+	syncPayees?: boolean;
+	syncInfrastructureFiles?: boolean;
+}
+
 /**
  * Entry point
  * @returns 
  */
-async function synchronize() {
+async function synchronize(syncOptions?: SyncOptions) {
 	// Cashier Sync synchronization
 
 	const activeUrl = getActiveServerUrlOrNotify();
 	if (!activeUrl) return;
 
-	if (syncAccounts) {
+	if (syncOptions?.syncAccounts) {
 		await synchronizeAccounts(activeUrl);
 	}
-	if (syncAaValues) {
+	if (syncOptions?.syncAaValues) {
 		await synchronizeAaValues(activeUrl);
 	}
-	if (syncPayees) {
+	if (syncOptions?.syncPayees) {
 		await synchronizePayees(activeUrl);
 	}
-	if (syncInfrastructureFiles) {
+	if (syncOptions?.syncInfrastructureFiles) {
 		await synchronizeInfrastructureFiles(activeUrl);
 	}
 }
 
-export { synchronize };
+function getActiveServerUrlOrNotify(serverUrl?: string): string | null {
+	const url = serverUrl?.trim();
+
+	if (!url) {
+		Notifier.error('No sync server configured. Please configure a sync server first.');
+		return null;
+	}
+
+	return url;
+}
+
+async function synchronizeAccounts(activeUrl: string) {
+	const sync = new CashierSync(activeUrl, _ptaSystem);
+	const response = await sync.readAccounts(_ptaSystem);
+	await SyncCommon.syncAccounts(_ptaSystem, response);
+	Notifier.success('Accounts fetched from Ledger');
+}
+
+async function synchronizeAaValues(activeUrl: string) {
+	const sync = new CashierSync(activeUrl, _ptaSystem);
+	const result = await sync.readCurrentValues();
+	await SyncCommon.syncCurrentValues(_ptaSystem, result);
+	Notifier.success('Asset Allocation values loaded');
+}
+
+async function synchronizePayees(activeUrl: string) {
+	const sync = new CashierSync(activeUrl, _ptaSystem);
+	const response = await sync.readPayees();
+	await SyncCommon.syncPayees(_ptaSystem, response);
+	Notifier.success('Payees fetched from Ledger');
+}
+
+async function synchronizeInfrastructureFiles(activeUrl: string) {
+	const sync = new CashierSync(activeUrl, _ptaSystem);
+
+	const fileContents = await Promise.all(
+		InfrastructureFiles.map((fileName) => sync.readInfrastructureFile(fileName))
+	);
+
+	const files: Record<string, string> = {};
+	InfrastructureFiles.forEach((fileName, index) => {
+		files[fileName] = fileContents[index];
+	});
+
+	await SyncCommon.syncInfrastructureFiles(files);
+	Notifier.success('Infrastructure files synchronized');
+}
+
+export { CashierSync, type SyncOptions, synchronize };

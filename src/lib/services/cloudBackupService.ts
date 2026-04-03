@@ -5,7 +5,7 @@
 import moment from 'moment';
 import appService from './appService';
 import { BackupType } from '$lib/enums';
-import { ISODATEFORMAT, LONGTIMEFORMAT } from '$lib/constants';
+import { ISODATEFORMAT, LONGTIMEFORMAT, PtaSystems } from '$lib/constants';
 import { createClient, type FileStat } from 'webdav';
 
 export class CloudBackupService {
@@ -97,7 +97,7 @@ export function getFilenameForBackup(backupType: string) {
 	let extension;
 	switch (backupType) {
 		case BackupType.JOURNAL:
-			extension = 'ledger';
+			extension = PtaSystems.ledger;
 			break;
 		default:
 			// case BackupType.SCHEDULEDXACTS:

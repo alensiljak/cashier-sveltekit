@@ -12,6 +12,7 @@ import * as RledgerParser from '$lib/utils/rledgerParser';
 import * as OpfsLib from '$lib/utils/opfslib';
 import ledgerService from '$lib/services/ledgerService';
 import type { CurrentValuesDict } from '$lib/data/viewModels';
+import { PtaSystems } from '$lib/constants';
 
 /**
  * Delete existing accounts and import new ones from a balance sheet response.
@@ -35,11 +36,11 @@ export async function syncCurrentValues(ptaSystem: string, result: any): Promise
 	}
 
 	let currentValues: CurrentValuesDict;
-	if (ptaSystem === 'beancount') {
+	if (ptaSystem === PtaSystems.beancount) {
 		currentValues = BeancountParser.parseCurrentValues(result, rootAccount);
-	} else if (ptaSystem === 'rledger') {
+	} else if (ptaSystem === PtaSystems.rledger) {
 		currentValues = RledgerParser.parseCurrentValues(result, rootAccount);
-	} else if (ptaSystem === 'ledger') {
+	} else if (ptaSystem === PtaSystems.ledger) {
 		currentValues = LedgerParser.parseCurrentValues(result, rootAccount);
 	} else {
 		throw new Error('Unknown PTA system: ' + ptaSystem);

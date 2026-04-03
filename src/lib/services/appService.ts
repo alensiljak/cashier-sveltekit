@@ -15,6 +15,7 @@ import * as LedgerParser from '$lib/utils/ledgerParser';
 import * as BeancountParser from '$lib/utils/beancountParser';
 import * as RledgerParser from '$lib/utils/rledgerParser';
 import { formatAmount } from '$lib/utils/formatter';
+import { PtaSystems } from '$lib/constants';
 
 interface AccountIndex {
 	[key: string]: Account;
@@ -133,7 +134,7 @@ class AppService {
 
 			// prepare output.
 			const output_system = await settings.get(SettingKeys.ptaSystem);
-			if (output_system === 'ledger') {
+			if (output_system === PtaSystems.ledger) {
 				output += this.translateToLedger(tx);
 			} else {
 				output += this.translateToBeancount(tx);
@@ -376,11 +377,11 @@ class AppService {
 
 		let items;
 		switch (ptaSystem) {
-			case 'rledger':
+			case PtaSystems.rledger:
 				items = response.rows;
 				break;
-			case 'beancount':
-			case 'ledger':
+			case PtaSystems.beancount:
+			case PtaSystems.ledger:
 				items = response;
 				break;
 			default:
@@ -394,11 +395,11 @@ class AppService {
 			if (item === '') continue;
 
 			// parse
-			if (ptaSystem === 'ledger') {
+			if (ptaSystem === PtaSystems.ledger) {
 				account = LedgerParser.parseBalanceSheetRow(item);
-			} else if (ptaSystem === 'beancount') {
+			} else if (ptaSystem === PtaSystems.beancount) {
 				account = BeancountParser.parseBalanceSheetRow(item);
-			} else if (ptaSystem === 'rledger') {
+			} else if (ptaSystem === PtaSystems.rledger) {
 				account = RledgerParser.parseBalanceSheetRow(item);
 				console.log('Parsed account from rledger:', account);
 			} else {

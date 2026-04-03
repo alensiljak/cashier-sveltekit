@@ -2,6 +2,8 @@
  * Contains queries for the sync, PTA system.
  */
 
+import { PtaSystems } from "$lib/constants";
+
 export interface Queries {
 	accounts(): string;
 	openAccounts(): string;
@@ -120,11 +122,11 @@ const RustledgerQueries: Queries = {
 };
 
 export function getQueries(ptaSystem: string): Queries {
-	if (ptaSystem === 'ledger') {
+	if (ptaSystem === PtaSystems.ledger) {
 		return LedgerQueries;
-	} else if (ptaSystem == 'beancount') {
+	} else if (ptaSystem == PtaSystems.beancount) {
 		return BeancountQueries;
-	} else if (ptaSystem == 'rledger') {
+	} else if (ptaSystem == PtaSystems.rledger) {
 		return RustledgerQueries;
 	} else {
 		throw new Error('Unknown PTA system: ' + ptaSystem);

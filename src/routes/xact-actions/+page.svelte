@@ -18,6 +18,7 @@
 	} from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import { SettingKeys, settings } from '$lib/settings';
+	import { PtaSystems } from '$lib/constants';
 
 	Notifier.init();
 
@@ -42,7 +43,7 @@
 	async function onCopyClicked() {
 		// get a journal version
 		let text = '';
-		if (ptaSystem == 'ledger') {
+		if (ptaSystem == PtaSystems.rledger) {
 			text = appService.translateToLedger($xact);
 		} else {
 			text = appService.translateToBeancount($xact);

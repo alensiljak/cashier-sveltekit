@@ -6,6 +6,7 @@ import { getQueries } from '$lib/sync/sync-queries';
 import * as BeancountParser from '$lib/utils/beancountParser';
 import * as LedgerParser from '$lib/utils/ledgerParser';
 import { UserError, NotFoundError, ApiError } from '$lib/utils/errors';
+import { PtaSystems } from '$lib/constants';
 
 const DATE_FORMAT = 'YYYY-MM-DD';
 
@@ -152,9 +153,9 @@ export class SecurityAnalyser {
 		}
 
 		let total;
-		if (ptaSystem == 'ledger') {
+		if (ptaSystem == PtaSystems.ledger) {
 			total = LedgerParser.getNumberFromBalanceRow(report);
-		} else if (ptaSystem == 'beancount') {
+		} else if (ptaSystem == PtaSystems.beancount) {
 			// total = BeancountParser.getNumberFromBalanceRow(report)
 			const line = report[0];
 			total = BeancountParser.getMoneyFromTupleString(line[0]).quantity;
@@ -179,9 +180,9 @@ export class SecurityAnalyser {
 		await api.init();
 		const report = await api.query(command);
 
-		if (ptaSystem == 'ledger') {
+		if (ptaSystem == PtaSystems.ledger) {
 			return LedgerParser.getNumberFromBalanceRow(report);
-		} else if (ptaSystem == 'beancount') {
+		} else if (ptaSystem == PtaSystems.beancount) {
 			// return BeancountParser.getNumberFromBalanceRow(report)
 			const line = report[0];
 			return BeancountParser.getMoneyFromTupleString(line[0]).quantity;

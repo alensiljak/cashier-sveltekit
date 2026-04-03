@@ -11,6 +11,12 @@ export const InfrastructureFiles = [
 	'accounts.bean'
 ] as const;
 
+export enum PtaSystems {
+	beancount = 'beancount',
+	rledger = 'rledger',
+	ledger = 'ledger'
+}
+
 export const DEFAULT_FORECAST_DAYS = 7 as const;
 export const ISODATEFORMAT = 'YYYY-MM-DD';
 export const LONGTIMEFORMAT = 'HHmmss';
