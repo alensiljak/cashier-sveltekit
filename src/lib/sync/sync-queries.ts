@@ -90,7 +90,7 @@ const RustledgerQueries: Queries = {
 	openAccounts: () => 'SELECT account, open from #accounts where close is null',
 	balances: () => 'SELECT account, sum(number) as balance, currency ORDER BY account',
 	currentValues: (rootAccount: string, currency: string) =>
-		`SELECT account, str(value(sum(position), '${currency}'))
+		`SELECT account, str(value(sum(position), '${currency}')) as value
         WHERE account ~ '^${rootAccount}'
         GROUP BY account
         HAVING NOT empty(sum(position))
