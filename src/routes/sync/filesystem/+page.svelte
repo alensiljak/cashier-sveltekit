@@ -495,6 +495,34 @@
 					{/if}
 				</div>
 			{/if}
+			{#if bookRootFileName || aaDefinitionFileName}
+				<div class="flex flex-col gap-2 mt-4">
+					{#if bookRootFileName}
+						<div role="alert" class="alert alert-success">
+							<input type="checkbox" class="checkbox checkbox-sm checkbox-success" checked disabled />
+							<span>Book set: {bookRootFileName}</span>
+							<button class="btn btn-xs btn-ghost border border-warning" onclick={() => {
+								bookRootFileName = '';
+								settings.set(SettingKeys.fullBookRoot, null);
+							}}>
+								<XIcon class="w-4 h-4" /> Unset
+							</button>
+						</div>
+					{/if}
+					{#if aaDefinitionFileName}
+						<div role="alert" class="alert alert-success">
+							<input type="checkbox" class="checkbox checkbox-sm checkbox-success" checked disabled />
+							<span>Asset Allocation set: {aaDefinitionFileName}</span>
+							<button class="btn btn-xs btn-ghost border border-warning" onclick={() => {
+								aaDefinitionFileName = '';
+								settings.set(SettingKeys.assetAllocationDefinition, null);
+							}}>
+								<XIcon class="w-4 h-4" /> Unset
+							</button>
+						</div>
+					{/if}
+				</div>
+			{/if}
 
 			{#if selectedEntry && showPreviewPanel}
 				<div class="mt-6 border border-base-300 rounded-lg">
