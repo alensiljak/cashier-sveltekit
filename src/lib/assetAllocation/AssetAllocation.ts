@@ -15,6 +15,8 @@ import {
 	NotFoundError,
 	ValidationError,
 } from '$lib/utils/errors';
+import { loadFileMap } from '$lib/sync/sync-fs';
+import { queryMultiFile } from '$lib/services/rustledger';
 
 /**
  * loadDefinition = loads the pre-set definition
@@ -334,7 +336,11 @@ export class AssetAllocationEngine {
 	async loadCurrentValues(): Promise<string[]> {
 		this.warnings = [];
 		const defaultCurrency = await appService.getDefaultCurrency();
-		const invAccounts = await loadInvestmentAccounts();
+
+		const { fileMap, mainFileName } = await loadFileMap();
+		const invAccounts = await loadInvestmentAccounts(
+			 (bql) => queryMultiFile(fileMap, mainFileName, bql)
+		);
 
 		invAccounts.forEach((account) => {
 			// Current Value is populated from Ledger. 

@@ -13,6 +13,8 @@ import { SettingKeys, settings } from '$lib/settings';
 import appService from './appService';
 import ledgerService from './ledgerService';
 
+type QueryFn = (bql: string) => { columns: string[]; rows: any[]; errors: any[] };
+
 export async function createDefaultAccounts() {
 	const accountsList = getDefaultChartOfAccounts();
 	await createAccounts(accountsList);
@@ -180,7 +182,8 @@ export function getShortAccountName(accountName: string): string {
  * Start from the investment root setting, and include the commodity.
  * @returns Promise with investment accounts collection
  */
-export async function loadInvestmentAccounts(): Promise<Account[]> {
+export async function loadInvestmentAccounts(queryFn: QueryFn = 
+    (bql) => ledgerService.query(bql)): Promise<Account[]> {
 	const rootAccount = await settings.get(SettingKeys.rootInvestmentAccount);
 	if (!rootAccount) {
 		throw new Error('Root investment account not set!');
@@ -194,8 +197,7 @@ export async function loadInvestmentAccounts(): Promise<Account[]> {
 		HAVING NOT empty(sum(position))
 		ORDER BY account`;
 
-    // we can't use ledgerService here because we need the multi-file ledger from the filesystem!
-	const result = ledgerService.query(bql);
+	const result = queryFn(bql);
 	if (result.errors.length > 0) {
 		throw new Error(result.errors.map((e: any) => e.message).join('; '));
 	}
