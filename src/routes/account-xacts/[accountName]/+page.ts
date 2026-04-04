@@ -32,7 +32,7 @@ function calculateCurrentBalance(xacts: Xact[], account: Account) {
 		for (const posting of xact.postings.filter((p) => p.account === account.name)) {
 			if (posting.amount) {
 				balance.quantity += posting.amount;
-				balance.currency ??= posting.currency;
+				balance.currency ||= posting.currency;
 			}
 		}
 	}
