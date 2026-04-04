@@ -142,7 +142,7 @@ async function collectAllFiles(
 /**
  * Load all beancount files from the filesystem, resolving includes.
  */
-async function loadFileMap(): Promise<{ fileMap: Record<string, string>; mainFileName: string }> {
+export async function loadFileMap(): Promise<{ fileMap: Record<string, string>; mainFileName: string }> {
 	const { fileName: mainFileName, content: mainContent, dirHandle } = await readMainBeancountFile();
 
 	const fileMap: Record<string, string> = {};
