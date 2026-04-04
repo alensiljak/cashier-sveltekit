@@ -52,12 +52,6 @@
 				<a class="link link-primary" href="/rledger">RustLedger demo</a>
 			</li>
 			<li>
-				<a class="link link-primary" href="/book">Book demo</a>
-			</li>
-			<li>
-				<a class="link link-primary" href="/p2p-sync">P2P synchronization</a>
-			</li>
-			<li>
 				<a class="link link-primary" href="/query">Query interface</a>
 			</li>
 			<li>

@@ -4,7 +4,7 @@
 
 - [x] Use OPFS for storage.
 - [x] Store all Beancount files.
-- [ ] Base all logic on Beancount files.
+- [x] Base all logic on Beancount files.
 
 ## Specifics
 
