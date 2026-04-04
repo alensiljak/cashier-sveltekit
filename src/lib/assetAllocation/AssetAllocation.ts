@@ -7,7 +7,7 @@ import numeral from 'numeral';
 import toml from 'toml';
 import { getAccountBalance, loadInvestmentAccounts } from '$lib/services/accountsService';
 import Big from 'big.js';
-import type { Money } from '../data/model';
+import { Account, Money } from '../data/model';
 import { NUMBER_FORMAT } from '../constants';
 import type { CurrentValuesDict } from '$lib/data/viewModels';
 import { UserError, NotFoundError, ValidationError } from '$lib/utils/errors';
@@ -247,13 +247,11 @@ export class AssetAllocationEngine {
 			const balance: Money = balancesDict[key];
 
 			// Update existing account.
-			const account = await appService.db.accounts.get(key);
+			let account = await appService.db.accounts.get(key);
 			if (!account) {
-				throw new NotFoundError(
-					'Account',
-					key,
-					'Please check the account name or reload your data'
-				);
+				// create the account
+				account = new Account(key);
+				account.balance = balance;
 			}
 			account.currentValue = balance.quantity;
 			account.currentCurrency = balance.currency;

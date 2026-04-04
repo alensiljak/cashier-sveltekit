@@ -12,7 +12,7 @@ import { AssetAllocationFilename, ISODATEFORMAT } from '$lib/constants';
 import { PtaSystems } from '$lib/enums';
 import * as syncCommon from '$lib/sync/sync-common';
 import * as RledgerParser from '$lib/utils/rledgerParser';
-import type { Account } from '$lib/data/model';
+import { Money, type Account } from '$lib/data/model';
 import { OPFSBackend } from '$lib/storage';
 import type { CurrentValuesDict } from '$lib/data/viewModels';
 import { AssetAllocationEngine } from '$lib/assetAllocation/AssetAllocation';
@@ -21,6 +21,8 @@ import {
 	initializeSyncProgress,
 	updateSyncStep
 } from '$lib/stores/syncProgressStore';
+import appService from '$lib/services/appService';
+import db from '$lib/data/db';
 
 // IndexedDB persistence for directory handle
 const IDB_NAME = 'cashier-fs-handles';
@@ -247,6 +249,8 @@ async function syncAccountsFromFs(
 		return { name: accountName, openDate };
 	});
 
+	// Save to accounts.bean file in OPFS.
+
 	const accountDirectives = await createAccountDirectives(entities);
 	const filename = 'accounts.bean';
 	const opfs = new OPFSBackend();
@@ -394,7 +398,7 @@ async function syncCurrentValues(
 	// creates { "account": amount }
 	const currentValues: CurrentValuesDict = {};
 	result.rows.forEach((row: any) => {
-		currentValues[row[0]] = row[1];
+		currentValues[row[0]] = Money.fromString(row[1]);
 	});
 
 	const aa = new AssetAllocationEngine();

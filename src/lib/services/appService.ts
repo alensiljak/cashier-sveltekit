@@ -372,7 +372,7 @@ class AppService {
 		}
 
 		const accountBalances: AccountIndex = {};
-		let account;
+		let account: Account | null = null;
 
 		let items;
 		switch (ptaSystem) {

@@ -93,8 +93,9 @@ const RustledgerQueries: Queries = {
 		`SELECT account, str(value(sum(position), '${currency}')) as value
         WHERE account ~ '^${rootAccount}'
         GROUP BY account
-        HAVING NOT empty(sum(position))
+        HAVING number(value(sum(position), 'EUR')) != 0
         ORDER BY account`,
+	// HAVING NOT empty(sum(position))
 	lots: (symbol: string) => 'balances',
 	payees: (from: string) =>
 		`SELECT DISTINCT COALESCE(payee, narration) as payee FROM transactions \
