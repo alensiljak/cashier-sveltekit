@@ -3,11 +3,10 @@
 	import Fab from '$lib/components/FAB.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
-	import db from '$lib/data/db';
 	import { selectionMetadata } from '$lib/data/mainStore';
-	import type { Account, Money } from '$lib/data/model';
+	import { Account, Money } from '$lib/data/model';
 	import { SelectionType } from '$lib/enums';
-	import * as AccountService from '$lib/services/accountsService';
+	import ledgerService from '$lib/services/ledgerService';
 	import appService from '$lib/services/appService';
 	import { SelectionModeMetadata, SettingKeys, settings } from '$lib/settings';
 	import { formatAmount, getMoneyColour } from '$lib/utils/formatter';
@@ -47,9 +46,6 @@
 		await loadData();
 	});
 
-	/**
-	 * Close all dialogs.
-	 */
 	function closeModal() {
 		isDeleteAllConfirmationOpen = false;
 	}
@@ -66,19 +62,12 @@
 		}
 	}
 
-	/**
-	 * Handle account selection after Add new account.
-	 */
 	async function handleAccountSelection() {
 		if (!$selectionMetadata || !$selectionMetadata.selectedId) return;
 		if ($selectionMetadata.selectionType !== SelectionType.ACCOUNT) return;
 
-		let account = await db.accounts.get($selectionMetadata.selectedId);
-		if (!account) {
-			throw new Error('Account not found');
-		}
-
-		await addAccount(account.name);
+		// The selectedId is the account name (string key).
+		await addAccount($selectionMetadata.selectedId as string);
 
 		selectionMetadata.set(undefined);
 	}
@@ -87,22 +76,112 @@
 		return account.exists === false;
 	}
 
-	async function loadData() {
-		// load from settings
-		accounts = await appService.loadFavouriteAccounts();
+	/**
+	 * Query account balances from the ParsedLedger via BQL.
+	 */
+	function queryFavouriteBalances(favNames: string[]): Map<string, Account> {
+		const result = new Map<string, Account>();
+		if (favNames.length === 0) return result;
 
-		let defaultCurrency = await appService.getDefaultCurrency();
-		// get account balances
-		accounts.forEach((account) => {
-			account.balance = AccountService.getAccountBalance(account, defaultCurrency);
+		// Build the WHERE IN clause.
+		const quotedNames = favNames.map((n) => `'${n}'`).join(', ');
+		const bql = `SELECT account, sum(position) AS balance WHERE account IN (${quotedNames})`;
+
+		const queryResult = ledgerService.query(bql);
+		if (queryResult.errors.length > 0) {
+			console.warn('BQL query errors:', queryResult.errors);
+			return result;
+		}
+
+		const accountIdx = queryResult.columns.indexOf('account');
+		const balanceIdx = queryResult.columns.indexOf('balance');
+
+		for (const row of queryResult.rows) {
+			const name: string = row[accountIdx];
+			const account = new Account(name);
+
+			if (balanceIdx !== -1) {
+				const cell = row[balanceIdx];
+				const balances = extractBalances(cell);
+				if (Object.keys(balances).length > 0) {
+					account.balances = balances;
+				}
+			}
+
+			result.set(name, account);
+		}
+
+		return result;
+	}
+
+	/**
+	 * Extract currency→amount pairs from a BQL position cell.
+	 */
+	function extractBalances(cell: any): Record<string, number> {
+		const balances: Record<string, number> = {};
+		if (!cell || typeof cell !== 'object') return balances;
+
+		if (Array.isArray(cell.positions)) {
+			for (const pos of cell.positions) {
+				if (pos?.units?.currency && pos.units.number != null) {
+					balances[pos.units.currency] = parseFloat(pos.units.number);
+				}
+			}
+			return balances;
+		}
+		if (cell.units?.currency && cell.units.number != null) {
+			balances[cell.units.currency] = parseFloat(cell.units.number);
+			return balances;
+		}
+		if (cell.currency && cell.number != null) {
+			balances[cell.currency] = parseFloat(cell.number);
+		}
+		return balances;
+	}
+
+	async function loadData() {
+		const favNames: string[] = (await settings.get(SettingKeys.favouriteAccounts)) ?? [];
+		if (favNames.length === 0) {
+			accounts = [];
+			return;
+		}
+
+		const defaultCurrency = await appService.getDefaultCurrency();
+
+		// Query balances from the WASM ParsedLedger.
+		const balanceMap = queryFavouriteBalances(favNames);
+
+		// Build the accounts list preserving the favourites order.
+		accounts = favNames.map((name) => {
+			const found = balanceMap.get(name);
+			if (found) {
+				// Set the display balance from the balances map.
+				const money = new Money();
+				money.currency = defaultCurrency;
+				if (found.balances) {
+					if (found.balances[defaultCurrency] != null) {
+						money.quantity = found.balances[defaultCurrency];
+						money.currency = defaultCurrency;
+					} else {
+						const firstCurrency = Object.keys(found.balances)[0];
+						if (firstCurrency) {
+							money.quantity = found.balances[firstCurrency];
+							money.currency = firstCurrency;
+						}
+					}
+				}
+				found.balance = money;
+				return found;
+			} else {
+				// Account not found in ledger — mark as non-existent.
+				const account = new Account(name);
+				account.exists = false;
+				account.balance = new Money();
+				account.balance.currency = defaultCurrency;
+				return account;
+			}
 		});
 
-		// Explicitly re-assign accounts to trigger reactivity
-		accounts = [...accounts];
-
-		// todo: add local Xacts to the balance.
-
-		// refresh the UI.
 		refreshKey += 1;
 	}
 
@@ -122,7 +201,6 @@
 	}
 
 	function onDeleteAllClicked() {
-		// confirm dialog
 		isDeleteAllConfirmationOpen = true;
 	}
 
