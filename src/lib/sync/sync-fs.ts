@@ -143,7 +143,11 @@ async function collectAllFiles(
 /**
  * Load all beancount files from the filesystem, resolving includes.
  */
-export async function loadFileMap(): Promise<{ fileMap: Record<string, string>; mainFileName: string; dirHandle: FileSystemDirectoryHandle }> {
+export async function loadFileMap(): Promise<{
+	fileMap: Record<string, string>;
+	mainFileName: string;
+	dirHandle: FileSystemDirectoryHandle;
+}> {
 	const { fileName: mainFileName, content: mainContent, dirHandle } = await readMainBeancountFile();
 
 	const fileMap: Record<string, string> = {};
@@ -337,7 +341,7 @@ async function syncAssetAllocation(dirHandle?: FileSystemDirectoryHandle) {
 	}
 
 	if (!dirHandle) {
-		dirHandle = await loadPersistedHandle() ?? undefined;
+		dirHandle = (await loadPersistedHandle()) ?? undefined;
 		if (!dirHandle) {
 			throw new Error('No directory selected. Please open a directory in the fs-sync page.');
 		}

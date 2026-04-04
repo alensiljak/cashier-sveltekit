@@ -10,11 +10,7 @@ import Big from 'big.js';
 import type { Money } from '../data/model';
 import { NUMBER_FORMAT } from '../constants';
 import type { CurrentValuesDict } from '$lib/data/viewModels';
-import {
-	UserError,
-	NotFoundError,
-	ValidationError,
-} from '$lib/utils/errors';
+import { UserError, NotFoundError, ValidationError } from '$lib/utils/errors';
 import { loadFileMap } from '$lib/sync/sync-fs';
 import { queryMultiFile } from '$lib/services/rustledger';
 
@@ -338,8 +334,8 @@ export class AssetAllocationEngine {
 		const defaultCurrency = await appService.getDefaultCurrency();
 
 		const { fileMap, mainFileName } = await loadFileMap();
-		const invAccounts = await loadInvestmentAccounts(
-			 (bql) => queryMultiFile(fileMap, mainFileName, bql)
+		const invAccounts = await loadInvestmentAccounts((bql) =>
+			queryMultiFile(fileMap, mainFileName, bql)
 		);
 
 		invAccounts.forEach((account) => {

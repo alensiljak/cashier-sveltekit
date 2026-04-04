@@ -183,8 +183,9 @@ export function getShortAccountName(accountName: string): string {
  * Start from the investment root setting, and include the commodity.
  * @returns Promise with investment accounts collection
  */
-export async function loadInvestmentAccounts(queryFn: QueryFn = 
-    (bql) => ledgerService.query(bql)): Promise<Account[]> {
+export async function loadInvestmentAccounts(
+	queryFn: QueryFn = (bql) => ledgerService.query(bql)
+): Promise<Account[]> {
 	const rootAccount = await settings.get(SettingKeys.rootInvestmentAccount);
 	if (!rootAccount) {
 		throw new Error('Root investment account not set!');
@@ -197,7 +198,7 @@ export async function loadInvestmentAccounts(queryFn: QueryFn =
 		GROUP BY account
 		HAVING number(value(sum(position), 'EUR')) != 0
 		ORDER BY account`;
-    // HAVING NOT empty(sum(position))
+	// HAVING NOT empty(sum(position))
 
 	const result = queryFn(bql);
 	if (result.errors.length > 0) {
@@ -211,23 +212,25 @@ export async function loadInvestmentAccounts(queryFn: QueryFn =
 	return result.rows.map((row: any) => {
 		const account = new Account(row[accountIdx]);
 
-        // Source:
-        // row[balancesIdx].positions is an array containing
-        // { units: { 'number', 'currency' } }
-        // Destination:
-        // account.balances: { EUR: 100, USD: 200 }
-        account.balances = row[balancesIdx].positions
-            .reduce((acc: any, balance: any) => {
-                if (account.name.indexOf(':HY') !== -1) {
-                    console.log('Processing balance', balance.units);
-                }
-                // acc[balance.units.currency] = (acc[balance.units.currency] ?? 0) + 
-                //     parseFloat(balance.units.number);
-                acc[balance.units.currency] = addDecimalStrings([acc[balance.units.currency]?.toString() ?? '0', balance.units.number]);
-                return acc;
-            }, {});
+		// Source:
+		// row[balancesIdx].positions is an array containing
+		// { units: { 'number', 'currency' } }
+		// Destination:
+		// account.balances: { EUR: 100, USD: 200 }
+		account.balances = row[balancesIdx].positions.reduce((acc: any, balance: any) => {
+			if (account.name.indexOf(':HY') !== -1) {
+				console.log('Processing balance', balance.units);
+			}
+			// acc[balance.units.currency] = (acc[balance.units.currency] ?? 0) +
+			//     parseFloat(balance.units.number);
+			acc[balance.units.currency] = addDecimalStrings([
+				acc[balance.units.currency]?.toString() ?? '0',
+				balance.units.number
+			]);
+			return acc;
+		}, {});
 
-        // current value: str(value(...)) returns e.g. "1234.56 EUR" or structured object
+		// current value: str(value(...)) returns e.g. "1234.56 EUR" or structured object
 		if (valueIdx !== -1 && row[valueIdx] != null) {
 			const raw = row[valueIdx];
 			if (typeof raw === 'object' && raw.number != null) {

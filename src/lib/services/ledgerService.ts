@@ -236,9 +236,7 @@ class LedgerService {
 	getXacts(): Xact[] {
 		if (!this.ledger) return [];
 		const directives: any[] = this.ledger.getDirectives();
-		return directives
-			.filter((d) => d.type === 'transaction')
-			.map((d) => this.directiveToXact(d));
+		return directives.filter((d) => d.type === 'transaction').map((d) => this.directiveToXact(d));
 	}
 
 	/** Read and combine all .bean sources from OPFS: infrastructure files + cashier.bean */

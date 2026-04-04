@@ -3,10 +3,7 @@
 */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import {
-	ensureInitialized,
-	parseBalanceSheetRow,
-} from '$lib/services/rustledger';
+import { ensureInitialized, parseBalanceSheetRow } from '$lib/services/rustledger';
 import { Account } from '$lib/data/model';
 
 describe('RustLedger Service', () => {

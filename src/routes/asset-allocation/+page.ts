@@ -32,7 +32,6 @@ export async function load() {
 		}
 
 		return { aa, assetClasses };
-
 	} catch (error) {
 		console.error(error);
 

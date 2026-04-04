@@ -247,10 +247,10 @@ async function synchronize(syncOptions?: SyncOptions) {
 		console.error(error);
 		Notifier.error(error.message);
 		// Update the current step to error
-		syncProgress.update(steps => {
-			const currentStep = steps.find(step => step.status === 'in-progress');
+		syncProgress.update((steps) => {
+			const currentStep = steps.find((step) => step.status === 'in-progress');
 			if (currentStep) {
-				return steps.map(step =>
+				return steps.map((step) =>
 					step.id === currentStep.id ? { ...step, status: 'error' } : step
 				);
 			}

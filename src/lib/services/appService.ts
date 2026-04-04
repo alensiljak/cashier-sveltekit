@@ -132,7 +132,7 @@ class AppService {
 			}
 
 			// prepare output.
-			const output_system = await settings.get(SettingKeys.ledgerDataSource) as string;
+			const output_system = (await settings.get(SettingKeys.ledgerDataSource)) as string;
 			if (output_system === LedgerDataSource.ledger) {
 				output += this.translateToLedger(tx);
 			} else {
@@ -143,7 +143,7 @@ class AppService {
 	}
 
 	async getVisibleCards(): Promise<string[]> {
-		let visibleCardNames: string[] = await settings.get(SettingKeys.visibleCards) as string[];
+		let visibleCardNames: string[] = (await settings.get(SettingKeys.visibleCards)) as string[];
 		if (!visibleCardNames) {
 			// create the default cards list here
 			visibleCardNames = [
@@ -290,7 +290,7 @@ class AppService {
 	async getDefaultCurrency(): Promise<string> {
 		let defaultCurrency = get(DefaultCurrencyStore);
 		if (!defaultCurrency) {
-			defaultCurrency = await settings.get(SettingKeys.currency) as string;
+			defaultCurrency = (await settings.get(SettingKeys.currency)) as string;
 			DefaultCurrencyStore.set(defaultCurrency);
 		}
 		return defaultCurrency;

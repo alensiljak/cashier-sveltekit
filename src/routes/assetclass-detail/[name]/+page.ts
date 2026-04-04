@@ -5,7 +5,11 @@ import type { Account } from '$lib/data/model.js';
 import * as AccountService from '$lib/services/accountsService';
 import appService from '$lib/services/appService';
 import { loadFileMap } from '$lib/sync/sync-fs';
-import { ensureInitialized, queryMultiFile, version as getWasmVersion } from '$lib/services/rustledger';
+import {
+	ensureInitialized,
+	queryMultiFile,
+	version as getWasmVersion
+} from '$lib/services/rustledger';
 import { get } from 'svelte/store';
 
 export type WasmQueryFn = (bql: string) => { columns: string[]; rows: any[]; errors: any[] };
@@ -58,7 +62,16 @@ export async function load({ params }) {
 	}));
 	const wasmVersion = getWasmVersion();
 
-	return { wasmQuery, investmentAccounts, currency, aa, assetClass, stocks, fileMapInfo, wasmVersion };
+	return {
+		wasmQuery,
+		investmentAccounts,
+		currency,
+		aa,
+		assetClass,
+		stocks,
+		fileMapInfo,
+		wasmVersion
+	};
 }
 
 function populateStocksWithCaching(assetClass: AssetClass, investmentAccounts: Account[]) {

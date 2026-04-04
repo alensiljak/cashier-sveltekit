@@ -43,9 +43,7 @@ export class SecurityAnalyser {
 		if (this.wasmQueryFn) {
 			const result = this.wasmQueryFn(command);
 			if (result.errors.length > 0) {
-				throw new Error(
-					`BQL query failed: ${result.errors.map((e: any) => e.message).join('; ')}`
-				);
+				throw new Error(`BQL query failed: ${result.errors.map((e: any) => e.message).join('; ')}`);
 			}
 			return result.rows;
 		}
