@@ -211,12 +211,13 @@ export async function loadInvestmentAccounts(queryFn: QueryFn =
 		const account = new Account(row[accountIdx]);
         // Source:
         // row[balancesIdx].positions is an array containing
-        // { units: { number, currency } }
+        // { units: { 'number', 'currency' } }
         // Destination:
         // account.balances: { EUR: 100, USD: 200 }
         account.balances = row[balancesIdx].positions
             .reduce((acc: any, balance: any) => {
-                acc[balance.units.currency] = balance.units.number;
+                acc[balance.units.currency] = (acc[balance.units.currency] ?? 0) + 
+                    parseFloat(balance.units.number);
                 return acc;
             }, {});
         // current value: str(value(...)) returns e.g. "1234.56 EUR" or structured object
