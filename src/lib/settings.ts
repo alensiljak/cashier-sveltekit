@@ -40,7 +40,11 @@ export const SettingKeys = {
 	dbInitialized: 'dbInitialized', // Marks that the db has been initialized
 	pCloudToken: 'pCloudToken',
 	syncServerUrl: 'syncServerUrl',
-	ptaSystem: 'ptaSystem', // ledger or beancount
+	// External data source system
+	ledgerDataSource: 'ledgerDataSource', // beancount, rledger, ledger, filesystem
+	//ptaSystem: 'ptaSystem', // ledger, beancount, rledger
+	// Storage backend
+	//storageBackend: 'storageBackend',
 	// path to the prices repository for CashierSync.
 	pricesRepositoryPath: 'pricesRepositoryPath',
 	// path to the book repository for CashierSync.
@@ -61,8 +65,6 @@ export const SettingKeys = {
 	peerId: 'peerId',
 	syncServers: 'syncServers',
 	syncActiveServerId: 'syncActiveServerId',
-	// Storage backend
-	storageBackend: 'storageBackend',
 	// Full path to the main book/journal file (set via fs-sync page)
 	externalBook: 'externalBook',
 	externalAssetAllocation: 'externalAssetAllocation'

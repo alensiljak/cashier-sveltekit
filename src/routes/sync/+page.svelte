@@ -7,10 +7,10 @@
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import * as SyncBeancount from '$lib/sync/sync-beancount';
 	import { InfrastructureFiles, LedgerDataSource } from '$lib/constants';
-		import { goto } from '$app/navigation';
+	import { goto } from '$app/navigation';
 	import * as cashierFsSync from '$lib/sync/sync-fs';
 	import ledgerService from '$lib/services/ledgerService';
-import { syncProgress } from '$lib/stores/syncProgressStore';
+	import { syncProgress } from '$lib/stores/syncProgressStore';
 
 	Notifier.init();
 
@@ -28,7 +28,7 @@ import { syncProgress } from '$lib/stores/syncProgressStore';
 	let configSource = $state<LedgerDataSource>(LedgerDataSource.filesystem);
 
 	let serverUrl = $state('');
-	let _ptaSystem = $state('');
+	let _dataSource = $state('');
 
 	onMount(async () => {
 		await loadSettings();
@@ -36,8 +36,8 @@ import { syncProgress } from '$lib/stores/syncProgressStore';
 
 	async function loadSettings() {
 		serverUrl = ((await settings.get<string>(SettingKeys.syncServerUrl)) as string | null) ?? '';
-		_ptaSystem = ((await settings.get(SettingKeys.ptaSystem)) as string) ?? '';
-		if (_ptaSystem) configSource = _ptaSystem as LedgerDataSource;
+		_dataSource = ((await settings.get(SettingKeys.ledgerDataSource)) as string) ?? '';
+		if (_dataSource) configSource = _dataSource as LedgerDataSource;
 
 		syncAccounts = (await settings.get(SettingKeys.syncAccounts)) ?? false;
 		syncAaValues = (await settings.get(SettingKeys.syncAaValues)) ?? false;
@@ -48,8 +48,8 @@ import { syncProgress } from '$lib/stores/syncProgressStore';
 	}
 
 	async function onConfigSourceChanged() {
-		_ptaSystem = configSource;
-		await settings.set(SettingKeys.ptaSystem, configSource);
+		_dataSource = configSource;
+		await settings.set(SettingKeys.ledgerDataSource, configSource);
 	}
 
 	function onConfigureClick() {
@@ -73,7 +73,7 @@ import { syncProgress } from '$lib/stores/syncProgressStore';
 		const activeUrl = SyncBeancount.getActiveServerUrlOrNotify();
 		if (!activeUrl) return;
 
-		const sync = new SyncBeancount.CashierSync(activeUrl, _ptaSystem);
+		const sync = new SyncBeancount.CashierSync(activeUrl, _dataSource);
 		await sync.reloadData();
 	}
 
@@ -81,7 +81,7 @@ import { syncProgress } from '$lib/stores/syncProgressStore';
 		const activeUrl = SyncBeancount.getActiveServerUrlOrNotify();
 		if (!activeUrl) return;
 
-		const sync = new SyncBeancount.CashierSync(activeUrl, _ptaSystem);
+		const sync = new SyncBeancount.CashierSync(activeUrl, _dataSource);
 		try {
 			await sync.shutdown();
 		} catch (error: any) {
@@ -244,12 +244,16 @@ import { syncProgress } from '$lib/stores/syncProgressStore';
 
 	<div class="flex flex-col space-y-8 pt-6">
 		<div class="border border-base-200 rounded-lg p-4">
-			<div class="grid items-center gap-x-4 gap-y-4" class:grid-cols-[auto_1fr_1.5rem]={syncStarted} class:grid-cols-[auto_1fr]={!syncStarted}>
+			<div
+				class="grid items-center gap-x-4 gap-y-4"
+				class:grid-cols-[auto_1fr_1.5rem]={syncStarted}
+				class:grid-cols-[auto_1fr]={!syncStarted}
+			>
 				<input
 					class="checkbox checkbox-primary rounded"
 					type="checkbox"
 					bind:checked={syncInfrastructureFiles}
-					onchange={(e) => toggleAllCheckboxes(e.target.checked)}
+					onchange={(e) => toggleAllCheckboxes(e.target?.checked)}
 				/>
 				<p><strong></strong></p>
 				{#if syncStarted}<div></div>{/if}
@@ -303,13 +307,17 @@ import { syncProgress } from '$lib/stores/syncProgressStore';
 	</div>
 
 	<center class="pt-10">
-		<button class="btn bg-accent text-secondary rounded uppercase" onclick={onSyncClicked} disabled={syncing}>
+		<button
+			class="btn bg-accent text-secondary rounded uppercase"
+			onclick={onSyncClicked}
+			disabled={syncing}
+		>
 			<span><RefreshCcw class={rotationClass} style="animation-direction: reverse;" /></span>
 			<span>Synchronize</span>
 		</button>
 	</center>
 
-	{#if _ptaSystem !== LedgerDataSource.filesystem}
+	{#if _dataSource !== LedgerDataSource.filesystem}
 		<hr class="my-10" />
 
 		<center>

@@ -50,7 +50,7 @@
 		symbols: StockSymbol[]
 	): Promise<StockSymbol[]> {
 		// Security analysis fetching is not yet implemented for the local filesystem backend.
-		const backend = await settings.get<string>(SettingKeys.storageBackend);
+		const backend = await settings.get<string>(SettingKeys.ledgerDataSource);
 		if (backend === LedgerDataSource.filesystem) {
 			console.info('Security analysis not yet implemented for local filesystem data source');
 			return symbols;
@@ -112,9 +112,9 @@
 	}
 
 	async function runServerCheck(serverUrl: string): Promise<string> {
-		const ptaSystem = (await settings.get(SettingKeys.ptaSystem)) as string;
+		const dataSource = (await settings.get(SettingKeys.ledgerDataSource)) as string;
 
-		const sync = new CashierSync(serverUrl, ptaSystem);
+		const sync = new CashierSync(serverUrl, dataSource as LedgerDataSource);
 		const result = await sync.healthCheck();
 		return result;
 	}
