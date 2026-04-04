@@ -14,7 +14,7 @@ import { get } from 'svelte/store';
 import * as LedgerParser from '$lib/utils/ledgerParser';
 import * as BeancountParser from '$lib/utils/beancountParser';
 import { formatAmount } from '$lib/utils/formatter';
-import { PtaSystems } from '$lib/constants';
+import { LedgerDataSource, PtaSystems } from '$lib/constants';
 
 interface AccountIndex {
 	[key: string]: Account;
@@ -132,8 +132,8 @@ class AppService {
 			}
 
 			// prepare output.
-			const output_system = await settings.get(SettingKeys.ptaSystem);
-			if (output_system === PtaSystems.ledger) {
+			const output_system = await settings.get(SettingKeys.ledgerDataSource) as string;
+			if (output_system === LedgerDataSource.ledger) {
 				output += this.translateToLedger(tx);
 			} else {
 				output += this.translateToBeancount(tx);
@@ -143,14 +143,14 @@ class AppService {
 	}
 
 	async getVisibleCards(): Promise<string[]> {
-		let visibleCardNames: string[] = await settings.get(SettingKeys.visibleCards);
+		let visibleCardNames: string[] = await settings.get(SettingKeys.visibleCards) as string[];
 		if (!visibleCardNames) {
 			// create the default cards list here
 			visibleCardNames = [
 				HomeCardNames.FAVOURITES,
 				HomeCardNames.JOURNAL,
 				HomeCardNames.SCHEDULED,
-				HomeCardNames.SYNC,
+				// HomeCardNames.SYNC,
 				HomeCardNames.FORECAST
 			];
 		}

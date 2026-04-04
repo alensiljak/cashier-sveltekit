@@ -40,9 +40,9 @@
 				case CardNames.ScheduledXactCard:
 					card = ScheduledXactsCard;
 					break;
-				case CardNames.SyncCard:
-					card = SyncCard;
-					break;
+				// case CardNames.SyncCard:
+				// 	card = SyncCard;
+				// 	break;
 			}
 			if (card) {
 				cards.push(card);

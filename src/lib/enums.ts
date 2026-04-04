@@ -12,7 +12,7 @@ export const HomeCardNames = {
 	FORECAST: 'ForecastCard',
 	JOURNAL: 'JournalCard',
 	SCHEDULED: 'ScheduledXactCard',
-	SYNC: 'SyncCard'
+	// SYNC: 'SyncCard'
 } as const;
 
 export const RecurrencePeriods = {

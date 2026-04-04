@@ -38,9 +38,9 @@
 		if (visibleCards.includes(HomeCardNames.FORECAST)) {
 			_showForecast = true;
 		}
-		if (visibleCards.includes(HomeCardNames.SYNC)) {
-			_showSync = true;
-		}
+		// if (visibleCards.includes(HomeCardNames.SYNC)) {
+		// 	_showSync = true;
+		// }
 		if (visibleCards.includes(HomeCardNames.JOURNAL)) {
 			_showJournal = true;
 		}
@@ -82,11 +82,11 @@
 		} else {
 			removeItem(HomeCardNames.SCHEDULED);
 		}
-		if (_showSync) {
-			includeItem(HomeCardNames.SYNC);
-		} else {
-			removeItem(HomeCardNames.SYNC);
-		}
+		// if (_showSync) {
+		// 	includeItem(HomeCardNames.SYNC);
+		// } else {
+		// 	removeItem(HomeCardNames.SYNC);
+		// }
 
 		await settings.set(SettingKeys.visibleCards, visibleCards);
 
@@ -122,9 +122,9 @@
 			<p>Scheduled Transactions</p>
 		</label>
 
-		<label class="flex items-center space-x-2">
+		<!-- <label class="flex items-center space-x-2">
 			<input class="checkbox checkbox-primary" type="checkbox" bind:checked={_showSync} />
 			<p>Synchronization</p>
-		</label>
+		</label> -->
 	</div>
 </section>
