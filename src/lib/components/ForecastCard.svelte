@@ -18,7 +18,7 @@
 
 		_accountNames = accountNames;
 
-		_days = await settings.get(SettingKeys.forecastDays);
+		_days = await settings.get(SettingKeys.forecastDays) as number;
 		if (_days === 0) {
 			_days = Constants.ForecastDays;
 		}

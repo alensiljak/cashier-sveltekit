@@ -7,12 +7,12 @@ import { defineConfig } from 'vite';
 import tailwindcss from '@tailwindcss/vite';
 import mkcert from 'vite-plugin-mkcert';
 
-// Generate build date in YYYYMMDD format
-const buildDate = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+// Generate build timestamp in YYYY-MM-DD HH:mm format
+const buildTimestamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
 
 const config: UserConfig = defineConfig({
 	define: {
-		__BUILD_DATE__: JSON.stringify(buildDate)
+		__BUILD_TIMESTAMP__: JSON.stringify(buildTimestamp)
 	},
 	server: {
 		// Ensure WASM files are served correctly in dev mode

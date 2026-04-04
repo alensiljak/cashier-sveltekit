@@ -13,7 +13,7 @@ declare global {
 		// interface PageData {}
 		// interface Platform {}
 	}
-	const __BUILD_DATE__: string;
+	const __BUILD_TIMESTAMP__: string;
 }
 
 export {};

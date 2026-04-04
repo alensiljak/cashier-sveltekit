@@ -42,7 +42,7 @@
 
 		<h3 class="text-3xl font-semibold">Version</h3>
 		<p>
-			Build Date: <code>{__BUILD_DATE__}</code>
+			Build: <code>{__BUILD_TIMESTAMP__}</code>
 		</p>
 
 		<h3 class="text-3xl font-semibold">Experiments</h3>
