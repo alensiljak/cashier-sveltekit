@@ -10,6 +10,8 @@
 	};
 	let { title = 'Cashier', menuItems }: Props = $props();
 
+	let dropdownBtn: HTMLButtonElement = $state()!;
+
 	// methods
 
 	function toggleSidebar() {
@@ -38,14 +40,23 @@
 			<div class="flex-none">
 				<div class="dropdown dropdown-end">
 					<button
+						bind:this={dropdownBtn}
 						tabindex="0"
 						class="btn btn-ghost btn-circle hover-transparent"
 					>
 						<EllipsisVertical size={18} />
 					</button>
+					<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 					<ul
 						role="menu"
 						class="menu menu-sm dropdown-content bg-primary rounded-box z-1 mt-1 w-52 p-2 shadow"
+						onclick={() => {
+							dropdownBtn.blur();
+							if (document.activeElement instanceof HTMLElement) {
+								document.activeElement.blur();
+							}
+						}}
+						onkeydown={(e) => e.key === 'Escape' && dropdownBtn.blur()}
 					>
 						{@render menuItems?.()}
 					</ul>
