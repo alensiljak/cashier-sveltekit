@@ -194,8 +194,9 @@ export async function loadInvestmentAccounts(queryFn: QueryFn =
         sum(position) as balances
 		WHERE account ~ '^${rootAccount}'
 		GROUP BY account
-		HAVING NOT empty(sum(position))
+		HAVING number(value(sum(position), 'EUR')) != 0
 		ORDER BY account`;
+    // HAVING NOT empty(sum(position))
 
 	const result = queryFn(bql);
 	if (result.errors.length > 0) {
