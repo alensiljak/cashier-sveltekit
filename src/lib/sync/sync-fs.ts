@@ -142,13 +142,13 @@ async function collectAllFiles(
 /**
  * Load all beancount files from the filesystem, resolving includes.
  */
-export async function loadFileMap(): Promise<{ fileMap: Record<string, string>; mainFileName: string }> {
+export async function loadFileMap(): Promise<{ fileMap: Record<string, string>; mainFileName: string; dirHandle: FileSystemDirectoryHandle }> {
 	const { fileName: mainFileName, content: mainContent, dirHandle } = await readMainBeancountFile();
 
 	const fileMap: Record<string, string> = {};
 	await collectAllFiles(dirHandle, mainFileName, mainContent, fileMap);
 
-	return { fileMap, mainFileName };
+	return { fileMap, mainFileName, dirHandle };
 }
 
 async function synchronize(syncOptions: syncCommon.SyncOptions): Promise<void> {
@@ -156,7 +156,7 @@ async function synchronize(syncOptions: syncCommon.SyncOptions): Promise<void> {
 		// Initialize sync progress
 		initializeSyncProgress();
 
-		const { fileMap, mainFileName } = await loadFileMap();
+		const { fileMap, mainFileName, dirHandle } = await loadFileMap();
 
 		// Parse all files together with include resolution.
 		await ensureInitialized();
@@ -189,7 +189,7 @@ async function synchronize(syncOptions: syncCommon.SyncOptions): Promise<void> {
 		// Asset Allocation definition (.toml)
 		if (syncOptions.syncAssetAllocation) {
 			updateSyncStep(3, 'in-progress');
-			await syncAssetAllocation();
+			await syncAssetAllocation(dirHandle);
 			updateSyncStep(3, 'completed');
 		}
 
@@ -327,7 +327,7 @@ function createOpeningBalancesDirective(accounts: Account[]): string {
  * Read the marked Asset Allocation file from external filesystem and
  * store into OPFS.
  */
-async function syncAssetAllocation() {
+async function syncAssetAllocation(dirHandle?: FileSystemDirectoryHandle) {
 	const source = await settings.get<string>(SettingKeys.externalAssetAllocation);
 	if (!source) {
 		throw new Error(
@@ -335,14 +335,15 @@ async function syncAssetAllocation() {
 		);
 	}
 
-	const dirHandle = await loadPersistedHandle();
 	if (!dirHandle) {
-		throw new Error('No directory selected. Please open a directory in the fs-sync page.');
-	}
-
-	const permission = await (dirHandle as any).requestPermission({ mode: 'read' });
-	if (permission !== 'granted') {
-		throw new Error('Read permission denied for directory');
+		dirHandle = await loadPersistedHandle() ?? undefined;
+		if (!dirHandle) {
+			throw new Error('No directory selected. Please open a directory in the fs-sync page.');
+		}
+		const permission = await (dirHandle as any).requestPermission({ mode: 'read' });
+		if (permission !== 'granted') {
+			throw new Error('Read permission denied for directory');
+		}
 	}
 
 	// Extract relative path from the stored full path (which includes directory name)
