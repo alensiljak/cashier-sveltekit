@@ -194,6 +194,7 @@ export async function loadInvestmentAccounts(): Promise<Account[]> {
 		HAVING NOT empty(sum(position))
 		ORDER BY account`;
 
+    // we can't use ledgerService here because we need the multi-file ledger from the filesystem!
 	const result = ledgerService.query(bql);
 	if (result.errors.length > 0) {
 		throw new Error(result.errors.map((e: any) => e.message).join('; '));
