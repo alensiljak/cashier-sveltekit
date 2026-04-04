@@ -11,6 +11,13 @@ import { get } from 'svelte/store';
 
 export type WasmQueryFn = (bql: string) => { columns: string[]; rows: any[]; errors: any[] };
 
+export interface RawQueryResult {
+	query: string;
+	columns: string[];
+	rows: any[];
+	errors: any[];
+}
+
 /*
     Asset Class Detail
  */
@@ -29,6 +36,19 @@ export async function load({ params }) {
 	const { fileMap, mainFileName } = await loadFileMap();
 	const wasmQuery: WasmQueryFn = (bql) => queryMultiFile(fileMap, mainFileName, bql);
 
+	// Build the BQL query for investment accounts (mirroring accountsService for display)
+	const rootAccount = await settings.get(SettingKeys.rootInvestmentAccount);
+	const accountsQuery = `SELECT account, str(value(sum(position), '${currency}')) as value,
+        sum(position) as balances
+		WHERE account ~ '^${rootAccount}'
+		GROUP BY account
+		HAVING number(value(sum(position), '${currency}')) != 0
+		ORDER BY account`;
+	const rawAccountsResult: RawQueryResult = {
+		query: accountsQuery,
+		...wasmQuery(accountsQuery)
+	};
+
 	const investmentAccounts = await AccountService.loadInvestmentAccounts(wasmQuery);
 	if (investmentAccounts.length === 0) {
 		console.warn('No investment accounts found');
@@ -44,7 +64,7 @@ export async function load({ params }) {
 	}
 	const stocks = populateStocksWithCaching(assetClass, investmentAccounts);
 
-	return { wasmQuery, investmentAccounts, currency, aa, assetClass, stocks };
+	return { wasmQuery, investmentAccounts, rawAccountsResult, currency, aa, assetClass, stocks };
 }
 
 function populateStocksWithCaching(assetClass: AssetClass, investmentAccounts: Account[]) {
