@@ -29,7 +29,7 @@
 
 				<div class="flex flex-row px-2">
 					<data class="grow">
-						{xact.payee}
+						{xact.payee}{xact.payee && xact.note ? ' | ' : ''}{xact.note}
 					</data>
 					<data class={`${Formatter.getAmountColour(posting?.amount)}`}>
 						{Formatter.formatAmount(posting?.amount)}
