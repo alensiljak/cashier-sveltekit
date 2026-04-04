@@ -64,12 +64,13 @@
 	{/each}
 </svelte:head>
 
-<div class="drawer" {...useSwipe(handleSwipe, () => ({ timeframe: 300, threshold: 30 }))}>
+<div class="drawer">
 	<!-- sidebar as modal -->
 	<input type="checkbox" id="drawer-modal" class="drawer-toggle" bind:checked={$drawerState} />
 	<div class="drawer-content h-screen">
 		<!-- former AppShell -->
-		<div class="grid grid-cols-1 lg:grid-cols-[288px_1fr] h-screen">
+		<div class="grid grid-cols-1 lg:grid-cols-[288px_1fr] h-screen"
+			{...useSwipe(handleSwipe, () => ({ timeframe: 350, threshold: 25 }))}>
 			<aside class="sticky top-0 col-span-1 hidden h-screen overflow-y-auto lg:block">
 				<!-- bg-surface-500/5 -->
 				<!-- <Navigation /> -->
