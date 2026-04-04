@@ -7,6 +7,16 @@ It is implemented as a PWA using Svelte and DaisyUI frameworks.
 
 - Project plans are stored in `/docs/projects` folder.
 
+## Architecture
+
+- The app is a PWA with a single page application (SPA) architecture.
+- The app is built using Svelte and DaisyUI frameworks.
+- The app is deployed as a static website to a CDN.
+- The app's data is stored in OPFS. Previously it was in IndexedDb and some data is still cached there. To be moved to files in OPFS.
+- The configuration information is in IndexedDb.
+- The app uses File System API to access full ledger.
+- Synchronization retrieves data from filesystem and stores it in OPFS and IndexedDb.
+
 ## Dev Server
 
 - Assume the local dev server is running at `http://localhost:5173/`. It is started by the user.

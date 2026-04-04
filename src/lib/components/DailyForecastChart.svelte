@@ -20,8 +20,9 @@
 	import { Composite6 } from 'hw-chartjs-plugin-colorschemes/src/colorschemes/colorschemes.office';
 	import { getAccountBalance, getShortAccountName } from '$lib/services/accountsService';
 	import db from '$lib/data/db';
-	import type { Account, ScheduledTransaction, Xact } from '$lib/data/model';
+	import { Account, type ScheduledTransaction, type Xact } from '$lib/data/model';
 	import appService from '$lib/services/appService';
+	import ledgerService from '$lib/services/ledgerService';
 	import moment from 'moment';
 	import { XactAugmenter } from '$lib/utils/xactAugmenter';
 	import { ISODATEFORMAT } from '$lib/constants';
@@ -38,6 +39,7 @@
 	let defaultCurrency: string;
 	let maxDate: moment.Moment;
 	let chartDiv: any;
+
 	Chart.register(Title, Legend, BarElement, CategoryScale, LinearScale, BarController);
 
 	onMount(async () => {
@@ -48,6 +50,7 @@
 			let data = await loadData();
 
 			renderChart(data);
+
 		} catch (error) {
 			Notifier.error('Error loading data for the chart.');
 			console.error(error);
@@ -141,13 +144,16 @@
 			datasets: []
 		};
 
-		// {
+		// Expected format:
+		// data = {
 		// 	label: 'third',
 		// 	data: [300, 150, 12, 1000.16, 100]
 		// }
 
+		const accounts = ledgerService.getAccounts();
+
 		for (const accountName of accountNames) {
-			let dataset = await createDatasetFor(accountName);
+			let dataset = await createDatasetFor(accountName, accounts);
 			data.datasets.push(dataset);
 		}
 
@@ -165,15 +171,16 @@
 		return scxsForAccount;
 	}
 
-	async function createDatasetFor(accountName: string) {
+	async function createDatasetFor(accountName: string, accounts: Account[]) {
 		// create a dataset record for each account.
 		let dataset = {
 			label: '',
-			data: new Array(daysCount + 1)
+			data: Array.from({ length: daysCount + 1 }) as number[]
 		};
 
 		// load account
-		const account: Account = await db.accounts.get(accountName);
+		const account: Account = accounts.find((a) => a.name === accountName) ?? new Account(accountName);
+
 		dataset.label = account.getAccountName();
 
 		// add default values.
