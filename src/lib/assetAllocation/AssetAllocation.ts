@@ -343,9 +343,9 @@ export class AssetAllocationEngine {
 		);
 
 		invAccounts.forEach((account) => {
-			// Current Value is populated from Ledger. 
+			// Current Value is populated from Ledger.
 			// Only the active accounts will have a value.
-			if (!account.currentValue) return;
+			if (account.currentValue == null) return;
 
 			const amount = Big(account.currentValue);
 

@@ -218,12 +218,21 @@ export async function loadInvestmentAccounts(queryFn: QueryFn =
                 acc[balance.units.currency] = balance.units.number;
                 return acc;
             }, {});
-        // current value
-		if (valueIdx !== -1 && row[valueIdx]) {
-			const parts = String(row[valueIdx]).split(' ');
-			if (parts.length === 2) {
-				account.currentValue = parseFloat(parts[0]);
-				account.currentCurrency = parts[1];
+        // current value: str(value(...)) returns e.g. "1234.56 EUR" or structured object
+		if (valueIdx !== -1 && row[valueIdx] != null) {
+			const raw = row[valueIdx];
+			if (typeof raw === 'object' && raw.number != null) {
+				// Structured: { number, currency }
+				account.currentValue = parseFloat(raw.number);
+				account.currentCurrency = raw.currency ?? '';
+			} else {
+				const str = String(raw).trim();
+				// Match a number (possibly negative, with commas/decimals) followed by a currency code
+				const match = str.match(/^([−-]?[\d,]*\.?\d+)\s+(\S+)$/);
+				if (match) {
+					account.currentValue = parseFloat(match[1].replace(/,/g, '').replace('−', '-'));
+					account.currentCurrency = match[2];
+				}
 			}
 		}
 		return account;
