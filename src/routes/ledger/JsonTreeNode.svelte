@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { ChevronRight, ChevronDown } from '@lucide/svelte';
 	import Self from './JsonTreeNode.svelte';
 
@@ -11,7 +12,7 @@
 
 	let { label, value, defaultExpanded = false, depth = 0 }: Props = $props();
 
-	let expanded = $state(defaultExpanded);
+	let expanded = $state(untrack(() => defaultExpanded));
 
 	function toggle() {
 		expanded = !expanded;

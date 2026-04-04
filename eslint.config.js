@@ -1,5 +1,6 @@
 import svelte from 'eslint-plugin-svelte';
 import svelteConfig from './svelte.config.js';
+import tseslint from '@typescript-eslint/eslint-plugin';
 
 // Note: JS/TS linting is handled by oxlint (see package.json lint script).
 // This ESLint config only covers Svelte template linting via eslint-plugin-svelte.
@@ -29,5 +30,6 @@ export default [
 				svelteConfig
 			}
 		}
-	}
+	},
+	tseslint.configs.recommended
 ];
