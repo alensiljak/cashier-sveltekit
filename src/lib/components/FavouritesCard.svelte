@@ -2,24 +2,31 @@
 	import { StarIcon } from '@lucide/svelte';
 	import HomeCardTemplate from './HomeCardTemplate.svelte';
 	import { goto } from '$app/navigation';
-	import type { Account } from '$lib/data/model';
+	import { Account, Money } from '$lib/data/model';
 	import { onMount } from 'svelte';
-	import { XactAugmenter } from '$lib/utils/xactAugmenter';
 	import appService from '$lib/services/appService';
+	import ledgerService from '$lib/services/ledgerService';
 	import Notifier from '$lib/utils/notifier';
-	import { getAccountBalance } from '$lib/services/accountsService';
 	import { formatAmount, getAmountColour } from '$lib/utils/formatter';
 	import { getBarWidth } from '$lib/utils/barWidthCalculator';
+	import { SettingKeys, settings } from '$lib/settings';
 
 	Notifier.init();
 
-	let defaultCurrency: string;
 	let accounts: Array<Account> = $state([]);
 
 	$effect(() => {
 		if (accounts.length > 0) {
-			maxBalance = Math.max(...accounts.map((account) => Math.abs(getBalance(account).quantity)));
-			minBalance = Math.min(...accounts.map((account) => Math.abs(getBalance(account).quantity)));
+			const quantities = accounts
+				.map((account) => Math.abs(account.balance?.quantity as number))
+				.filter((q) => !isNaN(q) && q > 0);
+			if (quantities.length > 0) {
+				maxBalance = Math.max(...quantities);
+				minBalance = Math.min(...quantities);
+			} else {
+				maxBalance = 0;
+				minBalance = 0;
+			}
 		}
 	});
 
@@ -30,28 +37,100 @@
 		await loadData();
 	});
 
-	function getBalance(account: Account) {
-		return getAccountBalance(account, defaultCurrency);
+	function queryFavouriteBalances(favNames: string[]): Map<string, Account> {
+		const result = new Map<string, Account>();
+		if (favNames.length === 0) return result;
+
+		const quotedNames = favNames.map((n) => `'${n}'`).join(', ');
+		const bql = `SELECT account, sum(position) AS balance WHERE account IN (${quotedNames})`;
+
+		const queryResult = ledgerService.query(bql);
+		if (queryResult.errors.length > 0) {
+			console.warn('BQL query errors:', queryResult.errors);
+			return result;
+		}
+
+		const accountIdx = queryResult.columns.indexOf('account');
+		const balanceIdx = queryResult.columns.indexOf('balance');
+
+		for (const row of queryResult.rows) {
+			const name: string = row[accountIdx];
+			const account = new Account(name);
+
+			if (balanceIdx !== -1) {
+				const cell = row[balanceIdx];
+				const balances = extractBalances(cell);
+				if (Object.keys(balances).length > 0) {
+					account.balances = balances;
+				}
+			}
+
+			result.set(name, account);
+		}
+
+		return result;
+	}
+
+	function extractBalances(cell: any): Record<string, number> {
+		const balances: Record<string, number> = {};
+		if (!cell || typeof cell !== 'object') return balances;
+
+		if (Array.isArray(cell.positions)) {
+			for (const pos of cell.positions) {
+				if (pos?.units?.currency && pos.units.number != null) {
+					balances[pos.units.currency] = parseFloat(pos.units.number);
+				}
+			}
+			return balances;
+		}
+		if (cell.units?.currency && cell.units.number != null) {
+			balances[cell.units.currency] = parseFloat(cell.units.number);
+			return balances;
+		}
+		if (cell.currency && cell.number != null) {
+			balances[cell.currency] = parseFloat(cell.number);
+		}
+		return balances;
 	}
 
 	async function loadData() {
-		defaultCurrency = await appService.getDefaultCurrency();
-
 		try {
-			let favArray = await appService.loadFavouriteAccounts();
-			if (!favArray) {
-				console.log('no favourite accounts selected yet');
+			const favNames: string[] = ((await settings.get<string[]>(SettingKeys.favouriteAccounts)) ?? []).slice(0, 5);
+			if (favNames.length === 0) {
+				accounts = [];
 				return;
 			}
 
-			// Use only the top 5 records.
-			favArray = favArray.slice(0, 5);
+			const defaultCurrency = await appService.getDefaultCurrency();
+			const balanceMap = queryFavouriteBalances(favNames);
 
-			// adjust the balance
-			const augmenter = new XactAugmenter();
-			favArray = await augmenter.adjustAccountBalances(favArray);
-
-			accounts = favArray;
+			accounts = favNames.map((name) => {
+				const found = balanceMap.get(name);
+				if (found) {
+					const money = new Money();
+					money.currency = defaultCurrency;
+					if (found.balances) {
+						if (found.balances[defaultCurrency] != null) {
+							money.quantity = found.balances[defaultCurrency];
+							money.currency = defaultCurrency;
+						} else {
+							const firstCurrency = Object.keys(found.balances)[0];
+							if (firstCurrency) {
+								money.quantity = found.balances[firstCurrency];
+								money.currency = firstCurrency;
+							}
+						}
+					}
+					found.balance = money;
+					return found;
+				} else {
+					const account = new Account(name);
+					account.exists = false;
+					account.balance = new Money();
+					account.balance.currency = defaultCurrency;
+					return account;
+				}
+			});
 		} catch (error: any) {
 			console.error(error);
 			Notifier.error(error.message);
@@ -84,18 +163,18 @@
 						<div class={`cell grow ${isGrayedOut(account) ? 'text-base-content text-opacity-50' : ''}`}>
 							{account?.name}
 						</div>
-						<data class={`text-right ${getAmountColour(getBalance(account).quantity)}`}>
-							{formatAmount(getBalance(account).quantity)}
-							{getBalance(account).currency}
+						<data class={`text-right ${getAmountColour(account.balance?.quantity as number)}`}>
+							{formatAmount(account.balance?.quantity as number)}
+							{account.balance?.currency}
 						</data>
 					</div>
 					<div
 						class="h-1"
 						style="width: {getBarWidth(
-							getBalance(account).quantity,
+							account.balance?.quantity as number,
 							minBalance,
 							maxBalance
-						)}%; background-color: {getBalance(account).quantity >= 0 ? 'green' : 'red'};"
+						)}%; background-color: {(account.balance?.quantity as number) >= 0 ? 'green' : 'red'};"
 					></div>
 				</div>
 			{/each}
