@@ -5,7 +5,6 @@ import Notifier from '$lib/utils/notifier';
 import * as OpfsLib from '$lib/utils/opfslib.js';
 import { get } from 'svelte/store';
 import { formatErrorForDisplay, AppError } from '$lib/utils/errors';
-import { SettingKeys, settings } from '$lib/settings';
 import { AssetAllocationFilename } from '$lib/constants';
 
 const aa = new AssetAllocationEngine();

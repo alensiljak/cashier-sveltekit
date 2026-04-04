@@ -3,13 +3,11 @@
 	import type { StockSymbol } from '$lib/assetAllocation/AssetClass.js';
 	import {
 		SecurityAnalyser,
-		type SecurityAnalysis
+		type SecurityAnalysis,
+		type QueryFn
 	} from '$lib/assetAllocation/securityAnalysis.js';
-	import { CashierSync } from '$lib/sync/sync-beancount.js';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { AaStocksStore } from '$lib/data/mainStore';
-	import { LedgerDataSource } from '$lib/constants';
-	import { SettingKeys, settings } from '$lib/settings';
 	import * as Formatter from '$lib/utils/formatter.js';
 	import { processWithConcurrencyLimit } from '$lib/utils/concurrency.js';
 	import { Loader, X } from '@lucide/svelte';
@@ -23,11 +21,12 @@
 		cursor = 'cursor-wait';
 
 		// securityAnalysis
-		data.stocks = await loadSecurityAnalysis(data.serverUrl, data.stocks as StockSymbol[]);
+		data.stocks = await loadSecurityAnalysis(data.wasmQuery as QueryFn, data.stocks as StockSymbol[]);
+		cursor = '';
 	});
 
-	async function fetchAnalysisFor(symbol: string): Promise<SecurityAnalysis> {
-		const svc = new SecurityAnalyser();
+	async function fetchAnalysisFor(queryFn: QueryFn, symbol: string): Promise<SecurityAnalysis> {
+		const svc = new SecurityAnalyser(queryFn);
 
 		// Parallelize yield and gainloss API calls
 		const [yieldResult, gainlossResult] = await Promise.all([
@@ -46,25 +45,9 @@
 	 * Processes stocks in batches, for concurrent API calls.
 	 */
 	async function loadSecurityAnalysis(
-		serverUrl: string,
+		queryFn: QueryFn,
 		symbols: StockSymbol[]
 	): Promise<StockSymbol[]> {
-		// Security analysis fetching is not yet implemented for the local filesystem backend.
-		const backend = await settings.get<string>(SettingKeys.ledgerDataSource);
-		if (backend === LedgerDataSource.filesystem) {
-			console.info('Security analysis not yet implemented for local filesystem data source');
-			return symbols;
-		}
-
-		if (!serverUrl) {
-			throw new Error('Sync Server URL not set');
-		}
-		const alive = await runServerCheck(serverUrl);
-		if (!alive) {
-			console.info('Server not online, aborting security analysis');
-			return symbols;
-		}
-
 		// Filter stocks that need analysis
 		const stocksToLoad = symbols.filter((stock) => !stock.analysis);
 
@@ -83,7 +66,7 @@
 			data.stocks = [...data.stocks];
 
 			try {
-				const analysis = await fetchAnalysisFor(symbol);
+				const analysis = await fetchAnalysisFor(queryFn, symbol);
 				stock.analysis = analysis;
 				stock.loading = false;
 
@@ -109,14 +92,6 @@
 		});
 
 		return symbols;
-	}
-
-	async function runServerCheck(serverUrl: string): Promise<string> {
-		const dataSource = (await settings.get(SettingKeys.ledgerDataSource)) as string;
-
-		const sync = new CashierSync(serverUrl, dataSource as LedgerDataSource);
-		const result = await sync.healthCheck();
-		return result;
 	}
 </script>
 

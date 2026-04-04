@@ -5,7 +5,11 @@ import type { Account } from '$lib/data/model.js';
 import * as AccountService from '$lib/services/accountsService';
 import appService from '$lib/services/appService';
 import { SettingKeys, settings } from '$lib/settings';
+import { loadFileMap } from '$lib/sync/sync-fs';
+import { ensureInitialized, queryMultiFile } from '$lib/services/rustledger';
 import { get } from 'svelte/store';
+
+export type WasmQueryFn = (bql: string) => { columns: string[]; rows: any[]; errors: any[] };
 
 /*
     Asset Class Detail
@@ -19,12 +23,13 @@ export async function load({ params }) {
 	}
 
 	const currency = await appService.getDefaultCurrency();
-	const serverUrl = await settings.get(SettingKeys.syncServerUrl);
-	if (!serverUrl) {
-		throw new Error('Sync Server URL not set!');
-	}
 
-	const investmentAccounts = await AccountService.loadInvestmentAccounts();
+	// Build a WASM query function from the filesystem.
+	await ensureInitialized();
+	const { fileMap, mainFileName } = await loadFileMap();
+	const wasmQuery: WasmQueryFn = (bql) => queryMultiFile(fileMap, mainFileName, bql);
+
+	const investmentAccounts = await AccountService.loadInvestmentAccounts(wasmQuery);
 	if (investmentAccounts.length === 0) {
 		console.warn('No investment accounts found');
 	}
@@ -39,7 +44,7 @@ export async function load({ params }) {
 	}
 	const stocks = populateStocksWithCaching(assetClass, investmentAccounts);
 
-	return { serverUrl, investmentAccounts, currency, aa, assetClass, stocks };
+	return { wasmQuery, investmentAccounts, currency, aa, assetClass, stocks };
 }
 
 function populateStocksWithCaching(assetClass: AssetClass, investmentAccounts: Account[]) {

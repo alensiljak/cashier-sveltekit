@@ -5,8 +5,8 @@ import appService from '$lib/services/appService';
 import { getQueries } from '$lib/sync/sync-queries';
 import * as BeancountParser from '$lib/utils/beancountParser';
 import * as LedgerParser from '$lib/utils/ledgerParser';
-import { UserError, NotFoundError, ApiError } from '$lib/utils/errors';
-import { PtaSystems } from '$lib/constants';
+import { UserError } from '$lib/utils/errors';
+import { LedgerDataSource, PtaSystems } from '$lib/constants';
 
 const DATE_FORMAT = 'YYYY-MM-DD';
 
@@ -20,51 +20,63 @@ export interface SecurityAnalysis {
 	gainloss: string;
 }
 
+export type QueryFn = (bql: string) => { columns: string[]; rows: any[]; errors: any[] };
+
 export class SecurityAnalyser {
 	currency: string | undefined;
-	syncApiClient: SyncApiClient;
+	private syncApiClient: SyncApiClient | null = null;
+	private wasmQueryFn: QueryFn | null = null;
+	private ptaSystem: string | null = null;
 
-	constructor() {
-		// symbol, currency
-		// this.symbol = symbol
-		//this.currency = null
-		this.syncApiClient = new SyncApiClient();
+	constructor(wasmQueryFn?: QueryFn) {
+		if (wasmQueryFn) {
+			this.wasmQueryFn = wasmQueryFn;
+		} else {
+			this.syncApiClient = new SyncApiClient();
+		}
 	}
 
 	/**
-	 * Performs the Security Analysis with Ledger data.
-	 * @param {string} symbol
+	 * Execute a query using either WASM or server backend.
 	 */
-	// async getSecurityAnalysisFor(symbol: string): Promise<SecurityAnalysis> {
-	//   let currency = await settings.get(SettingKeys.currency)
-	//   this.currency = currency
-	//   await this.syncApiClient.init()
+	private async query(command: string): Promise<Array<any>> {
+		if (this.wasmQueryFn) {
+			const result = this.wasmQueryFn(command);
+			if (result.errors.length > 0) {
+				throw new Error(
+					`BQL query failed: ${result.errors.map((e: any) => e.message).join('; ')}`
+				);
+			}
+			return result.rows;
+		}
 
-	//   let result: SecurityAnalysis = {
-	//     yield: await this.getYield(symbol, currency),
-	//     gainloss: await this.getGainLoss(symbol, currency),
-	//     //basis: await this.#getBasis(symbol, currency),
-	//   }
+		// Fall back to server
+		if (!this.syncApiClient) {
+			throw new Error('No query backend available');
+		}
+		await this.syncApiClient.init();
+		return this.syncApiClient.query(command);
+	}
 
-	//   return result
-	// }
-
-	/**
-	 * Used temporarily only to check the base amount. It mostly fits the gain/loss plus
-	 * the balance in base currency (not always!).
-	 * @param symbol
-	 * @param currency
-	 * @returns
-	 */
-	// eslint-disable-next-line no-unused-private-class-members
-	async #getBasis(symbol: string, currency: string) {
-		const ptaSystem = (await settings.get(SettingKeys.ptaSystem)) as string;
-		const queries = getQueries(ptaSystem);
-		const command = queries.basis(symbol, currency);
-
-		const report = await this.syncApiClient.query(command);
-
-		return report;
+	private async getPtaSystem(): Promise<string> {
+		if (!this.ptaSystem) {
+			if (this.wasmQueryFn) {
+				this.ptaSystem = PtaSystems.rledger;
+			} else {
+				// Map ledgerDataSource to PTA system for query selection
+				const dataSource = (await settings.get(SettingKeys.ledgerDataSource)) as string;
+				if (dataSource === LedgerDataSource.filesystem || dataSource === LedgerDataSource.rledger) {
+					this.ptaSystem = PtaSystems.rledger;
+				} else if (dataSource === LedgerDataSource.beancount) {
+					this.ptaSystem = PtaSystems.beancount;
+				} else if (dataSource === LedgerDataSource.ledger) {
+					this.ptaSystem = PtaSystems.ledger;
+				} else {
+					this.ptaSystem = PtaSystems.rledger;
+				}
+			}
+		}
+		return this.ptaSystem;
 	}
 
 	/**
@@ -74,7 +86,6 @@ export class SecurityAnalyser {
 	async getYield(symbol: string): Promise<string> {
 		const currency = (await settings.get(SettingKeys.currency)) as string;
 		this.currency = currency;
-		await this.syncApiClient.init();
 
 		// Retrieve income amount.
 		const incomeStr = await this.#getIncomeBalance(symbol);
@@ -102,13 +113,12 @@ export class SecurityAnalyser {
 	async getGainLoss(symbol: string) {
 		const currency = await appService.getDefaultCurrency();
 		this.currency = currency;
-		await this.syncApiClient.init();
 
-		const ptaSystem = (await settings.get(SettingKeys.ptaSystem)) as string;
+		const ptaSystem = await this.getPtaSystem();
 		const queries = getQueries(ptaSystem);
 		const command = queries.gainLoss(symbol, currency);
 
-		const report: Array<any> = (await this.syncApiClient.query(command)) as Array<any>;
+		const report: Array<any> = await this.query(command);
 		if (report.length == 0) {
 			return 'n/a';
 		}
@@ -126,9 +136,6 @@ export class SecurityAnalyser {
 		const marketValue = BeancountParser.getMoneyFromTupleString(line[1]).quantity;
 		const gainLoss = marketValue - costBasis;
 
-		// const number = this.#getNumberFromCollapseResult(line)
-		// calculate the percentage
-
 		const result = `${gainLoss.toFixed(2)} ${this.currency}, ${((gainLoss / costBasis) * 100).toFixed(2)}%`;
 		return result;
 	}
@@ -141,29 +148,27 @@ export class SecurityAnalyser {
 		const currency = this.currency as string;
 		const yieldFrom = moment().subtract(1, 'year').format(DATE_FORMAT);
 
-		const ptaSystem = (await settings.get(SettingKeys.ptaSystem)) as string;
+		const ptaSystem = await this.getPtaSystem();
 		const queries = getQueries(ptaSystem);
 		const command = queries.incomeBalance(symbol, yieldFrom, currency);
 
-		const report = await this.syncApiClient.query(command);
+		const report = await this.query(command);
 		if (report.length == 0) {
 			console.warn('No income balance found for symbol ' + symbol);
-			// throw new Error('No income balance found for symbol ' + symbol)
 			return 0;
 		}
 
 		let total;
 		if (ptaSystem == PtaSystems.ledger) {
 			total = LedgerParser.getNumberFromBalanceRow(report);
-		} else if (ptaSystem == PtaSystems.beancount) {
-			// total = BeancountParser.getNumberFromBalanceRow(report)
+		} else if (ptaSystem == PtaSystems.beancount || ptaSystem == PtaSystems.rledger) {
 			const line = report[0];
 			total = BeancountParser.getMoneyFromTupleString(line[0]).quantity;
 		} else {
 			throw new UserError(
 				`Unsupported accounting system: "${ptaSystem}"`,
 				'Please set a valid PTA system in settings (ledger or beancount)',
-				`Received: "${ptaSystem}". Supported systems are: ledger, beancount`
+				`Received: "${ptaSystem}". Supported systems are: ledger, beancount, rledger`
 			);
 		}
 
@@ -171,26 +176,22 @@ export class SecurityAnalyser {
 	}
 
 	async #getValueBalance(symbol: string, currency: string) {
-		const ptaSystem = (await settings.get(SettingKeys.ptaSystem)) as string;
+		const ptaSystem = await this.getPtaSystem();
 		const queries = getQueries(ptaSystem);
 		const command = queries.valueBalance(symbol, currency);
 
-		const api = this.syncApiClient;
-
-		await api.init();
-		const report = await api.query(command);
+		const report = await this.query(command);
 
 		if (ptaSystem == PtaSystems.ledger) {
 			return LedgerParser.getNumberFromBalanceRow(report);
-		} else if (ptaSystem == PtaSystems.beancount) {
-			// return BeancountParser.getNumberFromBalanceRow(report)
+		} else if (ptaSystem == PtaSystems.beancount || ptaSystem == PtaSystems.rledger) {
 			const line = report[0];
 			return BeancountParser.getMoneyFromTupleString(line[0]).quantity;
 		} else {
 			throw new UserError(
 				`Unsupported accounting system: "${ptaSystem}"`,
 				'Please set a valid PTA system in settings (ledger or beancount)',
-				`Received: "${ptaSystem}". Supported systems are: ledger, beancount`
+				`Received: "${ptaSystem}". Supported systems are: ledger, beancount, rledger`
 			);
 		}
 	}
