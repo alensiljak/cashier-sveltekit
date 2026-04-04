@@ -242,8 +242,7 @@
 									<th class="pr-3 py-0.5">Account</th>
 									<th class="pr-3 py-0.5">Balances (raw)</th>
 									<th class="pr-3 py-0.5">currentValue</th>
-									<th class="pr-3 py-0.5">currency</th>
-									<th class="py-0.5">balance (computed)</th>
+									<th class="py-0.5">currency</th>
 								</tr>
 							</thead>
 							<tbody>
@@ -256,8 +255,7 @@
 											{/each}
 										</td>
 										<td class="pr-3 py-0.5">{acct.currentValue}</td>
-										<td class="pr-3 py-0.5">{acct.currentCurrency}</td>
-										<td class="py-0.5">{acct.balance?.quantity} {acct.balance?.currency}</td>
+										<td class="py-0.5">{acct.currentCurrency}</td>
 									</tr>
 								{/each}
 							</tbody>
