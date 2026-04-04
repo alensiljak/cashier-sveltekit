@@ -33,6 +33,9 @@
 
 	// Debug panel
 	let debugOpen = $state(false);
+	let filesOpen = $state(false);
+	let accountsOpen = $state(false);
+	let rawAccountsResult: (RawQueryResult & { loaded: boolean }) | null = $state(null);
 	let symbolDebugOpen: Record<string, boolean> = $state({});
 
 	interface SymbolDebugData {
@@ -159,6 +162,40 @@
 				loading: false,
 				error: err instanceof Error ? err.message : String(err)
 			};
+		}
+	}
+
+	function toggleFiles() {
+		filesOpen = !filesOpen;
+	}
+
+	async function toggleAccounts() {
+		accountsOpen = !accountsOpen;
+		if (accountsOpen && !rawAccountsResult) {
+			const queryFn = data.wasmQuery as WasmQueryFn;
+			const currency = data.currency as string;
+			const rootAccount = await import('$lib/settings').then(({ settings, SettingKeys }) =>
+				settings.get(SettingKeys.rootInvestmentAccount)
+			);
+			const accountsQuery = `SELECT account, str(value(sum(position), '${currency}')) as value,
+        sum(position) as balances
+		WHERE account ~ '^${rootAccount}'
+		GROUP BY account
+		HAVING number(value(sum(position), '${currency}')) != 0
+		ORDER BY account`;
+			rawAccountsResult = { query: accountsQuery, loaded: false, columns: [], rows: [], errors: [] };
+			try {
+				const result = queryFn(accountsQuery);
+				rawAccountsResult = { query: accountsQuery, loaded: true, ...result };
+			} catch (err) {
+				rawAccountsResult = {
+					query: accountsQuery,
+					loaded: true,
+					columns: [],
+					rows: [],
+					errors: [{ message: err instanceof Error ? err.message : String(err) }]
+				};
+			}
 		}
 	}
 
@@ -313,27 +350,33 @@
 
 					<!-- File Map -->
 					<section>
-						<h3 class="mb-1 font-sans text-sm font-semibold">
+						<button
+							class="flex items-center gap-1 font-sans text-sm font-semibold hover:opacity-80"
+							onclick={toggleFiles}
+						>
+							{#if filesOpen}<ChevronDown class="h-3 w-3" />{:else}<ChevronRight class="h-3 w-3" />{/if}
 							Loaded Files ({data.fileMapInfo?.length ?? 0})
-						</h3>
-						<table class="border-collapse">
-							<thead>
-								<tr class="opacity-60">
-									<th class="pr-4 py-0.5 text-left font-normal">File</th>
-									<th class="pr-4 py-0.5 text-right font-normal">Lines</th>
-									<th class="py-0.5 text-right font-normal">Chars</th>
-								</tr>
-							</thead>
-							<tbody>
-								{#each data.fileMapInfo ?? [] as f}
-									<tr class="border-b">
-										<td class="pr-4 py-0.5">{f.name}</td>
-										<td class="pr-4 py-0.5 text-right">{f.lines.toLocaleString()}</td>
-										<td class="py-0.5 text-right">{f.chars.toLocaleString()}</td>
+						</button>
+						{#if filesOpen}
+							<table class="mt-1 border-collapse">
+								<thead>
+									<tr class="opacity-60">
+										<th class="pr-4 py-0.5 text-left font-normal">File</th>
+										<th class="pr-4 py-0.5 text-right font-normal">Lines</th>
+										<th class="py-0.5 text-right font-normal">Chars</th>
 									</tr>
-								{/each}
-							</tbody>
-						</table>
+								</thead>
+								<tbody>
+									{#each data.fileMapInfo ?? [] as f}
+										<tr class="border-b">
+											<td class="pr-4 py-0.5">{f.name}</td>
+											<td class="pr-4 py-0.5 text-right">{f.lines.toLocaleString()}</td>
+											<td class="py-0.5 text-right">{f.chars.toLocaleString()}</td>
+										</tr>
+									{/each}
+								</tbody>
+							</table>
+						{/if}
 					</section>
 
 					<!-- Asset Class Computed Values -->
@@ -359,42 +402,54 @@
 
 					<!-- All Investment Accounts Raw -->
 					<section>
-						<h3 class="mb-1 font-sans text-sm font-semibold">
+						<button
+							class="flex items-center gap-1 font-sans text-sm font-semibold hover:opacity-80"
+							onclick={toggleAccounts}
+						>
+							{#if accountsOpen}<ChevronDown class="h-3 w-3" />{:else}<ChevronRight class="h-3 w-3" />{/if}
 							All Investment Accounts ({data.investmentAccounts?.length ?? 0})
-						</h3>
-						<div class="mb-2 break-all rounded bg-gray-100 p-2 dark:bg-gray-800">
-							<span class="opacity-60">Query:</span>
-							{data.rawAccountsResult?.query}
-						</div>
-						{#if data.rawAccountsResult?.errors?.length}
-							<div class="text-error mb-2">
-								Errors: {data.rawAccountsResult.errors.map((e: any) => e.message).join('; ')}
-							</div>
-						{/if}
-						<table class="w-full border-collapse text-left">
-							<thead>
-								<tr class="border-b opacity-60">
-									<th class="pr-3 py-0.5">Account</th>
-									<th class="pr-3 py-0.5">Balances (raw)</th>
-									<th class="pr-3 py-0.5">currentValue</th>
-									<th class="py-0.5">currency</th>
-								</tr>
-							</thead>
-							<tbody>
-								{#each data.investmentAccounts ?? [] as acct}
-									<tr class="border-b hover:bg-gray-50 dark:hover:bg-gray-900">
-										<td class="pr-3 py-0.5">{acct.name}</td>
-										<td class="pr-3 py-0.5">
-											{#each Object.entries(acct.balances ?? {}) as [cur, qty]}
-												<span class="mr-2">{qty} {cur}</span>
-											{/each}
-										</td>
-										<td class="pr-3 py-0.5">{acct.currentValue}</td>
-										<td class="py-0.5">{acct.currentCurrency}</td>
+						</button>
+						{#if accountsOpen}
+							{#if rawAccountsResult && !rawAccountsResult.loaded}
+								<div class="mt-1 flex items-center gap-2 opacity-60">
+									<Loader class="h-3 w-3 animate-spin" /> Loading…
+								</div>
+							{:else if rawAccountsResult}
+								<div class="mb-2 mt-1 break-all rounded bg-gray-100 p-2 dark:bg-gray-800">
+									<span class="opacity-60">Query:</span>
+									{rawAccountsResult.query}
+								</div>
+								{#if rawAccountsResult.errors?.length}
+									<div class="text-error mb-2">
+										Errors: {rawAccountsResult.errors.map((e: any) => e.message).join('; ')}
+									</div>
+								{/if}
+							{/if}
+							<table class="mt-1 w-full border-collapse text-left">
+								<thead>
+									<tr class="border-b opacity-60">
+										<th class="pr-3 py-0.5">Account</th>
+										<th class="pr-3 py-0.5">Balances (raw)</th>
+										<th class="pr-3 py-0.5">currentValue</th>
+										<th class="py-0.5">currency</th>
 									</tr>
-								{/each}
-							</tbody>
-						</table>
+								</thead>
+								<tbody>
+									{#each data.investmentAccounts ?? [] as acct}
+										<tr class="border-b hover:bg-gray-50 dark:hover:bg-gray-900">
+											<td class="pr-3 py-0.5">{acct.name}</td>
+											<td class="pr-3 py-0.5">
+												{#each Object.entries(acct.balances ?? {}) as [cur, qty]}
+													<span class="mr-2">{qty} {cur}</span>
+												{/each}
+											</td>
+											<td class="pr-3 py-0.5">{acct.currentValue}</td>
+											<td class="py-0.5">{acct.currentCurrency}</td>
+										</tr>
+									{/each}
+								</tbody>
+							</table>
+						{/if}
 					</section>
 
 					<!-- Per-Symbol Raw Queries -->

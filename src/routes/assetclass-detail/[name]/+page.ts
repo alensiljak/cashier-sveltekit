@@ -4,7 +4,6 @@ import { AaStocksStore, AssetAllocationStore } from '$lib/data/mainStore';
 import type { Account } from '$lib/data/model.js';
 import * as AccountService from '$lib/services/accountsService';
 import appService from '$lib/services/appService';
-import { SettingKeys, settings } from '$lib/settings';
 import { loadFileMap } from '$lib/sync/sync-fs';
 import { ensureInitialized, queryMultiFile, version as getWasmVersion } from '$lib/services/rustledger';
 import { get } from 'svelte/store';
@@ -36,19 +35,6 @@ export async function load({ params }) {
 	const { fileMap, mainFileName } = await loadFileMap();
 	const wasmQuery: WasmQueryFn = (bql) => queryMultiFile(fileMap, mainFileName, bql);
 
-	// Build the BQL query for investment accounts (mirroring accountsService for display)
-	const rootAccount = await settings.get(SettingKeys.rootInvestmentAccount);
-	const accountsQuery = `SELECT account, str(value(sum(position), '${currency}')) as value,
-        sum(position) as balances
-		WHERE account ~ '^${rootAccount}'
-		GROUP BY account
-		HAVING number(value(sum(position), '${currency}')) != 0
-		ORDER BY account`;
-	const rawAccountsResult: RawQueryResult = {
-		query: accountsQuery,
-		...wasmQuery(accountsQuery)
-	};
-
 	const investmentAccounts = await AccountService.loadInvestmentAccounts(wasmQuery);
 	if (investmentAccounts.length === 0) {
 		console.warn('No investment accounts found');
@@ -72,7 +58,7 @@ export async function load({ params }) {
 	}));
 	const wasmVersion = getWasmVersion();
 
-	return { wasmQuery, investmentAccounts, rawAccountsResult, currency, aa, assetClass, stocks, fileMapInfo, wasmVersion };
+	return { wasmQuery, investmentAccounts, currency, aa, assetClass, stocks, fileMapInfo, wasmVersion };
 }
 
 function populateStocksWithCaching(assetClass: AssetClass, investmentAccounts: Account[]) {
