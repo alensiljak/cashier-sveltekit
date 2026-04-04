@@ -8,7 +8,8 @@
 	import { DefaultCurrencyStore } from '$lib/data/mainStore.js';
 	import { invalidateStorageBackendCache } from '$lib/storage/index.js';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
-	import { BoxIcon } from '@lucide/svelte';
+	import { BoxIcon, Check } from '@lucide/svelte';
+	import Fab from '$lib/components/FAB.svelte';
 
 	type FileChangeDetails = {
 		acceptedFiles: File[];
@@ -45,6 +46,8 @@
 		invalidateStorageBackendCache();
 
 		Notifier.success('Settings saved');
+
+		history.back();
 	}
 </script>
 
@@ -93,10 +96,6 @@
 		<p>Remember last transaction for payees.</p>
 	</label>
 
-	<center>
-		<button class="btn btn-secondary text-accent rounded uppercase" onclick={saveSettings}>
-			Save
-		</button>
-	</center>
+	<Fab Icon={Check} onclick={saveSettings} />
 
 </main>
