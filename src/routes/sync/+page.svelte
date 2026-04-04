@@ -6,7 +6,7 @@
 	import Notifier from '$lib/utils/notifier';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import * as SyncBeancount from '$lib/sync/sync-beancount';
-	import { InfrastructureFiles, PtaSystems } from '$lib/constants';
+	import { InfrastructureFiles, LedgerDataSource } from '$lib/constants';
 		import { goto } from '$app/navigation';
 	import * as cashierFsSync from '$lib/sync/sync-fs';
 	import ledgerService from '$lib/services/ledgerService';
@@ -25,8 +25,7 @@ import { syncProgress } from '$lib/stores/syncProgressStore';
 	let syncStarted = $state(false);
 	let syncing = $state(false);
 
-	type ConfigSource = 'filesystem' | 'rledger' | 'beancount' | 'ledger';
-	let configSource = $state<ConfigSource>('filesystem');
+	let configSource = $state<LedgerDataSource>(LedgerDataSource.filesystem);
 
 	let serverUrl = $state('');
 	let _ptaSystem = $state('');
@@ -38,7 +37,7 @@ import { syncProgress } from '$lib/stores/syncProgressStore';
 	async function loadSettings() {
 		serverUrl = ((await settings.get<string>(SettingKeys.syncServerUrl)) as string | null) ?? '';
 		_ptaSystem = ((await settings.get(SettingKeys.ptaSystem)) as string) ?? '';
-		if (_ptaSystem) configSource = _ptaSystem as ConfigSource;
+		if (_ptaSystem) configSource = _ptaSystem as LedgerDataSource;
 
 		syncAccounts = (await settings.get(SettingKeys.syncAccounts)) ?? false;
 		syncAaValues = (await settings.get(SettingKeys.syncAaValues)) ?? false;
@@ -55,16 +54,16 @@ import { syncProgress } from '$lib/stores/syncProgressStore';
 
 	function onConfigureClick() {
 		switch (configSource) {
-			case 'filesystem':
+			case LedgerDataSource.filesystem:
 				goto('/sync/filesystem');
 				break;
-			case PtaSystems.beancount:
+			case LedgerDataSource.beancount:
 				goto('/sync/beancount');
 				break;
-			case PtaSystems.rledger:
+			case LedgerDataSource.rledger:
 				Notifier.warning('Configure Cashier Server (Rust Ledger) - Not implemented yet.');
 				break;
-			case PtaSystems.ledger:
+			case LedgerDataSource.ledger:
 				Notifier.warning('Configure Cashier Server (Ledger-cli) - Not implemented yet.');
 				break;
 		}
@@ -111,20 +110,20 @@ import { syncProgress } from '$lib/stores/syncProgressStore';
 
 			// check which backend to synchronize with.
 			switch (configSource) {
-				case 'filesystem':
+				case LedgerDataSource.filesystem:
 					await cashierFsSync.synchronize(syncOptions);
 					break;
-				case PtaSystems.beancount:
+				case LedgerDataSource.beancount:
 					// cashier-server-python
 					await SyncBeancount.synchronize(syncOptions);
 					break;
-				case PtaSystems.rledger:
+				case LedgerDataSource.rledger:
 					// cashier-server-rust
 					Notifier.warning(
 						'Synchronization with Cashier Server (Rust Ledger) not implemented yet.'
 					);
 					break;
-				case PtaSystems.ledger:
+				case LedgerDataSource.ledger:
 					Notifier.warning('Synchronization with Cashier Server (Ledger-cli) not implemented yet.');
 					break;
 			}
@@ -179,7 +178,7 @@ import { syncProgress } from '$lib/stores/syncProgressStore';
 						class="radio radio-primary bg-base-100"
 						type="radio"
 						name="config-source"
-						value="filesystem"
+						value={LedgerDataSource.filesystem}
 						bind:group={configSource}
 						onchange={onConfigSourceChanged}
 					/>
@@ -190,7 +189,7 @@ import { syncProgress } from '$lib/stores/syncProgressStore';
 						class="radio radio-primary bg-base-100"
 						type="radio"
 						name="config-source"
-						value={PtaSystems.rledger}
+						value={LedgerDataSource.rledger}
 						bind:group={configSource}
 						onchange={onConfigSourceChanged}
 					/>
@@ -201,7 +200,7 @@ import { syncProgress } from '$lib/stores/syncProgressStore';
 						class="radio radio-primary bg-base-100"
 						type="radio"
 						name="config-source"
-						value={PtaSystems.beancount}
+						value={LedgerDataSource.beancount}
 						bind:group={configSource}
 						onchange={onConfigSourceChanged}
 					/>
@@ -212,7 +211,7 @@ import { syncProgress } from '$lib/stores/syncProgressStore';
 						class="radio radio-primary bg-base-100"
 						type="radio"
 						name="config-source"
-						value={PtaSystems.ledger}
+						value={LedgerDataSource.ledger}
 						bind:group={configSource}
 						onchange={onConfigSourceChanged}
 					/>
@@ -310,7 +309,7 @@ import { syncProgress } from '$lib/stores/syncProgressStore';
 		</button>
 	</center>
 
-	{#if _ptaSystem !== 'filesystem'}
+	{#if _ptaSystem !== LedgerDataSource.filesystem}
 		<hr class="my-10" />
 
 		<center>

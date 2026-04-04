@@ -8,6 +8,7 @@
 	import { CashierSync } from '$lib/sync/sync-beancount.js';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { AaStocksStore } from '$lib/data/mainStore';
+	import { LedgerDataSource } from '$lib/constants';
 	import { SettingKeys, settings } from '$lib/settings';
 	import * as Formatter from '$lib/utils/formatter.js';
 	import { processWithConcurrencyLimit } from '$lib/utils/concurrency.js';
@@ -23,8 +24,6 @@
 
 		// securityAnalysis
 		data.stocks = await loadSecurityAnalysis(data.serverUrl, data.stocks as StockSymbol[]);
-
-		cursor = '';
 	});
 
 	async function fetchAnalysisFor(symbol: string): Promise<SecurityAnalysis> {
@@ -44,16 +43,23 @@
 
 	/**
 	 * Load security analysis for all symbols.
-	 * Processes stocks in batches of 3 for concurrent API calls.
+	 * Processes stocks in batches, for concurrent API calls.
 	 */
 	async function loadSecurityAnalysis(
 		serverUrl: string,
 		symbols: StockSymbol[]
 	): Promise<StockSymbol[]> {
+		// Security analysis fetching is not yet implemented for the local filesystem backend.
+		const backend = await settings.get<string>(SettingKeys.storageBackend);
+		if (backend === LedgerDataSource.filesystem) {
+			console.info('Security analysis not yet implemented for local filesystem data source');
+			return symbols;
+		}
+
 		if (!serverUrl) {
 			throw new Error('Sync Server URL not set');
 		}
-		const alive = runServerCheck(serverUrl);
+		const alive = await runServerCheck(serverUrl);
 		if (!alive) {
 			console.info('Server not online, aborting security analysis');
 			return symbols;

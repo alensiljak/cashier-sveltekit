@@ -22,6 +22,13 @@ export enum PtaSystems {
 	ledger = 'ledger'
 }
 
+export enum LedgerDataSource {
+	filesystem = 'filesystem',
+	beancount = 'beancount',
+	rledger = 'rledger',
+	ledger = 'ledger'
+}
+
 export const DEFAULT_FORECAST_DAYS = 7 as const;
 export const ISODATEFORMAT = 'YYYY-MM-DD';
 export const LONGTIMEFORMAT = 'HHmmss';
