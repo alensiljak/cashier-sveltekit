@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Toolbar from '$lib/components/Toolbar.svelte';
-	import { PowerIcon, RefreshCcw } from '@lucide/svelte';
+	import { BoxIcon, PowerIcon, RefreshCcw } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import { SettingKeys, settings } from '$lib/settings';
 	import Notifier from '$lib/utils/notifier';
@@ -69,12 +69,9 @@
 		}
 	}
 
-	async function reloadData() {
-		const activeUrl = SyncBeancount.getActiveServerUrlOrNotify();
-		if (!activeUrl) return;
-
-		const sync = new SyncBeancount.CashierSync(activeUrl, _dataSource);
-		await sync.reloadData();
+	async function onOpfsClick() {
+		// navigate to OPFS page
+		await goto('/opfs');
 	}
 
 	async function onShutdownClick() {
@@ -142,6 +139,14 @@
 		}
 	}
 
+	async function reloadData() {
+		const activeUrl = SyncBeancount.getActiveServerUrlOrNotify();
+		if (!activeUrl) return;
+
+		const sync = new SyncBeancount.CashierSync(activeUrl, _dataSource);
+		await sync.reloadData();
+	}
+
 	async function saveSettings() {
 		await settings.set(SettingKeys.syncAccounts, syncAccounts);
 		await settings.set(SettingKeys.syncOpeningBalances, syncOpeningBalances);
@@ -165,6 +170,7 @@
 <Toolbar title="Cashier Sync">
 	{#snippet menuItems()}
 		<ToolbarMenuItem text="Shut down server" Icon={PowerIcon} onclick={onShutdownClick} />
+		<ToolbarMenuItem text="OPFS Storage" Icon={BoxIcon} onclick={onOpfsClick} />
 	{/snippet}
 </Toolbar>
 

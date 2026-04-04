@@ -42,10 +42,10 @@
 	onMount(async () => {
 		// load data
 		currency = await appService.getDefaultCurrency();
-		rootInvestmentAccount = await settings.get<string>(SettingKeys.rootInvestmentAccount);
-		rememberLastTransaction = await settings.get<boolean>(SettingKeys.rememberLastTransaction);
-		ptaSystem = await settings.get<string>(SettingKeys.ptaSystem);
-		storageBackend = (await settings.get<StorageBackendType>(SettingKeys.storageBackend)) ?? 'opfs';
+		rootInvestmentAccount = await settings.get<string>(SettingKeys.rootInvestmentAccount) as string;
+		rememberLastTransaction = await settings.get<boolean>(SettingKeys.rememberLastTransaction) as boolean;
+		// ptaSystem = await settings.get<string>(SettingKeys.ptaSystem);
+		// storageBackend = (await settings.get<StorageBackendType>(SettingKeys.storageBackend)) ?? 'opfs';
 
 		// Show current FS directory name if filesystem backend has a persisted handle
 		if (storageBackend === 'filesystem') {
@@ -157,9 +157,8 @@
 		await settings.set(SettingKeys.rootInvestmentAccount, rootInvestmentAccount);
 		await settings.set(SettingKeys.rememberLastTransaction, rememberLastTransaction);
 
-		await settings.set(SettingKeys.ptaSystem, ptaSystem);
-
-		await settings.set(SettingKeys.storageBackend, storageBackend);
+		// await settings.set(SettingKeys.ptaSystem, ptaSystem);
+		// await settings.set(SettingKeys.storageBackend, storageBackend);
 		invalidateStorageBackendCache();
 
 		Notifier.success('Settings saved');
@@ -222,7 +221,7 @@
 	</label>
 
 	<!-- ledger / beancount -->
-	<p>Select the default plain-text-account system:</p>
+	<!-- <p>Select the default plain-text-account system:</p>
 	<form class="space-y-2">
 		<label class="flex items-center space-x-2">
 			<input
@@ -256,7 +255,7 @@
 			/>
 			<p>Ledger-cli</p>
 		</label>
-	</form>
+	</form> -->
 
 	<!-- storage backend -->
 	<!-- <p>Storage backend:</p>
@@ -293,7 +292,7 @@
 		</label>
 	</form> -->
 
-	{#if storageBackend === 'filesystem'}
+	<!-- {#if storageBackend === 'filesystem'}
 		<div class="mt-2 flex items-center gap-2">
 			<button class="btn btn-outline btn-sm rounded" onclick={pickFsDirectory}>
 				Select Directory
@@ -304,7 +303,7 @@
 				<span class="text-sm opacity-50">No directory selected</span>
 			{/if}
 		</div>
-	{/if}
+	{/if} -->
 
 	<center>
 		<button class="btn btn-secondary text-accent rounded uppercase" onclick={saveSettings}>
@@ -314,7 +313,7 @@
 
 	<hr />
 
-	<section>
+	<!-- <section>
 		<h3 class="mb-2 text-2xl font-semibold">Asset Allocation</h3>
 		<fieldset class="fieldset">
 			<center>
@@ -333,7 +332,7 @@
 				</label>
 			</center>
 		</fieldset>
-	</section>
+	</section> -->
 
 	<section>
 		<h3 class="mb-2 text-2xl font-semibold">Restore Settings</h3>
