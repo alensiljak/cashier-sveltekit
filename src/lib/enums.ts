@@ -3,10 +3,6 @@ export const BackupType = {
 	SCHEDULEDXACTS: 'scheduled'
 };
 
-export const SelectionType = {
-	ACCOUNT: 'Account'
-} as const;
-
 export const HomeCardNames = {
 	FAVOURITES: 'FavouritesCard',
 	FORECAST: 'ForecastCard',
@@ -14,6 +10,13 @@ export const HomeCardNames = {
 	SCHEDULED: 'ScheduledXactCard',
 	// SYNC: 'SyncCard'
 } as const;
+
+export enum LedgerDataSource {
+	filesystem = 'filesystem',
+	beancount = 'beancount',
+	rledger = 'rledger',
+	ledger = 'ledger'
+}
 
 export const RecurrencePeriods = {
 	Days: 'days',
@@ -23,3 +26,13 @@ export const RecurrencePeriods = {
 	EndOfMonth: 'end of month',
 	Years: 'years'
 };
+
+export enum PtaSystems {
+	beancount = 'beancount',
+	rledger = 'rledger',
+	ledger = 'ledger'
+}
+
+export const SelectionType = {
+	ACCOUNT: 'Account'
+} as const;

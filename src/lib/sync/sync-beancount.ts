@@ -4,13 +4,14 @@
  */
 import { settings, SettingKeys } from '$lib/settings';
 import moment from 'moment';
-import { ISODATEFORMAT, PtaSystems } from '$lib/constants';
+import { ISODATEFORMAT } from '$lib/constants';
 import { getQueries } from './sync-queries';
 import type { Queries } from './sync-queries';
 import Notifier from '$lib/utils/notifier';
 import * as SyncCommon from '$lib/sync/sync-common';
 import type { SyncOptions } from '$lib/sync/sync-common';
 import { initializeSyncProgress, updateSyncStep } from '$lib/stores/syncProgressStore';
+import { PtaSystems } from '$lib/enums';
 
 Notifier.init();
 

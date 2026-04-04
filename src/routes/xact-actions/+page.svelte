@@ -18,7 +18,7 @@
 	} from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import { SettingKeys, settings } from '$lib/settings';
-	import { PtaSystems } from '$lib/constants';
+	import { LedgerDataSource } from '$lib/enums';
 
 	Notifier.init();
 
@@ -30,7 +30,7 @@
 	}
 
 	onMount(async () => {
-		ptaSystem = await settings.get(SettingKeys.ptaSystem);
+		ptaSystem = await settings.get(SettingKeys.ledgerDataSource) as string;
 	});
 
 	/**
@@ -43,7 +43,7 @@
 	async function onCopyClicked() {
 		// get a journal version
 		let text = '';
-		if (ptaSystem == PtaSystems.rledger) {
+		if (ptaSystem == LedgerDataSource.rledger) {
 			text = appService.translateToLedger($xact);
 		} else {
 			text = appService.translateToBeancount($xact);

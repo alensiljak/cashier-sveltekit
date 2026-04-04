@@ -8,9 +8,8 @@ import { AssetAllocationEngine } from '$lib/assetAllocation/AssetAllocation';
 import { settings, SettingKeys } from '$lib/settings';
 import * as LedgerParser from '$lib/utils/ledgerParser';
 import * as BeancountParser from '$lib/utils/beancountParser';
-import * as RledgerParser from '$lib/utils/rledgerParser';
 import type { CurrentValuesDict } from '$lib/data/viewModels';
-import { PtaSystems } from '$lib/constants';
+import { PtaSystems } from '$lib/enums';
 
 export interface SyncOptions {
 	syncAccounts?: boolean;

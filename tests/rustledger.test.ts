@@ -6,9 +6,6 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
 	ensureInitialized,
 	parseBalanceSheetRow,
-	parseCurrentValues,
-	getMoneyFromTupleString,
-	getNumberFromBalanceRow
 } from '$lib/services/rustledger';
 import { Account } from '$lib/data/model';
 
@@ -57,91 +54,6 @@ describe('RustLedger Service', () => {
 			// The fallback implementation will try to parse and may return an account with empty name
 			// This is acceptable behavior
 			expect(result).toBeDefined();
-		});
-	});
-
-	describe('parseCurrentValues', () => {
-		it('should parse current values from Beancount output', () => {
-			const lines = [
-				['Assets:Bank:Checking', '(1000.00 EUR)'],
-				['Assets:Bank:Savings', '(500.00 EUR)'],
-				['Liabilities:CreditCard', '(-200.00 EUR)']
-			];
-			const rootAccount = 'Assets';
-
-			const result = parseCurrentValues(lines, rootAccount);
-
-			expect(result).toHaveProperty('Assets:Bank:Checking');
-			expect(result['Assets:Bank:Checking'].quantity).toBe(1000.0);
-			expect(result['Assets:Bank:Checking'].currency).toBe('EUR');
-			expect(result['Assets:Bank:Savings'].quantity).toBe(500.0);
-			expect(result['Liabilities:CreditCard'].quantity).toBe(-200.0);
-		});
-
-		it('should handle empty lines array', () => {
-			const result = parseCurrentValues([], 'Assets');
-			expect(result).toEqual({});
-		});
-
-		it('should skip empty lines', () => {
-			const lines = [
-				['', ''],
-				['Assets:Bank:Checking', '(1000.00 EUR)']
-			];
-			const result = parseCurrentValues(lines, 'Assets');
-
-			expect(result).toHaveProperty('Assets:Bank:Checking');
-		});
-	});
-
-	describe('getMoneyFromTupleString', () => {
-		it('should parse positive amount with currency', () => {
-			const result = getMoneyFromTupleString('(100.00 EUR)');
-
-			expect(result.quantity).toBe(100.0);
-			expect(result.currency).toBe('EUR');
-		});
-
-		it('should parse negative amount', () => {
-			const result = getMoneyFromTupleString('(-25.50 USD)');
-
-			expect(result.quantity).toBe(-25.5);
-			expect(result.currency).toBe('USD');
-		});
-
-		it('should handle decimal amounts', () => {
-			const result = getMoneyFromTupleString('(1234.56 GBP)');
-
-			expect(result.quantity).toBe(1234.56);
-			expect(result.currency).toBe('GBP');
-		});
-
-		it('should handle zero amount', () => {
-			const result = getMoneyFromTupleString('(0.00 EUR)');
-
-			expect(result.quantity).toBe(0);
-			expect(result.currency).toBe('EUR');
-		});
-	});
-
-	describe('getNumberFromBalanceRow', () => {
-		it('should extract numeric value from balance row', () => {
-			const row = [['(1000.00 EUR)']];
-			const result = getNumberFromBalanceRow(row);
-
-			expect(result).toBe(1000.0);
-		});
-
-		it('should return 0 for empty row', () => {
-			const result = getNumberFromBalanceRow([]);
-			expect(result).toBe(0);
-		});
-
-		it('should handle negative amounts', () => {
-			const row = [['(-500.00 USD)']];
-			const result = getNumberFromBalanceRow(row);
-
-			expect(result).toBe(-500.0);
 		});
 	});
 

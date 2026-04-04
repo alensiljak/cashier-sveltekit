@@ -6,7 +6,7 @@ import { getQueries } from '$lib/sync/sync-queries';
 import * as BeancountParser from '$lib/utils/beancountParser';
 import * as LedgerParser from '$lib/utils/ledgerParser';
 import { UserError } from '$lib/utils/errors';
-import { LedgerDataSource, PtaSystems } from '$lib/constants';
+import { LedgerDataSource, PtaSystems } from '$lib/enums';
 
 const DATE_FORMAT = 'YYYY-MM-DD';
 

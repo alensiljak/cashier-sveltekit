@@ -6,7 +6,7 @@
 	import Notifier from '$lib/utils/notifier';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import * as SyncBeancount from '$lib/sync/sync-beancount';
-	import { InfrastructureFiles, LedgerDataSource } from '$lib/constants';
+	import { LedgerDataSource } from '$lib/enums';
 	import { goto } from '$app/navigation';
 	import * as cashierFsSync from '$lib/sync/sync-fs';
 	import ledgerService from '$lib/services/ledgerService';

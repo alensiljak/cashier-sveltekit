@@ -14,7 +14,7 @@ import { get } from 'svelte/store';
 import * as LedgerParser from '$lib/utils/ledgerParser';
 import * as BeancountParser from '$lib/utils/beancountParser';
 import { formatAmount } from '$lib/utils/formatter';
-import { LedgerDataSource, PtaSystems } from '$lib/constants';
+import { LedgerDataSource, PtaSystems } from '$lib/enums';
 
 interface AccountIndex {
 	[key: string]: Account;
@@ -290,7 +290,7 @@ class AppService {
 	async getDefaultCurrency(): Promise<string> {
 		let defaultCurrency = get(DefaultCurrencyStore);
 		if (!defaultCurrency) {
-			defaultCurrency = await settings.get(SettingKeys.currency);
+			defaultCurrency = await settings.get(SettingKeys.currency) as string;
 			DefaultCurrencyStore.set(defaultCurrency);
 		}
 		return defaultCurrency;

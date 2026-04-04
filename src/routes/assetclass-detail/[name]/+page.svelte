@@ -12,7 +12,7 @@
 	import * as Formatter from '$lib/utils/formatter.js';
 	import { processWithConcurrencyLimit } from '$lib/utils/concurrency.js';
 	import { getQueries } from '$lib/sync/sync-queries.js';
-	import { PtaSystems } from '$lib/constants.js';
+	import { PtaSystems } from '$lib/enums.js';
 	import { Loader, X, Bug, ChevronDown, ChevronRight } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import moment from 'moment';
