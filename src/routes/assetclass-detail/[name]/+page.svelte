@@ -35,6 +35,7 @@
 	let debugOpen = $state(false);
 	let filesOpen = $state(false);
 	let accountsOpen = $state(false);
+	let assetClassValuesOpen = $state(false);
 	let rawAccountsResult: (RawQueryResult & { loaded: boolean }) | null = $state(null);
 	let symbolDebugOpen: Record<string, boolean> = $state({});
 
@@ -381,10 +382,16 @@
 
 					<!-- Asset Class Computed Values -->
 					<section>
-						<h3 class="mb-1 font-sans text-sm font-semibold">Asset Class Values</h3>
-						{#if data.assetClass}
+						<button
+							class="flex items-center gap-1 font-sans text-sm font-semibold hover:opacity-80"
+							onclick={() => (assetClassValuesOpen = !assetClassValuesOpen)}
+						>
+							{#if assetClassValuesOpen}<ChevronDown class="h-3 w-3" />{:else}<ChevronRight class="h-3 w-3" />{/if}
+							Asset Class Values
+						</button>
+						{#if assetClassValuesOpen && data.assetClass}
 							{@const ac = data.assetClass}
-							<table class="border-collapse">
+							<table class="mt-1 border-collapse">
 								<tbody>
 									<tr class="border-b"><td class="pr-4 py-0.5 opacity-60">fullname</td><td>{ac.fullname}</td></tr>
 									<tr class="border-b"><td class="pr-4 py-0.5 opacity-60">allocation (target %)</td><td>{ac.allocation}</td></tr>
