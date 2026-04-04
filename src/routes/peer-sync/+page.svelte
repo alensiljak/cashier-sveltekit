@@ -396,10 +396,11 @@
 					</p>
 
 					<div class="form-control mt-2">
-						<label class="label">
+						<label class="label" for="iceCandidates">
 							<span class="label-text">Your ICE Candidates (copy and send to remote peer)</span>
 						</label>
 						<textarea
+							id="iceCandidates"
 							bind:value={iceCandidatesText}
 							readonly
 							class="textarea textarea-bordered h-24 font-mono text-xs"
@@ -413,10 +414,10 @@
 					</div>
 
 					<div class="form-control mt-4">
-						<label class="label">
+						<label class="label" for="remoteIceCandidates">
 							<span class="label-text">Remote ICE Candidates (paste here and add)</span>
 						</label>
-						<textarea
+						<textarea id="remoteIceCandidates"
 							bind:value={remoteIceCandidates}
 							placeholder="Paste remote ICE candidates JSON here..."
 							class="textarea textarea-bordered h-24 font-mono text-xs"

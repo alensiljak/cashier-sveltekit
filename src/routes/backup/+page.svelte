@@ -113,6 +113,7 @@
 		<div class="flex flex-row items-center space-x-4">
 			<p>To restore (overwriting any existing records!):</p>
 			<input
+				id="backupFile"
 				type="file"
 				name="files"
 				accept=".json"
@@ -122,7 +123,7 @@
 					onChangeHandler({ acceptedFiles: Array.from(target.files || []) });
 				}}
 			/>
-			<label class="label">
+			<label class="label" for="backupFile">
 				<span>Click to choose the backup file</span>
 			</label>
 		</div>
