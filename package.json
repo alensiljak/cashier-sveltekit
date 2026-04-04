@@ -22,7 +22,7 @@
 		"@lucide/svelte": "^1.0.0",
 		"@playwright/test": "^1.49.1",
 		"@rollup/wasm-node": "^4.34.0",
-		"@rustledger/wasm": "^0.11.0",
+		"@rustledger/wasm": "file:d:/src/rustledger/crates/rustledger-wasm/pkg",
 		"@sveltejs/adapter-static": "^3.0.8",
 		"@sveltejs/kit": "^2.15.2",
 		"@sveltejs/vite-plugin-svelte": "^7.0.0",

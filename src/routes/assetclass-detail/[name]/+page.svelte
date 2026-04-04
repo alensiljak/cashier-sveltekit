@@ -21,7 +21,17 @@
 	let data = $state(page.data);
 	let cursor = $state('');
 
-	// Debug panel state
+	// Lots per symbol (main view)
+	interface LotsData {
+		columns: string[];
+		rows: any[];
+		loading: boolean;
+		error?: string;
+	}
+	let lotsOpen: Record<string, boolean> = $state({});
+	let lotsData: Record<string, LotsData> = $state({});
+
+	// Debug panel
 	let debugOpen = $state(false);
 	let symbolDebugOpen: Record<string, boolean> = $state({});
 
@@ -29,6 +39,8 @@
 		income: RawQueryResult | null;
 		value: RawQueryResult | null;
 		gainLoss: RawQueryResult | null;
+		costOnly: RawQueryResult | null;
+		rawPositions: RawQueryResult | null;
 		loading: boolean;
 		error?: string;
 	}
@@ -77,29 +89,64 @@
 		return symbols;
 	}
 
+	// --- Lots (main view) ---
+
+	async function loadLots(symbol: string) {
+		const queryFn = data.wasmQuery as WasmQueryFn;
+		const query = `SELECT account, date, position WHERE currency = '${symbol}' ORDER BY account`;
+		lotsData[symbol] = { columns: [], rows: [], loading: true };
+		try {
+			const result = queryFn(query);
+			lotsData[symbol] = { columns: result.columns, rows: result.rows, loading: false };
+		} catch (err) {
+			lotsData[symbol] = {
+				columns: [],
+				rows: [],
+				loading: false,
+				error: err instanceof Error ? err.message : String(err)
+			};
+		}
+	}
+
+	function toggleLots(symbol: string) {
+		lotsOpen[symbol] = !lotsOpen[symbol];
+		if (lotsOpen[symbol] && !lotsData[symbol]) {
+			loadLots(symbol);
+		}
+	}
+
+	// --- Debug ---
+
 	async function runSymbolDebugQueries(symbol: string) {
 		const queryFn = data.wasmQuery as WasmQueryFn;
 		const currency = data.currency as string;
 		const queries = getQueries(PtaSystems.rledger);
 		const yieldFrom = moment().subtract(1, 'year').format('YYYY-MM-DD');
 
-		symbolDebug[symbol] = { income: null, value: null, gainLoss: null, loading: true };
+		symbolDebug[symbol] = {
+			income: null,
+			value: null,
+			gainLoss: null,
+			costOnly: null,
+			rawPositions: null,
+			loading: true
+		};
 
 		try {
 			const incomeQuery = queries.incomeBalance(symbol, yieldFrom, currency);
 			const valueQuery = queries.valueBalance(symbol, currency);
 			const gainLossQuery = queries.gainLoss(symbol, currency);
-
-			const [incomeResult, valueResult, gainLossResult] = [
-				queryFn(incomeQuery),
-				queryFn(valueQuery),
-				queryFn(gainLossQuery)
-			];
+			// Isolates whether cost() or convert() is the problem
+			const costOnlyQuery = `SELECT str(cost(sum(position))) as cost WHERE currency = '${symbol}'`;
+			// Individual lots without aggregation
+			const rawPositionsQuery = `SELECT account, position as lot WHERE currency = '${symbol}' ORDER BY account`;
 
 			symbolDebug[symbol] = {
-				income: { query: incomeQuery, ...incomeResult },
-				value: { query: valueQuery, ...valueResult },
-				gainLoss: { query: gainLossQuery, ...gainLossResult },
+				income: { query: incomeQuery, ...queryFn(incomeQuery) },
+				value: { query: valueQuery, ...queryFn(valueQuery) },
+				gainLoss: { query: gainLossQuery, ...queryFn(gainLossQuery) },
+				costOnly: { query: costOnlyQuery, ...queryFn(costOnlyQuery) },
+				rawPositions: { query: rawPositionsQuery, ...queryFn(rawPositionsQuery) },
 				loading: false
 			};
 		} catch (err) {
@@ -107,6 +154,8 @@
 				income: null,
 				value: null,
 				gainLoss: null,
+				costOnly: null,
+				rawPositions: null,
 				loading: false,
 				error: err instanceof Error ? err.message : String(err)
 			};
@@ -168,7 +217,7 @@
 							</div>
 						{/if}
 
-						<!-- accounts -->
+						<!-- Accounts -->
 						{#each stock.accounts as account}
 							<div class="ms-3">
 								{account.name},
@@ -178,6 +227,54 @@
 								{account.currentCurrency}
 							</div>
 						{/each}
+
+						<!-- Lots -->
+						<div class="ms-3 mt-1">
+							<button
+								class="flex items-center gap-1 text-xs opacity-60 hover:opacity-100"
+								onclick={() => toggleLots(stock.name)}
+							>
+								{#if lotsOpen[stock.name]}
+									<ChevronDown class="h-3 w-3" />
+								{:else}
+									<ChevronRight class="h-3 w-3" />
+								{/if}
+								Lots
+							</button>
+
+							{#if lotsOpen[stock.name]}
+								<div class="mt-1 font-mono text-xs">
+									{#if lotsData[stock.name]?.loading}
+										<span class="opacity-60">Loading…</span>
+									{:else if lotsData[stock.name]?.error}
+										<span class="text-error">{lotsData[stock.name].error}</span>
+									{:else if lotsData[stock.name]?.rows?.length}
+										<table class="border-collapse">
+											<thead>
+												<tr class="opacity-60">
+													{#each lotsData[stock.name].columns as col}
+														<th class="pr-4 text-left font-normal">{col}</th>
+													{/each}
+												</tr>
+											</thead>
+											<tbody>
+												{#each lotsData[stock.name].rows as row}
+													<tr>
+														{#each row as cell}
+															<td class="pr-4">
+																{typeof cell === 'object' ? JSON.stringify(cell) : cell}
+															</td>
+														{/each}
+													</tr>
+												{/each}
+											</tbody>
+										</table>
+									{:else}
+										<span class="opacity-60">No lots found</span>
+									{/if}
+								</div>
+							{/if}
+						</div>
 					</li>
 				{/each}
 			</ul>
@@ -201,12 +298,50 @@
 			{#if debugOpen}
 				<div class="mt-3 space-y-6 font-mono text-xs">
 
+					<!-- Environment -->
+					<section>
+						<h3 class="mb-1 font-sans text-sm font-semibold">Environment</h3>
+						<table class="border-collapse">
+							<tbody>
+								<tr class="border-b">
+									<td class="pr-4 py-0.5 opacity-60">WASM version</td>
+									<td>{data.wasmVersion}</td>
+								</tr>
+							</tbody>
+						</table>
+					</section>
+
+					<!-- File Map -->
+					<section>
+						<h3 class="mb-1 font-sans text-sm font-semibold">
+							Loaded Files ({data.fileMapInfo?.length ?? 0})
+						</h3>
+						<table class="border-collapse">
+							<thead>
+								<tr class="opacity-60">
+									<th class="pr-4 py-0.5 text-left font-normal">File</th>
+									<th class="pr-4 py-0.5 text-right font-normal">Lines</th>
+									<th class="py-0.5 text-right font-normal">Chars</th>
+								</tr>
+							</thead>
+							<tbody>
+								{#each data.fileMapInfo ?? [] as f}
+									<tr class="border-b">
+										<td class="pr-4 py-0.5">{f.name}</td>
+										<td class="pr-4 py-0.5 text-right">{f.lines.toLocaleString()}</td>
+										<td class="py-0.5 text-right">{f.chars.toLocaleString()}</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+					</section>
+
 					<!-- Asset Class Computed Values -->
 					<section>
 						<h3 class="mb-1 font-sans text-sm font-semibold">Asset Class Values</h3>
 						{#if data.assetClass}
 							{@const ac = data.assetClass}
-							<table class="w-full border-collapse">
+							<table class="border-collapse">
 								<tbody>
 									<tr class="border-b"><td class="pr-4 py-0.5 opacity-60">fullname</td><td>{ac.fullname}</td></tr>
 									<tr class="border-b"><td class="pr-4 py-0.5 opacity-60">allocation (target %)</td><td>{ac.allocation}</td></tr>
@@ -266,7 +401,7 @@
 					<section>
 						<h3 class="mb-1 font-sans text-sm font-semibold">Per-Symbol Raw Queries</h3>
 						{#each data.stocks ?? [] as stock}
-							<div class="mt-2 border rounded">
+							<div class="mt-2 rounded border">
 								<button
 									class="flex w-full items-center gap-2 px-2 py-1 text-left hover:bg-gray-50 dark:hover:bg-gray-900"
 									onclick={() => toggleSymbolDebug(stock.name)}
@@ -280,7 +415,7 @@
 								</button>
 
 								{#if symbolDebugOpen[stock.name]}
-									<div class="border-t px-2 py-2 space-y-3">
+									<div class="space-y-3 border-t px-2 py-2">
 										{#if symbolDebug[stock.name]?.loading}
 											<div class="flex items-center gap-2 opacity-60">
 												<Loader class="h-3 w-3 animate-spin" /> Running queries…
@@ -290,56 +425,29 @@
 										{:else if symbolDebug[stock.name]}
 											{@const sd = symbolDebug[stock.name]}
 
-											<!-- Income Balance -->
-											<div>
-												<div class="opacity-60 mb-0.5">income balance query</div>
-												<div class="break-all rounded bg-gray-100 p-1 dark:bg-gray-800">{sd.income?.query}</div>
-												{#if sd.income?.errors?.length}
-													<div class="text-error">Errors: {sd.income.errors.map((e: any) => e.message).join('; ')}</div>
-												{/if}
-												{#if sd.income?.rows?.length}
-													<div class="mt-0.5">cols: {sd.income.columns.join(', ')}</div>
-													{#each sd.income.rows as row}
-														<div>{formatRow(row)}</div>
-													{/each}
-												{:else}
-													<div class="opacity-60">— no rows —</div>
-												{/if}
-											</div>
-
-											<!-- Value Balance -->
-											<div>
-												<div class="opacity-60 mb-0.5">value balance query</div>
-												<div class="break-all rounded bg-gray-100 p-1 dark:bg-gray-800">{sd.value?.query}</div>
-												{#if sd.value?.errors?.length}
-													<div class="text-error">Errors: {sd.value.errors.map((e: any) => e.message).join('; ')}</div>
-												{/if}
-												{#if sd.value?.rows?.length}
-													<div class="mt-0.5">cols: {sd.value.columns.join(', ')}</div>
-													{#each sd.value.rows as row}
-														<div>{formatRow(row)}</div>
-													{/each}
-												{:else}
-													<div class="opacity-60">— no rows —</div>
-												{/if}
-											</div>
-
-											<!-- Gain/Loss -->
-											<div>
-												<div class="opacity-60 mb-0.5">gain/loss query</div>
-												<div class="break-all rounded bg-gray-100 p-1 dark:bg-gray-800">{sd.gainLoss?.query}</div>
-												{#if sd.gainLoss?.errors?.length}
-													<div class="text-error">Errors: {sd.gainLoss.errors.map((e: any) => e.message).join('; ')}</div>
-												{/if}
-												{#if sd.gainLoss?.rows?.length}
-													<div class="mt-0.5">cols: {sd.gainLoss.columns.join(', ')}</div>
-													{#each sd.gainLoss.rows as row}
-														<div>{formatRow(row)}</div>
-													{/each}
-												{:else}
-													<div class="opacity-60">— no rows —</div>
-												{/if}
-											</div>
+											{#each [
+												{ label: 'income balance', result: sd.income },
+												{ label: 'value balance', result: sd.value },
+												{ label: 'gain/loss (cost + convert)', result: sd.gainLoss },
+												{ label: 'cost only (no convert) — isolates cost() vs convert()', result: sd.costOnly },
+												{ label: 'raw positions per lot', result: sd.rawPositions }
+											] as { label, result }}
+												<div>
+													<div class="mb-0.5 opacity-60">{label}</div>
+													<div class="break-all rounded bg-gray-100 p-1 dark:bg-gray-800">{result?.query}</div>
+													{#if result?.errors?.length}
+														<div class="text-error">Errors: {result.errors.map((e: any) => e.message).join('; ')}</div>
+													{/if}
+													{#if result?.rows?.length}
+														<div class="mt-0.5 opacity-60">cols: {result.columns.join(', ')}</div>
+														{#each result.rows as row}
+															<div>{formatRow(row)}</div>
+														{/each}
+													{:else}
+														<div class="opacity-60">— no rows —</div>
+													{/if}
+												</div>
+											{/each}
 										{/if}
 									</div>
 								{/if}

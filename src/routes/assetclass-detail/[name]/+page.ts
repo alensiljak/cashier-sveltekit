@@ -6,7 +6,7 @@ import * as AccountService from '$lib/services/accountsService';
 import appService from '$lib/services/appService';
 import { SettingKeys, settings } from '$lib/settings';
 import { loadFileMap } from '$lib/sync/sync-fs';
-import { ensureInitialized, queryMultiFile } from '$lib/services/rustledger';
+import { ensureInitialized, queryMultiFile, version as getWasmVersion } from '$lib/services/rustledger';
 import { get } from 'svelte/store';
 
 export type WasmQueryFn = (bql: string) => { columns: string[]; rows: any[]; errors: any[] };
@@ -64,7 +64,15 @@ export async function load({ params }) {
 	}
 	const stocks = populateStocksWithCaching(assetClass, investmentAccounts);
 
-	return { wasmQuery, investmentAccounts, rawAccountsResult, currency, aa, assetClass, stocks };
+	// File map info for debugging (names + sizes, not content)
+	const fileMapInfo = Object.entries(fileMap).map(([name, content]) => ({
+		name,
+		chars: content.length,
+		lines: content.split('\n').length
+	}));
+	const wasmVersion = getWasmVersion();
+
+	return { wasmQuery, investmentAccounts, rawAccountsResult, currency, aa, assetClass, stocks, fileMapInfo, wasmVersion };
 }
 
 function populateStocksWithCaching(assetClass: AssetClass, investmentAccounts: Account[]) {
