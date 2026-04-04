@@ -12,6 +12,7 @@ import db from '$lib/data/db';
 import { SettingKeys, settings } from '$lib/settings';
 import appService from './appService';
 import ledgerService from './ledgerService';
+import { addDecimalStrings } from '$lib/utils/numberUtils';
 
 type QueryFn = (bql: string) => { columns: string[]; rows: any[]; errors: any[] };
 
@@ -209,6 +210,7 @@ export async function loadInvestmentAccounts(queryFn: QueryFn =
 
 	return result.rows.map((row: any) => {
 		const account = new Account(row[accountIdx]);
+
         // Source:
         // row[balancesIdx].positions is an array containing
         // { units: { 'number', 'currency' } }
@@ -216,10 +218,15 @@ export async function loadInvestmentAccounts(queryFn: QueryFn =
         // account.balances: { EUR: 100, USD: 200 }
         account.balances = row[balancesIdx].positions
             .reduce((acc: any, balance: any) => {
-                acc[balance.units.currency] = (acc[balance.units.currency] ?? 0) + 
-                    parseFloat(balance.units.number);
+                if (account.name.indexOf(':HY') !== -1) {
+                    console.log('Processing balance', balance.units);
+                }
+                // acc[balance.units.currency] = (acc[balance.units.currency] ?? 0) + 
+                //     parseFloat(balance.units.number);
+                acc[balance.units.currency] = addDecimalStrings([acc[balance.units.currency]?.toString() ?? '0', balance.units.number]);
                 return acc;
             }, {});
+
         // current value: str(value(...)) returns e.g. "1234.56 EUR" or structured object
 		if (valueIdx !== -1 && row[valueIdx] != null) {
 			const raw = row[valueIdx];
