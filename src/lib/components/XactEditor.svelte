@@ -9,7 +9,15 @@
 	import { SelectionModeMetadata, SettingKeys, settings } from '$lib/settings';
 	import { getEmptyPostingIndex } from '$lib/utils/xactUtils';
 	import { Posting } from '$lib/data/model';
-	import { ArrowUpDownIcon, PlusCircleIcon, SigmaIcon, TrashIcon, UserIcon, CalendarIcon, FileTextIcon } from '@lucide/svelte';
+	import {
+		ArrowUpDownIcon,
+		PlusCircleIcon,
+		SigmaIcon,
+		TrashIcon,
+		UserIcon,
+		CalendarIcon,
+		FileTextIcon
+	} from '@lucide/svelte';
 	import { Big } from 'big.js';
 
 	Notifier.init();

@@ -39,19 +39,19 @@ class CashierDAL {
 	 * @param {Xact} tx The transaction object
 	 * @returns the numeric id of the new transaction
 	 */
-	async saveXact(tx: Xact): Promise<number> {
-		if (!tx) {
-			throw new Error('transaction object is invalid!', tx);
-		}
-		if (!tx.id) {
-			// create a new id for the transaction
-			tx.id = new Date().getTime();
-		}
+	// async saveXact(tx: Xact): Promise<number> {
+	// 	if (!tx) {
+	// 		throw new Error('transaction object is invalid!', tx);
+	// 	}
+	// 	if (!tx.id) {
+	// 		// create a new id for the transaction
+	// 		tx.id = new Date().getTime();
+	// 	}
 
-		// returns the transaction id
-		const id = await db.xacts.put(tx);
-		return id as number;
-	}
+	// 	// returns the transaction id
+	// 	const id = await db.xacts.put(tx);
+	// 	return id as number;
+	// }
 }
 
 export default CashierDAL;

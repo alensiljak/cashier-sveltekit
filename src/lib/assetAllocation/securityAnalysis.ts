@@ -193,29 +193,4 @@ export class SecurityAnalyser {
 			);
 		}
 	}
-
-	/**
-	 * Parses a 1-line ledger result, when --collapse is used
-	 * @param {String} line
-	 */
-	#getNumberFromCollapseResult(line: string): string {
-		if (!line) {
-			return 'n/a';
-		}
-		line = line.trim();
-
-		// -1,139 EUR  Assets
-		const parts = line.split(' ');
-		if (parts.length != 4) {
-			throw new UserError(
-				'Unexpected response format from ledger',
-				'Please check that your ledger version is compatible',
-				`Expected format: "-1,139 EUR  Assets", got: "${line.substring(0, 50)}"`
-			);
-		}
-
-		let totalNumeric = parts[0];
-		totalNumeric = totalNumeric.replaceAll(',', '');
-		return totalNumeric;
-	}
 }

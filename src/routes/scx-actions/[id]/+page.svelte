@@ -60,8 +60,8 @@
 		let newTx: Xact = JSON.parse(JSON.stringify($xact));
 		// clear the id field, if any, to get a new one on save.
 		newTx.id = undefined;
-		const dal = new CashierDAL();
-		const id = await dal.saveXact(newTx);
+		// const dal = new CashierDAL();
+		// const id = await dal.saveXact(newTx);
 
 		// update the iteration date
 		await skip();
@@ -69,8 +69,8 @@
 		Notifier.success('Transaction created');
 
 		// load transaction into store
-		const tx = await appService.loadTransaction(id);
-		xact.set(tx);
+		// const tx = await appService.loadTransaction(id);
+		xact.set(newTx);
 
 		// open the transaction. Maintain page navigation history.
 		await goto('/tx', { replaceState: true });

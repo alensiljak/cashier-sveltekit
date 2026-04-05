@@ -10,7 +10,7 @@
 	export let children: AssetClass[] = [];
 	export let depth: number = 0;
 	export let collapsedState: Record<string, boolean> = {};
-	export let onToggle: (fullname: string) => void;
+	export let onToggle: (fullname: string) => void = () => {};
 	export let childrenIndex: Map<string, AssetClass[]> = new Map();
 
 	function isCollapsible(ac: AssetClass): boolean {

@@ -10,7 +10,7 @@ import Big from 'big.js';
 import { Account, Money } from '../data/model';
 import { NUMBER_FORMAT } from '../constants';
 import type { CurrentValuesDict } from '$lib/data/viewModels';
-import { UserError, NotFoundError, ValidationError } from '$lib/utils/errors';
+import { UserError, ValidationError } from '$lib/utils/errors';
 import { loadFileMap } from '$lib/sync/sync-fs';
 import { queryMultiFile } from '$lib/services/rustledger';
 
