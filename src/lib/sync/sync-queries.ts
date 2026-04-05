@@ -41,8 +41,7 @@ const BeancountQueries: Queries = {
 	 * @returns accounts query
 	 */
 	accounts: () => 'SELECT sum(number), currency, account ORDER BY account',
-	//'SELECT account FROM %23accounts WHERE close IS NULL',
-	openAccounts: () => 'SELECT account from #accounts where close is not null',
+	openAccounts: () => 'SELECT account from #accounts where close is null',
 	balances: () => 'SELECT account, sum(number), currency ORDER BY account',
 	currentValues: (rootAccount: string, currency: string) =>
 		`SELECT account, str(CONVERT(value(sum(position)), '${currency}'))
@@ -86,8 +85,7 @@ const RustledgerQueries: Queries = {
 	 * @returns accounts query
 	 */
 	accounts: () => 'SELECT sum(number) as balance, currency, account ORDER BY account',
-	//'SELECT account FROM %23accounts WHERE close IS NULL',
-	openAccounts: () => 'SELECT account, open from #accounts where close is null',
+	openAccounts: () => 'SELECT account, open, currencies from #accounts where close is null',
 	balances: () => 'SELECT account, sum(number) as balance, currency ORDER BY account',
 	currentValues: (rootAccount: string, currency: string) =>
 		`SELECT account, str(value(sum(position), '${currency}')) as value

@@ -246,7 +246,8 @@ async function syncAccountsFromFs(
 	const entities = result.rows.map((item: any) => {
 		const accountName = item[0];
 		const openDate = item[1];
-		return { name: accountName, openDate };
+		const currencies: string[] = item[2];
+		return { name: accountName, openDate, currencies };
 	});
 
 	// Save to accounts.bean file in OPFS.
@@ -286,11 +287,15 @@ async function syncAccountBalances(
 }
 
 async function createAccountDirectives(
-	entities: { name: string; openDate: string }[]
+	entities: { name: string; openDate: string; currencies: string[] }[]
 ): Promise<string> {
 	const lines: string[] = [];
 	for (const entity of entities) {
-		lines.push(`${entity.openDate} open ${entity.name}`);
+		let line = `${entity.openDate} open ${entity.name}`;
+		if (entity.currencies.length > 0) {
+			line += ` ${entity.currencies.join(', ')}`;
+		}
+		lines.push(line);
 	}
 	const content = lines.join('\n');
 	return content;
