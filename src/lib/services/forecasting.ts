@@ -1,3 +1,0 @@
-/*
-    Financial planning and forecasting functionality.
- */

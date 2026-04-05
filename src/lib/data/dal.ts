@@ -3,7 +3,7 @@
  */
 
 import type { Collection, IndexableType } from 'dexie';
-import { Account, Payee, ScheduledTransaction, Xact } from '$lib/data/model';
+import { Account, Payee, ScheduledTransaction } from '$lib/data/model';
 import db from '$lib/data/db';
 
 class CashierDAL {

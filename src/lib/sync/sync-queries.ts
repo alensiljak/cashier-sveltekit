@@ -49,7 +49,7 @@ const BeancountQueries: Queries = {
         GROUP BY account
         HAVING NOT empty(sum(position))
         ORDER BY account`,
-	lots: (symbol: string) => 'balances',
+	lots: (_symbol: string) => 'balances',
 	payees: (from: string) =>
 		`SELECT DISTINCT COALESCE(payee, narration) as payee FROM transactions \
          WHERE date >= ${from} ORDER BY payee`,
@@ -94,7 +94,7 @@ const RustledgerQueries: Queries = {
         HAVING number(value(sum(position), 'EUR')) != 0
         ORDER BY account`,
 	// HAVING NOT empty(sum(position))
-	lots: (symbol: string) => 'balances',
+	lots: (_symbol: string) => 'balances',
 	payees: (from: string) =>
 		`SELECT DISTINCT COALESCE(payee, narration) as payee FROM transactions \
          WHERE date >= ${from} ORDER BY payee`,

@@ -3,7 +3,7 @@
  */
 
 import { LedgerOutputParser } from '$lib/assetAllocation/ledgerOutputParser';
-import { Account, Money } from '$lib/data/model';
+import { Account } from '$lib/data/model';
 import type { CurrentValuesDict } from '$lib/data/viewModels';
 
 function parseBalanceSheetRow(line: string): Account | null {

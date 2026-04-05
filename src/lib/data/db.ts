@@ -5,7 +5,7 @@ import Dexie, { type Table } from 'dexie';
 import {
 	Account,
 	LastXact,
-	Xact,
+	// Xact,
 	Payee,
 	// Posting,
 	ScheduledTransaction,
@@ -20,7 +20,7 @@ interface CashierDatabase extends Dexie {
 	payees: Table;
 	scheduled: Table;
 	settings: Table;
-	xacts: Table;
+	// xacts: Table;
 }
 
 const db = new Dexie('Cashier') as CashierDatabase;
@@ -32,8 +32,8 @@ db.version(1).stores({
 	lastXact: 'payee',
 	payees: 'name',
 	scheduled: '++id, nextDate',
-	settings: 'key',
-	xacts: '++id, date'
+	settings: 'key'
+	// xacts: '++id, date'
 });
 
 // Mappings
@@ -41,7 +41,7 @@ db.version(1).stores({
 db.accounts.mapToClass(Account);
 db.lastXact.mapToClass(LastXact);
 db.payees.mapToClass(Payee);
-db.xacts.mapToClass(Xact);
+// db.xacts.mapToClass(Xact);
 db.settings.mapToClass(Setting);
 db.scheduled.mapToClass(ScheduledTransaction);
 

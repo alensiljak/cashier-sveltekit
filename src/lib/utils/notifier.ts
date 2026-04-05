@@ -9,8 +9,8 @@ const Notifier = {
 	},
 	notify(
 		message: string,
-		type: 'info' | 'error' | 'success' | undefined,
-		title: string | undefined = undefined
+		type: 'info' | 'error' | 'success' | undefined
+		// title: string | undefined = undefined
 	) {
 		switch (type) {
 			case 'success':

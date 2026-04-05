@@ -21,8 +21,6 @@ import {
 	initializeSyncProgress,
 	updateSyncStep
 } from '$lib/stores/syncProgressStore';
-import appService from '$lib/services/appService';
-import db from '$lib/data/db';
 
 // IndexedDB persistence for directory handle
 const IDB_NAME = 'cashier-fs-handles';

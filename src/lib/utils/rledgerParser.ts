@@ -26,7 +26,7 @@ function parseBalanceSheetRow(record: Record<string, string>): Account {
 	return account;
 }
 
-function parseCurrentValues(response: any, rootAccount: string): CurrentValuesDict {
+function parseCurrentValues(response: any): CurrentValuesDict {
 	// The return value { "account": amount }
 	const result: CurrentValuesDict = {};
 
