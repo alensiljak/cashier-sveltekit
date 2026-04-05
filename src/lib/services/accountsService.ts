@@ -142,10 +142,6 @@ function getDefaultChartOfAccounts() {
  * @returns The account balance in default currency or in the first currency found.
  */
 export function getAccountBalance(account: Account, defaultCurrency?: string): Money {
-	// if (!defaultCurrency) {
-	//   throw new Error('Default currency is mandatory!')
-	// }
-
 	const result = new Money();
 	// default value
 	result.currency = defaultCurrency as string;
@@ -165,7 +161,8 @@ export function getAccountBalance(account: Account, defaultCurrency?: string): M
 
 	// Otherwise take the first balance/currency.
 	const currencies = Object.keys(account.balances);
-	if (!currencies) return result;
+	// if no balances, return the default currency.
+	if (!currencies || currencies.length === 0) return result;
 
 	const currency = currencies[0];
 	result.quantity = account.balances[currency];
@@ -255,4 +252,35 @@ export async function populateAccountBalances(accounts: Account[]) {
 	const currency = await appService.getDefaultCurrency();
 
 	accounts.forEach((acct) => (acct.balance = getAccountBalance(acct, currency)));
+}
+
+export async function loadAccount(name: string): Promise<Account> {
+	const result = ledgerService.query(`SELECT * FROM accounts WHERE account = '${name}'`);
+
+	// validation
+
+	if (result.errors.length > 0) {
+		throw new Error(result.errors.map((e: any) => e.message).join('; '));
+	}
+	if (result.rows.length === 0) {
+		const account = new Account(name);
+		account.exists = false;
+		return account;
+	}
+	if (result.rows.length > 1) {
+		throw new Error(`Multiple accounts found with name "${name}"`);
+	}
+
+	const row = result.rows[0];
+	const accountIdx = result.columns.indexOf('account');
+	const currenciesIdx = result.columns.indexOf('currencies');
+
+	const account = new Account(row[accountIdx]);
+
+	if (currenciesIdx !== -1 && row[currenciesIdx]) {
+		const currencies: string[] = Array.from(row[currenciesIdx]);
+		account.balances = Object.fromEntries(currencies.map((c) => [c, 0]));
+	}
+
+	return account;
 }

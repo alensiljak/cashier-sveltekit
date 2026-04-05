@@ -5,7 +5,7 @@
 	import { goto } from '$app/navigation';
 	import Notifier from '$lib/utils/notifier';
 	import appService from '$lib/services/appService';
-	import { getAccountBalance } from '$lib/services/accountsService';
+	import { getAccountBalance, loadAccount } from '$lib/services/accountsService';
 	import { SelectionModeMetadata, SettingKeys, settings } from '$lib/settings';
 	import { getEmptyPostingIndex } from '$lib/utils/xactUtils';
 	import { Posting } from '$lib/data/model';
@@ -73,7 +73,8 @@
 				}
 
 				// load the account
-				const account = await appService.db.accounts.get(id);
+				const account = await loadAccount(id);
+				// get the first currency
 				const acctBalance = getAccountBalance(account, defaultCurrency);
 
 				$xact.postings[index].account = account.name;
@@ -86,7 +87,10 @@
 
 			case 'amount':
 				// Handle amount selection from calculator
-				if ($selectionMetadata.selectedId !== undefined && typeof $selectionMetadata.selectedId === 'number') {
+				if (
+					$selectionMetadata.selectedId !== undefined &&
+					typeof $selectionMetadata.selectedId === 'number'
+				) {
 					const amount = $selectionMetadata.selectedId as number;
 					const index = $selectionMetadata.postingIndex;
 
