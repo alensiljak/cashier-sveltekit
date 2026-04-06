@@ -27,17 +27,13 @@
 
 	let configSource = $state<LedgerDataSource>(LedgerDataSource.filesystem);
 
-	let serverUrl = $state('');
-	let _dataSource = $state('');
-
 	onMount(async () => {
 		await loadSettings();
 	});
 
 	async function loadSettings() {
-		serverUrl = ((await settings.get<string>(SettingKeys.syncServerUrl)) as string | null) ?? '';
-		_dataSource = ((await settings.get(SettingKeys.ledgerDataSource)) as string) ?? '';
-		if (_dataSource) configSource = _dataSource as LedgerDataSource;
+		const dataSource = (await settings.get<string>(SettingKeys.ledgerDataSource)) ?? '';
+		if (dataSource) configSource = dataSource as LedgerDataSource;
 
 		syncAccounts = (await settings.get(SettingKeys.syncAccounts)) ?? false;
 		syncAaValues = (await settings.get(SettingKeys.syncAaValues)) ?? false;
@@ -45,28 +41,6 @@
 		syncPayees = (await settings.get(SettingKeys.syncPayees)) ?? false;
 		syncInfrastructureFiles = (await settings.get(SettingKeys.syncInfrastructureFiles)) ?? false;
 		syncOpeningBalances = (await settings.get(SettingKeys.syncOpeningBalances)) ?? false;
-	}
-
-	async function onConfigSourceChanged() {
-		_dataSource = configSource;
-		await settings.set(SettingKeys.ledgerDataSource, configSource);
-	}
-
-	function onConfigureClick() {
-		switch (configSource) {
-			case LedgerDataSource.filesystem:
-				goto('/sync/filesystem');
-				break;
-			case LedgerDataSource.beancount:
-				goto('/sync/beancount');
-				break;
-			case LedgerDataSource.rledger:
-				Notifier.warning('Configure Cashier Server (Rust Ledger) - Not implemented yet.');
-				break;
-			case LedgerDataSource.ledger:
-				Notifier.warning('Configure Cashier Server (Ledger-cli) - Not implemented yet.');
-				break;
-		}
 	}
 
 	async function onOpfsClick() {
@@ -177,7 +151,7 @@
 	}
 </script>
 
-<Toolbar title="Cashier Sync">
+<Toolbar title="Synchronization">
 	{#snippet menuItems()}
 		<ToolbarMenuItem text="Shut down server" Icon={PowerIcon} onclick={onShutdownClick} />
 		<ToolbarMenuItem text="OPFS Storage" Icon={BoxIcon} onclick={onOpfsClick} />
@@ -185,67 +159,6 @@
 </Toolbar>
 
 <main class="container mx-auto max-w-6xl space-y-4 p-1 lg:p-10">
-	<div class="flex gap-6">
-		<div>
-			<p class="mb-2 font-medium">Select the data source:</p>
-			<form class="space-y-2">
-				<label class="flex items-center space-x-2">
-					<input
-						class="radio radio-primary bg-base-100"
-						type="radio"
-						name="config-source"
-						value={LedgerDataSource.filesystem}
-						bind:group={configSource}
-						onchange={onConfigSourceChanged}
-					/>
-					<span>Local filesystem</span>
-				</label>
-				<label class="flex items-center space-x-2">
-					<input
-						class="radio radio-primary bg-base-100"
-						type="radio"
-						name="config-source"
-						value={LedgerDataSource.rledger}
-						bind:group={configSource}
-						onchange={onConfigSourceChanged}
-					/>
-					<span>Cashier Server (Rust Ledger)</span>
-				</label>
-				<label class="flex items-center space-x-2">
-					<input
-						class="radio radio-primary bg-base-100"
-						type="radio"
-						name="config-source"
-						value={LedgerDataSource.beancount}
-						bind:group={configSource}
-						onchange={onConfigSourceChanged}
-					/>
-					<span>Cashier Server (Beancount)</span>
-				</label>
-				<label class="flex items-center space-x-2">
-					<input
-						class="radio radio-primary bg-base-100"
-						type="radio"
-						name="config-source"
-						value={LedgerDataSource.ledger}
-						bind:group={configSource}
-						onchange={onConfigSourceChanged}
-					/>
-					<span>Cashier Server (Ledger-cli)</span>
-				</label>
-			</form>
-		</div>
-		<div class="flex flex-1 items-center justify-center">
-			<button class="btn btn-outline btn-primary rounded" type="button" onclick={onConfigureClick}>
-				Configure
-			</button>
-		</div>
-	</div>
-
-	<center>
-		<h3 class="text-3xl font-bold">Synchronization</h3>
-	</center>
-
 	{#snippet statusIcon(status: string | undefined)}
 		{#if status === 'in-progress'}
 			<span class="loading loading-spinner loading-sm"></span>
@@ -358,7 +271,7 @@
 		</button>
 	</center>
 
-	{#if _dataSource !== LedgerDataSource.filesystem}
+	{#if configSource !== LedgerDataSource.filesystem}
 		<hr class="my-10" />
 
 		<center>
@@ -373,4 +286,5 @@
 			</button>
 		</center>
 	{/if}
+
 </main>
