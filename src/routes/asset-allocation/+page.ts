@@ -5,7 +5,7 @@ import Notifier from '$lib/utils/notifier';
 import * as OpfsLib from '$lib/utils/opfslib.js';
 import { get } from 'svelte/store';
 import { formatErrorForDisplay, AppError } from '$lib/utils/errors';
-import { AssetAllocationFilename } from '$lib/constants';
+import { LedgerFilenames } from '$lib/enums';
 
 const aa = new AssetAllocationEngine();
 
@@ -51,10 +51,9 @@ export async function load() {
 
 async function loadAaFromFile() {
 	// get the asset allocation filename from settings.
-	const filename = AssetAllocationFilename;
-	const definition = await OpfsLib.readFile(filename);
+	const definition = await OpfsLib.readFile(LedgerFilenames.asset_allocation);
 	if (!definition) {
-		throw new Error(`Could not load AA definition from ${filename}!`);
+		throw new Error(`Could not load AA definition from ${LedgerFilenames.asset_allocation}!`);
 	}
 
 	await aa.loadFullAssetAllocation(definition);

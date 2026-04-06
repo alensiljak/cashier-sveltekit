@@ -243,15 +243,17 @@ class LedgerService {
 	private async readAndCombineSources(): Promise<string> {
 		const parts: string[] = [];
 
-		// Read infrastructure files (synced from desktop), skip missing ones silently.
+		// Read beancount files (synced from desktop), skip missing ones silently.
 		for (const filename of Object.values(LedgerFilenames)) {
+			if (!filename.endsWith('.bean')) continue;
+
 			try {
 				const content = await opfslib.readFile(filename);
 				if (content) {
 					parts.push(content);
 				}
 			} catch (e) {
-				// Infrastructure file not yet synced — that's fine.
+				// Beancount file not yet synced — that's fine.
 				console.warn(`Could not read ${filename} from OPFS, skipping.`, e);
 			}
 		}
