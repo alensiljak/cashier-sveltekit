@@ -136,9 +136,10 @@
 			// invalidate cache and reload data
 			await ledgerService.invalidate();
 
+			Notifier.success('Synchronization completed successfully!');
 			rotationClass = '';
 			syncing = false;
-			Notifier.success('Synchronization completed successfully!');
+
 		} catch (error: any) {
 			rotationClass = '';
 			syncing = false;

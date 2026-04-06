@@ -1,11 +1,9 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
 	import SearchToolbar from '$lib/components/SearchToolbar.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { selectionMetadata } from '$lib/data/mainStore';
 	import { ListSearch } from '$lib/utils/ListSearch';
 	import ledgerService from '$lib/services/ledgerService';
-	import { resolve } from '$app/paths';
 
 	interface AccountRow {
 		account: string;

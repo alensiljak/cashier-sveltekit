@@ -3,7 +3,7 @@
  * Handles parsing, storage, and orchestration after raw data is fetched.
  */
 import appService from '$lib/services/appService';
-import CashierDAL from '$lib/data/dal';
+import CashierDAL from '$lib/data/dbdal';
 import { AssetAllocationEngine } from '$lib/assetAllocation/AssetAllocation';
 import { settings, SettingKeys } from '$lib/settings';
 import * as LedgerParser from '$lib/utils/ledgerParser';

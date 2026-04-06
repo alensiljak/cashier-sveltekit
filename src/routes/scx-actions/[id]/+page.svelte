@@ -4,7 +4,7 @@
 	import JournalXactRow from '$lib/components/JournalXactRow.svelte';
 	import SquareButton from '$lib/components/SquareButton.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
-	import CashierDAL, { saveScheduledTransaction } from '$lib/data/dal';
+	import CashierDAL, { saveScheduledTransaction } from '$lib/data/dbdal';
 	import { ScheduledXact, xact } from '$lib/data/mainStore';
 	import type { ScheduledTransaction, Xact } from '$lib/data/model';
 	import appService from '$lib/services/appService';

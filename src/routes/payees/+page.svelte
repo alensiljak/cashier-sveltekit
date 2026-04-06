@@ -1,8 +1,6 @@
 <script lang="ts">
-    import { goto } from '$app/navigation';
-    import { resolve } from '$app/paths';
 	import Toolbar from '$lib/components/Toolbar.svelte';
-	import CashierDAL from '$lib/data/dal';
+	import CashierDAL from '$lib/data/dbdal';
 	import type { Payee } from '$lib/data/model';
 	import { onMount } from 'svelte';
 	import { selectionMetadata } from '$lib/data/mainStore';
@@ -11,6 +9,10 @@
 	import SearchToolbar from '$lib/components/SearchToolbar.svelte';
 	import { ListSearch } from '$lib/utils/ListSearch';
 	import Notifier from '$lib/utils/notifier';
+	import { SettingKeys, settings } from '$lib/settings';
+	import { LedgerDataSource } from '$lib/enums';
+	import type { DAL } from '$lib/data/dal';
+	import FSDAL from '$lib/data/fsdal';
 
 	Notifier.init();
 
@@ -27,8 +29,14 @@
 	});
 
 	async function loadData(filter?: string) {
-		const dal = new CashierDAL();
-		payees = await dal.loadPayees().toArray();
+		const dataSource = await settings.get(SettingKeys.ledgerDataSource) as string;
+		let dal: DAL;
+		if (dataSource === LedgerDataSource.filesystem) {
+			dal = new FSDAL();
+		} else {
+			dal = new CashierDAL();
+		}
+		payees = await dal.loadPayees();
 
 		filteredPayees = payees;
 	}
