@@ -4,3 +4,13 @@ export type OpfsTreeNode = {
 	children?: OpfsTreeNode[];
 	expanded?: boolean;
 };
+
+export type AccountFileEntry = {
+	name: string;
+	openDate: string;
+	currencies: string[];
+};
+
+export type AccountFileContent = {
+	accounts: AccountFileEntry[];
+};

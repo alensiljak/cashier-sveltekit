@@ -4,9 +4,8 @@
 	https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/export
 */
 import db from '$lib/data/db';
-import { Account, LastXact, Payee, Posting, ScheduledTransaction, Xact } from '$lib/data/model';
+import { Account, LastXact, Payee, ScheduledTransaction, Xact } from '$lib/data/model';
 import { settings, SettingKeys } from '$lib/settings';
-import { XactAugmenter } from '$lib/utils/xactAugmenter';
 import { HomeCardNames } from '$lib/enums';
 import { DefaultCurrencyStore, ScheduledXact, xact } from '$lib/data/mainStore';
 import { loadInvestmentAccounts } from './accountsService';
@@ -14,7 +13,7 @@ import { get } from 'svelte/store';
 import * as LedgerParser from '$lib/utils/ledgerParser';
 import * as BeancountParser from '$lib/utils/beancountParser';
 import { formatAmount } from '$lib/utils/formatter';
-import { LedgerDataSource, PtaSystems } from '$lib/enums';
+import { PtaSystems } from '$lib/enums';
 
 interface AccountIndex {
 	[key: string]: Account;
@@ -74,26 +73,11 @@ class AppService {
 			id = Number(id);
 		}
 
-		// await this.db.Transaction(
-		//   'rw',
-		//   this.db.transactions,
-		//   // this.db.postings,
-		//   async (tx: Xact) => {
-		//     const x = await db.transactions.where('id').equals(id).count()
+		throw new Error('Delete transaction not implemented yet!');
 
-		//     // delete transaction record
-		//     const result = await db.transactions.where('id').equals(id).delete()
-
-		//     // delete postings
-		//     // result = await db.postings.where('transactionId').equals(id).delete()
-
-		//     return 'Transaction complete'
-		//   },
-		// )
-		await this.db.xacts.delete(id);
+		// await this.db.xacts.delete(id);
 
 		console.log('Delete transaction completed.', id);
-		//.catch(error => console.error('Error on Delete Transaction:', error))
 	}
 
 	/**
@@ -102,7 +86,8 @@ class AppService {
 	async deleteTransactions() {
 		// also clear any remaining postings
 		// this.db.postings.clear()
-		await this.db.xacts.clear();
+		// await this.db.xacts.clear();
+		throw new Error('Delete transactions not implemented yet!');
 	}
 
 	async duplicateTransaction(tx: Xact) {
@@ -113,33 +98,6 @@ class AppService {
 
 		// return the transaction
 		return newTx;
-	}
-
-	/**
-	 * Returns all the register transactions as text,
-	 * ready to be exported as a file or copied as a string.
-	 */
-	async getExportTransactions() {
-		const txs = await db.xacts.orderBy('date').toArray();
-
-		let output = '';
-
-		for (let i = 0; i < txs.length; i++) {
-			const tx = txs[i];
-
-			if (i > 0) {
-				output += '\n'; // space between transactions
-			}
-
-			// prepare output.
-			const output_system = (await settings.get(SettingKeys.ledgerDataSource)) as string;
-			if (output_system === LedgerDataSource.ledger) {
-				output += this.translateToLedger(tx);
-			} else {
-				output += this.translateToBeancount(tx);
-			}
-		}
-		return output;
 	}
 
 	async getVisibleCards(): Promise<string[]> {
@@ -483,22 +441,19 @@ class AppService {
 	 * @param {String} accountName
 	 */
 	async loadAccountTransactionsFor(accountName: string): Promise<Xact[]> {
+		console.warn('Loading transactions for account:', accountName);
+
+		throw new Error('Load account transactions not implemented yet!');
+
 		// get all the transactions which have postings that have this account.
-		// const txIds: number[] = []
 
-		let txs = await db.xacts
-			.filter((tx: Xact) => tx.postings.some((posting: Posting) => posting.account == accountName))
-			.toArray();
+		// let txs = await db.xacts
+		// 	.filter((tx: Xact) => tx.postings.some((posting: Posting) => posting.account == accountName))
+		// 	.toArray();
 
-		// let postings = await transactions
-		//   .map((tx) => tx.postings)
-		//   // .map((p: Posting) => p)
-		//   .flat()
-		//   .filter((p: Posting) => p.account == accountName)
+		// txs = XactAugmenter.calculateEmptyPostingAmounts(txs);
 
-		txs = XactAugmenter.calculateEmptyPostingAmounts(txs);
-
-		return txs;
+		// return txs;
 	}
 
 	/**
@@ -545,21 +500,6 @@ class AppService {
 		xact.set(scx.transaction);
 
 		return scx;
-	}
-
-	/**
-	 * Load single transaction with postings.
-	 * @param {int} id Xact id
-	 * @returns Xact with Postings
-	 */
-	async loadTransaction(id: number) {
-		if (typeof id === 'string') {
-			throw new Error('numeric ids are required as keys!');
-		}
-
-		const tx = await db.xacts.get(id);
-
-		return tx;
 	}
 
 	saveAccount(account: Account) {

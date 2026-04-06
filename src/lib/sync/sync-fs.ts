@@ -8,11 +8,11 @@ import { settings, SettingKeys } from '$lib/settings';
 import fullLedgerService from '$lib/services/fullLedgerService';
 import { getQueries } from './sync-queries';
 import moment from 'moment';
-import { AssetAllocationFilename, ISODATEFORMAT } from '$lib/constants';
-import { PtaSystems } from '$lib/enums';
+import { ISODATEFORMAT } from '$lib/constants';
+import { LedgerFilenames, PtaSystems } from '$lib/enums';
 import * as syncCommon from '$lib/sync/sync-common';
 import * as RledgerParser from '$lib/utils/rledgerParser';
-import { Money, type Account } from '$lib/data/model';
+import { Account, Money } from '$lib/data/model';
 import { OPFSBackend } from '$lib/storage';
 import type { CurrentValuesDict } from '$lib/data/viewModels';
 import { AssetAllocationEngine } from '$lib/assetAllocation/AssetAllocation';
@@ -21,6 +21,8 @@ import {
 	initializeSyncProgress,
 	updateSyncStep
 } from '$lib/stores/syncProgressStore';
+import { createAccountsFile } from '$lib/services/accountsService';
+import type { AccountFileEntry } from '$lib/data/opfsTypes';
 
 // IndexedDB persistence for directory handle
 const IDB_NAME = 'cashier-fs-handles';
@@ -178,7 +180,7 @@ async function synchronize(syncOptions: syncCommon.SyncSteps): Promise<boolean> 
 		// - accounts list
 		if (syncOptions.syncAccounts) {
 			updateSyncStep(1, 'in-progress');
-			await syncAccountsFromFs(queries);
+			await syncAccounts(queries);
 			updateSyncStep(1, 'completed');
 		}
 
@@ -234,25 +236,19 @@ async function synchronize(syncOptions: syncCommon.SyncSteps): Promise<boolean> 
  * @param fileMap
  * @param mainFileName
  */
-async function syncAccountsFromFs(
+async function syncAccounts(
 	queries: ReturnType<typeof getQueries>
 ) {
 	const query = queries.openAccounts();
 	const result = fullLedgerService.query(query);
 
-	const entities = result.rows.map((item: any) => {
-		const accountName = item[0];
-		const openDate = item[1];
-		const currencies: string[] = item[2];
-		return { name: accountName, openDate, currencies };
-	});
+	const entities: AccountFileEntry[] = result.rows.map((item: any) => ({
+		name: item[0], 
+		openDate: item[1],
+		currencies: item[2]
+	}));
 
-	// Save to accounts.bean file in OPFS.
-
-	const accountDirectives = await createAccountDirectives(entities);
-	const filename = 'accounts.bean';
-	const opfs = new OPFSBackend();
-	await opfs.writeFile(filename, accountDirectives);
+	await createAccountsFile(entities);
 }
 
 /**
@@ -279,21 +275,6 @@ async function syncAccountBalances(
 
 	// Instead of saving to the database, save to the initialization file.
 	await saveOpeningBalances(record);
-}
-
-async function createAccountDirectives(
-	entities: { name: string; openDate: string; currencies: string[] }[]
-): Promise<string> {
-	const lines: string[] = [];
-	for (const entity of entities) {
-		let line = `${entity.openDate} open ${entity.name}`;
-		if (entity.currencies.length > 0) {
-			line += ` ${entity.currencies.join(', ')}`;
-		}
-		lines.push(line);
-	}
-	const content = lines.join('\n');
-	return content;
 }
 
 /**
@@ -363,7 +344,7 @@ async function syncAssetAllocation(dirHandle?: FileSystemDirectoryHandle) {
 	
 	// Save to OPFS.
 	const opfs = new OPFSBackend();
-	await opfs.writeFile(AssetAllocationFilename, content);
+	await opfs.writeFile(LedgerFilenames.asset_allocation, content);
 }
 
 /**

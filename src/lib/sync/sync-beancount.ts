@@ -4,14 +4,14 @@
  */
 import { settings, SettingKeys } from '$lib/settings';
 import moment from 'moment';
-import { AssetAllocationFilename, ISODATEFORMAT } from '$lib/constants';
+import { ISODATEFORMAT } from '$lib/constants';
 import { getQueries } from './sync-queries';
 import type { Queries } from './sync-queries';
 import Notifier from '$lib/utils/notifier';
 import * as SyncCommon from '$lib/sync/sync-common';
 import type { SyncSteps } from '$lib/sync/sync-common';
 import { initializeSyncProgress, updateSyncStep } from '$lib/stores/syncProgressStore';
-import { PtaSystems } from '$lib/enums';
+import { LedgerFilenames, PtaSystems } from '$lib/enums';
 import { OPFSBackend } from '$lib/storage';
 
 Notifier.init();
@@ -296,7 +296,7 @@ async function syncAssetAllocation(sync: CashierSyncBeancount) {
 	
 	// Save to OPFS.
 	const opfs = new OPFSBackend();
-	await opfs.writeFile(AssetAllocationFilename, content);
+	await opfs.writeFile(LedgerFilenames.asset_allocation, content);
 	
 }
 

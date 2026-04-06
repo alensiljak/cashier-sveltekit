@@ -13,6 +13,9 @@ import { SettingKeys, settings } from '$lib/settings';
 import appService from './appService';
 import ledgerService from './ledgerService';
 import { addDecimalStrings } from '$lib/utils/numberUtils';
+import { OPFSBackend } from '$lib/storage/opfsBackend';
+import type { AccountFileEntry } from '$lib/data/opfsTypes';
+import { LedgerFilenames } from '$lib/enums';
 
 type QueryFn = (bql: string) => { columns: string[]; rows: any[]; errors: any[] };
 
@@ -280,4 +283,30 @@ export async function loadAccount(name: string): Promise<Account> {
 	}
 
 	return account;
+}
+
+/**
+ * Creates accounts file in OPFS.
+ */
+export async function createAccountsFile(entities: AccountFileEntry[]): Promise<void> {
+	// Save to accounts.bean file in OPFS.
+
+	const accountDirectives = await createAccountDirectives(entities);
+	const opfs = new OPFSBackend();
+	await opfs.writeFile(LedgerFilenames.accounts, accountDirectives);
+}
+
+async function createAccountDirectives(
+	entities: AccountFileEntry[]
+): Promise<string> {
+	const lines: string[] = [];
+	for (const entity of entities) {
+		let line = `${entity.openDate} open ${entity.name}`;
+		if (entity.currencies.length > 0) {
+			line += ` ${entity.currencies.join(', ')}`;
+		}
+		lines.push(line);
+	}
+	const content = lines.join('\n');
+	return content;
 }

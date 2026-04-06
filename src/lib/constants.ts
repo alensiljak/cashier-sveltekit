@@ -1,20 +1,6 @@
-export const AssetAllocationFilename = 'asset-allocation.toml';
 /**
- * Filename for transactions.
+ * Constants used across the application.
  */
-export const CashierFilename = 'cashier.bean';
-
-/**
- * List of all infrastructure files to synchronize.
- * Add new filenames to this array when new infrastructure files are introduced.
- */
-export const InfrastructureFiles = [
-	'book.bean',
-	// 'commodities.bean',
-	'accounts.bean',
-	'opening-balances.bean',
-	CashierFilename
-] as const;
 
 export const DEFAULT_FORECAST_DAYS = 7 as const;
 export const ISODATEFORMAT = 'YYYY-MM-DD';
