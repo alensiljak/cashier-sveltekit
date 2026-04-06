@@ -1,11 +1,7 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 	import { AssetAllocationEngine } from '$lib/assetAllocation/AssetAllocation.js';
-	import {
-		buildChildrenIndex,
-		getOffsetColor,
-		getRowColor
-	} from '$lib/assetAllocation/assetAllocationUtils.js';
+	import { buildChildrenIndex } from '$lib/assetAllocation/assetAllocationUtils.js';
 	import { validate } from '$lib/assetAllocation/assetAllocationValidation.js';
 	import { AssetClass } from '$lib/assetAllocation/AssetClass.js';
 	import Toolbar from '$lib/components/Toolbar.svelte';

@@ -11,7 +11,7 @@ import * as BeancountParser from '$lib/utils/beancountParser';
 import type { CurrentValuesDict } from '$lib/data/viewModels';
 import { PtaSystems } from '$lib/enums';
 
-export interface SyncOptions {
+export interface SyncSteps {
 	syncAccounts?: boolean;
 	syncAaValues?: boolean;
 	syncAssetAllocation?: boolean;

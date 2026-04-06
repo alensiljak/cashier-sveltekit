@@ -75,10 +75,13 @@
 	}
 
 	async function onShutdownClick() {
-		const activeUrl = SyncBeancount.getActiveServerUrlOrNotify();
-		if (!activeUrl) return;
+		const activeUrl = await settings.get<string>(SettingKeys.syncServerUrl);
+		if (!activeUrl) {
+			Notifier.error('No active server URL found. Please configure the server URL first.');
+			return;
+		}
 
-		const sync = new SyncBeancount.CashierSync(activeUrl, _dataSource);
+		const sync = new SyncBeancount.CashierSyncBeancount(activeUrl);
 		try {
 			await sync.shutdown();
 		} catch (error: any) {
@@ -97,7 +100,7 @@
 		rotationClass = rotationClass == '' ? 'animate-[spin_2s_linear_infinite]' : '';
 
 		try {
-			let syncOptions: SyncBeancount.SyncOptions = {
+			let syncOptions: SyncBeancount.SyncSteps = {
 				syncAccounts,
 				syncAaValues,
 				syncAssetAllocation,
@@ -105,14 +108,15 @@
 				syncOpeningBalances
 			};
 
+			let syncResult = false;
 			// check which backend to synchronize with.
 			switch (configSource) {
 				case LedgerDataSource.filesystem:
-					await cashierFsSync.synchronize(syncOptions);
+					syncResult = await cashierFsSync.synchronize(syncOptions);
 					break;
 				case LedgerDataSource.beancount:
 					// cashier-server-python
-					await SyncBeancount.synchronize(syncOptions);
+					syncResult = await SyncBeancount.synchronize(syncOptions);
 					break;
 				case LedgerDataSource.rledger:
 					// cashier-server-rust
@@ -123,6 +127,10 @@
 				case LedgerDataSource.ledger:
 					Notifier.warning('Synchronization with Cashier Server (Ledger-cli) not implemented yet.');
 					break;
+			}
+
+			if (!syncResult) {
+				throw new Error('Synchronization failed. Please check the logs for more details.');
 			}
 
 			// invalidate cache and reload data
@@ -140,10 +148,10 @@
 	}
 
 	async function reloadData() {
-		const activeUrl = SyncBeancount.getActiveServerUrlOrNotify();
+		const activeUrl = await settings.get<string>(SettingKeys.syncServerUrl);
 		if (!activeUrl) return;
 
-		const sync = new SyncBeancount.CashierSync(activeUrl, _dataSource);
+		const sync = new SyncBeancount.CashierSyncBeancount(activeUrl);
 		await sync.reloadData();
 	}
 
@@ -163,6 +171,7 @@
 		syncPayees = checked;
 		syncOpeningBalances = checked;
 		syncInfrastructureFiles = checked;
+
 		saveSettings();
 	}
 </script>

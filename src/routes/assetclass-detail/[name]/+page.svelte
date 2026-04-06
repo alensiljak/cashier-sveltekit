@@ -33,7 +33,6 @@
 
 	// Debug panel
 	let debugOpen = $state(false);
-	let filesOpen = $state(false);
 	let accountsOpen = $state(false);
 	let assetClassValuesOpen = $state(false);
 	let rawAccountsResult: (RawQueryResult & { loaded: boolean }) | null = $state(null);
@@ -164,10 +163,6 @@
 				error: err instanceof Error ? err.message : String(err)
 			};
 		}
-	}
-
-	function toggleFiles() {
-		filesOpen = !filesOpen;
 	}
 
 	async function toggleAccounts() {

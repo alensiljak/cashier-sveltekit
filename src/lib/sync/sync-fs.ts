@@ -156,7 +156,7 @@ export async function loadFileMap(): Promise<{
 	return { fileMap, mainFileName, dirHandle };
 }
 
-async function synchronize(syncOptions: syncCommon.SyncOptions): Promise<void> {
+async function synchronize(syncOptions: syncCommon.SyncSteps): Promise<boolean> {
 	try {
 		// Initialize sync progress
 		initializeSyncProgress();
@@ -209,6 +209,9 @@ async function synchronize(syncOptions: syncCommon.SyncOptions): Promise<void> {
 			await syncPayeesFromFs(queries);
 			updateSyncStep(5, 'completed');
 		}
+
+		return true;
+
 	} catch (error) {
 		console.error('Synchronization error:', error);
 		// Update the current step to error
@@ -357,6 +360,8 @@ async function syncAssetAllocation(dirHandle?: FileSystemDirectoryHandle) {
 	const relativePath = parts.slice(1).join('/'); // Remove the directory name prefix
 
 	const content = await readFileFromDir(dirHandle, relativePath);
+	
+	// Save to OPFS.
 	const opfs = new OPFSBackend();
 	await opfs.writeFile(AssetAllocationFilename, content);
 }

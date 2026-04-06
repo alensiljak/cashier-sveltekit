@@ -2,6 +2,7 @@
     validation
 */
 
+import Notifier from '$lib/utils/notifier';
 import { AssetAllocationEngine } from './AssetAllocation';
 import type { AssetClass } from './AssetClass';
 
@@ -24,6 +25,9 @@ export function validate(engine: AssetAllocationEngine) {
 	});
 
 	console.log('AA validation results: ', errors);
+	if (errors.length > 0) {
+		Notifier.warning('Asset allocation definition has errors!\n' + errors.join('\n'));
+	}
 
 	return errors;
 }

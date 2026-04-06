@@ -38,8 +38,6 @@ export class Projector {
 	 */
 
 	projectTx(stx: ScheduledTransaction, startDate: any, endDate: any) {
-		//console.log(stx)
-
 		const projections = [];
 
 		// if the tx date falls into the range, use it.

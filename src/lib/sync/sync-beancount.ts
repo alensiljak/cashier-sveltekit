@@ -4,14 +4,15 @@
  */
 import { settings, SettingKeys } from '$lib/settings';
 import moment from 'moment';
-import { ISODATEFORMAT } from '$lib/constants';
+import { AssetAllocationFilename, ISODATEFORMAT } from '$lib/constants';
 import { getQueries } from './sync-queries';
 import type { Queries } from './sync-queries';
 import Notifier from '$lib/utils/notifier';
 import * as SyncCommon from '$lib/sync/sync-common';
-import type { SyncOptions } from '$lib/sync/sync-common';
+import type { SyncSteps } from '$lib/sync/sync-common';
 import { initializeSyncProgress, updateSyncStep } from '$lib/stores/syncProgressStore';
 import { PtaSystems } from '$lib/enums';
+import { OPFSBackend } from '$lib/storage';
 
 Notifier.init();
 
@@ -20,12 +21,12 @@ Notifier.init();
  * The methods here represent the methods implemented by the server.
  * This is a proxy class for fetching Ledger data.
  */
-class CashierSync {
+class CashierSyncBeancount {
 	serverUrl: string;
 	queries: Queries;
-	ptaSystem: string;
+	ptaSystem: PtaSystems;
 
-	constructor(serverUrl: string, ptaSystem: string) {
+	constructor(serverUrl: string) {
 		if (!serverUrl) {
 			throw new Error('CashierSync URL not set.');
 		}
@@ -34,8 +35,8 @@ class CashierSync {
 		}
 		this.serverUrl = serverUrl;
 
-		this.ptaSystem = ptaSystem;
-		this.queries = getQueries(ptaSystem);
+		this.ptaSystem = PtaSystems.beancount;
+		this.queries = getQueries(this.ptaSystem);
 	}
 
 	async get(path: string, options?: object) {
@@ -86,23 +87,14 @@ class CashierSync {
 	/**
 	 * Retrieve the list of accounts with their balances.
 	 */
-	async readAccounts(ptaSystem: string): Promise<Record<string, unknown>> {
+	async readAccounts(): Promise<Record<string, unknown>> {
 		const accountsQuery = this.queries.accounts();
 		const response = await this.send(accountsQuery);
 		if (!response.ok) {
 			throw new Error('Error reading accounts!');
 		}
 
-		let content: any;
-
-		// if (ptaSystem === PtaSystems.rledger) {
-		// 	content = await response.json();
-		// } else
-		if (ptaSystem === PtaSystems.beancount) {
-			content = await response.json();
-		} else if (ptaSystem === PtaSystems.ledger) {
-			throw new Error('Not supported!');
-		}
+		const content = await response.json();
 
 		return content;
 	}
@@ -136,6 +128,21 @@ class CashierSync {
 		const result: any = await response.json();
 
 		return result;
+	}
+
+	/**
+	 * Read file content from Cashier server.
+	 */
+	async readFile(filePath: string): Promise<string> {
+		const url = new URL(`${this.serverUrl}/infrastructure`);
+		url.searchParams.append('file_path', filePath);
+		const response = await fetch(url);
+		if (!response.ok) {
+			throw new Error(`Error reading infrastructure file: ${filePath}`);
+		}
+
+		const json = await response.json();
+		return json.content;
 	}
 
 	async readLots(symbol: string) {
@@ -215,30 +222,49 @@ class CashierSync {
  * Entry point
  * @returns
  */
-async function synchronize(syncOptions?: SyncOptions) {
+async function synchronize(syncOptions?: SyncSteps): Promise<boolean> {
+	// defaults
+	if (!syncOptions) {
+		syncOptions = {
+			syncAccounts: true,
+			syncAaValues: true,
+			syncAssetAllocation: true,
+			syncPayees: true
+		};
+	}
+
 	// Initialize sync progress
 	initializeSyncProgress();
 
 	// Cashier Sync synchronization
 
-	const activeUrl = getActiveServerUrlOrNotify();
-	if (!activeUrl) return;
+	// const activeUrl = getActiveServerUrlOrNotify();
+	const activeUrl = await settings.get<string>(SettingKeys.syncServerUrl);
+	if (!activeUrl) return false;
 
-	const _ptaSystem = (await settings.get(SettingKeys.ptaSystem)) as PtaSystems;
-	const sync = new CashierSync(activeUrl, _ptaSystem);
+	// const _ptaSystem = (await settings.get(SettingKeys.ptaSystem)) as PtaSystems;
+	const sync = new CashierSyncBeancount(activeUrl);
 
 	try {
-		if (syncOptions?.syncAccounts) {
+		if (syncOptions.syncAccounts) {
 			updateSyncStep(1, 'in-progress');
 			await synchronizeAccounts(sync);
 			updateSyncStep(1, 'completed');
 		}
-		if (syncOptions?.syncAaValues) {
+
+		// Asset Allocation definition (.toml)
+		if (syncOptions.syncAssetAllocation) {
+			updateSyncStep(3, 'in-progress');
+			await syncAssetAllocation(sync);
+			updateSyncStep(3, 'completed');
+		}
+
+		if (syncOptions.syncAaValues) {
 			updateSyncStep(4, 'in-progress');
 			await synchronizeAaValues(sync);
 			updateSyncStep(4, 'completed');
 		}
-		if (syncOptions?.syncPayees) {
+		if (syncOptions.syncPayees) {
 			updateSyncStep(5, 'in-progress');
 			await synchronizePayees(sync);
 			updateSyncStep(5, 'completed');
@@ -246,46 +272,38 @@ async function synchronize(syncOptions?: SyncOptions) {
 	} catch (error: any) {
 		console.error(error);
 		Notifier.error(error.message);
-		// Update the current step to error
-		syncProgress.update((steps) => {
-			const currentStep = steps.find((step) => step.status === 'in-progress');
-			if (currentStep) {
-				return steps.map((step) =>
-					step.id === currentStep.id ? { ...step, status: 'error' } : step
-				);
-			}
-			return steps;
-		});
-	}
-}
-
-export function getActiveServerUrlOrNotify(serverUrl?: string): string | null {
-	const url = serverUrl?.trim();
-
-	if (!url) {
-		Notifier.error('No sync server configured. Please configure a sync server first.');
-		return null;
+		return false;
 	}
 
-	return url;
+	return true;
 }
 
-async function synchronizeAccounts(sync: CashierSync) {
-	const response = await sync.readAccounts(sync.ptaSystem);
+async function synchronizeAccounts(sync: CashierSyncBeancount) {
+	const response = await sync.readAccounts();
 	await SyncCommon.syncAccounts(sync.ptaSystem, response);
 	Notifier.success('Accounts fetched from Ledger');
 }
 
-async function synchronizeAaValues(sync: CashierSync) {
+async function synchronizeAaValues(sync: CashierSyncBeancount) {
 	const result = await sync.readCurrentValues();
 	await SyncCommon.syncCurrentValues(sync.ptaSystem, result);
 	Notifier.success('Asset Allocation values loaded');
 }
 
-async function synchronizePayees(sync: CashierSync) {
+async function syncAssetAllocation(sync: CashierSyncBeancount) {
+	// Get Asset Allocation from the sync server.
+	const content = await sync.readFile('portfolio/asset-allocation.toml');
+	
+	// Save to OPFS.
+	const opfs = new OPFSBackend();
+	await opfs.writeFile(AssetAllocationFilename, content);
+	
+}
+
+async function synchronizePayees(sync: CashierSyncBeancount) {
 	const response = await sync.readPayees();
 	await SyncCommon.syncPayees(response);
 	Notifier.success('Payees fetched from Ledger');
 }
 
-export { CashierSync, type SyncOptions, synchronize };
+export { CashierSyncBeancount, type SyncSteps, synchronize };
