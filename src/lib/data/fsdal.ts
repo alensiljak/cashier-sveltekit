@@ -9,8 +9,12 @@ import type { DAL } from "./dal";
 import { Payee } from "./model";
 
 export default class FSDAL implements DAL {
-    constructor() {
-        fullLedgerService.ensureLoaded();
+    private constructor() {}
+
+    static async create(): Promise<FSDAL> {
+        const dal = new FSDAL();
+        await fullLedgerService.ensureLoaded();
+        return dal;
     }
 
     async loadPayees(): Promise<Payee[]> {

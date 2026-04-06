@@ -22,6 +22,7 @@
 	let searchString = $state('');
 	let showFab = $derived(isInSelectionMode && searchString);
 
+
 	onMount(async () => {
 		await loadData();
 
@@ -29,16 +30,20 @@
 	});
 
 	async function loadData(filter?: string) {
+		document.body.style.cursor = 'wait';
+
 		const dataSource = await settings.get(SettingKeys.ledgerDataSource) as string;
 		let dal: DAL;
 		if (dataSource === LedgerDataSource.filesystem) {
-			dal = new FSDAL();
+			dal = await FSDAL.create();
 		} else {
-			dal = new CashierDAL();
+			dal = await CashierDAL.create();
 		}
 		payees = await dal.loadPayees();
 
 		filteredPayees = payees;
+		
+		document.body.style.cursor = 'default';
 	}
 
 	/**

@@ -2,12 +2,18 @@
  * Data Access Layer for permanent storage (indexeddb)
  */
 
-import type { Collection, IndexableType } from 'dexie';
+import type { IndexableType } from 'dexie';
 import { Account, Payee, ScheduledTransaction } from '$lib/data/model';
 import db from '$lib/data/db';
 import type { DAL } from './dal';
 
 export default class CashierDAL implements DAL {
+	
+	static async create(): Promise<CashierDAL> {
+		const dal = new CashierDAL();
+		return dal;
+	}
+
 	async deletePayees() {
 		return db.payees.clear();
 	}
