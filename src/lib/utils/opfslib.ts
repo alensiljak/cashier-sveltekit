@@ -53,7 +53,7 @@ async function getHandle(filename: string, create: boolean = false) {
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	} catch (error: any) {
 		if (error.name === 'NotFoundError') {
-			console.log('The file does not exist');
+			console.log('The file does not exist: ', filename);
 		} else {
 			console.error('An error occurred:', error);
 		}
@@ -68,7 +68,6 @@ export async function listFiles(): Promise<string[]> {
 		const files: string[] = [];
 
 		// Iterate through directory entries using the async iterator
-		// @ts-expect-error - FileSystemDirectoryHandle.entries() is part of the File System Access API
 		for await (const [name, handle] of root.entries()) {
 			if (handle.kind === 'file') {
 				files.push(name);

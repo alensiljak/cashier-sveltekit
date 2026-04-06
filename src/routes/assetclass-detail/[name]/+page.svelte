@@ -349,37 +349,6 @@
 						</table>
 					</section>
 
-					<!-- File Map -->
-					<section>
-						<button
-							class="flex items-center gap-1 font-sans text-sm font-semibold hover:opacity-80"
-							onclick={toggleFiles}
-						>
-							{#if filesOpen}<ChevronDown class="h-3 w-3" />{:else}<ChevronRight class="h-3 w-3" />{/if}
-							Loaded Files ({data.fileMapInfo?.length ?? 0})
-						</button>
-						{#if filesOpen}
-							<table class="mt-1 border-collapse">
-								<thead>
-									<tr class="opacity-60">
-										<th class="pr-4 py-0.5 text-left font-normal">File</th>
-										<th class="pr-4 py-0.5 text-right font-normal">Lines</th>
-										<th class="py-0.5 text-right font-normal">Chars</th>
-									</tr>
-								</thead>
-								<tbody>
-									{#each data.fileMapInfo ?? [] as f}
-										<tr class="border-b">
-											<td class="pr-4 py-0.5">{f.name}</td>
-											<td class="pr-4 py-0.5 text-right">{f.lines.toLocaleString()}</td>
-											<td class="py-0.5 text-right">{f.chars.toLocaleString()}</td>
-										</tr>
-									{/each}
-								</tbody>
-							</table>
-						{/if}
-					</section>
-
 					<!-- Asset Class Computed Values -->
 					<section>
 						<button

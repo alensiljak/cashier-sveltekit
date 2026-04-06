@@ -49,8 +49,6 @@ export async function load({ params }) {
 	}
 	const stocks = populateStocksWithCaching(assetClass, investmentAccounts);
 
-	// Debug info no longer available — full ledger is cached without raw file map.
-	const fileMapInfo: { name: string; chars: number; lines: number }[] = [];
 	const wasmVersion = getWasmVersion();
 
 	return {
@@ -60,7 +58,6 @@ export async function load({ params }) {
 		aa,
 		assetClass,
 		stocks,
-		fileMapInfo,
 		wasmVersion
 	};
 }

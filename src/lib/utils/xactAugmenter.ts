@@ -2,6 +2,7 @@ import { Account, Money, Posting, Xact } from '$lib/data/model';
 import appService from '$lib/services/appService';
 import { TransactionParser } from '$lib/utils/transactionParser';
 import { getAccountBalance } from '$lib/services/accountsService';
+import Notifier from './notifier';
 
 /**
  * Modifies the transaction records in-memory to create the missing parts,
@@ -59,6 +60,7 @@ export class XactAugmenter {
 				const msg = `Multiple empty postings found on ${tx.payee}`;
 				//throw new Error(msg)
 				console.warn(msg);
+				Notifier.warning(msg);
 				return;
 			} else if (emptyPostings.length === 0) {
 				// no empty postings
