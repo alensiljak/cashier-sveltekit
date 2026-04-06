@@ -187,6 +187,7 @@
 			</tr>
 		</thead>
 		<tbody>
+		{#if configSource !== LedgerDataSource.filesystem}
 			<tr>
 				<td>
 					<input
@@ -201,6 +202,8 @@
 				</td>
 				{#if syncStarted}<td>{@render statusIcon($syncProgress.find((s) => s.id === 1)?.status)}</td>{/if}
 			</tr>
+		{/if}
+
 			<tr>
 				<td>
 					<input
@@ -243,6 +246,8 @@
 				</td>
 				{#if syncStarted}<td>{@render statusIcon($syncProgress.find((s) => s.id === 4)?.status)}</td>{/if}
 			</tr>
+
+		{#if configSource !== LedgerDataSource.filesystem}
 			<tr>
 				<td>
 					<input
@@ -257,6 +262,8 @@
 				</td>
 				{#if syncStarted}<td>{@render statusIcon($syncProgress.find((s) => s.id === 5)?.status)}</td>{/if}
 			</tr>
+		{/if}
+
 		</tbody>
 	</table>
 
