@@ -2,6 +2,7 @@
 
 ## General
 
+- [ ] use the new Ledger for multi-file parsing, caching, and querying
 - [ ] transaction search by account, date range, payee, amount, etc.
 - [ ] research storing the configuration in OPFS, as a TOML file
 - [ ] setting for the cut-off date for the payees. Only include payees in transctions made since that date.

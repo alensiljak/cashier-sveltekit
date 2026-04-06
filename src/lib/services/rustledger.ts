@@ -4,7 +4,7 @@
  */
 
 import { Account } from '$lib/data/model';
-import type { ParsedLedger, ParseResult, QueryResult, ValidationResult } from '@rustledger/wasm';
+import type { ParsedLedger, ParseResult, QueryResult, ValidationResult, Ledger } from '@rustledger/wasm';
 import wasmUrl from '@rustledger/wasm/rustledger_wasm_bg.wasm?url';
 
 // WASM module instance
@@ -56,6 +56,19 @@ export function createParsedLedger(source: string): ParsedLedger | null {
 		return null;
 	}
 	return new wasmModule.ParsedLedger(source);
+}
+
+/**
+ * Create a Ledger instance from multiple Beancount files with include resolution.
+ * The Ledger caches parsed data and supports multiple queries without re-parsing.
+ * @param files - Map of filename → file contents
+ * @param entryPoint - The main file to start from (must be a key in files)
+ */
+export function createLedger(files: Record<string, string>, entryPoint: string): Ledger {
+	if (!wasmModule || !wasmModule.Ledger) {
+		throw new Error('WASM module not available or Ledger class not supported');
+	}
+	return wasmModule.Ledger.fromFiles(files, entryPoint);
 }
 
 /**
@@ -284,6 +297,7 @@ export function format(source: string): { formatted?: string; errors: any[] } {
 export default {
 	ensureInitialized,
 	parseBalanceSheetRow,
+	createLedger,
 	createParsedLedger,
 	getAccountsFromTransactions,
 	parseSource,

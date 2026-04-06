@@ -5,7 +5,7 @@
  */
 
 import { settings, SettingKeys } from '$lib/settings';
-import { ensureInitialized, parseMultiFile, queryMultiFile } from '$lib/services/rustledger';
+import fullLedgerService from '$lib/services/fullLedgerService';
 import { getQueries } from './sync-queries';
 import moment from 'moment';
 import { AssetAllocationFilename, ISODATEFORMAT } from '$lib/constants';
@@ -161,14 +161,12 @@ async function synchronize(syncOptions: syncCommon.SyncOptions): Promise<void> {
 		// Initialize sync progress
 		initializeSyncProgress();
 
-		const { fileMap, mainFileName, dirHandle } = await loadFileMap();
+		// Parse all files once and cache in the full ledger singleton.
+		await fullLedgerService.invalidate();
 
-		// Parse all files together with include resolution.
-		await ensureInitialized();
-		const parseResult = parseMultiFile(fileMap, mainFileName);
-
-		if (parseResult.errors.length > 0) {
-			console.log('Parse errors:', parseResult.errors);
+		const errors = fullLedgerService.getErrors();
+		if (errors.length > 0) {
+			console.log('Parse errors:', errors);
 			throw new Error('Parsing errors occurred. See console for details.');
 		}
 
@@ -180,35 +178,35 @@ async function synchronize(syncOptions: syncCommon.SyncOptions): Promise<void> {
 		// - accounts list
 		if (syncOptions.syncAccounts) {
 			updateSyncStep(1, 'in-progress');
-			await syncAccountsFromFs(queries, fileMap, mainFileName);
+			await syncAccountsFromFs(queries);
 			updateSyncStep(1, 'completed');
 		}
 
 		// - opening balances
 		if (syncOptions.syncOpeningBalances) {
 			updateSyncStep(2, 'in-progress');
-			await syncAccountBalances(queries, fileMap, mainFileName);
+			await syncAccountBalances(queries);
 			updateSyncStep(2, 'completed');
 		}
 
 		// Asset Allocation definition (.toml)
 		if (syncOptions.syncAssetAllocation) {
 			updateSyncStep(3, 'in-progress');
-			await syncAssetAllocation(dirHandle);
+			await syncAssetAllocation(fullLedgerService.dirHandle ?? undefined);
 			updateSyncStep(3, 'completed');
 		}
 
 		// - current values in the base currency (for asset allocation)
 		if (syncOptions.syncAaValues) {
 			updateSyncStep(4, 'in-progress');
-			await syncCurrentValues(queries, fileMap, mainFileName);
+			await syncCurrentValues(queries);
 			updateSyncStep(4, 'completed');
 		}
 
 		if (syncOptions.syncPayees) {
 			// - payees
 			updateSyncStep(5, 'in-progress');
-			await syncPayeesFromFs(queries, fileMap, mainFileName);
+			await syncPayeesFromFs(queries);
 			updateSyncStep(5, 'completed');
 		}
 	} catch (error) {
@@ -234,12 +232,10 @@ async function synchronize(syncOptions: syncCommon.SyncOptions): Promise<void> {
  * @param mainFileName
  */
 async function syncAccountsFromFs(
-	queries: ReturnType<typeof getQueries>,
-	fileMap: Record<string, string>,
-	mainFileName: string
+	queries: ReturnType<typeof getQueries>
 ) {
 	const query = queries.openAccounts();
-	const result = queryMultiFile(fileMap, mainFileName, query);
+	const result = fullLedgerService.query(query);
 
 	const entities = result.rows.map((item: any) => {
 		const accountName = item[0];
@@ -263,12 +259,10 @@ async function syncAccountsFromFs(
  * @param mainFileName
  */
 async function syncAccountBalances(
-	queries: ReturnType<typeof getQueries>,
-	fileMap: Record<string, string>,
-	mainFileName: string
+	queries: ReturnType<typeof getQueries>
 ) {
 	const query = queries.accounts();
-	const result = queryMultiFile(fileMap, mainFileName, query);
+	const result = fullLedgerService.query(query);
 
 	// parse accounts: [account, balance, currency]
 	const accounts = result.rows.map((row: any) => ({
@@ -374,9 +368,7 @@ async function syncAssetAllocation(dirHandle?: FileSystemDirectoryHandle) {
  * @param mainFileName
  */
 async function syncCurrentValues(
-	queries: ReturnType<typeof getQueries>,
-	fileMap: Record<string, string>,
-	mainFileName: string
+	queries: ReturnType<typeof getQueries>
 ) {
 	// currentValues query
 	const rootAccount = (await settings.get(SettingKeys.rootInvestmentAccount)) as string;
@@ -389,7 +381,7 @@ async function syncCurrentValues(
 	}
 
 	const query = queries.currentValues(rootAccount, currency);
-	const result = queryMultiFile(fileMap, mainFileName, query);
+	const result = fullLedgerService.query(query);
 	// result = { columns, errors, rows }
 
 	if (result.errors.length > 0) {
@@ -409,14 +401,12 @@ async function syncCurrentValues(
 }
 
 async function syncPayeesFromFs(
-	queries: ReturnType<typeof getQueries>,
-	fileMap: Record<string, string>,
-	mainFileName: string
+	queries: ReturnType<typeof getQueries>
 ) {
 	const from = moment().subtract(20, 'years').format(ISODATEFORMAT);
 	const payeesQuery = queries.payees(from);
 
-	const payeesResult = queryMultiFile(fileMap, mainFileName, payeesQuery);
+	const payeesResult = fullLedgerService.query(payeesQuery);
 
 	// Parse the result into a string[] of payee names, then store via common.
 	const payees = payeesResult.rows.map((row: any) => row);

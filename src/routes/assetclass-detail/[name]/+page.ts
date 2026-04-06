@@ -4,12 +4,8 @@ import { AaStocksStore, AssetAllocationStore } from '$lib/data/mainStore';
 import type { Account } from '$lib/data/model.js';
 import * as AccountService from '$lib/services/accountsService';
 import appService from '$lib/services/appService';
-import { loadFileMap } from '$lib/sync/sync-fs';
-import {
-	ensureInitialized,
-	queryMultiFile,
-	version as getWasmVersion
-} from '$lib/services/rustledger';
+import fullLedgerService from '$lib/services/fullLedgerService';
+import { version as getWasmVersion } from '$lib/services/rustledger';
 import { get } from 'svelte/store';
 
 export type WasmQueryFn = (bql: string) => { columns: string[]; rows: any[]; errors: any[] };
@@ -34,10 +30,9 @@ export async function load({ params }) {
 
 	const currency = await appService.getDefaultCurrency();
 
-	// Build a WASM query function from the filesystem.
-	await ensureInitialized();
-	const { fileMap, mainFileName } = await loadFileMap();
-	const wasmQuery: WasmQueryFn = (bql) => queryMultiFile(fileMap, mainFileName, bql);
+	// Build a WASM query function from the cached full ledger.
+	await fullLedgerService.ensureLoaded();
+	const wasmQuery: WasmQueryFn = (bql) => fullLedgerService.query(bql);
 
 	const investmentAccounts = await AccountService.loadInvestmentAccounts(wasmQuery);
 	if (investmentAccounts.length === 0) {
@@ -54,12 +49,8 @@ export async function load({ params }) {
 	}
 	const stocks = populateStocksWithCaching(assetClass, investmentAccounts);
 
-	// File map info for debugging (names + sizes, not content)
-	const fileMapInfo = Object.entries(fileMap).map(([name, content]) => ({
-		name,
-		chars: content.length,
-		lines: content.split('\n').length
-	}));
+	// Debug info no longer available — full ledger is cached without raw file map.
+	const fileMapInfo: { name: string; chars: number; lines: number }[] = [];
 	const wasmVersion = getWasmVersion();
 
 	return {

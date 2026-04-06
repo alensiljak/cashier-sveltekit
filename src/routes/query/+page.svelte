@@ -1,8 +1,7 @@
 <script lang="ts">
 	import Toolbar from "$lib/components/Toolbar.svelte";
 	import ledgerService from '$lib/services/ledgerService';
-	import { loadFileMap } from '$lib/sync/sync-fs';
-	import { queryMultiFile, ensureInitialized } from '$lib/services/rustledger';
+	import fullLedgerService from '$lib/services/fullLedgerService';
 
 	let bql = $state('SELECT account, sum(number) as balance, currency ORDER BY account');
 
@@ -72,9 +71,8 @@
 		if (useFilesystem) {
 			fsErrors = [];
 			try {
-				await ensureInitialized();
-				const { fileMap, mainFileName } = await loadFileMap();
-				const result = queryMultiFile(fileMap, mainFileName, bql);
+				await fullLedgerService.ensureLoaded();
+				const result = fullLedgerService.query(bql);
 				fsErrors = result?.errors ?? [];
 				if (fsErrors.length === 0) {
 					fsColumns = result?.columns ?? [];

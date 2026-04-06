@@ -11,8 +11,7 @@ import { Account, Money } from '../data/model';
 import { NUMBER_FORMAT } from '../constants';
 import type { CurrentValuesDict } from '$lib/data/viewModels';
 import { UserError, ValidationError } from '$lib/utils/errors';
-import { loadFileMap } from '$lib/sync/sync-fs';
-import { queryMultiFile } from '$lib/services/rustledger';
+import fullLedgerService from '$lib/services/fullLedgerService';
 
 /**
  * loadDefinition = loads the pre-set definition
@@ -331,9 +330,9 @@ export class AssetAllocationEngine {
 		this.warnings = [];
 		const defaultCurrency = await appService.getDefaultCurrency();
 
-		const { fileMap, mainFileName } = await loadFileMap();
+		await fullLedgerService.ensureLoaded();
 		const invAccounts = await loadInvestmentAccounts((bql) =>
-			queryMultiFile(fileMap, mainFileName, bql)
+			fullLedgerService.query(bql)
 		);
 
 		invAccounts.forEach((account) => {

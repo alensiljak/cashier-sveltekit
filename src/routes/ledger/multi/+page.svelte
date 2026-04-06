@@ -2,15 +2,13 @@
 	import { onMount } from 'svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import AccordionSection from '$lib/components/AccordionSection.svelte';
-	import { ensureInitialized, parseMultiFile } from '$lib/services/rustledger';
-	import { loadFileMap } from '$lib/sync/sync-fs';
+	import fullLedgerService from '$lib/services/fullLedgerService';
 	import JsonTreeNode from '../JsonTreeNode.svelte';
 
 	let isLoading = $state(false);
 	let error: string | null = $state(null);
 	let parseResult: Record<string, unknown> | null = $state(null);
-	let fileMap: Record<string, string> | null = $state(null);
-	let mainFileName: string | null = $state(null);
+	let directiveCount: number = $state(0);
 	let expandedSections: Record<string, boolean> = $state({});
 
 	function toggleSection(id: string) {
@@ -23,16 +21,14 @@
 			error = null;
 			parseResult = null;
 
-			const loaded = await loadFileMap();
-			fileMap = loaded.fileMap;
-			mainFileName = loaded.mainFileName;
-
-			await ensureInitialized();
-			const result = parseMultiFile(loaded.fileMap, loaded.mainFileName);
+			await fullLedgerService.invalidate();
+			directiveCount = fullLedgerService.getDirectives().length;
 
 			parseResult = {
-				ledger: result.ledger,
-				errors: result.errors,
+				ledger: {
+					directives: fullLedgerService.getDirectives(),
+				},
+				errors: fullLedgerService.getErrors(),
 			};
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to load or parse files';
@@ -93,27 +89,12 @@
 							{(parseResult.errors as unknown[]).length} errors
 						</span>
 					{/if}
-					{#if mainFileName}
-						<span class="badge badge-ghost text-xs">{mainFileName}</span>
-					{/if}
-					{#if fileMap}
-						<span class="badge badge-ghost text-xs">{Object.keys(fileMap).length} files</span>
+					{#if directiveCount > 0}
+						<span class="badge badge-ghost text-xs">{directiveCount} directives</span>
 					{/if}
 				</div>
 			</div>
 		</section>
-
-		<!-- File Map -->
-		<AccordionSection
-			title="File Map"
-			badge={fileMap ? Object.keys(fileMap).length : 0}
-			expanded={expandedSections['fileMap'] ?? false}
-			onToggle={() => toggleSection('fileMap')}
-		>
-			<div class="overflow-x-auto overflow-y-auto max-h-[300px] bg-base-200 rounded-lg p-3">
-				<JsonTreeNode label="fileMap" value={fileMap ? Object.keys(fileMap) : []} defaultExpanded={true} />
-			</div>
-		</AccordionSection>
 
 		<!-- Directives Tree -->
 		{#if parseResult.ledger != null}

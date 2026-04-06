@@ -3,8 +3,9 @@
 */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { ensureInitialized, parseBalanceSheetRow } from '$lib/services/rustledger';
+import { ensureInitialized } from '$lib/services/rustledger';
 import { Account } from '$lib/data/model';
+import { parseCurrentValues, parseBalanceSheetRow } from '$lib/utils/beancountParser';
 
 describe('RustLedger Service', () => {
 	beforeEach(async () => {
@@ -55,9 +56,7 @@ describe('RustLedger Service', () => {
 	});
 
 	describe('Integration: Full parsing workflow', () => {
-		it('should parse a complete Beancount balance sheet', async () => {
-			await ensureInitialized();
-
+		it('should parse a complete Beancount balance sheet', () => {
 			const beancountOutput = [
 				['2000.00 EUR', 'EUR', 'Assets:Bank:Checking'],
 				['1000.00 EUR', 'EUR', 'Assets:Bank:Savings'],
@@ -76,7 +75,7 @@ describe('RustLedger Service', () => {
 			expect(accounts[0].balances?.EUR).toBe(2000.0);
 
 			// Parse current values for Assets root
-			const currentValues = parseCurrentValues(beancountOutput, 'Assets');
+			const currentValues = parseCurrentValues(beancountOutput);
 			expect(Object.keys(currentValues).length).toBeGreaterThan(0);
 			expect(currentValues['Assets:Bank:Checking'].quantity).toBe(2000.0);
 		});

@@ -215,9 +215,6 @@ export async function loadInvestmentAccounts(
 		// Destination:
 		// account.balances: { EUR: 100, USD: 200 }
 		account.balances = row[balancesIdx].positions.reduce((acc: any, balance: any) => {
-			if (account.name.indexOf(':HY') !== -1) {
-				console.log('Processing balance', balance.units);
-			}
 			// acc[balance.units.currency] = (acc[balance.units.currency] ?? 0) +
 			//     parseFloat(balance.units.number);
 			acc[balance.units.currency] = addDecimalStrings([
