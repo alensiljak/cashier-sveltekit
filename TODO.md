@@ -2,7 +2,6 @@
 
 ## General
 
-- [ ] use the new Ledger for multi-file parsing, caching, and querying
 - [ ] transaction search by account, date range, payee, amount, etc.
 - [ ] research storing the configuration in OPFS, as a TOML file
 - [ ] setting for the cut-off date for the payees. Only include payees in transctions made since that date.
@@ -10,6 +9,14 @@
 - [ ] currency calculator
 - [ ] transaction import
 - [ ] price download
+
+## Onboarding
+
+- [ ] add setting for `initialized`
+- [ ] if not initialized, start the setup wizard
+- [ ] Go through the initial settings (data storage, server)
+- [ ] Add defaults to the wizard
+- [ ] default to filesystem if using a chromium-based browser
 
 ## Controls
 
