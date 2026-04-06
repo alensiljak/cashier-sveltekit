@@ -27,7 +27,7 @@ export class Account {
 
 	name = '';
 	balances?: Record<string, number>;
-	// currency: any
+	currencies: string[] = [];
 	currentValue: number | string | undefined;
 	currentCurrency: string | undefined;
 	exists: boolean = true;

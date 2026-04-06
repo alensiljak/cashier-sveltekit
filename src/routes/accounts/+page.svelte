@@ -4,6 +4,12 @@
 	import { selectionMetadata } from '$lib/data/mainStore';
 	import { ListSearch } from '$lib/utils/ListSearch';
 	import ledgerService from '$lib/services/ledgerService';
+	import { onMount } from 'svelte';
+	import { SettingKeys, settings } from '$lib/settings';
+	import { createDAL, type DAL } from '$lib/data/dal';
+	import { LedgerDataSource } from '$lib/enums';
+	import FSDAL from '$lib/data/fsdal';
+	import type { Account } from '$lib/data/model';
 
 	interface AccountRow {
 		account: string;
@@ -13,30 +19,34 @@
 		booking: string | null;
 	}
 
-	const lsVersion = ledgerService.version;
+	// const lsVersion = ledgerService.version;
 
 	let searchTerm = $state('');
 	let isInSelectionMode = $derived($selectionMetadata !== undefined);
+	let allAccounts: Account[] = $state([]);
 
-	const allAccounts: AccountRow[] = $derived.by(() => {
-		const _v = $lsVersion; // reactive dependency
-		const result = ledgerService.query('select * from accounts');
 
-		return (result?.rows ?? []).map((row: any[]) => ({
-			account: row[0],
-			open: row[1],
-			close: row[2],
-			currencies: row[3],
-			booking: row[4]
-		}));
+	onMount(async () => {
+		await loadData();
 	});
 
-	const filteredAccounts: AccountRow[] = $derived.by(() => {
+	async function loadData() {
+		document.body.style.cursor = 'wait';
+
+		const dal = await createDAL();
+
+		const accounts = await dal.loadAccounts();
+		allAccounts = accounts;
+		
+		document.body.style.cursor = 'default';
+	}
+
+	const filteredAccounts: Account[] = $derived.by(() => {
 		if (!searchTerm) return allAccounts;
 
 		const search = new ListSearch();
 		const regex = search.getRegex(searchTerm);
-		return allAccounts.filter((row) => regex.test(row.account ?? ''));
+		return allAccounts.filter((item) => regex.test(item.name ?? ''));
 	});
 
 	/**
@@ -83,17 +93,17 @@
 	<SearchToolbar focus {onSearch} />
 	<!-- Account list -->
 	<div class="flex-1 overflow-y-auto px-1">
-		{#each filteredAccounts as row, i (row.account ?? `undefined-${i}`)}
+		{#each filteredAccounts as row, i (row.name ?? `undefined-${i}`)}
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 			<div
 				class="border-base-content/15 flex items-center justify-between border-b py-2 px-1 {getAccountColour(
-					row.account
+					row.name
 				)}"
-				onclick={() => onAccountSelected(row.account)}
+				onclick={() => onAccountSelected(row.name)}
 				role="listitem"
 			>
-				<div class="flex-1 pl-1">{row.account}</div>
+				<div class="flex-1 pl-1">{row.name}</div>
 				{#if row.currencies?.length}
 					<span class="text-sm opacity-60 pr-1">
 						{row.currencies.join(', ')}

@@ -6,7 +6,7 @@
 import fullLedgerService from "$lib/services/fullLedgerService";
 import Notifier from "$lib/utils/notifier";
 import type { DAL } from "./dal";
-import { Payee } from "./model";
+import { Account, Payee } from "./model";
 
 export default class FSDAL implements DAL {
     private constructor() {}
@@ -17,8 +17,31 @@ export default class FSDAL implements DAL {
         return dal;
     }
 
+    async loadAccounts() {
+        const result = fullLedgerService.query(
+            'SELECT * FROM accounts ORDER BY account');
+        if (result.errors.length > 0) {
+            console.error('Error loading accounts:', result.errors);
+            Notifier.error('Failed to load accounts.' + 
+                result.errors.map(e => e.message).join('; '));
+            return [];
+        }
+
+        // return (result?.rows ?? []).map((row: any[]) => ({
+		// 	account: row[0],
+		// 	open: row[1],
+		// 	close: row[2],
+		// 	currencies: row[3],
+		// 	booking: row[4]
+		// }));
+
+        const accounts = result
+            .rows.map(row => row[0] as string)
+            .map(name => new Account(name));
+        return accounts;
+    }
+
     async loadPayees(): Promise<Payee[]> {
-		//return db.payees.orderBy('name');
         const result = fullLedgerService.query(
             'SELECT DISTINCT payee FROM transactions ORDER BY payee');
         if (result.errors.length > 0) {

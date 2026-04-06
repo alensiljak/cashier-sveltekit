@@ -8,7 +8,7 @@ import db from '$lib/data/db';
 import type { DAL } from './dal';
 
 export default class CashierDAL implements DAL {
-	
+
 	static async create(): Promise<CashierDAL> {
 		const dal = new CashierDAL();
 		return dal;
@@ -30,7 +30,7 @@ export default class CashierDAL implements DAL {
 	 * @returns Collection
 	 */
 	loadAccounts() {
-		return db.accounts.orderBy('name');
+		return db.accounts.orderBy('name').toArray();
 	}
 
 	async loadPayees(): Promise<Payee[]> {

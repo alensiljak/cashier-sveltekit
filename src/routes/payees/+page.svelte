@@ -29,7 +29,7 @@
 		isInSelectionMode = $selectionMetadata !== undefined;
 	});
 
-	async function loadData(filter?: string) {
+	async function loadData() {
 		document.body.style.cursor = 'wait';
 
 		const dataSource = await settings.get(SettingKeys.ledgerDataSource) as string;
