@@ -7,8 +7,9 @@ import { defineConfig } from 'vite';
 import tailwindcss from '@tailwindcss/vite';
 import mkcert from 'vite-plugin-mkcert';
 
-// Generate build timestamp in YYYY-MM-DD HH:mm format
-const buildTimestamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
+// Generate build timestamp in YYYY-MM-DD HH:mm format (local timezone)
+const now = new Date();
+const buildTimestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
 const config: UserConfig = defineConfig({
 	define: {
