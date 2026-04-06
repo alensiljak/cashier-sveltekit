@@ -3,27 +3,24 @@
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { selectionMetadata } from '$lib/data/mainStore';
 	import { ListSearch } from '$lib/utils/ListSearch';
-	import ledgerService from '$lib/services/ledgerService';
 	import { onMount } from 'svelte';
-	import { SettingKeys, settings } from '$lib/settings';
 	import { createDAL, type DAL } from '$lib/data/dal';
-	import { LedgerDataSource } from '$lib/enums';
-	import FSDAL from '$lib/data/fsdal';
 	import type { Account } from '$lib/data/model';
 
-	interface AccountRow {
-		account: string;
-		open: string | null;
-		close: string | null;
-		currencies: string[] | null;
-		booking: string | null;
-	}
+	// interface AccountRow {
+	// 	account: string;
+	// 	open: string | null;
+	// 	close: string | null;
+	// 	currencies: string[] | null;
+	// 	booking: string | null;
+	// }
 
 	// const lsVersion = ledgerService.version;
 
 	let searchTerm = $state('');
 	let isInSelectionMode = $derived($selectionMetadata !== undefined);
 	let allAccounts: Account[] = $state([]);
+	let dataLoaded = $state(false);
 
 
 	onMount(async () => {
@@ -37,7 +34,8 @@
 
 		const accounts = await dal.loadAccounts();
 		allAccounts = accounts;
-		
+
+		dataLoaded = true;
 		document.body.style.cursor = 'default';
 	}
 
@@ -93,6 +91,7 @@
 	<SearchToolbar focus {onSearch} />
 	<!-- Account list -->
 	<div class="flex-1 overflow-y-auto px-1">
+	{#if dataLoaded}
 		{#each filteredAccounts as row, i (row.name ?? `undefined-${i}`)}
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
@@ -111,5 +110,10 @@
 				{/if}
 			</div>
 		{/each}
+	{:else}
+		<div class="flex h-full items-center justify-center">
+			<span class="loading loading-spinner loading-lg"></span>
+		</div>
+	{/if}
 	</div>
 </main>

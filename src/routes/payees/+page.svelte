@@ -21,6 +21,7 @@
 	let isInSelectionMode = $state(false);
 	let searchString = $state('');
 	let showFab = $derived(isInSelectionMode && searchString);
+	let dataLoaded = $state(false);
 
 
 	onMount(async () => {
@@ -43,6 +44,7 @@
 
 		filteredPayees = payees;
 		
+		dataLoaded = true;
 		document.body.style.cursor = 'default';
 	}
 
@@ -106,6 +108,11 @@
 	<SearchToolbar focus {onSearch} />
 
 	<div class="flex-1 overflow-y-auto px-1">
+	{#if !dataLoaded}
+		<div class="flex h-full items-center justify-center">
+			<span class="loading loading-spinner loading-lg"></span>
+		</div>
+	{:else}
 		{#each filteredPayees as payee:Payee (payee.name)}
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
@@ -117,5 +124,6 @@
 				{payee.name || ' '}
 			</div>
 		{/each}
+	{/if}
 	</div>
 </section>
