@@ -8,7 +8,6 @@
 	import { Account } from '$lib/data/model';
 	import appService from '$lib/services/appService';
 	import * as OpfsLib from '$lib/utils/opfslib.js';
-	import { InfrastructureFiles } from '$lib/constants';
 	import rustledger from '$lib/services/rustledger';
 	import {
 		findLastTransactionDirective,
@@ -96,9 +95,9 @@
 			wasmVersion = ledgerService.getWasmVersion();
 			initialized = true;
 
-			await loadInfrastructure();
+			// await loadInfrastructure();
 
-			await importJournal();
+			// await importJournal();
 			if (!transactionSource) {
 				transactionSource = createDemoSource();
 			}
@@ -112,28 +111,28 @@
 		}
 	});
 
-	async function loadInfrastructure() {
-		try {
-			const files = InfrastructureFiles;
-			const contents: string[] = [];
+	// async function loadInfrastructure() {
+	// 	try {
+	// 		const files = InfrastructureFiles;
+	// 		const contents: string[] = [];
 
-			for (const filename of files) {
-				try {
-					const content = await OpfsLib.readFile(filename);
-					if (content) {
-						contents.push(content);
-					}
-				} catch (err) {
-					console.warn(`Could not load ${filename}:`, err);
-				}
-			}
+	// 		for (const filename of files) {
+	// 			try {
+	// 				const content = await OpfsLib.readFile(filename);
+	// 				if (content) {
+	// 					contents.push(content);
+	// 				}
+	// 			} catch (err) {
+	// 				console.warn(`Could not load ${filename}:`, err);
+	// 			}
+	// 		}
 
-			infrastructureSource = contents.join('\n\n');
-		} catch (err) {
-			console.warn('Could not load infrastructure files:', err);
-			infrastructureSource = '';
-		}
-	}
+	// 		infrastructureSource = contents.join('\n\n');
+	// 	} catch (err) {
+	// 		console.warn('Could not load infrastructure files:', err);
+	// 		infrastructureSource = '';
+	// 	}
+	// }
 
 	async function handleParse() {
 		try {
@@ -165,18 +164,18 @@
 		}
 	}
 
-	async function importJournal() {
-		try {
-			isLoading = true;
-			error = null;
-			transactionSource = await appService.getExportTransactions();
-		} catch (err) {
-			error = err instanceof Error ? err.message : 'Failed to import journal';
-			console.error('Import error:', err);
-		} finally {
-			isLoading = false;
-		}
-	}
+	// async function importJournal() {
+	// 	try {
+	// 		isLoading = true;
+	// 		error = null;
+	// 		transactionSource = await appService.getExportTransactions();
+	// 	} catch (err) {
+	// 		error = err instanceof Error ? err.message : 'Failed to import journal';
+	// 		console.error('Import error:', err);
+	// 	} finally {
+	// 		isLoading = false;
+	// 	}
+	// }
 
 	async function handleValidate() {
 		try {
