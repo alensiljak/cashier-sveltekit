@@ -6,8 +6,8 @@
 		CalendarClockIcon,
 		ChartPieIcon,
 		DatabaseIcon,
-		HelpCircleIcon,
-		HomeIcon,
+		CircleQuestionMarkIcon,
+		HouseIcon,
 		InfoIcon,
 		LandmarkIcon,
 		RefreshCw,
@@ -43,7 +43,7 @@
 						: ''}"
 					onclick={closeDrawer}
 				>
-					<HomeIcon />
+					<HouseIcon />
 					<span>Home</span>
 				</a>
 			</li>
@@ -168,7 +168,7 @@
 						: ''}"
 					onclick={closeDrawer}
 				>
-					<HelpCircleIcon />
+					<CircleQuestionMarkIcon />
 					<span>Help</span>
 				</a>
 			</li>
