@@ -170,6 +170,19 @@ export async function loadFileMap(): Promise<{
 	return { fileMap, mainFileName, dirHandle };
 }
 
+export async function loadLocalFileMap(): Promise<{
+	fileMap: Record<string, string>;
+	mainFileName: string;
+	dirHandle: null;
+}> {
+	const { fileName: mainFileName, content: mainContent, dirHandle } = await readLocalBeancountFile();
+
+	const fileMap: Record<string, string> = {};
+	await collectAllFiles(null as any, mainFileName, mainContent, fileMap);
+
+	return { fileMap, mainFileName, dirHandle: null };
+}
+
 async function synchronize(syncOptions: syncCommon.SyncSteps): Promise<boolean> {
 	try {
 		// Initialize sync progress
