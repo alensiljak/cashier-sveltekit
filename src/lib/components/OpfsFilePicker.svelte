@@ -164,6 +164,10 @@
 									>
 										<TrashIcon class="w-4 h-4" />
 									</button>
+								{:else}
+									<button class="btn btn-sm invisible" disabled aria-hidden="true">
+										<TrashIcon class="w-4 h-4" />
+									</button>
 								{/if}
 							</td>
 						{/if}
