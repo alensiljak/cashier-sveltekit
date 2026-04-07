@@ -61,10 +61,7 @@
 				<a class="link link-primary" href="/ledger/multi">Parsed Multi Ledger</a>
 			</li>
 			<li>
-				<a class="link link-primary" href="/demo/opfs">OPFS Storage Demo</a>
-			</li>
-			<li>
-				<a class="link link-secondary" href="/sync/opfs-test">OPFS Storage Test</a>
+				<a class="link link-primary" href="/sync/opfs-test">OPFS Storage Test</a>
 			</li>
 		</ul>
 	</section>

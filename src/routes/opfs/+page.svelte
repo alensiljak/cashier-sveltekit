@@ -1,8 +1,9 @@
 <script lang="ts">
 	import Toolbar from '$lib/components/Toolbar.svelte';
-	import { RefreshCcwIcon, SaveIcon, FilePlusIcon, TrashIcon, PencilIcon, UploadIcon } from '@lucide/svelte';
+	import { RefreshCcwIcon, SaveIcon, FilePlusIcon, TrashIcon, UploadIcon, FolderIcon, FolderOpenIcon, FileIcon } from '@lucide/svelte';
 	import { onMount, onDestroy } from 'svelte';
 	import * as OpfsLib from '$lib/utils/opfslib.js';
+	import type { FileTreeEntry } from '$lib/utils/opfslib.js';
 	import Notifier from '$lib/utils/notifier';
 
 	Notifier.init();
@@ -11,7 +12,11 @@
 		e.preventDefault();
 	}
 
-	let files = $state<string[]>([]);
+	interface EntryInfo extends FileTreeEntry {
+		expanded?: boolean;
+	}
+
+	let entries = $state<EntryInfo[]>([]);
 	let isLoading = $state(false);
 	let selectedFile = $state<string | null>(null);
 	let fileContent = $state<string>('');
@@ -44,9 +49,12 @@
 
 	async function loadFiles() {
 		isLoading = true;
+		selectedFile = null;
+		fileContent = '';
+		fileMetadata = null;
 		try {
-			const fileList = await OpfsLib.listFiles();
-			files = fileList.sort();
+			const treeEntries = await OpfsLib.listFileTree();
+			entries = treeEntries;
 		} catch (error: any) {
 			console.error('Error loading files:', error);
 			Notifier.error(error.message || 'Failed to load files');
@@ -55,22 +63,53 @@
 		}
 	}
 
-	function formatFileSize(bytes: number): string {
+	async function toggleDirectory(entry: EntryInfo) {
+		// Just toggle the expanded state - the display will filter based on this
+		const idx = entries.findIndex((e) => e.path === entry.path);
+		if (idx === -1) return;
+
+		const newEntries = [...entries];
+		newEntries[idx] = { ...newEntries[idx], expanded: !entry.expanded };
+		entries = newEntries;
+	}
+
+	function isEntryVisible(entry: EntryInfo): boolean {
+		// An entry is visible if all its parent directories are expanded
+		if (entry.depth === 0) return true; // Root level always visible
+
+		const pathParts = entry.path.split('/');
+		for (let i = 1; i < pathParts.length; i++) {
+			const parentPath = pathParts.slice(0, i).join('/');
+			const parent = entries.find((e) => e.path === parentPath);
+			if (!parent || !parent.expanded) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	function formatFileSize(bytes?: number): string {
+		if (bytes === undefined) return '--';
 		if (bytes === 0) return '0 B';
 		const units = ['B', 'KB', 'MB', 'GB'];
 		const i = Math.floor(Math.log(bytes) / Math.log(1024));
 		return `${(bytes / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
 	}
 
-	async function onFileClick(filename: string) {
-		selectedFile = filename;
+	async function onEntryClick(entry: EntryInfo) {
+		if (entry.kind === 'directory') {
+			await toggleDirectory(entry);
+			return;
+		}
+
+		selectedFile = entry.path;
 		isContentLoading = true;
 		fileContent = '';
 		fileMetadata = null;
 		try {
 			const [content, meta] = await Promise.all([
-				OpfsLib.readFile(filename),
-				OpfsLib.getFileMetadata(filename)
+				OpfsLib.readFile(entry.path),
+				OpfsLib.getFileMetadata(entry.path)
 			]);
 			fileMetadata = meta ?? null;
 			if (content !== undefined) {
@@ -92,8 +131,8 @@
 		}
 	}
 
-	function confirmDelete(filename: string) {
-		fileToDelete = filename;
+	function confirmDelete(filePath: string) {
+		fileToDelete = filePath;
 		showDeleteConfirm = true;
 	}
 
@@ -105,9 +144,9 @@
 			const success = await OpfsLib.deleteFile(fileToDelete);
 
 			if (success) {
-				Notifier.success(`File "${fileToDelete}" deleted successfully`);
+				Notifier.success(`File deleted successfully`);
 			} else {
-				Notifier.error(`Failed to delete file "${fileToDelete}"`);
+				Notifier.error(`Failed to delete file`);
 			}
 
 			showDeleteConfirm = false;
@@ -245,6 +284,7 @@
 			await loadFiles();
 		}
 
+		// Reset input value
 		input.value = '';
 	}
 
@@ -303,7 +343,7 @@
 			<div class="flex justify-center items-center p-8">
 				<span class="loading loading-spinner loading-lg"></span>
 			</div>
-		{:else if files.length === 0}
+		{:else if entries.length === 0}
 			<div class="alert alert-info">
 				<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6">
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -311,29 +351,50 @@
 				<span>No files found in OPFS storage. Drag and drop a text file here to add one.</span>
 			</div>
 		{:else}
-			<div class="mb-4 overflow-x-auto">
-				<table class="table table-zebra">
+			<div class="mb-4 overflow-x-auto overflow-y-auto" style="height: 400px;">
+				<table class="table table-zebra table-sm">
 					<thead>
 						<tr>
-							<th>Filename</th>
+							<th>Name</th>
 							<th>Size</th>
 							<th class="text-center">Actions</th>
 						</tr>
 					</thead>
 					<tbody>
-						{#each files as filename}
-							<tr class:bg-secondary={selectedFile === filename}>
-								<td class="font-mono text-sm">{filename}</td>
-								<td>—</td>
-								<td class="text-right">
-									<button class="btn btn-sm btn-primary gap-2 mr-2" onclick={() => onFileClick(filename)}>
-										<PencilIcon class="w-4 h-4" />
-									</button>
-									<button class="btn btn-sm btn-error btn-outline gap-2" onclick={() => confirmDelete(filename)}>
-										<TrashIcon class="w-4 h-4" />
-									</button>
-								</td>
-							</tr>
+						{#each entries as entry}
+							{#if isEntryVisible(entry)}
+								<tr
+									class="cursor-pointer hover"
+									class:bg-secondary={selectedFile === entry.path}
+									onclick={() => onEntryClick(entry)}
+								>
+									<td class="font-mono text-sm">
+										<span
+											class="flex items-center gap-1"
+											style="padding-left: {entry.depth * 1.25}rem"
+										>
+											{#if entry.kind === 'directory'}
+												{#if entry.expanded}
+													<FolderOpenIcon class="w-4 h-4 opacity-60 shrink-0" />
+												{:else}
+													<FolderIcon class="w-4 h-4 opacity-60 shrink-0" />
+												{/if}
+											{:else}
+												<FileIcon class="w-4 h-4 opacity-60 shrink-0" />
+											{/if}
+											{entry.name}
+										</span>
+									</td>
+									<td class="text-sm">{entry.kind === 'file' ? formatFileSize(entry.size) : '--'}</td>
+									<td class="text-right" onclick={(e) => e.stopPropagation()}>
+										{#if entry.kind === 'file'}
+											<button class="btn btn-sm btn-error btn-outline gap-2" onclick={() => confirmDelete(entry.path)}>
+												<TrashIcon class="w-4 h-4" />
+											</button>
+										{/if}
+									</td>
+								</tr>
+							{/if}
 						{/each}
 					</tbody>
 				</table>

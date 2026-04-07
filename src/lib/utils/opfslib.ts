@@ -81,6 +81,72 @@ export async function listFiles(): Promise<string[]> {
 	}
 }
 
+export interface FileTreeEntry {
+	name: string;
+	kind: 'file' | 'directory';
+	path: string; // relative path from root, e.g. "subdir/file.txt"
+	depth: number; // nesting level for indentation
+	size?: number;
+	lastModified?: number;
+	expanded?: boolean;
+}
+
+export async function listFileTree(): Promise<FileTreeEntry[]> {
+	try {
+		const root = await navigator.storage.getDirectory();
+		const entries: FileTreeEntry[] = [];
+
+		async function walkDirectory(dirHandle: FileSystemDirectoryHandle, prefix: string, depth: number) {
+			const items: FileTreeEntry[] = [];
+
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			for await (const [name, handle] of (dirHandle as any).entries()) {
+				const path = prefix ? `${prefix}/${name}` : name;
+				const entry: FileTreeEntry = { name, kind: handle.kind, path, depth };
+
+				if (handle.kind === 'file') {
+					try {
+						const file = await (handle as FileSystemFileHandle).getFile();
+						entry.size = file.size;
+						entry.lastModified = file.lastModified;
+					} catch {
+						// metadata unavailable
+					}
+				}
+
+				items.push(entry);
+			}
+
+			// Sort: directories first, then files, alphabetically
+			items.sort((a, b) => {
+				if (a.kind !== b.kind) return a.kind === 'directory' ? -1 : 1;
+				return a.name.localeCompare(b.name);
+			});
+
+			// Push each item and immediately recurse into directories
+			// so children appear right after their parent
+			for (const item of items) {
+				entries.push(item);
+
+				if (item.kind === 'directory') {
+					try {
+						const subDir = await dirHandle.getDirectoryHandle(item.name);
+						await walkDirectory(subDir, item.path, item.depth + 1);
+					} catch {
+						// skip inaccessible directories
+					}
+				}
+			}
+		}
+
+		await walkDirectory(root, '', 0);
+		return entries;
+	} catch (error) {
+		console.error('Error listing file tree:', error);
+		return [];
+	}
+}
+
 export async function fileExists(filename: string): Promise<boolean> {
 	const handle = await getHandle(filename, false);
 	return handle !== undefined;
