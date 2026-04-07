@@ -4,6 +4,7 @@
 	// Icons
 	import {
 		CalendarClockIcon,
+		ChartLineIcon,
 		ChartPieIcon,
 		DatabaseIcon,
 		CircleQuestionMarkIcon,
@@ -117,6 +118,18 @@
 				>
 					<CalendarClockIcon />
 					<span>Scheduled Transactions</span>
+				</a>
+			</li>
+			<li>
+				<a
+					href="/reports"
+					class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/reports'
+						? 'active bg-secondary text-secondary-content'
+						: ''}"
+					onclick={closeDrawer}
+				>
+					<ChartLineIcon />
+					<span>Reports</span>
 				</a>
 			</li>
 		</ul>
