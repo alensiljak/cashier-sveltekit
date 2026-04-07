@@ -7,16 +7,6 @@
 	import { createDAL, type DAL } from '$lib/data/dal';
 	import type { Account } from '$lib/data/model';
 
-	// interface AccountRow {
-	// 	account: string;
-	// 	open: string | null;
-	// 	close: string | null;
-	// 	currencies: string[] | null;
-	// 	booking: string | null;
-	// }
-
-	// const lsVersion = ledgerService.version;
-
 	let searchTerm = $state('');
 	let isInSelectionMode = $derived($selectionMetadata !== undefined);
 	let allAccounts: Account[] = $state([]);

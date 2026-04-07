@@ -178,11 +178,11 @@ async function synchronize(syncOptions: syncCommon.SyncSteps): Promise<boolean> 
 		// Synchronization steps:
 
 		// - accounts list
-		// if (syncOptions.syncAccounts) {
-		// 	updateSyncStep(1, 'in-progress');
-		// 	await syncAccounts(queries);
-		// 	updateSyncStep(1, 'completed');
-		// }
+		if (syncOptions.syncAccounts) {
+			updateSyncStep(1, 'in-progress');
+			await syncAccounts(queries);
+			updateSyncStep(1, 'completed');
+		}
 
 		// - opening balances
 		if (syncOptions.syncOpeningBalances) {
@@ -205,12 +205,12 @@ async function synchronize(syncOptions: syncCommon.SyncSteps): Promise<boolean> 
 			updateSyncStep(4, 'completed');
 		}
 
-		// if (syncOptions.syncPayees) {
-		// 	// - payees
-		// 	updateSyncStep(5, 'in-progress');
-		// 	await syncPayeesFromFs(queries);
-		// 	updateSyncStep(5, 'completed');
-		// }
+		// - payees
+		if (syncOptions.syncPayees) {
+			updateSyncStep(5, 'in-progress');
+			await syncPayeesFromFs(queries);
+			updateSyncStep(5, 'completed');
+		}
 
 		return true;
 
