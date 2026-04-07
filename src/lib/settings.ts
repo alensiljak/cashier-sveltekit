@@ -31,7 +31,10 @@ export const Constants = {
 };
 
 export const SettingKeys = {
+	// root files in OPFS
+	bookFilename: 'bookFilename',
 	assetAllocationDefinition: 'aa.definition',
+	//
 	backupServerUrl: 'backupServerUrl', // Server for online backup (pCloud).
 	currency: 'currency',
 	favouriteAccounts: 'favouriteAccounts',

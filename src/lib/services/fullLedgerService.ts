@@ -8,7 +8,10 @@
 
 import { writable, derived, type Readable } from 'svelte/store';
 import { ensureInitialized, createLedger } from './rustledger';
-import { loadFileMap } from '$lib/sync/sync-fs';
+// import { loadFileMap } from '$lib/sync/sync-fs';
+import { listFileTree } from '$lib/utils/opfslib';
+import { LedgerFilenames } from '$lib/enums';
+import { OPFSBackend } from '$lib/storage';
 import type { Ledger, QueryResult, BeancountError, Directive } from '@rustledger/wasm';
 
 class FullLedgerService {
@@ -17,11 +20,32 @@ class FullLedgerService {
 	private _version = writable(0);
 	readonly version: Readable<number> = derived(this._version, (v) => v);
 
+	/** Load file map from OPFS, reading all *.bean files recursively. */
+	async loadOpfsFileMap(): Promise<{ fileMap: Record<string, string>; mainFileName: string }> {
+		const opfs = new OPFSBackend();
+		const tree = await listFileTree();
+		const beanEntries = tree.filter((e) => e.kind === 'file' && 
+			e.name.endsWith('.bean'));
+
+		const fileMap: Record<string, string> = {};
+		await Promise.all(
+			beanEntries.map(async (entry) => {
+				const content = await opfs.readFile(entry.path);
+				if (content !== undefined) {
+					fileMap[entry.path] = content;
+				}
+			})
+		);
+
+		return { fileMap, mainFileName: LedgerFilenames.book };
+	}
+
 	/** Load file map from the filesystem, parse once, cache the Ledger. */
 	async load(): Promise<void> {
 		await ensureInitialized();
-		const { fileMap, mainFileName, dirHandle } = await loadFileMap();
-		this._dirHandle = dirHandle;
+		// const { fileMap, mainFileName, dirHandle } = await loadFileMap();
+		// this._dirHandle = dirHandle;
+		const { fileMap, mainFileName } = await this.loadOpfsFileMap();
 		this.ledger = createLedger(fileMap, mainFileName);
 		this._version.update((v) => v + 1);
 	}

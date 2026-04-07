@@ -11,6 +11,7 @@
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import { BoxIcon, Check } from '@lucide/svelte';
 	import Fab from '$lib/components/FAB.svelte';
+	import { page } from '$app/state';
 
 	Notifier.init();
 
@@ -18,8 +19,22 @@
 	let rootInvestmentAccount = $state<string>();
 	let currency = $state<string>();
 	let configSource = $state<LedgerDataSource>(LedgerDataSource.filesystem);
+	let bookFilename = $state<string | null>(null);
+	let assetAllocationDefinition = $state<string | null>(null);
 
 	onMount(async () => {
+		// Handle return from file picker
+		const settingKey = page.url.searchParams.get('settingKey');
+		const settingValue = page.url.searchParams.get('settingValue');
+		if (settingKey && settingValue) {
+			await settings.set(settingKey, settingValue);
+			// Remove params from URL without triggering navigation
+			const url = new URL(window.location.href);
+			url.searchParams.delete('settingKey');
+			url.searchParams.delete('settingValue');
+			history.replaceState({}, '', url.toString());
+		}
+
 		// load data
 		currency = await appService.getDefaultCurrency();
 		rootInvestmentAccount = (await settings.get<string>(
@@ -30,6 +45,10 @@
 		)) as boolean;
 		const dataSource = (await settings.get<string>(SettingKeys.ledgerDataSource)) ?? '';
 		if (dataSource) configSource = dataSource as LedgerDataSource;
+
+		bookFilename = (await settings.get<string>(SettingKeys.bookFilename)) ?? null;
+		assetAllocationDefinition =
+			(await settings.get<string>(SettingKeys.assetAllocationDefinition)) ?? null;
 	});
 
 	async function onConfigSourceChanged() {
@@ -119,7 +138,7 @@
 
 	<Fab Icon={Check} onclick={saveSettings} />
 
-	<hr class="my-6" />
+	<hr class="my-6 mx-4" />
 
 	<div class="flex gap-6">
 		<div>
@@ -174,6 +193,40 @@
 		<div class="flex flex-1 items-center justify-center">
 			<button class="btn btn-outline btn-primary rounded" type="button" onclick={onConfigureClick}>
 				Configure
+			</button>
+		</div>
+	</div>
+
+	<hr class="my-6 mx-4" />
+
+	<div class="flex flex-col space-y-4">
+		<h3 class="text-xl font-bold">Ledger Configuration</h3>
+
+		<div class="flex items-center gap-4">
+			<div class="flex-1">
+				<p class="text-sm font-medium">Book file</p>
+				<p class="font-mono text-sm opacity-70">{bookFilename ?? 'Not set'}</p>
+			</div>
+			<button
+				class="btn btn-primary btn-sm rounded"
+				type="button"
+				onclick={() => goto(`/opfs/file-picker?returnSetting=${SettingKeys.bookFilename}`)}
+			>
+				Select
+			</button>
+		</div>
+
+		<div class="flex items-center gap-4">
+			<div class="flex-1">
+				<p class="text-sm font-medium">Asset allocation definition</p>
+				<p class="font-mono text-sm opacity-70">{assetAllocationDefinition ?? 'Not set'}</p>
+			</div>
+			<button
+				class="btn btn-primary btn-sm rounded"
+				type="button"
+				onclick={() => goto(`/opfs/file-picker?returnSetting=${SettingKeys.assetAllocationDefinition}`)}
+			>
+				Select
 			</button>
 		</div>
 	</div>

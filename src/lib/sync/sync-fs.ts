@@ -93,20 +93,6 @@ async function readExternalBeancountFile(): Promise<{
 	return { fileName, content, dirHandle };
 }
 
-async function readLocalBeancountFile(): Promise<{
-	fileName: string;
-	content: string;
-	dirHandle: FileSystemDirectoryHandle;
-}> {
-	const mainFileName = await settings.get(SettingKeys.externalBook) as string;
-
-	console.log('Reading local file:', mainFileName);
-	
-	const content = await file.text();
-
-	return { fileName: mainFileName, content, dirHandle: null as any };
-}
-
 function parseIncludeFilenames(content: string): string[] {
 	const filenames: string[] = [];
 	const regex = /^include\s+"([^"]+)"/gm;
@@ -170,19 +156,6 @@ export async function loadFileMap(): Promise<{
 	await collectAllFiles(dirHandle, mainFileName, mainContent, fileMap);
 
 	return { fileMap, mainFileName, dirHandle };
-}
-
-export async function loadLocalFileMap(): Promise<{
-	fileMap: Record<string, string>;
-	mainFileName: string;
-	dirHandle: null;
-}> {
-	const { fileName: mainFileName, content: mainContent } = await readLocalBeancountFile();
-
-	const fileMap: Record<string, string> = {};
-	await collectAllFiles(null as any, mainFileName, mainContent, fileMap);
-
-	return { fileMap, mainFileName, dirHandle: null };
 }
 
 async function synchronize(syncOptions: syncCommon.SyncSteps): Promise<boolean> {
