@@ -39,25 +39,17 @@ export const SettingKeys = {
 	forecastDays: 'forecast.days',
 	dbInitialized: 'dbInitialized', // Marks that the db has been initialized
 	pCloudToken: 'pCloudToken',
+	// Cashier Server Sync
 	syncServerUrl: 'syncServerUrl',
 	// External data source system
 	ledgerDataSource: 'ledgerDataSource', // beancount, rledger, ledger, filesystem
-	//ptaSystem: 'ptaSystem', // ledger, beancount, rledger
-	// Storage backend
-	//storageBackend: 'storageBackend',
-	// path to the prices repository for CashierSync.
-	pricesRepositoryPath: 'pricesRepositoryPath',
-	// path to the book repository for CashierSync.
-	repositoryPath: 'repositoryPath',
 	rootInvestmentAccount: 'aa.rootAccount',
 	rememberLastTransaction: 'rememberLastTransaction',
-	writeableJournalFilePath: 'writeableJournalFilePath',
 	// synchronization choices
 	syncAccounts: 'syncAccounts',
 	syncAaValues: 'syncAaValues',
 	syncAssetAllocation: 'syncAssetAllocation',
 	syncPayees: 'syncPayees',
-	syncInfrastructureFiles: 'syncInfrastructureFiles',
 	syncOpeningBalances: 'syncOpeningBalances',
 	// Home cards
 	visibleCards: 'homeCardNames',

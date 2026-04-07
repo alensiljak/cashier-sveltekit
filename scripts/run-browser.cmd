@@ -1,2 +1,2 @@
 :: Create a shortcut `vivaldi.cmd` that runs Vivaldi on your machine.
-vivaldi --remote-debugging-port=9222
+C:\Users\alens\AppData\Local\Vivaldi\Application\vivaldi.exe --remote-debugging-port=9222

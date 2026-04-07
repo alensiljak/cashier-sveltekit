@@ -14,11 +14,11 @@
 
 	Notifier.init();
 
+	let syncAll = $state(false);
 	let syncAccounts = $state(false);
 	let syncAaValues = $state(false);
 	let syncAssetAllocation = $state(false);
 	let syncPayees = $state(false);
-	let syncInfrastructureFiles = $state(false);
 	let syncOpeningBalances = $state(false);
 
 	let rotationClass = $state('');
@@ -39,7 +39,6 @@
 		syncAaValues = (await settings.get(SettingKeys.syncAaValues)) ?? false;
 		syncAssetAllocation = (await settings.get(SettingKeys.syncAssetAllocation)) ?? false;
 		syncPayees = (await settings.get(SettingKeys.syncPayees)) ?? false;
-		syncInfrastructureFiles = (await settings.get(SettingKeys.syncInfrastructureFiles)) ?? false;
 		syncOpeningBalances = (await settings.get(SettingKeys.syncOpeningBalances)) ?? false;
 	}
 
@@ -136,16 +135,15 @@
 		await settings.set(SettingKeys.syncAaValues, syncAaValues);
 		await settings.set(SettingKeys.syncAssetAllocation, syncAssetAllocation);
 		await settings.set(SettingKeys.syncPayees, syncPayees);
-		await settings.set(SettingKeys.syncInfrastructureFiles, syncInfrastructureFiles);
 	}
 
 	function toggleAllCheckboxes(checked: boolean) {
+		syncAll = checked;
 		syncAccounts = checked;
 		syncAaValues = checked;
 		syncAssetAllocation = checked;
 		syncPayees = checked;
 		syncOpeningBalances = checked;
-		syncInfrastructureFiles = checked;
 
 		saveSettings();
 	}
@@ -178,7 +176,7 @@
 					<input
 						class="checkbox checkbox-primary rounded"
 						type="checkbox"
-						bind:checked={syncInfrastructureFiles}
+						bind:checked={syncAll}
 						onchange={(e) => toggleAllCheckboxes(e.target?.checked)}
 					/>
 				</th>
