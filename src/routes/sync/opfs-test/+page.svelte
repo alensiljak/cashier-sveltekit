@@ -301,9 +301,9 @@ The performance should be significantly better than reading from the File System
 		}
 	}
 
-    function onOpfsClick() {
-        goto('/demo/opfs');
-    }
+	function onOpfsClick() {
+		goto('/demo/opfs');
+	}
 </script>
 
 <main class="flex flex-col flex-1">
@@ -313,160 +313,163 @@ The performance should be significantly better than reading from the File System
 		{/snippet}
 	</Toolbar>
 
-	<div class="p-4 flex flex-col gap-6 max-w-4xl">
-		<h1 class="text-xl font-semibold">OPFS Load Test</h1>
-		<p class="text-sm text-base-content/60">
-			Hypothesis: parsing the full ledger from OPFS is faster than from the File System API.
-		</p>
-
-		<!-- Step 1: Copy files -->
-		<section class="card bg-base-200 p-4 flex flex-col gap-3">
-			<h2 class="font-semibold">Step 1 — Copy .bean files to OPFS</h2>
+	<div class="flex-1 overflow-y-auto">
+		<div class="p-4 flex flex-col gap-6 max-w-4xl">
+			<h1 class="text-xl font-semibold">OPFS Load Test</h1>
 			<p class="text-sm text-base-content/60">
-				Reads all <code>.bean</code> files recursively from the selected filesystem directory and copies
-				them into OPFS, preserving folder structure.
+				Hypothesis: parsing the full ledger from OPFS is faster than from the File System API.
 			</p>
-			<div class="flex gap-2 items-center">
-				<button
-					class="btn btn-primary btn-sm"
-					onclick={copyFilesToOpfs}
-					disabled={phase === 'copying' || phase === 'loading'}
-				>
-					{#if phase === 'copying'}
-						<span class="loading loading-spinner loading-xs"></span> Copying…
-					{:else}
-						Copy files to OPFS
-					{/if}
-				</button>
-				{#if timings.copy !== undefined}
-					<span class="text-sm text-base-content/60">Copy: {timings.copy} ms</span>
-				{/if}
-			</div>
 
-			{#if copyProgress.total > 0 && phase === 'copying'}
-				<progress
-					class="progress progress-primary w-full"
-					value={copyProgress.done}
-					max={copyProgress.total}
-				></progress>
-			{/if}
-
-			{#if statusMsg && (phase === 'copying' || phase === 'copied')}
-				<p class="text-sm">{statusMsg}</p>
-			{/if}
-		</section>
-
-		<!-- Step 2: Load ledger -->
-		<section class="card bg-base-200 p-4 flex flex-col gap-3">
-			<h2 class="font-semibold">Step 2 — Load Ledger from OPFS</h2>
-			<p class="text-sm text-base-content/60">
-				Creates a multi-file Ledger instance from the OPFS files. Entry point is taken from the <code
-					>externalBook</code
-				> setting.
-			</p>
-			<div class="flex gap-2 items-center flex-wrap">
-				<button
-					class="btn btn-secondary btn-sm"
-					onclick={loadLedger}
-					disabled={phase === 'copying' || phase === 'loading'}
-				>
-					{#if phase === 'loading'}
-						<span class="loading loading-spinner loading-xs"></span> Loading…
-					{:else}
-						Load Ledger
-					{/if}
-				</button>
-				{#if timings.load !== undefined}
-					<span class="text-sm text-base-content/60">Load: {timings.load} ms</span>
-				{/if}
-				{#if directiveCount > 0}
-					<span class="badge badge-ghost">{directiveCount.toLocaleString()} directives</span>
-				{/if}
-			</div>
-
-			{#if statusMsg && (phase === 'loading' || phase === 'loaded')}
-				<p class="text-sm">{statusMsg}</p>
-			{/if}
-
-			{#if timings.copy !== undefined && timings.load !== undefined}
-				<div class="stats stats-horizontal bg-base-100 shadow text-sm mt-1">
-					<div class="stat py-2 px-4">
-						<div class="stat-title text-xs">Files copied</div>
-						<div class="stat-value text-base">{copyProgress.done}</div>
-						<div class="stat-desc">{timings.copy} ms</div>
-					</div>
-					<div class="stat py-2 px-4">
-						<div class="stat-title text-xs">Directives parsed</div>
-						<div class="stat-value text-base">{directiveCount.toLocaleString()}</div>
-						<div class="stat-desc">{timings.load} ms total (read + parse)</div>
-					</div>
-				</div>
-			{/if}
-		</section>
-
-		<!-- Error -->
-		{#if phase === 'error' && errorMsg}
-			<div class="alert alert-error text-sm">
-				<span>{errorMsg}</span>
-			</div>
-		{/if}
-
-		<!-- Step 3: Query panel -->
-		{#if phase === 'loaded' && ledger}
+			<!-- Step 1: Copy files -->
 			<section class="card bg-base-200 p-4 flex flex-col gap-3">
-				<h2 class="font-semibold">Step 3 — Run BQL Query</h2>
-				<textarea
-					class="textarea textarea-bordered w-full font-mono text-sm h-24"
-					placeholder="Enter BQL query…"
-					bind:value={bql}
-					onkeydown={(e) => e.key === 'Enter' && e.ctrlKey && runQuery()}
-				></textarea>
+				<h2 class="font-semibold">Step 1 — Copy .bean files to OPFS</h2>
+				<p class="text-sm text-base-content/60">
+					Reads all <code>.bean</code> files recursively from the selected filesystem directory and copies
+					them into OPFS, preserving folder structure.
+				</p>
 				<div class="flex gap-2 items-center">
-					<button class="btn btn-primary btn-sm" onclick={runQuery} disabled={queryRunning}>
-						{#if queryRunning}
-							<span class="loading loading-spinner loading-xs"></span> Running…
+					<button
+						class="btn btn-primary btn-sm"
+						onclick={copyFilesToOpfs}
+						disabled={phase === 'copying' || phase === 'loading'}
+					>
+						{#if phase === 'copying'}
+							<span class="loading loading-spinner loading-xs"></span> Copying…
 						{:else}
-							Run (Ctrl+Enter)
+							Copy files to OPFS
 						{/if}
 					</button>
-					{#if queryResult}
-						<span class="text-sm text-base-content/60">{queryResult.rows.length} rows</span>
+					{#if timings.copy !== undefined}
+						<span class="text-sm text-base-content/60">Copy: {timings.copy} ms</span>
 					{/if}
 				</div>
 
-				{#if queryResult}
-					{#if queryResult.errors.length > 0}
-						<div class="border border-error rounded bg-error/10 p-3 text-sm text-error font-mono">
-							{#each queryResult.errors as err}
-								<div>{err.message}</div>
-							{/each}
-						</div>
-					{/if}
-					{#if queryResult.columns.length > 0}
-						<div class="overflow-x-auto">
-							<table class="table table-sm table-zebra w-full">
-								<thead>
-									<tr>
-										{#each queryResult.columns as col}
-											<th>{col}</th>
-										{/each}
-									</tr>
-								</thead>
-								<tbody>
-									{#each queryResult.rows as row}
-										<tr>
-											{#each queryResult.columns as _col, i}
-												<td class="font-mono text-xs whitespace-pre-wrap">{formatCell(row[i])}</td>
-											{/each}
-										</tr>
-									{/each}
-								</tbody>
-							</table>
-						</div>
-					{/if}
+				{#if copyProgress.total > 0 && phase === 'copying'}
+					<progress
+						class="progress progress-primary w-full"
+						value={copyProgress.done}
+						max={copyProgress.total}
+					></progress>
+				{/if}
+
+				{#if statusMsg && (phase === 'copying' || phase === 'copied')}
+					<p class="text-sm">{statusMsg}</p>
 				{/if}
 			</section>
-		{/if}
+
+			<!-- Step 2: Load ledger -->
+			<section class="card bg-base-200 p-4 flex flex-col gap-3">
+				<h2 class="font-semibold">Step 2 — Load Ledger from OPFS</h2>
+				<p class="text-sm text-base-content/60">
+					Creates a multi-file Ledger instance from the OPFS files. Entry point is taken from the <code
+						>externalBook</code
+					> setting.
+				</p>
+				<div class="flex gap-2 items-center flex-wrap">
+					<button
+						class="btn btn-secondary btn-sm"
+						onclick={loadLedger}
+						disabled={phase === 'copying' || phase === 'loading'}
+					>
+						{#if phase === 'loading'}
+							<span class="loading loading-spinner loading-xs"></span> Loading…
+						{:else}
+							Load Ledger
+						{/if}
+					</button>
+					{#if timings.load !== undefined}
+						<span class="text-sm text-base-content/60">Load: {timings.load} ms</span>
+					{/if}
+					{#if directiveCount > 0}
+						<span class="badge badge-ghost">{directiveCount.toLocaleString()} directives</span>
+					{/if}
+				</div>
+
+				{#if statusMsg && (phase === 'loading' || phase === 'loaded')}
+					<p class="text-sm">{statusMsg}</p>
+				{/if}
+
+				{#if timings.copy !== undefined && timings.load !== undefined}
+					<div class="stats stats-horizontal bg-base-100 shadow text-sm mt-1">
+						<div class="stat py-2 px-4">
+							<div class="stat-title text-xs">Files copied</div>
+							<div class="stat-value text-base">{copyProgress.done}</div>
+							<div class="stat-desc">{timings.copy} ms</div>
+						</div>
+						<div class="stat py-2 px-4">
+							<div class="stat-title text-xs">Directives parsed</div>
+							<div class="stat-value text-base">{directiveCount.toLocaleString()}</div>
+							<div class="stat-desc">{timings.load} ms total (read + parse)</div>
+						</div>
+					</div>
+				{/if}
+			</section>
+
+			<!-- Error -->
+			{#if phase === 'error' && errorMsg}
+				<div class="alert alert-error text-sm">
+					<span>{errorMsg}</span>
+				</div>
+			{/if}
+
+			<!-- Step 3: Query panel -->
+			{#if phase === 'loaded' && ledger}
+				<section class="card bg-base-200 p-4 flex flex-col gap-3">
+					<h2 class="font-semibold">Step 3 — Run BQL Query</h2>
+					<textarea
+						class="textarea textarea-bordered w-full font-mono text-sm h-24"
+						placeholder="Enter BQL query…"
+						bind:value={bql}
+						onkeydown={(e) => e.key === 'Enter' && e.ctrlKey && runQuery()}
+					></textarea>
+					<div class="flex gap-2 items-center">
+						<button class="btn btn-primary btn-sm" onclick={runQuery} disabled={queryRunning}>
+							{#if queryRunning}
+								<span class="loading loading-spinner loading-xs"></span> Running…
+							{:else}
+								Run (Ctrl+Enter)
+							{/if}
+						</button>
+						{#if queryResult}
+							<span class="text-sm text-base-content/60">{queryResult.rows.length} rows</span>
+						{/if}
+					</div>
+
+					{#if queryResult}
+						{#if queryResult.errors.length > 0}
+							<div class="border border-error rounded bg-error/10 p-3 text-sm text-error font-mono">
+								{#each queryResult.errors as err}
+									<div>{err.message}</div>
+								{/each}
+							</div>
+						{/if}
+						{#if queryResult.columns.length > 0}
+							<div class="overflow-x-auto">
+								<table class="table table-sm table-zebra w-full">
+									<thead>
+										<tr>
+											{#each queryResult.columns as col}
+												<th>{col}</th>
+											{/each}
+										</tr>
+									</thead>
+									<tbody>
+										{#each queryResult.rows as row}
+											<tr>
+												{#each queryResult.columns as _col, i}
+													<td class="font-mono text-xs whitespace-pre-wrap">{formatCell(row[i])}</td
+													>
+												{/each}
+											</tr>
+										{/each}
+									</tbody>
+								</table>
+							</div>
+						{/if}
+					{/if}
+				</section>
+			{/if}
+		</div>
 	</div>
 </main>
 
