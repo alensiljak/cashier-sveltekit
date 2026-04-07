@@ -45,11 +45,15 @@ async function openWrite(filename: string, create: boolean = true) {
 async function getHandle(filename: string, create: boolean = false) {
 	try {
 		const root = await navigator.storage.getDirectory();
-		const fileHandle = await root.getFileHandle(filename, {
-			create: create
-		});
+		const parts = filename.split('/');
+		const name = parts.pop()!;
 
-		return fileHandle;
+		let dir: FileSystemDirectoryHandle = root;
+		for (const part of parts) {
+			dir = await dir.getDirectoryHandle(part, { create });
+		}
+
+		return await dir.getFileHandle(name, { create });
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	} catch (error: any) {
 		if (error.name === 'NotFoundError') {
@@ -173,7 +177,15 @@ export async function getFileMetadata(filename: string): Promise<FileMetadata | 
 export async function deleteFile(filename: string): Promise<boolean> {
 	try {
 		const root = await navigator.storage.getDirectory();
-		await root.removeEntry(filename, { recursive: false });
+		const parts = filename.split('/');
+		const name = parts.pop()!;
+
+		let dir: FileSystemDirectoryHandle = root;
+		for (const part of parts) {
+			dir = await dir.getDirectoryHandle(part);
+		}
+
+		await dir.removeEntry(name, { recursive: false });
 		return true;
 	} catch (error) {
 		console.error('Error deleting file:', error);
