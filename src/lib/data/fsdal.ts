@@ -3,7 +3,7 @@
  * All data is loaded from the filesystem and provided by BQL queries from Rust Ledger WASM.
  */
 
-import fullLedgerService from "$lib/services/fullLedgerService";
+import localLedgerService from "$lib/services/localLedgerService";
 import Notifier from "$lib/utils/notifier";
 import type { DAL } from "./dal";
 import db from "./db";
@@ -14,12 +14,12 @@ export default class FSDAL implements DAL {
 
     static async create(): Promise<FSDAL> {
         const dal = new FSDAL();
-        await fullLedgerService.ensureLoaded();
+        await localLedgerService.ensureLoaded();
         return dal;
     }
 
     async loadAccounts() {
-        const result = fullLedgerService.query(
+        const result = localLedgerService.query(
             'SELECT * FROM accounts ORDER BY account');
         if (result.errors.length > 0) {
             console.error('Error loading accounts:', result.errors);
@@ -39,7 +39,7 @@ export default class FSDAL implements DAL {
     }
 
     // async loadPayees(): Promise<Payee[]> {
-    //     const result = fullLedgerService.query(
+    //     const result = localLedgerService.query(
     //         'SELECT DISTINCT payee FROM transactions ORDER BY payee');
     //     if (result.errors.length > 0) {
     //         console.error('Error loading payees:', result.errors);

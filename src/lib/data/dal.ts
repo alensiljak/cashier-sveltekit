@@ -15,6 +15,9 @@ export interface DAL {
 
 export async function createDAL(): Promise<DAL> {
     const dataSource = await settings.get(SettingKeys.ledgerDataSource) as string;
+    if (!dataSource) {
+        throw new Error('Ledger data source not configured');
+    }
 
     switch (dataSource) {
         case LedgerDataSource.filesystem:

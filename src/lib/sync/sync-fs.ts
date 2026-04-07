@@ -60,7 +60,7 @@ async function loadPersistedHandle(): Promise<FileSystemDirectoryHandle | null> 
 	}
 }
 
-async function readMainBeancountFile(): Promise<{
+async function readExternalBeancountFile(): Promise<{
 	fileName: string;
 	content: string;
 	dirHandle: FileSystemDirectoryHandle;
@@ -91,6 +91,18 @@ async function readMainBeancountFile(): Promise<{
 	const content = await file.text();
 
 	return { fileName, content, dirHandle };
+}
+
+async function readLocalBeancountFile(): Promise<{
+	fileName: string;
+	content: string;
+	dirHandle: FileSystemDirectoryHandle;
+}> {
+	const mainFileName = LedgerFilenames.book;
+
+	const content = await file.text();
+
+	return { fileName: mainFileName, content, dirHandle: null as any };
 }
 
 function parseIncludeFilenames(content: string): string[] {
@@ -150,7 +162,7 @@ export async function loadFileMap(): Promise<{
 	mainFileName: string;
 	dirHandle: FileSystemDirectoryHandle;
 }> {
-	const { fileName: mainFileName, content: mainContent, dirHandle } = await readMainBeancountFile();
+	const { fileName: mainFileName, content: mainContent, dirHandle } = await readExternalBeancountFile();
 
 	const fileMap: Record<string, string> = {};
 	await collectAllFiles(dirHandle, mainFileName, mainContent, fileMap);
