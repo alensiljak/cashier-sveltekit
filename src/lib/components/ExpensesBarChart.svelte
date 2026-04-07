@@ -37,6 +37,28 @@
 		const ctx = canvas.getContext('2d');
 		if (!ctx) return;
 
+		// Draw account name labels on top of the bars (afterDraw = after bars are painted).
+		const yLabelsPlugin = {
+			id: 'yLabels',
+			afterDraw(ch: Chart) {
+				const yScale = ch.scales['y'];
+				const c = ch.ctx;
+				const size = Chart.defaults.font.size ?? 12;
+				const family = Chart.defaults.font.family ?? 'sans-serif';
+				c.save();
+				c.fillStyle = '#f5f0e8';
+				c.font = `${size}px ${family}`;
+				c.textBaseline = 'middle';
+				c.textAlign = 'left';
+				plainLabels.forEach((label, i) => {
+					const y = yScale.getPixelForValue(i);
+					const text = label.length > 40 ? label.slice(0, 37) + '…' : label;
+					c.fillText(text, 6, y);
+				});
+				c.restore();
+			}
+		};
+
 		chart = new Chart(ctx, {
 			type: 'bar',
 			data: {
@@ -50,6 +72,7 @@
 					}
 				]
 			},
+			plugins: [yLabelsPlugin],
 			options: {
 				indexAxis: 'y',
 				responsive: true,
@@ -87,19 +110,10 @@
 					x: { beginAtZero: true },
 					y: {
 						afterFit(scale) {
-							// Collapse the left label column so bars use the full width
+							// Collapse the left label column — labels are drawn by the plugin
 							scale.width = 0;
 						},
-						ticks: {
-							mirror: true,   // draw labels inside the chart area, over the bars
-							padding: 6,
-							color: '#f5f0e8',
-							// Trim long account names to keep bars readable
-							callback: function (val) {
-								const label = this.getLabelForValue(val as number);
-								return label.length > 40 ? label.slice(0, 37) + '…' : label;
-							}
-						}
+						ticks: { display: false }
 					}
 				}
 			}
