@@ -26,7 +26,6 @@ export class OPFSBackend implements StorageBackend {
 		const root = await navigator.storage.getDirectory();
 		const files: string[] = [];
 
-		// @ts-expect-error - FileSystemDirectoryHandle.entries() is part of the File System Access API
 		for await (const [name, handle] of root.entries()) {
 			if (handle.kind === 'file') {
 				files.push(name);
@@ -50,7 +49,13 @@ export class OPFSBackend implements StorageBackend {
 	): Promise<FileSystemFileHandle | undefined> {
 		try {
 			const root = await navigator.storage.getDirectory();
-			return await root.getFileHandle(filename, { create });
+			const parts = filename.split('/');
+			const filePart = parts.pop()!;
+			let dir: FileSystemDirectoryHandle = root;
+			for (const segment of parts) {
+				dir = await dir.getDirectoryHandle(segment, { create });
+			}
+			return await dir.getFileHandle(filePart, { create });
 		} catch (error: any) {
 			if (error.name === 'NotFoundError') return undefined;
 			console.error('OPFS error:', error);

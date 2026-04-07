@@ -13,6 +13,7 @@ import { listFileTree } from '$lib/utils/opfslib';
 import { LedgerFilenames } from '$lib/enums';
 import { OPFSBackend } from '$lib/storage';
 import type { Ledger, QueryResult, BeancountError, Directive } from '@rustledger/wasm';
+import { SettingKeys, settings } from '$lib/settings';
 
 class FullLedgerService {
 	private ledger: Ledger | null = null;
@@ -37,7 +38,8 @@ class FullLedgerService {
 			})
 		);
 
-		return { fileMap, mainFileName: LedgerFilenames.book };
+		const mainFileName = await settings.get(SettingKeys.bookFilename) as string || LedgerFilenames.book;
+		return { fileMap, mainFileName };
 	}
 
 	/** Load file map from the filesystem, parse once, cache the Ledger. */
