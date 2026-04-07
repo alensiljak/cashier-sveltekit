@@ -98,9 +98,9 @@ async function readLocalBeancountFile(): Promise<{
 	content: string;
 	dirHandle: FileSystemDirectoryHandle;
 }> {
-	const mainFileName = LedgerFilenames.book;
+	const mainFileName = await settings.get(SettingKeys.externalBook) as string;
 
-	throw new Error('Local file loading not implemented yet. Please use external file sync for now.');
+	console.log('Reading local file:', mainFileName);
 	
 	const content = await file.text();
 
@@ -312,7 +312,7 @@ async function syncAccountBalances(
  */
 async function saveOpeningBalances(record: string) {
 	const opfs = new OPFSBackend();
-	const filename = 'opening-balances.bean';
+	const filename = LedgerFilenames.openingBalances;
 
 	await opfs.writeFile(filename, record);
 }

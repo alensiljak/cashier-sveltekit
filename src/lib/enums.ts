@@ -20,10 +20,10 @@ export enum LedgerDataSource {
 
 export enum LedgerFilenames {
 	asset_allocation = 'asset-allocation.toml',
-	accounts = 'accounts.bean',
-	book = 'book.bean',
-	cashier = 'cashier.bean',
-	openingBalances = 'opening-balances.bean'
+	accounts = 'cashier-accounts.bean',
+	book = 'cashier-book.bean',
+	cashier = 'cashier-xacts.bean',
+	openingBalances = 'cashier-opening-balances.bean'
 }
 
 export const RecurrencePeriods = {
