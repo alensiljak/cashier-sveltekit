@@ -100,6 +100,8 @@ async function readLocalBeancountFile(): Promise<{
 }> {
 	const mainFileName = LedgerFilenames.book;
 
+	throw new Error('Local file loading not implemented yet. Please use external file sync for now.');
+	
 	const content = await file.text();
 
 	return { fileName: mainFileName, content, dirHandle: null as any };
@@ -175,7 +177,7 @@ export async function loadLocalFileMap(): Promise<{
 	mainFileName: string;
 	dirHandle: null;
 }> {
-	const { fileName: mainFileName, content: mainContent, dirHandle } = await readLocalBeancountFile();
+	const { fileName: mainFileName, content: mainContent } = await readLocalBeancountFile();
 
 	const fileMap: Record<string, string> = {};
 	await collectAllFiles(null as any, mainFileName, mainContent, fileMap);
@@ -233,7 +235,7 @@ async function synchronize(syncOptions: syncCommon.SyncSteps): Promise<boolean> 
 		// - payees
 		if (syncOptions.syncPayees) {
 			updateSyncStep(5, 'in-progress');
-			await syncPayeesFromFs(queries);
+			await syncPayees(queries);
 			updateSyncStep(5, 'completed');
 		}
 
@@ -411,11 +413,11 @@ async function syncCurrentValues(
 	await aa.importCurrentValues(currentValues);
 }
 
-async function syncPayeesFromFs(
+async function syncPayees(
 	queries: ReturnType<typeof getQueries>
 ) {
-	const from = moment().subtract(20, 'years').format(ISODATEFORMAT);
-	const payeesQuery = queries.payees(from);
+	// const from = moment().subtract(20, 'years').format(ISODATEFORMAT);
+	const payeesQuery = queries.payees();
 
 	const payeesResult = fullLedgerService.query(payeesQuery);
 

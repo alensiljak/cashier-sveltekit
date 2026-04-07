@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { tick } from 'svelte';
+	import { tick, onMount } from 'svelte';
+	import { page } from '$app/state';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import AccordionSection from '$lib/components/AccordionSection.svelte';
 	import fullLedgerService from '$lib/services/fullLedgerService';
@@ -18,6 +19,20 @@
 	// Filter state
 	let dateFrom = $state('');
 	let dateTo = $state('');
+
+	onMount(() => {
+		const params = page.url.searchParams;
+		const paramAccount = params.get('account');
+		const paramDateFrom = params.get('dateFrom');
+		const paramDateTo = params.get('dateTo');
+		if (paramAccount || paramDateFrom || paramDateTo) {
+			if (paramAccount) account = paramAccount;
+			if (paramDateFrom) dateFrom = paramDateFrom;
+			if (paramDateTo) dateTo = paramDateTo;
+			filtersExpanded = false;
+			search();
+		}
+	});
 	let payeeNarration = $state('');
 	let account = $state('');
 	let amountOp = $state<'>' | '<' | '='>('=');
@@ -100,6 +115,15 @@ ${where} ORDER BY date DESC`;
 
 	// Index of 'number' column for colour coding
 	let numberColIdx = $derived(columns.indexOf('number'));
+
+	// Detect which columns are numeric based on the first row
+	let numericCols = $derived(
+		columns.map((_col, i) => {
+			if (rows.length === 0) return false;
+			const val = rows[0][i];
+			return typeof val === 'number' || (typeof val === 'string' && val !== '' && !isNaN(Number(val)));
+		})
+	);
 </script>
 
 <article class="flex h-screen flex-col" class:cursor-wait={isLoading}>
@@ -238,8 +262,8 @@ ${where} ORDER BY date DESC`;
 				<table class="table table-xs table-zebra w-full">
 					<thead>
 						<tr>
-							{#each columns as col}
-								<th>{col}</th>
+							{#each columns as col, i}
+								<th class:text-right={numericCols[i]}>{col}</th>
 							{/each}
 						</tr>
 					</thead>
@@ -249,6 +273,7 @@ ${where} ORDER BY date DESC`;
 								{#each columns as _col, i}
 									<td
 										class="font-mono whitespace-nowrap"
+										class:text-right={numericCols[i]}
 										class:text-red-400={i === numberColIdx && parseFloat(row[i]) < 0}
 										class:text-green-500={i === numberColIdx && parseFloat(row[i]) > 0}
 									>

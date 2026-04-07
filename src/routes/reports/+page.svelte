@@ -58,7 +58,9 @@
 				<a href="/reports/tx-search" class="btn btn-primary">
                     Transaction Search
                 </a>
-				<button class="btn btn-primary" disabled>Monthly Expenditure</button>
+				<a href="/reports/expenses" class="btn btn-primary">
+                    Expenses
+                </a>
 			</div>
 		</div>
 	</div>

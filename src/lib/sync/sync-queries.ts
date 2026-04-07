@@ -10,7 +10,7 @@ export interface Queries {
 	balances(): string;
 	currentValues(rootAccount: string, currency: string): string;
 	lots(symbol: string): string;
-	payees(from: string): string;
+	payees(from?: string): string;
 	incomeBalance(symbol: string, yieldFrom: string, currency: string): string;
 	gainLoss(symbol: string, currency: string): string;
 	valueBalance(symbol: string, currency: string): string;
@@ -95,9 +95,8 @@ const RustledgerQueries: Queries = {
         ORDER BY account`,
 	// HAVING NOT empty(sum(position))
 	lots: (_symbol: string) => 'balances',
-	payees: (from: string) =>
-		`SELECT DISTINCT COALESCE(payee, narration) as payee FROM transactions \
-         WHERE date >= ${from} ORDER BY payee`,
+	payees: () =>
+		`SELECT DISTINCT COALESCE(payee, narration) as payee FROM transactions ORDER BY payee`,
 	/**
 	 * Income balance for symbol
 	 * @returns Income from the security.

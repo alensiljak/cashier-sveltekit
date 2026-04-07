@@ -2,7 +2,6 @@
 
 ## General
 
-- [ ] transaction search by account, date range, payee, amount, etc.
 - [ ] research storing the configuration in OPFS, as a TOML file
 - [ ] setting for the cut-off date for the payees. Only include payees in transctions made since that date.
 - [ ] savings goals
@@ -32,10 +31,8 @@
 
 ## Reports
 
-- [ ] expenses in a period. Select period.
-- [ ] spending in the last 30 days
 - [ ] net worth (assets - liabilities)
 - [ ] spending trends over time
 - [ ] balance history: running balance over time
 - [ ] balance sheet - monthly, yearly. Income vs expenses summary.
-- [ ] saving reports. Choose parameters and save under a name. Show on home screen.
+- [ ] saving customized reports. Choose parameters and save under a name. Show on home screen.
