@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Toolbar from '$lib/components/Toolbar.svelte';
-	import { RefreshCcwIcon, SaveIcon, FilePlusIcon, TrashIcon, UploadIcon, FolderIcon, FolderOpenIcon, FileIcon } from '@lucide/svelte';
+	import OpfsFilePicker from '$lib/components/OpfsFilePicker.svelte';
+	import { SaveIcon, FilePlusIcon, UploadIcon } from '@lucide/svelte';
 	import { onMount, onDestroy } from 'svelte';
 	import * as OpfsLib from '$lib/utils/opfslib.js';
 	import type { FileTreeEntry } from '$lib/utils/opfslib.js';
@@ -12,12 +13,7 @@
 		e.preventDefault();
 	}
 
-	interface EntryInfo extends FileTreeEntry {
-		expanded?: boolean;
-	}
-
-	let entries = $state<EntryInfo[]>([]);
-	let isLoading = $state(false);
+	let filePicker = $state<ReturnType<typeof OpfsFilePicker> | null>(null);
 	let selectedFile = $state<string | null>(null);
 	let fileContent = $state<string>('');
 	let isContentLoading = $state(false);
@@ -39,7 +35,6 @@
 	onMount(async () => {
 		document.addEventListener('dragover', preventDefaultDrag);
 		document.addEventListener('drop', preventDefaultDrag);
-		await loadFiles();
 	});
 
 	onDestroy(() => {
@@ -47,62 +42,7 @@
 		document.removeEventListener('drop', preventDefaultDrag);
 	});
 
-	async function loadFiles() {
-		isLoading = true;
-		selectedFile = null;
-		fileContent = '';
-		fileMetadata = null;
-		try {
-			const treeEntries = await OpfsLib.listFileTree();
-			entries = treeEntries;
-		} catch (error: any) {
-			console.error('Error loading files:', error);
-			Notifier.error(error.message || 'Failed to load files');
-		} finally {
-			isLoading = false;
-		}
-	}
-
-	async function toggleDirectory(entry: EntryInfo) {
-		// Just toggle the expanded state - the display will filter based on this
-		const idx = entries.findIndex((e) => e.path === entry.path);
-		if (idx === -1) return;
-
-		const newEntries = [...entries];
-		newEntries[idx] = { ...newEntries[idx], expanded: !entry.expanded };
-		entries = newEntries;
-	}
-
-	function isEntryVisible(entry: EntryInfo): boolean {
-		// An entry is visible if all its parent directories are expanded
-		if (entry.depth === 0) return true; // Root level always visible
-
-		const pathParts = entry.path.split('/');
-		for (let i = 1; i < pathParts.length; i++) {
-			const parentPath = pathParts.slice(0, i).join('/');
-			const parent = entries.find((e) => e.path === parentPath);
-			if (!parent || !parent.expanded) {
-				return false;
-			}
-		}
-		return true;
-	}
-
-	function formatFileSize(bytes?: number): string {
-		if (bytes === undefined) return '--';
-		if (bytes === 0) return '0 B';
-		const units = ['B', 'KB', 'MB', 'GB'];
-		const i = Math.floor(Math.log(bytes) / Math.log(1024));
-		return `${(bytes / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
-	}
-
-	async function onEntryClick(entry: EntryInfo) {
-		if (entry.kind === 'directory') {
-			await toggleDirectory(entry);
-			return;
-		}
-
-		selectedFile = entry.path;
+	async function onFileSelect(entry: FileTreeEntry) {
 		isContentLoading = true;
 		fileContent = '';
 		fileMetadata = null;
@@ -150,7 +90,6 @@
 			}
 
 			showDeleteConfirm = false;
-			fileToDelete = null;
 
 			if (selectedFile === fileToDelete) {
 				selectedFile = null;
@@ -159,7 +98,8 @@
 				hasUnsavedChanges = false;
 			}
 
-			await loadFiles();
+			fileToDelete = null;
+			await filePicker?.refresh();
 		} catch (error: any) {
 			Notifier.error(error.message || 'Failed to delete file');
 		} finally {
@@ -169,7 +109,7 @@
 
 	async function saveFile() {
 		if (!selectedFile || !hasUnsavedChanges) return;
-		
+
 		isSaving = true;
 		try {
 			await OpfsLib.saveFile(selectedFile, fileContent);
@@ -190,12 +130,11 @@
 		}
 
 		try {
-			// Create an empty file
 			await OpfsLib.saveFile(newFileName.trim(), '');
 			Notifier.success(`File "${newFileName}" created successfully`);
 			newFileName = '';
 			showNewFileDialog = false;
-			await loadFiles();
+			await filePicker?.refresh();
 		} catch (error: any) {
 			Notifier.error(error.message || 'Failed to create file');
 		}
@@ -238,7 +177,7 @@
 		} else {
 			await OpfsLib.saveFile(file.name, content);
 			Notifier.success(`File "${file.name}" saved to OPFS`);
-			await loadFiles();
+			await filePicker?.refresh();
 		}
 	}
 
@@ -263,7 +202,7 @@
 		await OpfsLib.saveFile(targetName, dropConflictContent);
 		Notifier.success(`File "${targetName}" saved to OPFS`);
 		showDropConflict = false;
-		await loadFiles();
+		await filePicker?.refresh();
 	}
 
 	async function onUploadFileSelected(event: Event) {
@@ -281,33 +220,30 @@
 		} else {
 			await OpfsLib.saveFile(file.name, content);
 			Notifier.success(`File "${file.name}" saved to OPFS`);
-			await loadFiles();
+			await filePicker?.refresh();
 		}
 
-		// Reset input value
 		input.value = '';
 	}
 
 	function onFileContentChange(event: Event) {
 		const target = event.target as HTMLTextAreaElement;
 		fileContent = target.value;
-		if (fileContent !== originalContent) {
-			hasUnsavedChanges = true;
-		} else {
-			hasUnsavedChanges = false;
-		}
+		hasUnsavedChanges = fileContent !== originalContent;
+	}
+
+	function formatFileSize(bytes?: number): string {
+		if (bytes === undefined) return '--';
+		if (bytes === 0) return '0 B';
+		const units = ['B', 'KB', 'MB', 'GB'];
+		const i = Math.floor(Math.log(bytes) / Math.log(1024));
+		return `${(bytes / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
 	}
 </script>
 
 <article>
 	<Toolbar title="OPFS Files">
 		{#snippet menuItems()}
-			<li>
-				<button class="btn btn-sm btn-ghost gap-2" onclick={loadFiles} disabled={isLoading}>
-					<RefreshCcwIcon class="w-5 h-5 {isLoading ? 'animate-spin' : ''}" />
-					<span>Refresh</span>
-				</button>
-			</li>
 			<li>
 				<button class="btn btn-sm btn-ghost gap-2" onclick={openNewFileDialog}>
 					<FilePlusIcon class="w-5 h-5" />
@@ -326,7 +262,8 @@
 	<input type="file" bind:this={fileUploadInput} class="hidden" onchange={onUploadFileSelected} />
 
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<section class="p-4 rounded-lg transition-all duration-200"
+	<section
+		class="p-4 rounded-lg transition-all duration-200"
 		class:border-2={isDragOver}
 		class:border-dashed={isDragOver}
 		class:border-primary={isDragOver}
@@ -339,65 +276,15 @@
 			<div class="flex justify-center items-center p-8 text-primary font-semibold">
 				Drop file here to save to OPFS
 			</div>
-		{:else if isLoading}
-			<div class="flex justify-center items-center p-8">
-				<span class="loading loading-spinner loading-lg"></span>
-			</div>
-		{:else if entries.length === 0}
-			<div class="alert alert-info">
-				<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-				</svg>
-				<span>No files found in OPFS storage. Drag and drop a text file here to add one.</span>
-			</div>
 		{:else}
 			<div class="mb-4 overflow-x-auto overflow-y-auto" style="height: 400px;">
-				<table class="table table-zebra table-sm">
-					<thead>
-						<tr>
-							<th>Name</th>
-							<th>Size</th>
-							<th class="text-center">Actions</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each entries as entry}
-							{#if isEntryVisible(entry)}
-								<tr
-									class="cursor-pointer hover"
-									class:bg-secondary={selectedFile === entry.path}
-									onclick={() => onEntryClick(entry)}
-								>
-									<td class="font-mono text-sm">
-										<span
-											class="flex items-center gap-1"
-											style="padding-left: {entry.depth * 1.25}rem"
-										>
-											{#if entry.kind === 'directory'}
-												{#if entry.expanded}
-													<FolderOpenIcon class="w-4 h-4 opacity-60 shrink-0" />
-												{:else}
-													<FolderIcon class="w-4 h-4 opacity-60 shrink-0" />
-												{/if}
-											{:else}
-												<FileIcon class="w-4 h-4 opacity-60 shrink-0" />
-											{/if}
-											{entry.name}
-										</span>
-									</td>
-									<td class="text-sm">{entry.kind === 'file' ? formatFileSize(entry.size) : '--'}</td>
-									<td class="text-right" onclick={(e) => e.stopPropagation()}>
-										{#if entry.kind === 'file'}
-											<button class="btn btn-sm btn-error btn-outline gap-2" onclick={() => confirmDelete(entry.path)}>
-												<TrashIcon class="w-4 h-4" />
-											</button>
-										{/if}
-									</td>
-								</tr>
-							{/if}
-						{/each}
-					</tbody>
-				</table>
+				<OpfsFilePicker
+					bind:this={filePicker}
+					bind:selectedFile
+					showDeleteButtons
+					onfileselect={onFileSelect}
+					ondeleteclick={confirmDelete}
+				/>
 			</div>
 
 			{#if selectedFile}
@@ -405,7 +292,11 @@
 					<div class="flex items-center justify-between mb-2">
 						<h3 class="text-lg font-semibold">Content of: {selectedFile}</h3>
 						<div class="flex items-center gap-2">
-							<button class="btn btn-sm btn-primary" onclick={saveFile} disabled={isSaving || !hasUnsavedChanges}>
+							<button
+								class="btn btn-sm btn-primary"
+								onclick={saveFile}
+								disabled={isSaving || !hasUnsavedChanges}
+							>
 								<SaveIcon class="w-4 h-4" />
 								{isSaving ? 'Saving...' : 'Save'}
 							</button>
@@ -428,7 +319,9 @@
 							<span class="loading loading-spinner loading-md"></span>
 						</div>
 					{:else}
-						<textarea class="textarea textarea-bordered w-full font-mono text-sm" rows="20"
+						<textarea
+							class="textarea textarea-bordered w-full font-mono text-sm"
+							rows="20"
 							oninput={onFileContentChange}>{fileContent}</textarea>
 					{/if}
 				</div>
@@ -443,7 +336,9 @@
 				<h3 class="font-bold text-lg">Confirm Deletion</h3>
 				<p>Are you sure you want to delete "{fileToDelete}"?</p>
 				<div class="modal-action">
-					<button class="btn" onclick={() => showDeleteConfirm = false} disabled={isDeleting}>Cancel</button>
+					<button class="btn" onclick={() => (showDeleteConfirm = false)} disabled={isDeleting}
+						>Cancel</button
+					>
 					<button class="btn btn-error" onclick={deleteFile} disabled={isDeleting}>
 						{isDeleting ? 'Deleting...' : 'Delete'}
 					</button>
@@ -461,15 +356,16 @@
 					<label for="newFileNameInput" class="label">
 						<span class="label-text">Filename</span>
 					</label>
-					<input id="newFileNameInput" type="text"
+					<input
+						id="newFileNameInput"
+						type="text"
 						class="input input-bordered w-full"
 						placeholder="Enter filename..."
 						bind:value={newFileName}
 						onkeydown={(e) => {
-							if (e.key === 'Enter') {
-								createNewFile();
-							}
-						}} />
+							if (e.key === 'Enter') createNewFile();
+						}}
+					/>
 				</div>
 				<div class="modal-action">
 					<button class="btn" onclick={closeNewFileDialog}>Cancel</button>

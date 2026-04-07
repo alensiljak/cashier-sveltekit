@@ -12,10 +12,6 @@
 	import { BoxIcon, Check } from '@lucide/svelte';
 	import Fab from '$lib/components/FAB.svelte';
 
-	type FileChangeDetails = {
-		acceptedFiles: File[];
-	};
-
 	Notifier.init();
 
 	let rememberLastTransaction = $state<boolean>();
@@ -43,10 +39,10 @@
 	function onConfigureClick() {
 		switch (configSource) {
 			case LedgerDataSource.filesystem:
-				goto('/sync/filesystem');
+				goto('/settings/filesystem');
 				break;
 			case LedgerDataSource.beancount:
-				goto('/sync/beancount');
+				goto('/settings/beancount');
 				break;
 			case LedgerDataSource.rledger:
 				Notifier.warning('Configure Cashier Server (Rust Ledger) - Not implemented yet.');
