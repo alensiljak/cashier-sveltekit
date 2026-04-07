@@ -79,23 +79,19 @@
 				maintainAspectRatio: false,
 				onClick: onclick
 					? (event, elements) => {
+							// Allow tapping anywhere in a row (label, bar, or empty space
+							// beyond a short bar) — derive the row from the y-coordinate.
+							let index: number;
 							if (elements.length > 0) {
-								const account = plainLabels[elements[0].index];
-								if (account) onclick(account);
-								return;
-							}
-							// Also handle clicks/taps on y-axis tick labels.
-							// Use Chart.js normalised event.x/y so this works on both
-							// mouse (offsetX/Y) and touch events.
-							const yScale = chart?.scales['y'];
-							if (!yScale || event.x == null || event.y == null) return;
-							if (event.x <= yScale.right) {
+								index = elements[0].index;
+							} else {
+								const yScale = chart?.scales['y'];
+								if (!yScale || event.y == null) return;
 								const idx = yScale.getValueForPixel(event.y);
-								if (idx !== undefined) {
-									const i = Math.round(idx as number);
-									if (i >= 0 && i < plainLabels.length) onclick(plainLabels[i]);
-								}
+								if (idx === undefined) return;
+								index = Math.round(idx as number);
 							}
+							if (index >= 0 && index < plainLabels.length) onclick(plainLabels[index]);
 						}
 					: undefined,
 				plugins: {
