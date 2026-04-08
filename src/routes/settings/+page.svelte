@@ -1,4 +1,7 @@
 <script lang="ts">
+/*
+	This page is import of book files into OPFS.
+*/
 	import { onMount } from 'svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { SettingKeys, settings } from '$lib/settings';
@@ -201,6 +204,10 @@
 
 	<div class="flex flex-col space-y-4">
 		<h3 class="text-xl font-bold">Ledger Configuration</h3>
+
+		<center class="py-4">
+			<a href="/opfs/import-ledger" class="btn btn-primary">Import Ledger</a>
+		</center>
 
 		<div class="flex items-center gap-4">
 			<div class="flex-1">

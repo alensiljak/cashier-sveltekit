@@ -2,47 +2,9 @@
 	import { onMount } from 'svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { FolderOpenIcon } from '@lucide/svelte';
-
-	// ── IDB persistence for directory handle ─────────────────────────────────────
-	const IDB_NAME = 'cashier-fs-handles';
-	const IDB_STORE = 'handles';
-	const HANDLE_KEY = 'fsSyncDirectoryHandle';
-
-	function openIdb(): Promise<IDBDatabase> {
-		return new Promise((resolve, reject) => {
-			const req = indexedDB.open(IDB_NAME, 1);
-			req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE);
-			req.onsuccess = () => resolve(req.result);
-			req.onerror = () => reject(req.error);
-		});
-	}
-
-	async function persistHandle(handle: FileSystemDirectoryHandle): Promise<void> {
-		const db = await openIdb();
-		return new Promise((resolve, reject) => {
-			const tx = db.transaction(IDB_STORE, 'readwrite');
-			tx.objectStore(IDB_STORE).put(handle, HANDLE_KEY);
-			tx.oncomplete = () => { db.close(); resolve(); };
-			tx.onerror = () => { db.close(); reject(tx.error); };
-		});
-	}
-
-	async function loadPersistedHandle(): Promise<FileSystemDirectoryHandle | null> {
-		try {
-			const db = await openIdb();
-			return new Promise((resolve, reject) => {
-				const tx = db.transaction(IDB_STORE, 'readonly');
-				const req = tx.objectStore(IDB_STORE).get(HANDLE_KEY);
-				req.onsuccess = () => { db.close(); resolve(req.result ?? null); };
-				req.onerror = () => { db.close(); reject(req.error); };
-			});
-		} catch {
-			return null;
-		}
-	}
+	import { settings, SettingKeys } from '$lib/settings';
 
 	// ── Glob matching ─────────────────────────────────────────────────────────────
-	/** Convert a simple glob pattern (e.g. "*.bean") to a RegExp. */
 	function globToRegex(pattern: string): RegExp {
 		const escaped = pattern
 			.trim()
@@ -131,25 +93,13 @@
 	} | null>(null);
 
 	$effect(() => {
-		// scroll console to bottom whenever logLines changes
 		if (logLines.length && consoleEl) {
 			consoleEl.scrollTop = consoleEl.scrollHeight;
 		}
 	});
 
 	onMount(async () => {
-		const stored = await loadPersistedHandle();
-		if (stored) {
-			try {
-				const permission = await (stored as any).requestPermission({ mode: 'read' });
-				if (permission === 'granted') {
-					dirHandle = stored;
-					dirName = stored.name;
-				}
-			} catch {
-				// permission unavailable
-			}
-		}
+		dirName = (await settings.get<string>(SettingKeys.importBookDirectory)) ?? '';
 	});
 
 	async function pickDirectory() {
@@ -157,7 +107,7 @@
 			const handle = await (window as any).showDirectoryPicker({ mode: 'read' });
 			dirHandle = handle;
 			dirName = handle.name;
-			await persistHandle(handle);
+			await settings.set(SettingKeys.importBookDirectory, dirName);
 			phase = 'idle';
 			statusMsg = '';
 			errorMsg = '';
@@ -195,9 +145,6 @@
 		logLines = [];
 
 		try {
-			const permission = await (dirHandle as any).requestPermission({ mode: 'read' });
-			if (permission !== 'granted') throw new Error('Read permission denied for directory.');
-
 			const patterns = parseSpecs(fileSpec);
 			if (patterns.length === 0) throw new Error('No valid file specs provided.');
 
@@ -250,20 +197,15 @@
 		<!-- Directory picker -->
 		<section class="flex flex-col gap-2">
 			<label for="directoryPicker" class="label font-semibold">Source Directory</label>
-			{#if dirHandle}
-				<div class="flex items-center gap-2">
+			<div class="flex items-center gap-2">
+				{#if dirName}
 					<span class="font-mono text-sm bg-base-200 rounded px-3 py-2 flex-1 truncate">{dirName}/</span>
-					<button id="directoryPicker" class="btn btn-sm btn-ghost" onclick={pickDirectory}>
-						<FolderOpenIcon class="w-4 h-4" />
-						Change
-					</button>
-				</div>
-			{:else}
-				<button class="btn btn-primary gap-2 self-start" onclick={pickDirectory}>
+				{/if}
+				<button id="directoryPicker" class="btn btn-primary gap-2" onclick={pickDirectory}>
 					<FolderOpenIcon class="w-5 h-5" />
-					Select Directory
+					{dirName ? 'Change' : 'Select Directory'}
 				</button>
-			{/if}
+			</div>
 		</section>
 
 		<!-- File spec -->
@@ -277,26 +219,26 @@
 				bind:value={fileSpec}
 			/>
 			<p class="text-xs text-base-content/50">
-				Comma-separated glob patterns. Matched files are copied recursively, preserving directory structure.
+				Comma-separated glob patterns. Matched files are copied recursively, preserving directory
+				structure.
 			</p>
 		</section>
 
 		<!-- Import button -->
-		{#if dirHandle}
 		<center class="py-4">
 			<button
-				class="btn btn-accent self-start"
-				disabled={phase === 'copying'}
+				class="btn btn-accent"
+				disabled={phase === 'copying' || !dirHandle}
 				onclick={copyToOpfs}
 			>
 				Import
 			</button>
 		</center>
-		{/if}
 
 		<!-- Progress -->
 		{#if phase === 'copying' && progress.total > 0}
-			<progress class="progress progress-primary w-full" value={progress.done} max={progress.total}></progress>
+			<progress class="progress progress-primary w-full" value={progress.done} max={progress.total}
+			></progress>
 		{/if}
 
 		<!-- Console log -->
@@ -333,11 +275,17 @@
 		<div class="modal-box">
 			<h3 class="font-bold text-lg">File already exists</h3>
 			<p class="py-3 text-sm font-mono break-all">{overwriteDialog.path}</p>
-			<p class="text-sm text-base-content/70">This file already exists in OPFS. What would you like to do?</p>
+			<p class="text-sm text-base-content/70">
+				This file already exists in OPFS. What would you like to do?
+			</p>
 			<div class="modal-action flex gap-2">
 				<button class="btn btn-sm" onclick={() => resolveOverwrite('skip')}>Skip</button>
-				<button class="btn btn-sm btn-warning" onclick={() => resolveOverwrite('overwrite')}>Overwrite</button>
-				<button class="btn btn-sm btn-error" onclick={() => resolveOverwrite('overwriteAll')}>Overwrite All</button>
+				<button class="btn btn-sm btn-warning" onclick={() => resolveOverwrite('overwrite')}
+					>Overwrite</button
+				>
+				<button class="btn btn-sm btn-error" onclick={() => resolveOverwrite('overwriteAll')}
+					>Overwrite All</button
+				>
 			</div>
 		</div>
 		<div class="modal-backdrop" role="presentation" onclick={() => resolveOverwrite('skip')}></div>
