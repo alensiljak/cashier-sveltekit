@@ -65,6 +65,21 @@ async function opfsSaveBinary(filename: string, data: Uint8Array): Promise<void>
 	await stream.close();
 }
 
+async function opfsDeleteFile(filename: string): Promise<void> {
+	try {
+		const root = await navigator.storage.getDirectory();
+		const parts = filename.split('/');
+		const name = parts.pop()!;
+		let dir: FileSystemDirectoryHandle = root;
+		for (const part of parts) {
+			dir = await dir.getDirectoryHandle(part);
+		}
+		await dir.removeEntry(name);
+	} catch {
+		// File doesn't exist — that's fine
+	}
+}
+
 async function opfsListBeanFiles(): Promise<Array<{ path: string; content: string }>> {
 	const root = await navigator.storage.getDirectory();
 	const results: Array<{ path: string; content: string }> = [];
@@ -84,6 +99,20 @@ async function opfsListBeanFiles(): Promise<Array<{ path: string; content: strin
 
 	await walk(root, '');
 	return results;
+}
+
+async function loadFromCacheOrFiles(mainFileName: string): Promise<void> {
+	const bytes = await opfsReadBinary(LEDGER_CACHE_FILE);
+	if (bytes) {
+		try {
+			if (ledger) { ledger.free(); ledger = null; }
+			ledger = wasmModule!.Ledger.fromCache(bytes);
+			return;
+		} catch {
+			// Cache corrupt or version mismatch — fall through to file parse
+		}
+	}
+	await loadFromFiles(mainFileName);
 }
 
 // ---------------------------------------------------------------------------
@@ -107,7 +136,9 @@ export type WorkerRequestPayload =
 	/** Serialize the persistent ledger to the OPFS cache file. */
 	| { type: 'serialize-ledger' }
 	/** Restore the persistent ledger from the OPFS cache file. */
-	| { type: 'load-from-cache' };
+	| { type: 'load-from-cache' }
+	/** Free the in-memory ledger and delete the OPFS cache file. */
+	| { type: 'delete-cache' };
 
 export type WorkerRequest = { id: number } & WorkerRequestPayload;
 
@@ -120,6 +151,7 @@ export type WorkerResponsePayload =
 	| { type: 'reset-done' }
 	| { type: 'serialize-ledger-done'; bytes: number; ms: number }
 	| { type: 'load-from-cache-done'; directiveCount: number; ms: number }
+	| { type: 'delete-cache-done' }
 	| { type: 'error'; message: string };
 
 export type WorkerResponse = { id: number } & WorkerResponsePayload;
@@ -174,7 +206,7 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
 			case 'ensure-loaded': {
 				if (!ledger) {
 					const t0 = performance.now();
-					await loadFromFiles(e.data.mainFileName);
+					await loadFromCacheOrFiles(e.data.mainFileName);
 					const ms = performance.now() - t0;
 					reply({
 						type: 'load-done',
@@ -196,6 +228,12 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
 			case 'invalidate': {
 				const t0 = performance.now();
 				await loadFromFiles(e.data.mainFileName);
+				// Update the cache so future ensure-loaded calls get fresh data
+				try {
+					await opfsSaveBinary(LEDGER_CACHE_FILE, ledger!.serialize());
+				} catch {
+					// Non-fatal — cache update failed but ledger is in memory
+				}
 				const ms = performance.now() - t0;
 				reply({
 					type: 'load-done',
@@ -274,6 +312,16 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
 					directiveCount: ledger.getDirectives().length,
 					ms
 				});
+				break;
+			}
+
+			case 'delete-cache': {
+				if (ledger) {
+					ledger.free();
+					ledger = null;
+				}
+				await opfsDeleteFile(LEDGER_CACHE_FILE);
+				reply({ type: 'delete-cache-done' });
 				break;
 			}
 

@@ -13,6 +13,10 @@
 - [ ] transaction import
 - [ ] price download
 
+## Ledger
+
+- [ ] invalidate the cache when the ledger file changes
+
 ## Onboarding
 
 - [ ] add setting for `onboarded`

@@ -162,6 +162,17 @@ class LedgerWorkerClient {
 		this._isLoaded = false;
 		this._version.update((v) => v + 1);
 	}
+
+	/**
+	 * Free the in-memory ledger and delete the OPFS binary cache.
+	 * Call this whenever source files change so the next ensureLoaded()
+	 * re-parses fresh data instead of serving a stale cache.
+	 */
+	async deleteCache(): Promise<void> {
+		await this.send<'delete-cache-done'>({ type: 'delete-cache' });
+		this._isLoaded = false;
+		this._version.update((v) => v + 1);
+	}
 }
 
 const fullLedgerService = new LedgerWorkerClient();

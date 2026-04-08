@@ -100,6 +100,13 @@
 		await refreshStatus();
 	}
 
+	async function handleDeleteCache() {
+		await fullLedgerService.deleteCache();
+		currentHash = '';
+		status = 'Cache deleted and ledger instance freed.';
+		await refreshStatus();
+	}
+
 	async function loadOpfsFileMap(): Promise<Record<string, string>> {
 		const opfs = new OPFSBackend();
 		const tree = await listFileTree();
@@ -182,6 +189,9 @@
 		</button>
 		<button class="btn btn-outline btn-sm" on:click={handleReset} disabled={isWorking}>
 			Reset instance
+		</button>
+		<button class="btn btn-outline btn-error btn-sm" on:click={handleDeleteCache} disabled={isWorking}>
+			Delete cache
 		</button>
 	</div>
 
