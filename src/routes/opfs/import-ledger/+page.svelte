@@ -230,7 +230,7 @@
 		<!-- Import button -->
 		<center class="py-4">
 			<button
-				class="btn btn-accent"
+				class="btn btn-accent text-secondary"
 				disabled={phase === 'copying' || !dirName}
 				onclick={copyToOpfs}
 			>
