@@ -17,7 +17,7 @@ import { OPFSBackend } from '$lib/storage/opfsBackend';
 import type { AccountFileEntry } from '$lib/data/opfsTypes';
 import { LedgerFilenames } from '$lib/enums';
 
-type QueryFn = (bql: string) => { columns: string[]; rows: any[]; errors: any[] };
+type QueryFn = (bql: string) => Promise<{ columns: string[]; rows: any[]; errors: any[] }>;
 
 export async function createDefaultAccounts() {
 	const accountsList = getDefaultChartOfAccounts();
@@ -184,7 +184,7 @@ export function getShortAccountName(accountName: string): string {
  * @returns Promise with investment accounts collection
  */
 export async function loadInvestmentAccounts(
-	queryFn: QueryFn = (bql) => ledgerService.query(bql)
+	queryFn: QueryFn = async (bql) => ledgerService.query(bql)
 ): Promise<Account[]> {
 	const rootAccount = await settings.get(SettingKeys.rootInvestmentAccount);
 	if (!rootAccount) {
@@ -200,7 +200,7 @@ export async function loadInvestmentAccounts(
 		ORDER BY account`;
 	// HAVING NOT empty(sum(position))
 
-	const result = queryFn(bql);
+	const result = await queryFn(bql);
 	if (result.errors.length > 0) {
 		throw new Error(result.errors.map((e: any) => e.message).join('; '));
 	}

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Toolbar from '$lib/components/Toolbar.svelte';
-	import fullLedgerService from '$lib/services/fullLedgerService';
+	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 
 	let loading = $state(false);
 	let loaded = $state(fullLedgerService.isLoaded);

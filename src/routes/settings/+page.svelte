@@ -90,7 +90,7 @@
 
 		Notifier.success('Settings saved');
 
-		history.back();
+		goto('/'); // Go to home after saving settings
 	}
 </script>
 

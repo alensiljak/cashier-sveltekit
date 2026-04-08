@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Toolbar from "$lib/components/Toolbar.svelte";
 	import ledgerService from '$lib/services/ledgerService';
-	import fullLedgerService from '$lib/services/fullLedgerService';
+	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 
 	let bql = $state('SELECT account, sum(number) as balance, currency ORDER BY account');
 
@@ -72,8 +72,8 @@
 			fullLedgerErrors = [];
 			try {
 				await fullLedgerService.ensureLoaded();
-				const result = fullLedgerService.query(bql);
-				fullLedgerErrors = result?.errors ?? [];
+				const result = await fullLedgerService.query(bql);
+				fullLedgerErrors = (result?.errors ?? []) as QueryError[];
 				if (fullLedgerErrors.length === 0) {
 					fullLedgerColumns = result?.columns ?? [];
 					fullLedgerRows = result?.rows ?? [];

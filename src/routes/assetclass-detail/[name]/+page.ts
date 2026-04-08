@@ -4,11 +4,11 @@ import { AaStocksStore, AssetAllocationStore } from '$lib/data/mainStore';
 import type { Account } from '$lib/data/model.js';
 import * as AccountService from '$lib/services/accountsService';
 import appService from '$lib/services/appService';
-import fullLedgerService from '$lib/services/fullLedgerService';
+import fullLedgerService from '$lib/services/ledgerWorkerClient';
 import { version as getWasmVersion } from '$lib/services/rustledger';
 import { get } from 'svelte/store';
 
-export type WasmQueryFn = (bql: string) => { columns: string[]; rows: any[]; errors: any[] };
+export type WasmQueryFn = (bql: string) => Promise<{ columns: string[]; rows: any[]; errors: any[] }>;
 
 export interface RawQueryResult {
 	query: string;

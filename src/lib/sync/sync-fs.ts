@@ -5,7 +5,7 @@
  */
 
 import { settings, SettingKeys } from '$lib/settings';
-import fullLedgerService from '$lib/services/fullLedgerService';
+import fullLedgerService from '$lib/services/ledgerWorkerClient';
 import { getQueries } from './sync-queries';
 import moment from 'moment';
 import { ISODATEFORMAT } from '$lib/constants';
@@ -166,7 +166,7 @@ async function synchronize(syncOptions: syncCommon.SyncSteps): Promise<boolean> 
 		// Parse all files once and cache in the full ledger singleton.
 		await fullLedgerService.invalidate();
 
-		const errors = fullLedgerService.getErrors();
+		const errors = await fullLedgerService.getErrors();
 		if (errors.length > 0) {
 			console.log('Parse errors:', errors);
 			throw new Error('Parsing errors occurred. See console for details.');
@@ -233,7 +233,7 @@ async function syncAccounts(
 	queries: ReturnType<typeof getQueries>
 ) {
 	const query = queries.openAccounts();
-	const result = fullLedgerService.query(query);
+	const result = await fullLedgerService.query(query);
 
 	const entities: AccountFileEntry[] = result.rows.map((item: any) => ({
 		name: item[0], 
@@ -254,7 +254,7 @@ async function syncAccountBalances(
 	queries: ReturnType<typeof getQueries>
 ) {
 	const query = queries.accounts();
-	const result = fullLedgerService.query(query);
+	const result = await fullLedgerService.query(query);
 
 	// parse accounts: [account, balance, currency]
 	const accounts = result.rows.map((row: any) => ({
@@ -326,7 +326,7 @@ async function syncCurrentValues(
 	}
 
 	const query = queries.currentValues(rootAccount, currency);
-	const result = fullLedgerService.query(query);
+	const result = await fullLedgerService.query(query);
 	// result = { columns, errors, rows }
 
 	if (result.errors.length > 0) {
@@ -351,7 +351,7 @@ async function syncPayees(
 	// const from = moment().subtract(20, 'years').format(ISODATEFORMAT);
 	const payeesQuery = queries.payees();
 
-	const payeesResult = fullLedgerService.query(payeesQuery);
+	const payeesResult = await fullLedgerService.query(payeesQuery);
 
 	// Parse the result into a string[] of payee names, then store via common.
 	const payees = payeesResult.rows.map((row: any) => row);

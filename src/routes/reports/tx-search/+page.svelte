@@ -3,7 +3,7 @@
 	import { page } from '$app/state';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import AccordionSection from '$lib/components/AccordionSection.svelte';
-	import fullLedgerService from '$lib/services/fullLedgerService';
+	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 
 	// State
 	let isLoading = $state(false);
@@ -84,11 +84,11 @@ ${where} ORDER BY date DESC`;
 		await tick(); // yield to browser so loading state renders before synchronous query
 		try {
 			await fullLedgerService.ensureLoaded();
-			const result = fullLedgerService.query(generatedQuery);
-			queryErrors = result?.errors ?? [];
+			const result = await fullLedgerService.query(generatedQuery);
+			queryErrors = (result?.errors ?? []) as typeof queryErrors;
 			if (queryErrors.length === 0) {
 				columns = result?.columns ?? [];
-				rows = result?.rows ?? [];
+				rows = (result?.rows ?? []) as any[][];
 			} else {
 				columns = [];
 				rows = [];

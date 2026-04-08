@@ -20,7 +20,7 @@ export interface SecurityAnalysis {
 	gainloss: string;
 }
 
-export type QueryFn = (bql: string) => { columns: string[]; rows: any[]; errors: any[] };
+export type QueryFn = (bql: string) => Promise<{ columns: string[]; rows: any[]; errors: any[] }>;
 
 export class SecurityAnalyser {
 	currency: string | undefined;
@@ -41,7 +41,7 @@ export class SecurityAnalyser {
 	 */
 	private async query(command: string): Promise<Array<any>> {
 		if (this.wasmQueryFn) {
-			const result = this.wasmQueryFn(command);
+			const result = await this.wasmQueryFn(command);
 			if (result.errors.length > 0) {
 				throw new Error(`BQL query failed: ${result.errors.map((e: any) => e.message).join('; ')}`);
 			}

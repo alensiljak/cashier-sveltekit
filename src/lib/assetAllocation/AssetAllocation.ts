@@ -11,7 +11,7 @@ import { Account, Money } from '../data/model';
 import { NUMBER_FORMAT } from '../constants';
 import type { CurrentValuesDict } from '$lib/data/viewModels';
 import { UserError, ValidationError } from '$lib/utils/errors';
-import fullLedgerService from '$lib/services/fullLedgerService';
+import fullLedgerService from '$lib/services/ledgerWorkerClient';
 
 /**
  * loadDefinition = loads the pre-set definition
@@ -332,7 +332,7 @@ export class AssetAllocationEngine {
 
 		await fullLedgerService.ensureLoaded();
 		const invAccounts = await loadInvestmentAccounts((bql) =>
-			fullLedgerService.query(bql)
+			fullLedgerService.query(bql)  // query() is now async — matches QueryFn signature
 		);
 
 		invAccounts.forEach((account) => {

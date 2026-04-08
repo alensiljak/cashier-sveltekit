@@ -99,7 +99,7 @@
 		const query = `SELECT account, date, position WHERE currency = '${symbol}' ORDER BY account`;
 		lotsData[symbol] = { columns: [], rows: [], loading: true };
 		try {
-			const result = queryFn(query);
+			const result = await queryFn(query);
 			lotsData[symbol] = { columns: result.columns, rows: result.rows, loading: false };
 		} catch (err) {
 			lotsData[symbol] = {
@@ -144,12 +144,19 @@
 			// Individual lots without aggregation
 			const rawPositionsQuery = `SELECT account, position as lot WHERE currency = '${symbol}' ORDER BY account`;
 
+			const [income, value, gainLoss, costOnly, rawPositions] = await Promise.all([
+				queryFn(incomeQuery),
+				queryFn(valueQuery),
+				queryFn(gainLossQuery),
+				queryFn(costOnlyQuery),
+				queryFn(rawPositionsQuery)
+			]);
 			symbolDebug[symbol] = {
-				income: { query: incomeQuery, ...queryFn(incomeQuery) },
-				value: { query: valueQuery, ...queryFn(valueQuery) },
-				gainLoss: { query: gainLossQuery, ...queryFn(gainLossQuery) },
-				costOnly: { query: costOnlyQuery, ...queryFn(costOnlyQuery) },
-				rawPositions: { query: rawPositionsQuery, ...queryFn(rawPositionsQuery) },
+				income: { query: incomeQuery, ...income },
+				value: { query: valueQuery, ...value },
+				gainLoss: { query: gainLossQuery, ...gainLoss },
+				costOnly: { query: costOnlyQuery, ...costOnly },
+				rawPositions: { query: rawPositionsQuery, ...rawPositions },
 				loading: false
 			};
 		} catch (err) {
@@ -181,7 +188,7 @@
 		ORDER BY account`;
 			rawAccountsResult = { query: accountsQuery, loaded: false, columns: [], rows: [], errors: [] };
 			try {
-				const result = queryFn(accountsQuery);
+				const result = await queryFn(accountsQuery);
 				rawAccountsResult = { query: accountsQuery, loaded: true, ...result };
 			} catch (err) {
 				rawAccountsResult = {

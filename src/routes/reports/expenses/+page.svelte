@@ -4,7 +4,7 @@
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import PeriodSelector, { type Period } from '$lib/components/PeriodSelector.svelte';
 	import ExpensesBarChart from '$lib/components/ExpensesBarChart.svelte';
-	import fullLedgerService from '$lib/services/fullLedgerService';
+	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 
 	let isLoading = $state(false);
 	let error = $state<string | null>(null);
@@ -32,10 +32,10 @@
 			await fullLedgerService.ensureLoaded();
 
 			const bql = `SELECT account, number WHERE account ~ "^Expenses" AND date >= ${period.dateFrom} AND date <= ${period.dateTo}`;
-			const result = fullLedgerService.query(bql);
+			const result = await fullLedgerService.query(bql);
 
 			if (result?.errors?.length) {
-				error = result.errors.map((e) => e.message).join('; ');
+				error = (result.errors as any[]).map((e) => e.message).join('; ');
 				chartLabels = [];
 				chartValues = [];
 				return;
@@ -54,7 +54,7 @@
 
 			// Aggregate amounts per account
 			const totals = new Map<string, number>();
-			for (const row of rows) {
+			for (const row of rows as any[]) {
 				const account = String(row[accountIdx] ?? '');
 				const amount = parseFloat(String(row[numberIdx] ?? '0')) || 0;
 				totals.set(account, (totals.get(account) ?? 0) + amount);

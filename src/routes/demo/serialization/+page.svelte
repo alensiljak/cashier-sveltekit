@@ -1,12 +1,18 @@
 <script lang="ts">
+/*
+ * Demonstration of serializing the full ledger state to a binary format
+ * and saving it in OPFS, then restoring it back. This is used to
+ * avoid expensive parsing and booking.
+ */
+
 	import { onMount } from 'svelte';
-	import fullLedgerService from '$lib/services/fullLedgerService';
+	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import { computeSourceHash } from '$lib/services/rustledger';
 	import { settings, SettingKeys } from '$lib/settings';
-	import { saveBinaryFile, readBinaryFile, getFileMetadata } from '$lib/utils/opfslib';
-	import type { WorkerRequest, WorkerResponse } from './ledger.worker';
-
-	const CACHE_FILE = 'ledger-cache.bin';
+	import { getFileMetadata } from '$lib/utils/opfslib';
+	import { listFileTree } from '$lib/utils/opfslib';
+	import { OPFSBackend } from '$lib/storage';
+	import { LEDGER_CACHE_FILE } from '$lib/constants';
 
 	let status = '';
 	let isLoaded = false;
@@ -15,26 +21,16 @@
 	let currentHash = '';
 	let directiveCount = 0;
 	let isWorking = false;
-	let isWorkerWorking = false;
-
-	// Timing state
-	let serializeMs: number | null = null;
-	let deserializeMs: number | null = null;
-	let workerSerializeMs: number | null = null;
-	let workerDeserializeMs: number | null = null;
-
-	let worker: Worker | null = null;
 
 	onMount(async () => {
 		await refreshStatus();
-		worker = new Worker(new URL('./ledger.worker.ts', import.meta.url), { type: 'module' });
 	});
 
 	async function refreshStatus() {
 		isLoaded = fullLedgerService.isLoaded;
-		directiveCount = fullLedgerService.getDirectives().length;
+		directiveCount = (await fullLedgerService.getDirectives()).length;
 
-		const meta = await getFileMetadata(CACHE_FILE);
+		const meta = await getFileMetadata(LEDGER_CACHE_FILE);
 		cacheSize = meta?.size ?? null;
 
 		storedHash = (await settings.get<string>(SettingKeys.ledgerCacheHash)) ?? '';
@@ -42,23 +38,19 @@
 
 	async function handleSerialize() {
 		isWorking = true;
-		serializeMs = null;
 		status = 'Loading ledger...';
 		try {
 			await fullLedgerService.ensureLoaded();
 
 			status = 'Serializing...';
-			const t0 = performance.now();
-			const bytes = fullLedgerService.serialize();
-			await saveBinaryFile(CACHE_FILE, bytes);
-			serializeMs = performance.now() - t0;
+			const result = await fullLedgerService.serialize();
 
 			// Compute hash from source files and persist it
-			const { fileMap } = await fullLedgerService.loadOpfsFileMap();
+			const fileMap = await loadOpfsFileMap();
 			currentHash = hashFileMap(fileMap);
 			await settings.set(SettingKeys.ledgerCacheHash, currentHash);
 
-			status = `Serialized ${bytes.length.toLocaleString()} bytes → OPFS. Hash saved.`;
+			status = `Serialized ${result.bytes.toLocaleString()} bytes to OPFS. Hash saved.`;
 			await refreshStatus();
 		} catch (e) {
 			status = `Error: ${e}`;
@@ -69,26 +61,16 @@
 
 	async function handleDeserialize() {
 		isWorking = true;
-		deserializeMs = null;
-		status = 'Reading cache from OPFS...';
+		status = 'Restoring from cache...';
 		try {
-			// Time OPFS read + WASM fromCache — same scope as worker
-			const t0 = performance.now();
-			const bytes = await readBinaryFile(CACHE_FILE);
-			if (!bytes) {
-				status = 'No cache file found in OPFS. Serialize first.';
-				return;
-			}
-			await fullLedgerService.loadFromCache(bytes);
-			deserializeMs = performance.now() - t0;
+			const result = await fullLedgerService.loadFromCache();
 
-			// Hash comparison happens after timing (reads all .bean files — would skew numbers)
-			const { fileMap } = await fullLedgerService.loadOpfsFileMap();
+			// Hash comparison
+			const fileMap = await loadOpfsFileMap();
 			currentHash = hashFileMap(fileMap);
 			const hashMatch = storedHash && currentHash === storedHash;
 
-			const directives = fullLedgerService.getDirectives().length;
-			status = `Restored from cache (${bytes.length.toLocaleString()} bytes, ${directives} directives). Hash ${hashMatch ? 'matches ✓' : 'mismatch — sources may have changed'}.`;
+			status = `Restored from cache (${result.directiveCount} directives). Hash ${hashMatch ? 'matches' : 'mismatch — sources may have changed'}.`;
 			await refreshStatus();
 		} catch (e) {
 			status = `Error: ${e}`;
@@ -97,54 +79,11 @@
 		}
 	}
 
-	async function handleWorkerSerialize() {
-		if (!worker) return;
-		isWorkerWorking = true;
-		workerSerializeMs = null;
-		status = 'Worker: serializing...';
-
-		const { mainFileName } = await fullLedgerService.loadOpfsFileMap();
-
-		worker.onmessage = async (e: MessageEvent<WorkerResponse>) => {
-			if (e.data.type === 'serialize-done') {
-				workerSerializeMs = e.data.ms;
-				status = `Worker serialized ${e.data.bytes.toLocaleString()} bytes → OPFS in ${fmt(e.data.ms)}.`;
-				await refreshStatus();
-			} else if (e.data.type === 'error') {
-				status = `Worker error: ${e.data.message}`;
-			}
-			isWorkerWorking = false;
-		};
-
-		const req: WorkerRequest = { type: 'serialize', mainFileName };
-		worker.postMessage(req);
-	}
-
-	async function handleWorkerDeserialize() {
-		if (!worker) return;
-		isWorkerWorking = true;
-		workerDeserializeMs = null;
-		status = 'Worker: deserializing...';
-
-		worker.onmessage = (e: MessageEvent<WorkerResponse>) => {
-			if (e.data.type === 'deserialize-done') {
-				workerDeserializeMs = e.data.ms;
-				status = `Worker restored from cache (${e.data.bytes.toLocaleString()} bytes, ${e.data.directives} directives) in ${fmt(e.data.ms)}.`;
-			} else if (e.data.type === 'error') {
-				status = `Worker error: ${e.data.message}`;
-			}
-			isWorkerWorking = false;
-		};
-
-		const req: WorkerRequest = { type: 'deserialize' };
-		worker.postMessage(req);
-	}
-
 	async function handleCalculateHash() {
 		isWorking = true;
 		status = 'Reading OPFS files...';
 		try {
-			const { fileMap } = await fullLedgerService.loadOpfsFileMap();
+			const fileMap = await loadOpfsFileMap();
 			currentHash = hashFileMap(fileMap);
 			status = `Hash calculated from ${Object.keys(fileMap).length} source file(s).`;
 		} catch (e) {
@@ -155,14 +94,27 @@
 	}
 
 	async function handleReset() {
-		fullLedgerService.reset();
+		await fullLedgerService.reset();
 		currentHash = '';
-		serializeMs = null;
-		deserializeMs = null;
-		workerSerializeMs = null;
-		workerDeserializeMs = null;
 		status = 'Ledger instance freed (not loaded).';
 		await refreshStatus();
+	}
+
+	async function loadOpfsFileMap(): Promise<Record<string, string>> {
+		const opfs = new OPFSBackend();
+		const tree = await listFileTree();
+		const beanEntries = tree.filter((e) => e.kind === 'file' && e.name.endsWith('.bean'));
+
+		const fileMap: Record<string, string> = {};
+		await Promise.all(
+			beanEntries.map(async (entry) => {
+				const content = await opfs.readFile(entry.path);
+				if (content !== undefined) {
+					fileMap[entry.path] = content;
+				}
+			})
+		);
+		return fileMap;
 	}
 
 	function hashFileMap(fileMap: Record<string, string>): string {
@@ -174,15 +126,9 @@
 		return h ? h.slice(0, 12) + '…' : '—';
 	}
 
-	function fmt(ms: number): string {
-		return ms < 1000 ? `${ms.toFixed(0)} ms` : `${(ms / 1000).toFixed(2)} s`;
-	}
-
 	$: hashState =
 		!storedHash || !currentHash ? 'unknown' :
 		storedHash === currentHash   ? 'match'   : 'mismatch';
-
-	$: anyWorking = isWorking || isWorkerWorking;
 </script>
 
 <div class="page">
@@ -210,56 +156,18 @@
 		</div>
 	</section>
 
-	<section class="timing-grid">
-		<div class="timing-row">
-			<span class="timing-label">Serialize (main thread)</span>
-			<span class="timing-value">{serializeMs !== null ? fmt(serializeMs) : '—'}</span>
-		</div>
-		<div class="timing-row">
-			<span class="timing-label">Deserialize (main thread)</span>
-			<span class="timing-value">{deserializeMs !== null ? fmt(deserializeMs) : '—'}</span>
-		</div>
-		<div class="timing-row">
-			<span class="timing-label">Serialize (worker)</span>
-			<span class="timing-value">{workerSerializeMs !== null ? fmt(workerSerializeMs) : '—'}</span>
-		</div>
-		<div class="timing-row">
-			<span class="timing-label">Deserialize (worker)</span>
-			<span class="timing-value">{workerDeserializeMs !== null ? fmt(workerDeserializeMs) : '—'}</span>
-		</div>
-	</section>
-
 	<section class="actions-group">
-		<div class="group-label">Main thread</div>
 		<div class="actions">
-			<button class="btn" on:click={handleSerialize} disabled={anyWorking}>
+			<button class="btn" on:click={handleSerialize} disabled={isWorking}>
 				Serialize → OPFS
 			</button>
-			<button class="btn" on:click={handleDeserialize} disabled={anyWorking || cacheSize === null}>
+			<button class="btn" on:click={handleDeserialize} disabled={isWorking || cacheSize === null}>
 				Deserialize ← OPFS
 			</button>
-		</div>
-	</section>
-
-	<section class="actions-group">
-		<div class="group-label">Web Worker</div>
-		<div class="actions">
-			<button class="btn" on:click={handleWorkerSerialize} disabled={anyWorking}>
-				Serialize → OPFS
-			</button>
-			<button class="btn" on:click={handleWorkerDeserialize} disabled={anyWorking || cacheSize === null}>
-				Deserialize ← OPFS
-			</button>
-		</div>
-	</section>
-
-	<section class="actions-group">
-		<div class="group-label">Common</div>
-		<div class="actions">
-			<button class="btn" on:click={handleCalculateHash} disabled={anyWorking}>
+			<button class="btn" on:click={handleCalculateHash} disabled={isWorking}>
 				Calculate hash
 			</button>
-			<button class="btn" on:click={handleReset} disabled={anyWorking}>
+			<button class="btn" on:click={handleReset} disabled={isWorking}>
 				Reset instance
 			</button>
 		</div>
@@ -318,44 +226,8 @@
 		color: var(--color-warn, #f38ba8);
 	}
 
-	.timing-grid {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 0.4rem 1.5rem;
-		margin-bottom: 1.5rem;
-		background: var(--surface-2, #1e1e2e);
-		border-radius: 6px;
-		padding: 1rem;
-	}
-
-	.timing-row {
-		display: flex;
-		flex-direction: column;
-		gap: 0.1rem;
-	}
-
-	.timing-label {
-		font-size: 0.75rem;
-		opacity: 0.55;
-	}
-
-	.timing-value {
-		font-size: 1rem;
-		font-weight: 600;
-		font-family: monospace;
-		color: var(--color-ok, #a6e3a1);
-	}
-
 	.actions-group {
 		margin-bottom: 1rem;
-	}
-
-	.group-label {
-		font-size: 0.75rem;
-		opacity: 0.5;
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		margin-bottom: 0.4rem;
 	}
 
 	.actions {

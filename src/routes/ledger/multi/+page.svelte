@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import AccordionSection from '$lib/components/AccordionSection.svelte';
-	import fullLedgerService from '$lib/services/fullLedgerService';
+	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import JsonTreeNode from '../JsonTreeNode.svelte';
 
 	let isLoading = $state(false);
@@ -22,13 +22,15 @@
 			parseResult = null;
 
 			await fullLedgerService.invalidate();
-			directiveCount = fullLedgerService.getDirectives().length;
+			const [directives, errors] = await Promise.all([
+				fullLedgerService.getDirectives(),
+				fullLedgerService.getErrors()
+			]);
+			directiveCount = directives.length;
 
 			parseResult = {
-				ledger: {
-					directives: fullLedgerService.getDirectives(),
-				},
-				errors: fullLedgerService.getErrors(),
+				ledger: { directives },
+				errors
 			};
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to load or parse files';
