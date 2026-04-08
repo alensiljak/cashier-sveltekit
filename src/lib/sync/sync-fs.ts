@@ -191,25 +191,18 @@ async function synchronize(syncOptions: syncCommon.SyncSteps): Promise<boolean> 
 			updateSyncStep(2, 'completed');
 		}
 
-		// Asset Allocation definition (.toml)
-		if (syncOptions.syncAssetAllocation) {
-			updateSyncStep(3, 'in-progress');
-			await syncAssetAllocation(fullLedgerService.dirHandle ?? undefined);
-			updateSyncStep(3, 'completed');
-		}
-
 		// - current values in the base currency (for asset allocation)
 		if (syncOptions.syncAaValues) {
-			updateSyncStep(4, 'in-progress');
+			updateSyncStep(3, 'in-progress');
 			await syncCurrentValues(queries);
-			updateSyncStep(4, 'completed');
+			updateSyncStep(3, 'completed');
 		}
 
 		// - payees
 		if (syncOptions.syncPayees) {
-			updateSyncStep(5, 'in-progress');
+			updateSyncStep(4, 'in-progress');
 			await syncPayees(queries);
-			updateSyncStep(5, 'completed');
+			updateSyncStep(4, 'completed');
 		}
 
 		return true;
@@ -311,40 +304,6 @@ function createOpeningBalancesDirective(accounts: Account[]): string {
 
 	const record = lines.join('\n');
 	return record;
-}
-
-/**
- * Read the marked Asset Allocation file from external filesystem and
- * store into OPFS.
- */
-async function syncAssetAllocation(dirHandle?: FileSystemDirectoryHandle) {
-	const source = await settings.get<string>(SettingKeys.externalAssetAllocation);
-	if (!source) {
-		throw new Error(
-			'No asset allocation file configured. Please select a file in the Configuration.'
-		);
-	}
-
-	if (!dirHandle) {
-		dirHandle = (await loadPersistedHandle()) ?? undefined;
-		if (!dirHandle) {
-			throw new Error('No directory selected. Please open a directory in the fs-sync page.');
-		}
-		const permission = await (dirHandle as any).requestPermission({ mode: 'read' });
-		if (permission !== 'granted') {
-			throw new Error('Read permission denied for directory');
-		}
-	}
-
-	// Extract relative path from the stored full path (which includes directory name)
-	const parts = source.split('/');
-	const relativePath = parts.slice(1).join('/'); // Remove the directory name prefix
-
-	const content = await readFileFromDir(dirHandle, relativePath);
-	
-	// Save to OPFS.
-	const opfs = new OPFSBackend();
-	await opfs.writeFile(LedgerFilenames.asset_allocation, content);
 }
 
 /**

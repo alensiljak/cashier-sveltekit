@@ -19,7 +19,6 @@ export enum LedgerDataSource {
 }
 
 export enum LedgerFilenames {
-	asset_allocation = 'asset-allocation.toml',
 	accounts = 'cashier-accounts.bean',
 	book = 'cashier-book.bean',
 	cashier = 'cashier-xacts.bean',

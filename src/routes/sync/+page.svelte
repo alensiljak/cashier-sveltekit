@@ -17,7 +17,6 @@
 	let syncAll = $state(false);
 	let syncAccounts = $state(false);
 	let syncAaValues = $state(false);
-	let syncAssetAllocation = $state(false);
 	let syncPayees = $state(false);
 	let syncOpeningBalances = $state(false);
 
@@ -37,7 +36,6 @@
 
 		syncAccounts = (await settings.get(SettingKeys.syncAccounts)) ?? false;
 		syncAaValues = (await settings.get(SettingKeys.syncAaValues)) ?? false;
-		syncAssetAllocation = (await settings.get(SettingKeys.syncAssetAllocation)) ?? false;
 		syncPayees = (await settings.get(SettingKeys.syncPayees)) ?? false;
 		syncOpeningBalances = (await settings.get(SettingKeys.syncOpeningBalances)) ?? false;
 	}
@@ -218,20 +216,6 @@
 					<input
 						class="checkbox checkbox-primary rounded"
 						type="checkbox"
-						bind:checked={syncAssetAllocation}
-						onchange={saveSettings}
-					/>
-				</td>
-				<td onclick={() => syncAssetAllocation = !syncAssetAllocation} class="cursor-pointer">
-					Asset Allocation definition
-				</td>
-				{#if syncStarted}<td>{@render statusIcon($syncProgress.find((s) => s.id === 3)?.status)}</td>{/if}
-			</tr>
-			<tr>
-				<td>
-					<input
-						class="checkbox checkbox-primary rounded"
-						type="checkbox"
 						bind:checked={syncAaValues}
 						onchange={saveSettings}
 					/>
@@ -239,7 +223,7 @@
 				<td onclick={() => syncAaValues = !syncAaValues} class="cursor-pointer">
 					Account current values (for asset allocation)
 				</td>
-				{#if syncStarted}<td>{@render statusIcon($syncProgress.find((s) => s.id === 4)?.status)}</td>{/if}
+				{#if syncStarted}<td>{@render statusIcon($syncProgress.find((s) => s.id === 3)?.status)}</td>{/if}
 			</tr>
 			<tr>
 				<td>
@@ -253,7 +237,7 @@
 				<td onclick={() => syncPayees = !syncPayees} class="cursor-pointer">
 					Payees
 				</td>
-				{#if syncStarted}<td>{@render statusIcon($syncProgress.find((s) => s.id === 5)?.status)}</td>{/if}
+				{#if syncStarted}<td>{@render statusIcon($syncProgress.find((s) => s.id === 4)?.status)}</td>{/if}
 			</tr>
 		</tbody>
 	</table>

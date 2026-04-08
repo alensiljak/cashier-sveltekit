@@ -11,8 +11,7 @@ import Notifier from '$lib/utils/notifier';
 import * as SyncCommon from '$lib/sync/sync-common';
 import type { SyncSteps } from '$lib/sync/sync-common';
 import { initializeSyncProgress, updateSyncStep } from '$lib/stores/syncProgressStore';
-import { LedgerFilenames, PtaSystems } from '$lib/enums';
-import { OPFSBackend } from '$lib/storage';
+import { PtaSystems } from '$lib/enums';
 
 Notifier.init();
 
@@ -288,16 +287,6 @@ async function synchronizeAaValues(sync: CashierSyncBeancount) {
 	const result = await sync.readCurrentValues();
 	await SyncCommon.syncCurrentValues(sync.ptaSystem, result);
 	Notifier.success('Asset Allocation values loaded');
-}
-
-async function syncAssetAllocation(sync: CashierSyncBeancount) {
-	// Get Asset Allocation from the sync server.
-	const content = await sync.readFile('portfolio/asset-allocation.toml');
-	
-	// Save to OPFS.
-	const opfs = new OPFSBackend();
-	await opfs.writeFile(LedgerFilenames.asset_allocation, content);
-	
 }
 
 async function synchronizePayees(sync: CashierSyncBeancount) {
