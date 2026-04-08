@@ -136,7 +136,10 @@
 
 	// ── Copy logic ────────────────────────────────────────────────────────────────
 	async function copyToOpfs() {
-		if (!dirHandle) return;
+		if (!dirHandle) {
+			await pickDirectory();
+			if (!dirHandle) return;
+		}
 
 		phase = 'copying';
 		errorMsg = '';
@@ -228,7 +231,7 @@
 		<center class="py-4">
 			<button
 				class="btn btn-accent"
-				disabled={phase === 'copying' || !dirHandle}
+				disabled={phase === 'copying' || !dirName}
 				onclick={copyToOpfs}
 			>
 				Import
