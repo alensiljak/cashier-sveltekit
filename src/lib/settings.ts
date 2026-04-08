@@ -74,7 +74,7 @@ export const CardNames = {
 	ForecastCard: 'ForecastCard',
 	JournalCard: 'JournalCard',
 	ScheduledXactCard: 'ScheduledXactCard',
-	SyncCard: 'SyncCard'
+	// SyncCard: 'SyncCard'
 };
 
 class Settings {
