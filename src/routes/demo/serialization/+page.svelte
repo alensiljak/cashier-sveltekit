@@ -4,6 +4,7 @@
 	import { computeSourceHash } from '$lib/services/rustledger';
 	import { settings, SettingKeys } from '$lib/settings';
 	import { saveBinaryFile, readBinaryFile, getFileMetadata } from '$lib/utils/opfslib';
+	import type { WorkerRequest, WorkerResponse } from './ledger.worker';
 
 	const CACHE_FILE = 'ledger-cache.bin';
 
@@ -14,9 +15,19 @@
 	let currentHash = '';
 	let directiveCount = 0;
 	let isWorking = false;
+	let isWorkerWorking = false;
+
+	// Timing state
+	let serializeMs: number | null = null;
+	let deserializeMs: number | null = null;
+	let workerSerializeMs: number | null = null;
+	let workerDeserializeMs: number | null = null;
+
+	let worker: Worker | null = null;
 
 	onMount(async () => {
 		await refreshStatus();
+		worker = new Worker(new URL('./ledger.worker.ts', import.meta.url), { type: 'module' });
 	});
 
 	async function refreshStatus() {
@@ -31,13 +42,16 @@
 
 	async function handleSerialize() {
 		isWorking = true;
+		serializeMs = null;
 		status = 'Loading ledger...';
 		try {
 			await fullLedgerService.ensureLoaded();
 
 			status = 'Serializing...';
+			const t0 = performance.now();
 			const bytes = fullLedgerService.serialize();
 			await saveBinaryFile(CACHE_FILE, bytes);
+			serializeMs = performance.now() - t0;
 
 			// Compute hash from source files and persist it
 			const { fileMap } = await fullLedgerService.loadOpfsFileMap();
@@ -53,29 +67,25 @@
 		}
 	}
 
-	async function handleReset() {
-		fullLedgerService.reset();
-		currentHash = '';
-		status = 'Ledger instance freed (not loaded).';
-		await refreshStatus();
-	}
-
 	async function handleDeserialize() {
 		isWorking = true;
+		deserializeMs = null;
 		status = 'Reading cache from OPFS...';
 		try {
+			// Time OPFS read + WASM fromCache — same scope as worker
+			const t0 = performance.now();
 			const bytes = await readBinaryFile(CACHE_FILE);
 			if (!bytes) {
 				status = 'No cache file found in OPFS. Serialize first.';
 				return;
 			}
+			await fullLedgerService.loadFromCache(bytes);
+			deserializeMs = performance.now() - t0;
 
-			// Compare hashes before restoring
+			// Hash comparison happens after timing (reads all .bean files — would skew numbers)
 			const { fileMap } = await fullLedgerService.loadOpfsFileMap();
 			currentHash = hashFileMap(fileMap);
 			const hashMatch = storedHash && currentHash === storedHash;
-
-			await fullLedgerService.loadFromCache(bytes);
 
 			const directives = fullLedgerService.getDirectives().length;
 			status = `Restored from cache (${bytes.length.toLocaleString()} bytes, ${directives} directives). Hash ${hashMatch ? 'matches ✓' : 'mismatch — sources may have changed'}.`;
@@ -85,6 +95,49 @@
 		} finally {
 			isWorking = false;
 		}
+	}
+
+	async function handleWorkerSerialize() {
+		if (!worker) return;
+		isWorkerWorking = true;
+		workerSerializeMs = null;
+		status = 'Worker: serializing...';
+
+		const { mainFileName } = await fullLedgerService.loadOpfsFileMap();
+
+		worker.onmessage = async (e: MessageEvent<WorkerResponse>) => {
+			if (e.data.type === 'serialize-done') {
+				workerSerializeMs = e.data.ms;
+				status = `Worker serialized ${e.data.bytes.toLocaleString()} bytes → OPFS in ${fmt(e.data.ms)}.`;
+				await refreshStatus();
+			} else if (e.data.type === 'error') {
+				status = `Worker error: ${e.data.message}`;
+			}
+			isWorkerWorking = false;
+		};
+
+		const req: WorkerRequest = { type: 'serialize', mainFileName };
+		worker.postMessage(req);
+	}
+
+	async function handleWorkerDeserialize() {
+		if (!worker) return;
+		isWorkerWorking = true;
+		workerDeserializeMs = null;
+		status = 'Worker: deserializing...';
+
+		worker.onmessage = (e: MessageEvent<WorkerResponse>) => {
+			if (e.data.type === 'deserialize-done') {
+				workerDeserializeMs = e.data.ms;
+				status = `Worker restored from cache (${e.data.bytes.toLocaleString()} bytes, ${e.data.directives} directives) in ${fmt(e.data.ms)}.`;
+			} else if (e.data.type === 'error') {
+				status = `Worker error: ${e.data.message}`;
+			}
+			isWorkerWorking = false;
+		};
+
+		const req: WorkerRequest = { type: 'deserialize' };
+		worker.postMessage(req);
 	}
 
 	async function handleCalculateHash() {
@@ -101,6 +154,17 @@
 		}
 	}
 
+	async function handleReset() {
+		fullLedgerService.reset();
+		currentHash = '';
+		serializeMs = null;
+		deserializeMs = null;
+		workerSerializeMs = null;
+		workerDeserializeMs = null;
+		status = 'Ledger instance freed (not loaded).';
+		await refreshStatus();
+	}
+
 	function hashFileMap(fileMap: Record<string, string>): string {
 		const sources = Object.keys(fileMap).sort().map((k) => fileMap[k]);
 		return computeSourceHash(sources);
@@ -110,9 +174,15 @@
 		return h ? h.slice(0, 12) + '…' : '—';
 	}
 
+	function fmt(ms: number): string {
+		return ms < 1000 ? `${ms.toFixed(0)} ms` : `${(ms / 1000).toFixed(2)} s`;
+	}
+
 	$: hashState =
 		!storedHash || !currentHash ? 'unknown' :
 		storedHash === currentHash   ? 'match'   : 'mismatch';
+
+	$: anyWorking = isWorking || isWorkerWorking;
 </script>
 
 <div class="page">
@@ -140,19 +210,59 @@
 		</div>
 	</section>
 
-	<section class="actions">
-		<button on:click={handleSerialize} disabled={isWorking}>
-			Serialize → OPFS
-		</button>
-		<button on:click={handleReset} disabled={isWorking}>
-			Reset instance
-		</button>
-		<button on:click={handleDeserialize} disabled={isWorking || cacheSize === null}>
-			Deserialize ← OPFS
-		</button>
-		<button on:click={handleCalculateHash} disabled={isWorking}>
-			Calculate hash
-		</button>
+	<section class="timing-grid">
+		<div class="timing-row">
+			<span class="timing-label">Serialize (main thread)</span>
+			<span class="timing-value">{serializeMs !== null ? fmt(serializeMs) : '—'}</span>
+		</div>
+		<div class="timing-row">
+			<span class="timing-label">Deserialize (main thread)</span>
+			<span class="timing-value">{deserializeMs !== null ? fmt(deserializeMs) : '—'}</span>
+		</div>
+		<div class="timing-row">
+			<span class="timing-label">Serialize (worker)</span>
+			<span class="timing-value">{workerSerializeMs !== null ? fmt(workerSerializeMs) : '—'}</span>
+		</div>
+		<div class="timing-row">
+			<span class="timing-label">Deserialize (worker)</span>
+			<span class="timing-value">{workerDeserializeMs !== null ? fmt(workerDeserializeMs) : '—'}</span>
+		</div>
+	</section>
+
+	<section class="actions-group">
+		<div class="group-label">Main thread</div>
+		<div class="actions">
+			<button class="btn" on:click={handleSerialize} disabled={anyWorking}>
+				Serialize → OPFS
+			</button>
+			<button class="btn" on:click={handleDeserialize} disabled={anyWorking || cacheSize === null}>
+				Deserialize ← OPFS
+			</button>
+		</div>
+	</section>
+
+	<section class="actions-group">
+		<div class="group-label">Web Worker</div>
+		<div class="actions">
+			<button class="btn" on:click={handleWorkerSerialize} disabled={anyWorking}>
+				Serialize → OPFS
+			</button>
+			<button class="btn" on:click={handleWorkerDeserialize} disabled={anyWorking || cacheSize === null}>
+				Deserialize ← OPFS
+			</button>
+		</div>
+	</section>
+
+	<section class="actions-group">
+		<div class="group-label">Common</div>
+		<div class="actions">
+			<button class="btn" on:click={handleCalculateHash} disabled={anyWorking}>
+				Calculate hash
+			</button>
+			<button class="btn" on:click={handleReset} disabled={anyWorking}>
+				Reset instance
+			</button>
+		</div>
 	</section>
 
 	{#if status}
@@ -174,7 +284,7 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.4rem;
-		margin-bottom: 1.5rem;
+		margin-bottom: 1rem;
 		background: var(--surface-2, #1e1e2e);
 		border-radius: 6px;
 		padding: 1rem;
@@ -208,18 +318,50 @@
 		color: var(--color-warn, #f38ba8);
 	}
 
+	.timing-grid {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 0.4rem 1.5rem;
+		margin-bottom: 1.5rem;
+		background: var(--surface-2, #1e1e2e);
+		border-radius: 6px;
+		padding: 1rem;
+	}
+
+	.timing-row {
+		display: flex;
+		flex-direction: column;
+		gap: 0.1rem;
+	}
+
+	.timing-label {
+		font-size: 0.75rem;
+		opacity: 0.55;
+	}
+
+	.timing-value {
+		font-size: 1rem;
+		font-weight: 600;
+		font-family: monospace;
+		color: var(--color-ok, #a6e3a1);
+	}
+
+	.actions-group {
+		margin-bottom: 1rem;
+	}
+
+	.group-label {
+		font-size: 0.75rem;
+		opacity: 0.5;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		margin-bottom: 0.4rem;
+	}
+
 	.actions {
 		display: flex;
 		gap: 0.75rem;
 		flex-wrap: wrap;
-		margin-bottom: 1rem;
-	}
-
-	button {
-		padding: 0.5rem 1.1rem;
-		border-radius: 4px;
-		cursor: pointer;
-		font-size: 0.9rem;
 	}
 
 	button:disabled {
