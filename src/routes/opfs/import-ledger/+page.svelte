@@ -4,6 +4,46 @@
 	import { FolderOpenIcon } from '@lucide/svelte';
 	import { settings, SettingKeys } from '$lib/settings';
 
+	// ── IndexedDB handle persistence ──────────────────────────────────────────────
+	const IDB_NAME = 'cashier-fs-handles';
+	const IDB_STORE = 'handles';
+	const HANDLE_KEY = 'importLedgerDirectoryHandle';
+
+	function openIdb(): Promise<IDBDatabase> {
+		return new Promise((resolve, reject) => {
+			const req = indexedDB.open(IDB_NAME, 1);
+			req.onupgradeneeded = () => {
+				req.result.createObjectStore(IDB_STORE);
+			};
+			req.onsuccess = () => resolve(req.result);
+			req.onerror = () => reject(req.error);
+		});
+	}
+
+	async function persistHandle(handle: FileSystemDirectoryHandle): Promise<void> {
+		const db = await openIdb();
+		return new Promise((resolve, reject) => {
+			const tx = db.transaction(IDB_STORE, 'readwrite');
+			tx.objectStore(IDB_STORE).put(handle, HANDLE_KEY);
+			tx.oncomplete = () => { db.close(); resolve(); };
+			tx.onerror = () => { db.close(); reject(tx.error); };
+		});
+	}
+
+	async function loadPersistedHandle(): Promise<FileSystemDirectoryHandle | null> {
+		try {
+			const db = await openIdb();
+			return new Promise((resolve, reject) => {
+				const tx = db.transaction(IDB_STORE, 'readonly');
+				const req = tx.objectStore(IDB_STORE).get(HANDLE_KEY);
+				req.onsuccess = () => { db.close(); resolve(req.result ?? null); };
+				req.onerror = () => { db.close(); reject(req.error); };
+			});
+		} catch {
+			return null;
+		}
+	}
+
 	// ── Glob matching ─────────────────────────────────────────────────────────────
 	function globToRegex(pattern: string): RegExp {
 		const escaped = pattern
@@ -100,6 +140,17 @@
 
 	onMount(async () => {
 		dirName = (await settings.get<string>(SettingKeys.importBookDirectory)) ?? '';
+		const stored = await loadPersistedHandle();
+		if (stored) {
+			try {
+				const permission = await (stored as any).requestPermission({ mode: 'read' });
+				if (permission === 'granted') {
+					dirHandle = stored;
+				}
+			} catch {
+				// Permission denied or unavailable
+			}
+		}
 	});
 
 	async function pickDirectory() {
@@ -108,6 +159,7 @@
 			dirHandle = handle;
 			dirName = handle.name;
 			await settings.set(SettingKeys.importBookDirectory, dirName);
+			await persistHandle(handle);
 			phase = 'idle';
 			statusMsg = '';
 			errorMsg = '';
