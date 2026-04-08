@@ -52,9 +52,6 @@
 				<a class="link link-primary" href="/rledger">RustLedger demo</a>
 			</li>
 			<li>
-				<a class="link link-primary" href="/query">Query interface</a>
-			</li>
-			<li>
 				<a class="link link-primary" href="/ledger">Parsed Ledger</a>
 			</li>
 			<li>

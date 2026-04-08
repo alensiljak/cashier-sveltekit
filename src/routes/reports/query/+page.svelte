@@ -6,19 +6,19 @@
 	let bql = $state('SELECT account, sum(number) as balance, currency ORDER BY account');
 
 	// Source selection
-	let useOpfs = $state(true);
-	let useFilesystem = $state(false);
+	let useLiteLedger = $state(true);
+	let useFullLedger = $state(false);
 
-	// OPFS results
-	let opfsColumns: string[] = $state([]);
-	let opfsRows: any[] = $state([]);
+	// Lite Ledger results
+	let liteLedgerColumns: string[] = $state([]);
+	let liteLedgerRows: any[] = $state([]);
 	interface QueryError { message: string; severity?: string; line?: number; column?: number; }
-	let opfsErrors: QueryError[] = $state([]);
+	let liteLedgerErrors: QueryError[] = $state([]);
 
-	// Filesystem results
-	let fsColumns: string[] = $state([]);
-	let fsRows: any[] = $state([]);
-	let fsErrors: any[] = $state([]);
+	// Full Ledger results
+	let fullLedgerColumns: string[] = $state([]);
+	let fullLedgerRows: any[] = $state([]);
+	let fullLedgerErrors: QueryError[] = $state([]);
 
 	let isRunning = $state(false);
 
@@ -39,64 +39,64 @@
 		isRunning = true;
 
 		// Ensure at least one source is selected
-		if (!useOpfs && !useFilesystem) {
-			useOpfs = true;
+		if (!useLiteLedger && !useFullLedger) {
+			useLiteLedger = true;
 		}
 
-		// Run OPFS query
-		if (useOpfs) {
-			opfsErrors = [];
+		// Run Lite Ledger query
+		if (useLiteLedger) {
+			liteLedgerErrors = [];
 			try {
 				const result = ledgerService.query(bql);
-				opfsErrors = result?.errors ?? [];
-				if (opfsErrors.length === 0) {
-					opfsColumns = result?.columns ?? [];
-					opfsRows = result?.rows ?? [];
+				liteLedgerErrors = result?.errors ?? [];
+				if (liteLedgerErrors.length === 0) {
+					liteLedgerColumns = result?.columns ?? [];
+					liteLedgerRows = result?.rows ?? [];
 				} else {
-					opfsColumns = [];
-					opfsRows = [];
+					liteLedgerColumns = [];
+					liteLedgerRows = [];
 				}
 			} catch (e: any) {
-				opfsColumns = [];
-				opfsRows = [];
-				opfsErrors = [{ message: e?.message ?? String(e), severity: 'error', line: 0, column: 0 }];
+				liteLedgerColumns = [];
+				liteLedgerRows = [];
+				liteLedgerErrors = [{ message: e?.message ?? String(e), severity: 'error', line: 0, column: 0 }];
 			}
 		} else {
-			opfsColumns = [];
-			opfsRows = [];
-			opfsErrors = [];
+			liteLedgerColumns = [];
+			liteLedgerRows = [];
+			liteLedgerErrors = [];
 		}
 
-		// Run Filesystem query
-		if (useFilesystem) {
-			fsErrors = [];
+		// Run Full Ledger query
+		if (useFullLedger) {
+			fullLedgerErrors = [];
 			try {
 				await fullLedgerService.ensureLoaded();
 				const result = fullLedgerService.query(bql);
-				fsErrors = result?.errors ?? [];
-				if (fsErrors.length === 0) {
-					fsColumns = result?.columns ?? [];
-					fsRows = result?.rows ?? [];
+				fullLedgerErrors = result?.errors ?? [];
+				if (fullLedgerErrors.length === 0) {
+					fullLedgerColumns = result?.columns ?? [];
+					fullLedgerRows = result?.rows ?? [];
 				} else {
-					fsColumns = [];
-					fsRows = [];
+					fullLedgerColumns = [];
+					fullLedgerRows = [];
 				}
 			} catch (e: any) {
-				fsColumns = [];
-				fsRows = [];
-				fsErrors = [{ message: e?.message ?? String(e), severity: 'error', line: 0, column: 0 }];
+				fullLedgerColumns = [];
+				fullLedgerRows = [];
+				fullLedgerErrors = [{ message: e?.message ?? String(e), severity: 'error', line: 0, column: 0 }];
 			}
 		} else {
-			fsColumns = [];
-			fsRows = [];
-			fsErrors = [];
+			fullLedgerColumns = [];
+			fullLedgerRows = [];
+			fullLedgerErrors = [];
 		}
 
 		isRunning = false;
 	}
 
 	// Are we in comparison mode?
-	let comparing = $derived(useOpfs && useFilesystem);
+	let comparing = $derived(useLiteLedger && useFullLedger);
 </script>
 
 <main class="flex flex-col flex-1">
@@ -113,12 +113,12 @@
 		<div class="flex gap-2 items-center flex-wrap">
 			<!-- Source checkboxes -->
 			<label class="label cursor-pointer gap-1">
-				<input type="checkbox" class="checkbox checkbox-sm" bind:checked={useOpfs} />
-				<span class="label-text">OPFS</span>
+				<input type="checkbox" class="checkbox checkbox-sm" bind:checked={useLiteLedger} />
+				<span class="label-text">Lite Ledger</span>
 			</label>
 			<label class="label cursor-pointer gap-1">
-				<input type="checkbox" class="checkbox checkbox-sm" bind:checked={useFilesystem} />
-				<span class="label-text">Filesystem</span>
+				<input type="checkbox" class="checkbox checkbox-sm" bind:checked={useFullLedger} />
+				<span class="label-text">Full Ledger</span>
 			</label>
 
 			<button class="btn btn-primary btn-sm" onclick={runQuery} disabled={isRunning}>
@@ -133,34 +133,34 @@
 		{#if comparing}
 			<!-- Side-by-side comparison -->
 			<div class="grid grid-cols-2 gap-4">
-				<!-- OPFS panel -->
+				<!-- Lite Ledger panel -->
 				<div class="flex flex-col gap-2">
-					<h3 class="font-semibold text-sm">OPFS {opfsRows.length > 0 ? `(${opfsRows.length} rows)` : ''}</h3>
-					{@render errorBlock(opfsErrors)}
-					{@render resultTable(opfsColumns, opfsRows)}
+					<h3 class="font-semibold text-sm">Lite Ledger {liteLedgerRows.length > 0 ? `(${liteLedgerRows.length} rows)` : ''}</h3>
+					{@render errorBlock(liteLedgerErrors)}
+					{@render resultTable(liteLedgerColumns, liteLedgerRows)}
 				</div>
-				<!-- Filesystem panel -->
+				<!-- Full Ledger panel -->
 				<div class="flex flex-col gap-2">
-					<h3 class="font-semibold text-sm">Filesystem {fsRows.length > 0 ? `(${fsRows.length} rows)` : ''}</h3>
-					{@render errorBlock(fsErrors)}
-					{@render resultTable(fsColumns, fsRows)}
+					<h3 class="font-semibold text-sm">Full Ledger {fullLedgerRows.length > 0 ? `(${fullLedgerRows.length} rows)` : ''}</h3>
+					{@render errorBlock(fullLedgerErrors)}
+					{@render resultTable(fullLedgerColumns, fullLedgerRows)}
 				</div>
 			</div>
 		{:else}
 			<!-- Single source output -->
-			{#if useOpfs}
-				{#if opfsRows.length > 0}
-					<span class="text-sm text-base-content/60">{opfsRows.length} row{opfsRows.length !== 1 ? 's' : ''}</span>
+			{#if useLiteLedger}
+				{#if liteLedgerRows.length > 0}
+					<span class="text-sm text-base-content/60">{liteLedgerRows.length} row{liteLedgerRows.length !== 1 ? 's' : ''}</span>
 				{/if}
-				{@render errorBlock(opfsErrors)}
-				{@render resultTable(opfsColumns, opfsRows)}
+				{@render errorBlock(liteLedgerErrors)}
+				{@render resultTable(liteLedgerColumns, liteLedgerRows)}
 			{/if}
-			{#if useFilesystem}
-				{#if fsRows.length > 0}
-					<span class="text-sm text-base-content/60">{fsRows.length} row{fsRows.length !== 1 ? 's' : ''}</span>
+			{#if useFullLedger}
+				{#if fullLedgerRows.length > 0}
+					<span class="text-sm text-base-content/60">{fullLedgerRows.length} row{fullLedgerRows.length !== 1 ? 's' : ''}</span>
 				{/if}
-				{@render errorBlock(fsErrors)}
-				{@render resultTable(fsColumns, fsRows)}
+				{@render errorBlock(fullLedgerErrors)}
+				{@render resultTable(fullLedgerColumns, fullLedgerRows)}
 			{/if}
 		{/if}
 	</div>
