@@ -1,5 +1,9 @@
 # Tasks
 
+## Projects
+
+- [ ] [Fast Ledger Load](doc/projects/2026-04-08_fast_ledger_load.md)
+
 ## General
 
 - [ ] research storing the configuration in OPFS, as a TOML file
@@ -11,10 +15,10 @@
 
 ## Onboarding
 
-- [ ] add setting for `initialized`
-- [ ] if not initialized, start the setup wizard
+- [ ] add setting for `onboarded`
+- [ ] if not onboarded, start the setup wizard
 - [ ] Go through the initial settings (data storage, server)
-- [ ] Add defaults to the wizard
+- [ ] Add defaults to the wizard.
 - [ ] default to filesystem if using a chromium-based browser
 
 ## Controls
