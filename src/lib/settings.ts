@@ -64,7 +64,9 @@ export const SettingKeys = {
 	importBookDirectory: 'importBookDirectory',
 	// Full path to the main book/journal file (set via fs-sync page)
 	externalBook: 'externalBook',
-	externalAssetAllocation: 'externalAssetAllocation'
+	externalAssetAllocation: 'externalAssetAllocation',
+	// SHA-256 hash of source files at last serialization, stored alongside the OPFS binary cache
+	ledgerCacheHash: 'ledgerCacheHash'
 };
 
 export const CardNames = {

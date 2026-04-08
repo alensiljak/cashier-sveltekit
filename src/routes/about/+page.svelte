@@ -63,6 +63,9 @@
 			<li>
 				<a class="link link-primary" href="/sync/opfs-test">OPFS Storage Test</a>
 			</li>
+			<li>
+				<a class="link link-primary" href="/demo/serialization">Serialization Test</a>
+			</li>
 		</ul>
 	</section>
 </article>

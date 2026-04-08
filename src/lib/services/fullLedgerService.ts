@@ -7,7 +7,7 @@
  */
 
 import { writable, derived, type Readable } from 'svelte/store';
-import { ensureInitialized, createLedger } from './rustledger';
+import { ensureInitialized, createLedger, ledgerFromCache } from './rustledger';
 // import { loadFileMap } from '$lib/sync/sync-fs';
 import { listFileTree } from '$lib/utils/opfslib';
 import { LedgerFilenames } from '$lib/enums';
@@ -108,6 +108,35 @@ class FullLedgerService {
 			this.ledger.free();
 			this.ledger = null;
 		}
+	}
+
+	/** Serialize the cached ledger to binary bytes. Throws if not loaded. */
+	serialize(): Uint8Array {
+		if (!this.ledger) throw new Error('Ledger not loaded');
+		return this.ledger.serialize();
+	}
+
+	/**
+	 * Restore the ledger from previously serialized bytes without re-parsing source files.
+	 * Caller is responsible for verifying the cache is still valid (e.g. via hash comparison).
+	 */
+	async loadFromCache(bytes: Uint8Array): Promise<void> {
+		await ensureInitialized();
+		if (this.ledger) {
+			this.ledger.free();
+			this.ledger = null;
+		}
+		this.ledger = ledgerFromCache(bytes);
+		this._version.update((v) => v + 1);
+	}
+
+	/** Free the instance without reloading — leaves the service in an unloaded state. */
+	reset(): void {
+		if (this.ledger) {
+			this.ledger.free();
+			this.ledger = null;
+		}
+		this._version.update((v) => v + 1);
 	}
 }
 

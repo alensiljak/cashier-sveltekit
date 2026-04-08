@@ -262,6 +262,27 @@ export function parseAllAccounts(source: string): Account[] {
 }
 
 /**
+ * Compute a SHA-256 hash over an array of source strings.
+ * Returns a lowercase hex string suitable for change detection.
+ */
+export function computeSourceHash(sources: string[]): string {
+	if (!wasmModule || !wasmModule.hashSources) {
+		throw new Error('WASM module not available or hashSources() not supported');
+	}
+	return wasmModule.hashSources(sources);
+}
+
+/**
+ * Restore a Ledger from previously serialized bytes (Ledger.fromCache).
+ */
+export function ledgerFromCache(bytes: Uint8Array): Ledger {
+	if (!wasmModule || !wasmModule.Ledger) {
+		throw new Error('WASM module not available or Ledger class not supported');
+	}
+	return wasmModule.Ledger.fromCache(bytes);
+}
+
+/**
  * Get the WASM library version
  */
 export function version(): string {

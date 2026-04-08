@@ -211,6 +211,23 @@ export async function deleteFiles(
 	return { deleted, failed };
 }
 
+export async function saveBinaryFile(filename: string, data: Uint8Array): Promise<void> {
+	const stream = await openWrite(filename);
+	await stream?.write(data.buffer as ArrayBuffer);
+	await stream?.close();
+}
+
+export async function readBinaryFile(filename: string): Promise<Uint8Array | undefined> {
+	const fileHandle = await getHandle(filename);
+	if (!fileHandle) {
+		console.warn('File could not be opened', filename);
+		return undefined;
+	}
+	const file = await fileHandle.getFile();
+	const buffer = await file.arrayBuffer();
+	return new Uint8Array(buffer as ArrayBuffer);
+}
+
 export async function deleteAll(): Promise<void> {
 	const root = await navigator.storage.getDirectory();
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
