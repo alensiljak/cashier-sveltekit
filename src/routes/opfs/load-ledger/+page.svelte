@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import FAB from '$lib/components/FAB.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
-	import { Check, FolderOpenIcon } from '@lucide/svelte';
+	import { FolderOpenIcon } from '@lucide/svelte';
 
 	// ── IDB persistence for directory handle ─────────────────────────────────────
 	const IDB_NAME = 'cashier-fs-handles';
@@ -122,12 +121,21 @@
 	let progress = $state({ done: 0, total: 0 });
 	let statusMsg = $state('');
 	let errorMsg = $state('');
+	let logLines = $state<string[]>([]);
+	let consoleEl = $state<HTMLDivElement | null>(null);
 
 	// Overwrite dialog
 	let overwriteDialog = $state<{
 		resolve: (choice: 'skip' | 'overwrite' | 'overwriteAll') => void;
 		path: string;
 	} | null>(null);
+
+	$effect(() => {
+		// scroll console to bottom whenever logLines changes
+		if (logLines.length && consoleEl) {
+			consoleEl.scrollTop = consoleEl.scrollHeight;
+		}
+	});
 
 	onMount(async () => {
 		const stored = await loadPersistedHandle();
@@ -153,6 +161,7 @@
 			phase = 'idle';
 			statusMsg = '';
 			errorMsg = '';
+			logLines = [];
 		} catch (e: any) {
 			if (e?.name !== 'AbortError') {
 				errorMsg = e?.message ?? String(e);
@@ -183,6 +192,7 @@
 		errorMsg = '';
 		progress = { done: 0, total: 0 };
 		statusMsg = 'Scanning files…';
+		logLines = [];
 
 		try {
 			const permission = await (dirHandle as any).requestPermission({ mode: 'read' });
@@ -209,11 +219,13 @@
 				if (exists && !overwriteAll) {
 					const choice = await waitForOverwriteChoice(path);
 					if (choice === 'skip') {
+						logLines = [...logLines, `skipped ${path}`];
 						progress.done++;
 						continue;
 					}
 					if (choice === 'overwriteAll') overwriteAll = true;
 				}
+				logLines = [...logLines, `copying ${path}`];
 				const file = await handle.getFile();
 				await writeOpfsFile(path, file);
 				progress.done++;
@@ -222,17 +234,10 @@
 
 			phase = 'done';
 			statusMsg = `Done — ${progress.done} of ${progress.total} file(s) copied to OPFS.`;
+			logLines = [...logLines, statusMsg];
 		} catch (e: any) {
 			errorMsg = e?.message ?? String(e);
 			phase = 'error';
-		}
-	}
-
-	function onFabClick() {
-		if (dirHandle && phase !== 'copying') {
-			copyToOpfs();
-		} else if (!dirHandle) {
-			pickDirectory();
 		}
 	}
 </script>
@@ -240,15 +245,15 @@
 <div class="h-screen flex flex-col overflow-hidden">
 	<Toolbar title="Load Ledger to OPFS" />
 
-	<div class="flex-1 overflow-y-auto p-4 flex flex-col gap-4 pb-24">
+	<div class="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
 
 		<!-- Directory picker -->
 		<section class="flex flex-col gap-2">
-			<label class="label font-semibold">Source Directory</label>
+			<label for="directoryPicker" class="label font-semibold">Source Directory</label>
 			{#if dirHandle}
 				<div class="flex items-center gap-2">
 					<span class="font-mono text-sm bg-base-200 rounded px-3 py-2 flex-1 truncate">{dirName}/</span>
-					<button class="btn btn-sm btn-ghost" onclick={pickDirectory}>
+					<button id="directoryPicker" class="btn btn-sm btn-ghost" onclick={pickDirectory}>
 						<FolderOpenIcon class="w-4 h-4" />
 						Change
 					</button>
@@ -276,14 +281,35 @@
 			</p>
 		</section>
 
-		<!-- Progress / status -->
-		{#if phase === 'copying'}
-			<section class="flex flex-col gap-2">
-				{#if progress.total > 0}
-					<progress class="progress progress-primary w-full" value={progress.done} max={progress.total}></progress>
-				{/if}
-				<p class="text-sm">{statusMsg}</p>
-			</section>
+		<!-- Import button -->
+		{#if dirHandle}
+		<center class="py-4">
+			<button
+				class="btn btn-accent self-start"
+				disabled={phase === 'copying'}
+				onclick={copyToOpfs}
+			>
+				Import
+			</button>
+		</center>
+		{/if}
+
+		<!-- Progress -->
+		{#if phase === 'copying' && progress.total > 0}
+			<progress class="progress progress-primary w-full" value={progress.done} max={progress.total}></progress>
+		{/if}
+
+		<!-- Console log -->
+		{#if logLines.length > 0}
+			<div
+				bind:this={consoleEl}
+				class="bg-neutral text-neutral-content font-mono text-xs rounded p-2 overflow-y-auto"
+				style="height: 7.5rem; min-height: 7.5rem;"
+			>
+				{#each logLines as line}
+					<div>{line}</div>
+				{/each}
+			</div>
 		{/if}
 
 		{#if phase === 'done' && statusMsg}
@@ -300,12 +326,6 @@
 
 	</div>
 </div>
-
-<FAB
-	Icon={Check}
-	onclick={onFabClick}
-	backgroundColor={!dirHandle ? 'btn-neutral' : phase === 'copying' ? 'btn-ghost' : 'btn-accent'}
-/>
 
 <!-- Overwrite dialog -->
 {#if overwriteDialog}
