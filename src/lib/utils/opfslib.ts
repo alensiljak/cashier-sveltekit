@@ -210,3 +210,15 @@ export async function deleteFiles(
 
 	return { deleted, failed };
 }
+
+export async function deleteAll(): Promise<void> {
+	const root = await navigator.storage.getDirectory();
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	for await (const [name, handle] of (root as any).entries()) {
+		if (handle.kind === 'directory') {
+			await root.removeEntry(name, { recursive: true });
+		} else {
+			await root.removeEntry(name);
+		}
+	}
+}

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import OpfsFilePicker from '$lib/components/OpfsFilePicker.svelte';
-	import { SaveIcon, FilePlusIcon, UploadIcon } from '@lucide/svelte';
+	import { SaveIcon, FilePlusIcon, UploadIcon, Trash2Icon } from '@lucide/svelte';
 	import { onMount, onDestroy } from 'svelte';
 	import * as OpfsLib from '$lib/utils/opfslib.js';
 	import type { FileTreeEntry } from '$lib/utils/opfslib.js';
@@ -31,6 +31,8 @@
 	let dropConflictFileName = $state('');
 	let dropConflictContent = $state('');
 	let fileUploadInput = $state<HTMLInputElement | null>(null);
+	let showDeleteAllConfirm = $state(false);
+	let isDeletingAll = $state(false);
 
 	onMount(async () => {
 		document.addEventListener('dragover', preventDefaultDrag);
@@ -226,6 +228,24 @@
 		input.value = '';
 	}
 
+	async function deleteAll() {
+		isDeletingAll = true;
+		try {
+			await OpfsLib.deleteAll();
+			selectedFile = null;
+			fileContent = '';
+			originalContent = '';
+			hasUnsavedChanges = false;
+			showDeleteAllConfirm = false;
+			Notifier.success('All files deleted');
+			await filePicker?.refresh();
+		} catch (error: any) {
+			Notifier.error(error.message || 'Failed to delete all files');
+		} finally {
+			isDeletingAll = false;
+		}
+	}
+
 	function onFileContentChange(event: Event) {
 		const target = event.target as HTMLTextAreaElement;
 		fileContent = target.value;
@@ -254,6 +274,12 @@
 				<button class="btn btn-sm btn-ghost gap-2" onclick={() => fileUploadInput?.click()}>
 					<UploadIcon class="w-5 h-5" />
 					<span>Upload File</span>
+				</button>
+			</li>
+			<li>
+				<button class="btn btn-sm btn-ghost gap-2 text-error" onclick={() => (showDeleteAllConfirm = true)}>
+					<Trash2Icon class="w-5 h-5" />
+					<span>Delete All</span>
 				</button>
 			</li>
 		{/snippet}
@@ -370,6 +396,22 @@
 				<div class="modal-action">
 					<button class="btn" onclick={closeNewFileDialog}>Cancel</button>
 					<button class="btn btn-primary" onclick={createNewFile}>Create</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+
+	<!-- Delete All Confirmation Modal -->
+	{#if showDeleteAllConfirm}
+		<div class="modal modal-open">
+			<div class="modal-box">
+				<h3 class="font-bold text-lg">Delete All Files</h3>
+				<p>This will permanently delete all files and folders from OPFS. This cannot be undone.</p>
+				<div class="modal-action">
+					<button class="btn" onclick={() => (showDeleteAllConfirm = false)} disabled={isDeletingAll}>Cancel</button>
+					<button class="btn btn-error" onclick={deleteAll} disabled={isDeletingAll}>
+						{isDeletingAll ? 'Deleting...' : 'Delete All'}
+					</button>
 				</div>
 			</div>
 		</div>
