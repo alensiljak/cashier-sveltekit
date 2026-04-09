@@ -6,8 +6,6 @@
 	import type { BeancountError, Directive, ParsedLedger } from '@rustledger/wasm';
 	import { DirectiveFormatter } from '$lib/rledger/directiveFormatter';
 	import { Account } from '$lib/data/model';
-	import appService from '$lib/services/appService';
-	import * as OpfsLib from '$lib/utils/opfslib.js';
 	import rustledger from '$lib/services/rustledger';
 	import {
 		findLastTransactionDirective,
@@ -35,9 +33,6 @@
 
 	// Editable transaction source (only transactions, not infrastructure)
 	let transactionSource = $state('');
-
-	// Infrastructure source (book.bean from OPFS)
-	let infrastructureSource = $state('');
 
 	// UI state
 	let sourceOnly = $state(false);
@@ -73,11 +68,7 @@
 
 	// Derived state
 	let fullBeancountSource = $derived(
-		sourceOnly
-			? transactionSource
-			: infrastructureSource && transactionSource
-				? `${infrastructureSource}\n\n${transactionSource}`
-				: infrastructureSource || transactionSource || ''
+		transactionSource
 	);
 
 	let lastTransactionDirective = $derived(findLastTransactionDirective(parsedDirectives));
@@ -110,29 +101,6 @@
 			isLoading = false;
 		}
 	});
-
-	// async function loadInfrastructure() {
-	// 	try {
-	// 		const files = InfrastructureFiles;
-	// 		const contents: string[] = [];
-
-	// 		for (const filename of files) {
-	// 			try {
-	// 				const content = await OpfsLib.readFile(filename);
-	// 				if (content) {
-	// 					contents.push(content);
-	// 				}
-	// 			} catch (err) {
-	// 				console.warn(`Could not load ${filename}:`, err);
-	// 			}
-	// 		}
-
-	// 		infrastructureSource = contents.join('\n\n');
-	// 	} catch (err) {
-	// 		console.warn('Could not load infrastructure files:', err);
-	// 		infrastructureSource = '';
-	// 	}
-	// }
 
 	async function handleParse() {
 		try {
@@ -282,12 +250,6 @@
 		// Derive the transaction source from the new full source
 		if (sourceOnly) {
 			transactionSource = newFullSource;
-		} else if (infrastructureSource) {
-			// Remove the infrastructure prefix to get just the transactions
-			const infraPrefix = infrastructureSource + '\n\n';
-			transactionSource = newFullSource.startsWith(infraPrefix)
-				? newFullSource.slice(infraPrefix.length)
-				: newFullSource;
 		} else {
 			transactionSource = newFullSource;
 		}
@@ -434,7 +396,7 @@
 	>
 		<SourceViewer
 			source={fullBeancountSource}
-			infrastructureLength={infrastructureSource.length}
+			infrastructureLength={0}
 			transactionLength={transactionSource.length}
 		/>
 	</AccordionSection>
