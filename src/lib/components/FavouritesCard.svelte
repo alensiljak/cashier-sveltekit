@@ -5,7 +5,7 @@
 	import { Account, Money } from '$lib/data/model';
 	import { onMount } from 'svelte';
 	import appService from '$lib/services/appService';
-	import fullLedgerService from '$lib/services/fullLedgerService';
+	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import Notifier from '$lib/utils/notifier';
 	import { formatAmount, getAmountColour } from '$lib/utils/formatter';
 	import { getBarWidth } from '$lib/utils/barWidthCalculator';
@@ -37,23 +37,24 @@
 		await loadData();
 	});
 
-	function queryFavouriteBalances(favNames: string[]): Map<string, Account> {
+	async function queryFavouriteBalances(favNames: string[]): Promise<Map<string, Account>> {
 		const result = new Map<string, Account>();
 		if (favNames.length === 0) return result;
+
+		await fullLedgerService.ensureLoaded();
 
 		const quotedNames = favNames.map((n) => `'${n}'`).join(', ');
 		const bql = `SELECT account, sum(position) AS balance WHERE account IN (${quotedNames})`;
 
-		const queryResult = fullLedgerService.query(bql);
+		const queryResult = await fullLedgerService.query(bql);
 		if (queryResult.errors.length > 0) {
 			console.warn('BQL query errors:', queryResult.errors);
-			return result;
 		}
 
 		const accountIdx = queryResult.columns.indexOf('account');
 		const balanceIdx = queryResult.columns.indexOf('balance');
 
-		for (const row of queryResult.rows) {
+		for (const row of queryResult.rows as any[][]) {
 			const name: string = row[accountIdx];
 			const account = new Account(name);
 
@@ -102,7 +103,7 @@
 			}
 
 			const defaultCurrency = await appService.getDefaultCurrency();
-			const balanceMap = queryFavouriteBalances(favNames);
+			const balanceMap = await queryFavouriteBalances(favNames);
 
 			accounts = favNames.map((name) => {
 				const found = balanceMap.get(name);

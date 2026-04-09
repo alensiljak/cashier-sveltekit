@@ -6,7 +6,6 @@
 	import { selectionMetadata } from '$lib/data/mainStore';
 	import { Account, Money } from '$lib/data/model';
 	import { SelectionType } from '$lib/enums';
-	import ledgerService from '$lib/services/ledgerService';
 	import appService from '$lib/services/appService';
 	import { SelectionModeMetadata, SettingKeys, settings } from '$lib/settings';
 	import { formatAmount, getMoneyColour } from '$lib/utils/formatter';
@@ -14,6 +13,7 @@
 	import Notifier from '$lib/utils/notifier';
 	import { ArrowUpDownIcon, PlusCircleIcon, PlusIcon, Trash2Icon, TrashIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
+	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 
 	Notifier.init();
 
@@ -80,24 +80,25 @@
 	/**
 	 * Query account balances from the ParsedLedger via BQL.
 	 */
-	function queryFavouriteBalances(favNames: string[]): Map<string, Account> {
+	async function queryFavouriteBalances(favNames: string[]): Promise<Map<string, Account>> {
 		const result = new Map<string, Account>();
 		if (favNames.length === 0) return result;
+
+		await fullLedgerService.ensureLoaded();
 
 		// Build the WHERE IN clause.
 		const quotedNames = favNames.map((n) => `'${n}'`).join(', ');
 		const bql = `SELECT account, sum(position) AS balance WHERE account IN (${quotedNames})`;
 
-		const queryResult = ledgerService.query(bql);
+		const queryResult = await fullLedgerService.query(bql);
 		if (queryResult.errors.length > 0) {
 			console.warn('BQL query errors:', queryResult.errors);
-			return result;
 		}
 
 		const accountIdx = queryResult.columns.indexOf('account');
 		const balanceIdx = queryResult.columns.indexOf('balance');
 
-		for (const row of queryResult.rows) {
+		for (const row of queryResult.rows as any[][]) {
 			const name: string = row[accountIdx];
 			const account = new Account(name);
 
@@ -149,8 +150,8 @@
 
 		const defaultCurrency = await appService.getDefaultCurrency();
 
-		// Query balances from the WASM ParsedLedger.
-		const balanceMap = queryFavouriteBalances(favNames);
+		// Query balances via the full ledger worker.
+		const balanceMap = await queryFavouriteBalances(favNames);
 
 		// Build the accounts list preserving the favourites order.
 		accounts = favNames.map((name) => {
@@ -235,7 +236,7 @@
 		{:else}
 			<!-- list -->
 			<div>
-				{#each accounts as account (account)}
+				{#each accounts as account (account.name)}
 					<div class="flex w-full flex-col px-0.5">
 						<!-- row -->
 						<!-- svelte-ignore a11y_click_events_have_key_events -->
