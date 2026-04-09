@@ -9,7 +9,6 @@
 	import { pwaAssetsHead } from 'virtual:pwa-assets/head';
 	import { onMount } from 'svelte';
 	import fullLedgerService from '$lib/services/fullLedgerService';
-	import { writable } from 'svelte/store';
 	import { drawerState } from '$lib/data/mainStore';
 	import NavigationV3 from '$lib/components/navigation.svelte';
 	import Notifier from '$lib/utils/notifier';
@@ -18,7 +17,6 @@
 
 	let { children } = $props();
 
-	const ledgerReady = writable(false);
 	onMount(async () => {
 		// Initialize the Ledger service.
 		const initialized = await initializeApp();
@@ -55,7 +53,6 @@
 
 		try {
 			await fullLedgerService.load();
-			ledgerReady.set(true);
 			console.log('FullLedgerService loaded and ready');
 			return true;
 		} catch (err) {
@@ -63,7 +60,6 @@
 			Notifier.error('Failed to initialize the engine.' + err);
 			return false;
 		}
-
 	}
 
 	function handleSwipe(e: SwipeCustomEvent) {
@@ -93,20 +89,13 @@
 		<!-- former AppShell -->
 		<div class="grid grid-cols-1 lg:grid-cols-[288px_1fr] h-screen">
 			<aside class="sticky top-0 col-span-1 hidden h-screen overflow-y-auto lg:block">
-				<!-- bg-surface-500/5 -->
 				<!-- <Navigation /> -->
 				<NavigationV3 />
 			</aside>
 
 			<main class="col-span-1 bg-base-300 h-full overflow-auto touch-pan-y"
 				{...useSwipe(handleSwipe, () => ({ timeframe: 350, threshold: 25 }))}>
-				{#if $ledgerReady}
-					{@render children()}
-				{:else}
-					<div class="flex items-center justify-center h-full">
-						<span class="loading loading-spinner loading-lg"></span>
-					</div>
-				{/if}
+				{@render children()}
 			</main>
 		</div>
 	</div>
