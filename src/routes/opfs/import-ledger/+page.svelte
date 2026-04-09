@@ -177,10 +177,10 @@
 					const permission = await (stored as any).requestPermission({ mode: 'read' });
 					if (permission === 'granted') {
 						dirHandle = stored;
-						await scanAndCompare();
 					}
 				} catch {
 					// Permission denied or unavailable
+					console.warn('Could not access previously selected directory handle.');
 				}
 			}
 		}
@@ -204,7 +204,6 @@
 		statusMsg = '';
 		errorMsg = '';
 		logLines = [];
-		scanAndCompare();
 	}
 
 	async function pickDirectory() {
@@ -218,7 +217,6 @@
 			statusMsg = '';
 			errorMsg = '';
 			logLines = [];
-			await scanAndCompare();
 		} catch (e: any) {
 			if (e?.name !== 'AbortError') {
 				errorMsg = e?.message ?? String(e);
@@ -383,41 +381,37 @@
 			</p>
 		</section>
 
-		<!-- Scan results -->
-		{#if phase === 'scanning'}
-			<section class="flex items-center gap-3 text-sm text-base-content/70">
-				<span class="loading loading-spinner loading-sm"></span>
-				<span>
+		<!-- Scan button -->
+		<center class="py-4">
+			<button
+				class="btn btn-primary"
+				disabled={phase === 'scanning' || phase === 'copying' || !dirName}
+				onclick={scanAndCompare}
+			>
+				{#if phase === 'scanning'}
+					<span class="loading loading-spinner loading-sm"></span>
 					Scanning…
 					{#if scanProgress.total > 0}
 						({scanProgress.done} / {scanProgress.total})
 					{/if}
-				</span>
-			</section>
-		{:else if scanStats !== null}
+				{:else}
+					Scan
+				{/if}
+			</button>
+		</center>
+
+		<!-- Scan results -->
+		{#if scanStats !== null}
 			<section class="flex flex-col gap-3">
 				<div class="flex items-center gap-2 flex-wrap">
 					<span class="text-sm font-semibold text-base-content/70">Scan results:</span>
-					<span class="badge badge-success gap-1">
-						{scanStats.new} new
-					</span>
-					<span class="badge badge-warning gap-1">
-						{scanStats.modified} modified
-					</span>
-					<span class="badge badge-ghost gap-1">
-						{scanStats.identical} identical
-					</span>
-					<button
-						class="btn btn-sm btn-ghost ml-auto"
-						disabled={phase === 'copying'}
-						onclick={scanAndCompare}
-					>
-						Rescan
-					</button>
+					<span class="badge badge-success">{scanStats.new} new</span>
+					<span class="badge badge-warning">{scanStats.modified} modified</span>
+					<span class="badge badge-ghost">{scanStats.identical} identical</span>
 				</div>
 
 				<!-- Import mode -->
-				<div class="flex gap-6">
+				<div class="flex flex-wrap gap-6">
 					<label class="flex items-center gap-2 cursor-pointer">
 						<input
 							type="radio"
@@ -444,12 +438,9 @@
 					</label>
 				</div>
 			</section>
-		{:else if dirName && phase === 'idle'}
-			<section class="text-sm text-base-content/50 italic">
-				Scan pending — change the file spec or
-				<button class="link" onclick={scanAndCompare}>scan now</button>.
-			</section>
 		{/if}
+
+		<hr class="my-6 mx-4" />
 
 		<!-- Import button -->
 		<center class="py-4">
