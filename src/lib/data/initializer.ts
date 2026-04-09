@@ -8,6 +8,7 @@ import * as OpfsLib from '$lib/utils/opfslib';
 export async function initialize() {
     // Create the transactions file.
     await OpfsLib.saveFile(CASHIER_XACT_FILE, '');
+
     // Set the main file.
     await settings.set(SettingKeys.bookFilename, CASHIER_XACT_FILE);
 }

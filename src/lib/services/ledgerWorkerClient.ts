@@ -176,6 +176,12 @@ class LedgerWorkerClient {
 		return resp.accounts;
 	}
 
+	/** Return the operating currencies declared in the ledger options. */
+	async getOperatingCurrencies(): Promise<string[]> {
+		const resp = await this.send<'options-done'>({ type: 'get-options' });
+		return resp.operatingCurrencies;
+	}
+
 	/** Free the cached ledger without reloading. */
 	async reset(): Promise<void> {
 		await this.send<'reset-done'>({ type: 'reset' });

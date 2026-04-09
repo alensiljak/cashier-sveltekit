@@ -1,5 +1,5 @@
 <script lang="ts">
-/*
+	/*
 	This page is import of book files into OPFS.
 */
 	import { onMount } from 'svelte';
@@ -15,20 +15,30 @@
 	import { BoxIcon, Check } from '@lucide/svelte';
 	import Fab from '$lib/components/FAB.svelte';
 	import { page } from '$app/state';
+	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 
 	Notifier.init();
 
 	let rememberLastTransaction = $state<boolean>();
 	let rootInvestmentAccount = $state<string>();
 	let currency = $state<string>();
+	let bookCurrencies = $state<string[]>([]);
 	let configSource = $state<LedgerDataSource>(LedgerDataSource.filesystem);
 	let bookFilename = $state<string | null>(null);
 	let assetAllocationDefinition = $state<string | null>(null);
 
 	onMount(async () => {
 		// Handle return from file picker
+		await handleFilePickerReturn();
+
+		// load data
+		await loadData();
+	});
+
+	async function handleFilePickerReturn() {
 		const settingKey = page.url.searchParams.get('settingKey');
 		const settingValue = page.url.searchParams.get('settingValue');
+
 		if (settingKey && settingValue) {
 			await settings.set(settingKey, settingValue);
 			// Remove params from URL without triggering navigation
@@ -37,9 +47,17 @@
 			url.searchParams.delete('settingValue');
 			history.replaceState({}, '', url.toString());
 		}
+	}
 
-		// load data
+	async function loadData() {
 		currency = await appService.getDefaultCurrency();
+		bookCurrencies = await fullLedgerService.getOperatingCurrencies();
+		if (!currency) {
+			// load from the ledger
+			currency = bookCurrencies[0];
+			// save to settings for next time
+			await settings.set(SettingKeys.currency, currency);
+		}
 		rootInvestmentAccount = (await settings.get<string>(
 			SettingKeys.rootInvestmentAccount
 		)) as string;
@@ -52,7 +70,7 @@
 		bookFilename = (await settings.get<string>(SettingKeys.bookFilename)) ?? null;
 		assetAllocationDefinition =
 			(await settings.get<string>(SettingKeys.assetAllocationDefinition)) ?? null;
-	});
+	}
 
 	async function onConfigSourceChanged() {
 		await settings.set(SettingKeys.ledgerDataSource, configSource);
@@ -103,9 +121,11 @@
 <main class="mx-auto max-w-6xl space-y-4 p-1">
 	<!-- currency -->
 	<div class="form-control w-full">
-		<label for="currency" class="label">
-			<span class="label-text">Main Currency</span>
-		</label>
+		<div class="flex items-baseline gap-4">
+			<label for="currency" class="label">
+				<span class="label-text">Main Currency</span>
+			</label>
+		</div>
 		<input
 			id="currency"
 			class="input rounded"
@@ -113,6 +133,9 @@
 			placeholder="Main Currency"
 			bind:value={currency}
 		/>
+		{#if bookCurrencies.length > 0}
+			<span class="text-sm opacity-70">Book currencies: {bookCurrencies.join(', ')}</span>
+		{/if}
 	</div>
 	<!-- investment account -->
 	<div class="form-control w-full">
@@ -229,15 +252,17 @@
 			<button
 				class="btn btn-primary btn-sm rounded"
 				type="button"
-				onclick={() => goto(`/opfs/file-picker?returnSetting=${SettingKeys.assetAllocationDefinition}`)}
+				onclick={() =>
+					goto(`/opfs/file-picker?returnSetting=${SettingKeys.assetAllocationDefinition}`)}
 			>
 				Select
 			</button>
 		</div>
 
 		<h4 class="h4 text-lg font-bold">Note</h4>
-		<p class="text-sm">Cashier uses `cashier.bean` file to store transactions created on the device. This file needs to 
-			be included in your book file.
+		<p class="text-sm">
+			Cashier uses `cashier.bean` file to store transactions created on the device. This file needs
+			to be included in your book file.
 		</p>
 	</div>
 </main>

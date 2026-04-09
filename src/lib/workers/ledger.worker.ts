@@ -140,7 +140,9 @@ export type WorkerRequestPayload =
 	/** Free the in-memory ledger and delete the OPFS cache file. */
 	| { type: 'delete-cache' }
 	/** Return all open accounts (open directives + BQL tx accounts merged). */
-	| { type: 'get-all-accounts' };
+	| { type: 'get-all-accounts' }
+	/** Return ledger options (e.g. operating_currencies). */
+	| { type: 'get-options' };
 
 export type WorkerRequest = { id: number } & WorkerRequestPayload;
 
@@ -155,6 +157,7 @@ export type WorkerResponsePayload =
 	| { type: 'serialize-ledger-done'; bytes: number; ms: number }
 	| { type: 'load-from-cache-done'; directiveCount: number; ms: number }
 	| { type: 'delete-cache-done' }
+	| { type: 'options-done'; operatingCurrencies: string[] }
 	| { type: 'error'; message: string };
 
 export type WorkerResponse = { id: number } & WorkerResponsePayload;
@@ -342,6 +345,15 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
 					currencies: currenciesCol !== -1 ? (row[currenciesCol] ?? []) : []
 				}));
 				reply({ type: 'all-accounts-done', accounts });
+				break;
+			}
+
+			case 'get-options': {
+				const opts = ledger ? ledger.getOptions() : null;
+				reply({
+					type: 'options-done',
+					operatingCurrencies: opts?.operating_currencies ?? []
+				});
 				break;
 			}
 
