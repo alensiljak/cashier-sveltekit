@@ -2,7 +2,7 @@
 
 ## Projects
 
-- [ ] [Fast Ledger Load](doc/projects/2026-04-08_fast_ledger_load.md)
+- [x] [Fast Ledger Load](doc/projects/2026-04-08_fast_ledger_load.md)
 
 ## General
 
