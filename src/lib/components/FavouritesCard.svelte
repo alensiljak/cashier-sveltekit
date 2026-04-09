@@ -35,10 +35,32 @@
 	const lsVersion = fullLedgerService.version;
 	const isReloading = fullLedgerService.isReloading;
 
+	let balancesLoaded = $state(false);
+
+	// Immediately show account names with placeholders, then load balances.
 	$effect(() => {
 		const _v = $lsVersion;
+		balancesLoaded = false;
+		showPlaceholders();
 		loadData();
 	});
+
+	async function showPlaceholders() {
+		const favNames: string[] =
+			((await settings.get<string[]>(SettingKeys.favouriteAccounts)) ?? []).slice(0, 5);
+		if (favNames.length === 0) return;
+
+		// Only set placeholders if balances haven't loaded yet.
+		if (!balancesLoaded) {
+			accounts = favNames.map((name) => {
+				const account = new Account(name);
+				account.balance = new Money();
+				account.balance.currency = '---';
+				account.balance.quantity = 0;
+				return account;
+			});
+		}
+	}
 
 	async function queryFavouriteBalances(favNames: string[]): Promise<Map<string, Account>> {
 		const result = new Map<string, Account>();
@@ -99,7 +121,8 @@
 
 	async function loadData() {
 		try {
-			const favNames: string[] = ((await settings.get<string[]>(SettingKeys.favouriteAccounts)) ?? []).slice(0, 5);
+			const favNames: string[] =
+				((await settings.get<string[]>(SettingKeys.favouriteAccounts)) ?? []).slice(0, 5);
 			if (favNames.length === 0) {
 				accounts = [];
 				return;
@@ -135,6 +158,7 @@
 					return account;
 				}
 			});
+			balancesLoaded = true;
 		} catch (error: any) {
 			console.error(error);
 			Notifier.error(error.message);
@@ -168,19 +192,25 @@
 						<div class={`cell grow ${isGrayedOut(account) ? 'text-base-content text-opacity-50' : ''}`}>
 							{account?.name}
 						</div>
-						<data class={`text-right ${getAmountColour(account.balance?.quantity as number)}`}>
-							{formatAmount(account.balance?.quantity as number)}
-							{account.balance?.currency}
+						<data class={`text-right ${balancesLoaded ? getAmountColour(account.balance?.quantity as number) : 'text-base-content/30'}`}>
+							{#if balancesLoaded}
+								{formatAmount(account.balance?.quantity as number)}
+								{account.balance?.currency}
+							{:else}
+								···
+							{/if}
 						</data>
 					</div>
-					<div
-						class="h-1"
-						style="width: {getBarWidth(
-							account.balance?.quantity as number,
-							minBalance,
-							maxBalance
-						)}%; background-color: {(account.balance?.quantity as number) >= 0 ? 'green' : 'red'};"
-					></div>
+					{#if balancesLoaded}
+						<div
+							class="h-1"
+							style="width: {getBarWidth(
+								account.balance?.quantity as number,
+								minBalance,
+								maxBalance
+							)}%; background-color: {(account.balance?.quantity as number) >= 0 ? 'green' : 'red'};"
+						></div>
+					{/if}
 				</div>
 			{/each}
 		{/if}
