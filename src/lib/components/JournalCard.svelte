@@ -7,6 +7,7 @@
 	import Notifier from '$lib/utils/notifier';
 	import { formatAmount, getReadableDate, getXactAmountColour } from '$lib/utils/formatter';
 	import fullLedgerService from '$lib/services/fullLedgerService';
+	import workerLedger from '$lib/services/ledgerWorkerClient';
 
 	Notifier.init();
 
@@ -14,6 +15,7 @@
 	let xactBalances: Money[] = $state([]);
 
 	const lsVersion = fullLedgerService.version;
+	const isReloading = workerLedger.isReloading;
 
 	$effect(() => {
 		const _v = $lsVersion;
@@ -67,6 +69,7 @@
 	{/snippet}
 	{#snippet title()}
 		Device Journal
+		{#if $isReloading}<span class="loading loading-spinner loading-xs ml-2 opacity-70"></span>{/if}
 	{/snippet}
 	{#snippet content()}
 		{#if xacts.length == 0}

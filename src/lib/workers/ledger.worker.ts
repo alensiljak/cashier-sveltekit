@@ -182,10 +182,15 @@ async function loadFromFiles(mainFileName: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Message handler
+// Message handler — serialized via a queue so async handlers never interleave.
+// An async onmessage can be re-entered while awaiting; the queue ensures that
+// e.g. a 'query' message never races a concurrent 'invalidate'.
 // ---------------------------------------------------------------------------
 
-self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
+const _msgQueue: MessageEvent<WorkerRequest>[] = [];
+let _processing = false;
+
+async function handleMessage(e: MessageEvent<WorkerRequest>): Promise<void> {
 	const { id } = e.data;
 
 	const reply = (data: WorkerResponsePayload) => {
@@ -362,5 +367,18 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
 		}
 	} catch (err) {
 		reply({ type: 'error', message: String(err) });
+	}
+}
+
+self.onmessage = (e: MessageEvent<WorkerRequest>) => {
+	_msgQueue.push(e);
+	if (!_processing) {
+		_processing = true;
+		(async () => {
+			while (_msgQueue.length > 0) {
+				await handleMessage(_msgQueue.shift()!);
+			}
+			_processing = false;
+		})();
 	}
 };

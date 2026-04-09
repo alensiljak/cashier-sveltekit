@@ -54,13 +54,15 @@
 			await ledgerService.appendTransaction(beancountText);
 		}
 		xactSpan.set(undefined);
-		await fullLedgerService.invalidate();
 
 		// Remember Last Transaction?
 		const remember = await settings.get(SettingKeys.rememberLastTransaction);
 		if (remember) {
 			await appService.saveLastTransaction(clonedXact);
 		}
+
+		// Re-parse the full book in the background — cards show a loading indicator.
+		fullLedgerService.invalidate();
 
 		history.back();
 	}

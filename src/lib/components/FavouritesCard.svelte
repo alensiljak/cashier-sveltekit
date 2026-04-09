@@ -3,7 +3,6 @@
 	import HomeCardTemplate from './HomeCardTemplate.svelte';
 	import { goto } from '$app/navigation';
 	import { Account, Money } from '$lib/data/model';
-	import { onMount } from 'svelte';
 	import appService from '$lib/services/appService';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import Notifier from '$lib/utils/notifier';
@@ -33,8 +32,12 @@
 	let maxBalance: number = $state(0);
 	let minBalance: number = $state(0);
 
-	onMount(async () => {
-		await loadData();
+	const lsVersion = fullLedgerService.version;
+	const isReloading = fullLedgerService.isReloading;
+
+	$effect(() => {
+		const _v = $lsVersion;
+		loadData();
 	});
 
 	async function queryFavouriteBalances(favNames: string[]): Promise<Map<string, Account>> {
@@ -153,6 +156,7 @@
 	{/snippet}
 	{#snippet title()}
 		Favourites
+		{#if $isReloading}<span class="loading loading-spinner loading-xs ml-2 opacity-70"></span>{/if}
 	{/snippet}
 	{#snippet content()}
 		{#if !accounts}

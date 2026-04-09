@@ -78,7 +78,9 @@
 		await ledgerService.deleteTransaction(span);
 		xactSpan.set(undefined);
 		xact.set(Xact.create());
-		await fullLedgerService.invalidate();
+
+		// Re-parse the full book in the background — cards show a loading indicator.
+		fullLedgerService.invalidate();
 
 		Notifier.success('Transaction deleted');
 
@@ -94,7 +96,9 @@
 		const newXact = appService.createXactFrom($xact);
 		const beancountText = xactToBeancountText(newXact);
 		await ledgerService.appendTransaction(beancountText);
-		await fullLedgerService.invalidate();
+
+		// Re-parse the full book in the background.
+		fullLedgerService.invalidate();
 
 		Notifier.success('Transaction copied');
 

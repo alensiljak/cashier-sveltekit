@@ -9,7 +9,7 @@
  * callers only need to update the import path, not the variable name.
  */
 
-import { writable, derived, type Readable } from 'svelte/store';
+import { writable, derived, get, type Readable } from 'svelte/store';
 import { settings, SettingKeys } from '$lib/settings';
 import type {
 	WorkerRequestPayload,
@@ -31,9 +31,12 @@ class LedgerWorkerClient {
 	private _isLoaded = false;
 	private _isConfigured = writable(false);
 	private _version = writable(0);
+	private _isReloading = writable(false);
 	readonly version: Readable<number> = derived(this._version, (v) => v);
 	/** False until at least one successful load with .bean files present. */
 	readonly isConfigured: Readable<boolean> = derived(this._isConfigured, (v) => v);
+	/** True while a background invalidate/re-parse is in progress. */
+	readonly isReloading: Readable<boolean> = derived(this._isReloading, (v) => v);
 
 	// -------------------------------------------------------------------------
 	// Worker lifecycle
@@ -118,17 +121,26 @@ class LedgerWorkerClient {
 		}
 	}
 
-	/** Load only if not already loaded; no-op otherwise. */
+	/** Load only if not already loaded; no-op otherwise.
+	 *  Also skips if an invalidate() is already in progress — the version bump
+	 *  at the end of invalidation will retrigger any reactive subscribers. */
 	async ensureLoaded(): Promise<void> {
 		if (this._isLoaded) return;
+		if (get(this._isReloading)) return;
 		await this.load();
 	}
 
 	/** Free and re-parse — picks up source file changes. */
 	async invalidate(): Promise<void> {
-		await this.send<'load-done'>({ type: 'invalidate', mainFileName: await this.mainFileName() });
-		this._isLoaded = true;
-		this._version.update((v) => v + 1);
+		this._isReloading.set(true);
+		this._isLoaded = false; // prevent queries from reaching the worker while re-parsing
+		try {
+			await this.send<'load-done'>({ type: 'invalidate', mainFileName: await this.mainFileName() });
+			this._isLoaded = true;
+			this._version.update((v) => v + 1);
+		} finally {
+			this._isReloading.set(false);
+		}
 	}
 
 	/** Run a BQL query against the cached ledger. Returns empty results if not loaded. */
