@@ -8,7 +8,7 @@
  * import * as AccountService from 'accountService'
  */
 import { Account, Money } from '$lib/data/model';
-import db from '$lib/data/db';
+// import db from '$lib/data/db';
 import { SettingKeys, settings } from '$lib/settings';
 import appService from './appService';
 import fullLedgerService from './ledgerWorkerClient';
@@ -16,31 +16,33 @@ import { addDecimalStrings } from '$lib/utils/numberUtils';
 
 type QueryFn = (bql: string) => Promise<{ columns: string[]; rows: any[]; errors: any[] }>;
 
-export async function createDefaultAccounts() {
-	const accountsList = getDefaultChartOfAccounts();
-	await createAccounts(accountsList);
-}
+// export async function createDefaultAccounts() {
+// 	const accountsList = getDefaultChartOfAccounts();
+// 	await createAccounts(accountsList);
+// }
 
 /**
  * Creates accounts in the db, from a string list.
  * @param accountsList List of accounts, one account full name per line
  */
-async function createAccounts(accountsList: string) {
-	let accountNames = accountsList.split('\n');
-	// trim
-	accountNames = accountNames.map((account) => account.trim());
-	accountNames = accountNames.filter((account) => account);
+// async function createAccounts(accountsList: string) {
+// 	let accountNames = accountsList.split('\n');
+// 	// trim
+// 	accountNames = accountNames.map((account) => account.trim());
+// 	accountNames = accountNames.filter((account) => account);
 
-	// create objects
-	// const accounts = accountNames.map((accountName) => new Account(accountName))
-	const accounts = accountNames.map((accountName) => {
-		return {
-			name: accountName
-		};
-	});
-	await db.accounts.bulkAdd(accounts);
-}
+// 	// create objects
+// 	// const accounts = accountNames.map((accountName) => new Account(accountName))
+// 	const accounts = accountNames.map((accountName) => {
+// 		return {
+// 			name: accountName
+// 		};
+// 	});
+// 	await db.accounts.bulkAdd(accounts);
+// }
 
+
+// oxlint-disable-next-line no-unused-vars
 function getDefaultChartOfAccounts() {
 	const accountsList = `
     Assets:Cash

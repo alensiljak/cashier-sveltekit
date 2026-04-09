@@ -1,23 +1,20 @@
 /*
 	Provide service layer for the application.
-
-	https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/export
 */
 import db from '$lib/data/db';
-import { Account, LastXact, Payee, ScheduledTransaction, Xact } from '$lib/data/model';
+import { LastXact, ScheduledTransaction, Xact } from '$lib/data/model';
 import { settings, SettingKeys } from '$lib/settings';
 import { HomeCardNames } from '$lib/enums';
 import { DefaultCurrencyStore, ScheduledXact, xact } from '$lib/data/mainStore';
 import { loadInvestmentAccounts } from './accountsService';
 import { get } from 'svelte/store';
-import * as LedgerParser from '$lib/utils/ledgerParser';
-import * as BeancountParser from '$lib/utils/beancountParser';
+// import * as LedgerParser from '$lib/utils/ledgerParser';
+// import * as BeancountParser from '$lib/utils/beancountParser';
 import { formatAmount } from '$lib/utils/formatter';
-import { PtaSystems } from '$lib/enums';
 
-interface AccountIndex {
-	[key: string]: Account;
-}
+// interface AccountIndex {
+// 	[key: string]: Account;
+// }
 
 class AppService {
 	/**
@@ -33,10 +30,10 @@ class AppService {
 		return tx;
 	}
 
-	createAccount(name: string) {
-		const acc = new Account(name);
-		return db.accounts.add(acc);
-	}
+	// createAccount(name: string) {
+	// 	const acc = new Account(name);
+	// 	return db.accounts.add(acc);
+	// }
 
 	createXactFrom(existing: Xact): Xact {
 		const newXact = new Xact();
@@ -56,13 +53,13 @@ class AppService {
 		return db;
 	}
 
-	deleteAccount(name: string) {
-		return db.accounts.delete(name);
-	}
+	// deleteAccount(name: string) {
+	// 	return db.accounts.delete(name);
+	// }
 
-	async deleteAccounts() {
-		return db.accounts.clear();
-	}
+	// async deleteAccounts() {
+	// 	return db.accounts.clear();
+	// }
 
 	/**
 	 * Delete transaction and related postings.
@@ -287,104 +284,79 @@ class AppService {
 	}
 
 	/**
-	 * Deprecated. Now using importBalanceSheet instead.
-	 * Imports accounts list from Ledger.
-	 * @param accountsList Output of `ledger accounts`
-	 * @returns
-	 */
-	async importAccounts(accountsList: string[]) {
-		if (!accountsList) {
-			throw new Error('The accounts list is required!');
-		}
-
-		const accounts = [];
-
-		for (let i = 0; i < accountsList.length; i++) {
-			const line = accountsList[i];
-			if (line === '') continue;
-
-			const account = new Account('');
-			account.name = line;
-			accounts.push(account);
-		}
-
-		return db.accounts.bulkPut(accounts);
-	}
-
-	/**
 	 * Imports the accounts list with their balances.
 	 * Populates the Account balances. Reads the balances from a Ledger report.
 	 * 10,000 AUD  Assets:Bank Account
 	 * @param lines Output of `ledger balance --flat`
 	 * @returns The promise resolving to the id of the last record updated (Dexie default)
 	 */
-	async importBalanceSheet(ptaSystem: string, response: any): Promise<unknown> {
-		if (!response) {
-			// !response.length
-			throw new Error('No balance records received for import!');
-		}
+	// async importBalanceSheet(ptaSystem: string, response: any): Promise<unknown> {
+	// 	if (!response) {
+	// 		// !response.length
+	// 		throw new Error('No balance records received for import!');
+	// 	}
 
-		const mainCurrency = await this.getDefaultCurrency();
-		if (!mainCurrency) {
-			throw new Error('No default currency set!');
-		}
+	// 	const mainCurrency = await this.getDefaultCurrency();
+	// 	if (!mainCurrency) {
+	// 		throw new Error('No default currency set!');
+	// 	}
 
-		const accountBalances: AccountIndex = {};
-		let account: Account | null = null;
+	// 	const accountBalances: AccountIndex = {};
+	// 	let account: Account | null = null;
 
-		let items;
-		switch (ptaSystem) {
-			// case PtaSystems.rledger:
-			// 	items = response.rows;
-			// 	break;
-			case PtaSystems.beancount:
-			case PtaSystems.ledger:
-				items = response;
-				break;
-			default:
-				throw new Error('Unknown PTA system: ' + ptaSystem);
-		}
+	// 	let items;
+	// 	switch (ptaSystem) {
+	// 		// case PtaSystems.rledger:
+	// 		// 	items = response.rows;
+	// 		// 	break;
+	// 		case PtaSystems.beancount:
+	// 		case PtaSystems.ledger:
+	// 			items = response;
+	// 			break;
+	// 		default:
+	// 			throw new Error('Unknown PTA system: ' + ptaSystem);
+	// 	}
 
-		// read and parse the balance sheet entries
-		for (let i = 0; i < items.length; i++) {
-			const item = items[i];
-			console.log('Balance sheet item:', item);
-			if (item === '') continue;
+	// 	// read and parse the balance sheet entries
+	// 	for (let i = 0; i < items.length; i++) {
+	// 		const item = items[i];
+	// 		console.log('Balance sheet item:', item);
+	// 		if (item === '') continue;
 
-			// parse
-			if (ptaSystem === PtaSystems.ledger) {
-				account = LedgerParser.parseBalanceSheetRow(item);
-			} else if (ptaSystem === PtaSystems.beancount) {
-				account = BeancountParser.parseBalanceSheetRow(item);
-				// } else if (ptaSystem === PtaSystems.rledger) {
-				// 	account = RledgerParser.parseBalanceSheetRow(item);
-				// 	console.log('Parsed account from rledger:', account);
-			} else {
-				throw new Error('Unknown PTA system: ' + ptaSystem);
-			}
+	// 		// parse
+	// 		if (ptaSystem === PtaSystems.ledger) {
+	// 			account = LedgerParser.parseBalanceSheetRow(item);
+	// 		} else if (ptaSystem === PtaSystems.beancount) {
+	// 			account = BeancountParser.parseBalanceSheetRow(item);
+	// 			// } else if (ptaSystem === PtaSystems.rledger) {
+	// 			// 	account = RledgerParser.parseBalanceSheetRow(item);
+	// 			// 	console.log('Parsed account from rledger:', account);
+	// 		} else {
+	// 			throw new Error('Unknown PTA system: ' + ptaSystem);
+	// 		}
 
-			if (!account) {
-				continue;
-			} else {
-				// see if we already have this account
-				const existingAccount = accountBalances[account.name];
-				if (existingAccount && existingAccount.balances && account.balances) {
-					// add the new balance in another currency
-					const currency = Object.keys(account.balances)[0];
-					const amount = Object.values(account.balances)[0];
-					existingAccount.balances[currency] = amount;
-				} else {
-					// insert account
-					accountBalances[account.name] = account;
-				}
-			}
-			// }
-		}
+	// 		if (!account) {
+	// 			continue;
+	// 		} else {
+	// 			// see if we already have this account
+	// 			const existingAccount = accountBalances[account.name];
+	// 			if (existingAccount && existingAccount.balances && account.balances) {
+	// 				// add the new balance in another currency
+	// 				const currency = Object.keys(account.balances)[0];
+	// 				const amount = Object.values(account.balances)[0];
+	// 				existingAccount.balances[currency] = amount;
+	// 			} else {
+	// 				// insert account
+	// 				accountBalances[account.name] = account;
+	// 			}
+	// 		}
+	// 		// }
+	// 	}
 
-		// the array of accounts to be updated.
-		const accounts: Account[] = Object.values(accountBalances);
-		return db.accounts.bulkPut(accounts);
-	}
+	// 	// the array of accounts to be updated.
+	// 	const accounts: Account[] = Object.values(accountBalances);
+	// 	return db.accounts.bulkPut(accounts);
+	// }
 
 	importCommodities(text: string) {
 		if (!text) {
@@ -410,10 +382,10 @@ class AppService {
 	 * Imports the payees into storage.
 	 * @param payees Array of payee names from Ledger.
 	 */
-	async importPayees(payeeNames: string[]): Promise<void> {
-		const payees = payeeNames.map((name) => new Payee(name));
-		await db.payees.bulkAdd(payees);
-	}
+	// async importPayees(payeeNames: string[]): Promise<void> {
+	// 	const payees = payeeNames.map((name) => new Payee(name));
+	// 	await db.payees.bulkAdd(payees);
+	// }
 
 	/**
 	 * Imports Scheduled Transactions from a JSON String backup (from the export file).
@@ -431,9 +403,9 @@ class AppService {
 		await db.scheduled.bulkPut(parsed);
 	}
 
-	async loadAccount(name: string) {
-		return db.accounts.get(name);
-	}
+	// async loadAccount(name: string) {
+	// 	return db.accounts.get(name);
+	// }
 
 	/**
 	 * Loads all transactions for the given account name.
@@ -460,35 +432,35 @@ class AppService {
 	 * Loads the favourite accounts.
 	 * @returns {Array} List of Account records which are marked as Favourites.
 	 */
-	async loadFavouriteAccounts(): Promise<Account[]> {
-		const favArray = await settings.get<string[]>(SettingKeys.favouriteAccounts);
-		if (!favArray) {
-			console.warn('No favourite accounts found.');
-			return [];
-		}
+	// async loadFavouriteAccounts(): Promise<Account[]> {
+	// 	const favArray = await settings.get<string[]>(SettingKeys.favouriteAccounts);
+	// 	if (!favArray) {
+	// 		console.warn('No favourite accounts found.');
+	// 		return [];
+	// 	}
 
-		// load account details
-		const accounts: Account[] = await db.accounts.bulkGet(favArray);
+	// 	// load account details
+	// 	const accounts: Account[] = await db.accounts.bulkGet(favArray);
 
-		// Handle any accounts that have not been found.
-		// Keep them in the list. They should be grayed out.
-		for (let i = 0; i < accounts.length; i++) {
-			let account = accounts[i];
-			if (account === undefined) {
-				// the account has been removed but the Favourites record exists.
-				console.warn('Account marked as favourite but not found in Accounts.');
+	// 	// Handle any accounts that have not been found.
+	// 	// Keep them in the list. They should be grayed out.
+	// 	for (let i = 0; i < accounts.length; i++) {
+	// 		let account = accounts[i];
+	// 		if (account === undefined) {
+	// 			// the account has been removed but the Favourites record exists.
+	// 			console.warn('Account marked as favourite but not found in Accounts.');
 
-				account = new Account(favArray[i]);
-				account.exists = false;
-				accounts[i] = account;
+	// 			account = new Account(favArray[i]);
+	// 			account.exists = false;
+	// 			accounts[i] = account;
 
-				// accounts.splice(i, 1)
-				// i--
-			}
-		}
+	// 			// accounts.splice(i, 1)
+	// 			// i--
+	// 		}
+	// 	}
 
-		return accounts;
-	}
+	// 	return accounts;
+	// }
 
 	async loadScheduledXact(id: number): Promise<ScheduledTransaction> {
 		const scx = await db.scheduled.get(id);
@@ -502,9 +474,9 @@ class AppService {
 		return scx;
 	}
 
-	saveAccount(account: Account) {
-		return db.accounts.put(account);
-	}
+	// saveAccount(account: Account) {
+	// 	return db.accounts.put(account);
+	// }
 
 	/**
 	 * Saves the given transaction as the Last Xact for the Payee.

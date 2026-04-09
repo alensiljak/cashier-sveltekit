@@ -3,10 +3,10 @@
 */
 import Dexie, { type Table } from 'dexie';
 import {
-	Account,
+	// Account,
 	LastXact,
 	// Xact,
-	Payee,
+	// Payee,
 	// Posting,
 	ScheduledTransaction,
 	Setting
@@ -15,9 +15,9 @@ import {
 // Define the schema
 
 interface CashierDatabase extends Dexie {
-	accounts: Table;
+	// accounts: Table;
 	lastXact: Table;
-	payees: Table;
+	// payees: Table;
 	scheduled: Table;
 	settings: Table;
 	// xacts: Table;
@@ -38,9 +38,9 @@ db.version(1).stores({
 
 // Mappings
 
-db.accounts.mapToClass(Account);
+// db.accounts.mapToClass(Account);
 db.lastXact.mapToClass(LastXact);
-db.payees.mapToClass(Payee);
+// db.payees.mapToClass(Payee);
 // db.xacts.mapToClass(Xact);
 db.settings.mapToClass(Setting);
 db.scheduled.mapToClass(ScheduledTransaction);
