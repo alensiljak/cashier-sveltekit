@@ -141,7 +141,7 @@
 
 	<Fab Icon={Check} onclick={saveSettings} />
 
-	<hr class="my-6 mx-4" />
+	<!-- <hr class="my-6 mx-4" />
 
 	<div class="flex gap-6">
 		<div>
@@ -198,7 +198,7 @@
 				Configure
 			</button>
 		</div>
-	</div>
+	</div> -->
 
 	<hr class="my-6 mx-4" />
 

@@ -17,8 +17,12 @@
 		SettingsIcon,
 		StarIcon,
 		UsersRoundIcon,
+		ContainerIcon,
 
-		ContainerIcon
+		FolderOpenIcon,
+
+		FolderInputIcon
+
 
 	} from '@lucide/svelte';
 
@@ -151,6 +155,30 @@
 					<ul>
 						<li>
 							<a
+								href="/opfs/import-ledger"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/opfs/import-ledger'
+									? 'active bg-secondary text-secondary-content'
+									: ''}"
+								onclick={closeDrawer}
+							>
+								<FolderInputIcon />
+								<span>Ledger Import</span>
+							</a>
+						</li>
+						<!-- <li>
+							<a
+								href="/sync"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/sync'
+									? 'active bg-secondary text-secondary-content'
+									: ''}"
+								onclick={closeDrawer}
+							>
+								<RefreshCw />
+								<span>Sync</span>
+							</a>
+						</li> -->
+						<li>
+							<a
 								href="/backup"
 								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/backup'
 									? 'active bg-secondary text-secondary-content'
@@ -163,8 +191,21 @@
 						</li>
 						<li>
 							<a
+								href="/opfs"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/opfs'
+									? 'active bg-secondary text-secondary-content'
+									: ''}"
+								onclick={closeDrawer}
+							>
+								<FolderOpenIcon />
+								<span>File Storage</span>
+							</a>
+						</li>
+						<li>
+							<a
 								href="/tools/serialization"
-								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/tools/serialization'
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname ===
+								'/tools/serialization'
 									? 'active bg-secondary text-secondary-content'
 									: ''}"
 								onclick={closeDrawer}
@@ -188,18 +229,6 @@
 					<span>Peer Sync</span>
 				</a>
 			</li> -->
-			<li>
-				<a
-					href="/sync"
-					class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/sync'
-						? 'active bg-secondary text-secondary-content'
-						: ''}"
-					onclick={closeDrawer}
-				>
-					<RefreshCw />
-					<span>Sync</span>
-				</a>
-			</li>
 			<li>
 				<a
 					href="/help"
