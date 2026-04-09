@@ -8,21 +8,24 @@
 		BarController,
 		BarElement,
 		CategoryScale,
+		type ChartData,
+		type ChartOptions,
 		LinearScale,
 		Legend,
 		Chart,
 		Title
 	} from 'chart.js';
 	import { onMount } from 'svelte';
+	import type { Unsubscriber } from 'svelte/store';
 	import 'hw-chartjs-plugin-colorschemes/src/plugins/plugin.colorschemes';
 	// office.Composite6
 	// @ts-ignore
 	import { Composite6 } from 'hw-chartjs-plugin-colorschemes/src/colorschemes/colorschemes.office';
-	import { getAccountBalance, getShortAccountName } from '$lib/services/accountsService';
+	import { getShortAccountName } from '$lib/services/accountsService';
 	import db from '$lib/data/db';
-	import { Account, type ScheduledTransaction, type Xact } from '$lib/data/model';
+	import { type ScheduledTransaction, type Xact } from '$lib/data/model';
 	import appService from '$lib/services/appService';
-	import fullLedgerService from '$lib/services/fullLedgerService';
+	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import moment from 'moment';
 	import { XactAugmenter } from '$lib/utils/xactAugmenter';
 	import { ISODATEFORMAT } from '$lib/constants';
@@ -38,24 +41,42 @@
 
 	let defaultCurrency: string;
 	let maxDate: moment.Moment;
-	let chartDiv: any;
+	let chartDiv: HTMLCanvasElement | null = null;
+	let chart: Chart<'bar'> | null = null;
 
 	Chart.register(Title, Legend, BarElement, CategoryScale, LinearScale, BarController);
 
-	onMount(async () => {
+	onMount(() => {
+		chart = renderChart(createEmptyChartData());
+
+		const unsubscribe: Unsubscriber = fullLedgerService.loaded.subscribe((loaded) => {
+			if (!loaded) {
+				updateChart(createEmptyChartData());
+				return;
+			}
+
+			void loadAndRenderChart();
+		});
+
+		return () => {
+			unsubscribe();
+			chart?.destroy();
+			chart = null;
+		};
+	});
+
+	async function loadAndRenderChart() {
 		defaultCurrency = await appService.getDefaultCurrency();
 		maxDate = moment().add(daysCount, 'days');
 
 		try {
 			let data = await loadData();
-
-			renderChart(data);
-
+			updateChart(data);
 		} catch (error) {
 			Notifier.error('Error loading data for the chart.');
 			console.error(error);
 		}
-	});
+	}
 
 	async function addScxData(accountName: string, amounts: number[]): Promise<number[]> {
 		// project scheduled transactions
@@ -126,7 +147,7 @@
 	}
 
 	function createXAxis() {
-		let labels: string[] = new Array(daysCount + 1);
+		let labels: string[] = Array.from({ length: daysCount + 1 }, () => '');
 
 		for (let i = 0; i <= daysCount; i++) {
 			// labels on weeks only
@@ -139,25 +160,53 @@
 		return labels;
 	}
 
-	async function loadData() {
-		let data: any = {
+	function createEmptyChartData(): ChartData<'bar'> {
+		return {
+			labels: createXAxis(),
 			datasets: []
 		};
+	}
 
-		// Expected format:
-		// data = {
-		// 	label: 'third',
-		// 	data: [300, 150, 12, 1000.16, 100]
-		// }
+	/** Fetch current balances for selected accounts via BQL. */
+	async function loadAccountBalances(): Promise<Record<string, number>> {
+		const balances: Record<string, number> = {};
 
-		const accounts = fullLedgerService.getAccounts();
+		// Build a filter for only the selected accounts.
+		const inList = accountNames.map((name) => `'${name}'`).join(', ');
+		const bql = `SELECT account, sum(number) as balance, currency WHERE account in (${inList}) GROUP BY account, currency ORDER BY account`;
+		const result = await fullLedgerService.query(bql);
 
-		for (const accountName of accountNames) {
-			let dataset = await createDatasetFor(accountName, accounts);
-			data.datasets.push(dataset);
+		const colAccount = result.columns.indexOf('account');
+		const colBalance = result.columns.indexOf('balance');
+		const colCurrency = result.columns.indexOf('currency');
+
+		for (const row of result.rows as unknown[][]) {
+			const account = row[colAccount] as string;
+			const balance = Number(row[colBalance]) || 0;
+			const currency = row[colCurrency] as string;
+
+			// Prefer the balance in default currency; otherwise take the first one found.
+			if (currency === defaultCurrency || !(account in balances)) {
+				balances[account] = balance;
+			}
 		}
 
-		return data;
+		return balances;
+	}
+
+	async function loadData(): Promise<ChartData<'bar'>> {
+		const balances = await loadAccountBalances();
+		const datasets = [];
+
+		for (const accountName of accountNames) {
+			let dataset = await createDatasetFor(accountName, balances[accountName] ?? 0);
+			datasets.push(dataset);
+		}
+
+		return {
+			labels: createXAxis(),
+			datasets
+		};
 	}
 
 	async function loadScxsFor(accountName: string) {
@@ -171,26 +220,14 @@
 		return scxsForAccount;
 	}
 
-	async function createDatasetFor(accountName: string, accounts: Account[]) {
-		// create a dataset record for each account.
+	async function createDatasetFor(accountName: string, currentBalance: number) {
 		let dataset = {
-			label: '',
-			data: Array.from({ length: daysCount + 1 }) as number[]
+			label: getShortAccountName(accountName),
+			data: Array.from<number>({ length: daysCount + 1 }).fill(0)
 		};
 
-		// load account
-		const account: Account = accounts.find((a) => a.name === accountName) ?? new Account(accountName);
-
-		dataset.label = account.getAccountName();
-
-		// add default values.
-		for (let i = 0; i < dataset.data.length; i++) {
-			dataset.data[i] = 0;
-		}
-
-		// todo: add local transactions
-
-		dataset.data[0] = getAccountBalance(account, defaultCurrency).quantity;
+		// Day-0 is the current balance from BQL.
+		dataset.data[0] = currentBalance;
 
 		// add scheduled transactions
 		dataset.data = await addScxData(accountName, dataset.data);
@@ -198,46 +235,61 @@
 		return dataset;
 	}
 
-	function renderChart(data: any) {
-		// document.getElementById('chartDiv') as ChartItem
-		const ctx = chartDiv.getContext('2d');
+	function updateChart(data: ChartData<'bar'>) {
+		if (!chart) return;
+		chart.data = data;
+		chart.update();
+	}
 
-		// labels, x-axis
-		const labels = createXAxis();
-		data.labels = labels;
+	function renderChart(data: ChartData<'bar'>) {
+		// document.getElementById('chartDiv') as ChartItem
+		if (!chartDiv) {
+			throw new Error('Could not initialize forecast chart canvas.');
+		}
+
+		const ctx = chartDiv.getContext('2d');
+		if (!ctx) {
+			throw new Error('Could not initialize forecast chart context.');
+		}
 
 		// Color palettes:
 		// https://nagix.github.io/chartjs-plugin-colorschemes/colorchart.html
 
+		const options: ChartOptions<'bar'> = {
+			plugins: {
+				legend: {
+					labels: {
+						usePointStyle: true
+					}
+				}
+			},
+			responsive: true,
+			scales: {
+				x: {
+					stacked: true
+				},
+				y: {
+					stacked: true
+				}
+			}
+		};
+
 		const config: any = {
 			type: 'bar',
-			data: data,
+			data,
 			options: {
+				...options,
 				plugins: {
-					legend: {
-						labels: {
-							usePointStyle: true
-						}
-					},
+					...options.plugins,
 					colorschemes: {
 						scheme: Composite6
-					}
-				},
-				responsive: true,
-				scales: {
-					x: {
-						stacked: true
-					},
-					y: {
-						stacked: true
 					}
 				}
 			}
 		};
-		const chart = new Chart(ctx, config);
+
+		return new Chart<'bar'>(ctx, config);
 	}
 </script>
 
-<div id="chartDiv"></div>
-<!-- <canvas use:chartRender={chartData}></canvas> -->
-<canvas bind:this={chartDiv} width={400} height={200}> </canvas>
+<canvas bind:this={chartDiv} width={400} height={200}></canvas>

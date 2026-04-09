@@ -29,9 +29,11 @@ class LedgerWorkerClient {
 	private _nextId = 0;
 
 	private _isLoaded = false;
+	private _loaded = writable(false);
 	private _isConfigured = writable(false);
 	private _version = writable(0);
 	private _isReloading = writable(false);
+	readonly loaded: Readable<boolean> = derived(this._loaded, (value) => value);
 	readonly version: Readable<number> = derived(this._version, (v) => v);
 	/** False until at least one successful load with .bean files present. */
 	readonly isConfigured: Readable<boolean> = derived(this._isConfigured, (v) => v);
@@ -99,6 +101,11 @@ class LedgerWorkerClient {
 	// Public API  (mirrors FullLedgerService, query/getDirectives/getErrors async)
 	// -------------------------------------------------------------------------
 
+	private setLoaded(value: boolean): void {
+		this._isLoaded = value;
+		this._loaded.set(value);
+	}
+
 	get isLoaded(): boolean {
 		return this._isLoaded;
 	}
@@ -107,16 +114,17 @@ class LedgerWorkerClient {
 	async load(): Promise<void> {
 		try {
 			await this.send<'load-done'>({ type: 'load', mainFileName: await this.mainFileName() });
-			this._isLoaded = true;
+			this.setLoaded(true);
 			this._isConfigured.set(true);
 			this._version.update((v) => v + 1);
 		} catch (err) {
 			if (String(err).includes('No .bean files found')) {
 				// App not yet configured — stay unloaded but don't crash callers.
-				this._isLoaded = false;
+				this.setLoaded(false);
 				this._isConfigured.set(false);
 				return;
 			}
+			this.setLoaded(false);
 			throw err;
 		}
 	}
@@ -133,10 +141,10 @@ class LedgerWorkerClient {
 	/** Free and re-parse — picks up source file changes. */
 	async invalidate(): Promise<void> {
 		this._isReloading.set(true);
-		this._isLoaded = false; // prevent queries from reaching the worker while re-parsing
+		this.setLoaded(false); // prevent queries from reaching the worker while re-parsing
 		try {
 			await this.send<'load-done'>({ type: 'invalidate', mainFileName: await this.mainFileName() });
-			this._isLoaded = true;
+			this.setLoaded(true);
 			this._version.update((v) => v + 1);
 		} finally {
 			this._isReloading.set(false);
@@ -177,7 +185,7 @@ class LedgerWorkerClient {
 	 */
 	async loadFromCache(): Promise<{ directiveCount: number; ms: number }> {
 		const resp = await this.send<'load-from-cache-done'>({ type: 'load-from-cache' });
-		this._isLoaded = true;
+		this.setLoaded(true);
 		this._version.update((v) => v + 1);
 		return { directiveCount: resp.directiveCount, ms: resp.ms };
 	}
@@ -197,7 +205,7 @@ class LedgerWorkerClient {
 	/** Free the cached ledger without reloading. */
 	async reset(): Promise<void> {
 		await this.send<'reset-done'>({ type: 'reset' });
-		this._isLoaded = false;
+		this.setLoaded(false);
 		this._version.update((v) => v + 1);
 	}
 
@@ -208,7 +216,7 @@ class LedgerWorkerClient {
 	 */
 	async deleteCache(): Promise<void> {
 		await this.send<'delete-cache-done'>({ type: 'delete-cache' });
-		this._isLoaded = false;
+		this.setLoaded(false);
 		this._version.update((v) => v + 1);
 	}
 }

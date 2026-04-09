@@ -8,7 +8,7 @@
 	import { pwaInfo } from 'virtual:pwa-info';
 	import { pwaAssetsHead } from 'virtual:pwa-assets/head';
 	import { onMount } from 'svelte';
-	import fullLedgerService from '$lib/services/fullLedgerService';
+	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import { drawerState } from '$lib/data/mainStore';
 	import NavigationV3 from '$lib/components/navigation.svelte';
 	import Notifier from '$lib/utils/notifier';

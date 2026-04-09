@@ -7,14 +7,18 @@
 
 	let _accountNames: string[] = $state([]);
 	let _days: number = $state(0);
+	let _settingsLoaded = $state(false);
 
-	onMount(async () => {
-		await loadData();
+	onMount(() => {
+		void loadData();
 	});
 
 	async function loadData() {
 		let accountNames = await settings.get<string[]>(SettingKeys.forecastAccounts);
-		if (!accountNames) return;
+		if (!accountNames) {
+			_settingsLoaded = true;
+			return;
+		}
 
 		_accountNames = accountNames;
 
@@ -22,6 +26,8 @@
 		if (_days === 0) {
 			_days = Constants.ForecastDays;
 		}
+
+		_settingsLoaded = true;
 	}
 </script>
 
@@ -38,7 +44,9 @@
 		</a>
 	{/snippet}
 	{#snippet content()}
-		{#if !_accountNames.length || !_days}
+		{#if !_settingsLoaded}
+			<p>Loading forecast settings...</p>
+		{:else if !_accountNames.length || !_days}
 			<p>There are no accounts selected for forecasting</p>
 		{:else}
 			<DailyForecastChart daysCount={_days} accountNames={_accountNames} />
