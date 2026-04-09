@@ -10,6 +10,7 @@
 	let error = $state<string | null>(null);
 	let chartLabels = $state<string[]>([]);
 	let chartValues = $state<number[]>([]);
+	let expenseTotal = $derived(chartValues.reduce((sum, v) => sum + v, 0));
 	let currentPeriod = $state<Period | null>(null);
 
 	function handleBarClick(account: string) {
@@ -98,4 +99,12 @@
 			<ExpensesBarChart labels={chartLabels} values={chartValues} onclick={handleBarClick} />
 		{/if}
 	</section>
+
+	<!-- Total -->
+	{#if chartValues.length > 0}
+		<div class="flex justify-end px-4 py-2 border-t border-base-300 text-sm font-medium">
+			<span class="text-base-content/60 mr-2">Total:</span>
+			<span>{expenseTotal.toFixed(2)}</span>
+		</div>
+	{/if}
 </article>
