@@ -1,0 +1,19 @@
+; Test book
+; To be used for testing, demos, and app initialization.
+
+option "title" "Demo Book"
+
+option "operating_currency" "EUR"
+
+; Commodities
+2024-01-01 commodity EUR
+  note: "Euro"
+  format: "EUR 0.00"
+
+; Accounts
+2024-01-01 open Assets:Cash
+2024-01-01 open Assets:Bank:Checking
+
+; Transactions
+
+include "cashier.bean"
