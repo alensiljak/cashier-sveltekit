@@ -22,7 +22,7 @@
 	import db from '$lib/data/db';
 	import { Account, type ScheduledTransaction, type Xact } from '$lib/data/model';
 	import appService from '$lib/services/appService';
-	import ledgerService from '$lib/services/ledgerService';
+	import fullLedgerService from '$lib/services/fullLedgerService';
 	import moment from 'moment';
 	import { XactAugmenter } from '$lib/utils/xactAugmenter';
 	import { ISODATEFORMAT } from '$lib/constants';
@@ -150,7 +150,7 @@
 		// 	data: [300, 150, 12, 1000.16, 100]
 		// }
 
-		const accounts = ledgerService.getAccounts();
+		const accounts = fullLedgerService.getAccounts();
 
 		for (const accountName of accountNames) {
 			let dataset = await createDatasetFor(accountName, accounts);

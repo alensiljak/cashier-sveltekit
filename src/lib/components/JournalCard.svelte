@@ -6,14 +6,14 @@
 	import { XactAugmenter } from '$lib/utils/xactAugmenter';
 	import Notifier from '$lib/utils/notifier';
 	import { formatAmount, getReadableDate, getXactAmountColour } from '$lib/utils/formatter';
-	import ledgerService from '$lib/services/ledgerService';
+	import fullLedgerService from '$lib/services/fullLedgerService';
 
 	Notifier.init();
 
 	let xacts: Xact[] = $state([]);
 	let xactBalances: Money[] = $state([]);
 
-	const lsVersion = ledgerService.version;
+	const lsVersion = fullLedgerService.version;
 
 	$effect(() => {
 		const _v = $lsVersion;
@@ -36,7 +36,7 @@
 	}
 
 	async function loadData() {
-		const all = await ledgerService.getXactsWithSpans();
+		const all = await fullLedgerService.getXactsWithSpans();
 		// Newest first, limited to 5
 		const latest = all.slice().reverse().slice(0, 5);
 		xacts = latest.map((item) => item.xact);

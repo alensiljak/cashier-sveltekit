@@ -8,7 +8,7 @@
 	import { pwaInfo } from 'virtual:pwa-info';
 	import { pwaAssetsHead } from 'virtual:pwa-assets/head';
 	import { onMount } from 'svelte';
-	import ledgerService from '$lib/services/ledgerService';
+	import fullLedgerService from '$lib/services/fullLedgerService';
 	import { writable } from 'svelte/store';
 	import { drawerState } from '$lib/data/mainStore';
 	import NavigationV3 from '$lib/components/navigation.svelte';
@@ -18,11 +18,11 @@
 	const ledgerReady = writable(false);
 	onMount(async () => {
 		try {
-			await ledgerService.load();
+			await fullLedgerService.load();
 			ledgerReady.set(true);
-			console.log('LedgerService loaded and ready');
+			console.log('FullLedgerService loaded and ready');
 		} catch (err) {
-			console.error('Failed to initialize LedgerService:', err);
+			console.error('Failed to initialize FullLedgerService:', err);
 		}
 
 		if (pwaInfo) {

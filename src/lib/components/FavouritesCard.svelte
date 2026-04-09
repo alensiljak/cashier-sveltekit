@@ -5,7 +5,7 @@
 	import { Account, Money } from '$lib/data/model';
 	import { onMount } from 'svelte';
 	import appService from '$lib/services/appService';
-	import ledgerService from '$lib/services/ledgerService';
+	import fullLedgerService from '$lib/services/fullLedgerService';
 	import Notifier from '$lib/utils/notifier';
 	import { formatAmount, getAmountColour } from '$lib/utils/formatter';
 	import { getBarWidth } from '$lib/utils/barWidthCalculator';
@@ -44,7 +44,7 @@
 		const quotedNames = favNames.map((n) => `'${n}'`).join(', ');
 		const bql = `SELECT account, sum(position) AS balance WHERE account IN (${quotedNames})`;
 
-		const queryResult = ledgerService.query(bql);
+		const queryResult = fullLedgerService.query(bql);
 		if (queryResult.errors.length > 0) {
 			console.warn('BQL query errors:', queryResult.errors);
 			return result;

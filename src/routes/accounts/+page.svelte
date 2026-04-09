@@ -4,7 +4,7 @@
 	import { selectionMetadata } from '$lib/data/mainStore';
 	import { ListSearch } from '$lib/utils/ListSearch';
 	import { onMount } from 'svelte';
-	import { createDAL, type DAL } from '$lib/data/dal';
+	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import type { Account } from '$lib/data/model';
 
 	let searchTerm = $state('');
@@ -20,10 +20,9 @@
 	async function loadData() {
 		document.body.style.cursor = 'wait';
 
-		const dal = await createDAL();
-
-		const accounts = await dal.loadAccounts();
-		allAccounts = accounts;
+		await fullLedgerService.ensureLoaded();
+		const accounts = await fullLedgerService.getAllAccounts();
+		allAccounts = accounts as Account[];
 
 		dataLoaded = true;
 		document.body.style.cursor = 'default';

@@ -156,6 +156,12 @@ class LedgerWorkerClient {
 		return { directiveCount: resp.directiveCount, ms: resp.ms };
 	}
 
+	/** Return all open accounts (from #accounts where close is null). */
+	async getAllAccounts(): Promise<Array<{ name: string; currencies: string[] }>> {
+		const resp = await this.send<'all-accounts-done'>({ type: 'get-all-accounts' });
+		return resp.accounts;
+	}
+
 	/** Free the cached ledger without reloading. */
 	async reset(): Promise<void> {
 		await this.send<'reset-done'>({ type: 'reset' });

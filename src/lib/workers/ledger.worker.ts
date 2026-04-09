@@ -138,7 +138,9 @@ export type WorkerRequestPayload =
 	/** Restore the persistent ledger from the OPFS cache file. */
 	| { type: 'load-from-cache' }
 	/** Free the in-memory ledger and delete the OPFS cache file. */
-	| { type: 'delete-cache' };
+	| { type: 'delete-cache' }
+	/** Return all open accounts (open directives + BQL tx accounts merged). */
+	| { type: 'get-all-accounts' };
 
 export type WorkerRequest = { id: number } & WorkerRequestPayload;
 
@@ -149,6 +151,7 @@ export type WorkerResponsePayload =
 	| { type: 'errors-done'; errors: unknown[] }
 	| { type: 'state-done'; isLoaded: boolean }
 	| { type: 'reset-done' }
+	| { type: 'all-accounts-done'; accounts: Array<{ name: string; currencies: string[] }> }
 	| { type: 'serialize-ledger-done'; bytes: number; ms: number }
 	| { type: 'load-from-cache-done'; directiveCount: number; ms: number }
 	| { type: 'delete-cache-done' }
@@ -322,6 +325,23 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
 				}
 				await opfsDeleteFile(LEDGER_CACHE_FILE);
 				reply({ type: 'delete-cache-done' });
+				break;
+			}
+
+			case 'get-all-accounts': {
+				if (!ledger) {
+					reply({ type: 'all-accounts-done', accounts: [] });
+					break;
+				}
+				const bql = 'SELECT account, currencies from #accounts where close is null ORDER BY account';
+				const result = ledger.query(bql);
+				const accountCol = (result.columns ?? []).indexOf('account');
+				const currenciesCol = (result.columns ?? []).indexOf('currencies');
+				const accounts = ((result.rows ?? []) as any[]).map((row) => ({
+					name: accountCol !== -1 ? (row[accountCol] ?? '') : '',
+					currencies: currenciesCol !== -1 ? (row[currenciesCol] ?? []) : []
+				}));
+				reply({ type: 'all-accounts-done', accounts });
 				break;
 			}
 

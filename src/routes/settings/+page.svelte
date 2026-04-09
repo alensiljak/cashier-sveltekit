@@ -205,13 +205,11 @@
 	<div class="flex flex-col space-y-4">
 		<h3 class="text-xl font-bold">Ledger Configuration</h3>
 
-		<center class="py-4">
-			<a href="/opfs/import-ledger" class="btn btn-primary">Import Ledger</a>
-		</center>
+		<p class="text-sm">Import Ledger first, then choose the file to use.</p>
 
 		<div class="flex items-center gap-4">
 			<div class="flex-1">
-				<p class="text-sm font-medium">Book file</p>
+				<p class="text-sm font-medium">Book file:</p>
 				<p class="font-mono text-sm opacity-70">{bookFilename ?? 'Not set'}</p>
 			</div>
 			<button
@@ -236,5 +234,10 @@
 				Select
 			</button>
 		</div>
+
+		<h4 class="h4 text-lg font-bold">Note</h4>
+		<p class="text-sm">Cashier uses `cashier.bean` file to store transactions created on the device. This file needs to 
+			be included in your book file.
+		</p>
 	</div>
 </main>
