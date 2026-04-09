@@ -7,6 +7,7 @@
 		ChartLineIcon,
 		ChartPieIcon,
 		DatabaseIcon,
+		WrenchIcon,
 		CircleQuestionMarkIcon,
 		HouseIcon,
 		InfoIcon,
@@ -15,7 +16,10 @@
 		ScrollIcon,
 		SettingsIcon,
 		StarIcon,
-		UsersRoundIcon
+		UsersRoundIcon,
+
+		ContainerIcon
+
 	} from '@lucide/svelte';
 
 	function closeDrawer(): void {
@@ -138,16 +142,39 @@
 
 		<ul class="menu menu-lg w-full">
 			<li>
-				<a
-					href="/backup"
-					class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/backup'
-						? 'active bg-secondary text-secondary-content'
-						: ''}"
-					onclick={closeDrawer}
-				>
-					<DatabaseIcon />
-					<span>Backup</span>
-				</a>
+				<details>
+					<summary class="flex w-full items-center gap-2 py-3 text-lg font-medium">
+						<WrenchIcon size={22} />
+						<span>Tools</span>
+						<span class="flex-1"></span>
+					</summary>
+					<ul>
+						<li>
+							<a
+								href="/backup"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/backup'
+									? 'active bg-secondary text-secondary-content'
+									: ''}"
+								onclick={closeDrawer}
+							>
+								<DatabaseIcon />
+								<span>Backup</span>
+							</a>
+						</li>
+						<li>
+							<a
+								href="/tools/serialization"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/tools/serialization'
+									? 'active bg-secondary text-secondary-content'
+									: ''}"
+								onclick={closeDrawer}
+							>
+								<ContainerIcon />
+								<span>Serialization</span>
+							</a>
+						</li>
+					</ul>
+				</details>
 			</li>
 			<!-- <li>
 				<a
