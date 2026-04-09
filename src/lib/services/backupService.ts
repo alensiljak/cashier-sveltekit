@@ -1,5 +1,6 @@
 /*
     Backup Service
+	Backup and restore custom data using a JSON file.
 */
 
 import { ISODATEFORMAT, LONGTIMEFORMAT } from '$lib/constants';
@@ -37,8 +38,10 @@ export async function createBackupFile(filename: string) {
  * @returns Text containing the backup content.
  */
 export async function createBackup() {
-	// assemble the backup content
+	// assemble the backup content:
+	// settings
 	const allSettings = await settings.getAll();
+	// scheduled transactions
 	const scx: ScheduledTransaction[] = await db.scheduled.toArray();
 
 	const backup: Backup = {
