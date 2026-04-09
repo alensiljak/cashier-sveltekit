@@ -11,11 +11,10 @@ It is implemented as a PWA using Svelte and DaisyUI frameworks.
 
 - The app is a PWA with a single page application (SPA) architecture.
 - The app is built using Svelte and DaisyUI frameworks.
-- The app is deployed as a static website to Netlify (`npm run deploy`).
-- The app's data is stored in OPFS. Previously it was in IndexedDb and some data is still cached there. To be moved to files in OPFS.
-- The configuration information is in IndexedDb.
-- The app uses File System API to access full ledger.
-- Synchronization retrieves data from filesystem and stores it in OPFS and IndexedDb.
+- It is deployed as a static website to Netlify (`npm run deploy`).
+- The ledger is stored in OPFS, in Beancount files. Some data is in IndexedDb.
+- The configuration information is in Settinsg table in IndexedDb.
+- The app uses File System API to access full ledger in supported browsers.
 
 ### Key directories
 
@@ -31,7 +30,7 @@ It is implemented as a PWA using Svelte and DaisyUI frameworks.
 
 ## Dev Server
 
-- Assume the local dev server is running at `http://localhost:5173/`. It is started by the user.
+- Assume the local dev server is running at `http://localhost:5173/`. It is started and managed by the user.
 
 ## Tools
 

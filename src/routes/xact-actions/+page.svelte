@@ -7,6 +7,7 @@
 	import { ScheduledTransaction, Xact } from '$lib/data/model';
 	import appService from '$lib/services/appService';
 	import ledgerService from '$lib/services/ledgerService';
+	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import { xactToBeancountText } from '$lib/utils/xactUtils';
 	import Notifier from '$lib/utils/notifier';
 	import {
@@ -77,6 +78,7 @@
 		await ledgerService.deleteTransaction(span);
 		xactSpan.set(undefined);
 		xact.set(Xact.create());
+		await fullLedgerService.invalidate();
 
 		Notifier.success('Transaction deleted');
 
@@ -92,6 +94,7 @@
 		const newXact = appService.createXactFrom($xact);
 		const beancountText = xactToBeancountText(newXact);
 		await ledgerService.appendTransaction(beancountText);
+		await fullLedgerService.invalidate();
 
 		Notifier.success('Transaction copied');
 

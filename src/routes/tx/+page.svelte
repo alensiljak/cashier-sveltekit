@@ -11,6 +11,7 @@
 	import { SettingKeys, settings } from '$lib/settings';
 	import appService from '$lib/services/appService';
 	import ledgerService from '$lib/services/ledgerService';
+	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import { xactToBeancountText } from '$lib/utils/xactUtils';
 	import { base } from '$app/paths';
 	import TransactionEditor from '$lib/components/XactEditor.svelte';
@@ -53,6 +54,7 @@
 			await ledgerService.appendTransaction(beancountText);
 		}
 		xactSpan.set(undefined);
+		await fullLedgerService.invalidate();
 
 		// Remember Last Transaction?
 		const remember = await settings.get(SettingKeys.rememberLastTransaction);
