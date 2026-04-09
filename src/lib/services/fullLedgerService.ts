@@ -232,32 +232,6 @@ class FullLedgerService {
 		return directives.filter((d) => d.type === 'transaction').map((d) => this.directiveToXact(d));
 	}
 
-	/**
-	 * Read cashier.bean, parse it independently, and return all transaction directives
-	 * zipped with their DirectiveSpans (line ranges). Used by the journal page.
-	 */
-	async getXactsWithSpans(): Promise<Array<{ xact: Xact; span: DirectiveSpan }>> {
-		const source = (await opfslib.readFile(CASHIER_XACT_FILE)) ?? '';
-		if (!source.trim()) return [];
-
-		const tempLedger = createParsedLedger(source);
-		if (!tempLedger) return [];
-
-		try {
-			const directives: any[] = tempLedger.getDirectives();
-			const spans = mapDirectiveSpans(source, tempLedger);
-
-			return directives
-				.filter((d) => d.type === 'transaction')
-				.map((directive, i) => ({
-					xact: this.directiveToXact(directive),
-					span: spans[i]
-				}));
-		} finally {
-			tempLedger.free();
-		}
-	}
-
 	/** Append a formatted transaction to cashier.bean and invalidate. */
 	async appendTransaction(beancountText: string): Promise<void> {
 		let content = (await opfslib.readFile(CASHIER_XACT_FILE)) ?? '';

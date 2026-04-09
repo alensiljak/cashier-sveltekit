@@ -38,10 +38,9 @@
 	}
 
 	async function loadData() {
-		const all = await fullLedgerService.getXactsWithSpans();
+		const all = fullLedgerService.getXacts();
 		// Newest first, limited to 5
-		const latest = all.slice().reverse().slice(0, 5);
-		xacts = latest.map((item) => item.xact);
+		xacts = all.slice().reverse().slice(0, 5);
 		xactBalances = [];
 
 		try {
