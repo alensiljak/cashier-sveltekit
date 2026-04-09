@@ -62,6 +62,7 @@ export const SettingKeys = {
 	syncActiveServerId: 'syncActiveServerId',
 	// book import from filesystem via File System API
 	importBookDirectory: 'importBookDirectory',
+	importBookFileSpec: 'importBookFileSpec',
 	// Full path to the main book/journal file (set via fs-sync page)
 	externalBook: 'externalBook',
 	externalAssetAllocation: 'externalAssetAllocation',

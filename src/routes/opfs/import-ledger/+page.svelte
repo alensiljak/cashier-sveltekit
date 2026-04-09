@@ -140,6 +140,7 @@
 
 	onMount(async () => {
 		dirName = (await settings.get<string>(SettingKeys.importBookDirectory)) ?? '';
+		fileSpec = (await settings.get<string>(SettingKeys.importBookFileSpec)) ?? fileSpec;
 		const stored = await loadPersistedHandle();
 		if (stored) {
 			try {
@@ -200,6 +201,7 @@
 		logLines = [];
 
 		try {
+			await settings.set(SettingKeys.importBookFileSpec, fileSpec);
 			const patterns = parseSpecs(fileSpec);
 			if (patterns.length === 0) throw new Error('No valid file specs provided.');
 
