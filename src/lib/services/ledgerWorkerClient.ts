@@ -29,8 +29,11 @@ class LedgerWorkerClient {
 	private _nextId = 0;
 
 	private _isLoaded = false;
+	private _isConfigured = writable(false);
 	private _version = writable(0);
 	readonly version: Readable<number> = derived(this._version, (v) => v);
+	/** False until at least one successful load with .bean files present. */
+	readonly isConfigured: Readable<boolean> = derived(this._isConfigured, (v) => v);
 
 	// -------------------------------------------------------------------------
 	// Worker lifecycle
@@ -99,9 +102,20 @@ class LedgerWorkerClient {
 
 	/** Parse all .bean files from OPFS, replace the cached ledger. */
 	async load(): Promise<void> {
-		await this.send<'load-done'>({ type: 'load', mainFileName: await this.mainFileName() });
-		this._isLoaded = true;
-		this._version.update((v) => v + 1);
+		try {
+			await this.send<'load-done'>({ type: 'load', mainFileName: await this.mainFileName() });
+			this._isLoaded = true;
+			this._isConfigured.set(true);
+			this._version.update((v) => v + 1);
+		} catch (err) {
+			if (String(err).includes('No .bean files found')) {
+				// App not yet configured — stay unloaded but don't crash callers.
+				this._isLoaded = false;
+				this._isConfigured.set(false);
+				return;
+			}
+			throw err;
+		}
 	}
 
 	/** Load only if not already loaded; no-op otherwise. */
@@ -117,8 +131,9 @@ class LedgerWorkerClient {
 		this._version.update((v) => v + 1);
 	}
 
-	/** Run a BQL query against the cached ledger. */
+	/** Run a BQL query against the cached ledger. Returns empty results if not loaded. */
 	async query(bql: string): Promise<{ columns: string[]; rows: unknown[]; errors: unknown[] }> {
+		if (!this._isLoaded) return { columns: [], rows: [], errors: [] };
 		const resp = await this.send<'query-done'>({ type: 'query', bql });
 		return { columns: resp.columns, rows: resp.rows, errors: resp.errors };
 	}
