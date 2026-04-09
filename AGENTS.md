@@ -16,6 +16,11 @@ It is implemented as a PWA using Svelte and DaisyUI frameworks.
 - The configuration information is in Settinsg table in IndexedDb.
 - The app uses File System API to access full ledger in supported browsers.
 
+## Rust Ledger WASM
+
+- `ledgerWorkerClient` is the interface to the Ledger engine, providing all financial information for the app.
+- Individual pages send queries and use the returned data.
+
 ### Key directories
 
 - `src/lib/components/` — shared UI components
@@ -44,17 +49,7 @@ It is implemented as a PWA using Svelte and DaisyUI frameworks.
 - Run `npm run format` to format, `npm run lint` to lint.
 - Use Serena MCP for codebase navigation.
 
-## Rust Ledger WASM
-
-- Use `Ledger` for multi-file parsing, caching, and querying.
-- `ParsedLedger` is used for single-file only or a concatenated Beancount string.
-
-```js
-const ledger = Ledger.fromFiles({filemap}, "mainfile.bean");
-const costBasis = ledger.query("SELECT cost(sum(position)) ...");
-```
-
-### Code Intelligence
+### Code Intelligence (LSP)
 
 Prefer LSP over Grep/Glob/Read for code navigation:
 
