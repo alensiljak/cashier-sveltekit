@@ -1,7 +1,5 @@
 <script lang="ts">
 	import Toolbar from '$lib/components/Toolbar.svelte';
-	import CashierDAL from '$lib/data/dbdal';
-	import type { Payee } from '$lib/data/model';
 	import { onMount } from 'svelte';
 	import { selectionMetadata } from '$lib/data/mainStore';
 	import Fab from '$lib/components/FAB.svelte';
@@ -9,15 +7,12 @@
 	import SearchToolbar from '$lib/components/SearchToolbar.svelte';
 	import { ListSearch } from '$lib/utils/ListSearch';
 	import Notifier from '$lib/utils/notifier';
-	import { SettingKeys, settings } from '$lib/settings';
-	import { LedgerDataSource } from '$lib/enums';
-	import type { DAL } from '$lib/data/dal';
-	import FSDAL from '$lib/data/fsdal';
+	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 
 	Notifier.init();
 
-	let payees: Array<Payee> = [];
-	let filteredPayees: Array<Payee> = $state([]);
+	let payees: string[] = [];
+	let filteredPayees: string[] = $state([]);
 	let isInSelectionMode = $state(false);
 	let searchString = $state('');
 	let showFab = $derived(isInSelectionMode && searchString);
@@ -33,17 +28,16 @@
 	async function loadData() {
 		document.body.style.cursor = 'wait';
 
-		const dataSource = await settings.get(SettingKeys.ledgerDataSource) as string;
-		let dal: DAL;
-		if (dataSource === LedgerDataSource.filesystem) {
-			dal = await FSDAL.create();
-		} else {
-			dal = await CashierDAL.create();
-		}
-		payees = await dal.loadPayees();
+		await fullLedgerService.ensureLoaded();
+		const result = await fullLedgerService.query(
+			'SELECT DISTINCT COALESCE(payee, narration) as payee FROM transactions ORDER BY payee'
+		);
+
+		const payeeIdx = result.columns.indexOf('payee');
+		payees = result.rows.map((row: any) => row[payeeIdx] as string);
 
 		filteredPayees = payees;
-		
+
 		dataLoaded = true;
 		document.body.style.cursor = 'default';
 	}
@@ -90,7 +84,7 @@
 			let search = new ListSearch();
 			let regex = search.getRegex(value);
 
-			filteredPayees = payees.filter((payee) => regex.test(payee.name));
+			filteredPayees = payees.filter((payee) => regex.test(payee));
 		} else {
 			// Clear filter. Use all records.
 			filteredPayees = payees;
@@ -113,15 +107,15 @@
 			<span class="loading loading-spinner loading-lg"></span>
 		</div>
 	{:else}
-		{#each filteredPayees as payee:Payee (payee.name)}
+		{#each filteredPayees as payee (payee)}
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 			<div
 				class="border-base-content/15 border-b py-2 min-h-[44px] flex items-center"
-				onclick={() => onPayeeSelected(payee.name)}
+				onclick={() => onPayeeSelected(payee)}
 				role="listitem"
 			>
-				{payee.name || ' '}
+				{payee || ' '}
 			</div>
 		{/each}
 	{/if}
