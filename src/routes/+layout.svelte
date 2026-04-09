@@ -52,7 +52,7 @@
 		}
 
 		try {
-			await fullLedgerService.load();
+			await fullLedgerService.ensureLoaded();
 			console.log('FullLedgerService loaded and ready');
 			return true;
 		} catch (err) {

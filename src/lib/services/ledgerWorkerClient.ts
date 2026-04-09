@@ -131,12 +131,26 @@ class LedgerWorkerClient {
 	}
 
 	/** Load only if not already loaded; no-op otherwise.
+	 *  Tries the binary cache first, falling back to a full file parse.
 	 *  Also skips if an invalidate() is already in progress — the version bump
 	 *  at the end of invalidation will retrigger any reactive subscribers. */
 	async ensureLoaded(): Promise<void> {
 		if (this._isLoaded) return;
 		if (get(this._isReloading)) return;
-		await this.load();
+		try {
+			await this.send<'load-done'>({ type: 'ensure-loaded', mainFileName: await this.mainFileName() });
+			this.setLoaded(true);
+			this._isConfigured.set(true);
+			this._version.update((v) => v + 1);
+		} catch (err) {
+			if (String(err).includes('No .bean files found')) {
+				this.setLoaded(false);
+				this._isConfigured.set(false);
+				return;
+			}
+			this.setLoaded(false);
+			throw err;
+		}
 	}
 
 	/** Free and re-parse — picks up source file changes. */
