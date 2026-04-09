@@ -25,10 +25,15 @@
 		<hr class="hr text-gray-600" />
 
 		<div class="space-y-1">
+		<p>Device Transactions:</p>
+		
 			{#each page.data.xacts as xact: Xact (xact)}
 				{@const posting = xact.postings?.find((p: Posting) => p.account === page.data.account.name)}
 
 				<div class="flex flex-row px-2">
+					<data class="mr-4">
+						{xact.date}
+					</data>
 					<data class="grow">
 						{xact.payee}{xact.payee && xact.note ? ' | ' : ''}{xact.note}
 					</data>

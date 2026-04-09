@@ -6,7 +6,7 @@
 	import { xact } from '$lib/data/mainStore';
 	import { Xact } from '$lib/data/model';
 	import FavouritesCard from '$lib/components/FavouritesCard.svelte';
-	import SyncCard from '$lib/components/SyncCard.svelte';
+	// import SyncCard from '$lib/components/SyncCard.svelte';
 	import ForecastCard from '$lib/components/ForecastCard.svelte';
 	import ScheduledXactsCard from '$lib/components/ScheduledXactsCard.svelte';
 	import { onMount, type Component } from 'svelte';

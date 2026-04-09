@@ -10,6 +10,7 @@
  */
 
 import { writable, derived, get, type Readable } from 'svelte/store';
+import { Account } from '$lib/data/model';
 import { settings, SettingKeys } from '$lib/settings';
 import type {
 	WorkerRequestPayload,
@@ -200,6 +201,35 @@ class LedgerWorkerClient {
 	async getOperatingCurrencies(): Promise<string[]> {
 		const resp = await this.send<'options-done'>({ type: 'get-options' });
 		return resp.operatingCurrencies;
+	}
+
+	/**
+	 * Fetch a single account with balances in all currencies.
+	 * Uses the accounts query (SELECT sum(number), currency, account) filtered
+	 * by account name. Multiple rows (one per currency) are merged into a
+	 * single Account with a populated `balances` record.
+	 */
+	async getAccountWithBalances(accountName: string): Promise<Account | null> {
+		const bql = `SELECT sum(number) AS balance, currency, account WHERE account = '${accountName}' ORDER BY currency`;
+		const { columns, rows } = await this.query(bql);
+		if (!rows || rows.length === 0) return null;
+
+		const balanceIdx = columns.indexOf('balance');
+		const currencyIdx = columns.indexOf('currency');
+		const accountIdx = columns.indexOf('account');
+
+		const account = new Account(accountIdx !== -1 ? (rows[0] as any[])[accountIdx] as string : accountName);
+		account.balances = {};
+
+		for (const row of rows as any[][]) {
+			const currency = row[currencyIdx] as string;
+			const balance = parseFloat(row[balanceIdx] as string) || 0;
+			if (currency) {
+				account.balances[currency] = (account.balances[currency] ?? 0) + balance;
+			}
+		}
+
+		return account;
 	}
 
 	/** Free the cached ledger without reloading. */

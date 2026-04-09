@@ -2,40 +2,33 @@
     Account Transactions
 */
 
-import { Account, Money, Xact } from '$lib/data/model.js';
+import { Money } from '$lib/data/model.js';
 import ledgerService from '$lib/services/ledgerService.js';
+import fullLedgerService from '$lib/services/ledgerWorkerClient';
+
 
 export async function load({ params }) {
 	if (!params.accountName) {
 		throw new Error('Account must be specified!');
 	}
 
-	const accounts = ledgerService.getAllAccounts();
-	const account = accounts.find((a) => a.name === params.accountName);
+	const account = await fullLedgerService.getAccountWithBalances(params.accountName);
 	if (!account) {
 		throw new Error('Account not found!');
 	}
 
+	// take the first balance
+	if (!account.balances) {
+		throw new Error('Account has no balances!');
+	}
+	const total: Money = new Money();
+	total.quantity = account?.balances[Object.keys(account.balances)[0]] ?? 0;
+	total.currency = Object.keys(account.balances)[0] ?? '';
+
+	await ledgerService.load();
 	const xacts = ledgerService
 		.getXacts()
 		.filter((xact) => xact.postings?.some((p) => p.account === params.accountName));
 
-	const total = calculateCurrentBalance(xacts, account);
-
 	return { account, xacts, total };
-}
-
-function calculateCurrentBalance(xacts: Xact[], account: Account) {
-	const balance = new Money();
-
-	for (const xact of xacts) {
-		for (const posting of xact.postings.filter((p) => p.account === account.name)) {
-			if (posting.amount) {
-				balance.quantity += posting.amount;
-				balance.currency ||= posting.currency;
-			}
-		}
-	}
-
-	return balance;
 }

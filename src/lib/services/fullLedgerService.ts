@@ -196,34 +196,48 @@ class FullLedgerService {
 	 * Get all declared accounts from the cached ledger, including those with no transactions.
 	 * Merges open-directive accounts with BQL balance results.
 	 */
-	getAllAccounts(): Account[] {
-		if (!this.ledger) return [];
+	// getAllAccounts(): Account[] {
+	// 	if (!this.ledger) return [];
 
-		const directives: any[] = this.ledger.getDirectives();
-		const closedAccountNames = new Set<string>(
-			directives.filter((d) => d.type === 'close').map((d) => d.account)
-		);
-		const openAccountNames = new Set<string>(
-			directives
-				.filter((d) => d.type === 'open' && !closedAccountNames.has(d.account))
-				.map((d) => d.account)
-		);
+	// 	// TODO: rewrite this to use a query and not parse directives directly.
+	// 	const queries = getQueries(PtaSystems.rledger);
+	// 	// const openAccountNames = this.ledger.query(queries.openAccounts())
+	// 	// 	.rows.map((r) => r[0] as string);
+	// 	const accounts = this.ledger.query(queries.accounts())
+	// 		.rows
+	// 		.map((r) => {
+	// 			let acct = new Account(r[2] as string);
+	// 			acct.balances = { [r[1] as string]: parseFloat(r[0] as string) };
+	// 			acct.currencies = [r[1] as string];
+	// 			return acct;
+	// 		});
+	// 	return accounts;
 
-		const txAccounts = getAccountsFromTransactions(this.ledger);
-		const txAccountMap = new Map<string, Account>(txAccounts.map((a) => [a.name, a]));
+	// 	// const directives: any[] = this.ledger.getDirectives();
+	// 	// const closedAccountNames = new Set<string>(
+	// 	// 	directives.filter((d) => d.type === 'close').map((d) => d.account)
+	// 	// );
+	// 	// const openAccountNames = new Set<string>(
+	// 	// 	directives
+	// 	// 		.filter((d) => d.type === 'open' && !closedAccountNames.has(d.account))
+	// 	// 		.map((d) => d.account)
+	// 	// );
 
-		const all = new Map<string, Account>();
-		for (const name of openAccountNames) {
-			all.set(name, txAccountMap.get(name) ?? new Account(name));
-		}
-		for (const account of txAccounts) {
-			if (!all.has(account.name) && !closedAccountNames.has(account.name)) {
-				all.set(account.name, account);
-			}
-		}
+	// 	// const txAccounts = getAccountsFromTransactions(this.ledger);
+	// 	// const txAccountMap = new Map<string, Account>(txAccounts.map((a) => [a.name, a]));
 
-		return Array.from(all.values()).sort((a, b) => a.name.localeCompare(b.name));
-	}
+	// 	// const all = new Map<string, Account>();
+	// 	// for (const name of openAccountNames) {
+	// 	// 	all.set(name, txAccountMap.get(name) ?? new Account(name));
+	// 	// }
+	// 	// for (const account of txAccounts) {
+	// 	// 	if (!all.has(account.name) && !closedAccountNames.has(account.name)) {
+	// 	// 		all.set(account.name, account);
+	// 	// 	}
+	// 	// }
+
+	// 	// return Array.from(all.values()).sort((a, b) => a.name.localeCompare(b.name));
+	// }
 
 	/** Get all transactions from the cached ledger as Xact objects. */
 	getXacts(): Xact[] {
