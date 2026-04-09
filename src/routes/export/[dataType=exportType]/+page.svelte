@@ -7,7 +7,7 @@
 	import Notifier from '$lib/utils/notifier';
 	import { CopyIcon, FileDownIcon, Share2Icon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
-	import { LedgerFilenames } from '$lib/enums';
+	import { CASHIER_XACT_FILE } from '$lib/constants';
 
 	Notifier.init();
 
@@ -34,14 +34,14 @@
 			return true;
 		}
 
-		const shareFile = new File([''], LedgerFilenames.cashier, { type: 'text/plain' });
+		const shareFile = new File([''], CASHIER_XACT_FILE, { type: 'text/plain' });
 		return navigator.canShare({ files: [shareFile] });
 	}
 
 	async function loadData() {
 		switch (dataType) {
 			case 'journal':
-				output = (await opfslib.readFile(LedgerFilenames.cashier)) ?? '';
+				output = (await opfslib.readFile(CASHIER_XACT_FILE)) ?? '';
 				break;
 			case 'scheduled':
 				output = await loadScheduledTransactions();

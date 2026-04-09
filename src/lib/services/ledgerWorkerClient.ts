@@ -11,7 +11,6 @@
 
 import { writable, derived, type Readable } from 'svelte/store';
 import { settings, SettingKeys } from '$lib/settings';
-import { LedgerFilenames } from '$lib/enums';
 import type {
 	WorkerRequestPayload,
 	WorkerResponse,
@@ -87,7 +86,7 @@ class LedgerWorkerClient {
 	// -------------------------------------------------------------------------
 
 	private async mainFileName(): Promise<string> {
-		return (await settings.get<string>(SettingKeys.bookFilename)) ?? LedgerFilenames.book;
+		return (await settings.get<string>(SettingKeys.bookFilename)) ?? 'book.bean';
 	}
 
 	// -------------------------------------------------------------------------

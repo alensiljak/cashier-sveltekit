@@ -14,7 +14,7 @@ import {
 	replaceDirectiveBySpan,
 	type DirectiveSpan
 } from '$lib/rledger/sourceEditor';
-import { LedgerFilenames } from '$lib/enums';
+import { CASHIER_XACT_FILE } from '$lib/constants';
 
 interface QueryError {
 	message: string;
@@ -106,7 +106,7 @@ class LedgerService {
 
 	/** Append a formatted transaction to cashier.bean → invalidate. */
 	async appendTransaction(beancountText: string): Promise<void> {
-		let content = (await opfslib.readFile(LedgerFilenames.cashier)) ?? '';
+		let content = (await opfslib.readFile(CASHIER_XACT_FILE)) ?? '';
 
 		// Ensure a blank-line separator before the new entry.
 		if (content.length > 0 && !content.endsWith('\n\n')) {
@@ -114,7 +114,7 @@ class LedgerService {
 		}
 		content += beancountText.trimEnd() + '\n';
 
-		await opfslib.saveFile(LedgerFilenames.cashier, content);
+		await opfslib.saveFile(CASHIER_XACT_FILE, content);
 		await this.invalidate();
 	}
 
@@ -124,7 +124,7 @@ class LedgerService {
 	 * splices in the new text, writes back, and invalidates.
 	 */
 	async editTransaction(span: DirectiveSpan, newBeancountText: string): Promise<void> {
-		const source = (await opfslib.readFile(LedgerFilenames.cashier)) ?? '';
+		const source = (await opfslib.readFile(CASHIER_XACT_FILE)) ?? '';
 		const tempLedger = createParsedLedger(source);
 		if (!tempLedger) throw new Error('Failed to parse cashier.bean');
 		try {
@@ -132,11 +132,11 @@ class LedgerService {
 			const idx = spans.findIndex((s) => s.startLine === span.startLine);
 			if (idx === -1) {
 				throw new Error(
-					`Could not locate directive at line ${span.startLine} in ${LedgerFilenames.cashier}`
+					`Could not locate directive at line ${span.startLine} in ${CASHIER_XACT_FILE}`
 				);
 			}
 			const updated = replaceDirectiveBySpan(source, spans, idx, newBeancountText.trimEnd());
-			await opfslib.saveFile(LedgerFilenames.cashier, updated);
+			await opfslib.saveFile(CASHIER_XACT_FILE, updated);
 		} finally {
 			tempLedger.free();
 		}
@@ -148,7 +148,7 @@ class LedgerService {
 	 * Removes the span lines and collapses extra blank lines.
 	 */
 	async deleteTransaction(span: DirectiveSpan): Promise<void> {
-		const source = (await opfslib.readFile(LedgerFilenames.cashier)) ?? '';
+		const source = (await opfslib.readFile(CASHIER_XACT_FILE)) ?? '';
 		const tempLedger = createParsedLedger(source);
 		if (!tempLedger) throw new Error('Failed to parse cashier.bean');
 		try {
@@ -156,13 +156,13 @@ class LedgerService {
 			const idx = spans.findIndex((s) => s.startLine === span.startLine);
 			if (idx === -1) {
 				throw new Error(
-					`Could not locate directive at line ${span.startLine} in ${LedgerFilenames.cashier}`
+					`Could not locate directive at line ${span.startLine} in ${CASHIER_XACT_FILE}`
 				);
 			}
 			let updated = replaceDirectiveBySpan(source, spans, idx, '');
 			// Collapse runs of 3+ blank lines down to 2 (one visual separator).
 			updated = updated.replace(/\n{3,}/g, '\n\n');
-			await opfslib.saveFile(LedgerFilenames.cashier, updated);
+			await opfslib.saveFile(CASHIER_XACT_FILE, updated);
 		} finally {
 			tempLedger.free();
 		}
@@ -243,28 +243,14 @@ class LedgerService {
 	private async readAndCombineSources(): Promise<string> {
 		const parts: string[] = [];
 
-		// Read beancount files (synced from desktop), skip missing ones silently.
-		for (const filename of Object.values(LedgerFilenames)) {
-			if (!filename.endsWith('.bean')) continue;
-
-			try {
-				const content = await opfslib.readFile(filename);
-				if (content) {
-					parts.push(content);
-				}
-			} catch (e) {
-				// Beancount file not yet synced — that's fine.
-				console.warn(`Could not read ${filename} from OPFS, skipping.`, e);
-			}
-		}
-
+		// Read beancount files (synced from desktop).
 		// Read or create cashier.bean (device transactions).
-		// let cashier = await opfslib.readFile(LedgerFilenames.cashier);
-		// if (cashier === undefined) {
-		// 	await opfslib.saveFile(LedgerFilenames.cashier, '');
-		// 	cashier = '';
-		// }
-		// parts.push(cashier);
+		let cashier = await opfslib.readFile(CASHIER_XACT_FILE);
+		if (cashier === undefined) {
+			await opfslib.saveFile(CASHIER_XACT_FILE, '');
+			cashier = '';
+		}
+		parts.push(cashier);
 
 		return parts.join('\n\n');
 	}
@@ -275,7 +261,7 @@ class LedgerService {
 	 * the list and supply the span needed for editing.
 	 */
 	async getXactsWithSpans(): Promise<Array<{ xact: Xact; span: DirectiveSpan }>> {
-		const source = (await opfslib.readFile(LedgerFilenames.cashier)) ?? '';
+		const source = (await opfslib.readFile(CASHIER_XACT_FILE)) ?? '';
 		if (!source.trim()) return [];
 
 		const tempLedger = createParsedLedger(source);

@@ -17,7 +17,6 @@ import {
 	version as wasmVersion
 } from './rustledger';
 import { listFileTree } from '$lib/utils/opfslib';
-import { LedgerFilenames } from '$lib/enums';
 import { OPFSBackend } from '$lib/storage';
 import type { Ledger, QueryResult, BeancountError, Directive, ParsedLedger } from '@rustledger/wasm';
 import { SettingKeys, settings } from '$lib/settings';
@@ -28,6 +27,7 @@ import {
 	replaceDirectiveBySpan,
 	type DirectiveSpan
 } from '$lib/rledger/sourceEditor';
+import { CASHIER_XACT_FILE } from '$lib/constants';
 
 class FullLedgerService {
 	private ledger: Ledger | null = null;
@@ -52,7 +52,7 @@ class FullLedgerService {
 			})
 		);
 
-		const mainFileName = await settings.get(SettingKeys.bookFilename) as string || LedgerFilenames.book;
+		const mainFileName = await settings.get(SettingKeys.bookFilename) as string;
 		return { fileMap, mainFileName };
 	}
 
@@ -237,7 +237,7 @@ class FullLedgerService {
 	 * zipped with their DirectiveSpans (line ranges). Used by the journal page.
 	 */
 	async getXactsWithSpans(): Promise<Array<{ xact: Xact; span: DirectiveSpan }>> {
-		const source = (await opfslib.readFile(LedgerFilenames.cashier)) ?? '';
+		const source = (await opfslib.readFile(CASHIER_XACT_FILE)) ?? '';
 		if (!source.trim()) return [];
 
 		const tempLedger = createParsedLedger(source);
@@ -260,14 +260,14 @@ class FullLedgerService {
 
 	/** Append a formatted transaction to cashier.bean and invalidate. */
 	async appendTransaction(beancountText: string): Promise<void> {
-		let content = (await opfslib.readFile(LedgerFilenames.cashier)) ?? '';
+		let content = (await opfslib.readFile(CASHIER_XACT_FILE)) ?? '';
 
 		if (content.length > 0 && !content.endsWith('\n\n')) {
 			content = content.trimEnd() + '\n\n';
 		}
 		content += beancountText.trimEnd() + '\n';
 
-		await opfslib.saveFile(LedgerFilenames.cashier, content);
+		await opfslib.saveFile(CASHIER_XACT_FILE, content);
 		await this.invalidate();
 	}
 
@@ -276,7 +276,7 @@ class FullLedgerService {
 	 * Parses cashier.bean independently, locates the span, splices in new text, and invalidates.
 	 */
 	async editTransaction(span: DirectiveSpan, newBeancountText: string): Promise<void> {
-		const source = (await opfslib.readFile(LedgerFilenames.cashier)) ?? '';
+		const source = (await opfslib.readFile(CASHIER_XACT_FILE)) ?? '';
 		const tempLedger = createParsedLedger(source);
 		if (!tempLedger) throw new Error('Failed to parse cashier.bean');
 		try {
@@ -284,11 +284,11 @@ class FullLedgerService {
 			const idx = spans.findIndex((s) => s.startLine === span.startLine);
 			if (idx === -1) {
 				throw new Error(
-					`Could not locate directive at line ${span.startLine} in ${LedgerFilenames.cashier}`
+					`Could not locate directive at line ${span.startLine} in ${CASHIER_XACT_FILE}`
 				);
 			}
 			const updated = replaceDirectiveBySpan(source, spans, idx, newBeancountText.trimEnd());
-			await opfslib.saveFile(LedgerFilenames.cashier, updated);
+			await opfslib.saveFile(CASHIER_XACT_FILE, updated);
 		} finally {
 			tempLedger.free();
 		}
@@ -299,7 +299,7 @@ class FullLedgerService {
 	 * Delete a transaction from cashier.bean identified by its DirectiveSpan.
 	 */
 	async deleteTransaction(span: DirectiveSpan): Promise<void> {
-		const source = (await opfslib.readFile(LedgerFilenames.cashier)) ?? '';
+		const source = (await opfslib.readFile(CASHIER_XACT_FILE)) ?? '';
 		const tempLedger = createParsedLedger(source);
 		if (!tempLedger) throw new Error('Failed to parse cashier.bean');
 		try {
@@ -307,12 +307,12 @@ class FullLedgerService {
 			const idx = spans.findIndex((s) => s.startLine === span.startLine);
 			if (idx === -1) {
 				throw new Error(
-					`Could not locate directive at line ${span.startLine} in ${LedgerFilenames.cashier}`
+					`Could not locate directive at line ${span.startLine} in ${CASHIER_XACT_FILE}`
 				);
 			}
 			let updated = replaceDirectiveBySpan(source, spans, idx, '');
 			updated = updated.replace(/\n{3,}/g, '\n\n');
-			await opfslib.saveFile(LedgerFilenames.cashier, updated);
+			await opfslib.saveFile(CASHIER_XACT_FILE, updated);
 		} finally {
 			tempLedger.free();
 		}

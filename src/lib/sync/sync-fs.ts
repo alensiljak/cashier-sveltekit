@@ -7,13 +7,13 @@
 import { settings, SettingKeys } from '$lib/settings';
 import fullLedgerService from '$lib/services/ledgerWorkerClient';
 import { getQueries } from './sync-queries';
-import moment from 'moment';
-import { ISODATEFORMAT } from '$lib/constants';
-import { LedgerFilenames, PtaSystems } from '$lib/enums';
+// import moment from 'moment';
+// import { ISODATEFORMAT } from '$lib/constants';
+import { PtaSystems } from '$lib/enums';
 import * as syncCommon from '$lib/sync/sync-common';
-import * as RledgerParser from '$lib/utils/rledgerParser';
+// import * as RledgerParser from '$lib/utils/rledgerParser';
 import { Account, Money } from '$lib/data/model';
-import { OPFSBackend } from '$lib/storage';
+// import { OPFSBackend } from '$lib/storage';
 import type { CurrentValuesDict } from '$lib/data/viewModels';
 import { AssetAllocationEngine } from '$lib/assetAllocation/AssetAllocation';
 import {
@@ -21,8 +21,7 @@ import {
 	initializeSyncProgress,
 	updateSyncStep
 } from '$lib/stores/syncProgressStore';
-import { createAccountsFile } from '$lib/services/accountsService';
-import type { AccountFileEntry } from '$lib/data/opfsTypes';
+// import type { AccountFileEntry } from '$lib/data/opfsTypes';
 
 // IndexedDB persistence for directory handle
 const IDB_NAME = 'cashier-fs-handles';
@@ -178,18 +177,18 @@ async function synchronize(syncOptions: syncCommon.SyncSteps): Promise<boolean> 
 		// Synchronization steps:
 
 		// - accounts list
-		if (syncOptions.syncAccounts) {
-			updateSyncStep(1, 'in-progress');
-			await syncAccounts(queries);
-			updateSyncStep(1, 'completed');
-		}
+		// if (syncOptions.syncAccounts) {
+		// 	updateSyncStep(1, 'in-progress');
+		// 	await syncAccounts(queries);
+		// 	updateSyncStep(1, 'completed');
+		// }
 
 		// - opening balances
-		if (syncOptions.syncOpeningBalances) {
-			updateSyncStep(2, 'in-progress');
-			await syncAccountBalances(queries);
-			updateSyncStep(2, 'completed');
-		}
+		// if (syncOptions.syncOpeningBalances) {
+		// 	updateSyncStep(2, 'in-progress');
+		// 	await syncAccountBalances(queries);
+		// 	updateSyncStep(2, 'completed');
+		// }
 
 		// - current values in the base currency (for asset allocation)
 		if (syncOptions.syncAaValues) {
@@ -229,20 +228,20 @@ async function synchronize(syncOptions: syncCommon.SyncSteps): Promise<boolean> 
  * @param fileMap
  * @param mainFileName
  */
-async function syncAccounts(
-	queries: ReturnType<typeof getQueries>
-) {
-	const query = queries.openAccounts();
-	const result = await fullLedgerService.query(query);
+// async function syncAccounts(
+// 	queries: ReturnType<typeof getQueries>
+// ) {
+// 	const query = queries.openAccounts();
+// 	const result = await fullLedgerService.query(query);
 
-	const entities: AccountFileEntry[] = result.rows.map((item: any) => ({
-		name: item[0], 
-		openDate: item[1],
-		currencies: item[2]
-	}));
+// 	const entities: AccountFileEntry[] = result.rows.map((item: any) => ({
+// 		name: item[0], 
+// 		openDate: item[1],
+// 		currencies: item[2]
+// 	}));
 
-	await createAccountsFile(entities);
-}
+// 	await createAccountsFile(entities);
+// }
 
 /**
  * Balances can only be retrieved from #transactions.
@@ -250,25 +249,25 @@ async function syncAccounts(
  * @param fileMap
  * @param mainFileName
  */
-async function syncAccountBalances(
-	queries: ReturnType<typeof getQueries>
-) {
-	const query = queries.accounts();
-	const result = await fullLedgerService.query(query);
+// async function syncAccountBalances(
+// 	queries: ReturnType<typeof getQueries>
+// ) {
+// 	const query = queries.accounts();
+// 	const result = await fullLedgerService.query(query);
 
-	// parse accounts: [account, balance, currency]
-	const accounts = result.rows.map((row: any) => ({
-		balance: row[0],
-		currency: row[1],
-		account: row[2]
-	}));
+// 	// parse accounts: [account, balance, currency]
+// 	const accounts = result.rows.map((row: any) => ({
+// 		balance: row[0],
+// 		currency: row[1],
+// 		account: row[2]
+// 	}));
 
-	const entities = accounts.map((item: any) => RledgerParser.parseBalanceSheetRow(item));
-	const record = createOpeningBalancesDirective(entities);
+// 	const entities = accounts.map((item: any) => RledgerParser.parseBalanceSheetRow(item));
+// 	const record = createOpeningBalancesDirective(entities);
 
-	// Instead of saving to the database, save to the initialization file.
-	await saveOpeningBalances(record);
-}
+// 	// Instead of saving to the database, save to the initialization file.
+// 	await saveOpeningBalances(record);
+// }
 
 /**
  * Save opening balances record to the book.bean file in OPFS.
@@ -276,35 +275,35 @@ async function syncAccountBalances(
  * all other directives (options, plugins, etc.). If none exists, appends.
  * Creates the file if it does not exist.
  */
-async function saveOpeningBalances(record: string) {
-	const opfs = new OPFSBackend();
-	const filename = LedgerFilenames.openingBalances;
+// async function saveOpeningBalances(record: string) {
+// 	const opfs = new OPFSBackend();
+// 	const filename = LedgerFilenames.openingBalances;
 
-	await opfs.writeFile(filename, record);
-}
+// 	await opfs.writeFile(filename, record);
+// }
 
 /**
  * Creates transaction directives for opening balances based on the list of accounts.
  * @param accounts List of accounts with balances.
  */
-function createOpeningBalancesDirective(accounts: Account[]): string {
-	const date = moment().format(ISODATEFORMAT);
-	const lines: string[] = [`${date} * "Opening Balances"`];
+// function createOpeningBalancesDirective(accounts: Account[]): string {
+// 	const date = moment().format(ISODATEFORMAT);
+// 	const lines: string[] = [`${date} * "Opening Balances"`];
 
-	for (const account of accounts) {
-		if (!account.balances) continue;
-		for (const [currency, amount] of Object.entries(account.balances)) {
-			if (amount === 0) continue;
-			const formatted = amount.toFixed(8).replace(/\.?0+$/, '');
-			lines.push(`    ${account.name}  ${formatted} ${currency}`);
-		}
-	}
+// 	for (const account of accounts) {
+// 		if (!account.balances) continue;
+// 		for (const [currency, amount] of Object.entries(account.balances)) {
+// 			if (amount === 0) continue;
+// 			const formatted = amount.toFixed(8).replace(/\.?0+$/, '');
+// 			lines.push(`    ${account.name}  ${formatted} ${currency}`);
+// 		}
+// 	}
 
-	lines.push(`    Equity:Opening-Balances`);
+// 	lines.push(`    Equity:Opening-Balances`);
 
-	const record = lines.join('\n');
-	return record;
-}
+// 	const record = lines.join('\n');
+// 	return record;
+// }
 
 /**
  * Current values in base currency. Used for asset allocation.

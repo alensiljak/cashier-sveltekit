@@ -12,7 +12,7 @@
 	import * as opfslib from '$lib/utils/opfslib';
 	import Notifier from '$lib/utils/notifier';
 	import { FileDownIcon, ImportIcon, PlusIcon, TrashIcon } from '@lucide/svelte';
-	import { LedgerFilenames } from '$lib/enums';
+	import { CASHIER_XACT_FILE } from '$lib/constants';
 
 	Notifier.init();
 
@@ -42,7 +42,7 @@
 
 	async function onDeleteAllConfirmed() {
 		closeModal();
-		await opfslib.saveFile(LedgerFilenames.cashier, '');
+		await opfslib.saveFile(CASHIER_XACT_FILE, '');
 		await ledgerService.invalidate();
 		Notifier.success('All local transactions deleted.');
 	}

@@ -18,13 +18,6 @@ export enum LedgerDataSource {
 	ledger = 'ledger'
 }
 
-export enum LedgerFilenames {
-	accounts = 'cashier-accounts.bean',
-	book = 'cashier-book.bean',
-	cashier = 'cashier-xacts.bean',
-	openingBalances = 'cashier-opening-balances.bean'
-}
-
 export const RecurrencePeriods = {
 	Days: 'days',
 	Weeks: 'weeks',
