@@ -239,25 +239,25 @@ export class AssetAllocationEngine {
 	 * Adapted to the Beancount report.
 	 * @param {CurrentValuesDict} balancesDict Current values for all accounts
 	 */
-	async importCurrentValues(balancesDict: CurrentValuesDict) {
-		const accounts = Object.keys(balancesDict);
-		for (let i = 0; i < accounts.length; i++) {
-			const key = accounts[i];
-			const balance: Money = balancesDict[key];
+	// async importCurrentValues(balancesDict: CurrentValuesDict) {
+	// 	const accounts = Object.keys(balancesDict);
+	// 	for (let i = 0; i < accounts.length; i++) {
+	// 		const key = accounts[i];
+	// 		const balance: Money = balancesDict[key];
 
-			// Update existing account.
-			let account = await appService.db.accounts.get(key);
-			if (!account) {
-				// create the account
-				account = new Account(key);
-				account.balance = balance;
-			}
-			account.currentValue = balance.quantity;
-			account.currentCurrency = balance.currency;
+	// 		// Update existing account.
+	// 		let account = await appService.db.accounts.get(key);
+	// 		if (!account) {
+	// 			// create the account
+	// 			account = new Account(key);
+	// 			account.balance = balance;
+	// 		}
+	// 		account.currentValue = balance.quantity;
+	// 		account.currentCurrency = balance.currency;
 
-			await appService.db.accounts.put(account);
-		}
-	}
+	// 		await appService.db.accounts.put(account);
+	// 	}
+	// }
 
 	/**
 	 * Convert a tree AA structure (object) into a list of Asset Classes.
