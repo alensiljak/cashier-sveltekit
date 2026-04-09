@@ -1,5 +1,5 @@
 /*
-Utilities to work with OPFS
+	Utilities to work with OPFS storage.
 */
 
 export async function readFile(filename: string) {

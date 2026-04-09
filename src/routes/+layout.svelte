@@ -12,17 +12,19 @@
 	import { writable } from 'svelte/store';
 	import { drawerState } from '$lib/data/mainStore';
 	import NavigationV3 from '$lib/components/navigation.svelte';
+	import Notifier from '$lib/utils/notifier';
+	import { SettingKeys, settings } from '$lib/settings';
+	import { initialize } from '$lib/data/initializer';
 
 	let { children } = $props();
 
 	const ledgerReady = writable(false);
 	onMount(async () => {
-		try {
-			await fullLedgerService.load();
-			ledgerReady.set(true);
-			console.log('FullLedgerService loaded and ready');
-		} catch (err) {
-			console.error('Failed to initialize FullLedgerService:', err);
+		// Initialize the Ledger service.
+		const initialized = await initializeApp();
+		if (!initialized) {
+			Notifier.error('Failed to initialize the engine.');
+			return;
 		}
 
 		if (pwaInfo) {
@@ -43,6 +45,26 @@
 			});
 		}
 	});
+
+	async function initializeApp(): Promise<boolean> {
+		// Check if the main file exists?
+		const mainFile = await settings.get(SettingKeys.bookFilename);
+		if (!mainFile) {
+			await initialize();
+		}
+
+		try {
+			await fullLedgerService.load();
+			ledgerReady.set(true);
+			console.log('FullLedgerService loaded and ready');
+			return true;
+		} catch (err) {
+			console.error('Failed to initialize FullLedgerService:', err);
+			Notifier.error('Failed to initialize the engine.' + err);
+			return false;
+		}
+
+	}
 
 	function handleSwipe(e: SwipeCustomEvent) {
 		if (e.detail.direction == 'right') {

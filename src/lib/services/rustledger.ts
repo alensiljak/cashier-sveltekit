@@ -68,6 +68,11 @@ export function createLedger(files: Record<string, string>, entryPoint: string):
 	if (!wasmModule || !wasmModule.Ledger) {
 		throw new Error('WASM module not available or Ledger class not supported');
 	}
+	// validate
+	if (!entryPoint || !files.hasOwnProperty(entryPoint)) {
+		throw new Error('Entry point file is missing or not found in files');
+	}
+
 	return wasmModule.Ledger.fromFiles(files, entryPoint);
 }
 

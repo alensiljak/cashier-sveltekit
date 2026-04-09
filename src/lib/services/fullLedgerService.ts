@@ -62,6 +62,9 @@ class FullLedgerService {
 		const { fileMap, mainFileName } = await this.loadOpfsFileMap();
 		this.ledger = createLedger(fileMap, mainFileName);
 		this._version.update((v) => v + 1);
+
+		// example on how to read the currencies:
+		//console.log('currencies:', this.ledger?.getOptions().operating_currencies);
 	}
 
 	/** The directory handle obtained during the last load. */
