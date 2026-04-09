@@ -2,20 +2,22 @@
 	import { FileUpIcon, ScrollIcon } from '@lucide/svelte';
 	import HomeCardTemplate from './HomeCardTemplate.svelte';
 	import { goto } from '$app/navigation';
-	import { Money, type Xact } from '$lib/data/model';
+	import { Money, Posting, Xact } from '$lib/data/model';
 	import { XactAugmenter } from '$lib/utils/xactAugmenter';
 	import Notifier from '$lib/utils/notifier';
 	import { formatAmount, getReadableDate, getXactAmountColour } from '$lib/utils/formatter';
-	import fullLedgerService from '$lib/services/fullLedgerService';
-	import workerLedger from '$lib/services/ledgerWorkerClient';
+	import { ensureInitialized, createParsedLedger } from '$lib/services/rustledger';
+	import { readFile } from '$lib/utils/opfslib';
+	import { CASHIER_XACT_FILE } from '$lib/constants';
+	import ledgerService from '$lib/services/ledgerService';
 
 	Notifier.init();
 
 	let xacts: Xact[] = $state([]);
 	let xactBalances: Money[] = $state([]);
 
-	const lsVersion = fullLedgerService.version;
-	const isReloading = workerLedger.isReloading;
+	const lsVersion = ledgerService.version;
+	let isLoading = $state(false);
 
 	$effect(() => {
 		const _v = $lsVersion;
@@ -38,18 +40,56 @@
 	}
 
 	async function loadData() {
-		const all = fullLedgerService.getXacts();
-		// Newest first, limited to 5
-		xacts = all.slice().reverse().slice(0, 5);
+		isLoading = true;
 		xactBalances = [];
 
 		try {
+			await ensureInitialized();
+			const source = (await readFile(CASHIER_XACT_FILE)) ?? '';
+			if (!source.trim()) {
+				xacts = [];
+				return;
+			}
+
+			const ledger = createParsedLedger(source);
+			if (!ledger) {
+				xacts = [];
+				return;
+			}
+
+			try {
+				const directives: any[] = ledger.getDirectives();
+				const txDirectives = directives.filter((d) => d.type === 'transaction');
+				// Last 5, newest first
+				const last5 = txDirectives.slice(-5).reverse();
+				xacts = last5.map(directiveToXact);
+			} finally {
+				ledger.free();
+			}
+
 			const amounts = XactAugmenter.calculateXactAmounts(xacts);
 			xactBalances.push(...amounts);
 		} catch (error: any) {
 			console.error(error);
 			Notifier.error(error.message);
+		} finally {
+			isLoading = false;
 		}
+	}
+
+	function directiveToXact(directive: any): Xact {
+		const tx = new Xact();
+		tx.date = directive.date;
+		tx.payee = directive.payee ?? '';
+		tx.note = directive.narration ?? '';
+		tx.postings = (directive.postings ?? []).map((p: any) => {
+			const posting = new Posting();
+			posting.account = p.account ?? '';
+			if (p.units?.number != null) posting.amount = parseFloat(p.units.number);
+			if (p.units?.currency) posting.currency = p.units.currency;
+			return posting;
+		});
+		return tx;
 	}
 
 	async function onClick() {
@@ -68,7 +108,7 @@
 	{/snippet}
 	{#snippet title()}
 		Device Journal
-		{#if $isReloading}<span class="loading loading-spinner loading-xs ml-2 opacity-70"></span>{/if}
+		{#if isLoading}<span class="loading loading-spinner loading-xs ml-2 opacity-70"></span>{/if}
 	{/snippet}
 	{#snippet content()}
 		{#if xacts.length == 0}

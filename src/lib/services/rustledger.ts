@@ -106,6 +106,17 @@ export function queryMultiFile(
 }
 
 /**
+ * Run a BQL query on a single Beancount source string.
+ * Parses the source, interpolates, then executes the query — no persistent instance needed.
+ */
+export function query(source: string, queryStr: string): QueryResult {
+	if (!wasmModule || !wasmModule.query) {
+		throw new Error('WASM module not available or query() not supported');
+	}
+	return wasmModule.query(source, queryStr) as QueryResult;
+}
+
+/**
  * Parse source and return ParseResult from WASM.
  */
 export function parseSource(source: string): ParseResult {
@@ -328,6 +339,7 @@ export default {
 	getAccountsFromTransactions,
 	parseSource,
 	parseMultiFile,
+	query,
 	validateSource,
 	format,
 	version

@@ -16,10 +16,12 @@ It is implemented as a PWA using Svelte and DaisyUI frameworks.
 - The configuration information is in Settinsg table in IndexedDb.
 - The app uses File System API to access full ledger in supported browsers.
 
-## Rust Ledger WASM
+### Rust Ledger WASM
 
-- `ledgerWorkerClient` is the interface to the Ledger engine, providing all financial information for the app.
-- Individual pages send queries and use the returned data.
+- `ledgerService` is the light version, loading only the Transactions. It provides the LSP features and is used for saving the Xact record to a correct place in the source file.
+- `fullLedgerService` loads the complete book, with all files, and is used to run financial reports and queries.
+- `ledgerWorkerClient` is the interface to the fullLedgerService, running in a Worker and handling data in the background.
+- Individual pages send queries and use the returned data asynchronously.
 
 ### Key directories
 
