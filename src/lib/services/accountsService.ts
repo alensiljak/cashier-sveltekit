@@ -11,7 +11,7 @@ import { Account, Money } from '$lib/data/model';
 import db from '$lib/data/db';
 import { SettingKeys, settings } from '$lib/settings';
 import appService from './appService';
-import ledgerService from './ledgerService';
+import fullLedgerService from './ledgerWorkerClient';
 import { addDecimalStrings } from '$lib/utils/numberUtils';
 
 type QueryFn = (bql: string) => Promise<{ columns: string[]; rows: any[]; errors: any[] }>;
@@ -181,7 +181,7 @@ export function getShortAccountName(accountName: string): string {
  * @returns Promise with investment accounts collection
  */
 export async function loadInvestmentAccounts(
-	queryFn: QueryFn = async (bql) => ledgerService.query(bql)
+	queryFn: QueryFn = async (bql) => fullLedgerService.query(bql)
 ): Promise<Account[]> {
 	const rootAccount = await settings.get(SettingKeys.rootInvestmentAccount);
 	if (!rootAccount) {
@@ -252,7 +252,7 @@ export async function populateAccountBalances(accounts: Account[]) {
 }
 
 export async function loadAccount(name: string): Promise<Account> {
-	const result = ledgerService.query(`SELECT * FROM accounts WHERE account = '${name}'`);
+	const result = await fullLedgerService.query(`SELECT * FROM accounts WHERE account = '${name}'`);
 
 	// validation
 
@@ -268,7 +268,7 @@ export async function loadAccount(name: string): Promise<Account> {
 		throw new Error(`Multiple accounts found with name "${name}"`);
 	}
 
-	const row = result.rows[0];
+	const row = result.rows[0] as any;
 	const accountIdx = result.columns.indexOf('account');
 	const currenciesIdx = result.columns.indexOf('currencies');
 
