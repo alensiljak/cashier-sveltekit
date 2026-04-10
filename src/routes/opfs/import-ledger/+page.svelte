@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
-	import { FolderOpenIcon } from '@lucide/svelte';
+	import { FolderOpenIcon, RefreshCcwIcon } from '@lucide/svelte';
 	import { settings, SettingKeys } from '$lib/settings';
+	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 
 	// ── IndexedDB handle persistence ──────────────────────────────────────────────
 	const IDB_NAME = 'cashier-fs-handles';
@@ -141,6 +142,8 @@
 	let consoleEl = $state<HTMLDivElement | null>(null);
 	let hourglassTick = $state(0);
 	let scannedFiles = $state<ScannedFile[]>([]);
+	let reloadPhase = $state<'idle' | 'reloading' | 'done' | 'error'>('idle');
+	let reloadError = $state('');
 	let scanStats = $state<{ new: number; modified: number; identical: number } | null>(null);
 	let importMode = $state<'all' | 'modified'>('modified');
 
@@ -283,6 +286,19 @@
 		} catch (e: any) {
 			errorMsg = e?.message ?? String(e);
 			phase = 'error';
+		}
+	}
+
+	// ── Reload ledger ─────────────────────────────────────────────────────────────
+	async function reloadLedger() {
+		reloadPhase = 'reloading';
+		reloadError = '';
+		try {
+			await fullLedgerService.invalidate();
+			reloadPhase = 'done';
+		} catch (e: any) {
+			reloadError = e?.message ?? String(e);
+			reloadPhase = 'error';
 		}
 	}
 
@@ -436,6 +452,27 @@
 						<span class="badge badge-sm badge-outline">{scannedFiles.length} files</span>
 					</label>
 				</div>
+
+				<!-- File preview list -->
+				{#if filesToImportCount > 0}
+					{@const preview = importMode === 'modified'
+						? scannedFiles.filter((f) => f.status !== 'identical')
+						: scannedFiles}
+					<div
+						class="overflow-y-auto border border-base-300 rounded font-mono text-xs"
+						style="max-height: 5.5rem;"
+					>
+						{#each preview as file}
+							<div class="flex items-center gap-2 px-2 py-0.5 hover:bg-base-200">
+								<span
+									class="badge badge-xs shrink-0 {file.status === 'new'
+										? 'badge-success'
+										: 'badge-warning'}">{file.status}</span>
+								<span class="truncate">{file.path}</span>
+							</div>
+						{/each}
+					</div>
+				{/if}
 			</section>
 		{/if}
 
@@ -483,6 +520,27 @@
 			<div class="alert alert-success text-sm">
 				<span>{statusMsg}</span>
 			</div>
+		{/if}
+
+		{#if phase === 'done'}
+			<center class="py-4">
+				<button
+					class="btn btn-outline"
+					disabled={reloadPhase === 'reloading'}
+					onclick={reloadLedger}
+				>
+					{#if reloadPhase === 'reloading'}
+						<span class="loading loading-spinner loading-sm"></span>
+						Reloading…
+					{:else}
+						<RefreshCcwIcon class="w-4 h-4" />
+						Reload Ledger
+					{/if}
+				</button>
+				{#if reloadPhase === 'done'}
+					<p class="text-xs text-success mt-2">Ledger reloaded.</p>
+				{/if}
+			</center>
 		{/if}
 
 		{#if (phase === 'error' || errorMsg) && errorMsg}
