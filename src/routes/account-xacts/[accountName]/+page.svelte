@@ -47,9 +47,10 @@
 			</div>
 		</header>
 
+		<!-- Device transactions -->
+		{#if page.data.xacts.length > 0}
 		<hr class="hr text-gray-600" />
 
-		<!-- Device transactions -->
 		<div class="space-y-1 rounded border-l-4 border-amber-500 bg-amber-50 p-2 dark:bg-amber-950/30">
 			<p class="flex items-center gap-2 text-sm font-semibold text-amber-700 dark:text-amber-400">
 				Device Transactions
@@ -73,6 +74,7 @@
 				</div>
 			{/each}
 		</div>
+		{/if}
 
 		<!-- Double-line separator -->
 		<div class="my-2 space-y-0.5">
