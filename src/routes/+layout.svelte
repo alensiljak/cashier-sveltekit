@@ -12,8 +12,7 @@
 	import { drawerState } from '$lib/data/mainStore';
 	import NavigationV3 from '$lib/components/navigation.svelte';
 	import Notifier from '$lib/utils/notifier';
-	import { SettingKeys, settings } from '$lib/settings';
-	import { initialize } from '$lib/data/initializer';
+	import { ensureInitialized } from '$lib/data/initializer';
 
 	let { children } = $props();
 
@@ -29,7 +28,7 @@
 			const { useRegisterSW } = await import('virtual:pwa-register/svelte');
 			useRegisterSW({
 				immediate: true,
-				onRegistered(r) {
+				onRegistered(r: any) {
 					// uncomment following code if you want check for updates
 					// r && setInterval(() => {
 					//    console.log('Checking for sw update')
@@ -37,7 +36,7 @@
 					// }, 20000 /* 20s for testing purposes */)
 					console.log(`SW Registered: ${r}`);
 				},
-				onRegisterError(error) {
+				onRegisterError(error: any) {
 					console.log('SW registration error', error);
 				}
 			});
@@ -45,11 +44,8 @@
 	});
 
 	async function initializeApp(): Promise<boolean> {
-		// Check if the main file exists?
-		const mainFile = await settings.get(SettingKeys.bookFilename);
-		if (!mainFile) {
-			await initialize();
-		}
+		// Check if the main ledger file exists?
+		await ensureInitialized();
 
 		try {
 			await fullLedgerService.ensureLoaded();

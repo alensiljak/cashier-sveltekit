@@ -1,31 +1,27 @@
 <script lang="ts">
-	/*
-	This page is import of book files into OPFS.
-*/
 	import { onMount } from 'svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { SettingKeys, settings } from '$lib/settings';
 	import Notifier from '$lib/utils/notifier';
 	import appService from '$lib/services/appService';
-	import { goto } from '$app/navigation';
-	import { LedgerDataSource } from '$lib/enums';
+	import { goto, replaceState } from '$app/navigation';
 	import { DefaultCurrencyStore } from '$lib/data/mainStore.js';
-	import { invalidateStorageBackendCache } from '$lib/storage/index.js';
+	// import { invalidateStorageBackendCache } from '$lib/storage/index.js';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import { BoxIcon, Check } from '@lucide/svelte';
 	import Fab from '$lib/components/FAB.svelte';
 	import { page } from '$app/state';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
-
+	import { USER_BOOK_FILENAME } from '$lib/constants';
+	
 	Notifier.init();
 
 	let rememberLastTransaction = $state<boolean>();
-	let rootInvestmentAccount = $state<string>();
 	let currency = $state<string>();
 	let bookCurrencies = $state<string[]>([]);
-	let configSource = $state<LedgerDataSource>(LedgerDataSource.filesystem);
 	let bookFilename = $state<string | null>(null);
 	let assetAllocationDefinition = $state<string | null>(null);
+	let rootInvestmentAccount = $state<string>();
 
 	onMount(async () => {
 		// Handle return from file picker
@@ -39,58 +35,53 @@
 		const settingKey = page.url.searchParams.get('settingKey');
 		const settingValue = page.url.searchParams.get('settingValue');
 
-		if (settingKey && settingValue) {
-			await settings.set(settingKey, settingValue);
-			// Remove params from URL without triggering navigation
-			const url = new URL(window.location.href);
-			url.searchParams.delete('settingKey');
-			url.searchParams.delete('settingValue');
-			history.replaceState({}, '', url.toString());
+		if (!settingKey || !settingValue) {
+			return;
 		}
+
+		switch (settingKey) {
+			case USER_BOOK_FILENAME:
+				bookFilename = settingValue;
+				break;
+			case SettingKeys.assetAllocationDefinition:
+				await settings.set(settingKey, settingValue);
+				// assetAllocationDefinition = settingValue;
+				break;
+			default:
+				console.warn(`Unknown setting key returned from file picker: ${settingKey}`);
+				return; // Don't save unknown settings
+		}
+
+		// Remove params from URL without triggering navigation
+		const url = new URL(window.location.href);
+		url.searchParams.delete('settingKey');
+		url.searchParams.delete('settingValue');
+		replaceState('', {});
 	}
 
 	async function loadData() {
 		currency = await appService.getDefaultCurrency();
 		bookCurrencies = await fullLedgerService.getOperatingCurrencies();
-		if (!currency) {
+		if (!currency && bookCurrencies.length > 0) {
 			// load from the ledger
 			currency = bookCurrencies[0];
 			// save to settings for next time
 			await settings.set(SettingKeys.currency, currency);
 		}
+
 		rootInvestmentAccount = (await settings.get<string>(
 			SettingKeys.rootInvestmentAccount
 		)) as string;
 		rememberLastTransaction = (await settings.get<boolean>(
 			SettingKeys.rememberLastTransaction
 		)) as boolean;
-		const dataSource = (await settings.get<string>(SettingKeys.ledgerDataSource)) ?? '';
-		if (dataSource) configSource = dataSource as LedgerDataSource;
 
-		bookFilename = (await settings.get<string>(SettingKeys.bookFilename)) ?? null;
+		if (!bookFilename) {
+			bookFilename = await appService.readBookFilename();
+		}
+
 		assetAllocationDefinition =
 			(await settings.get<string>(SettingKeys.assetAllocationDefinition)) ?? null;
-	}
-
-	async function onConfigSourceChanged() {
-		await settings.set(SettingKeys.ledgerDataSource, configSource);
-	}
-
-	function onConfigureClick() {
-		switch (configSource) {
-			case LedgerDataSource.filesystem:
-				goto('/settings/filesystem');
-				break;
-			case LedgerDataSource.beancount:
-				goto('/settings/beancount');
-				break;
-			case LedgerDataSource.rledger:
-				Notifier.warning('Configure Cashier Server (Rust Ledger) - Not implemented yet.');
-				break;
-			case LedgerDataSource.ledger:
-				Notifier.warning('Configure Cashier Server (Ledger-cli) - Not implemented yet.');
-				break;
-		}
 	}
 
 	async function onOpfsClick() {
@@ -104,11 +95,16 @@
 		await settings.set(SettingKeys.rootInvestmentAccount, rootInvestmentAccount);
 		await settings.set(SettingKeys.rememberLastTransaction, rememberLastTransaction);
 
-		invalidateStorageBackendCache();
+		// Save book filename in cashier.bean
+		if (bookFilename) {
+			await appService.writeBookFilename(bookFilename);
+		}
+
+		// invalidateStorageBackendCache();
 
 		Notifier.success('Settings saved');
 
-		goto('/'); // Go to home after saving settings
+		await goto('/'); // Go to home after saving settings
 	}
 </script>
 
@@ -130,25 +126,12 @@
 			id="currency"
 			class="input rounded"
 			type="text"
-			placeholder="Main Currency"
+			placeholder="EUR, USD, etc."
 			bind:value={currency}
 		/>
 		{#if bookCurrencies.length > 0}
 			<span class="text-sm opacity-70">Book currencies: {bookCurrencies.join(', ')}</span>
 		{/if}
-	</div>
-	<!-- investment account -->
-	<div class="form-control w-full">
-		<label for="investment-account-root" class="label">
-			<span class="label-text">Investment account root</span>
-		</label>
-		<input
-			id="investment-account-root"
-			class="input rounded"
-			type="text"
-			placeholder="Investment account root"
-			bind:value={rootInvestmentAccount}
-		/>
 	</div>
 
 	<!-- last transaction -->
@@ -162,107 +145,59 @@
 		<p>Remember last transaction for payees.</p>
 	</label>
 
-	<Fab Icon={Check} onclick={saveSettings} />
+	<h3 class="text-xl font-bold">Ledger Configuration</h3>
 
-	<!-- <hr class="my-6 mx-4" />
+	<p class="text-sm">
+		<a href="/opfs/import-ledger" class="link">Import Ledger files</a>
+		first, then choose the book file here.
+	</p>
 
-	<div class="flex gap-6">
-		<div>
-			<p class="mb-2 font-medium">Select the data source:</p>
-			<form class="space-y-2">
-				<label class="flex items-center space-x-2">
-					<input
-						class="radio radio-primary bg-base-100"
-						type="radio"
-						name="config-source"
-						value={LedgerDataSource.filesystem}
-						bind:group={configSource}
-						onchange={onConfigSourceChanged}
-					/>
-					<span>Local filesystem</span>
-				</label>
-				<label class="flex items-center space-x-2">
-					<input
-						class="radio radio-primary bg-base-100"
-						type="radio"
-						name="config-source"
-						value={LedgerDataSource.rledger}
-						bind:group={configSource}
-						onchange={onConfigSourceChanged}
-					/>
-					<span>Cashier Server (Rust Ledger)</span>
-				</label>
-				<label class="flex items-center space-x-2">
-					<input
-						class="radio radio-primary bg-base-100"
-						type="radio"
-						name="config-source"
-						value={LedgerDataSource.beancount}
-						bind:group={configSource}
-						onchange={onConfigSourceChanged}
-					/>
-					<span>Cashier Server (Beancount)</span>
-				</label>
-				<label class="flex items-center space-x-2">
-					<input
-						class="radio radio-primary bg-base-100"
-						type="radio"
-						name="config-source"
-						value={LedgerDataSource.ledger}
-						bind:group={configSource}
-						onchange={onConfigSourceChanged}
-					/>
-					<span>Cashier Server (Ledger-cli)</span>
-				</label>
-			</form>
+	<div class="flex items-center gap-4">
+		<div class="flex-1">
+			<p class="text-sm font-medium">Book file:</p>
+			<p class="font-mono text-sm opacity-70">{bookFilename ?? 'Not set'}</p>
 		</div>
-		<div class="flex flex-1 items-center justify-center">
-			<button class="btn btn-outline btn-primary rounded" type="button" onclick={onConfigureClick}>
-				Configure
-			</button>
-		</div>
-	</div> -->
-
-	<hr class="my-6 mx-4" />
-
-	<div class="flex flex-col space-y-4">
-		<h3 class="text-xl font-bold">Ledger Configuration</h3>
-
-		<p class="text-sm">Import Ledger first, then choose the file to use.</p>
-
-		<div class="flex items-center gap-4">
-			<div class="flex-1">
-				<p class="text-sm font-medium">Book file:</p>
-				<p class="font-mono text-sm opacity-70">{bookFilename ?? 'Not set'}</p>
-			</div>
-			<button
-				class="btn btn-primary btn-sm rounded"
-				type="button"
-				onclick={() => goto(`/opfs/file-picker?returnSetting=${SettingKeys.bookFilename}`)}
-			>
-				Select
-			</button>
-		</div>
-
-		<div class="flex items-center gap-4">
-			<div class="flex-1">
-				<p class="text-sm font-medium">Asset allocation definition</p>
-				<p class="font-mono text-sm opacity-70">{assetAllocationDefinition ?? 'Not set'}</p>
-			</div>
-			<button
-				class="btn btn-primary btn-sm rounded"
-				type="button"
-				onclick={() =>
-					goto(`/opfs/file-picker?returnSetting=${SettingKeys.assetAllocationDefinition}`)}
-			>
-				Select
-			</button>
-		</div>
-
-		<h4 class="h4 text-lg font-bold">Note</h4>
-		<p class="text-sm">
-			Cashier uses `cashier.bean` file to store transactions created on the device. This file needs
-			to be included in your book file.
-		</p>
+		<button
+			class="btn btn-primary btn-sm rounded"
+			type="button"
+			onclick={() => goto(`/opfs/file-picker?returnSetting=${USER_BOOK_FILENAME}`)}
+		>
+			Select
+		</button>
 	</div>
+
+	<h3 class="text-xl font-bold">Asset Allocation</h3>
+
+	<div class="flex items-center gap-4">
+		<div class="flex-1">
+			<p class="text-sm font-medium">Asset allocation definition</p>
+			<p class="font-mono text-sm opacity-70">{assetAllocationDefinition ?? 'Not set'}</p>
+		</div>
+		<button
+			class="btn btn-primary btn-sm rounded"
+			type="button"
+			onclick={() =>
+				goto(`/opfs/file-picker?returnSetting=${SettingKeys.assetAllocationDefinition}`)}
+		>
+			Select
+		</button>
+	</div>
+
+	<!-- investment account -->
+	<div class="form-control w-full">
+		<div>
+			<label for="investment-account-root" class="label">
+				<span class="label-text">Investment account root:</span>
+			</label>
+		</div>
+		<input
+			id="investment-account-root"
+			class="input rounded"
+			type="text"
+			placeholder="i.e. Assets:Investments"
+			bind:value={rootInvestmentAccount}
+		/>
+	</div>
+
+	<Fab Icon={Check} onclick={saveSettings} />
 </main>

@@ -155,6 +155,18 @@
 					<ul>
 						<li>
 							<a
+								href="/backup"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/backup'
+									? 'active bg-secondary text-secondary-content'
+									: ''}"
+								onclick={closeDrawer}
+							>
+								<DatabaseIcon />
+								<span>Backup</span>
+							</a>
+						</li>
+						<li>
+							<a
 								href="/opfs/import-ledger"
 								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/opfs/import-ledger'
 									? 'active bg-secondary text-secondary-content'
@@ -177,18 +189,6 @@
 								<span>Sync</span>
 							</a>
 						</li> -->
-						<li>
-							<a
-								href="/backup"
-								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/backup'
-									? 'active bg-secondary text-secondary-content'
-									: ''}"
-								onclick={closeDrawer}
-							>
-								<DatabaseIcon />
-								<span>Backup</span>
-							</a>
-						</li>
 						<li>
 							<a
 								href="/opfs"

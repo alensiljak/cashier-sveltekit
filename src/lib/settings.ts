@@ -31,23 +31,23 @@ export const Constants = {
 };
 
 export const SettingKeys = {
-	// root files in OPFS
-	bookFilename: 'bookFilename',
+	// asset allocation settings
 	assetAllocationDefinition: 'aa.definition',
+	rootInvestmentAccount: 'aa.rootAccount',
 	//
 	backupServerUrl: 'backupServerUrl', // Server for online backup (pCloud).
 	currency: 'currency',
+	rememberLastTransaction: 'rememberLastTransaction',
 	favouriteAccounts: 'favouriteAccounts',
+	// forecast
 	forecastAccounts: 'forecast.accounts',
 	forecastDays: 'forecast.days',
-	dbInitialized: 'dbInitialized', // Marks that the db has been initialized
+	//
 	pCloudToken: 'pCloudToken',
 	// Cashier Server Sync
 	syncServerUrl: 'syncServerUrl',
 	// External data source system
-	ledgerDataSource: 'ledgerDataSource', // beancount, rledger, ledger, filesystem
-	rootInvestmentAccount: 'aa.rootAccount',
-	rememberLastTransaction: 'rememberLastTransaction',
+	// ledgerDataSource: 'ledgerDataSource', // beancount, rledger, ledger, filesystem
 	// synchronization choices
 	syncAccounts: 'syncAccounts',
 	syncAaValues: 'syncAaValues',
@@ -60,12 +60,12 @@ export const SettingKeys = {
 	peerId: 'peerId',
 	syncServers: 'syncServers',
 	syncActiveServerId: 'syncActiveServerId',
-	// book import from filesystem via File System API
+	// import book from filesystem via File System API
 	importBookDirectory: 'importBookDirectory',
 	importBookFileSpec: 'importBookFileSpec',
 	// Full path to the main book/journal file (set via fs-sync page) on external filesystem.
-	externalBook: 'externalBook',
-	externalAssetAllocation: 'externalAssetAllocation',
+	// externalBook: 'externalBook',
+	// externalAssetAllocation: 'externalAssetAllocation',
 	// SHA-256 hash of source files at last serialization, stored alongside the OPFS binary cache
 	ledgerCacheHash: 'ledgerCacheHash'
 };

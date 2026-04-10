@@ -11,6 +11,8 @@ import { get } from 'svelte/store';
 // import * as LedgerParser from '$lib/utils/ledgerParser';
 // import * as BeancountParser from '$lib/utils/beancountParser';
 import { formatAmount } from '$lib/utils/formatter';
+import { readFile, saveFile } from '$lib/utils/opfslib';
+import { CASHIER_XACT_FILE } from '$lib/constants';
 
 // interface AccountIndex {
 // 	[key: string]: Account;
@@ -501,6 +503,47 @@ class AppService {
 
 	serialize(content: unknown) {
 		return JSON.stringify(content);
+	}
+
+	/**
+ 	* Read the book filename from cashier.bean.
+ 	*/
+	async readBookFilename(): Promise<string | null> {
+		const content = await readFile(CASHIER_XACT_FILE);
+		if (!content) return null;
+
+		for (const line of content.split('\n')) {
+			const match = line.match(/^include\s+"([^"]+)"/);
+			if (match) return match[1];
+		}
+
+		return null;
+	}
+
+	async writeBookFilename(filename: string) {
+		const existing = await readFile(CASHIER_XACT_FILE);
+		const newLine = `include "${filename}"`;
+
+		let updated: string;
+		if (existing) {
+			const replaced = existing.replace(/^include\s+"[^"]*"/m, newLine);
+			updated = replaced !== existing ? replaced : `${newLine}\n\n${existing}`;
+		} else {
+			updated = `${newLine}\n\n`;
+		}
+
+		await saveFile(CASHIER_XACT_FILE, updated);
+	}
+
+	/**
+	 * Strips the include directives from the book file content,
+	 * so that only the remaining content is exported.
+	 */
+	async stripIncludesFromBookFile(): Promise<string> {
+		const content = await readFile(CASHIER_XACT_FILE);
+		if (!content) return '';
+
+		return content.replace(/^include\s+"[^"]*"\s*\n\n/gm, '');
 	}
 }
 

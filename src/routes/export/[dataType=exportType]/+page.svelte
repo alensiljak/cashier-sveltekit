@@ -3,7 +3,6 @@
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import appService from '$lib/services/appService';
 	import { getFilenameForBackup } from '$lib/services/cloudBackupService';
-	import * as opfslib from '$lib/utils/opfslib';
 	import Notifier from '$lib/utils/notifier';
 	import { CopyIcon, FileDownIcon, Share2Icon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
@@ -18,6 +17,7 @@
 
 	onMount(async () => {
 		canUseWebShare = supportsWebShare();
+
 		await loadData();
 	});
 
@@ -41,7 +41,7 @@
 	async function loadData() {
 		switch (dataType) {
 			case 'journal':
-				output = (await opfslib.readFile(CASHIER_XACT_FILE)) ?? '';
+				output = await appService.stripIncludesFromBookFile();
 				break;
 			case 'scheduled':
 				output = await loadScheduledTransactions();

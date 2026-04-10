@@ -11,3 +11,6 @@ export const LEDGER_CACHE_FILE = 'ledger-cache.bin';
 export const ISODATEFORMAT = 'YYYY-MM-DD';
 export const LONGTIMEFORMAT = 'HHmmss';
 export const NUMBER_FORMAT = '#,##0.00';
+
+// settings key
+export const USER_BOOK_FILENAME = 'userBookFilename';

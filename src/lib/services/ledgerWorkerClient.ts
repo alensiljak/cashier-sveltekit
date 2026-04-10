@@ -17,6 +17,7 @@ import type {
 	WorkerResponse,
 	WorkerResponsePayload
 } from '$lib/workers/ledger.worker';
+import { CASHIER_XACT_FILE } from '$lib/constants';
 
 // Extract the response shape for a given `type` discriminant.
 type ResponseOf<T extends WorkerResponsePayload['type']> = Extract<WorkerResponsePayload, { type: T }>;
@@ -95,7 +96,8 @@ class LedgerWorkerClient {
 	// -------------------------------------------------------------------------
 
 	private async mainFileName(): Promise<string> {
-		return (await settings.get<string>(SettingKeys.bookFilename)) ?? 'book.bean';
+		return CASHIER_XACT_FILE;
+		// return (await settings.get<string>(SettingKeys.bookFilename)) ?? 'book.bean';
 	}
 
 	// -------------------------------------------------------------------------
