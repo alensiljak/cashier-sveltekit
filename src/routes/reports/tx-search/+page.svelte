@@ -259,7 +259,7 @@ ${where} ORDER BY date DESC`;
 			<div class="py-8 text-center text-base-content/50 text-sm">No results.</div>
 		{:else}
 			<div class="overflow-x-auto">
-				<table class="table table-xs table-zebra w-full">
+				<table class="table table-xs w-full [&_tbody_tr:nth-child(even)]:bg-base-200 [&_tbody_tr:nth-child(odd)]:bg-base-100">
 					<thead>
 						<tr>
 							{#each columns as col, i}
