@@ -28,9 +28,9 @@ const db = new Dexie('Cashier') as CashierDatabase;
 // Schema
 
 db.version(1).stores({
-	accounts: 'name',
+	// accounts: 'name',
 	lastXact: 'payee',
-	payees: 'name',
+	// payees: 'name',
 	scheduled: '++id, nextDate',
 	settings: 'key'
 	// xacts: '++id, date'
