@@ -6,6 +6,7 @@
 	import { onMount } from 'svelte';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import type { Account } from '$lib/data/model';
+	import { goto } from '$app/navigation';
 
 	let searchTerm = $state('');
 	let isInSelectionMode = $derived($selectionMetadata !== undefined);
@@ -64,8 +65,8 @@
 			}
 			history.back();
 		} else {
-			// TODO: navigate to account details page
-			// goto(resolve('/account')); // todo: show account details
+			// navigate to account details page
+			goto('/account-xacts/' + encodeURIComponent(name));
 		}
 	}
 

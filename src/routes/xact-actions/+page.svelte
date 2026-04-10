@@ -24,14 +24,12 @@
 	Notifier.init();
 
 	let isDeleteConfirmationOpen = $state(false);
-	let ptaSystem = $state('');
 
 	if (!$xact) {
 		goto('/');
 	}
 
 	onMount(async () => {
-		ptaSystem = await settings.get(SettingKeys.ledgerDataSource) as string;
 	});
 
 	/**
@@ -44,11 +42,7 @@
 	async function onCopyClicked() {
 		// get a journal version
 		let text = '';
-		if (ptaSystem == LedgerDataSource.rledger) {
-			text = appService.translateToLedger($xact);
-		} else {
-			text = appService.translateToBeancount($xact);
-		}
+		text = appService.translateToBeancount($xact);
 
 		// copy to clipboard
 		await navigator.clipboard.writeText(text);
