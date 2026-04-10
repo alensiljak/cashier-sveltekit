@@ -297,8 +297,6 @@
 		logLines = [];
 
 		try {
-			await settings.set(SettingKeys.importBookFileSpec, fileSpec);
-
 			const filesToCopy =
 				importMode === 'modified'
 					? scannedFiles.filter((f) => f.status !== 'identical')
@@ -333,7 +331,7 @@
 </script>
 
 <div class="h-screen flex flex-col overflow-hidden">
-	<Toolbar title="Copy Ledger to OPFS" />
+	<Toolbar title="Import Ledger to OPFS" />
 
 	<div class="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
 
@@ -374,6 +372,7 @@
 				placeholder="*.bean, *.toml"
 				bind:value={fileSpec}
 				oninput={invalidateScan}
+				onblur={() => settings.set(SettingKeys.importBookFileSpec, fileSpec)}
 			/>
 			<p class="text-xs text-base-content/50">
 				Comma-separated glob patterns. Matched files are copied recursively, preserving directory
