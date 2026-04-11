@@ -49,7 +49,7 @@
 
 		<ul>
 			<li>
-				<a class="link link-primary" href="/rledger">RustLedger demo</a>
+				<a class="link link-primary" href="/demo/rledger">RustLedger demo</a>
 			</li>
 			<li>
 				<a class="link link-primary" href="/ledger">Parsed Ledger</a>

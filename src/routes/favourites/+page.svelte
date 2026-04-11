@@ -199,7 +199,7 @@
 	}
 
 	async function onDeleteClicked() {
-		await goto('/favourites-delete');
+		await goto('/favourites/delete');
 	}
 
 	function onDeleteAllClicked() {
@@ -214,7 +214,7 @@
 	}
 
 	async function onReorderClick() {
-		await goto('/favourites-reorder');
+		await goto('/favourites/reorder');
 	}
 </script>
 
