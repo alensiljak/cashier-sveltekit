@@ -380,8 +380,6 @@
 			phase = 'done';
 			statusMsg = `Done — ${progress.done} of ${progress.total} file(s) synced.`;
 			logLines = [...logLines, statusMsg];
-
-			await scanAndCompare();
 		} catch (e) {
 			const err = e as { message?: string };
 			errorMsg = err?.message ?? String(e);
