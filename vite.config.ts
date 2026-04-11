@@ -21,11 +21,12 @@ const config: UserConfig = defineConfig({
 		fs: {
 			allow: ['..']
 		},
-		// needed when running in a container and using source files on the host.
-		watch: {
-			usePolling: true,
-			interval: 500 // ms
-		}
+		// Needed when running in a container and using source files on the host.
+		// Or, use CHOKIDAR_USEPOLLING env var in devcontainer.json.
+		// watch: {
+		// 	usePolling: true,
+		// 	interval: 500 // ms
+		// }
 	},
 	build: {
 		//sourcemap: process.env.SOURCE_MAP === 'true',
