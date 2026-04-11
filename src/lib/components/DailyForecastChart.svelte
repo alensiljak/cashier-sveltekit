@@ -82,8 +82,8 @@
 		// project scheduled transactions
 		let scxs = await loadScxsFor(accountName);
 
-		// todo: project the schedule into the selected period (i.e. if a xact repeats daily, it should be
-		// included 7 times in a weekly forecast).
+		// TODO: project the schedule into the selected period (i.e. if a xact repeats daily,
+		// it should be included 7 times in a weekly forecast).
 
 		// calculate values for subsequent days
 		amounts = addScxAmounts(scxs, amounts, accountName);

@@ -520,6 +520,14 @@ class AppService {
 		return null;
 	}
 
+	/**
+	 * Stores the user-selected book filename in cashier.bean as an include directive.
+	 * If an include directive already exists, it is replaced. Otherwise, 
+	 * a new directive is added at the top.
+	 * @param {string} filename The filename to include in cashier.bean
+	 * @returns {Promise<void>}
+	 * @throws {Error} If there is an issue reading or writing the file.
+	 */
 	async writeBookFilename(filename: string) {
 		const existing = await readFile(CASHIER_XACT_FILE);
 		const newLine = `include "${filename}"`;
