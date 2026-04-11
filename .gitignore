@@ -28,3 +28,6 @@ package-lock.json
 vite.config.*.timestamp-*
 .claude/settings.local.json
 .claude/worktrees/
+
+# SSL keys
+/**/localhost*.pem
