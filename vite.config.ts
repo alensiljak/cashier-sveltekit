@@ -16,6 +16,7 @@ const config: UserConfig = defineConfig({
 		__BUILD_TIMESTAMP__: JSON.stringify(buildTimestamp)
 	},
 	server: {
+		host: '0.0.0.0',
 		// Ensure WASM files are served correctly in dev mode
 		fs: {
 			allow: ['..']
@@ -150,7 +151,7 @@ const config: UserConfig = defineConfig({
 				includeVersionFile: true
 			}
 		}),
-		mkcert()
+		// mkcert()
 		//VitePWA({ registerType: 'autoUpdate' })
 	]
 });
