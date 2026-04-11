@@ -4,46 +4,21 @@
 	import { FolderOpenIcon, RefreshCcwIcon } from '@lucide/svelte';
 	import { settings, SettingKeys } from '$lib/settings';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
+	import {
+		loadPersistedHandle,
+		persistHandle,
+		requestReadPermission
+	} from '$lib/utils/fsHandleStore';
+	import {
+		deleteManifestEntry,
+		getManifest,
+		putManifestEntry,
+		type ImportedFileMeta
+	} from '$lib/utils/importManifest';
+	import { processWithConcurrencyLimit } from '$lib/utils/concurrency';
 
-	// ── IndexedDB handle persistence ──────────────────────────────────────────────
-	const IDB_NAME = 'cashier-fs-handles';
-	const IDB_STORE = 'handles';
 	const HANDLE_KEY = 'importLedgerDirectoryHandle';
-
-	function openIdb(): Promise<IDBDatabase> {
-		return new Promise((resolve, reject) => {
-			const req = indexedDB.open(IDB_NAME, 1);
-			req.onupgradeneeded = () => {
-				req.result.createObjectStore(IDB_STORE);
-			};
-			req.onsuccess = () => resolve(req.result);
-			req.onerror = () => reject(req.error);
-		});
-	}
-
-	async function persistHandle(handle: FileSystemDirectoryHandle): Promise<void> {
-		const db = await openIdb();
-		return new Promise((resolve, reject) => {
-			const tx = db.transaction(IDB_STORE, 'readwrite');
-			tx.objectStore(IDB_STORE).put(handle, HANDLE_KEY);
-			tx.oncomplete = () => { db.close(); resolve(); };
-			tx.onerror = () => { db.close(); reject(tx.error); };
-		});
-	}
-
-	async function loadPersistedHandle(): Promise<FileSystemDirectoryHandle | null> {
-		try {
-			const db = await openIdb();
-			return new Promise((resolve, reject) => {
-				const tx = db.transaction(IDB_STORE, 'readonly');
-				const req = tx.objectStore(IDB_STORE).get(HANDLE_KEY);
-				req.onsuccess = () => { db.close(); resolve(req.result ?? null); };
-				req.onerror = () => { db.close(); reject(req.error); };
-			});
-		} catch {
-			return null;
-		}
-	}
+	const CONCURRENCY = 4;
 
 	// ── Glob matching ─────────────────────────────────────────────────────────────
 	function globToRegex(pattern: string): RegExp {
@@ -77,36 +52,30 @@
 		}
 		const fh = await dir.getFileHandle(parts[parts.length - 1], { create: true });
 		const writable = await fh.createWritable();
-		await writable.write(await file.arrayBuffer());
+		await writable.write(file);
 		await writable.close();
 	}
 
-	// ── Hashing ───────────────────────────────────────────────────────────────────
-	async function hashBuffer(buf: ArrayBuffer): Promise<string> {
-		const digest = await crypto.subtle.digest('SHA-256', buf);
-		return Array.from(new Uint8Array(digest))
-			.map((b) => b.toString(16).padStart(2, '0'))
-			.join('');
-	}
-
-	async function hashOpfsFile(path: string): Promise<string | null> {
-		try {
-			const root = await navigator.storage.getDirectory();
-			const parts = path.split('/');
-			let dir: FileSystemDirectoryHandle = root;
-			for (const part of parts.slice(0, -1)) {
+	async function deleteOpfsFile(path: string): Promise<void> {
+		const root = await navigator.storage.getDirectory();
+		const parts = path.split('/');
+		let dir: FileSystemDirectoryHandle = root;
+		for (const part of parts.slice(0, -1)) {
+			try {
 				dir = await dir.getDirectoryHandle(part);
+			} catch {
+				return;
 			}
-			const fh = await dir.getFileHandle(parts[parts.length - 1]);
-			const file = await fh.getFile();
-			return hashBuffer(await file.arrayBuffer());
+		}
+		try {
+			await dir.removeEntry(parts[parts.length - 1]);
 		} catch {
-			return null;
+			// already gone
 		}
 	}
 
-	// ── Recursive file scanner ────────────────────────────────────────────────────
-	async function scanFiles(
+	// ── Recursive file handle collector ───────────────────────────────────────────
+	async function collectFileHandles(
 		dir: FileSystemDirectoryHandle,
 		prefix: string,
 		patterns: RegExp[],
@@ -118,15 +87,21 @@
 			if (handle.kind === 'file' && matchesAny(name, patterns)) {
 				out.push({ path, handle: handle as FileSystemFileHandle });
 			} else if (handle.kind === 'directory') {
-				await scanFiles(handle as FileSystemDirectoryHandle, path, patterns, out);
+				await collectFileHandles(handle as FileSystemDirectoryHandle, path, patterns, out);
 			}
 		}
 	}
 
 	// ── State ─────────────────────────────────────────────────────────────────────
 	type Phase = 'idle' | 'scanning' | 'copying' | 'done' | 'error';
-	type FileStatus = 'new' | 'modified' | 'identical';
-	type ScannedFile = { path: string; getFile: () => Promise<File>; status: FileStatus };
+	type FileStatus = 'new' | 'modified' | 'identical' | 'deleted';
+	type ScannedFile = {
+		path: string;
+		size: number;
+		lastModified: number;
+		getFile?: () => Promise<File>;
+		status: FileStatus;
+	};
 
 	let dirHandle = $state<FileSystemDirectoryHandle | null>(null);
 	let fallbackFiles = $state<File[] | null>(null);
@@ -144,7 +119,12 @@
 	let scannedFiles = $state<ScannedFile[]>([]);
 	let reloadPhase = $state<'idle' | 'reloading' | 'done' | 'error'>('idle');
 	let reloadError = $state('');
-	let scanStats = $state<{ new: number; modified: number; identical: number } | null>(null);
+	let scanStats = $state<{
+		new: number;
+		modified: number;
+		identical: number;
+		deleted: number;
+	} | null>(null);
 	let importMode = $state<'all' | 'modified'>('modified');
 
 	let filesToImportCount = $derived(
@@ -160,7 +140,9 @@
 		} else {
 			hourglassTick = 0;
 		}
-		return () => { if (timer) clearInterval(timer); };
+		return () => {
+			if (timer) clearInterval(timer);
+		};
 	});
 
 	$effect(() => {
@@ -174,25 +156,12 @@
 		dirName = (await settings.get<string>(SettingKeys.importBookDirectory)) ?? '';
 		fileSpec = (await settings.get<string>(SettingKeys.importBookFileSpec)) ?? fileSpec;
 		if (hasDirectoryPicker) {
-			const stored = await loadPersistedHandle();
-			if (stored) {
-				try {
-					const permission = await (stored as any).requestPermission({ mode: 'read' });
-					if (permission === 'granted') {
-						dirHandle = stored;
-					}
-				} catch {
-					// Permission denied or unavailable
-					console.warn('Could not access previously selected directory handle.');
-				}
+			const stored = await loadPersistedHandle(HANDLE_KEY);
+			if (stored && (await requestReadPermission(stored))) {
+				dirHandle = stored;
 			}
 		}
 	});
-
-	function invalidateScan() {
-		scanStats = null;
-		scannedFiles = [];
-	}
 
 	function handleFallbackInput(event: Event) {
 		const input = event.target as HTMLInputElement;
@@ -211,23 +180,28 @@
 
 	async function pickDirectory() {
 		try {
-			const handle = await (window as any).showDirectoryPicker({ mode: 'read' });
+			const handle = await (
+				window as unknown as {
+					showDirectoryPicker: (opts: { mode: 'read' }) => Promise<FileSystemDirectoryHandle>;
+				}
+			).showDirectoryPicker({ mode: 'read' });
 			dirHandle = handle;
 			dirName = handle.name;
 			await settings.set(SettingKeys.importBookDirectory, dirName);
-			await persistHandle(handle);
+			await persistHandle(HANDLE_KEY, handle);
 			phase = 'idle';
 			statusMsg = '';
 			errorMsg = '';
 			logLines = [];
-		} catch (e: any) {
-			if (e?.name !== 'AbortError') {
-				errorMsg = e?.message ?? String(e);
+		} catch (e) {
+			const err = e as { name?: string; message?: string };
+			if (err?.name !== 'AbortError') {
+				errorMsg = err?.message ?? String(e);
 			}
 		}
 	}
 
-	// ── Scan & compare ────────────────────────────────────────────────────────────
+	// ── Scan & compare (metadata-based) ───────────────────────────────────────────
 	async function scanAndCompare() {
 		if (!dirHandle && !fallbackFiles) return;
 
@@ -241,11 +215,17 @@
 			const patterns = parseSpecs(fileSpec);
 			if (patterns.length === 0) throw new Error('No valid file specs provided.');
 
-			const rawFiles: Array<{ path: string; getFile: () => Promise<File> }> = [];
+			type RawFile = {
+				path: string;
+				getFile: () => Promise<File>;
+				sizeHint?: number;
+				mtimeHint?: number;
+			};
+			const rawFiles: RawFile[] = [];
 
 			if (dirHandle) {
 				const handles: Array<{ path: string; handle: FileSystemFileHandle }> = [];
-				await scanFiles(dirHandle, '', patterns, handles);
+				await collectFileHandles(dirHandle, '', patterns, handles);
 				for (const { path, handle } of handles) {
 					rawFiles.push({ path, getFile: () => handle.getFile() });
 				}
@@ -255,36 +235,80 @@
 					const path = parts.slice(1).join('/');
 					if (path && matchesAny(parts[parts.length - 1], patterns)) {
 						const captured = f;
-						rawFiles.push({ path, getFile: async () => captured });
+						rawFiles.push({
+							path,
+							getFile: async () => captured,
+							sizeHint: f.size,
+							mtimeHint: f.lastModified
+						});
 					}
 				}
 			}
 
 			scanProgress.total = rawFiles.length;
-			const result: ScannedFile[] = [];
-			const stats = { new: 0, modified: 0, identical: 0 };
 
-			for (const { path, getFile } of rawFiles) {
-				const opfsHash = await hashOpfsFile(path);
-				let status: FileStatus;
-				if (opfsHash === null) {
-					status = 'new';
-					stats.new++;
-				} else {
-					const file = await getFile();
-					const srcHash = await hashBuffer(await file.arrayBuffer());
-					status = srcHash === opfsHash ? 'identical' : 'modified';
+			const manifest = await getManifest();
+			const seen = new Set<string>();
+			const result: ScannedFile[] = new Array(rawFiles.length);
+			const stats = { new: 0, modified: 0, identical: 0, deleted: 0 };
+
+			await processWithConcurrencyLimit(
+				rawFiles.map((rf, idx) => ({ rf, idx })),
+				CONCURRENCY,
+				async ({ rf, idx }) => {
+					let size: number;
+					let lastModified: number;
+					if (rf.sizeHint !== undefined && rf.mtimeHint !== undefined) {
+						size = rf.sizeHint;
+						lastModified = rf.mtimeHint;
+					} else {
+						const file = await rf.getFile();
+						size = file.size;
+						lastModified = file.lastModified;
+					}
+
+					const prev = manifest.get(rf.path);
+					let status: FileStatus;
+					if (!prev) {
+						status = 'new';
+					} else if (prev.size === size && prev.lastModified === lastModified) {
+						status = 'identical';
+					} else {
+						status = 'modified';
+					}
+
+					result[idx] = {
+						path: rf.path,
+						size,
+						lastModified,
+						getFile: rf.getFile,
+						status
+					};
+					seen.add(rf.path);
 					stats[status]++;
+					scanProgress.done++;
 				}
-				result.push({ path, getFile, status });
-				scanProgress.done++;
+			);
+
+			// Detect deletions: manifest entries that no longer exist in source
+			for (const [path, meta] of manifest) {
+				if (!seen.has(path)) {
+					result.push({
+						path,
+						size: meta.size,
+						lastModified: meta.lastModified,
+						status: 'deleted'
+					});
+					stats.deleted++;
+				}
 			}
 
 			scannedFiles = result;
 			scanStats = stats;
 			phase = 'idle';
-		} catch (e: any) {
-			errorMsg = e?.message ?? String(e);
+		} catch (e) {
+			const err = e as { message?: string };
+			errorMsg = err?.message ?? String(e);
 			phase = 'error';
 		}
 	}
@@ -296,14 +320,15 @@
 		try {
 			await fullLedgerService.invalidate();
 			reloadPhase = 'done';
-		} catch (e: any) {
-			reloadError = e?.message ?? String(e);
+		} catch (e) {
+			const err = e as { message?: string };
+			reloadError = err?.message ?? String(e);
 			reloadPhase = 'error';
 		}
 	}
 
-	// ── Copy logic ────────────────────────────────────────────────────────────────
-	async function copyToOpfs() {
+	// ── Sync (copy new/modified, remove deleted) ──────────────────────────────────
+	async function syncToOpfs() {
 		if (scannedFiles.length === 0) return;
 
 		phase = 'copying';
@@ -313,34 +338,53 @@
 		logLines = [];
 
 		try {
-			const filesToCopy =
+			const toCopy =
 				importMode === 'modified'
-					? scannedFiles.filter((f) => f.status !== 'identical')
-					: scannedFiles;
+					? scannedFiles.filter((f) => f.status === 'new' || f.status === 'modified')
+					: scannedFiles.filter((f) => f.status !== 'deleted');
+			const toDelete = scannedFiles.filter((f) => f.status === 'deleted');
 
-			progress.total = filesToCopy.length;
+			progress.total = toCopy.length + toDelete.length;
 
-			if (filesToCopy.length === 0) {
-				statusMsg = 'Nothing to import — all files are identical.';
+			if (progress.total === 0) {
+				statusMsg = 'Nothing to sync — everything is up to date.';
 				phase = 'done';
 				return;
 			}
 
-			statusMsg = `Copying ${filesToCopy.length} file(s)…`;
+			statusMsg = `Syncing ${progress.total} file(s)…`;
 
-			for (const { path, getFile, status } of filesToCopy) {
-				logLines = [...logLines, `${status}: ${path}`];
-				const file = await getFile();
-				await writeOpfsFile(path, file);
+			await processWithConcurrencyLimit(toCopy, CONCURRENCY, async (entry) => {
+				if (!entry.getFile) return;
+				const file = await entry.getFile();
+				await writeOpfsFile(entry.path, file);
+				await putManifestEntry({
+					path: entry.path,
+					size: file.size,
+					lastModified: file.lastModified,
+					importedAt: Date.now()
+				} satisfies ImportedFileMeta);
+				logLines = [...logLines, `${entry.status}: ${entry.path}`];
 				progress.done++;
-				statusMsg = `Copied ${progress.done} / ${progress.total}`;
-			}
+				statusMsg = `Synced ${progress.done} / ${progress.total}`;
+			});
+
+			await processWithConcurrencyLimit(toDelete, CONCURRENCY, async (entry) => {
+				await deleteOpfsFile(entry.path);
+				await deleteManifestEntry(entry.path);
+				logLines = [...logLines, `deleted: ${entry.path}`];
+				progress.done++;
+				statusMsg = `Synced ${progress.done} / ${progress.total}`;
+			});
 
 			phase = 'done';
-			statusMsg = `Done — ${progress.done} of ${progress.total} file(s) copied to OPFS.`;
+			statusMsg = `Done — ${progress.done} of ${progress.total} file(s) synced.`;
 			logLines = [...logLines, statusMsg];
-		} catch (e: any) {
-			errorMsg = e?.message ?? String(e);
+
+			await scanAndCompare();
+		} catch (e) {
+			const err = e as { message?: string };
+			errorMsg = err?.message ?? String(e);
 			phase = 'error';
 		}
 	}
@@ -375,6 +419,16 @@
 						/>
 					</label>
 				{/if}
+				{#if dirHandle || fallbackFiles}
+					<button
+						class="btn btn-secondary gap-2"
+						disabled={phase === 'scanning' || phase === 'copying'}
+						onclick={scanAndCompare}
+					>
+						<RefreshCcwIcon class="w-4 h-4 {phase === 'scanning' ? 'animate-spin' : ''}" />
+						Scan
+					</button>
+				{/if}
 			</div>
 		</section>
 
@@ -387,8 +441,9 @@
 				class="input input-bordered font-mono w-full"
 				placeholder="*.bean, *.toml"
 				bind:value={fileSpec}
-				oninput={invalidateScan}
-				onblur={() => settings.set(SettingKeys.importBookFileSpec, fileSpec)}
+				onblur={async () => {
+					await settings.set(SettingKeys.importBookFileSpec, fileSpec);
+				}}
 			/>
 			<p class="text-xs text-base-content/50">
 				Comma-separated glob patterns. Matched files are copied recursively, preserving directory
@@ -396,24 +451,16 @@
 			</p>
 		</section>
 
-		<!-- Scan button -->
-		<center class="py-4">
-			<button
-				class="btn btn-primary"
-				disabled={phase === 'scanning' || phase === 'copying' || !dirName}
-				onclick={scanAndCompare}
-			>
-				{#if phase === 'scanning'}
-					<span class="loading loading-spinner loading-sm"></span>
-					Scanning…
-					{#if scanProgress.total > 0}
-						({scanProgress.done} / {scanProgress.total})
-					{/if}
-				{:else}
-					Scan
+		<!-- Scan progress -->
+		{#if phase === 'scanning'}
+			<div class="flex items-center gap-2 text-sm text-base-content/70">
+				<span class="loading loading-spinner loading-sm"></span>
+				Scanning
+				{#if scanProgress.total > 0}
+					({scanProgress.done} / {scanProgress.total})
 				{/if}
-			</button>
-		</center>
+			</div>
+		{/if}
 
 		<!-- Scan results -->
 		{#if scanStats !== null}
@@ -423,6 +470,9 @@
 					<span class="badge badge-success">{scanStats.new} new</span>
 					<span class="badge badge-warning">{scanStats.modified} modified</span>
 					<span class="badge badge-ghost">{scanStats.identical} identical</span>
+					{#if scanStats.deleted > 0}
+						<span class="badge badge-error">{scanStats.deleted} deleted</span>
+					{/if}
 				</div>
 
 				<!-- Import mode -->
@@ -435,10 +485,7 @@
 							value="modified"
 							bind:group={importMode}
 						/>
-						<span class="text-sm">Import new &amp; modified only</span>
-						<span class="badge badge-sm badge-outline">
-							{scannedFiles.filter((f) => f.status !== 'identical').length} files
-						</span>
+						<span class="text-sm">Sync new, modified &amp; deleted</span>
 					</label>
 					<label class="flex items-center gap-2 cursor-pointer">
 						<input
@@ -448,44 +495,50 @@
 							value="all"
 							bind:group={importMode}
 						/>
-						<span class="text-sm">Import all</span>
-						<span class="badge badge-sm badge-outline">{scannedFiles.length} files</span>
+						<span class="text-sm">Re-copy all</span>
 					</label>
 				</div>
 
 				<!-- File preview list -->
-				{#if filesToImportCount > 0}
-					{@const preview = importMode === 'modified'
-						? scannedFiles.filter((f) => f.status !== 'identical')
-						: scannedFiles}
-					<div
-						class="overflow-y-auto border border-base-300 rounded font-mono text-xs"
-						style="max-height: 5.5rem;"
-					>
-						{#each preview as file}
-							<div class="flex items-center gap-2 px-2 py-0.5 hover:bg-base-200">
-								<span
-									class="badge badge-xs shrink-0 {file.status === 'new'
-										? 'badge-success'
-										: 'badge-warning'}">{file.status}</span>
-								<span class="truncate">{file.path}</span>
-							</div>
-						{/each}
-					</div>
+				{#if scannedFiles.length > 0}
+					{@const preview =
+						importMode === 'modified'
+							? scannedFiles.filter((f) => f.status !== 'identical')
+							: scannedFiles}
+					{#if preview.length > 0}
+						<div
+							class="overflow-y-auto border border-base-300 rounded font-mono text-xs"
+							style="max-height: 5.5rem;"
+						>
+							{#each preview as file}
+								<div class="flex items-center gap-2 px-2 py-0.5 hover:bg-base-200">
+									<span
+										class="badge badge-xs shrink-0 {file.status === 'new'
+											? 'badge-success'
+											: file.status === 'modified'
+												? 'badge-warning'
+												: file.status === 'deleted'
+													? 'badge-error'
+													: 'badge-ghost'}">{file.status}</span>
+									<span class="truncate">{file.path}</span>
+								</div>
+							{/each}
+						</div>
+					{/if}
 				{/if}
 			</section>
 		{/if}
 
 		<hr class="my-6 mx-4" />
 
-		<!-- Import button -->
+		<!-- Sync button -->
 		<center class="py-4">
 			<button
 				class="btn btn-accent text-secondary"
 				disabled={phase === 'copying' || phase === 'scanning' || filesToImportCount === 0}
-				onclick={copyToOpfs}
+				onclick={syncToOpfs}
 			>
-				Import
+				Sync
 				{#if scanStats !== null && filesToImportCount > 0}
 					<span class="badge badge-sm">{filesToImportCount}</span>
 				{/if}
@@ -539,6 +592,9 @@
 				</button>
 				{#if reloadPhase === 'done'}
 					<p class="text-xs text-success mt-2">Ledger reloaded.</p>
+				{/if}
+				{#if reloadError}
+					<p class="text-xs text-error mt-2">{reloadError}</p>
 				{/if}
 			</center>
 		{/if}

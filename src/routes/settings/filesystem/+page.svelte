@@ -18,12 +18,14 @@
 	import Notifier from '$lib/utils/notifier';
 	import { settings, SettingKeys } from '$lib/settings';
 	import Fab from '$lib/components/FAB.svelte';
+	import {
+		loadPersistedHandle,
+		persistHandle,
+		requestReadPermission
+	} from '$lib/utils/fsHandleStore';
 
 	Notifier.init();
 
-	// IndexedDB persistence for directory handle (same mechanism as settings page)
-	const IDB_NAME = 'cashier-fs-handles';
-	const IDB_STORE = 'handles';
 	const HANDLE_KEY = 'fsSyncDirectoryHandle';
 
 	interface EntryInfo {
@@ -55,26 +57,23 @@
 		const aaDef = await settings.get<string>(SettingKeys.externalAssetAllocation);
 		aaDefinitionFileName = aaDef ?? '';
 
-		const stored = await loadPersistedHandle();
-		if (stored) {
-			try {
-				const permission = await (stored as any).requestPermission({ mode: 'read' });
-				if (permission === 'granted') {
-					dirHandle = stored;
-					dirName = stored.name;
-					await loadEntries();
-				}
-			} catch {
-				// Permission denied or unavailable
-			}
+		const stored = await loadPersistedHandle(HANDLE_KEY);
+		if (stored && (await requestReadPermission(stored))) {
+			dirHandle = stored;
+			dirName = stored.name;
+			await loadEntries();
 		}
 	});
 
 	async function pickDirectory() {
 		try {
-			dirHandle = await (window as any).showDirectoryPicker({ mode: 'read' });
+			dirHandle = await (
+				window as unknown as {
+					showDirectoryPicker: (opts: { mode: 'read' }) => Promise<FileSystemDirectoryHandle>;
+				}
+			).showDirectoryPicker({ mode: 'read' });
 			dirName = dirHandle!.name;
-			await persistHandle(dirHandle!);
+			await persistHandle(HANDLE_KEY, dirHandle!);
 			await loadEntries();
 		} catch (error: any) {
 			if (error.name !== 'AbortError') {
@@ -293,53 +292,6 @@
 			preview = `Error: ${error.message || 'Failed to read file'}`;
 		} finally {
 			isPreviewLoading = false;
-		}
-	}
-
-	function openIdb(): Promise<IDBDatabase> {
-		return new Promise((resolve, reject) => {
-			const req = indexedDB.open(IDB_NAME, 1);
-			req.onupgradeneeded = () => {
-				req.result.createObjectStore(IDB_STORE);
-			};
-			req.onsuccess = () => resolve(req.result);
-			req.onerror = () => reject(req.error);
-		});
-	}
-
-	async function persistHandle(handle: FileSystemDirectoryHandle): Promise<void> {
-		const db = await openIdb();
-		return new Promise((resolve, reject) => {
-			const tx = db.transaction(IDB_STORE, 'readwrite');
-			tx.objectStore(IDB_STORE).put(handle, HANDLE_KEY);
-			tx.oncomplete = () => {
-				db.close();
-				resolve();
-			};
-			tx.onerror = () => {
-				db.close();
-				reject(tx.error);
-			};
-		});
-	}
-
-	async function loadPersistedHandle(): Promise<FileSystemDirectoryHandle | null> {
-		try {
-			const db = await openIdb();
-			return new Promise((resolve, reject) => {
-				const tx = db.transaction(IDB_STORE, 'readonly');
-				const req = tx.objectStore(IDB_STORE).get(HANDLE_KEY);
-				req.onsuccess = () => {
-					db.close();
-					resolve(req.result ?? null);
-				};
-				req.onerror = () => {
-					db.close();
-					reject(req.error);
-				};
-			});
-		} catch {
-			return null;
 		}
 	}
 

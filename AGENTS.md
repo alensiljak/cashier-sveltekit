@@ -41,8 +41,8 @@ It is implemented as a PWA using Svelte and DaisyUI frameworks.
 
 ## Tools
 
+- `npm` is the package manager.
 - Use ripgrep (`rg`) CLI for fast text search across text files.n
-- Use `sd` (sed alternative) for fast text replace in text files.
 - Use `agent-browser` CLI to run the browser.
 - **Formatting**: `oxfmt` (with Prettier as fallback for `.svelte` files via `prettier-plugin-svelte`).
 - **Linting**: `oxlint` for JS/TS; `eslint-plugin-svelte` via ESLint for Svelte templates.
