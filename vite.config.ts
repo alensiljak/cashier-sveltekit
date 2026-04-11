@@ -20,6 +20,11 @@ const config: UserConfig = defineConfig({
 		// Ensure WASM files are served correctly in dev mode
 		fs: {
 			allow: ['..']
+		},
+		// needed when running in a container and using source files on the host.
+		watch: {
+			usePolling: true,
+			interval: 500 // ms
 		}
 	},
 	build: {
