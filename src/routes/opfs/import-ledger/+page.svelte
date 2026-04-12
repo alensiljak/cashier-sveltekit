@@ -86,7 +86,7 @@
 			const path = prefix ? `${prefix}/${name}` : name;
 			if (handle.kind === 'file' && matchesAny(name, patterns)) {
 				out.push({ path, handle: handle as FileSystemFileHandle });
-			} else if (handle.kind === 'directory') {
+			} else if (handle.kind === 'directory' && !name.startsWith('.')) {
 				await collectFileHandles(handle as FileSystemDirectoryHandle, path, patterns, out);
 			}
 		}
