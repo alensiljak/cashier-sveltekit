@@ -6,6 +6,14 @@ import { Money } from '$lib/data/model.js';
 import ledgerService from '$lib/services/ledgerService.js';
 import fullLedgerService from '$lib/services/ledgerWorkerClient';
 
+export type UnifiedXact = {
+	date: string;
+	payee: string;
+	narration: string;
+	amount: number;
+	currency: string;
+	isDevice: boolean;
+};
 
 export async function load({ params }) {
 	if (!params.accountName) {
@@ -37,5 +45,41 @@ WHERE account = '${params.accountName}' ORDER BY date DESC`;
 	const { columns, rows, errors } = await fullLedgerService.query(bql);
 	if (errors?.length) console.warn('Ledger xact query errors:', errors);
 
-	return { account, xacts, total, ledgerColumns: columns, ledgerRows: rows };
+	// Normalize device xacts
+	const deviceRows: UnifiedXact[] = xacts.map((xact) => {
+		const posting = xact.postings?.find((p) => p.account === params.accountName);
+		return {
+			date: xact.date ?? '',
+			payee: xact.payee ?? '',
+			narration: xact.note ?? '',
+			amount: posting?.amount ?? 0,
+			currency: posting?.currency ?? '',
+			isDevice: true
+		};
+	});
+
+	// Normalize ledger rows
+	const dateIdx = columns.indexOf('date');
+	const payeeIdx = columns.indexOf('payee');
+	const narrationIdx = columns.indexOf('narration');
+	const numberIdx = columns.indexOf('number');
+	const currencyIdx = columns.indexOf('currency');
+
+	const ledgerNormalized: UnifiedXact[] = (rows as unknown[][]).map((row) => ({
+		date: row[dateIdx] as string,
+		payee: row[payeeIdx] as string,
+		narration: row[narrationIdx] as string,
+		amount: row[numberIdx] as number,
+		currency: row[currencyIdx] as string,
+		isDevice: false
+	}));
+
+	// Merge and sort descending by date
+	const unifiedRows = [...deviceRows, ...ledgerNormalized].sort((a, b) =>
+		b.date.localeCompare(a.date)
+	);
+
+	const hasDeviceXacts = deviceRows.length > 0;
+
+	return { account, total, unifiedRows, hasDeviceXacts };
 }

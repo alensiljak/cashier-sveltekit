@@ -15,7 +15,7 @@
 
 ## Ledger
 
-- [ ] invalidate the cache when the ledger file changes
+- [x] invalidate the cache when the ledger file changes
 
 ## Onboarding
 

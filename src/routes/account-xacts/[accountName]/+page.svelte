@@ -1,21 +1,14 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import Toolbar from '$lib/components/Toolbar.svelte';
-	import { Posting, Xact } from '$lib/data/model';
+	import type { UnifiedXact } from './+page.js';
 	import * as Formatter from '$lib/utils/formatter';
-
-	const cols = $derived(page.data.ledgerColumns as string[]);
-	const dateIdx = $derived(cols.indexOf('date'));
-	const payeeIdx = $derived(cols.indexOf('payee'));
-	const narrationIdx = $derived(cols.indexOf('narration'));
-	const numberIdx = $derived(cols.indexOf('number'));
-	const currencyIdx = $derived(cols.indexOf('currency'));
 
 	const PAGE_SIZE = 30;
 	let visibleCount = $state(PAGE_SIZE);
 	let sentinel = $state<HTMLElement | null>(null);
 
-	const allRows = $derived(page.data.ledgerRows as unknown[][]);
+	const allRows = $derived(page.data.unifiedRows as UnifiedXact[]);
 	const visibleRows = $derived(allRows.slice(0, visibleCount));
 
 	$effect(() => {
@@ -47,33 +40,11 @@
 			</div>
 		</header>
 
-		<!-- Device transactions -->
-		{#if page.data.xacts.length > 0}
-		<hr class="hr text-gray-600" />
-
-		<div class="space-y-1 rounded border-l-4 border-amber-500 bg-amber-50 p-2 dark:bg-amber-950/30">
-			<p class="flex items-center gap-2 text-sm font-semibold text-amber-700 dark:text-amber-400">
-				Device Transactions
-				<span class="rounded bg-amber-200 px-1.5 py-0.5 text-xs font-normal text-amber-800 dark:bg-amber-900/50 dark:text-amber-300">not exported</span>
-			</p>
-
-			{#each page.data.xacts as xact: Xact (xact)}
-				{@const posting = xact.postings?.find((p: Posting) => p.account === page.data.account.name)}
-
-				<div class="flex flex-row px-2">
-					<data class="mr-4">
-						{xact.date}
-					</data>
-					<data class="grow">
-						{xact.payee}{xact.payee && xact.note ? ' | ' : ''}{xact.note}
-					</data>
-					<data class={`${Formatter.getAmountColour(posting?.amount)}`}>
-						{Formatter.formatAmount(posting?.amount)}
-						{posting?.currency}
-					</data>
-				</div>
-			{/each}
-		</div>
+		{#if page.data.hasDeviceXacts}
+			<div class="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-400">
+				<span class="inline-block h-3 w-1 rounded-sm bg-amber-400"></span>
+				<span>Rows with an amber bar are device-only and not yet exported</span>
+			</div>
 		{/if}
 
 		<!-- Double-line separator -->
@@ -82,21 +53,21 @@
 			<hr class="border-gray-400" />
 		</div>
 
-		<!-- Full ledger transactions -->
+		<!-- Unified transaction list -->
 		<div class="space-y-1">
-			<p class="text-sm font-semibold text-gray-600">Ledger</p>
-
-			{#each visibleRows as row}
-				<div class="flex flex-row px-2">
-					<data class="mr-4 shrink-0">
-						{row[dateIdx]}
-					</data>
+			{#each visibleRows as row (row)}
+				<div
+					class="flex flex-row px-2 {row.isDevice
+						? 'border-l-2 border-amber-400 bg-amber-50/60 dark:bg-amber-950/25'
+						: ''}"
+				>
+					<data class="mr-4 shrink-0">{row.date}</data>
 					<data class="grow">
-						{row[payeeIdx]}{row[payeeIdx] && row[narrationIdx] ? ' | ' : ''}{row[narrationIdx]}
+						{row.payee}{row.payee && row.narration ? ' | ' : ''}{row.narration}
 					</data>
-					<data class={`shrink-0 ${Formatter.getAmountColour(row[numberIdx] as number)}`}>
-						{Formatter.formatAmount(row[numberIdx] as number)}
-						{row[currencyIdx]}
+					<data class="shrink-0 {Formatter.getAmountColour(row.amount)}">
+						{Formatter.formatAmount(row.amount)}
+						{row.currency}
 					</data>
 				</div>
 			{/each}
