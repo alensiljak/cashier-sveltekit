@@ -43,7 +43,7 @@
 		{#if page.data.hasDeviceXacts}
 			<div class="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-400">
 				<span class="inline-block h-3 w-1 rounded-sm bg-amber-400"></span>
-				<span>Rows with an amber bar are device-only and not yet exported</span>
+				<span>Records only on device</span>
 			</div>
 		{/if}
 

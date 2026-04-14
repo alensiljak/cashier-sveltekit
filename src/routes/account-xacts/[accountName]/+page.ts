@@ -69,13 +69,30 @@ WHERE account = '${params.accountName}' ORDER BY date DESC`;
 		date: row[dateIdx] as string,
 		payee: row[payeeIdx] as string,
 		narration: row[narrationIdx] as string,
-		amount: row[numberIdx] as number,
+		amount: parseFloat(row[numberIdx] as string),
 		currency: row[currencyIdx] as string,
 		isDevice: false
 	}));
 
+	// Mark ledger rows that match a device row, then add only unmatched device rows
+	const unmatchedDeviceRows: UnifiedXact[] = [];
+	for (const dr of deviceRows) {
+		const matchIdx = ledgerNormalized.findIndex(
+			(lr) =>
+				lr.date === dr.date &&
+				lr.payee === dr.payee &&
+				lr.amount === dr.amount &&
+				lr.currency === dr.currency
+		);
+		if (matchIdx !== -1) {
+			ledgerNormalized[matchIdx].isDevice = true;
+		} else {
+			unmatchedDeviceRows.push(dr);
+		}
+	}
+
 	// Merge and sort descending by date
-	const unifiedRows = [...deviceRows, ...ledgerNormalized].sort((a, b) =>
+	const unifiedRows = [...unmatchedDeviceRows, ...ledgerNormalized].sort((a, b) =>
 		b.date.localeCompare(a.date)
 	);
 
