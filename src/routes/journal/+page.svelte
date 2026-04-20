@@ -9,10 +9,9 @@
 	import { xact, xactSpan } from '$lib/data/mainStore';
 	import ledgerService from '$lib/services/ledgerService';
 	import type { DirectiveSpan } from '$lib/rledger/sourceEditor';
-	import * as opfslib from '$lib/utils/opfslib';
 	import Notifier from '$lib/utils/notifier';
 	import { FileDownIcon, ImportIcon, PlusIcon, TrashIcon } from '@lucide/svelte';
-	import { CASHIER_XACT_FILE } from '$lib/constants';
+	import appService from '$lib/services/appService';
 
 	Notifier.init();
 
@@ -42,7 +41,7 @@
 
 	async function onDeleteAllConfirmed() {
 		closeModal();
-		await opfslib.saveFile(CASHIER_XACT_FILE, '');
+		await appService.createDefaultCashierFile();
 		await ledgerService.invalidate();
 		Notifier.success('All local transactions deleted.');
 	}

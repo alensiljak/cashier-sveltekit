@@ -7,6 +7,7 @@
 */
 import { CASHIER_XACT_FILE } from '$lib/constants';
 // import { SettingKeys, settings } from '$lib/settings';
+import appService from '$lib/services/appService';
 import * as OpfsLib from '$lib/utils/opfslib';
 
 /**
@@ -18,5 +19,5 @@ export async function ensureInitialized() {
     if (mainFileExists) return;
 
     // Create the transactions file.
-    await OpfsLib.saveFile(CASHIER_XACT_FILE, '');
+    await appService.createDefaultCashierFile();
 }

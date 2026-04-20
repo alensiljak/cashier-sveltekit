@@ -506,6 +506,17 @@ class AppService {
 	}
 
 	/**
+	 * Creates (or overwrites) cashier.bean with the default content,
+	 * preserving the current `include` directive for the user-selected
+	 * book file, if one has been configured.
+	 */
+	async createDefaultCashierFile(): Promise<void> {
+		const bookFilename = await this.readBookFilename();
+		const content = bookFilename ? `include "${bookFilename}"\n\n` : '';
+		await saveFile(CASHIER_XACT_FILE, content);
+	}
+
+	/**
  	* Read the book filename from cashier.bean.
  	*/
 	async readBookFilename(): Promise<string | null> {
