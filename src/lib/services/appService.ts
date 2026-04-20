@@ -13,6 +13,8 @@ import { get } from 'svelte/store';
 import { formatAmount } from '$lib/utils/formatter';
 import { readFile, saveFile } from '$lib/utils/opfslib';
 import { CASHIER_XACT_FILE } from '$lib/constants';
+import { ensureInitialized, createParsedLedger } from './rustledger';
+import { mapDirectiveSpans } from '$lib/rledger/sourceEditor';
 
 // interface AccountIndex {
 // 	[key: string]: Account;
@@ -563,6 +565,34 @@ class AppService {
 		if (!content) return '';
 
 		return content.replace(/^include\s+"[^"]*"\s*\n\n/gm, '');
+	}
+
+	/**
+	 * Sort transactions in a Beancount source string by date.
+	 * Uses the WASM parser to extract directive spans, then reorders them.
+	 */
+	async sortTransactionsByDate(source: string): Promise<string> {
+		if (!source.trim()) return source;
+
+		await ensureInitialized();
+		const ledger = createParsedLedger(source);
+		if (!ledger) return source;
+
+		try {
+			const spans = mapDirectiveSpans(source, ledger);
+
+			// Each transaction starts with YYYY-MM-DD — extract it directly from the source text.
+			const pairs = spans.map((span) => ({
+				date: span.sourceText.slice(0, 10),
+				sourceText: span.sourceText
+			}));
+
+			pairs.sort((a, b) => a.date.localeCompare(b.date));
+
+			return pairs.map((p) => p.sourceText).join('\n\n') + '\n';
+		} finally {
+			ledger.free();
+		}
 	}
 }
 

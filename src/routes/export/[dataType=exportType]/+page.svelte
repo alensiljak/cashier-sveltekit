@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import Toolbar from '$lib/components/Toolbar.svelte';
+	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import appService from '$lib/services/appService';
 	import { getFilenameForBackup } from '$lib/services/cloudBackupService';
 	import Notifier from '$lib/utils/notifier';
-	import { CopyIcon, FileDownIcon, Share2Icon } from '@lucide/svelte';
+	import { ArrowDownNarrowWideIcon, CopyIcon, FileDownIcon, Share2Icon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import { CASHIER_XACT_FILE } from '$lib/constants';
 
@@ -47,6 +48,14 @@
 				output = await loadScheduledTransactions();
 				break;
 		}
+	}
+
+	async function onSortByDateClick() {
+		if (!output) {
+			Notifier.info('Nothing to sort.');
+			return;
+		}
+		output = await appService.sortTransactionsByDate(output);
 	}
 
 	async function loadScheduledTransactions() {
@@ -137,7 +146,11 @@
 </script>
 
 <article class="flex h-screen flex-col">
-	<Toolbar title="Export {dataType}" />
+	<Toolbar title="Export {dataType}">
+		{#snippet menuItems()}
+			<ToolbarMenuItem text="Sort by Date" Icon={ArrowDownNarrowWideIcon} onclick={onSortByDateClick} />
+		{/snippet}
+	</Toolbar>
 
 	<main class="flex flex-col p-1 grow overflow-auto">
 		<p>Note: Journal is exported in ledger format, Scheduled Transactions in JSON.</p>

@@ -18,8 +18,6 @@
 		TrashIcon
 	} from '@lucide/svelte';
 	import { onMount } from 'svelte';
-	import { SettingKeys, settings } from '$lib/settings';
-	import { LedgerDataSource } from '$lib/enums';
 
 	Notifier.init();
 
