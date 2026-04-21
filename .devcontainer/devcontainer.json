@@ -28,7 +28,8 @@
 				"esbenp.prettier-vscode",
 				// "ms-vscode.vscode-typescript-next"
 				"dbaeumer.vscode-eslint",
-				"anthropic.claude-code"
+				"anthropic.claude-code",
+				"donjayamanne.githistory"
 			]
 		}
 	},
