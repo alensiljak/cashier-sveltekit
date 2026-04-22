@@ -21,7 +21,6 @@ Thumbs.db
 
 # Tests
 test-results
-package-lock.json
 .aider*
 
 # Assistants
