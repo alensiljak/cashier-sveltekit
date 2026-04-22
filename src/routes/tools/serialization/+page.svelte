@@ -159,80 +159,85 @@
 </script>
 
 <Toolbar title="Ledger Serialization Demo"></Toolbar>
-<article class="p-4 max-w-xl">
-	<!-- Ledger loaded indicator -->
-	<div class="mx-auto mb-4 flex max-w-[350px] items-center gap-3 rounded-md border bg-base-200 px-4 py-3">
-		<span
-			class="inline-block h-3 w-3 flex-shrink-0 rounded-full"
-			class:bg-green-500={isLoaded && !loading}
-			class:bg-red-500={!isLoaded && !loading}
-			class:bg-yellow-400={loading}
-			title={loading ? 'Loading…' : isLoaded ? 'Ledger loaded' : 'Ledger not loaded'}
-		></span>
-		<span class="flex-1 text-sm">
-			{#if loading}
-				Loading…
-			{:else if isLoaded}
-				Ledger loaded
-			{:else if loadError}
-				Error: {loadError}
-			{:else}
-				Ledger not loaded
-			{/if}
-		</span>
-		<button class="btn btn-sm" on:click={handleLoad} disabled={loading}>
-			{loading ? 'Loading…' : 'Load'}
-		</button>
-	</div>
-	<!-- Status card -->
-	<div class="card bg-base-200 shadow mb-4">
-		<div class="card-body p-4 gap-2">
-			<div class="flex items-center gap-4 text-sm">
-				<span class="w-36 opacity-60 shrink-0">Ledger loaded</span>
-				<span class="font-medium {isLoaded ? 'text-success' : 'text-error'}">
-					{isLoaded ? `yes (${directiveCount} directives)` : 'no'}
-				</span>
-			</div>
-			<div class="flex items-center gap-4 text-sm">
-				<span class="w-36 opacity-60 shrink-0">OPFS cache size</span>
-				<span class="font-medium">
-					{cacheSize !== null ? `${cacheSize.toLocaleString()} bytes` : '—'}
-				</span>
-			</div>
-			<div class="flex items-center gap-4 text-sm">
-				<span class="w-36 opacity-60 shrink-0">Stored hash</span>
-				<span class="font-mono font-medium">{hashShort(storedHash)}</span>
-			</div>
-			<div class="flex items-center gap-4 text-sm">
-				<span class="w-36 opacity-60 shrink-0">Current hash</span>
-				<span class="font-mono font-medium">{hashShort(currentHash)}</span>
-				<span class="badge {hashBadgeClass} badge-sm">{hashState}</span>
+<article class="p-4 max-w-xl space-y-6">
+
+	<!-- Section 1: Ledger Instance -->
+	<section>
+		<h2 class="text-base font-semibold mb-3 opacity-70 uppercase tracking-wide">Ledger Instance</h2>
+
+		<!-- Loaded indicator -->
+		<div class="mb-3 flex items-center gap-3 rounded-md border bg-base-200 px-4 py-3">
+			<span
+				class="inline-block h-3 w-3 flex-shrink-0 rounded-full"
+				class:bg-green-500={isLoaded && !loading}
+				class:bg-red-500={!isLoaded && !loading}
+				class:bg-yellow-400={loading}
+				title={loading ? 'Loading…' : isLoaded ? 'Ledger loaded' : 'Ledger not loaded'}
+			></span>
+			<span class="flex-1 text-sm">
+				{#if loading}
+					Loading…
+				{:else if isLoaded}
+					Ledger loaded ({directiveCount} directives)
+				{:else if loadError}
+					Error: {loadError}
+				{:else}
+					Ledger not loaded
+				{/if}
+			</span>
+			<button class="btn btn-sm" on:click={handleLoad} disabled={loading}>
+				{loading ? 'Loading…' : 'Load'}
+			</button>
+		</div>
+
+		<!-- Instance actions -->
+		<div class="flex flex-wrap gap-2">
+			<button class="btn btn-primary btn-sm" on:click={handleSerialize} disabled={isWorking}>
+				Serialize → OPFS
+			</button>
+			<button class="btn btn-secondary btn-sm" on:click={handleDeserialize} disabled={isWorking || cacheSize === null}>
+				Deserialize ← OPFS
+			</button>
+			<button class="btn btn-outline btn-sm" on:click={handleReset} disabled={isWorking}>
+				Reset instance
+			</button>
+		</div>
+	</section>
+
+	<!-- Section 2: OPFS Files -->
+	<section>
+		<h2 class="text-base font-semibold mb-3 opacity-70 uppercase tracking-wide">OPFS Cache</h2>
+
+		<div class="card bg-base-200 shadow mb-3">
+			<div class="card-body p-4 gap-2">
+				<div class="flex items-center gap-4 text-sm">
+					<span class="w-36 opacity-60 shrink-0">Cache size</span>
+					<span class="font-medium">
+						{cacheSize !== null ? `${cacheSize.toLocaleString()} bytes` : '—'}
+					</span>
+				</div>
+				<div class="flex items-center gap-4 text-sm">
+					<span class="w-36 opacity-60 shrink-0">Stored hash</span>
+					<span class="font-mono font-medium">{hashShort(storedHash)}</span>
+				</div>
+				<div class="flex items-center gap-4 text-sm">
+					<span class="w-36 opacity-60 shrink-0">Current hash</span>
+					<span class="font-mono font-medium">{hashShort(currentHash)}</span>
+					<span class="badge {hashBadgeClass} badge-sm">{hashState}</span>
+				</div>
 			</div>
 		</div>
-	</div>
 
-	<!-- Serialize / Deserialize row -->
-	<div class="flex flex-wrap gap-2 mb-2">
-		<button class="btn btn-primary btn-sm" on:click={handleSerialize} disabled={isWorking}>
-			Serialize → OPFS
-		</button>
-		<button class="btn btn-secondary btn-sm" on:click={handleDeserialize} disabled={isWorking || cacheSize === null}>
-			Deserialize ← OPFS
-		</button>
-	</div>
-
-	<!-- General functions row -->
-	<div class="flex flex-wrap gap-2 mb-4">
-		<button class="btn btn-outline btn-sm" on:click={handleCalculateHash} disabled={isWorking}>
-			Calculate hash
-		</button>
-		<button class="btn btn-outline btn-sm" on:click={handleReset} disabled={isWorking}>
-			Reset instance
-		</button>
-		<button class="btn btn-outline btn-error btn-sm" on:click={handleDeleteCache} disabled={isWorking}>
-			Delete cache
-		</button>
-	</div>
+		<!-- OPFS actions -->
+		<div class="flex flex-wrap gap-2">
+			<button class="btn btn-outline btn-sm" on:click={handleCalculateHash} disabled={isWorking}>
+				Calculate hash
+			</button>
+			<button class="btn btn-outline btn-error btn-sm" on:click={handleDeleteCache} disabled={isWorking}>
+				Delete cache
+			</button>
+		</div>
+	</section>
 
 	{#if status}
 		<div class="alert alert-soft text-sm py-2">
