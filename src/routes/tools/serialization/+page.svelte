@@ -158,7 +158,7 @@
 		hashState === 'mismatch' ? 'badge-error'   : 'badge-ghost';
 </script>
 
-<Toolbar title="Ledger Serialization Demo"></Toolbar>
+<Toolbar title="Ledger Serialization"></Toolbar>
 <article class="p-4 max-w-xl space-y-6">
 
 	<!-- Section 1: Ledger Instance -->
