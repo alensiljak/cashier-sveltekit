@@ -9,7 +9,9 @@
 				"serena",
 				"start-mcp-server",
 				"--context",
-				"ide-assistant"
+				"ide-assistant",
+				"--open-web-dashboard",
+        		"false"
 			]
 		}
 	}
