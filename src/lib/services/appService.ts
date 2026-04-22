@@ -12,7 +12,7 @@ import { get } from 'svelte/store';
 // import * as BeancountParser from '$lib/utils/beancountParser';
 import { formatAmount } from '$lib/utils/formatter';
 import { readFile, saveFile } from '$lib/utils/opfslib';
-import { CASHIER_XACT_FILE } from '$lib/constants';
+import { CASHIER_XACT_FILE, USER_BOOK_FILENAME } from '$lib/constants';
 import { ensureInitialized, createParsedLedger } from './rustledger';
 import { mapDirectiveSpans } from '$lib/rledger/sourceEditor';
 
@@ -508,63 +508,34 @@ class AppService {
 	}
 
 	/**
-	 * Creates (or overwrites) cashier.bean with the default content,
-	 * preserving the current `include` directive for the user-selected
-	 * book file, if one has been configured.
+	 * Creates (or overwrites) cashier.bean with empty content.
+	 * The include directive for the user's book is injected on-the-fly at
+	 * parse time by the ledger worker, so it is never written to disk.
 	 */
 	async createDefaultCashierFile(): Promise<void> {
-		const bookFilename = await this.readBookFilename();
-		const content = bookFilename ? `include "${bookFilename}"\n\n` : '';
-		await saveFile(CASHIER_XACT_FILE, content);
+		await saveFile(CASHIER_XACT_FILE, '');
 	}
 
 	/**
- 	* Read the book filename from cashier.bean.
- 	*/
+	 * Read the book filename from settings.
+	 */
 	async readBookFilename(): Promise<string | null> {
-		const content = await readFile(CASHIER_XACT_FILE);
-		if (!content) return null;
-
-		for (const line of content.split('\n')) {
-			const match = line.match(/^include\s+"([^"]+)"/);
-			if (match) return match[1];
-		}
-
-		return null;
+		return await settings.get<string>(USER_BOOK_FILENAME);
 	}
 
 	/**
-	 * Stores the user-selected book filename in cashier.bean as an include directive.
-	 * If an include directive already exists, it is replaced. Otherwise, 
-	 * a new directive is added at the top.
-	 * @param {string} filename The filename to include in cashier.bean
-	 * @returns {Promise<void>}
-	 * @throws {Error} If there is an issue reading or writing the file.
+	 * Stores the user-selected book filename in settings.
 	 */
 	async writeBookFilename(filename: string) {
-		const existing = await readFile(CASHIER_XACT_FILE);
-		const newLine = `include "${filename}"`;
-
-		let updated: string;
-		if (existing) {
-			const replaced = existing.replace(/^include\s+"[^"]*"/m, newLine);
-			updated = replaced !== existing ? replaced : `${newLine}\n\n${existing}`;
-		} else {
-			updated = `${newLine}\n\n`;
-		}
-
-		await saveFile(CASHIER_XACT_FILE, updated);
+		await settings.set(USER_BOOK_FILENAME, filename);
 	}
 
 	/**
-	 * Strips the include directives from the book file content,
-	 * so that only the remaining content is exported.
+	 * Returns the cashier.bean content for export.
+	 * The file no longer contains include directives, so no stripping is needed.
 	 */
 	async stripIncludesFromBookFile(): Promise<string> {
-		const content = await readFile(CASHIER_XACT_FILE);
-		if (!content) return '';
-
-		return content.replace(/^include\s+"[^"]*"\s*\n\n/gm, '');
+		return (await readFile(CASHIER_XACT_FILE)) ?? '';
 	}
 
 	/**

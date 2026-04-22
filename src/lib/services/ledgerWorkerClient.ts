@@ -17,7 +17,7 @@ import type {
 	WorkerResponse,
 	WorkerResponsePayload
 } from '$lib/workers/ledger.worker';
-import { CASHIER_XACT_FILE } from '$lib/constants';
+import { CASHIER_XACT_FILE, USER_BOOK_FILENAME } from '$lib/constants';
 
 // Extract the response shape for a given `type` discriminant.
 type ResponseOf<T extends WorkerResponsePayload['type']> = Extract<WorkerResponsePayload, { type: T }>;
@@ -97,7 +97,10 @@ class LedgerWorkerClient {
 
 	private async mainFileName(): Promise<string> {
 		return CASHIER_XACT_FILE;
-		// return (await settings.get<string>(SettingKeys.bookFilename)) ?? 'book.bean';
+	}
+
+	private async userBookFilename(): Promise<string | undefined> {
+		return (await settings.get<string>(USER_BOOK_FILENAME)) ?? undefined;
 	}
 
 	// -------------------------------------------------------------------------
@@ -116,7 +119,7 @@ class LedgerWorkerClient {
 	/** Parse all .bean files from OPFS, replace the cached ledger. */
 	async load(): Promise<void> {
 		try {
-			await this.send<'load-done'>({ type: 'load', mainFileName: await this.mainFileName() });
+			await this.send<'load-done'>({ type: 'load', mainFileName: await this.mainFileName(), userBookFilename: await this.userBookFilename() });
 			this.setLoaded(true);
 			this._isConfigured.set(true);
 			this._version.update((v) => v + 1);
@@ -140,7 +143,7 @@ class LedgerWorkerClient {
 		if (this._isLoaded) return;
 		if (get(this._isReloading)) return;
 		try {
-			await this.send<'load-done'>({ type: 'ensure-loaded', mainFileName: await this.mainFileName() });
+			await this.send<'load-done'>({ type: 'ensure-loaded', mainFileName: await this.mainFileName(), userBookFilename: await this.userBookFilename() });
 			this.setLoaded(true);
 			this._isConfigured.set(true);
 			this._version.update((v) => v + 1);
@@ -160,7 +163,7 @@ class LedgerWorkerClient {
 		this._isReloading.set(true);
 		this.setLoaded(false); // prevent queries from reaching the worker while re-parsing
 		try {
-			await this.send<'load-done'>({ type: 'invalidate', mainFileName: await this.mainFileName() });
+			await this.send<'load-done'>({ type: 'invalidate', mainFileName: await this.mainFileName(), userBookFilename: await this.userBookFilename() });
 			this.setLoaded(true);
 			this._version.update((v) => v + 1);
 		} finally {

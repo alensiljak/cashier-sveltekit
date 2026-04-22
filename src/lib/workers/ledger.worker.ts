@@ -101,7 +101,7 @@ async function opfsListBeanFiles(): Promise<Array<{ path: string; content: strin
 	return results;
 }
 
-async function loadFromCacheOrFiles(mainFileName: string): Promise<void> {
+async function loadFromCacheOrFiles(mainFileName: string, userBookFilename?: string): Promise<void> {
 	const bytes = await opfsReadBinary(LEDGER_CACHE_FILE);
 	if (bytes) {
 		try {
@@ -112,7 +112,7 @@ async function loadFromCacheOrFiles(mainFileName: string): Promise<void> {
 			// Cache corrupt or version mismatch — fall through to file parse
 		}
 	}
-	await loadFromFiles(mainFileName);
+	await loadFromFiles(mainFileName, userBookFilename);
 }
 
 // ---------------------------------------------------------------------------
@@ -125,9 +125,9 @@ async function loadFromCacheOrFiles(mainFileName: string): Promise<void> {
  */
 export type WorkerRequestPayload =
 	// --- Persistent-ledger operations ---
-	| { type: 'load'; mainFileName: string }
-	| { type: 'ensure-loaded'; mainFileName: string }
-	| { type: 'invalidate'; mainFileName: string }
+	| { type: 'load'; mainFileName: string; userBookFilename?: string }
+	| { type: 'ensure-loaded'; mainFileName: string; userBookFilename?: string }
+	| { type: 'invalidate'; mainFileName: string; userBookFilename?: string }
 	| { type: 'query'; bql: string }
 	| { type: 'get-directives' }
 	| { type: 'get-errors' }
@@ -166,7 +166,7 @@ export type WorkerResponse = { id: number } & WorkerResponsePayload;
 // Helpers
 // ---------------------------------------------------------------------------
 
-async function loadFromFiles(mainFileName: string): Promise<void> {
+async function loadFromFiles(mainFileName: string, userBookFilename?: string): Promise<void> {
 	const wasm = wasmModule!;
 	if (ledger) {
 		ledger.free();
@@ -177,6 +177,16 @@ async function loadFromFiles(mainFileName: string): Promise<void> {
 	const fileMap: Record<string, string> = {};
 	for (const { path, content } of beanFiles) {
 		fileMap[path] = content;
+	}
+	// Inject the user's book include into cashier.bean on-the-fly, without
+	// persisting the directive to disk. Only when the book file is actually present.
+	if (
+		userBookFilename &&
+		userBookFilename !== mainFileName &&
+		fileMap[mainFileName] !== undefined &&
+		fileMap[userBookFilename] !== undefined
+	) {
+		fileMap[mainFileName] = `include "${userBookFilename}"\n\n${fileMap[mainFileName]}`;
 	}
 	ledger = wasm.Ledger.fromFiles(fileMap, mainFileName);
 }
@@ -203,7 +213,7 @@ async function handleMessage(e: MessageEvent<WorkerRequest>): Promise<void> {
 		switch (e.data.type) {
 			case 'load': {
 				const t0 = performance.now();
-				await loadFromFiles(e.data.mainFileName);
+				await loadFromFiles(e.data.mainFileName, e.data.userBookFilename);
 				const ms = performance.now() - t0;
 				reply({
 					type: 'load-done',
@@ -217,7 +227,7 @@ async function handleMessage(e: MessageEvent<WorkerRequest>): Promise<void> {
 			case 'ensure-loaded': {
 				if (!ledger) {
 					const t0 = performance.now();
-					await loadFromCacheOrFiles(e.data.mainFileName);
+					await loadFromCacheOrFiles(e.data.mainFileName, e.data.userBookFilename);
 					const ms = performance.now() - t0;
 					reply({
 						type: 'load-done',
@@ -238,7 +248,7 @@ async function handleMessage(e: MessageEvent<WorkerRequest>): Promise<void> {
 
 			case 'invalidate': {
 				const t0 = performance.now();
-				await loadFromFiles(e.data.mainFileName);
+				await loadFromFiles(e.data.mainFileName, e.data.userBookFilename);
 				// Update the cache so future ensure-loaded calls get fresh data
 				try {
 					await opfsSaveBinary(LEDGER_CACHE_FILE, ledger!.serialize());
