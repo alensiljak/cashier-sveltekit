@@ -27,11 +27,9 @@
 		</p>
 
 		<p>
-			To achieve its full purpose, Cashier is synchronized with Ledger-cli data. It allows exporting
-			the created transactions. For a proper start, it should be populated with the data from
-			Ledger, using Cashier Server, <a class="link link-primary"
-				href="https://github.com/alensiljak/cashier-server-python">repo</a>.
-			Install the server with <code>uv tool install cashier-server</code>.
+			Cashier can also read your whole Beancount ledger. Use Ledger Import function to copy
+			and regularly update your ledger data. Eventually export the Journal transactions created on your
+			device and store them into your ledger files.
 		</p>
 
 		<h3 class="text-3xl font-semibold">Links</h3>
