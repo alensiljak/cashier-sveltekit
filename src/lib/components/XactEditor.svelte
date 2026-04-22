@@ -29,8 +29,6 @@
 			new Big(0)
 		);
 	});
-	let _emptyPostingCount: number;
-
 	if (!$xact) {
 		goto('/');
 	}
@@ -39,8 +37,6 @@
 		if ($selectionMetadata) {
 			handleEntitySelection();
 		}
-
-		recalculateSum();
 	});
 
 	async function handleEntitySelection() {
@@ -86,7 +82,6 @@
 				$xact.postings[index].account = account.name;
 				$xact.postings[index].currency = acctBalance.currency;
 
-				// todo: recalculateSum();
 				// todo: validateCurrencies();
 				break;
 			}
@@ -105,8 +100,6 @@
 					}
 				}
 
-				// Recalculate the sum
-				recalculateSum();
 				break;
 		}
 
@@ -174,25 +167,6 @@
 		}
 	}
 
-	function onPostingAmountChanged() {
-		// recalculate sum
-		recalculateSum();
-	}
-
-	function recalculateSum() {
-		sum = new Big(0);
-		_emptyPostingCount = 0;
-
-		if (!$xact || !$xact.postings || $xact.postings.length === 0) return;
-
-		$xact.postings.forEach((posting) => {
-			if (posting.amount) {
-				sum = sum.plus(new Big(posting.amount));
-			} else {
-				_emptyPostingCount += 1;
-			}
-		});
-	}
 </script>
 
 <div class="flex h-full flex-col space-y-3 py-2">
@@ -259,7 +233,6 @@
 			<PostingEditor
 				{index}
 				onAccountClicked={(event) => onPostingAccountClicked(index)}
-				onAmountChanged={onPostingAmountChanged}
 			/>
 		{/each}
 	</div>
