@@ -13,9 +13,12 @@
 	import { listFileTree } from '$lib/utils/opfslib';
 	import { OPFSBackend } from '$lib/storage';
 	import { LEDGER_CACHE_FILE } from '$lib/constants';
+	import Toolbar from '$lib/components/Toolbar.svelte';
 
 	let status = '';
 	let isLoaded = false;
+	let loading = false;
+	let loadError: string | null = null;
 	let cacheSize: number | null = null;
 	let storedHash = '';
 	let currentHash = '';
@@ -25,6 +28,19 @@
 	onMount(async () => {
 		await refreshStatus();
 	});
+
+	async function handleLoad() {
+		loading = true;
+		loadError = null;
+		try {
+			await fullLedgerService.load();
+			await refreshStatus();
+		} catch (e) {
+			loadError = e instanceof Error ? e.message : String(e);
+		} finally {
+			loading = false;
+		}
+	}
 
 	async function refreshStatus() {
 		isLoaded = fullLedgerService.isLoaded;
@@ -142,9 +158,32 @@
 		hashState === 'mismatch' ? 'badge-error'   : 'badge-ghost';
 </script>
 
+<Toolbar title="Ledger Serialization Demo"></Toolbar>
 <article class="p-4 max-w-xl">
-	<h2 class="text-xl font-semibold mb-4">Ledger Serialization Demo</h2>
-
+	<!-- Ledger loaded indicator -->
+	<div class="mx-auto mb-4 flex max-w-[350px] items-center gap-3 rounded-md border bg-base-200 px-4 py-3">
+		<span
+			class="inline-block h-3 w-3 flex-shrink-0 rounded-full"
+			class:bg-green-500={isLoaded && !loading}
+			class:bg-red-500={!isLoaded && !loading}
+			class:bg-yellow-400={loading}
+			title={loading ? 'Loading…' : isLoaded ? 'Ledger loaded' : 'Ledger not loaded'}
+		></span>
+		<span class="flex-1 text-sm">
+			{#if loading}
+				Loading…
+			{:else if isLoaded}
+				Ledger loaded
+			{:else if loadError}
+				Error: {loadError}
+			{:else}
+				Ledger not loaded
+			{/if}
+		</span>
+		<button class="btn btn-sm" on:click={handleLoad} disabled={loading}>
+			{loading ? 'Loading…' : 'Load'}
+		</button>
+	</div>
 	<!-- Status card -->
 	<div class="card bg-base-200 shadow mb-4">
 		<div class="card-body p-4 gap-2">
