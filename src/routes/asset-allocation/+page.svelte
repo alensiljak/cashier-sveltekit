@@ -7,10 +7,9 @@
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import AssetClassRow from '$lib/components/AssetClassRow.svelte';
-	import { AaStocksStore, AssetAllocationStore } from '$lib/data/mainStore.js';
+	import { AaStocksStore, AssetAllocationStore, AssetAllocationLoadedAtStore } from '$lib/data/mainStore.js';
 	import Notifier from '$lib/utils/notifier.js';
-	import { DatabaseZapIcon, FileDownIcon, ScaleIcon } from '@lucide/svelte';
-	import { onMount } from 'svelte';
+	import { RefreshCwIcon, FileDownIcon, ScaleIcon } from '@lucide/svelte';
 
 	Notifier.init();
 
@@ -19,16 +18,12 @@
 	let childrenIndex: Map<string, AssetClass[]> = new Map();
 	let collapsedState: Record<string, boolean> = {};
 
-	onMount(() => {
-		if (!data.aa) {
-			Notifier.error('Could not load Asset Allocation definition.');
-			return;
-		}
-
+	$: if (data.aa && data.assetClasses?.length) {
 		_allocation = data.assetClasses as AssetClass[];
-		// Build children index for hierarchical rendering
 		childrenIndex = buildChildrenIndex(_allocation);
-	});
+	} else if (!data.aa) {
+		Notifier.error('Could not load Asset Allocation definition.');
+	}
 
 	function toggleCollapse(fullname: string) {
 		collapsedState[fullname] = !collapsedState[fullname];
@@ -73,11 +68,10 @@
 		);
 	}
 
-	async function onClearCacheClick() {
-		// clear from state
+	async function onRefreshClick() {
 		AssetAllocationStore.set(undefined);
 		AaStocksStore.set(undefined);
-
+		AssetAllocationLoadedAtStore.set(undefined);
 		invalidateAll();
 	}
 
@@ -114,7 +108,6 @@
 <article class="flex h-screen flex-col">
 	<Toolbar title="Asset Allocation">
 		{#snippet menuItems()}
-			<ToolbarMenuItem text="Clear cache" Icon={DatabaseZapIcon} onclick={onClearCacheClick} />
 			<ToolbarMenuItem text="Export" Icon={FileDownIcon} onclick={onExportClick} />
 			<ToolbarMenuItem text="Validate" Icon={ScaleIcon} onclick={onValidateClick} />
 			<ToolbarMenuItem text="Help" />
@@ -159,4 +152,15 @@
 			</tbody>
 		</table>
 	</section>
+
+	<footer class="flex shrink-0 items-center justify-end gap-2 border-t border-base-300 px-3 py-1 text-xs text-base-content/50">
+		{#if $AssetAllocationLoadedAtStore}
+			<span>Loaded at {$AssetAllocationLoadedAtStore.toLocaleTimeString()}</span>
+		{:else}
+			<span>Not loaded</span>
+		{/if}
+		<button class="btn btn-ghost btn-xs" onclick={onRefreshClick} title="Reload">
+			<RefreshCwIcon size={14} />
+		</button>
+	</footer>
 </article>

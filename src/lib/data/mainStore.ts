@@ -31,5 +31,6 @@ export const ScheduledXact: Writable<ScheduledTransaction> = writable();
 // asset allocation
 export const AssetAllocationStore: Writable<AssetClass[] | undefined> = writable();
 export const AaStocksStore: Writable<StockCache | undefined> = writable();
+export const AssetAllocationLoadedAtStore: Writable<Date | undefined> = writable();
 // Drawer/sidebar store.
 export const drawerState: Writable<boolean> = writable(false);

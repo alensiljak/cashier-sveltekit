@@ -1,6 +1,6 @@
 import { AssetAllocationEngine } from '$lib/assetAllocation/AssetAllocation';
 import type { AssetClass } from '$lib/assetAllocation/AssetClass';
-import { AssetAllocationStore } from '$lib/data/mainStore';
+import { AssetAllocationStore, AssetAllocationLoadedAtStore } from '$lib/data/mainStore';
 import Notifier from '$lib/utils/notifier';
 import * as OpfsLib from '$lib/utils/opfslib.js';
 import { get } from 'svelte/store';
@@ -19,6 +19,7 @@ export async function load() {
 
 			// save into store.
 			AssetAllocationStore.set(assetClasses);
+			AssetAllocationLoadedAtStore.set(new Date());
 		}
 
 		// Show warnings if any commodities are not mapped
