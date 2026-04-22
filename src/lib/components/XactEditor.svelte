@@ -22,7 +22,13 @@
 
 	Notifier.init();
 
-	let sum = $state(Big(0));
+	let sum = $derived.by(() => {
+		if (!$xact?.postings?.length) return new Big(0);
+		return $xact.postings.reduce(
+			(acc, posting) => (posting.amount ? acc.plus(new Big(posting.amount)) : acc),
+			new Big(0)
+		);
+	});
 	let _emptyPostingCount: number;
 
 	if (!$xact) {
