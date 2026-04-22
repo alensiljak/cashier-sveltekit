@@ -11,12 +11,12 @@
 	import { Posting } from '$lib/data/model';
 	import {
 		ArrowUpDownIcon,
-		PlusCircleIcon,
 		SigmaIcon,
 		TrashIcon,
 		UserIcon,
 		CalendarIcon,
-		FileTextIcon
+		FileTextIcon,
+		CirclePlusIcon
 	} from '@lucide/svelte';
 	import { Big } from 'big.js';
 
@@ -217,7 +217,7 @@
 				class="btn btn-outline btn-accent btn-icon rounded"
 				onclick={onAddPostingClicked}
 			>
-				<PlusCircleIcon />
+				<CirclePlusIcon />
 			</button>
 			<a class="btn btn-outline btn-accent btn-icon rounded" href="/postings-reorder">
 				<ArrowUpDownIcon />
