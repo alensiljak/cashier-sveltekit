@@ -1,6 +1,6 @@
 <!--
   ExpensesBarChart - horizontal bar chart for expense amounts per account.
-  Bars are red; account names appear on the y-axis. Sorted by the caller (desc).
+  Bars are red for positive amounts, green for negative (refunds). Account names appear on the y-axis. Sorted by the caller (desc).
 -->
 <script lang="ts">
 	import { BarController, BarElement, CategoryScale, LinearScale, Chart, Tooltip } from 'chart.js';
@@ -66,8 +66,12 @@
 				datasets: [
 					{
 						data: plainValues,
-						backgroundColor: 'rgba(239, 68, 68, 0.75)',
-						borderColor: 'rgba(239, 68, 68, 1)',
+						backgroundColor: plainValues.map((v) =>
+							v < 0 ? 'rgba(34, 197, 94, 0.75)' : 'rgba(239, 68, 68, 0.75)'
+						),
+						borderColor: plainValues.map((v) =>
+							v < 0 ? 'rgba(34, 197, 94, 1)' : 'rgba(239, 68, 68, 1)'
+						),
 						borderWidth: 1
 					}
 				]
