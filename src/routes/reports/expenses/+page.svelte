@@ -34,7 +34,7 @@
 			const defaultCurrency = await settings.get<string>(SettingKeys.currency);
 			await fullLedgerService.ensureLoaded();
 
-			const bql = `SELECT account, number(CONVERT(number, "${defaultCurrency}")) AS number WHERE account ~ "^Expenses" AND date >= ${period.dateFrom} AND date <= ${period.dateTo}`;
+			const bql = `SELECT account, NUMBER(CONVERT(units(position), "${defaultCurrency}")) AS number WHERE account ~ "^Expenses" AND date >= ${period.dateFrom} AND date <= ${period.dateTo}`;
 			const result = await fullLedgerService.query(bql);
 
 			if (result?.errors?.length) {
