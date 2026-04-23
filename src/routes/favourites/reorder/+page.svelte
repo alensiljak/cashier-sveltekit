@@ -44,11 +44,11 @@
 	}
 </script>
 
-<article>
+<article class="flex h-screen flex-col">
 	<Toolbar title="Reorder Favourites"></Toolbar>
 	<Fab Icon={CheckIcon} onclick={onFabClicked} />
 
-	<section class="space-y-2 p-1">
+	<section class="grow space-y-2 overflow-auto p-1 pb-24">
 		{#each _favourites as item, index (item)}
 			<div
 				class="border-base-content/25 flex h-14 flex-row items-center space-x-3
