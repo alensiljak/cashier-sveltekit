@@ -5,6 +5,7 @@
 	import PeriodSelector, { type Period } from '$lib/components/PeriodSelector.svelte';
 	import ExpensesBarChart from '$lib/components/ExpensesBarChart.svelte';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
+	import { SettingKeys, settings } from '$lib/settings';
 
 	let isLoading = $state(false);
 	let error = $state<string | null>(null);
@@ -30,9 +31,10 @@
 		await tick();
 
 		try {
+			const defaultCurrency = await settings.get<string>(SettingKeys.currency);
 			await fullLedgerService.ensureLoaded();
 
-			const bql = `SELECT account, number WHERE account ~ "^Expenses" AND date >= ${period.dateFrom} AND date <= ${period.dateTo}`;
+			const bql = `SELECT account, number(CONVERT(number, "${defaultCurrency}")) AS number WHERE account ~ "^Expenses" AND date >= ${period.dateFrom} AND date <= ${period.dateTo}`;
 			const result = await fullLedgerService.query(bql);
 
 			if (result?.errors?.length) {
