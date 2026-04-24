@@ -1,19 +1,21 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { beforeNavigate } from '$app/navigation';
+	import { get } from 'svelte/store';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { SettingKeys, settings } from '$lib/settings';
 	import Notifier from '$lib/utils/notifier';
 	import appService from '$lib/services/appService';
 	import { goto, replaceState } from '$app/navigation';
-	import { DefaultCurrencyStore } from '$lib/data/mainStore.js';
+	import { DefaultCurrencyStore, PendingSettingsStore } from '$lib/data/mainStore.js';
 	// import { invalidateStorageBackendCache } from '$lib/storage/index.js';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
-	import { BoxIcon, Check } from '@lucide/svelte';
+	import { BoxIcon, Check, RotateCcw } from '@lucide/svelte';
 	import Fab from '$lib/components/FAB.svelte';
 	import { page } from '$app/state';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import { USER_BOOK_FILENAME } from '$lib/constants';
-	
+
 	Notifier.init();
 
 	let rememberLastTransaction = $state<boolean>();
@@ -22,13 +24,44 @@
 	let bookFilename = $state<string | null>(null);
 	let assetAllocationDefinition = $state<string | null>(null);
 	let rootInvestmentAccount = $state<string>();
+	let loaded = $state(false);
+
+	// Saved (DB) values for revert comparison
+	let savedCurrency = $state<string | undefined>(undefined);
+	let savedBookFilename = $state<string | null>(null);
+	let savedAssetAllocationDefinition = $state<string | null>(null);
+	let savedRootInvestmentAccount = $state<string | undefined>(undefined);
+	let savedRememberLastTransaction = $state<boolean | undefined>(undefined);
+
+	// Dirty flags — only meaningful after initial load
+	let currencyDirty = $derived(loaded && currency !== savedCurrency);
+	let bookFilenameDirty = $derived(loaded && bookFilename !== savedBookFilename);
+	let assetAllocationDirty = $derived(
+		loaded && assetAllocationDefinition !== savedAssetAllocationDefinition
+	);
+	let rootInvestmentDirty = $derived(loaded && rootInvestmentAccount !== savedRootInvestmentAccount);
+
+	// Save form state before navigating away (e.g. to file picker)
+	beforeNavigate(() => {
+		if (loaded) {
+			PendingSettingsStore.set({
+				currency,
+				rememberLastTransaction,
+				bookFilename,
+				assetAllocationDefinition,
+				rootInvestmentAccount
+			});
+		}
+	});
 
 	onMount(async () => {
-		// Handle return from file picker
+		// Handle return from file picker (sets bookFilename / assetAllocationDefinition from URL)
 		await handleFilePickerReturn();
 
 		// load data
 		await loadData();
+
+		loaded = true;
 	});
 
 	async function handleFilePickerReturn() {
@@ -44,44 +77,49 @@
 				bookFilename = settingValue;
 				break;
 			case SettingKeys.assetAllocationDefinition:
-				await settings.set(settingKey, settingValue);
-				// assetAllocationDefinition = settingValue;
+				assetAllocationDefinition = settingValue;
 				break;
 			default:
 				console.warn(`Unknown setting key returned from file picker: ${settingKey}`);
-				return; // Don't save unknown settings
+				return;
 		}
 
 		// Remove params from URL without triggering navigation
-		const url = new URL(window.location.href);
-		url.searchParams.delete('settingKey');
-		url.searchParams.delete('settingValue');
 		replaceState('', {});
 	}
 
 	async function loadData() {
-		currency = await appService.getDefaultCurrency();
+		// Restore pending state saved before navigating to file picker
+		const pending = get(PendingSettingsStore);
+
 		bookCurrencies = await fullLedgerService.getOperatingCurrencies();
-		if (!currency && bookCurrencies.length > 0) {
-			// load from the ledger
-			currency = bookCurrencies[0];
-			// save to settings for next time
-			await settings.set(SettingKeys.currency, currency);
-		}
 
-		rootInvestmentAccount = (await settings.get<string>(
+		// Load saved DB values (used for revert comparison and as fallback)
+		savedCurrency = (await appService.getDefaultCurrency()) ?? undefined;
+		savedBookFilename = (await appService.readBookFilename()) ?? null;
+		savedRootInvestmentAccount = (await settings.get<string>(
 			SettingKeys.rootInvestmentAccount
-		)) as string;
-		rememberLastTransaction = (await settings.get<boolean>(
+		)) as string | undefined;
+		savedRememberLastTransaction = (await settings.get<boolean>(
 			SettingKeys.rememberLastTransaction
-		)) as boolean;
+		)) as boolean | undefined;
+		savedAssetAllocationDefinition =
+			(await settings.get<string>(SettingKeys.assetAllocationDefinition)) ?? null;
 
-		if (!bookFilename) {
-			bookFilename = await appService.readBookFilename();
+		// Auto-detect currency from book if not saved yet
+		if (!savedCurrency && bookCurrencies.length > 0) {
+			savedCurrency = bookCurrencies[0];
+			await settings.set(SettingKeys.currency, savedCurrency);
 		}
 
-		assetAllocationDefinition =
-			(await settings.get<string>(SettingKeys.assetAllocationDefinition)) ?? null;
+		// Populate form: pending values take precedence over saved values.
+		// URL-param values (set by handleFilePickerReturn above) take precedence over pending.
+		currency = pending?.currency ?? savedCurrency;
+		rememberLastTransaction = pending?.rememberLastTransaction ?? savedRememberLastTransaction;
+		if (!bookFilename) bookFilename = pending?.bookFilename ?? savedBookFilename;
+		if (!assetAllocationDefinition)
+			assetAllocationDefinition = pending?.assetAllocationDefinition ?? savedAssetAllocationDefinition;
+		rootInvestmentAccount = pending?.rootInvestmentAccount ?? savedRootInvestmentAccount;
 	}
 
 	async function onOpfsClick() {
@@ -94,6 +132,7 @@
 
 		await settings.set(SettingKeys.rootInvestmentAccount, rootInvestmentAccount);
 		await settings.set(SettingKeys.rememberLastTransaction, rememberLastTransaction);
+		await settings.set(SettingKeys.assetAllocationDefinition, assetAllocationDefinition);
 
 		// Save book filename in cashier.bean
 		if (bookFilename) {
@@ -101,6 +140,9 @@
 		}
 
 		// invalidateStorageBackendCache();
+
+		// Clear pending store now that everything is saved
+		PendingSettingsStore.set(undefined);
 
 		Notifier.success('Settings saved');
 
@@ -122,13 +164,25 @@
 				<span class="label-text">Main Currency</span>
 			</label>
 		</div>
-		<input
-			id="currency"
-			class="input rounded"
-			type="text"
-			placeholder="EUR, USD, etc."
-			bind:value={currency}
-		/>
+		<div class="flex gap-2">
+			<input
+				id="currency"
+				class="input rounded flex-1"
+				type="text"
+				placeholder="EUR, USD, etc."
+				bind:value={currency}
+			/>
+			{#if currencyDirty}
+				<button
+					type="button"
+					class="btn btn-outline btn-error btn-sm btn-square rounded"
+					title="Revert change"
+					onclick={() => (currency = savedCurrency)}
+				>
+					<RotateCcw size={16} />
+				</button>
+			{/if}
+		</div>
 		{#if bookCurrencies.length > 0}
 			<span class="text-sm opacity-70">Book currencies: {bookCurrencies.join(', ')}</span>
 		{/if}
@@ -157,6 +211,16 @@
 			<p class="text-sm font-medium">Book file:</p>
 			<p class="font-mono text-sm opacity-70">{bookFilename ?? 'Not set'}</p>
 		</div>
+		{#if bookFilenameDirty}
+			<button
+				type="button"
+				class="btn btn-outline btn-error btn-sm btn-square rounded"
+				title="Revert change"
+				onclick={() => (bookFilename = savedBookFilename)}
+			>
+				<RotateCcw size={16} />
+			</button>
+		{/if}
 		<button
 			class="btn btn-primary btn-sm rounded"
 			type="button"
@@ -173,6 +237,16 @@
 			<p class="text-sm font-medium">Asset allocation definition</p>
 			<p class="font-mono text-sm opacity-70">{assetAllocationDefinition ?? 'Not set'}</p>
 		</div>
+		{#if assetAllocationDirty}
+			<button
+				type="button"
+				class="btn btn-outline btn-error btn-sm btn-square rounded"
+				title="Revert change"
+				onclick={() => (assetAllocationDefinition = savedAssetAllocationDefinition)}
+			>
+				<RotateCcw size={16} />
+			</button>
+		{/if}
 		<button
 			class="btn btn-primary btn-sm rounded"
 			type="button"
@@ -190,13 +264,25 @@
 				<span class="label-text">Investment account root:</span>
 			</label>
 		</div>
-		<input
-			id="investment-account-root"
-			class="input rounded"
-			type="text"
-			placeholder="i.e. Assets:Investments"
-			bind:value={rootInvestmentAccount}
-		/>
+		<div class="flex gap-2">
+			<input
+				id="investment-account-root"
+				class="input rounded flex-1"
+				type="text"
+				placeholder="i.e. Assets:Investments"
+				bind:value={rootInvestmentAccount}
+			/>
+			{#if rootInvestmentDirty}
+				<button
+					type="button"
+					class="btn btn-outline btn-error btn-sm btn-square rounded"
+					title="Revert change"
+					onclick={() => (rootInvestmentAccount = savedRootInvestmentAccount)}
+				>
+					<RotateCcw size={16} />
+				</button>
+			{/if}
+		</div>
 	</div>
 
 	<Fab Icon={Check} onclick={saveSettings} />

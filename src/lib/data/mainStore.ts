@@ -34,3 +34,13 @@ export const AaStocksStore: Writable<StockCache | undefined> = writable();
 export const AssetAllocationLoadedAtStore: Writable<Date | undefined> = writable();
 // Drawer/sidebar store.
 export const drawerState: Writable<boolean> = writable(false);
+
+export interface PendingSettings {
+	currency?: string;
+	rememberLastTransaction?: boolean;
+	bookFilename?: string | null;
+	assetAllocationDefinition?: string | null;
+	rootInvestmentAccount?: string;
+}
+
+export const PendingSettingsStore: Writable<PendingSettings | undefined> = writable(undefined);
