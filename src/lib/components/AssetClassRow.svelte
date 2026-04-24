@@ -12,9 +12,9 @@
 	export let collapsedState: Record<string, boolean> = {};
 	export let onToggle: (fullname: string) => void = () => {};
 	export let childrenIndex: Map<string, AssetClass[]> = new Map();
+	export let viewMode: 'allocation' | 'value' = 'allocation';
 
 	function isCollapsible(ac: AssetClass): boolean {
-		// Asset classes with symbols are leaf nodes and not collapsible
 		return !ac.symbols?.length && children.length > 0;
 	}
 
@@ -25,20 +25,21 @@
 	}
 
 	function getIndentClass() {
-		// Use standard Tailwind padding classes that are guaranteed to exist
 		const indentClasses = ['pl-0', 'pl-4', 'pl-8', 'pl-12', 'pl-16', 'pl-20'];
 		return indentClasses[depth] || indentClasses[indentClasses.length - 1];
 	}
 
 	function getBorderClass() {
 		if (depth === 0) return '';
-		// Add border-left for nested items to create tree visual hierarchy
 		return 'border-l border-base-300';
 	}
 
 	function getChildren(fullname: string): AssetClass[] {
 		return childrenIndex.get(fullname) || [];
 	}
+
+	$: allocHidden = viewMode !== 'allocation' ? ' hidden lg:table-cell' : '';
+	$: valueHidden = viewMode !== 'value' ? ' hidden lg:table-cell' : '';
 </script>
 
 <!-- Row for this asset class -->
@@ -58,7 +59,6 @@
 				</button>
 			{/if}
 			{#if depth > 0}
-				<!-- Visual indentation guides -->
 				<div class="flex">
 					{#each Array(depth).fill(0) as _, i}
 						<div class="border-base-300 mr-1 h-full w-2 border-l"></div>
@@ -72,22 +72,22 @@
 			</span>
 		</div>
 	</td>
-	<td class="text-end">
+	<td class="text-end{allocHidden}">
 		{numeral(assetClass.allocation).format(NUMBER_FORMAT)}
 	</td>
-	<td class="text-end">
+	<td class="text-end{allocHidden}">
 		{numeral(assetClass.currentAllocation).format(NUMBER_FORMAT)}
 	</td>
-	<td class={`text-end ${getOffsetColor(assetClass.diffPerc)}`}>
+	<td class="text-end{allocHidden} {getOffsetColor(assetClass.diffPerc)}">
 		{numeral(assetClass.diffPerc).format(NUMBER_FORMAT)}
 	</td>
-	<td class="text-end">
+	<td class="text-end{valueHidden}">
 		{numeral(assetClass.allocatedValue).format(NUMBER_FORMAT)}
 	</td>
-	<td class="text-end">
+	<td class="text-end{valueHidden}">
 		{numeral(assetClass.currentValue).format(NUMBER_FORMAT)}
 	</td>
-	<td class={`pr-1 text-end ${getOffsetColor(assetClass.diffPerc)}`}>
+	<td class="pr-1 text-end{valueHidden} {getOffsetColor(assetClass.diffPerc)}">
 		{numeral(assetClass.diffAmount).format(NUMBER_FORMAT)}
 	</td>
 </tr>
@@ -102,6 +102,7 @@
 			{collapsedState}
 			{onToggle}
 			{childrenIndex}
+			{viewMode}
 		/>
 	{/each}
 {/if}

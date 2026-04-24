@@ -13,21 +13,24 @@
 
 	Notifier.init();
 
-	export let data;
-	let _allocation: AssetClass[];
-	let childrenIndex: Map<string, AssetClass[]> = new Map();
-	let collapsedState: Record<string, boolean> = {};
+	let { data } = $props();
+	let _allocation = $state<AssetClass[]>([]);
+	let childrenIndex = $state(new Map<string, AssetClass[]>());
+	let collapsedState = $state<Record<string, boolean>>({});
+	let viewMode = $state<'allocation' | 'value'>('allocation');
 
-	$: if (data.aa && data.assetClasses?.length) {
-		_allocation = data.assetClasses as AssetClass[];
-		childrenIndex = buildChildrenIndex(_allocation);
-	} else if (!data.aa) {
-		Notifier.error('Could not load Asset Allocation definition.');
-	}
+	$effect(() => {
+		if (data.aa && data.assetClasses?.length) {
+			const alloc = data.assetClasses as AssetClass[];
+			_allocation = alloc;
+			childrenIndex = buildChildrenIndex(alloc);
+		} else if (!data.aa) {
+			Notifier.error('Could not load Asset Allocation definition.');
+		}
+	});
 
 	function toggleCollapse(fullname: string) {
 		collapsedState[fullname] = !collapsedState[fullname];
-		collapsedState = { ...collapsedState }; // Trigger reactivity
 	}
 
 	function getChildren(fullname: string): AssetClass[] {
@@ -35,8 +38,6 @@
 	}
 
 	function downloadAsFile(content: string) {
-		// filename
-		// todo: let now = moment()
 		let now = new Date();
 		let filename = 'asset-allocation_';
 		filename += now.toISOString().substring(0, 10);
@@ -44,21 +45,17 @@
 		filename += ('' + now.getHours()).padStart(2, '0');
 		filename += '-';
 		filename += ('' + now.getMinutes()).padStart(2, '0');
-		// filename += now.getTimezoneOffset()
 		filename += '.txt';
 
-		// Create blob with content
 		const blob = new Blob([content], { type: 'text/plain;charset=utf-8;' });
 		const url = URL.createObjectURL(blob);
 
-		// Create anchor element
 		const a = document.createElement('a');
 		a.href = url;
 		a.download = filename;
 		document.body.appendChild(a);
 		a.click();
 
-		// Cleanup when browser is idle (download completed)
 		requestIdleCallback(
 			() => {
 				document.body.removeChild(a);
@@ -78,21 +75,14 @@
 	async function onExportClick() {
 		let aa = new AssetAllocationEngine();
 		const output = aa.formatAllocationRowsForTxtExport(_allocation);
-
 		downloadAsFile(output);
 	}
 
-	/**
-	 * validate the allocation (definition)
-	 */
 	async function onValidateClick() {
 		if (data.assetClasses?.length === 0) {
 			Notifier.info('Please recalculate the allocation first.');
 		}
-
-		// confirm that the group allocations match the sum of the children's allocation.
 		let errors = validate(data.aa!);
-
 		if (errors.length > 0) {
 			let message = 'Errors: ';
 			for (let i = 0; i < errors.length; i++) {
@@ -114,22 +104,44 @@
 		{/snippet}
 	</Toolbar>
 
+	<!-- View mode toggle — small screens only -->
+	<div class="lg:hidden shrink-0 flex items-center justify-center bg-primary py-1.5">
+		<div class="view-toggle">
+			<button
+				class="view-toggle-btn"
+				class:active={viewMode === 'allocation'}
+				onclick={() => (viewMode = 'allocation')}
+			>%</button>
+			<button
+				class="view-toggle-btn"
+				class:active={viewMode === 'value'}
+				onclick={() => (viewMode = 'value')}
+			>###</button>
+		</div>
+	</div>
+
 	<section class="overflow-auto p-3">
 		<table class="mx-auto max-w-4xl">
 			<thead>
 				<tr>
 					<th colspan="1"></th>
-					<th colspan="3" style="text-align: center; border-right-width: 1px;">Allocation</th>
-					<th colspan="3" style="text-align: center;">Value</th>
+					<th
+						colspan="3"
+						class="text-center border-r{viewMode !== 'allocation' ? ' hidden' : ''} lg:table-cell"
+					>Allocation</th>
+					<th
+						colspan="3"
+						class="text-center{viewMode !== 'value' ? ' hidden' : ''} lg:table-cell"
+					>Value</th>
 				</tr>
 				<tr>
 					<th class="table-cell-fit px-2 text-center">Asset Class</th>
-					<th class="table-cell-fit px-2 text-center">Target</th>
-					<th class="table-cell-fit px-2 text-center">Current</th>
-					<th class="table-cell-fit px-2 text-center">Diff %</th>
-					<th class="table-cell-fit px-2 text-center">Allocated</th>
-					<th class="table-cell-fit pr-2 pl-5 text-center">Current</th>
-					<th class="table-cell-fit px-2 text-center">Difference</th>
+					<th class="table-cell-fit px-2 text-center{viewMode !== 'allocation' ? ' hidden' : ''} lg:table-cell">Target</th>
+					<th class="table-cell-fit px-2 text-center{viewMode !== 'allocation' ? ' hidden' : ''} lg:table-cell">Current</th>
+					<th class="table-cell-fit px-2 text-center{viewMode !== 'allocation' ? ' hidden' : ''} lg:table-cell">Diff %</th>
+					<th class="table-cell-fit px-2 text-center{viewMode !== 'value' ? ' hidden' : ''} lg:table-cell">Allocated</th>
+					<th class="table-cell-fit pr-2 pl-5 text-center{viewMode !== 'value' ? ' hidden' : ''} lg:table-cell">Current</th>
+					<th class="table-cell-fit px-2 text-center{viewMode !== 'value' ? ' hidden' : ''} lg:table-cell">Difference</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -142,6 +154,7 @@
 							{collapsedState}
 							onToggle={toggleCollapse}
 							{childrenIndex}
+							{viewMode}
 						/>
 					{/each}
 				{:else}
@@ -164,3 +177,42 @@
 		</button>
 	</footer>
 </article>
+
+<style>
+	.view-toggle {
+		display: flex;
+		border-radius: 0.25rem;
+		overflow: hidden;
+		border: 1px solid var(--color-primary-900);
+	}
+
+	.view-toggle-btn {
+		padding: 0.25rem 1.25rem;
+		background-color: var(--color-primary-700);
+		color: var(--color-accent-200);
+		font-size: 0.85rem;
+		font-weight: 700;
+		letter-spacing: 0.04em;
+		cursor: pointer;
+		border: none;
+		box-shadow:
+			0 2px 4px rgba(0, 0, 0, 0.3),
+			inset 0 1px 0 rgba(255, 255, 255, 0.07);
+		transition:
+			background-color 0.1s,
+			box-shadow 0.1s;
+	}
+
+	.view-toggle-btn:not(:last-child) {
+		border-right: 1px solid var(--color-primary-900);
+	}
+
+	.view-toggle-btn.active {
+		background-color: var(--color-primary-950);
+		box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.55);
+	}
+
+	.view-toggle-btn:hover:not(.active) {
+		background-color: var(--color-primary-600);
+	}
+</style>

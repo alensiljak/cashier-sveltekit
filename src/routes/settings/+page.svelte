@@ -8,7 +8,6 @@
 	import appService from '$lib/services/appService';
 	import { goto, replaceState } from '$app/navigation';
 	import { DefaultCurrencyStore, PendingSettingsStore } from '$lib/data/mainStore.js';
-	// import { invalidateStorageBackendCache } from '$lib/storage/index.js';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import { BoxIcon, Check, RotateCcw } from '@lucide/svelte';
 	import Fab from '$lib/components/FAB.svelte';
