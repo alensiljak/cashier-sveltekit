@@ -13,6 +13,7 @@
 		CheckIcon,
 		ChevronDownIcon,
 		ChevronUpIcon,
+		PencilIcon,
 		PlusIcon,
 		Trash2Icon,
 		TrashIcon
@@ -30,6 +31,8 @@
 	let isDeleteConfirmationOpen = $state(false);
 	let indexToDelete = $state(-1);
 	let isDeleteGroupConfirmationOpen = $state(false);
+	let isRenameModalOpen = $state(false);
+	let editedGroupName = $state('');
 
 	onMount(async () => {
 		await handleAccountSelection();
@@ -112,6 +115,32 @@
 		await goto('/accounts');
 	}
 
+	function openRenameModal() {
+		editedGroupName = groupTitle;
+		isRenameModalOpen = true;
+	}
+
+	function closeRenameModal() {
+		isRenameModalOpen = false;
+		editedGroupName = '';
+	}
+
+	async function onRenameConfirmed() {
+		const trimmed = editedGroupName.trim();
+		if (!trimmed) {
+			closeRenameModal();
+			return;
+		}
+		const currentGroups = (await settings.get<AccountGroup[]>(SettingKeys.accountGroups)) ?? [];
+		if (currentGroups[groupIndex]) {
+			currentGroups[groupIndex].title = trimmed;
+			await settings.set(SettingKeys.accountGroups, currentGroups);
+			groupTitle = trimmed;
+			Notifier.success('Group renamed');
+		}
+		closeRenameModal();
+	}
+
 	async function onSave() {
 		const currentGroups = (await settings.get<AccountGroup[]>(SettingKeys.accountGroups)) ?? [];
 		if (currentGroups[groupIndex]) {
@@ -127,6 +156,7 @@
 <article class="flex h-screen flex-col">
 	<Toolbar title={groupTitle}>
 		{#snippet menuItems()}
+			<ToolbarMenuItem text="Rename" Icon={PencilIcon} onclick={openRenameModal} />
 			<ToolbarMenuItem text="Add Account" Icon={PlusIcon} onclick={onAddClicked} />
 			<ToolbarMenuItem text="Delete Group" Icon={Trash2Icon} onclick={onDeleteGroupClicked} />
 		{/snippet}
@@ -194,9 +224,43 @@
 	</section>
 </article>
 
-<!-- Delete group confirmation dialog -->
+<!-- Rename group dialog -->
 <input
 	type="checkbox"
+	id="rename-group-modal"
+	class="modal-toggle"
+	bind:checked={isRenameModalOpen}
+/>
+<dialog class="modal">
+	<div class="modal-box">
+		<header class="flex justify-between">
+			<h2 class="text-lg font-bold">Rename Group</h2>
+		</header>
+		<article>
+			<div class="form-control w-full">
+				<label class="label" for="rename-group-input">
+					<span class="label-text">Group Name</span>
+				</label>
+				<input
+					id="rename-group-input"
+					type="text"
+					placeholder="Enter group name"
+					class="input input-bordered w-full"
+					bind:value={editedGroupName}
+					onkeydown={(e) => e.key === 'Enter' && onRenameConfirmed()}
+				/>
+			</div>
+		</article>
+		<footer class="flex justify-end gap-4 mt-4">
+			<button type="button" class="btn btn-ghost" onclick={closeRenameModal}>Cancel</button>
+			<button type="button" class="btn btn-primary" onclick={onRenameConfirmed}>Save</button>
+		</footer>
+	</div>
+</dialog>
+
+<!-- Delete group confirmation dialog -->
+<input
+	 type="checkbox"
 	id="delete-group-confirm-modal"
 	class="modal-toggle"
 	bind:checked={isDeleteGroupConfirmationOpen}
