@@ -4,7 +4,7 @@
 		dragElement?: HTMLElement | null;
 		ondragend?: (event: DragEvent) => void;
 		ondragmove?: (event: DragEvent) => void;
-		setDragElement: (clientX: number, clientY: number, drag_element: HTMLElement) => void;
+		setDragElement?: (clientX: number, clientY: number, drag_element: HTMLElement) => void;
 	}
 
 	let {
@@ -22,8 +22,9 @@
 		container.append(dragElement);
 		is_dragging = true;
 	};
-	setDragElement;
 
+	// oxlint: container is assigned via bind:this below
+	// eslint-disable-next-line no-unassigned-vars
 	let container: HTMLElement;
 	let cx = 0;
 	let cy = 0;
@@ -69,7 +70,7 @@
 	};
 	const handle_mouseup = () => {
 		if (is_dragging) {
-			dragElement && container.removeChild(dragElement);
+			if (dragElement) container.removeChild(dragElement);
 			if (terrain) {
 				terrain.dispatchEvent(new DragEvent('drop'));
 				terrain = null;
@@ -122,9 +123,11 @@
 					}
 				}
 			}
-			if (xs.parentElement) {
-				xs = xs.parentElement;
-			}
+		if (xs.parentElement) {
+			xs = xs.parentElement;
+		} else {
+			break;
+		}
 		}
 		let ys = container;
 		for (;;) {
@@ -142,9 +145,11 @@
 					}
 				}
 			}
-			if (ys.parentElement) {
-				ys = ys.parentElement;
-			}
+		if (ys.parentElement) {
+			ys = ys.parentElement;
+		} else {
+			break;
+		}
 		}
 		const drag_rect = dragElement?.getBoundingClientRect();
 		if (!drag_rect) {

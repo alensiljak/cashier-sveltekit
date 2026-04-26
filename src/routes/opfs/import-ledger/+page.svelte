@@ -249,7 +249,7 @@
 
 			const manifest = await getManifest();
 			const seen = new Set<string>();
-			const result: ScannedFile[] = new Array(rawFiles.length);
+			const result: ScannedFile[] = Array.from({ length: rawFiles.length });
 			const stats = { new: 0, modified: 0, identical: 0, deleted: 0 };
 
 			await processWithConcurrencyLimit(
