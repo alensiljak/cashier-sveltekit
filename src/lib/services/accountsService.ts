@@ -41,7 +41,6 @@ type QueryFn = (bql: string) => Promise<{ columns: string[]; rows: any[]; errors
 // 	await db.accounts.bulkAdd(accounts);
 // }
 
-
 // oxlint-disable-next-line no-unused-vars
 function getDefaultChartOfAccounts() {
 	const accountsList = `
@@ -283,4 +282,3 @@ export async function loadAccount(name: string): Promise<Account> {
 
 	return account;
 }
-

@@ -8,7 +8,6 @@ import db from '$lib/data/db';
 import type { DAL } from './dal';
 
 export default class CashierDAL implements DAL {
-
 	static async create(): Promise<CashierDAL> {
 		const dal = new CashierDAL();
 		return dal;

@@ -90,7 +90,7 @@ export const CardNames = {
 	FavouritesCard: 'FavouritesCard',
 	ForecastCard: 'ForecastCard',
 	JournalCard: 'JournalCard',
-	ScheduledXactCard: 'ScheduledXactCard',
+	ScheduledXactCard: 'ScheduledXactCard'
 	// SyncCard: 'SyncCard'
 };
 

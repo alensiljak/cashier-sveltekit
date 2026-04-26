@@ -100,7 +100,11 @@ export async function listFileTree(): Promise<FileTreeEntry[]> {
 		const root = await navigator.storage.getDirectory();
 		const entries: FileTreeEntry[] = [];
 
-		async function walkDirectory(dirHandle: FileSystemDirectoryHandle, prefix: string, depth: number) {
+		async function walkDirectory(
+			dirHandle: FileSystemDirectoryHandle,
+			prefix: string,
+			depth: number
+		) {
 			const items: FileTreeEntry[] = [];
 
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any

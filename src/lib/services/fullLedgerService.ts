@@ -18,7 +18,13 @@ import {
 } from './rustledger';
 import { listFileTree } from '$lib/utils/opfslib';
 import { OPFSBackend } from '$lib/storage';
-import type { Ledger, QueryResult, BeancountError, Directive, ParsedLedger } from '@rustledger/wasm';
+import type {
+	Ledger,
+	QueryResult,
+	BeancountError,
+	Directive,
+	ParsedLedger
+} from '@rustledger/wasm';
 import { SettingKeys, settings } from '$lib/settings';
 import { Account, Xact, Posting } from '$lib/data/model';
 import * as opfslib from '$lib/utils/opfslib';
@@ -39,8 +45,7 @@ class FullLedgerService {
 	async loadOpfsFileMap(): Promise<{ fileMap: Record<string, string>; mainFileName: string }> {
 		const opfs = new OPFSBackend();
 		const tree = await listFileTree();
-		const beanEntries = tree.filter((e) => e.kind === 'file' &&
-			e.name.endsWith('.bean'));
+		const beanEntries = tree.filter((e) => e.kind === 'file' && e.name.endsWith('.bean'));
 
 		const fileMap: Record<string, string> = {};
 		await Promise.all(
@@ -52,7 +57,7 @@ class FullLedgerService {
 			})
 		);
 
-		const mainFileName = await settings.get(SettingKeys.bookFilename) as string;
+		const mainFileName = (await settings.get(SettingKeys.bookFilename)) as string;
 		return { fileMap, mainFileName };
 	}
 

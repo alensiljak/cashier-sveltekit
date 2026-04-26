@@ -4,7 +4,13 @@
  */
 
 import { Account } from '$lib/data/model';
-import type { ParsedLedger, ParseResult, QueryResult, ValidationResult, Ledger } from '@rustledger/wasm';
+import type {
+	ParsedLedger,
+	ParseResult,
+	QueryResult,
+	ValidationResult,
+	Ledger
+} from '@rustledger/wasm';
 import wasmUrl from '@rustledger/wasm/rustledger_wasm_bg.wasm?url';
 
 // WASM module instance

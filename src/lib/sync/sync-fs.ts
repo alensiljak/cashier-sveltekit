@@ -149,7 +149,11 @@ export async function loadFileMap(): Promise<{
 	mainFileName: string;
 	dirHandle: FileSystemDirectoryHandle;
 }> {
-	const { fileName: mainFileName, content: mainContent, dirHandle } = await readExternalBeancountFile();
+	const {
+		fileName: mainFileName,
+		content: mainContent,
+		dirHandle
+	} = await readExternalBeancountFile();
 
 	const fileMap: Record<string, string> = {};
 	await collectAllFiles(dirHandle, mainFileName, mainContent, fileMap);
@@ -205,7 +209,6 @@ async function synchronize(syncOptions: syncCommon.SyncSteps): Promise<boolean> 
 		}
 
 		return true;
-
 	} catch (error) {
 		console.error('Synchronization error:', error);
 		// Update the current step to error
@@ -235,7 +238,7 @@ async function synchronize(syncOptions: syncCommon.SyncSteps): Promise<boolean> 
 // 	const result = await fullLedgerService.query(query);
 
 // 	const entities: AccountFileEntry[] = result.rows.map((item: any) => ({
-// 		name: item[0], 
+// 		name: item[0],
 // 		openDate: item[1],
 // 		currencies: item[2]
 // 	}));
@@ -311,9 +314,7 @@ async function synchronize(syncOptions: syncCommon.SyncSteps): Promise<boolean> 
  * @param fileMap
  * @param mainFileName
  */
-async function syncCurrentValues(
-	queries: ReturnType<typeof getQueries>
-) {
+async function syncCurrentValues(queries: ReturnType<typeof getQueries>) {
 	// currentValues query
 	const rootAccount = (await settings.get(SettingKeys.rootInvestmentAccount)) as string;
 	if (!rootAccount) {
@@ -344,9 +345,7 @@ async function syncCurrentValues(
 	await aa.importCurrentValues(currentValues);
 }
 
-async function syncPayees(
-	queries: ReturnType<typeof getQueries>
-) {
+async function syncPayees(queries: ReturnType<typeof getQueries>) {
 	// const from = moment().subtract(20, 'years').format(ISODATEFORMAT);
 	const payeesQuery = queries.payees();
 

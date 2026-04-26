@@ -4,64 +4,59 @@
  */
 
 // import localLedgerService from "$lib/services/localLedgerService";
-import ledgerService from "$lib/services/ledgerService";
-import Notifier from "$lib/utils/notifier";
-import type { DAL } from "./dal";
-import db from "./db";
-import { Account, Payee } from "./model";
+import ledgerService from '$lib/services/ledgerService';
+import Notifier from '$lib/utils/notifier';
+import type { DAL } from './dal';
+import db from './db';
+import { Account, Payee } from './model';
 
 export default class FSDAL implements DAL {
-    private constructor() {}
+	private constructor() {}
 
-    static async create(): Promise<FSDAL> {
-        const dal = new FSDAL();
-        // await localLedgerService.ensureLoaded();
-        await ledgerService.ensureInitialized();
-        return dal;
-    }
+	static async create(): Promise<FSDAL> {
+		const dal = new FSDAL();
+		// await localLedgerService.ensureLoaded();
+		await ledgerService.ensureInitialized();
+		return dal;
+	}
 
-    async loadAccounts() {
-        const result = ledgerService.query(
-            'SELECT * FROM accounts ORDER BY account');
-        if (result.errors.length > 0) {
-            console.error('Error loading accounts:', result.errors);
-            Notifier.error('Failed to load accounts.' + 
-                result.errors.map(e => e.message).join('; '));
-            return [];
-        }
+	async loadAccounts() {
+		const result = ledgerService.query('SELECT * FROM accounts ORDER BY account');
+		if (result.errors.length > 0) {
+			console.error('Error loading accounts:', result.errors);
+			Notifier.error('Failed to load accounts.' + result.errors.map((e) => e.message).join('; '));
+			return [];
+		}
 
-        const accounts = result
-            .rows
-            .map(row => {
-                let account = new Account(row[0] as string);
-                account.currencies = row[3] as string[];
-                return account;
-            });
-        return accounts;
-    }
+		const accounts = result.rows.map((row) => {
+			let account = new Account(row[0] as string);
+			account.currencies = row[3] as string[];
+			return account;
+		});
+		return accounts;
+	}
 
-    // async loadPayees(): Promise<Payee[]> {
-    //     const result = ledgerService.query(
-    //         'SELECT DISTINCT payee FROM transactions ORDER BY payee');
-    //     if (result.errors.length > 0) {
-    //         console.error('Error loading payees:', result.errors);
-    //         Notifier.error('Failed to load payees.' + 
-    //             result.errors.map(e => e.message).join('; '));
-    //         return [];
-    //     }
+	// async loadPayees(): Promise<Payee[]> {
+	//     const result = ledgerService.query(
+	//         'SELECT DISTINCT payee FROM transactions ORDER BY payee');
+	//     if (result.errors.length > 0) {
+	//         console.error('Error loading payees:', result.errors);
+	//         Notifier.error('Failed to load payees.' +
+	//             result.errors.map(e => e.message).join('; '));
+	//         return [];
+	//     }
 
-    //     const payees = result
-    //         .rows.map(row => new Payee(row[0] as string));
+	//     const payees = result
+	//         .rows.map(row => new Payee(row[0] as string));
 
-    //     return payees;
+	//     return payees;
 	// }
 
-    /**
-     * For now, use the IndexedDB as we don't have all the payee records in OPFS.
-     * @returns Array of Payee entities.
-     */
-    async loadPayees(): Promise<Payee[]> {
+	/**
+	 * For now, use the IndexedDB as we don't have all the payee records in OPFS.
+	 * @returns Array of Payee entities.
+	 */
+	async loadPayees(): Promise<Payee[]> {
 		return await db.payees.orderBy('name').toArray();
-    }
-
+	}
 }

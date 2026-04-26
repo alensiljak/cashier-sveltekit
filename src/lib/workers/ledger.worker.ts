@@ -101,11 +101,17 @@ async function opfsListBeanFiles(): Promise<Array<{ path: string; content: strin
 	return results;
 }
 
-async function loadFromCacheOrFiles(mainFileName: string, userBookFilename?: string): Promise<void> {
+async function loadFromCacheOrFiles(
+	mainFileName: string,
+	userBookFilename?: string
+): Promise<void> {
 	const bytes = await opfsReadBinary(LEDGER_CACHE_FILE);
 	if (bytes) {
 		try {
-			if (ledger) { ledger.free(); ledger = null; }
+			if (ledger) {
+				ledger.free();
+				ledger = null;
+			}
 			ledger = wasmModule!.Ledger.fromCache(bytes);
 			return;
 		} catch {
@@ -351,7 +357,8 @@ async function handleMessage(e: MessageEvent<WorkerRequest>): Promise<void> {
 					reply({ type: 'all-accounts-done', accounts: [] });
 					break;
 				}
-				const bql = 'SELECT account, currencies from #accounts where close is null ORDER BY account';
+				const bql =
+					'SELECT account, currencies from #accounts where close is null ORDER BY account';
 				const result = ledger.query(bql);
 				const accountCol = (result.columns ?? []).indexOf('account');
 				const currenciesCol = (result.columns ?? []).indexOf('currencies');
@@ -373,7 +380,10 @@ async function handleMessage(e: MessageEvent<WorkerRequest>): Promise<void> {
 			}
 
 			default:
-				reply({ type: 'error', message: `Unknown request type: ${(e.data as WorkerRequest).type}` });
+				reply({
+					type: 'error',
+					message: `Unknown request type: ${(e.data as WorkerRequest).type}`
+				});
 		}
 	} catch (err) {
 		reply({ type: 'error', message: String(err) });

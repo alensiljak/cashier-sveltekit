@@ -18,10 +18,7 @@ function openDb(): Promise<IDBDatabase> {
 	});
 }
 
-export async function persistHandle(
-	key: string,
-	handle: FileSystemDirectoryHandle
-): Promise<void> {
+export async function persistHandle(key: string, handle: FileSystemDirectoryHandle): Promise<void> {
 	const db = await openDb();
 	return new Promise((resolve, reject) => {
 		const tx = db.transaction(STORE, 'readwrite');
@@ -37,9 +34,7 @@ export async function persistHandle(
 	});
 }
 
-export async function loadPersistedHandle(
-	key: string
-): Promise<FileSystemDirectoryHandle | null> {
+export async function loadPersistedHandle(key: string): Promise<FileSystemDirectoryHandle | null> {
 	try {
 		const db = await openDb();
 		return new Promise((resolve, reject) => {
@@ -59,9 +54,7 @@ export async function loadPersistedHandle(
 	}
 }
 
-export async function requestReadPermission(
-	handle: FileSystemDirectoryHandle
-): Promise<boolean> {
+export async function requestReadPermission(handle: FileSystemDirectoryHandle): Promise<boolean> {
 	try {
 		const permission = await (
 			handle as unknown as {

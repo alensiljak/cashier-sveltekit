@@ -8,7 +8,9 @@ import fullLedgerService from '$lib/services/ledgerWorkerClient';
 import { version as getWasmVersion } from '$lib/services/rustledger';
 import { get } from 'svelte/store';
 
-export type WasmQueryFn = (bql: string) => Promise<{ columns: string[]; rows: any[]; errors: any[] }>;
+export type WasmQueryFn = (
+	bql: string
+) => Promise<{ columns: string[]; rows: any[]; errors: any[] }>;
 
 export interface RawQueryResult {
 	query: string;

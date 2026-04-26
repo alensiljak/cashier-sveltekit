@@ -331,8 +331,8 @@ export class AssetAllocationEngine {
 		const defaultCurrency = await appService.getDefaultCurrency();
 
 		await fullLedgerService.ensureLoaded();
-		const invAccounts = await loadInvestmentAccounts((bql) =>
-			fullLedgerService.query(bql)  // query() is now async — matches QueryFn signature
+		const invAccounts = await loadInvestmentAccounts(
+			(bql) => fullLedgerService.query(bql) // query() is now async — matches QueryFn signature
 		);
 
 		invAccounts.forEach((account) => {

@@ -20,7 +20,7 @@ const config: UserConfig = defineConfig({
 		// Ensure WASM files are served correctly in dev mode
 		fs: {
 			allow: ['..']
-		},
+		}
 		// Needed when running in a container and using source files on the host.
 		// Or, use CHOKIDAR_USEPOLLING env var in devcontainer.json.
 		// watch: {
@@ -156,7 +156,7 @@ const config: UserConfig = defineConfig({
 			kit: {
 				includeVersionFile: true
 			}
-		}),
+		})
 		// mkcert()
 		//VitePWA({ registerType: 'autoUpdate' })
 	]
