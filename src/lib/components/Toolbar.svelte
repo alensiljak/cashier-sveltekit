@@ -21,7 +21,7 @@
 </script>
 
 <!-- Toolbar for pages -->
-<div class="relative">
+<div class="relative sticky top-0 z-10">
 	<div class="navbar bg-primary text-base-content h-12 min-h-12 py-1 shadow-sm">
 		<div class="flex-none">
 			<button
