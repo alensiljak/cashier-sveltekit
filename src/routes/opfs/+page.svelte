@@ -1,8 +1,9 @@
 <script lang="ts">
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import OpfsFilePicker from '$lib/components/OpfsFilePicker.svelte';
-	import { SaveIcon, FilePlusIcon, UploadIcon, Trash2Icon } from '@lucide/svelte';
+	import { FilePlusIcon, UploadIcon, Trash2Icon } from '@lucide/svelte';
 	import { onMount, onDestroy } from 'svelte';
+	import { goto } from '$app/navigation';
 	import * as OpfsLib from '$lib/utils/opfslib.js';
 	import type { FileTreeEntry } from '$lib/utils/opfslib.js';
 	import Notifier from '$lib/utils/notifier';
@@ -15,18 +16,12 @@
 
 	let filePicker = $state<ReturnType<typeof OpfsFilePicker> | null>(null);
 	let selectedFile = $state<string | null>(null);
-	let fileContent = $state<string>('');
-	let isContentLoading = $state(false);
-	let isSaving = $state(false);
-	let originalContent = $state<string>('');
-	let hasUnsavedChanges = $state(false);
 	let showNewFileDialog = $state(false);
 	let newFileName = $state('');
 	let showDeleteConfirm = $state(false);
 	let isDeleting = $state(false);
 	let fileToDelete = $state<string | null>(null);
 	let isDragOver = $state(false);
-	let fileMetadata = $state<OpfsLib.FileMetadata | null>(null);
 	let showDropConflict = $state(false);
 	let dropConflictFileName = $state('');
 	let dropConflictContent = $state('');
@@ -44,33 +39,8 @@
 		document.removeEventListener('drop', preventDefaultDrag);
 	});
 
-	async function onFileSelect(entry: FileTreeEntry) {
-		isContentLoading = true;
-		fileContent = '';
-		fileMetadata = null;
-		try {
-			const [content, meta] = await Promise.all([
-				OpfsLib.readFile(entry.path),
-				OpfsLib.getFileMetadata(entry.path)
-			]);
-			fileMetadata = meta ?? null;
-			if (content !== undefined) {
-				fileContent = content;
-				originalContent = content;
-				hasUnsavedChanges = false;
-			} else {
-				fileContent = 'File is empty or could not be read.';
-				originalContent = '';
-				hasUnsavedChanges = false;
-			}
-		} catch (error: any) {
-			Notifier.error(error.message || 'Failed to read file');
-			fileContent = `Error: ${error.message || 'Failed to read file'}`;
-			originalContent = '';
-			hasUnsavedChanges = false;
-		} finally {
-			isContentLoading = false;
-		}
+	function onFileSelect(entry: FileTreeEntry) {
+		goto(`/opfs/edit-file?file=${encodeURIComponent(entry.path)}`);
 	}
 
 	function confirmDelete(filePath: string) {
@@ -95,9 +65,6 @@
 
 			if (selectedFile === fileToDelete) {
 				selectedFile = null;
-				fileContent = '';
-				originalContent = '';
-				hasUnsavedChanges = false;
 			}
 
 			fileToDelete = null;
@@ -106,22 +73,6 @@
 			Notifier.error(error.message || 'Failed to delete file');
 		} finally {
 			isDeleting = false;
-		}
-	}
-
-	async function saveFile() {
-		if (!selectedFile || !hasUnsavedChanges) return;
-
-		isSaving = true;
-		try {
-			await OpfsLib.saveFile(selectedFile, fileContent);
-			originalContent = fileContent;
-			hasUnsavedChanges = false;
-			Notifier.success('File saved successfully');
-		} catch (error: any) {
-			Notifier.error(error.message || 'Failed to save file');
-		} finally {
-			isSaving = false;
 		}
 	}
 
@@ -233,9 +184,6 @@
 		try {
 			await OpfsLib.deleteAll();
 			selectedFile = null;
-			fileContent = '';
-			originalContent = '';
-			hasUnsavedChanges = false;
 			showDeleteAllConfirm = false;
 			Notifier.success('All files deleted');
 			await filePicker?.refresh();
@@ -245,23 +193,9 @@
 			isDeletingAll = false;
 		}
 	}
-
-	function onFileContentChange(event: Event) {
-		const target = event.target as HTMLTextAreaElement;
-		fileContent = target.value;
-		hasUnsavedChanges = fileContent !== originalContent;
-	}
-
-	function formatFileSize(bytes?: number): string {
-		if (bytes === undefined) return '--';
-		if (bytes === 0) return '0 B';
-		const units = ['B', 'KB', 'MB', 'GB'];
-		const i = Math.floor(Math.log(bytes) / Math.log(1024));
-		return `${(bytes / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
-	}
 </script>
 
-<article>
+<article class="h-screen flex flex-col overflow-hidden">
 	<Toolbar title="OPFS Files">
 		{#snippet menuItems()}
 			<li>
@@ -277,7 +211,10 @@
 				</button>
 			</li>
 			<li>
-				<button class="btn btn-sm btn-ghost gap-2 text-error" onclick={() => (showDeleteAllConfirm = true)}>
+				<button
+					class="btn btn-sm btn-ghost gap-2 text-error"
+					onclick={() => (showDeleteAllConfirm = true)}
+				>
 					<Trash2Icon class="w-5 h-5" />
 					<span>Delete All</span>
 				</button>
@@ -289,7 +226,7 @@
 
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<section
-		class="p-4 rounded-lg transition-all duration-200"
+		class="flex-1 overflow-hidden p-4 transition-all duration-200"
 		class:border-2={isDragOver}
 		class:border-dashed={isDragOver}
 		class:border-primary={isDragOver}
@@ -303,7 +240,7 @@
 				Drop file here to save to OPFS
 			</div>
 		{:else}
-			<div class="mb-4 overflow-x-auto overflow-y-auto" style="height: 400px;">
+			<div class="overflow-x-auto overflow-y-auto h-full">
 				<OpfsFilePicker
 					bind:this={filePicker}
 					bind:selectedFile
@@ -312,46 +249,6 @@
 					ondeleteclick={confirmDelete}
 				/>
 			</div>
-
-			{#if selectedFile}
-				<div class="mt-6">
-					<div class="flex items-center justify-between mb-2">
-						<h3 class="text-lg font-semibold">Content of: {selectedFile}</h3>
-						<div class="flex items-center gap-2">
-							<button
-								class="btn btn-sm btn-primary"
-								onclick={saveFile}
-								disabled={isSaving || !hasUnsavedChanges}
-							>
-								<SaveIcon class="w-4 h-4" />
-								{isSaving ? 'Saving...' : 'Save'}
-							</button>
-							{#if hasUnsavedChanges}
-								<span class="text-warning text-sm">*Unsaved changes</span>
-							{/if}
-						</div>
-					</div>
-					{#if fileMetadata}
-						<div class="text-sm text-base-content/60 mb-2 flex gap-4">
-							<span>Size: {formatFileSize(fileMetadata.size)}</span>
-							<span>Modified: {new Date(fileMetadata.lastModified).toLocaleString()}</span>
-							{#if fileMetadata.type}
-								<span>Type: {fileMetadata.type}</span>
-							{/if}
-						</div>
-					{/if}
-					{#if isContentLoading}
-						<div class="flex justify-center items-center p-4">
-							<span class="loading loading-spinner loading-md"></span>
-						</div>
-					{:else}
-						<textarea
-							class="textarea textarea-bordered w-full font-mono text-sm"
-							rows="20"
-							oninput={onFileContentChange}>{fileContent}</textarea>
-					{/if}
-				</div>
-			{/if}
 		{/if}
 	</section>
 
@@ -408,7 +305,11 @@
 				<h3 class="font-bold text-lg">Delete All Files</h3>
 				<p>This will permanently delete all files and folders from OPFS. This cannot be undone.</p>
 				<div class="modal-action">
-					<button class="btn" onclick={() => (showDeleteAllConfirm = false)} disabled={isDeletingAll}>Cancel</button>
+					<button
+						class="btn"
+						onclick={() => (showDeleteAllConfirm = false)}
+						disabled={isDeletingAll}>Cancel</button
+					>
 					<button class="btn btn-error" onclick={deleteAll} disabled={isDeletingAll}>
 						{isDeletingAll ? 'Deleting...' : 'Delete All'}
 					</button>
@@ -422,7 +323,9 @@
 		<div class="modal modal-open">
 			<div class="modal-box">
 				<h3 class="font-bold text-lg">File Already Exists</h3>
-				<p>A file named "{dropConflictFileName}" already exists in OPFS. What would you like to do?</p>
+				<p>
+					A file named "{dropConflictFileName}" already exists in OPFS. What would you like to do?
+				</p>
 				<div class="modal-action flex-wrap gap-2">
 					<button class="btn" onclick={() => resolveDropConflict('cancel')}>Cancel</button>
 					<button class="btn btn-warning" onclick={() => resolveDropConflict('copy')}>
