@@ -7,6 +7,8 @@
 	import { CirclePlusIcon } from '@lucide/svelte';
 
 	let groups: AccountGroup[] = $state([]);
+	let isAddGroupModalOpen = $state(false);
+	let newGroupName = $state('');
 
 	onMount(async () => {
 		let stored = await settings.get<AccountGroup[]>(SettingKeys.accountGroups);
@@ -16,6 +18,30 @@
 		}
 		groups = stored;
 	});
+
+	function closeAddGroupModal() {
+		isAddGroupModalOpen = false;
+		newGroupName = '';
+	}
+
+	async function createGroup() {
+		if (!newGroupName.trim()) return;
+
+		const newGroup: AccountGroup = {
+			title: newGroupName.trim(),
+			accounts: []
+		};
+
+		const updatedGroups = [...groups, newGroup];
+		await settings.set(SettingKeys.accountGroups, updatedGroups);
+		groups = updatedGroups;
+
+		closeAddGroupModal();
+	}
+
+	function openAddGroupModal() {
+		isAddGroupModalOpen = true;
+	}
 </script>
 
 <article class="flex h-screen flex-col">
@@ -24,7 +50,7 @@
 			<ToolbarMenuItem
 				text="Add Group"
 				Icon={CirclePlusIcon}
-				targetNav="/import-ledger-xact"
+				onclick={openAddGroupModal}
 			/>
 		{/snippet}
 	</Toolbar>
@@ -34,3 +60,37 @@
 		{/each}
 	</section>
 </article>
+
+<!-- Add Group dialog -->
+<input
+	type="checkbox"
+	id="add-group-modal"
+	class="modal-toggle"
+	bind:checked={isAddGroupModalOpen}
+/>
+<dialog class="modal">
+	<div class="modal-box">
+		<header class="flex justify-between">
+			<h2 class="text-lg font-bold">Add Group</h2>
+		</header>
+		<article>
+			<div class="form-control w-full">
+				<label class="label" for="group-name-input">
+					<span class="label-text">Group Name</span>
+				</label>
+				<input
+					id="group-name-input"
+					type="text"
+					placeholder="Enter group name"
+					class="input input-bordered w-full"
+					bind:value={newGroupName}
+					onkeydown={e => e.key === 'Enter' && createGroup()}
+				/>
+			</div>
+		</article>
+		<footer class="flex justify-end gap-4 mt-4">
+			<button type="button" class="btn btn-ghost" onclick={closeAddGroupModal}>Cancel</button>
+			<button type="button" class="btn btn-primary" onclick={createGroup}>Create</button>
+		</footer>
+	</div>
+</dialog>
