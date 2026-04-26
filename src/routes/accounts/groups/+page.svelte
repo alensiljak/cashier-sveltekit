@@ -5,6 +5,7 @@
 	import { onMount } from 'svelte';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import { CirclePlusIcon } from '@lucide/svelte';
+	import { goto } from '$app/navigation';
 
 	let groups: AccountGroup[] = $state([]);
 	let isAddGroupModalOpen = $state(false);
@@ -56,7 +57,7 @@
 	</Toolbar>
 	<section class="flex grow flex-col gap-3 overflow-auto p-2">
 		{#each groups as group, i (group.title)}
-			<AccountGroupCard {group} index={i} />
+			<AccountGroupCard {group} index={i} onAccountClick={(name) => goto(`/account-xacts/${encodeURIComponent(name)}`)} />
 		{/each}
 	</section>
 </article>

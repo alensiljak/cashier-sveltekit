@@ -12,8 +12,9 @@
 	type Props = {
 		group: AccountGroup;
 		index: number;
+		onAccountClick?: (accountName: string) => void;
 	};
-	let { group, index }: Props = $props();
+	let { group, index, onAccountClick }: Props = $props();
 
 	let accounts: Account[] = $state([]);
 	let maxBalance = $state(0);
@@ -155,7 +156,11 @@
 				<div class="bg-base-200 flex w-full flex-col px-0.5 text-base">
 					<div class="border-base-content/15 my-0.25 flex flex-row border-b py-0.5">
 						<div
-							class={`cell grow ${account.exists === false ? 'text-base-content/50' : ''}`}
+							class={`cell grow ${account.exists === false ? 'text-base-content/50' : ''} ${onAccountClick ? 'cursor-pointer' : ''}`}
+							onclick={() => onAccountClick?.(account.name)}
+							role="button"
+							tabindex="0"
+							onkeydown={(e) => e.key === 'Enter' && onAccountClick?.(account.name)}
 						>
 							{account.name}
 						</div>

@@ -123,11 +123,11 @@
 					}
 				}
 			}
-		if (xs.parentElement) {
-			xs = xs.parentElement;
-		} else {
-			break;
-		}
+			if (xs.parentElement) {
+				xs = xs.parentElement;
+			} else {
+				break;
+			}
 		}
 		let ys = container;
 		for (;;) {
@@ -145,11 +145,11 @@
 					}
 				}
 			}
-		if (ys.parentElement) {
-			ys = ys.parentElement;
-		} else {
-			break;
-		}
+			if (ys.parentElement) {
+				ys = ys.parentElement;
+			} else {
+				break;
+			}
 		}
 		const drag_rect = dragElement?.getBoundingClientRect();
 		if (!drag_rect) {
