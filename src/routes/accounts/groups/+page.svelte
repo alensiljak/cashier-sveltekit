@@ -4,7 +4,7 @@
 	import { defaultAccountGroups, SettingKeys, settings, type AccountGroup } from '$lib/settings';
 	import { onMount } from 'svelte';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
-	import { CirclePlusIcon } from '@lucide/svelte';
+	import { ArrowUpDownIcon, CirclePlusIcon } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 
 	let groups: AccountGroup[] = $state([]);
@@ -52,6 +52,11 @@
 				text="Add Group"
 				Icon={CirclePlusIcon}
 				onclick={openAddGroupModal}
+			/>
+			<ToolbarMenuItem
+				text="Reorder Groups"
+				Icon={ArrowUpDownIcon}
+				targetNav="/accounts/groups/reorder"
 			/>
 		{/snippet}
 	</Toolbar>

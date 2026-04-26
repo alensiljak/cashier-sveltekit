@@ -1,17 +1,18 @@
 <script lang="ts">
-	import Fab from '$lib/components/FAB.svelte';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import { SettingKeys, settings } from '$lib/settings';
-	import { CheckIcon, GripVerticalIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
+	import { GripVerticalIcon, CheckIcon } from '@lucide/svelte';
+	import Toolbar from '$lib/components/Toolbar.svelte';
+	import Fab from '$lib/components/FAB.svelte';
+	import { SettingKeys, settings, type AccountGroup } from '$lib/settings';
 
-	let favourites = $state<string[]>([]);
+	let groups: AccountGroup[] = $state([]);
 	let listEl = $state<HTMLElement | null>(null);
 
 	// Ghost / drag state
 	let isDragging = $state(false);
 	let dragCurIndex = $state(-1);
-	let ghostName = $state('');
+	let ghostTitle = $state('');
+	let ghostColor = $state('');
 	let ghostTop = $state(0);
 	let ghostLeft = $state(0);
 	let ghostWidth = $state(0);
@@ -23,7 +24,7 @@
 	let autoScrollId: ReturnType<typeof setInterval> | null = null;
 
 	onMount(async () => {
-		favourites = (await settings.get(SettingKeys.favouriteAccounts)) ?? [];
+		groups = (await settings.get<AccountGroup[]>(SettingKeys.accountGroups)) ?? [];
 	});
 
 	function startDrag(e: PointerEvent, idx: number) {
@@ -37,7 +38,8 @@
 		dragCurIndex = idx;
 		dragBaseIndex = idx;
 		dragStartY = e.clientY;
-		ghostName = favourites[idx];
+		ghostTitle = groups[idx].title;
+		ghostColor = groups[idx].color ?? '';
 		ghostLeft = rect.left;
 		ghostTop = rect.top;
 		ghostWidth = rect.width;
@@ -56,14 +58,14 @@
 		const dy = e.clientY - dragStartY;
 		const targetIdx = Math.max(
 			0,
-			Math.min(favourites.length - 1, Math.round(dragBaseIndex + dy / estItemHeight))
+			Math.min(groups.length - 1, Math.round(dragBaseIndex + dy / estItemHeight))
 		);
 
 		if (targetIdx !== dragCurIndex) {
-			const updated = [...favourites];
+			const updated = [...groups];
 			const [moved] = updated.splice(dragCurIndex, 1);
 			updated.splice(targetIdx, 0, moved);
-			favourites = updated;
+			groups = updated;
 			dragCurIndex = targetIdx;
 		}
 
@@ -86,6 +88,7 @@
 		isDragging = false;
 		dragCurIndex = -1;
 		stopAutoScroll();
+		settings.set(SettingKeys.accountGroups, groups);
 	}
 
 	function stopAutoScroll() {
@@ -94,16 +97,12 @@
 			autoScrollId = null;
 		}
 	}
-
-	async function onFabClicked() {
-		await settings.set(SettingKeys.favouriteAccounts, favourites);
-		history.back();
-	}
 </script>
 
 <article class="flex h-screen flex-col">
-	<Toolbar title="Reorder Favourites" />
-	<Fab Icon={CheckIcon} onclick={onFabClicked} />
+	<Toolbar title="Reorder Groups" />
+
+	<Fab Icon={CheckIcon} onclick={() => history.back()} />
 
 	<!-- Drag ghost -->
 	{#if isDragging}
@@ -112,34 +111,40 @@
 			style="top: {ghostTop}px; left: {ghostLeft}px; width: {ghostWidth}px; height: {ghostHeight}px;"
 		>
 			<GripVerticalIcon size={20} class="text-base-content/40 shrink-0" />
-			<span class="grow">{ghostName}</span>
+			<span class="grow font-medium">{ghostTitle}</span>
+			{#if ghostColor}
+				<div class="h-4 w-4 shrink-0 rounded-full" style="background-color: {ghostColor}"></div>
+			{/if}
 		</div>
 	{/if}
 
 	<section
 		role="list"
-		class="grow overflow-y-auto pb-24 p-1"
+		class="grow overflow-y-auto"
 		bind:this={listEl}
 		onpointermove={onPointerMove}
 		onpointerup={onPointerUp}
 		onpointercancel={onPointerUp}
 	>
-		{#each favourites as item, index (item)}
+		{#each groups as group, i (group.title)}
 			<div
 				role="listitem"
 				data-item
-				class="border-base-content/25 flex h-14 flex-row items-center gap-3 rounded-lg border-b px-2"
-				class:opacity-20={isDragging && index === dragCurIndex}
+				class="border-base-content/15 flex items-center gap-3 border-b px-3 py-3"
+				class:opacity-20={isDragging && i === dragCurIndex}
 			>
 				<button
 					type="button"
 					class="text-base-content/40 touch-none cursor-grab active:cursor-grabbing"
 					aria-label="Drag to reorder"
-					onpointerdown={(e) => startDrag(e, index)}
+					onpointerdown={(e) => startDrag(e, i)}
 				>
 					<GripVerticalIcon size={22} />
 				</button>
-				<span class="grow">{item}</span>
+				<span class="grow font-medium">{group.title}</span>
+				{#if group.color}
+					<div class="h-4 w-4 shrink-0 rounded-full" style="background-color: {group.color}"></div>
+				{/if}
 			</div>
 		{/each}
 	</section>
