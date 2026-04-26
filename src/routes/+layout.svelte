@@ -66,6 +66,12 @@
 			drawerState.update((state) => false);
 		}
 	}
+
+	function handleDrawerSideSwipe(e: SwipeCustomEvent) {
+		if (e.detail.direction == 'left') {
+			drawerState.update((state) => false);
+		}
+	}
 </script>
 
 <svelte:head>
@@ -90,12 +96,21 @@
 			</aside>
 
 			<main class="col-span-1 bg-base-300 h-full overflow-auto touch-pan-y"
-				{...useSwipe(handleSwipe, () => ({ timeframe: 350, threshold: 25 }))}>
+				{...useSwipe(handleSwipe, () => ({
+					timeframe: 350,
+					minSwipeDistance: 25,
+					touchAction: 'pan-y'
+				}))}>
 				{@render children()}
 			</main>
 		</div>
 	</div>
-	<div class="drawer-side">
+	<div class="drawer-side"
+		{...useSwipe(handleDrawerSideSwipe, () => ({
+			timeframe: 350,
+			minSwipeDistance: 25,
+			touchAction: 'pan-y'
+		}))}>
 		<label for="drawer-modal" class="drawer-overlay"></label>
 		<div class="bg-base-200 w-[288px] h-screen overflow-y-auto">
 			<!-- <Navigation /> -->
