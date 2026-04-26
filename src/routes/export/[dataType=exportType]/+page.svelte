@@ -152,7 +152,7 @@
 		{/snippet}
 	</Toolbar>
 
-	<main class="flex flex-col p-1 grow overflow-auto">
+	<main class="flex flex-col p-1 grow">
 		<p>Note: Journal is exported in ledger format, Scheduled Transactions in JSON.</p>
 
 		<textarea

@@ -26,7 +26,7 @@
 <article class="flex h-screen flex-col">
 	<Toolbar title="Account Transactions"></Toolbar>
 
-	<section class="h-full space-y-2 overflow-auto p-1">
+	<section class="h-full space-y-2 p-1">
 		<header>
 			<p>{page.data.account.getParentName()}</p>
 			<div class="flex flex-row text-3xl font-bold">

@@ -49,7 +49,7 @@
 	<Toolbar title="Delete Favourites"></Toolbar>
 	<Fab Icon={CheckIcon} onclick={onFabClicked} />
 
-	<section class="grow overflow-auto p-1">
+	<section class="grow p-1">
 		{#each _accounts as account, i (account)}
 			<div class="border-base-content/15 flex flex-row border-b py-1">
 				<data class="grow content-center">

@@ -79,7 +79,7 @@
 		{/snippet}
 	</Toolbar>
 
-	<section class="grow space-y-2 overflow-auto p-1 pb-3" bind:this={listContainer}>
+	<section class="grow space-y-2 p-1 pb-3" bind:this={listContainer}>
 		{#if xactsWithSpans.length === 0}
 			<p>The device journal is empty</p>
 		{:else}

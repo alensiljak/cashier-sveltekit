@@ -86,7 +86,7 @@
 
 	<Fab onclick={onFabClicked} Icon={PlusIcon} />
 
-	<section class="grow overflow-auto p-1">
+	<section class="grow p-1">
 		{#if filteredList.length === 0}
 			<p>No scheduled transactions found</p>
 		{:else}

@@ -183,7 +183,7 @@
 		</button>
 	</div>
 
-	<section class="grow overflow-auto p-1">
+	<section class="grow p-1">
 		{#if accounts.length === 0}
 			<p class="p-2 opacity-60">No accounts in this group. Use the menu to add accounts.</p>
 		{:else}

@@ -325,7 +325,7 @@
 
 <article class="flex h-screen flex-col">
 	<Toolbar title="Peer Sync" />
-	<section class="flex-1 space-y-4 overflow-auto p-4">
+	<section class="flex-1 space-y-4 p-4">
 		<!-- Peer ID Card -->
 		<div class="card bg-base-200 shadow-xl">
 			<div class="card-body p-4">

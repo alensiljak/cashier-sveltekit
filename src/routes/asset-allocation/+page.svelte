@@ -120,7 +120,7 @@
 		</div>
 	</div>
 
-	<section class="overflow-auto p-3">
+	<section class="p-3">
 		<table class="mx-auto max-w-4xl">
 			<thead>
 				<tr>

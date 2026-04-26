@@ -5,7 +5,7 @@
 <article class="flex h-screen flex-col">
 	<Toolbar title="About"></Toolbar>
 
-	<section class="space-y-4 overflow-auto p-1">
+	<section class="space-y-4 p-1">
 		<h1 class="text-5xl font-bold">Cashier Svelte</h1>
 		<p>
 			Cashier Svelte is a version of

@@ -230,7 +230,7 @@
 
 	<Fab Icon={PlusIcon} onclick={onAddClicked} />
 
-	<section class="grow overflow-auto p-1">
+	<section class="grow p-1">
 		{#if accounts.length === 0}
 			<p>No favourite accounts set</p>
 		{:else}
