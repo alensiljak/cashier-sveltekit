@@ -30,6 +30,20 @@ export const Constants = {
 	ForecastDays: 7
 };
 
+export interface AccountGroup {
+	title: string;
+	accounts: string[];
+	color?: string;
+}
+
+export const defaultAccountGroups: AccountGroup[] = [
+	{ title: 'Cash Accounts', accounts: [] },
+	{ title: 'Bank Accounts', accounts: [] },
+	{ title: 'Savings Accounts', accounts: [] },
+	{ title: 'Credit Cards', accounts: [] },
+	{ title: 'Loans', accounts: [] }
+];
+
 export const SettingKeys = {
 	// asset allocation settings
 	assetAllocationDefinition: 'aa.definition',
@@ -67,7 +81,9 @@ export const SettingKeys = {
 	// externalBook: 'externalBook',
 	// externalAssetAllocation: 'externalAssetAllocation',
 	// SHA-256 hash of source files at last serialization, stored alongside the OPFS binary cache
-	ledgerCacheHash: 'ledgerCacheHash'
+	ledgerCacheHash: 'ledgerCacheHash',
+	// Account groups for the groups page
+	accountGroups: 'accountGroups'
 };
 
 export const CardNames = {

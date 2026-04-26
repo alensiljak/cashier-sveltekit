@@ -17,12 +17,9 @@
 		StarIcon,
 		UsersRoundIcon,
 		ContainerIcon,
-
 		FolderOpenIcon,
-
-		FolderInputIcon
-
-
+		FolderInputIcon,
+		ListIcon
 	} from '@lucide/svelte';
 
 	function closeDrawer(): void {
@@ -81,26 +78,14 @@
 			</li>
 			<li>
 				<a
-					href="/accounts"
-					class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/accounts'
+					href="/accounts/groups"
+					class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/accounts/groups'
 						? 'active bg-secondary text-secondary-content'
 						: ''}"
 					onclick={closeDrawer}
 				>
 					<LandmarkIcon />
-					<span>Accounts</span>
-				</a>
-			</li>
-			<li>
-				<a
-					href="/payees"
-					class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/payees'
-						? 'active bg-secondary text-secondary-content'
-						: ''}"
-					onclick={closeDrawer}
-				>
-					<UsersRoundIcon />
-					<span>Payees</span>
+					<span>My Accounts</span>
 				</a>
 			</li>
 			<li>
@@ -155,7 +140,8 @@
 						<li>
 							<a
 								href="/opfs/import-ledger"
-								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/opfs/import-ledger'
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname ===
+								'/opfs/import-ledger'
 									? 'active bg-secondary text-secondary-content'
 									: ''}"
 								onclick={closeDrawer}
@@ -199,6 +185,41 @@
 							>
 								<ContainerIcon />
 								<span>Serialization</span>
+							</a>
+						</li>
+					</ul>
+				</details>
+			</li>
+			<li>
+				<details>
+					<summary class="flex w-full items-center gap-2 py-3 text-lg font-medium">
+						<ListIcon size={22} />
+						<span>Lists</span>
+						<span class="flex-1"></span>
+					</summary>
+					<ul>
+						<li>
+							<a
+								href="/payees"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/payees'
+									? 'active bg-secondary text-secondary-content'
+									: ''}"
+								onclick={closeDrawer}
+							>
+								<UsersRoundIcon />
+								<span>Payees</span>
+							</a>
+						</li>
+						<li>
+							<a
+								href="/accounts"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/accounts'
+									? 'active bg-secondary text-secondary-content'
+									: ''}"
+								onclick={closeDrawer}
+							>
+								<LandmarkIcon />
+								<span>Accounts</span>
 							</a>
 						</li>
 					</ul>
