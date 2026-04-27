@@ -7,6 +7,20 @@ It is implemented as a PWA using Svelte and DaisyUI frameworks.
 
 - Project plans are stored in `/docs/projects` folder.
 
+## Usage Scenarios
+
+The most common scenarios:
+
+### Mobile App
+
+- Quick balance check.
+- Transaction entry.
+
+#### Desktop App
+
+- More detailed review, analysis, reports.
+- Moving transactions from cashier.bean into an appropriate file.
+
 ## Architecture
 
 - The app is a PWA with a single page application (SPA) architecture.

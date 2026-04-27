@@ -32,7 +32,6 @@
 	});
 
 	async function onFab() {
-		// console.log('fab clicked!');
 		try {
 			await saveXact();
 		} catch (e: any) {
