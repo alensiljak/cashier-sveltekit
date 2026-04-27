@@ -15,7 +15,11 @@ None at the moment. Regular ongoing maintenance.
 
 ## Quick Xact Entry
 
+- [ ] voice entry, Web Speech API + NLP rule engine.
 - [ ] add a home screen shortcut to /quick-add page
+- [ ] Drafts. User speaks / types a narrative. Creates a transaction later.
+- [ ] read the last transaction from the ledger, not special table
+- [ ] list multiple last transactions, to choose from
 
 ## Onboarding
 
