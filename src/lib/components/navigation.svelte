@@ -19,7 +19,10 @@
 		ContainerIcon,
 		FolderOpenIcon,
 		FolderInputIcon,
-		ListIcon
+		ListIcon,
+		ChartNoAxesCombinedIcon,
+		HardDriveIcon,
+		CalculatorIcon
 	} from '@lucide/svelte';
 
 	function closeDrawer(): void {
@@ -54,30 +57,6 @@
 			</li>
 			<li>
 				<a
-					href="/journal"
-					class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/journal'
-						? 'active bg-secondary text-secondary-content'
-						: ''}"
-					onclick={closeDrawer}
-				>
-					<ScrollIcon />
-					<span>Journal</span>
-				</a>
-			</li>
-			<li>
-				<a
-					href="/favourites"
-					class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/favourites'
-						? 'active bg-secondary text-secondary-content'
-						: ''}"
-					onclick={closeDrawer}
-				>
-					<StarIcon />
-					<span>Favourites</span>
-				</a>
-			</li>
-			<li>
-				<a
 					href="/accounts/groups"
 					class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/accounts/groups'
 						? 'active bg-secondary text-secondary-content'
@@ -90,14 +69,14 @@
 			</li>
 			<li>
 				<a
-					href="/asset-allocation"
-					class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/asset-allocation'
+					href="/journal"
+					class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/journal'
 						? 'active bg-secondary text-secondary-content'
 						: ''}"
 					onclick={closeDrawer}
 				>
-					<ChartPieIcon />
-					<span>Asset Allocation</span>
+					<ScrollIcon />
+					<span>Journal</span>
 				</a>
 			</li>
 			<li>
@@ -112,31 +91,103 @@
 					<span>Scheduled Transactions</span>
 				</a>
 			</li>
-			<li>
-				<a
-					href="/reports"
-					class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/reports'
-						? 'active bg-secondary text-secondary-content'
-						: ''}"
-					onclick={closeDrawer}
-				>
-					<ChartLineIcon />
-					<span>Reports</span>
-				</a>
-			</li>
 		</ul>
 
-		<div class="divider divider-primary m-2"></div>
+		<div class="divider divider-primary m-1"></div>
 
 		<ul class="menu menu-lg w-full">
 			<li>
 				<details>
-					<summary class="flex w-full items-center gap-2 py-3 text-lg font-medium">
-						<WrenchIcon size={22} />
-						<span>Tools</span>
+					<summary class="flex w-full items-center gap-2 py-2 text-lg font-medium">
+						<ChartNoAxesCombinedIcon size={22} />
+						<span>Analysis</span>
 						<span class="flex-1"></span>
 					</summary>
 					<ul>
+						<li>
+							<a
+								href="/reports"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/reports'
+									? 'active bg-secondary text-secondary-content'
+									: ''}"
+								onclick={closeDrawer}
+							>
+								<ChartLineIcon />
+								<span>Reports</span>
+							</a>
+						</li>
+						<li>
+							<a
+								href="/favourites"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/favourites'
+									? 'active bg-secondary text-secondary-content'
+									: ''}"
+								onclick={closeDrawer}
+							>
+								<StarIcon />
+								<span>Favourites</span>
+							</a>
+						</li>
+						<li>
+							<a
+								href="/accounts"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/accounts'
+									? 'active bg-secondary text-secondary-content'
+									: ''}"
+								onclick={closeDrawer}
+							>
+								<LandmarkIcon />
+								<span>Accounts</span>
+							</a>
+						</li>
+						<li>
+							<a
+								href="/asset-allocation"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname ===
+								'/asset-allocation'
+									? 'active bg-secondary text-secondary-content'
+									: ''}"
+								onclick={closeDrawer}
+							>
+								<ChartPieIcon />
+								<span>Asset Allocation</span>
+							</a>
+						</li>
+						<li>
+							<a
+								href="/payees"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/payees'
+									? 'active bg-secondary text-secondary-content'
+									: ''}"
+								onclick={closeDrawer}
+							>
+								<UsersRoundIcon />
+								<span>Payees</span>
+							</a>
+						</li>
+					</ul>
+				</details>
+			</li>
+			<li>
+				<details>
+					<summary class="flex w-full items-center gap-2 py-2 text-lg font-medium">
+						<HardDriveIcon size={22} />
+						<span>Data</span>
+						<span class="flex-1"></span>
+					</summary>
+					<ul>
+						<li>
+							<a
+								href="/backup"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/backup'
+									? 'active bg-secondary text-secondary-content'
+									: ''}"
+								onclick={closeDrawer}
+							>
+								<DatabaseIcon />
+								<span>Backup</span>
+							</a>
+						</li>
 						<li>
 							<a
 								href="/opfs/import-ledger"
@@ -152,18 +203,6 @@
 						</li>
 						<li>
 							<a
-								href="/backup"
-								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/backup'
-									? 'active bg-secondary text-secondary-content'
-									: ''}"
-								onclick={closeDrawer}
-							>
-								<DatabaseIcon />
-								<span>Backup</span>
-							</a>
-						</li>
-						<li>
-							<a
 								href="/opfs"
 								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/opfs'
 									? 'active bg-secondary text-secondary-content'
@@ -174,6 +213,17 @@
 								<span>File Storage</span>
 							</a>
 						</li>
+					</ul>
+				</details>
+			</li>
+			<li>
+				<details>
+					<summary class="flex w-full items-center gap-2 py-2 text-lg font-medium">
+						<WrenchIcon size={22} />
+						<span>Utilities</span>
+						<span class="flex-1"></span>
+					</summary>
+					<ul>
 						<li>
 							<a
 								href="/tools/serialization"
@@ -187,39 +237,16 @@
 								<span>Serialization</span>
 							</a>
 						</li>
-					</ul>
-				</details>
-			</li>
-			<li>
-				<details>
-					<summary class="flex w-full items-center gap-2 py-3 text-lg font-medium">
-						<ListIcon size={22} />
-						<span>Lists</span>
-						<span class="flex-1"></span>
-					</summary>
-					<ul>
 						<li>
 							<a
-								href="/payees"
-								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/payees'
+								href="/calculator"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/calculator'
 									? 'active bg-secondary text-secondary-content'
 									: ''}"
 								onclick={closeDrawer}
 							>
-								<UsersRoundIcon />
-								<span>Payees</span>
-							</a>
-						</li>
-						<li>
-							<a
-								href="/accounts"
-								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/accounts'
-									? 'active bg-secondary text-secondary-content'
-									: ''}"
-								onclick={closeDrawer}
-							>
-								<LandmarkIcon />
-								<span>Accounts</span>
+								<CalculatorIcon />
+								<span>Calculator</span>
 							</a>
 						</li>
 					</ul>
@@ -237,6 +264,11 @@
 					<span>Peer Sync</span>
 				</a>
 			</li> -->
+		</ul>
+
+		<div class="divider divider-primary m-1"></div>
+
+		<ul class="menu menu-lg w-full">
 			<li>
 				<a
 					href="/help"
@@ -261,22 +293,18 @@
 					<span>About</span>
 				</a>
 			</li>
+			<li>
+				<a
+					href="/settings"
+					class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/settings'
+						? 'active bg-secondary text-secondary-content'
+						: ''}"
+					onclick={closeDrawer}
+				>
+					<SettingsIcon />
+					<span>Settings</span>
+				</a>
+			</li>
 		</ul>
 	</div>
-
-	<!-- Settings button at the bottom -->
-	<ul class="menu menu-lg mt-auto w-full">
-		<li>
-			<a
-				href="/settings"
-				class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/settings'
-					? 'active bg-secondary text-secondary-content'
-					: ''}"
-				onclick={closeDrawer}
-			>
-				<SettingsIcon />
-				<span>Settings</span>
-			</a>
-		</li>
-	</ul>
 </div>
