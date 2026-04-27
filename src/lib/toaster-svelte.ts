@@ -16,7 +16,7 @@ class DaisyUIToaster {
 			this.toastContainer = document.createElement('div');
 			this.toastContainer.id = 'toast-container';
 			this.toastContainer.className =
-				'fixed bottom-8 left-1/2 -translate-x-1/2 z-[1000] pointer-events-none w-[90%] max-w-md flex flex-col items-center gap-2';
+				'fixed top-8 left-1/2 -translate-x-1/2 z-[1000] pointer-events-none w-[90%] max-w-md flex flex-col items-center gap-2';
 			document.body.appendChild(this.toastContainer);
 		}
 	}
