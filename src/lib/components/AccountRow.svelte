@@ -29,7 +29,7 @@
 <!-- svelte-ignore a11y_interactive_supports_focus -->
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <div
-	class={`border-base-content/15 flex w-full flex-row border-b py-0.5 ${isGrayed ? 'text-base-content/50' : ''} ${onclick ? 'cursor-pointer' : ''}`}
+	class={`border-base-content/15 flex w-full flex-row border-b py-0.5 text-base ${isGrayed ? 'text-base-content/50' : ''} ${onclick ? 'cursor-pointer' : ''}`}
 	style={rowStyle}
 	onclick={() => onclick?.(account.name)}
 	role={onclick ? 'button' : undefined}
@@ -40,7 +40,7 @@
 		{#if namespace}
 			<small class="truncate leading-tight text-base-content/50">{namespace}</small>
 		{/if}
-		<span class={`text-base truncate ${namespace ? 'ml-2' : ''}`}>{leafName}</span>
+		<span class={`truncate ${namespace ? 'ml-2' : ''}`}>{leafName}</span>
 	</div>
 	<data
 		class={`content-end ml-2 shrink-0 text-right tabular-nums ${balancesLoaded ? getAmountColour(quantity) : 'text-base-content/30'}`}
