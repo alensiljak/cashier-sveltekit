@@ -1,24 +1,39 @@
 import { Posting, type Xact } from '$lib/data/model';
 import { DirectiveFormatter } from '$lib/rledger/directiveFormatter';
 
+export const PLACEHOLDER_ACCOUNT = 'Expenses:Uncategorized';
+
 /**
  * Convert an Xact to a Beancount transaction string using DirectiveFormatter.
  */
 export function xactToBeancountText(tx: Xact): string {
+	// Keep all postings; never drop rows the user added.
+	// Force ! flag whenever any posting lacks an explicit account.
+	const hasPlaceholder = tx.postings.some((p) => !p.account);
+	const flag = hasPlaceholder ? '!' : (tx.flag ?? '*');
+
 	const directive = {
 		type: 'transaction' as const,
 		date: tx.date ?? '',
-		flag: '*',
+		flag,
 		payee: tx.payee ?? '',
 		narration: tx.note ?? '',
 		tags: [],
 		links: [],
-		postings: tx.postings
-			.filter((p) => p.account)
-			.map((p) => ({
-				account: p.account,
-				units: p.amount != null ? { number: String(p.amount), currency: p.currency } : undefined
-			}))
+		postings: tx.postings.map((p) => {
+			let units: { number: string; currency: string } | undefined;
+			if (p.amount != null) {
+				units = { number: String(p.amount), currency: p.currency };
+			} else if (p.currency) {
+				// Currency set but no amount — default to 0.
+				units = { number: '0', currency: p.currency };
+			}
+			// No amount and no currency → omit units (Beancount auto-balance posting).
+			return {
+				account: p.account || PLACEHOLDER_ACCOUNT,
+				units
+			};
+		})
 	};
 	return DirectiveFormatter.toString(directive as any);
 }

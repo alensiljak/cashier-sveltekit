@@ -290,6 +290,7 @@ class LedgerService {
 		tx.date = directive.date;
 		tx.payee = directive.payee ?? '';
 		tx.note = directive.narration ?? '';
+		tx.flag = directive.flag ?? '*';
 		tx.postings = (directive.postings ?? []).map((p: any) => {
 			const posting = new Posting();
 			posting.account = p.account ?? '';

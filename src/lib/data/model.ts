@@ -115,6 +115,7 @@ export class Xact {
 	date?: string;
 	payee?: string;
 	note?: string;
+	flag?: string;
 	postings: Posting[];
 	//
 	//amount: any
@@ -124,6 +125,7 @@ export class Xact {
 		// this.id = newId()
 		this.date = '';
 		this.payee = '';
+		this.flag = '*';
 		this.postings = [];
 	}
 

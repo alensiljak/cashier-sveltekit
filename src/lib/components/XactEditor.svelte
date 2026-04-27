@@ -16,7 +16,9 @@
 		UserIcon,
 		CalendarIcon,
 		FileTextIcon,
-		CirclePlusIcon
+		CirclePlusIcon,
+		TriangleAlertIcon,
+		CircleCheckIcon
 	} from '@lucide/svelte';
 	import { Big } from 'big.js';
 
@@ -28,6 +30,16 @@
 			(acc, posting) => (posting.amount ? acc.plus(new Big(posting.amount)) : acc),
 			new Big(0)
 		);
+	});
+
+	let hasPlaceholder = $derived(
+		$xact?.postings?.some((p) => !p.account) ?? false
+	);
+
+	$effect(() => {
+		if (hasPlaceholder && $xact) {
+			$xact.flag = '!';
+		}
 	});
 	if (!$xact) {
 		goto('/');
@@ -201,6 +213,38 @@
 			class="input w-full rounded"
 			bind:value={$xact.note}
 		/>
+	</div>
+
+	<!-- Transaction flag -->
+	<div class="flex flex-col items-center gap-1">
+		<div class="join">
+			<button
+				type="button"
+				title="Mark as incomplete / needs review"
+				class="join-item btn btn-sm"
+				class:btn-warning={$xact.flag === '!'}
+				class:btn-outline={$xact.flag !== '!'}
+				onclick={() => ($xact.flag = '!')}
+			>
+				<TriangleAlertIcon class="h-4 w-4" />
+				<span>!</span>
+			</button>
+			<button
+				type="button"
+				title="Mark as complete"
+				class="join-item btn btn-sm"
+				class:btn-success={$xact.flag === '*'}
+				class:btn-outline={$xact.flag !== '*'}
+				disabled={hasPlaceholder}
+				onclick={() => ($xact.flag = '*')}
+			>
+				<CircleCheckIcon class="h-4 w-4" />
+				<span>*</span>
+			</button>
+		</div>
+		{#if hasPlaceholder}
+			<span class="text-warning text-xs">Has uncategorized postings</span>
+		{/if}
 	</div>
 
 	<!-- Postings -->
