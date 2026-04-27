@@ -13,9 +13,9 @@ None at the moment. Regular ongoing maintenance.
 - [ ] transaction import
 - [ ] price download
 
-## Ledger
+## Quick Xact Entry
 
-- [x] invalidate the cache when the ledger file changes
+- [ ] add a home screen shortcut to /quick-add page
 
 ## Onboarding
 
@@ -32,7 +32,7 @@ None at the moment. Regular ongoing maintenance.
 
 ## Budgeting
 
-- [ ] budget, [link](https://rustledger.github.io/guides/budgeting.html).
+- [ ] budget, [docs](https://rustledger.github.io/guides/budgeting.html).
 - [ ] track actual spending againtst the budget
 - [ ] a budget is amount in time period
 - [ ] monthly budget as default?

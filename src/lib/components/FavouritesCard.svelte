@@ -1,13 +1,12 @@
 <script lang="ts">
 	import { StarIcon } from '@lucide/svelte';
 	import HomeCardTemplate from './HomeCardTemplate.svelte';
+	import AccountRow from './AccountRow.svelte';
 	import { goto } from '$app/navigation';
 	import { Account, Money } from '$lib/data/model';
 	import appService from '$lib/services/appService';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import Notifier from '$lib/utils/notifier';
-	import { formatAmount, getAmountColour } from '$lib/utils/formatter';
-	import { getBarWidth } from '$lib/utils/barWidthCalculator';
 	import { SettingKeys, settings } from '$lib/settings';
 
 	Notifier.init();
@@ -166,10 +165,6 @@
 		}
 	}
 
-	function isGrayedOut(account: Account) {
-		return account.exists === false;
-	}
-
 	async function onClick() {
 		await goto('/favourites', { replaceState: false });
 	}
@@ -188,31 +183,7 @@
 			<p>There are no favourite accounts defined</p>
 		{:else}
 			{#each accounts as account: Account (account.name)}
-				<div class="bg-base-200 flex w-full flex-col px-0.5 text-base">
-					<div class="border-base-content/15 my-0.25 flex flex-row border-b py-0.5">
-						<div class={`cell grow ${isGrayedOut(account) ? 'text-base-content text-opacity-50' : ''}`}>
-							{account?.name}
-						</div>
-						<data class={`text-right ${balancesLoaded ? getAmountColour(account.balance?.quantity as number) : 'text-base-content/30'}`}>
-							{#if balancesLoaded}
-								{formatAmount(account.balance?.quantity as number)}
-								{account.balance?.currency}
-							{:else}
-								···
-							{/if}
-						</data>
-					</div>
-					{#if balancesLoaded}
-						<div
-							class="h-1"
-							style="width: {getBarWidth(
-								account.balance?.quantity as number,
-								minBalance,
-								maxBalance
-							)}%; background-color: {(account.balance?.quantity as number) >= 0 ? 'green' : 'red'};"
-						></div>
-					{/if}
-				</div>
+				<AccountRow {account} {balancesLoaded} {minBalance} {maxBalance} />
 			{/each}
 		{/if}
 	{/snippet}

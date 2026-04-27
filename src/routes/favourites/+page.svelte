@@ -8,8 +8,7 @@
 	import { SelectionType } from '$lib/enums';
 	import appService from '$lib/services/appService';
 	import { SelectionModeMetadata, SettingKeys, settings } from '$lib/settings';
-	import { formatAmount, getMoneyColour } from '$lib/utils/formatter';
-	import { getBarWidth } from '$lib/utils/barWidthCalculator';
+	import AccountRow from '$lib/components/AccountRow.svelte';
 	import Notifier from '$lib/utils/notifier';
 	import { ArrowUpDownIcon, PlusCircleIcon, PlusIcon, Trash2Icon, TrashIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
@@ -20,7 +19,6 @@
 	let isDeleteAllConfirmationOpen = $state(false);
 
 	let accounts: Account[] = $state([]);
-	let refreshKey = $state(0);
 
 	let maxBalance: number = $state(0);
 	let minBalance: number = $state(0);
@@ -73,9 +71,6 @@
 		selectionMetadata.set(undefined);
 	}
 
-	function isGrayedOut(account: Account) {
-		return account.exists === false;
-	}
 
 	/**
 	 * Query account balances from the ParsedLedger via BQL.
@@ -183,8 +178,6 @@
 				return account;
 			}
 		});
-
-		refreshKey += 1;
 	}
 
 	async function onAccountClick(accountName?: string) {
@@ -237,39 +230,13 @@
 			<!-- list -->
 			<div>
 				{#each accounts as account (account.name)}
-					<div class="flex w-full flex-col px-0.5">
-						<!-- row -->
-						<!-- svelte-ignore a11y_click_events_have_key_events -->
-						<!-- svelte-ignore a11y_no_static_element_interactions -->
-						<div
-							class={`border-base-content/15 hover:bg-base-100 hover:bg-opacity-50 flex cursor-pointer flex-row
-										border-b py-1 ${isGrayedOut(account) ? 'text-base-content text-opacity-50' : ''}`}
-							onclick={() => onAccountClick(account.name)}
-						>
-							<div class="mr-1 flex grow flex-col">
-								<small>{account.getParentName()}</small>
-								<data class="ml-4">{account.getAccountName()}</data>
-							</div>
-							{#key refreshKey}
-								<data class={`content-end text-end ${getMoneyColour(account.balance as Money)}`}>
-									{formatAmount(account.balance?.quantity as number)}
-									{account.balance?.currency}
-								</data>
-							{/key}
-						</div>
-						{#key refreshKey}
-							<div
-								class="h-1"
-								style="width: {getBarWidth(
-									account.balance?.quantity as number,
-									minBalance,
-									maxBalance
-								)}%; background-color: {(account.balance?.quantity as number) >= 0
-									? 'green'
-									: 'red'};"
-							></div>
-						{/key}
-					</div>
+					<AccountRow
+						{account}
+						balancesLoaded={true}
+						{minBalance}
+						{maxBalance}
+						onclick={onAccountClick}
+					/>
 				{/each}
 			</div>
 		{/if}

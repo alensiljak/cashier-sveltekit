@@ -37,13 +37,14 @@ export class Account {
 	}
 
 	getAccountName() {
-		const separatorIndex = this.name.lastIndexOf(':');
-		return this.name.substring(separatorIndex + 1);
+		const parts = this.name.split(':');
+		if (parts.length <= 2) return parts[parts.length - 1];
+		return parts.slice(2).join(':');
 	}
 
 	getParentName() {
-		const separatorIndex = this.name.lastIndexOf(':');
-		return this.name.substring(0, separatorIndex);
+		const parts = this.name.split(':');
+		return parts.slice(0, Math.min(2, parts.length - 1)).join(':');
 	}
 }
 

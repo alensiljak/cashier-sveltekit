@@ -1,13 +1,12 @@
 <script lang="ts">
 	import { Settings2Icon } from '@lucide/svelte';
 	import HomeCardTemplate from './HomeCardTemplate.svelte';
+	import AccountRow from './AccountRow.svelte';
 	import { goto } from '$app/navigation';
 	import { Account, Money } from '$lib/data/model';
 	import type { AccountGroup } from '$lib/settings';
 	import appService from '$lib/services/appService';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
-	import { formatAmount, getAmountColour } from '$lib/utils/formatter';
-	import { getBarWidth } from '$lib/utils/barWidthCalculator';
 
 	type Props = {
 		group: AccountGroup;
@@ -153,41 +152,7 @@
 			<p class="px-2 py-1 text-sm opacity-60">No accounts added</p>
 		{:else}
 			{#each accounts as account (account.name)}
-				<div class="bg-base-200 flex w-full flex-col px-0.5 text-base">
-					<div class="border-base-content/15 my-0.25 flex flex-row border-b py-0.5">
-						<div
-							class={`cell grow ${account.exists === false ? 'text-base-content/50' : ''} ${onAccountClick ? 'cursor-pointer' : ''}`}
-							onclick={() => onAccountClick?.(account.name)}
-							role="button"
-							tabindex="0"
-							onkeydown={(e) => e.key === 'Enter' && onAccountClick?.(account.name)}
-						>
-							{account.name}
-						</div>
-						<data
-							class={`text-right ${balancesLoaded ? getAmountColour(account.balance?.quantity as number) : 'text-base-content/30'}`}
-						>
-							{#if balancesLoaded}
-								{formatAmount(account.balance?.quantity as number)}
-								{account.balance?.currency}
-							{:else}
-								···
-							{/if}
-						</data>
-					</div>
-					{#if balancesLoaded}
-						<div
-							class="h-1"
-							style="width: {getBarWidth(
-								account.balance?.quantity as number,
-								minBalance,
-								maxBalance
-							)}%; background-color: {(account.balance?.quantity as number) >= 0
-								? 'green'
-								: 'red'};"
-						></div>
-					{/if}
-				</div>
+				<AccountRow {account} {balancesLoaded} {minBalance} {maxBalance} onclick={onAccountClick} />
 			{/each}
 		{/if}
 	{/snippet}
