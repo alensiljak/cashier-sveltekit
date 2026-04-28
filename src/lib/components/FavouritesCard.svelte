@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { StarIcon } from '@lucide/svelte';
+	import { Settings2Icon, StarIcon } from '@lucide/svelte';
 	import HomeCardTemplate from './HomeCardTemplate.svelte';
 	import AccountRow from './AccountRow.svelte';
 	import { goto } from '$app/navigation';
@@ -166,7 +166,7 @@
 	}
 
 	async function onClick() {
-		await goto('/favourites', { replaceState: false });
+		await goto('/accounts/groups', { replaceState: false });
 	}
 </script>
 
@@ -174,6 +174,12 @@
 	{#snippet icon()}
 		<StarIcon />
 	{/snippet}
+	{#snippet menu()}
+		<a href="/favourites">
+			<Settings2Icon />
+		</a>
+	{/snippet}
+
 	{#snippet title()}
 		Favourites
 		{#if $isReloading}<span class="loading loading-spinner loading-xs ml-2 opacity-70"></span>{/if}

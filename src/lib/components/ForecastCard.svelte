@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ChartLineIcon, SettingsIcon } from '@lucide/svelte';
+	import { ChartLineIcon, Settings2Icon } from '@lucide/svelte';
 	import HomeCardTemplate from './HomeCardTemplate.svelte';
 	import { Constants, SettingKeys, settings } from '$lib/settings';
 	import { onMount } from 'svelte';
@@ -40,7 +40,7 @@
 	{/snippet}
 	{#snippet menu()}
 		<a href="/forecast-settings">
-			<SettingsIcon />
+			<Settings2Icon  />
 		</a>
 	{/snippet}
 	{#snippet content()}
