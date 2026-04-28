@@ -24,11 +24,11 @@ export function xactToBeancountText(tx: Xact): string {
 			let units: { number: string; currency: string } | undefined;
 			if (p.amount != null) {
 				units = { number: String(p.amount), currency: p.currency };
-			} else if (p.currency) {
-				// Currency set but no amount — default to 0.
+			} else if (!p.account && p.currency) {
+				// No account but currency set — default to 0 to preserve the placeholder posting.
 				units = { number: '0', currency: p.currency };
 			}
-			// No amount and no currency → omit units (Beancount auto-balance posting).
+			// Account set with no amount, or neither → omit units (Beancount auto-balance posting).
 			return {
 				account: p.account || PLACEHOLDER_ACCOUNT,
 				units
