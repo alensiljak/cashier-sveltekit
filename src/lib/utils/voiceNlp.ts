@@ -95,25 +95,33 @@ function parseCurrency(text: string): { amount?: number; currency: string } {
 
 function extractPayee(text: string): string | undefined {
     const patterns = [
-        /(?:at|to|for|from|@)\s+([A-Z][a-zA-Z\s'&-]{1,30})/,
-        /(?:paid|spent|bought|purchased)\s+(?:\d[\d.,]*\s+\w+\s+)?(?:at|to|for)\s+([A-Z][a-zA-Z\s'&-]{1,30})/i,
+        /(?:at|to|for|from|@)\s+([a-zA-Z][a-zA-Z'&-]*(?:\s+(?!(?:for|to|from|at)\b)[a-zA-Z'&-]+)*)/i,
+        /(?:paid|spent|bought|purchased)\s+(?:\d[\d.,]*\s+\w+\s+)?(?:at|to|for)\s+([a-zA-Z][a-zA-Z'&-]*(?:\s+(?!(?:for|to|from|at)\b)[a-zA-Z'&-]+)*)/i,
         /^([A-Z][a-zA-Z\s'&-]{1,20})\s+\d/,
     ]
 
     for (const re of patterns) {
         const m = text.match(re)
-        if (m) return m[1].trim()
+        if (m) {
+            const name = m[1].trim()
+            return name.charAt(0).toUpperCase() + name.slice(1)
+        }
     }
 
     const stopWords = new Set([
         'paid', 'spent', 'bought', 'received', 'transferred', 'charged',
         'the', 'a', 'an', 'i', 'me', 'my', 'at', 'to', 'for', 'from',
+        'euro', 'euros', 'dollar', 'dollars', 'pound', 'pounds', 'yen', 'franc', 'francs',
+        'usd', 'eur', 'gbp', 'chf', 'hrk', 'jpy',
     ])
     const words = text.split(/\s+/)
-    for (const w of words) {
-        if (!stopWords.has(w.toLowerCase()) && /^[a-zA-Z]/.test(w)) {
-            return w.charAt(0).toUpperCase() + w.slice(1)
-        }
+    const payeeWords = words.filter(
+        (w) => !stopWords.has(w.toLowerCase()) && /^[a-zA-Z]/.test(w)
+    )
+    if (payeeWords.length > 0) {
+        return payeeWords
+            .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+            .join(' ')
     }
 
     return undefined
@@ -140,7 +148,7 @@ export function parseTranscript(text: string): ParseResult {
     const isIncome = /receive|received|income|salary|paycheck|wage/i.test(lower)
 
     let fromAccount: string | undefined
-    const fromMatch = text.match(/from\s+(?:my\s+)?([a-zA-Z\s]+?)(?:\s+to|\s+account|$)/i)
+    const fromMatch = text.match(/from\s+(?:my\s+)?([a-zA-Z0-9\s]+?)(?:\s+to|\s+account|$)/i)
     if (fromMatch) {
         fromAccount = guessAccount(fromMatch[1]) ?? fromMatch[1].trim()
         matched.push(`from: ${fromAccount}`)
@@ -148,7 +156,7 @@ export function parseTranscript(text: string): ParseResult {
     }
 
     let toAccount: string | undefined
-    const toMatch = text.match(/to\s+(?:my\s+)?([a-zA-Z\s]+?)(?:\s+from|\s+account|$)/i)
+    const toMatch = text.match(/to\s+(?:my\s+)?([a-zA-Z0-9\s]+?)(?:\s+from|\s+account|$)/i)
     if (toMatch && isTransfer) {
         toAccount = guessAccount(toMatch[1]) ?? toMatch[1].trim()
         matched.push(`to: ${toAccount}`)
@@ -160,7 +168,7 @@ export function parseTranscript(text: string): ParseResult {
             fromAccount = guessAccount(text) ?? 'Income:Other'
             toAccount = toAccount ?? 'Assets:Checking'
         } else {
-            fromAccount = guessAccount(text) ?? 'Assets:Checking'
+            fromAccount = 'Assets:Checking'
         }
     }
 

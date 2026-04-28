@@ -4,6 +4,7 @@
     import { Xact } from '$lib/data/model'
     import { xact as xactStore, xactSpan } from '$lib/data/mainStore'
     import { type ParseResult, parseTranscript, buildTransaction, formatBeancount } from '$lib/utils/voiceNlp'
+    import fullLedgerService from '$lib/services/ledgerWorkerClient'
 
     // --- State ---
 
@@ -14,6 +15,7 @@
     let transaction = $state<Xact | null>(null)
     let errorMsg = $state('')
     let supported = $state(true)
+    let resolvingFrom = $state(false)
 
     function handleTranscript(text: string) {
         transcript = text
@@ -118,6 +120,24 @@
         goto('/tx')
     }
 
+    async function resolveFromAccount() {
+        if (!parseResult?.fromAccount || parseResult.fromAccount.includes(':')) return
+        resolvingFrom = true
+        try {
+            const raw = parseResult.fromAccount
+            const result = await fullLedgerService.query(
+                `SELECT account WHERE account ~ '(?i)${raw}' GROUP BY account ORDER BY account`
+            )
+            if (result.errors.length === 0 && result.rows.length > 0) {
+                const accountIdx = result.columns.indexOf('account')
+                parseResult.fromAccount = (result.rows[0] as unknown[])[accountIdx] as string
+                transaction = buildTransaction(parseResult)
+            }
+        } finally {
+            resolvingFrom = false
+        }
+    }
+
     function clearAll() {
         transcript = ''
         interimTranscript = ''
@@ -204,6 +224,23 @@
                             <li>{item}</li>
                         {/each}
                     </ul>
+                    {#if parseResult.fromAccount && !parseResult.fromAccount.includes(':')}
+                        <div class="flex items-center gap-2 pt-1">
+                            <span class="text-xs opacity-60">from account "{parseResult.fromAccount}" not resolved</span>
+                            <button
+                                class="btn btn-xs btn-ghost gap-1"
+                                onclick={resolveFromAccount}
+                                disabled={resolvingFrom}
+                            >
+                                {#if resolvingFrom}
+                                    <span class="loading loading-spinner loading-xs"></span>
+                                {:else}
+                                    <span>↻</span>
+                                {/if}
+                                Resolve
+                            </button>
+                        </div>
+                    {/if}
                 </div>
             </div>
         {/if}
