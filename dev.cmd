@@ -1,5 +1,5 @@
-@echo off
+::@echo off
 
-@call scripts\run-browser.cmd
+::@scripts\run-browser.cmd
 
 @npm run dev
