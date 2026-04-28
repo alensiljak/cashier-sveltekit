@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { CalendarClockIcon } from '@lucide/svelte';
+	import { CalendarClockIcon, CalendarDaysIcon } from '@lucide/svelte';
 	import HomeCardTemplate from './HomeCardTemplate.svelte';
 	import { goto } from '$app/navigation';
 	import type { Money, ScheduledTransaction, Xact } from '$lib/data/model';
@@ -24,6 +24,11 @@
 
 	async function loadData() {
 		scxs = await db.scheduled.orderBy('nextDate').limit(5).toArray();
+	}
+
+	async function onCalendarClick(e: MouseEvent) {
+		e.stopPropagation();
+		await goto('/scheduled-xacts/calendar');
 	}
 
 	async function onClick() {
@@ -63,11 +68,12 @@
 		{/if}
 	{/snippet}
 	{#snippet footer()}
-		<!-- <center>
-		<button type="button" class="btn btn-outline btn-warning uppercase" onclick={onExportClick}>
-			<FileUpIcon />
-			<span>Export</span>
+		<center>
+		<button type="button" class="btn btn-outline btn-warning uppercase"
+			onclick={onCalendarClick}>
+			<CalendarDaysIcon />
+			<span>Calendar</span>
 		</button>
-	</center> -->
+	</center>
 	{/snippet}
 </HomeCardTemplate>
