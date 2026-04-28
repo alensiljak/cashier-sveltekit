@@ -37,7 +37,7 @@
 	);
 
 	$effect(() => {
-		if (hasPlaceholder && $xact) {
+		if (hasPlaceholder && $xact && $xact.flag !== '!') {
 			$xact.flag = '!';
 		}
 	});
