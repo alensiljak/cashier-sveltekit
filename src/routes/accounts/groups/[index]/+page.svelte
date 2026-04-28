@@ -231,7 +231,7 @@
 		<h3 class="text-base font-semibold opacity-80">Accounts</h3>
 		<button
 			type="button"
-			class="btn btn-ghost btn-circle btn-sm"
+			class="btn btn-primary btn-circle btn-sm"
 			onclick={onAddClicked}
 			aria-label="Add account"
 		>
