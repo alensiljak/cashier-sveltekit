@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Xact } from '$lib/data/model';
 	import { getAmountColour } from '$lib/utils/formatter';
+	import { TriangleAlertIcon } from '@lucide/svelte';
 
 	interface Props {
 		xact: Xact;
@@ -24,7 +25,10 @@
 			{xact.date}
 			<!-- todo: ISO format -->
 		</time>
-		<div>
+		<div class="flex items-center gap-1">
+			{#if xact.flag === '!'}
+				<TriangleAlertIcon class="text-warning size-4 shrink-0" />
+			{/if}
 			{xact.payee}
 		</div>
 	</div>

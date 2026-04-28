@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { FileUpIcon, ScrollIcon } from '@lucide/svelte';
+	import { FileUpIcon, ScrollIcon, TriangleAlertIcon } from '@lucide/svelte';
 	import HomeCardTemplate from './HomeCardTemplate.svelte';
 	import { goto } from '$app/navigation';
 	import { Money, Posting, Xact } from '$lib/data/model';
@@ -82,6 +82,7 @@
 		tx.date = directive.date;
 		tx.payee = directive.payee ?? '';
 		tx.note = directive.narration ?? '';
+		tx.flag = directive.flag ?? '*';
 		tx.postings = (directive.postings ?? []).map((p: any) => {
 			const posting = new Posting();
 			posting.account = p.account ?? '';
@@ -120,7 +121,10 @@
 						<time class="opacity-60">
 							{getReadableDate(xact.date)}
 						</time>
-						<div class="grow">
+						<div class="flex grow items-center gap-1">
+							{#if xact.flag === '!'}
+								<TriangleAlertIcon class="text-warning size-4 shrink-0" />
+							{/if}
 							{xact.payee}
 						</div>
 						<div class={`${getXactColour(index)}`}>
