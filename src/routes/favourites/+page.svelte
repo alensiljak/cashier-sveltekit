@@ -181,7 +181,7 @@
 	}
 
 	async function onAccountClick(accountName?: string) {
-		goto('/account-xacts/' + accountName);
+		goto('/accounts/account-xacts/' + accountName);
 	}
 
 	async function onAddClicked() {

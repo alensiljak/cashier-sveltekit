@@ -29,7 +29,7 @@
 	<section class="h-full space-y-2 p-1">
 		<header>
 			<p>{page.data.account.getParentName()}</p>
-			<div class="flex flex-row text-3xl font-bold">
+			<div class="flex flex-row text-2xl font-bold">
 				<data class="grow">
 					{page.data.account.getAccountName()}
 				</data>

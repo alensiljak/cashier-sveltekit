@@ -62,7 +62,7 @@
 	</Toolbar>
 	<section class="flex grow flex-col gap-3 p-2">
 		{#each groups as group, i (group.title)}
-			<AccountGroupCard {group} index={i} onAccountClick={(name) => goto(`/account-xacts/${encodeURIComponent(name)}`)} />
+			<AccountGroupCard {group} index={i} onAccountClick={(name) => goto(`/accounts/account-xacts/${encodeURIComponent(name)}`)} />
 		{/each}
 	</section>
 </article>

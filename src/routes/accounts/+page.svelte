@@ -66,7 +66,7 @@
 			history.back();
 		} else {
 			// navigate to account details page
-			goto('/account-xacts/' + encodeURIComponent(name));
+			goto('/accounts/account-xacts/' + encodeURIComponent(name));
 		}
 	}
 
