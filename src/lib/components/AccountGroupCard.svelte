@@ -50,13 +50,7 @@
 			const defaultCurrency = await appService.getDefaultCurrency();
 
 			const quotedNames = group.accounts.map((n) => `'${n}'`).join(', ');
-			// Workaround for the bug with the IN operator.
-			const accountFilter =
-				group.accounts.length === 1
-					? `account = ${quotedNames}`
-					: `account IN (${quotedNames})`;
-			const bql = `SELECT account, sum(position) AS balance WHERE ${accountFilter}`;
-			// const bql = `SELECT account, sum(position) AS balance WHERE account IN (${quotedNames})`;
+			const bql = `SELECT account, sum(position) AS balance WHERE account IN (${quotedNames})`;
 			const queryResult = await fullLedgerService.query(bql);
 
 			const accountIdx = queryResult.columns.indexOf('account');
