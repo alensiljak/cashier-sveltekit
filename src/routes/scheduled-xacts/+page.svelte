@@ -78,7 +78,7 @@
 		{#snippet menuItems()}
 			<ToolbarMenuItem Icon={PackageIcon} text="Backup" targetNav="/export/scheduled" />
 			<ToolbarMenuItem Icon={PackageOpenIcon} text="Restore" targetNav="/restore/scheduled" />
-			<ToolbarMenuItem Icon={CalendarIcon} text="Calendar" />
+			<ToolbarMenuItem Icon={CalendarIcon} text="Calendar" targetNav="/scheduled-xacts/calendar" />
 		{/snippet}
 	</Toolbar>
 	<!-- search toolbar -->

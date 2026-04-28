@@ -24,7 +24,7 @@ Characteristics
 - **Automatic transaction syncing** (Plaid, Yodlee, or similar).
 - **Manual transaction entry** with receipt image attachment.
 - **Real-time balance updates** and pending transaction visibility.
-- **Multi-currency support** (if traveling or holding foreign accounts).
+- ✅ **Multi-currency support** (if traveling or holding foreign accounts).
 
 ### 2. Budgeting
 
@@ -37,8 +37,8 @@ Characteristics
 ### 3. Expense Categorization & Tagging
 
 - **Smart auto-categorization** with learning (e.g., Starbucks → Coffee).
-- **Custom categories & subcategories**.
-- **Split transactions** (one Walmart trip split into Groceries, Home Goods, etc.).
+- ✅ **Custom categories & subcategories**.
+- ✅ **Split transactions** (one Walmart trip split into Groceries, Home Goods, etc.).
 - **Rule engine** – “If merchant contains ‘Netflix’, category = Subscriptions.”
 - **Tagging** for tax tracking (business vs. personal), trips, or projects.
 

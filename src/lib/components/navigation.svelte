@@ -21,7 +21,10 @@
 		FolderInputIcon,
 		ChartNoAxesCombinedIcon,
 		HardDriveIcon,
-		CalculatorIcon
+		CalculatorIcon,
+
+		CalendarIcon
+
 	} from '@lucide/svelte';
 
 	function closeDrawer(): void {
@@ -125,6 +128,12 @@
 							>
 								<StarIcon />
 								<span>Favourites</span>
+							</a>
+						</li>
+						<li>
+							<a href="/scheduled-xacts/calendar" class="flex w-full items-center gap-2 py-2">
+								<CalendarIcon />
+								<span>Calendar</span>
 							</a>
 						</li>
 						<li>
