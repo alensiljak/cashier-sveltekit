@@ -50,7 +50,7 @@
 						<time class={`${getDateColour(scx.nextDate)}`}>
 							{getReadableDate(scx.nextDate)}
 						</time>
-						<data class="grow">
+						<data class="min-w-0 grow truncate">
 							{scx.transaction?.payee}
 						</data>
 						<data class={`${getAmountColour(amounts[index]?.quantity)}`}>
