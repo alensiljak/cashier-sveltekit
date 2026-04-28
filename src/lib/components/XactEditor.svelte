@@ -263,10 +263,10 @@
 			>
 				<CirclePlusIcon />
 			</button>
-			<a class="btn btn-outline btn-accent btn-icon rounded" href="/postings-reorder">
+			<a class="btn btn-outline btn-accent btn-icon rounded" href="/postings/reorder">
 				<ArrowUpDownIcon />
 			</a>
-			<a class="btn btn-outline btn-accent btn-icon rounded" href="/postings-delete">
+			<a class="btn btn-outline btn-accent btn-icon rounded" href="/postings/delete">
 				<TrashIcon />
 			</a>
 		</div>
