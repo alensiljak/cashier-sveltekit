@@ -1,6 +1,8 @@
 <script lang="ts">
+    import { goto } from '$app/navigation'
     import Toolbar from '$lib/components/Toolbar.svelte'
     import { Xact, Posting } from '$lib/data/model'
+    import { xact as xactStore, xactSpan } from '$lib/data/mainStore'
 
     // --- Types ---
 
@@ -325,6 +327,13 @@
         transcript = phrase
     }
 
+    function openInEditor() {
+        if (!transaction) return
+        xactStore.set(transaction)
+        xactSpan.set(undefined)
+        goto('/tx')
+    }
+
     function clearAll() {
         transcript = ''
         interimTranscript = ''
@@ -423,6 +432,12 @@
                     <pre class="text-xs bg-base-300 rounded p-3 whitespace-pre-wrap font-mono">{formatBeancount(transaction)}</pre>
                 </div>
             </div>
+        {/if}
+
+        {#if transaction}
+            <button class="btn btn-primary self-center" onclick={openInEditor}>
+                Open in Editor
+            </button>
         {/if}
 
         {#if errorMsg}

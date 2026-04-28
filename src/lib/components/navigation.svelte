@@ -23,7 +23,10 @@
 		HardDriveIcon,
 		CalculatorIcon,
 
-		CalendarIcon
+		CalendarIcon,
+
+		MicIcon
+
 
 	} from '@lucide/svelte';
 
@@ -232,6 +235,12 @@
 						<span class="flex-1"></span>
 					</summary>
 					<ul>
+					<li>
+						<a href="/tools/voice-entry" class="flex w-full items-center gap-2 py-2">
+							<MicIcon />
+							<span>Voice Entry</span>
+						</a>
+					</li>
 						<li>
 							<a
 								href="/tools/serialization"
