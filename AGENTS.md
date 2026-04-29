@@ -9,26 +9,24 @@ It is implemented as a PWA using Svelte and DaisyUI frameworks.
 
 ## Usage Scenarios
 
-The most common scenarios:
-
 ### Mobile App
 
-- Quick balance check.
-- Transaction entry.
+- balance overview
+- quick transaction entry. Stored in `cashier.bean`.
+- import/sync Beancount files into local storage (OPFS)
 
 #### Desktop App
 
-- More detailed review, analysis, reports.
-- Moving transactions from cashier.bean into an appropriate file.
+- detailed review, analysis, reports
+- sorting transactions from `cashier.bean` into appropriate beancount files
 
 ## Architecture
 
-- The app is a PWA with a single page application (SPA) architecture.
-- The app is built using Svelte and DaisyUI frameworks.
-- It is deployed as a static website to Netlify (`npm run deploy`).
-- The ledger is stored in OPFS, in Beancount files. Some data is in IndexedDb.
+- The app is a PWA with a single page application (SPA) architecture, using SvelteKit and DaisyUI frameworks.
+- It is deployed as a static website to Netlify (via `npm run deploy`).
+- The ledger files are stored in OPFS, in Beancount format. The app data is in IndexedDb.
 - The configuration information is in Settinsg table in IndexedDb.
-- The app uses File System API to access full ledger in supported browsers.
+- The app uses File System API to access the ledger files on the device.
 
 ### Rust Ledger WASM
 
