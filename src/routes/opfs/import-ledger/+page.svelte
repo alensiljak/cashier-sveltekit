@@ -213,22 +213,20 @@
 			const result: ScannedFile[] = Array.from({ length: rawFiles.length });
 			const stats = { new: 0, modified: 0, identical: 0, deleted: 0 };
 
-			await processWithConcurrencyLimit(
-				rawFiles.map((rf, idx) => ({ rf, idx })),
-				CONCURRENCY,
-				async ({ rf, idx }) => {
+			await Promise.all(
+				rawFiles.map(async ({ path, getFile, sizeHint, mtimeHint }, idx) => {
 					let size: number;
 					let lastModified: number;
-					if (rf.sizeHint !== undefined && rf.mtimeHint !== undefined) {
-						size = rf.sizeHint;
-						lastModified = rf.mtimeHint;
+					if (sizeHint !== undefined && mtimeHint !== undefined) {
+						size = sizeHint;
+						lastModified = mtimeHint;
 					} else {
-						const file = await rf.getFile();
+						const file = await getFile();
 						size = file.size;
 						lastModified = file.lastModified;
 					}
 
-					const prev = manifest.get(rf.path);
+					const prev = manifest.get(path);
 					let status: FileStatus;
 					if (!prev) {
 						status = 'new';
@@ -238,17 +236,11 @@
 						status = 'modified';
 					}
 
-					result[idx] = {
-						path: rf.path,
-						size,
-						lastModified,
-						getFile: rf.getFile,
-						status
-					};
-					seen.add(rf.path);
+					result[idx] = { path, size, lastModified, getFile, status };
+					seen.add(path);
 					stats[status]++;
 					scanProgress.done++;
-				}
+				})
 			);
 
 			// Detect deletions: manifest entries that no longer exist in source
