@@ -24,7 +24,10 @@
 		HardDriveIcon,
 		CalculatorIcon,
 		CalendarIcon,
-		MicIcon
+		MicIcon,
+
+		ListTreeIcon
+
 	} from '@lucide/svelte';
 
 	function closeDrawer(): void {
@@ -122,6 +125,19 @@
 							>
 								<ChartLineIcon />
 								<span>Reports</span>
+							</a>
+						</li>
+						<li>
+							<a
+								href="/accounts/tree"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname ===
+								'/accounts/tree'
+									? 'active bg-secondary text-secondary-content'
+									: ''}"
+								onclick={closeDrawer}
+							>
+								<ListTreeIcon />
+								<span>Account Tree</span>
 							</a>
 						</li>
 						<li>
