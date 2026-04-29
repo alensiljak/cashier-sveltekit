@@ -3,6 +3,7 @@
 	import { FolderIcon, FolderOpenIcon, FileIcon, TrashIcon, RefreshCcwIcon } from '@lucide/svelte';
 	import * as OpfsLib from '$lib/utils/opfslib.js';
 	import type { FileTreeEntry } from '$lib/utils/opfslib.js';
+	import { getManifest } from '$lib/utils/importManifest';
 
 	type Props = {
 		selectedFile?: string | null;
@@ -24,16 +25,23 @@
 
 	let entries = $state<FileTreeEntry[]>([]);
 	let isLoading = $state(false);
+	let manifest = $state(new Map<string, { importedAt: number }>());
 
 	export async function refresh() {
 		isLoading = true;
 		try {
-			entries = await OpfsLib.listFileTree();
+			[entries, manifest] = await Promise.all([OpfsLib.listFileTree(), getManifest()]);
 		} catch (error: any) {
 			console.error('Error loading files:', error);
 		} finally {
 			isLoading = false;
 		}
+	}
+
+	function isLocallyModified(entry: FileTreeEntry): boolean {
+		if (entry.kind !== 'file' || !entry.lastModified) return false;
+		const meta = manifest.get(entry.path);
+		return !!meta && entry.lastModified > meta.importedAt;
 	}
 
 	onMount(refresh);
@@ -151,6 +159,9 @@
 									<FileIcon class="w-4 h-4 opacity-60 shrink-0" />
 								{/if}
 								{entry.name}
+								{#if isLocallyModified(entry)}
+									<span class="w-2 h-2 rounded-full bg-warning shrink-0" title="Modified locally since last sync"></span>
+								{/if}
 							</span>
 						</td>
 						<td class="text-sm">{entry.kind === 'file' ? formatFileSize(entry.size) : '--'}</td>
