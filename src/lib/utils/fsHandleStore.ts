@@ -66,3 +66,16 @@ export async function requestReadPermission(handle: FileSystemDirectoryHandle): 
 		return false;
 	}
 }
+
+export async function requestWritePermission(handle: FileSystemDirectoryHandle): Promise<boolean> {
+	try {
+		const permission = await (
+			handle as unknown as {
+				requestPermission: (opts: { mode: 'read' | 'readwrite' }) => Promise<PermissionState>;
+			}
+		).requestPermission({ mode: 'readwrite' });
+		return permission === 'granted';
+	} catch {
+		return false;
+	}
+}

@@ -16,31 +16,10 @@
 		type ImportedFileMeta
 	} from '$lib/utils/importManifest';
 	import { processWithConcurrencyLimit } from '$lib/utils/concurrency';
+	import { parseSpecs, matchesAny, collectFsFileHandles } from '$lib/utils/fsScan';
 
 	const HANDLE_KEY = 'importLedgerDirectoryHandle';
 	const CONCURRENCY = 4;
-
-	// ── Glob matching ─────────────────────────────────────────────────────────────
-	function globToRegex(pattern: string): RegExp {
-		const escaped = pattern
-			.trim()
-			.replace(/[.+^${}()|[\]\\]/g, '\\$&')
-			.replace(/\*/g, '.*')
-			.replace(/\?/g, '.');
-		return new RegExp(`^${escaped}$`, 'i');
-	}
-
-	function parseSpecs(raw: string): RegExp[] {
-		return raw
-			.split(',')
-			.map((s) => s.trim())
-			.filter(Boolean)
-			.map(globToRegex);
-	}
-
-	function matchesAny(name: string, patterns: RegExp[]): boolean {
-		return patterns.some((p) => p.test(name));
-	}
 
 	// ── OPFS helpers ──────────────────────────────────────────────────────────────
 	async function writeOpfsFile(path: string, file: File): Promise<void> {
@@ -71,24 +50,6 @@
 			await dir.removeEntry(parts[parts.length - 1]);
 		} catch {
 			// already gone
-		}
-	}
-
-	// ── Recursive file handle collector ───────────────────────────────────────────
-	async function collectFileHandles(
-		dir: FileSystemDirectoryHandle,
-		prefix: string,
-		patterns: RegExp[],
-		out: Array<{ path: string; handle: FileSystemFileHandle }>
-	): Promise<void> {
-		// @ts-expect-error entries() is available in modern browsers
-		for await (const [name, handle] of dir.entries()) {
-			const path = prefix ? `${prefix}/${name}` : name;
-			if (handle.kind === 'file' && matchesAny(name, patterns)) {
-				out.push({ path, handle: handle as FileSystemFileHandle });
-			} else if (handle.kind === 'directory' && !name.startsWith('.')) {
-				await collectFileHandles(handle as FileSystemDirectoryHandle, path, patterns, out);
-			}
 		}
 	}
 
@@ -225,7 +186,7 @@
 
 			if (dirHandle) {
 				const handles: Array<{ path: string; handle: FileSystemFileHandle }> = [];
-				await collectFileHandles(dirHandle, '', patterns, handles);
+				await collectFsFileHandles(dirHandle, '', patterns, handles);
 				for (const { path, handle } of handles) {
 					rawFiles.push({ path, getFile: () => handle.getFile() });
 				}
@@ -529,14 +490,14 @@
 
 		<hr class="my-6 mx-4" />
 
-		<!-- Sync button -->
+		<!-- Import button -->
 		<center class="py-4">
 			<button
 				class="btn btn-accent text-secondary"
 				disabled={phase === 'copying' || phase === 'scanning' || filesToImportCount === 0}
 				onclick={syncToOpfs}
 			>
-				Sync
+				Import
 				{#if scanStats !== null && filesToImportCount > 0}
 					<span class="badge badge-sm">{filesToImportCount}</span>
 				{/if}

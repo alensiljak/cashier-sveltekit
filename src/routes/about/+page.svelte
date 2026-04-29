@@ -58,6 +58,9 @@
 			<li>
 				<a class="link link-primary" href="/demo/webdav">WebDAV demo</a>
 			</li>
+			<li>
+				<a class="link link-primary" href="/opfs/sync">FS sync</a>
+			</li>
 		</ul>
 	</section>
 </article>

@@ -19,6 +19,7 @@
 		ContainerIcon,
 		FolderOpenIcon,
 		FolderInputIcon,
+		ArrowLeftRightIcon,
 		ChartNoAxesCombinedIcon,
 		HardDriveIcon,
 		CalculatorIcon,
@@ -200,6 +201,18 @@
 							>
 								<FolderInputIcon />
 								<span>Ledger Import</span>
+							</a>
+						</li>
+						<li>
+							<a
+								href="/opfs/sync"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/opfs/sync'
+									? 'active bg-secondary text-secondary-content'
+									: ''}"
+								onclick={closeDrawer}
+							>
+								<ArrowLeftRightIcon />
+								<span>Sync</span>
 							</a>
 						</li>
 						<li>
