@@ -59,7 +59,7 @@
 				<a class="link link-primary" href="/demo/webdav">WebDAV demo</a>
 			</li>
 			<li>
-				<a class="link link-primary" href="/opfs/sync">FS sync</a>
+				<a class="link link-primary" href="/accounts/tree">Account Tree</a>
 			</li>
 		</ul>
 	</section>
