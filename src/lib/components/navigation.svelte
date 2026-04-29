@@ -93,7 +93,7 @@
 				</a>
 			</li>
 			<li>
-				<a href="/tools/voice-entry" class="flex w-full items-center gap-2 py-2">
+				<a href="/tools/voice-entry" class="flex w-full items-center gap-2 py-2" onclick={closeDrawer}>
 					<MicIcon />
 					<span>Voice Entry</span>
 				</a>
