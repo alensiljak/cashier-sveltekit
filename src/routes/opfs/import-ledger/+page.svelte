@@ -391,7 +391,7 @@
 <div class="h-screen flex flex-col overflow-hidden">
 	<Toolbar title="Import Ledger to OPFS" />
 
-	<div class="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+	<div class="flex-1 overflow-y-auto touch-pan-y p-4 flex flex-col gap-4">
 
 		<!-- Directory picker -->
 		<section class="flex flex-col gap-2">

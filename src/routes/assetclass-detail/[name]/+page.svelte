@@ -222,7 +222,7 @@
 
 <article class="flex h-screen flex-col">
 	<Toolbar title="Asset Class Detail"></Toolbar>
-	<section class={`h-full p-1 ${cursor} overflow-y-auto`}>
+	<section class={`h-full p-1 ${cursor} overflow-y-auto touch-pan-y`}>
 		<p>{name}</p>
 		<p>Allocation: {data.assetClass?.allocation}</p>
 

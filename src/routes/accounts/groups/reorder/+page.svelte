@@ -120,7 +120,7 @@
 
 	<section
 		role="list"
-		class="grow overflow-y-auto"
+		class="grow overflow-y-auto touch-pan-y"
 		bind:this={listEl}
 		onpointermove={onPointerMove}
 		onpointerup={onPointerUp}

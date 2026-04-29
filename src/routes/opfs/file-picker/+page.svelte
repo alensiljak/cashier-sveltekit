@@ -26,7 +26,7 @@
 </script>
 
 <div class="h-screen flex flex-col overflow-hidden">
-	<div class="flex-1 overflow-y-auto p-4">
+	<div class="flex-1 overflow-y-auto touch-pan-y p-4">
 		{#if returnSetting}
 			<p class="mb-3 text-sm opacity-70">Select a file for <strong>{returnSetting}</strong>, then tap the confirm button.</p>
 		{/if}

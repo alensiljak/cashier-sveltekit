@@ -101,7 +101,7 @@
 	<!-- search toolbar -->
 	<SearchToolbar focus {onSearch} />
 
-	<div class="flex-1 overflow-y-auto px-1">
+	<div class="flex-1 overflow-y-auto touch-pan-y px-1">
 	{#if !dataLoaded}
 		<div class="flex h-full items-center justify-center">
 			<span class="loading loading-spinner loading-lg"></span>

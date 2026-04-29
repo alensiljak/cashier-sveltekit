@@ -151,7 +151,7 @@
 <article class="flex h-screen flex-col">
     <Toolbar title="Speech Entry" />
 
-    <section class="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
+    <section class="flex flex-1 flex-col gap-4 overflow-y-auto p-4 touch-pan-y">
         {#if !supported}
             <div class="alert alert-error">
                 Web Speech API is not supported in this browser. Try Chrome or Edge.

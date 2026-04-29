@@ -126,7 +126,7 @@
 
 <section
 	role="list"
-	class="space-y-2 p-1 max-w-6xl mx-auto overflow-y-auto"
+	class="space-y-2 p-1 max-w-6xl mx-auto overflow-y-auto touch-pan-y"
 	bind:this={listEl}
 	onpointermove={onPointerMove}
 	onpointerup={onPointerUp}

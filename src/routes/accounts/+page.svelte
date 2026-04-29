@@ -80,7 +80,7 @@
 	<!-- search toolbar -->
 	<SearchToolbar focus {onSearch} />
 	<!-- Account list -->
-	<div class="flex-1 overflow-y-auto px-1">
+	<div class="flex-1 overflow-y-auto touch-pan-y px-1">
 	{#if dataLoaded}
 		{#each filteredAccounts as row, i (row.name ?? `undefined-${i}`)}
 			<!-- svelte-ignore a11y_click_events_have_key_events -->

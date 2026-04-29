@@ -86,7 +86,7 @@
 	</div>
 
 	<!-- Chart area -->
-	<section class="grow overflow-y-auto px-4 py-2">
+	<section class="grow overflow-y-auto touch-pan-y px-4 py-2">
 		{#if isLoading}
 			<div class="flex justify-center py-12">
 				<span class="loading loading-spinner loading-md"></span>

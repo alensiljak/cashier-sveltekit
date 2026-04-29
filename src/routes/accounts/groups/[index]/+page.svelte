@@ -252,7 +252,7 @@
 
 	<section
 		role="list"
-		class="grow overflow-y-auto p-1"
+		class="grow overflow-y-auto touch-pan-y p-1"
 		bind:this={listEl}
 		onpointermove={onDragPointerMove}
 		onpointerup={onDragPointerUp}

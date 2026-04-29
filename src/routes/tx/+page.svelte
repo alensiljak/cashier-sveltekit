@@ -75,7 +75,7 @@
 		{/snippet}
 	</Toolbar>
 
-	<section class="container mx-auto flex-1 overflow-y-auto lg:max-w-screen-sm">
+	<section class="container mx-auto flex-1 overflow-y-auto touch-pan-y lg:max-w-screen-sm">
 		<Fab Icon={Check} onclick={onFab} />
 
 		<!-- tx editor -->

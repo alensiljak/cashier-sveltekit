@@ -87,7 +87,7 @@
 
 <article class="flex h-screen flex-col">
 	<Toolbar title="WebDAV Sync Demo" />
-	<section class="flex-1 space-y-4 overflow-y-auto p-4">
+	<section class="flex-1 space-y-4 overflow-y-auto touch-pan-y p-4">
 
 		<!-- Config Card -->
 		<div class="card bg-base-200 shadow-xl">

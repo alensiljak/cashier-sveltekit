@@ -238,7 +238,7 @@ ${where} ORDER BY date DESC`;
 	</div>
 
 	<!-- Results -->
-	<section class="grow overflow-y-auto px-2 py-2">
+	<section class="grow overflow-y-auto touch-pan-y px-2 py-2">
 		{#if isLoading}
 			<div class="flex justify-center py-8">
 				<span class="loading loading-spinner loading-md"></span>
