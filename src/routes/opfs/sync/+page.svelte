@@ -3,6 +3,7 @@
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { FolderOpenIcon, RefreshCcwIcon, ArrowLeftIcon, ArrowRightIcon, PlayIcon, MinusIcon } from '@lucide/svelte';
 	import { settings, SettingKeys } from '$lib/settings';
+	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import {
 		loadPersistedHandle,
 		persistHandle,
@@ -58,6 +59,8 @@
 	let errorMsg = $state('');
 	let logLines = $state<string[]>([]);
 	let consoleEl = $state<HTMLDivElement | null>(null);
+	let reloadPhase = $state<'idle' | 'reloading' | 'done' | 'error'>('idle');
+	let reloadError = $state('');
 
 	$effect(() => {
 		if (logLines.length && consoleEl) {
@@ -248,6 +251,19 @@
 		}
 	}
 
+	async function reloadLedger() {
+		reloadPhase = 'reloading';
+		reloadError = '';
+		try {
+			await fullLedgerService.invalidate();
+			reloadPhase = 'done';
+		} catch (e) {
+			const err = e as { message?: string };
+			reloadError = err?.message ?? String(e);
+			reloadPhase = 'error';
+		}
+	}
+
 	function formatDate(ms?: number): string {
 		if (!ms) return '—';
 		return new Date(ms).toLocaleString();
@@ -417,6 +433,27 @@
 			<div class="alert alert-success text-sm">
 				<span>Sync complete.</span>
 			</div>
+			<center class="py-4">
+				<button
+					class="btn btn-outline"
+					disabled={reloadPhase === 'reloading'}
+					onclick={reloadLedger}
+				>
+					{#if reloadPhase === 'reloading'}
+						<span class="loading loading-spinner loading-sm"></span>
+						Reloading…
+					{:else}
+						<RefreshCcwIcon class="w-4 h-4" />
+						Reload Ledger
+					{/if}
+				</button>
+				{#if reloadPhase === 'done'}
+					<p class="text-xs text-success mt-2">Ledger reloaded.</p>
+				{/if}
+				{#if reloadError}
+					<p class="text-xs text-error mt-2">{reloadError}</p>
+				{/if}
+			</center>
 		{/if}
 
 		{#if errorMsg}
