@@ -189,7 +189,7 @@
 			<p>There are no favourite accounts defined</p>
 		{:else}
 			{#each accounts as account: Account (account.name)}
-				<AccountRow {account} {balancesLoaded} {minBalance} {maxBalance} />
+				<AccountRow {account} {balancesLoaded} {minBalance} {maxBalance} compact />
 			{/each}
 		{/if}
 	{/snippet}

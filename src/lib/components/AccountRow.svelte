@@ -8,9 +8,10 @@
 		balancesLoaded: boolean;
 		minBalance: number;
 		maxBalance: number;
+		compact?: boolean;
 		onclick?: (name: string) => void;
 	};
-	let { account, balancesLoaded, minBalance, maxBalance, onclick }: Props = $props();
+	let { account, balancesLoaded, minBalance, maxBalance, compact = false, onclick }: Props = $props();
 
 	const namespace = $derived(account.getParentName());
 	const leafName = $derived(account.getAccountName());
@@ -37,10 +38,10 @@
 	onkeydown={(e) => e.key === 'Enter' && onclick?.(account.name)}
 >
 	<div class="mr-1 flex min-w-0 grow flex-col">
-		{#if namespace}
+		{#if namespace && !compact}
 			<small class="truncate leading-tight text-base-content/50">{namespace}</small>
 		{/if}
-		<span class={`truncate ${namespace ? 'ml-2' : ''}`}>{leafName}</span>
+		<span class={`truncate ${namespace && !compact ? 'ml-2' : ''}`}>{leafName}</span>
 	</div>
 	<data
 		class={`content-end ml-2 shrink-0 text-right tabular-nums ${balancesLoaded ? getAmountColour(quantity) : 'text-base-content/30'}`}
