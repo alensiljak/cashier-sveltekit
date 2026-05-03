@@ -1,33 +1,37 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
-	import fullLedgerService from '$lib/services/fullLedgerService';
-	import type { BeancountError } from '@rustledger/wasm';
+	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 
+	type ErrorItem = { severity: string; line: number; column: number; message: string };
 	type Status = 'idle' | 'loading' | 'done' | 'error';
 
 	let status: Status = $state('idle');
 	let loadError: string | null = $state(null);
 
 	let isValid = $state(false);
-	let errors: BeancountError[] = $state([]);
-	let warnings: BeancountError[] = $state([]);
+	let errors: ErrorItem[] = $state([]);
+	let warnings: ErrorItem[] = $state([]);
 
 	onMount(async () => {
 		await runValidation();
 	});
 
-	async function runValidation() {
+	async function runValidation(reload = false) {
 		try {
 			status = 'loading';
 			loadError = null;
 
-			await fullLedgerService.load();
+			if (reload) {
+				await fullLedgerService.invalidate();
+			} else {
+				await fullLedgerService.ensureLoaded();
+			}
 
-			const allErrors = fullLedgerService.getErrors();
+			const allErrors = (await fullLedgerService.getErrors()) as ErrorItem[];
 			errors = allErrors.filter((e) => e.severity === 'error');
 			warnings = allErrors.filter((e) => e.severity === 'warning');
-			isValid = fullLedgerService.isValid();
+			isValid = errors.length === 0;
 
 			status = 'done';
 		} catch (err) {
@@ -46,7 +50,7 @@
 	<div class="flex items-center gap-3">
 		<button
 			class="btn btn-primary"
-			onclick={runValidation}
+			onclick={() => runValidation(true)}
 			disabled={status === 'loading'}
 		>
 			{#if status === 'loading'}
