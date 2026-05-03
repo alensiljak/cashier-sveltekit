@@ -26,7 +26,8 @@
 		CalendarIcon,
 		MicIcon,
 
-		ListTreeIcon
+		ListTreeIcon,
+		ShieldCheckIcon
 
 	} from '@lucide/svelte';
 
@@ -289,6 +290,18 @@
 							>
 								<CalculatorIcon />
 								<span>Calculator</span>
+							</a>
+						</li>
+						<li>
+							<a
+								href="/util/validation"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/util/validation'
+									? 'active bg-secondary text-secondary-content'
+									: ''}"
+								onclick={closeDrawer}
+							>
+								<ShieldCheckIcon />
+								<span>Validation</span>
 							</a>
 						</li>
 					</ul>
