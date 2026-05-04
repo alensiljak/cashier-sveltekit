@@ -3,9 +3,10 @@ import type { UserConfig } from 'vite';
 //import { VitePWA } from 'vite-plugin-pwa'
 import { SvelteKitPWA } from '@vite-pwa/sveltekit';
 import { defineConfig } from 'vite';
-// import { svelte } from '@sveltejs/vite-plugin-svelte';
+//import { svelte } from '@sveltejs/vite-plugin-svelte';
 import tailwindcss from '@tailwindcss/vite';
-import mkcert from 'vite-plugin-mkcert';
+//import mkcert from 'vite-plugin-mkcert';
+import path from 'path';
 
 // Generate build timestamp in YYYY-MM-DD HH:mm format (local timezone)
 const now = new Date();
@@ -19,7 +20,8 @@ const config: UserConfig = defineConfig({
 		host: '0.0.0.0',
 		// Ensure WASM files are served correctly in dev mode
 		fs: {
-			allow: ['..']
+			allow: ['..', path.resolve(__dirname, '..', '..', '..', 'node_modules')]
+			//strict: false,
 		}
 		// Needed when running in a container and using source files on the host.
 		// Or, use CHOKIDAR_USEPOLLING env var in devcontainer.json.
