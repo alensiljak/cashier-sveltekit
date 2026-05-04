@@ -20,9 +20,8 @@ const config: UserConfig = defineConfig({
 		host: '0.0.0.0',
 		// Ensure WASM files are served correctly in dev mode
 		fs: {
-      allow: ['..'],
+			allow: ['..', path.resolve(__dirname, '..', '..', '..', 'node_modules')]
 			//strict: false,
-			path.resolve(__dirname, '..', '..', '..', 'node_modules'),
 		}
 		// Needed when running in a container and using source files on the host.
 		// Or, use CHOKIDAR_USEPOLLING env var in devcontainer.json.
