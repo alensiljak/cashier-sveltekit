@@ -190,9 +190,9 @@
 			const rawIncome = markOutliers(buildDetails(monthList, incomeMap));
 			const rawExpenses = markOutliers(buildDetails(monthList, expenseMap));
 
-			months = monthList.map((m) => m.label);
-			incomeData = rawIncome.map((m) => m.total);
-			expensesData = rawExpenses.map((m) => m.total);
+			months = [...monthList].reverse().map((m) => m.label);
+			incomeData = [...rawIncome].reverse().map((m) => m.total);
+			expensesData = [...rawExpenses].reverse().map((m) => m.total);
 			incomeMonths = [...rawIncome].reverse();
 			expenseMonths = [...rawExpenses].reverse();
 		} catch (e) {
