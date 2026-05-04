@@ -16,6 +16,9 @@
 			<a href="/reports/expenses" class="btn btn-primary">
 				Expenses
 			</a>
+			<a href="/reports/income-expense" class="btn btn-primary">
+				Income vs Expenses
+			</a>
 		</div>
 	</div>
 </article>
