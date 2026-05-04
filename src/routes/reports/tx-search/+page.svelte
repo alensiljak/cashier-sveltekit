@@ -3,7 +3,9 @@
 	import { page } from '$app/state';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import AccordionSection from '$lib/components/AccordionSection.svelte';
+	import JournalXactRow from '$lib/components/JournalXactRow.svelte';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
+	import { Xact, Posting } from '$lib/data/model';
 
 	// State
 	let isLoading = $state(false);
@@ -101,29 +103,47 @@ ${where} ORDER BY date DESC`;
 		}
 	}
 
-	function formatCell(value: any): string {
-		if (value == null) return '';
-		if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-			return String(value);
-		}
-		try {
-			return JSON.stringify(value);
-		} catch {
-			return String(value);
-		}
-	}
+	let xacts = $derived.by(() => {
+		if (rows.length === 0 || columns.length === 0) return [] as Xact[];
 
-	// Index of 'number' column for colour coding
-	let numberColIdx = $derived(columns.indexOf('number'));
+		const dateIdx = columns.indexOf('date');
+		const payeeIdx = columns.indexOf('payee');
+		const narrationIdx = columns.indexOf('narration');
+		const accountIdx = columns.indexOf('account');
+		const numberIdx = columns.indexOf('number');
+		const currencyIdx = columns.indexOf('currency');
 
-	// Detect which columns are numeric based on the first row
-	let numericCols = $derived(
-		columns.map((_col, i) => {
-			if (rows.length === 0) return false;
-			const val = rows[0][i];
-			return typeof val === 'number' || (typeof val === 'string' && val !== '' && !isNaN(Number(val)));
-		})
-	);
+		const keyOrder: string[] = [];
+		const groupMap = new Map<string, Xact>();
+
+		for (const row of rows as any[][]) {
+			const date = String(row[dateIdx] ?? '');
+			const payee = String(row[payeeIdx] ?? '');
+			const narration = String(row[narrationIdx] ?? '');
+			const account = String(row[accountIdx] ?? '');
+			const numVal = row[numberIdx];
+			const currency = String(row[currencyIdx] ?? '');
+
+			const key = `${date}\0${payee}\0${narration}`;
+			if (!groupMap.has(key)) {
+				const tx = new Xact();
+				tx.date = date;
+				tx.payee = payee || narration;
+				tx.note = payee ? narration : '';
+				tx.postings = [];
+				keyOrder.push(key);
+				groupMap.set(key, tx);
+			}
+
+			const posting = new Posting();
+			posting.account = account;
+			posting.amount = typeof numVal === 'number' ? numVal : parseFloat(String(numVal));
+			posting.currency = currency;
+			groupMap.get(key)!.postings.push(posting);
+		}
+
+		return keyOrder.map((k) => groupMap.get(k)!);
+	});
 </script>
 
 <article class="flex h-screen flex-col" class:cursor-wait={isLoading}>
@@ -133,7 +153,7 @@ ${where} ORDER BY date DESC`;
 	<div class="px-2 pt-2">
 		<AccordionSection
 			title="Filters"
-			badge={hasSearched ? rows.length : undefined}
+			badge={hasSearched ? xacts.length : undefined}
 			expanded={filtersExpanded}
 			onToggle={() => (filtersExpanded = !filtersExpanded)}
 		>
@@ -258,32 +278,12 @@ ${where} ORDER BY date DESC`;
 		{:else if rows.length === 0}
 			<div class="py-8 text-center text-base-content/50 text-sm">No results.</div>
 		{:else}
-			<div class="overflow-x-auto">
-				<table class="table table-xs w-full [&_tbody_tr:nth-child(even)]:bg-base-200 [&_tbody_tr:nth-child(odd)]:bg-base-100">
-					<thead>
-						<tr>
-							{#each columns as col, i}
-								<th class:text-right={numericCols[i]}>{col}</th>
-							{/each}
-						</tr>
-					</thead>
-					<tbody>
-						{#each rows as row}
-							<tr>
-								{#each columns as _col, i}
-									<td
-										class="font-mono whitespace-nowrap"
-										class:text-right={numericCols[i]}
-										class:text-red-400={i === numberColIdx && parseFloat(row[i]) < 0}
-										class:text-green-500={i === numberColIdx && parseFloat(row[i]) > 0}
-									>
-										{formatCell(row[i])}
-									</td>
-								{/each}
-							</tr>
-						{/each}
-					</tbody>
-				</table>
+			<div class="flex flex-col divide-y divide-base-200">
+				{#each xacts as xact}
+					<div class="py-2">
+						<JournalXactRow {xact} />
+					</div>
+				{/each}
 			</div>
 		{/if}
 	</section>
