@@ -9,9 +9,9 @@
 	import { SelectionType } from '$lib/enums';
 	import { SelectionModeMetadata, SettingKeys, settings, type AccountGroup } from '$lib/settings';
 	import Notifier from '$lib/utils/notifier';
+	import DragReorderList from '$lib/components/DragReorderList.svelte';
 	import {
 		CheckIcon,
-		GripVerticalIcon,
 		PencilIcon,
 		PlusIcon,
 		Trash2Icon,
@@ -66,75 +66,6 @@
 		currentGroup.accounts.push(name);
 		await settings.set(SettingKeys.accountGroups, currentGroups);
 		Notifier.success('Account added');
-	}
-
-	let listEl = $state<HTMLElement | null>(null);
-	let isDragging = $state(false);
-	let dragCurIndex = $state(-1);
-	let ghostName = $state('');
-	let ghostTop = $state(0);
-	let ghostLeft = $state(0);
-	let ghostWidth = $state(0);
-	let ghostHeight = $state(0);
-	let pointerOffsetY = 0;
-	let dragBaseIndex = 0;
-	let dragStartY = 0;
-	let estItemHeight = 44;
-	let autoScrollId: ReturnType<typeof setInterval> | null = null;
-
-	function startDrag(e: PointerEvent, idx: number) {
-		e.preventDefault();
-		const itemEl = (e.currentTarget as HTMLElement).closest('[data-item]') as HTMLElement;
-		const rect = itemEl.getBoundingClientRect();
-		isDragging = true;
-		dragCurIndex = idx;
-		dragBaseIndex = idx;
-		dragStartY = e.clientY;
-		ghostName = accounts[idx];
-		ghostLeft = rect.left;
-		ghostTop = rect.top;
-		ghostWidth = rect.width;
-		ghostHeight = rect.height;
-		pointerOffsetY = e.clientY - rect.top;
-		estItemHeight = rect.height;
-		listEl?.setPointerCapture(e.pointerId);
-	}
-
-	function onDragPointerMove(e: PointerEvent) {
-		if (!isDragging || !listEl) return;
-		ghostTop = e.clientY - pointerOffsetY;
-		const targetIdx = Math.max(
-			0,
-			Math.min(
-				accounts.length - 1,
-				Math.round(dragBaseIndex + (e.clientY - dragStartY) / estItemHeight)
-			)
-		);
-		if (targetIdx !== dragCurIndex) {
-			const updated = [...accounts];
-			const [moved] = updated.splice(dragCurIndex, 1);
-			updated.splice(targetIdx, 0, moved);
-			accounts = updated;
-			dragCurIndex = targetIdx;
-		}
-		const listRect = listEl.getBoundingClientRect();
-		stopAutoScroll();
-		if (e.clientY < listRect.top + 60) {
-			autoScrollId = setInterval(() => { listEl!.scrollTop -= 6; }, 16);
-		} else if (e.clientY > listRect.bottom - 60) {
-			autoScrollId = setInterval(() => { listEl!.scrollTop += 6; }, 16);
-		}
-	}
-
-	function onDragPointerUp() {
-		if (!isDragging) return;
-		isDragging = false;
-		dragCurIndex = -1;
-		stopAutoScroll();
-	}
-
-	function stopAutoScroll() {
-		if (autoScrollId !== null) { clearInterval(autoScrollId); autoScrollId = null; }
 	}
 
 	function onDeleteClicked(i: number) {
@@ -239,56 +170,22 @@
 		</button>
 	</div>
 
-	<!-- Drag ghost -->
-	{#if isDragging}
-		<div
-			class="border-base-300 bg-base-100 pointer-events-none fixed z-50 flex items-center gap-3 border px-3 shadow-xl"
-			style="top: {ghostTop}px; left: {ghostLeft}px; width: {ghostWidth}px; height: {ghostHeight}px;"
-		>
-			<GripVerticalIcon size={18} class="text-base-content/40 shrink-0" />
-			<span class="grow text-sm">{ghostName}</span>
-		</div>
-	{/if}
-
-	<section
-		role="list"
-		class="grow overflow-y-auto touch-pan-y p-1"
-		bind:this={listEl}
-		onpointermove={onDragPointerMove}
-		onpointerup={onDragPointerUp}
-		onpointercancel={onDragPointerUp}
-	>
-		{#if accounts.length === 0}
+	<DragReorderList bind:items={accounts} getLabel={(a) => a} class="grow overflow-y-auto p-1">
+		{#snippet empty()}
 			<p class="p-2 opacity-60">No accounts in this group. Use the menu to add accounts.</p>
-		{:else}
-			{#each accounts as account, i (account)}
-				<div
-					role="listitem"
-					data-item
-					class="border-base-content/15 flex flex-row items-center border-b py-1"
-					class:opacity-20={isDragging && i === dragCurIndex}
-				>
-					<button
-						type="button"
-						class="text-base-content/30 touch-none cursor-grab px-1 active:cursor-grabbing"
-						aria-label="Drag to reorder"
-						onpointerdown={(e) => startDrag(e, i)}
-					>
-						<GripVerticalIcon size={18} />
-					</button>
-					<data class="grow content-center px-2">{account}</data>
-					<button
-						type="button"
-						class="btn btn-outline btn-secondary btn-sm mr-1"
-						onclick={() => onDeleteClicked(i)}
-						aria-label="Remove account"
-					>
-						<TrashIcon size={16} />
-					</button>
-				</div>
-			{/each}
-		{/if}
-	</section>
+		{/snippet}
+		{#snippet row(account, i)}
+			<span class="grow">{account}</span>
+			<button
+				type="button"
+				class="btn btn-outline btn-secondary btn-sm mr-1"
+				onclick={() => onDeleteClicked(i)}
+				aria-label="Remove account"
+			>
+				<TrashIcon size={16} />
+			</button>
+		{/snippet}
+	</DragReorderList>
 </article>
 
 <!-- Rename group dialog -->
