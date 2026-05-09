@@ -1,12 +1,16 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { ChartBar, ChartPie } from '@lucide/svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import PeriodSelector, { type Period } from '$lib/components/PeriodSelector.svelte';
 	import ExpensesBarChart from '$lib/components/ExpensesBarChart.svelte';
+	import ExpensesDonutChart from '$lib/components/ExpensesDonutChart.svelte';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import { SettingKeys, settings } from '$lib/settings';
 
+	type ChartType = 'bar' | 'donut';
+	let chartType = $state<ChartType>('bar');
 	let isLoading = $state(false);
 	let error = $state<string | null>(null);
 	let chartLabels = $state<string[]>([]);
@@ -79,10 +83,28 @@
 <article class="flex h-screen flex-col" class:cursor-wait={isLoading}>
 	<Toolbar title="Expenses" />
 
-	<!-- Period selector -->
+	<!-- Period selector + chart type toggle -->
 	<div class="flex items-center gap-3 px-4 pt-3 pb-2">
 		<span class="text-sm font-medium text-base-content/60">Period:</span>
 		<PeriodSelector onselect={loadExpenses} />
+		<div class="ml-auto flex gap-1">
+			<button
+				class="btn btn-ghost btn-sm btn-square"
+				class:bg-base-200={chartType === 'bar'}
+				onclick={() => (chartType = 'bar')}
+				title="Bar chart"
+			>
+				<ChartBar size={16} />
+			</button>
+			<button
+				class="btn btn-ghost btn-sm btn-square"
+				class:bg-base-200={chartType === 'donut'}
+				onclick={() => (chartType = 'donut')}
+				title="Donut chart"
+			>
+				<ChartPie size={16} />
+			</button>
+		</div>
 	</div>
 
 	<!-- Chart area -->
@@ -97,8 +119,10 @@
 			</div>
 		{:else if chartLabels.length === 0}
 			<div class="py-12 text-center text-base-content/50 text-sm">No expense data for this period.</div>
-		{:else}
+		{:else if chartType === 'bar'}
 			<ExpensesBarChart labels={chartLabels} values={chartValues} onclick={handleBarClick} />
+		{:else}
+			<ExpensesDonutChart labels={chartLabels} values={chartValues} onclick={handleBarClick} />
 		{/if}
 	</section>
 
