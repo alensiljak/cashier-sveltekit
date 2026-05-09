@@ -20,16 +20,13 @@
 				.filter((q) => !isNaN(q) && q > 0);
 			if (quantities.length > 0) {
 				maxBalance = Math.max(...quantities);
-				minBalance = Math.min(...quantities);
 			} else {
 				maxBalance = 0;
-				minBalance = 0;
 			}
 		}
 	});
 
 	let maxBalance: number = $state(0);
-	let minBalance: number = $state(0);
 
 	const lsVersion = fullLedgerService.version;
 	const isReloading = fullLedgerService.isReloading;
@@ -189,7 +186,7 @@
 			<p>There are no favourite accounts defined</p>
 		{:else}
 			{#each accounts as account: Account (account.name)}
-				<AccountRow {account} {balancesLoaded} {minBalance} {maxBalance} compact />
+				<AccountRow {account} {balancesLoaded} {maxBalance} compact />
 			{/each}
 		{/if}
 	{/snippet}

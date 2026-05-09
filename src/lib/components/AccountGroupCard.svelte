@@ -17,7 +17,6 @@
 
 	let accounts: Account[] = $state([]);
 	let maxBalance = $state(0);
-	let minBalance = $state(0);
 	let balancesLoaded = $state(false);
 
 	const lsVersion = fullLedgerService.version;
@@ -35,7 +34,6 @@
 				.map((a) => Math.abs(a.balance?.quantity as number))
 				.filter((q) => !isNaN(q) && q > 0);
 			maxBalance = quantities.length > 0 ? Math.max(...quantities) : 0;
-			minBalance = quantities.length > 0 ? Math.min(...quantities) : 0;
 		}
 	});
 
@@ -146,7 +144,7 @@
 			<p class="px-2 py-1 text-sm opacity-60">No accounts added</p>
 		{:else}
 			{#each accounts as account (account.name)}
-				<AccountRow {account} {balancesLoaded} {minBalance} {maxBalance} onclick={onAccountClick} />
+				<AccountRow {account} {balancesLoaded} {maxBalance} onclick={onAccountClick} />
 			{/each}
 		{/if}
 	{/snippet}

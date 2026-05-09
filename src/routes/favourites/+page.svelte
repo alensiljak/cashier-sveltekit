@@ -21,20 +21,13 @@
 	let accounts: Account[] = $state([]);
 
 	let maxBalance: number = $state(0);
-	let minBalance: number = $state(0);
 
 	$effect(() => {
 		if (accounts.length > 0) {
 			const quantities = accounts
 				.map((account) => Math.abs(account.balance?.quantity as number))
 				.filter((q) => !isNaN(q) && q > 0);
-			if (quantities.length > 0) {
-				maxBalance = Math.max(...quantities);
-				minBalance = Math.min(...quantities);
-			} else {
-				maxBalance = 0;
-				minBalance = 0;
-			}
+			maxBalance = quantities.length > 0 ? Math.max(...quantities) : 0;
 		}
 	});
 
@@ -233,7 +226,6 @@
 					<AccountRow
 						{account}
 						balancesLoaded={true}
-						{minBalance}
 						{maxBalance}
 						onclick={onAccountClick}
 					/>

@@ -6,12 +6,11 @@
 	type Props = {
 		account: Account;
 		balancesLoaded: boolean;
-		minBalance: number;
 		maxBalance: number;
 		compact?: boolean;
 		onclick?: (name: string) => void;
 	};
-	let { account, balancesLoaded, minBalance, maxBalance, compact = false, onclick }: Props = $props();
+	let { account, balancesLoaded, maxBalance, compact = false, onclick }: Props = $props();
 
 	const namespace = $derived(account.getParentName());
 	const leafName = $derived(account.getAccountName());
@@ -20,7 +19,7 @@
 
 	const rowStyle = $derived.by(() => {
 		if (!balancesLoaded) return '';
-		const pct = getBarWidth(quantity, minBalance, maxBalance);
+		const pct = getBarWidth(quantity, maxBalance);
 		if (pct === 0) return '';
 		const color = quantity >= 0 ? '#22c55e' : '#f87171';
 		return `background: linear-gradient(to right, ${color}20 ${pct}%, transparent ${pct}%)`;
