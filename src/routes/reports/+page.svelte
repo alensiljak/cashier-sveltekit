@@ -13,6 +13,9 @@
 			<a href="/reports/tx-search" class="btn btn-primary">
 				Transaction Search
 			</a>
+			<a href="/reports/assets" class="btn btn-primary">
+				Assets
+			</a>
 			<a href="/reports/expenses" class="btn btn-primary">
 				Expenses
 			</a>
