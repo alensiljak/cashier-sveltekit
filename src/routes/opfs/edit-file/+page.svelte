@@ -3,7 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
-	import { SaveIcon, XIcon } from '@lucide/svelte';
+	import { ArrowDownToLineIcon, SaveIcon, XIcon } from '@lucide/svelte';
 	import * as OpfsLib from '$lib/utils/opfslib.js';
 	import Notifier from '$lib/utils/notifier';
 
@@ -16,6 +16,7 @@
 	let hasUnsavedChanges = $state(false);
 	let isLoading = $state(true);
 	let isSaving = $state(false);
+	let textareaEl: HTMLTextAreaElement = $state()!;
 
 	onMount(async () => {
 		if (!filePath) {
@@ -54,6 +55,12 @@
 		goto('/opfs');
 	}
 
+	function scrollToBottom() {
+		textareaEl.focus();
+		textareaEl.setSelectionRange(textareaEl.value.length, textareaEl.value.length);
+		textareaEl.scrollTop = textareaEl.scrollHeight;
+	}
+
 	function onContentChange(event: Event) {
 		const target = event.target as HTMLTextAreaElement;
 		fileContent = target.value;
@@ -77,6 +84,10 @@
 			<span class="text-warning text-sm">*Unsaved changes</span>
 		{/if}
 		<div class="flex-1"></div>
+		<button class="btn btn-ghost btn-sm" onclick={scrollToBottom} title="Go to end">
+			<ArrowDownToLineIcon class="w-4 h-4" />
+			<span class="hidden sm:inline">End</span>
+		</button>
 		<button class="btn btn-ghost btn-sm gap-2" onclick={close}>
 			<XIcon class="w-4 h-4" />
 			Close
@@ -89,6 +100,7 @@
 		</div>
 	{:else}
 		<textarea
+			bind:this={textareaEl}
 			class="flex-1 textarea font-mono text-sm resize-none rounded-none border-0 focus:outline-none w-full"
 			oninput={onContentChange}
 		>{fileContent}</textarea>
