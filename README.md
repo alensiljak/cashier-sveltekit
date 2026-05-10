@@ -22,3 +22,11 @@ $colour5: #076461; // tropical rain forest
 ## Publish
 
 Run `npm run publish` to build and deploy the app to production.
+
+## Development
+
+To use a yet-unpublished version of rustledger, compile the WASM and reference with
+
+```json
+d:/src/rustledger/crates/rustledger-wasm/pkg
+```
