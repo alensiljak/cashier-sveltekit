@@ -3,9 +3,9 @@
 	import { ChevronDown, ChevronRight } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import Toolbar from '$lib/components/Toolbar.svelte';
+	import MultiCurrencyBalance from '$lib/components/MultiCurrencyBalance.svelte';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import appService from '$lib/services/appService';
-	import { getAmountColour } from '$lib/utils/formatter';
 
 	interface TreeNode {
 		name: string;
@@ -126,29 +126,6 @@
 		}
 	}
 
-	function formatBalance(balances: Record<string, number>): string {
-		if (!balances || Object.keys(balances).length === 0) return '';
-		if (defaultCurrency && defaultCurrency in balances && balances[defaultCurrency] !== 0) {
-			return fmt(balances[defaultCurrency], defaultCurrency);
-		}
-		const entry = Object.entries(balances).find(([, v]) => v !== 0);
-		if (!entry) return '';
-		return fmt(entry[1], entry[0]);
-	}
-
-	function getBalanceAmount(balances: Record<string, number>): number {
-		if (!balances || Object.keys(balances).length === 0) return 0;
-		if (defaultCurrency && defaultCurrency in balances) return balances[defaultCurrency];
-		return Object.values(balances).find((v) => v !== 0) ?? 0;
-	}
-
-	function fmt(amount: number, currency: string): string {
-		const formatted = new Intl.NumberFormat(undefined, {
-			minimumFractionDigits: 2,
-			maximumFractionDigits: 2
-		}).format(Math.abs(amount));
-		return `${amount < 0 ? '-' : ''}${formatted} ${currency}`;
-	}
 
 	function getAccountTypeColour(name: string): string {
 		const root = name.split(':')[0];
@@ -179,35 +156,40 @@
 		{#if dataLoaded}
 			<div class="min-w-max">
 				{#each visibleNodes as node (node.name)}
-					<div
-						class="w-full flex items-center border-b border-base-content/15 py-1.5 {getAccountTypeColour(node.name)}"
-						style="padding-left: {node.level * 1.25 + 0.25}rem"
-					>
-						<button
-							class="w-5 h-5 flex items-center justify-center shrink-0 mr-1 rounded hover:bg-base-300"
-							onclick={() => toggleNode(node.name)}
-							tabindex={node.children.length > 0 ? 0 : -1}
-							aria-label={node.expanded ? 'Collapse' : 'Expand'}
+					<div class="border-b border-base-content/15 {getAccountTypeColour(node.name)}">
+						<div
+							class="w-full flex items-start py-1.5"
+							style="padding-left: {node.level * 1.25 + 0.25}rem"
 						>
-							{#if node.children.length > 0}
-								{#if node.expanded}
-									<ChevronDown class="w-4 h-4 opacity-60" />
-								{:else}
-									<ChevronRight class="w-4 h-4 opacity-60" />
+							<button
+								class="w-5 h-5 flex items-center justify-center shrink-0 mr-1 rounded hover:bg-base-300"
+								onclick={() => toggleNode(node.name)}
+								tabindex={node.children.length > 0 ? 0 : -1}
+								aria-label={node.expanded ? 'Collapse' : 'Expand'}
+							>
+								{#if node.children.length > 0}
+									{#if node.expanded}
+										<ChevronDown class="w-4 h-4 opacity-60" />
+									{:else}
+										<ChevronRight class="w-4 h-4 opacity-60" />
+									{/if}
 								{/if}
-							{/if}
-						</button>
-						<!-- svelte-ignore a11y_click_events_have_key_events -->
-						<!-- svelte-ignore a11y_no_static_element_interactions -->
-						<span
-							class="flex-1 whitespace-nowrap cursor-pointer {node.level === 0 ? 'font-semibold' : ''}"
-							onclick={() => goto('/accounts/account-xacts/' + encodeURIComponent(node.name))}
-						>
-							{node.label}
-						</span>
-						<span class="text-sm tabular-nums whitespace-nowrap pr-2 {getAmountColour(getBalanceAmount(node.balances))}">
-							{formatBalance(node.balances)}
-						</span>
+							</button>
+							<!-- svelte-ignore a11y_click_events_have_key_events -->
+							<!-- svelte-ignore a11y_no_static_element_interactions -->
+							<span
+								class="flex-1 whitespace-nowrap cursor-pointer {node.level === 0 ? 'font-semibold' : ''}"
+								onclick={() => goto('/accounts/account-xacts/' + encodeURIComponent(node.name))}
+							>
+								{node.label}
+							</span>
+							<MultiCurrencyBalance
+								balances={node.balances}
+								defaultCurrency={defaultCurrency}
+								loaded={true}
+								class="text-sm pr-2 shrink-0"
+							/>
+						</div>
 					</div>
 				{/each}
 			</div>

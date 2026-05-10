@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Account } from '$lib/data/model';
-	import { formatAmount, getAmountColour } from '$lib/utils/formatter';
 	import { getBarWidth } from '$lib/utils/barWidthCalculator';
+	import MultiCurrencyBalance from './MultiCurrencyBalance.svelte';
 
 	type Props = {
 		account: Account;
@@ -29,7 +29,7 @@
 <!-- svelte-ignore a11y_interactive_supports_focus -->
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <div
-	class={`border-base-content/15 flex w-full flex-row border-b py-0.5 text-base ${isGrayed ? 'text-base-content/50' : ''} ${onclick ? 'cursor-pointer' : ''}`}
+	class={`border-base-content/15 flex w-full flex-row items-start border-b py-0.5 text-base ${isGrayed ? 'text-base-content/50' : ''} ${onclick ? 'cursor-pointer' : ''}`}
 	style={rowStyle}
 	onclick={() => onclick?.(account.name)}
 	role={onclick ? 'button' : undefined}
@@ -42,14 +42,10 @@
 		{/if}
 		<span class={`truncate ${namespace && !compact ? 'ml-2' : ''}`}>{leafName}</span>
 	</div>
-	<data
-		class={`content-end ml-2 shrink-0 text-right tabular-nums ${balancesLoaded ? getAmountColour(quantity) : 'text-base-content/30'}`}
-	>
-		{#if balancesLoaded}
-			{formatAmount(quantity)}
-			{account.balance?.currency}
-		{:else}
-			···
-		{/if}
-	</data>
+	<MultiCurrencyBalance
+		balances={account.balances}
+		defaultCurrency={account.balance?.currency ?? ''}
+		loaded={balancesLoaded}
+		class="ml-2 shrink-0"
+	/>
 </div>
