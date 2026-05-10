@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { tick } from 'svelte';
+	import { goto } from '$app/navigation';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import MultiCurrencyBalance from '$lib/components/MultiCurrencyBalance.svelte';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
@@ -217,13 +218,14 @@
 				{/if}
 			</div>
 		{:else}
-			<div
-				class="flex items-center gap-2 rounded py-1.5 pr-2 hover:bg-base-200"
+			<button
+				class="flex w-full cursor-pointer items-center gap-2 rounded py-1.5 pr-2 hover:bg-base-200"
 				class:opacity-50={node.closed}
 				style="padding-left: {0.5 + node.depth}rem"
+				onclick={() => goto(`/accounts/account-xacts/${encodeURIComponent(node.fullName)}`)}
 			>
 				<span class="w-3 shrink-0"></span>
-				<span class="flex-1 text-sm">{node.name}</span>
+				<span class="flex-1 text-left text-sm">{node.name}</span>
 				{#if showBase}
 					<span class="font-mono text-sm tabular-nums"
 						>{formatAmount(node.value)}&nbsp;{baseCurrency}</span
@@ -236,7 +238,7 @@
 						class="text-sm"
 					/>
 				{/if}
-			</div>
+			</button>
 		{/if}
 	{/if}
 {/snippet}
