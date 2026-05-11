@@ -1,5 +1,18 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
+	import rustledger from '$lib/services/rustledger';
+
+	let wasmVersion = '';
+
+	onMount(async () => {
+		try {
+			await rustledger.ensureInitialized();
+			wasmVersion = rustledger.version();
+		} catch {
+			wasmVersion = 'unavailable';
+		}
+	});
 </script>
 
 <article class="flex h-screen flex-col">
@@ -41,6 +54,9 @@
 		<h3 class="text-3xl font-semibold">Version</h3>
 		<p>
 			Build: <code>{__BUILD_TIMESTAMP__}</code>
+		</p>
+		<p>
+			RustLedger WASM: <code>{wasmVersion || 'loading…'}</code>
 		</p>
 
 		<h3 class="text-3xl font-semibold">Experiments</h3>
