@@ -36,6 +36,19 @@
 		$xact?.postings?.some((p) => !p.account) ?? false
 	);
 
+	let isBalanced = $derived.by(() => {
+		if (!$xact?.postings?.length) return true;
+		const hasAutoBalance = $xact.postings.some((p) => p.account && p.amount == null);
+		const byCurrency: Record<string, number> = {};
+		for (const p of $xact.postings) {
+			if (!p.account || p.amount == null || !p.currency) continue;
+			byCurrency[p.currency] = (byCurrency[p.currency] ?? 0) + p.amount;
+		}
+		// Auto-balance only resolves within a single currency; cross-currency needs a price annotation.
+		if (hasAutoBalance && Object.keys(byCurrency).length <= 1) return true;
+		return Object.values(byCurrency).every((s) => Math.abs(s) <= 0.005);
+	});
+
 	$effect(() => {
 		if (hasPlaceholder && $xact && $xact.flag !== '!') {
 			$xact.flag = '!';
@@ -217,30 +230,38 @@
 
 	<!-- Transaction flag -->
 	<div class="flex flex-col items-center gap-1">
-		<div class="join">
-			<button
-				type="button"
-				title="Mark as incomplete / needs review"
-				class="join-item btn btn-sm"
-				class:btn-warning={$xact.flag === '!'}
-				class:btn-outline={$xact.flag !== '!'}
-				onclick={() => ($xact.flag = '!')}
-			>
-				<TriangleAlertIcon class="h-4 w-4" />
-				<span>!</span>
-			</button>
-			<button
-				type="button"
-				title="Mark as complete"
-				class="join-item btn btn-sm"
-				class:btn-success={$xact.flag === '*'}
-				class:btn-outline={$xact.flag !== '*'}
-				disabled={hasPlaceholder}
-				onclick={() => ($xact.flag = '*')}
-			>
-				<CircleCheckIcon class="h-4 w-4" />
-				<span>*</span>
-			</button>
+		<div class="flex items-center gap-2">
+			<div class="join">
+				<button
+					type="button"
+					title="Mark as incomplete / needs review"
+					class="join-item btn btn-sm"
+					class:btn-warning={$xact.flag === '!'}
+					class:btn-outline={$xact.flag !== '!'}
+					onclick={() => ($xact.flag = '!')}
+				>
+					<TriangleAlertIcon class="h-4 w-4" />
+					<span>!</span>
+				</button>
+				<button
+					type="button"
+					title="Mark as complete"
+					class="join-item btn btn-sm"
+					class:btn-success={$xact.flag === '*'}
+					class:btn-outline={$xact.flag !== '*'}
+					disabled={hasPlaceholder}
+					onclick={() => ($xact.flag = '*')}
+				>
+					<CircleCheckIcon class="h-4 w-4" />
+					<span>*</span>
+				</button>
+			</div>
+			{#if !isBalanced}
+				<span class="text-error text-xs flex items-center gap-1" title="Amounts don't balance — run Validate for details">
+					<TriangleAlertIcon class="h-3 w-3" />
+					unbalanced
+				</span>
+			{/if}
 		</div>
 		{#if hasPlaceholder}
 			<span class="text-warning text-xs">Has uncategorized postings</span>
