@@ -149,10 +149,12 @@ class LedgerWorkerClient {
 		if (this._isLoaded) return;
 		if (get(this._isReloading)) return;
 		try {
+			const useCaching = (await settings.get<boolean>(SettingKeys.ledgerCacheEnabled)) ?? true;
 			await this.send<'load-done'>({
 				type: 'ensure-loaded',
 				mainFileName: await this.mainFileName(),
-				userBookFilename: await this.userBookFilename()
+				userBookFilename: await this.userBookFilename(),
+				useCaching
 			});
 			this.setLoaded(true);
 			this._isConfigured.set(true);
@@ -173,10 +175,12 @@ class LedgerWorkerClient {
 		this._isReloading.set(true);
 		this.setLoaded(false); // prevent queries from reaching the worker while re-parsing
 		try {
+			const useCaching = (await settings.get<boolean>(SettingKeys.ledgerCacheEnabled)) ?? true;
 			await this.send<'load-done'>({
 				type: 'invalidate',
 				mainFileName: await this.mainFileName(),
-				userBookFilename: await this.userBookFilename()
+				userBookFilename: await this.userBookFilename(),
+				useCaching
 			});
 			this.setLoaded(true);
 			this._version.update((v) => v + 1);

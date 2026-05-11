@@ -103,19 +103,22 @@ async function opfsListBeanFiles(): Promise<Array<{ path: string; content: strin
 
 async function loadFromCacheOrFiles(
 	mainFileName: string,
-	userBookFilename?: string
+	userBookFilename?: string,
+	useCaching = true
 ): Promise<void> {
-	const bytes = await opfsReadBinary(LEDGER_CACHE_FILE);
-	if (bytes) {
-		try {
-			if (ledger) {
-				ledger.free();
-				ledger = null;
+	if (useCaching) {
+		const bytes = await opfsReadBinary(LEDGER_CACHE_FILE);
+		if (bytes) {
+			try {
+				if (ledger) {
+					ledger.free();
+					ledger = null;
+				}
+				ledger = wasmModule!.Ledger.fromCache(bytes);
+				return;
+			} catch {
+				// Cache corrupt or version mismatch — fall through to file parse
 			}
-			ledger = wasmModule!.Ledger.fromCache(bytes);
-			return;
-		} catch {
-			// Cache corrupt or version mismatch — fall through to file parse
 		}
 	}
 	await loadFromFiles(mainFileName, userBookFilename);
@@ -132,8 +135,8 @@ async function loadFromCacheOrFiles(
 export type WorkerRequestPayload =
 	// --- Persistent-ledger operations ---
 	| { type: 'load'; mainFileName: string; userBookFilename?: string }
-	| { type: 'ensure-loaded'; mainFileName: string; userBookFilename?: string }
-	| { type: 'invalidate'; mainFileName: string; userBookFilename?: string }
+	| { type: 'ensure-loaded'; mainFileName: string; userBookFilename?: string; useCaching?: boolean }
+	| { type: 'invalidate'; mainFileName: string; userBookFilename?: string; useCaching?: boolean }
 	| { type: 'query'; bql: string }
 	| { type: 'get-directives' }
 	| { type: 'get-errors' }
@@ -233,7 +236,7 @@ async function handleMessage(e: MessageEvent<WorkerRequest>): Promise<void> {
 			case 'ensure-loaded': {
 				if (!ledger) {
 					const t0 = performance.now();
-					await loadFromCacheOrFiles(e.data.mainFileName, e.data.userBookFilename);
+					await loadFromCacheOrFiles(e.data.mainFileName, e.data.userBookFilename, e.data.useCaching ?? true);
 					const ms = performance.now() - t0;
 					reply({
 						type: 'load-done',
@@ -256,10 +259,12 @@ async function handleMessage(e: MessageEvent<WorkerRequest>): Promise<void> {
 				const t0 = performance.now();
 				await loadFromFiles(e.data.mainFileName, e.data.userBookFilename);
 				// Update the cache so future ensure-loaded calls get fresh data
-				try {
-					await opfsSaveBinary(LEDGER_CACHE_FILE, ledger!.serialize());
-				} catch {
-					// Non-fatal — cache update failed but ledger is in memory
+				if (e.data.useCaching ?? true) {
+					try {
+						await opfsSaveBinary(LEDGER_CACHE_FILE, ledger!.serialize());
+					} catch {
+						// Non-fatal — cache update failed but ledger is in memory
+					}
 				}
 				const ms = performance.now() - t0;
 				reply({

@@ -18,6 +18,7 @@
 	Notifier.init();
 
 	let rememberLastTransaction = $state<boolean>();
+	let ledgerCacheEnabled = $state<boolean>(true);
 	let currency = $state<string>();
 	let bookCurrencies = $state<string[]>([]);
 	let bookFilename = $state<string | null>(null);
@@ -38,7 +39,9 @@
 	let assetAllocationDirty = $derived(
 		loaded && assetAllocationDefinition !== savedAssetAllocationDefinition
 	);
-	let rootInvestmentDirty = $derived(loaded && rootInvestmentAccount !== savedRootInvestmentAccount);
+	let rootInvestmentDirty = $derived(
+		loaded && rootInvestmentAccount !== savedRootInvestmentAccount
+	);
 
 	// Save form state before navigating away (e.g. to file picker)
 	beforeNavigate(() => {
@@ -96,12 +99,13 @@
 		// Load saved DB values (used for revert comparison and as fallback)
 		savedCurrency = (await appService.getDefaultCurrency()) ?? undefined;
 		savedBookFilename = (await appService.readBookFilename()) ?? null;
-		savedRootInvestmentAccount = (await settings.get<string>(
-			SettingKeys.rootInvestmentAccount
-		)) as string | undefined;
+		savedRootInvestmentAccount = (await settings.get<string>(SettingKeys.rootInvestmentAccount)) as
+			| string
+			| undefined;
 		savedRememberLastTransaction = (await settings.get<boolean>(
 			SettingKeys.rememberLastTransaction
 		)) as boolean | undefined;
+		ledgerCacheEnabled = (await settings.get<boolean>(SettingKeys.ledgerCacheEnabled)) ?? true;
 		savedAssetAllocationDefinition =
 			(await settings.get<string>(SettingKeys.assetAllocationDefinition)) ?? null;
 
@@ -117,7 +121,8 @@
 		rememberLastTransaction = pending?.rememberLastTransaction ?? savedRememberLastTransaction;
 		if (!bookFilename) bookFilename = pending?.bookFilename ?? savedBookFilename;
 		if (!assetAllocationDefinition)
-			assetAllocationDefinition = pending?.assetAllocationDefinition ?? savedAssetAllocationDefinition;
+			assetAllocationDefinition =
+				pending?.assetAllocationDefinition ?? savedAssetAllocationDefinition;
 		rootInvestmentAccount = pending?.rootInvestmentAccount ?? savedRootInvestmentAccount;
 	}
 
@@ -131,6 +136,7 @@
 
 		await settings.set(SettingKeys.rootInvestmentAccount, rootInvestmentAccount);
 		await settings.set(SettingKeys.rememberLastTransaction, rememberLastTransaction);
+		await settings.set(SettingKeys.ledgerCacheEnabled, ledgerCacheEnabled);
 		await settings.set(SettingKeys.assetAllocationDefinition, assetAllocationDefinition);
 
 		// Save book filename in cashier.bean
@@ -283,6 +289,23 @@
 			{/if}
 		</div>
 	</div>
+
+	<!-- Ledger cache -->
+	<section>
+		<h3 class="text-xl font-bold">Ledger Caching</h3>
+
+		<div class="my-3">
+		<label for="ledger-cache-enabled" class="flex items-center space-x-2">
+			<input
+				id="ledger-cache-enabled"
+				class="checkbox checkbox-primary rounded"
+				type="checkbox"
+				bind:checked={ledgerCacheEnabled}
+			/>
+			<p>Enable ledger cache (load from binary cache on startup).</p>
+		</label>
+		</div>
+	</section>
 
 	<Fab Icon={Check} onclick={saveSettings} />
 </main>
