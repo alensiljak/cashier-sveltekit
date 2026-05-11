@@ -6,8 +6,8 @@
 	let bql = $state('SELECT account, sum(number) as balance, currency ORDER BY account');
 
 	// Source selection
-	let useLiteLedger = $state(true);
-	let useFullLedger = $state(false);
+	let useLiteLedger = $state(false);
+	let useFullLedger = $state(true);
 
 	// Lite Ledger results
 	let liteLedgerColumns: string[] = $state([]);
