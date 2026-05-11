@@ -1,8 +1,11 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
 	import Toolbar from '$lib/components/Toolbar.svelte';
+	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import type { UnifiedXact } from './+page.js';
 	import * as Formatter from '$lib/utils/formatter';
+	import { ScaleIcon } from '@lucide/svelte';
 
 	const PAGE_SIZE = 30;
 	let visibleCount = $state(PAGE_SIZE);
@@ -24,7 +27,15 @@
 </script>
 
 <article class="flex h-screen flex-col">
-	<Toolbar title="Account Transactions"></Toolbar>
+	<Toolbar title="Account Transactions">
+		{#snippet menuItems()}
+			<ToolbarMenuItem
+				Icon={ScaleIcon}
+				text="Balance Adjustment"
+				onclick={() => goto(`/accounts/bal-adj?account=${encodeURIComponent(page.data.account.name)}`)}
+			/>
+		{/snippet}
+	</Toolbar>
 
 	<section class="min-h-0 flex-1 overflow-y-auto space-y-2 p-1">
 		<header>

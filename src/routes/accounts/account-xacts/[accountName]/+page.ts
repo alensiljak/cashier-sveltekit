@@ -38,7 +38,7 @@ export async function load({ params }) {
 
 	// Full ledger transactions for this account
 	const bql = `SELECT date, payee, narration, number, currency \
-WHERE account = '${params.accountName}' ORDER BY date DESC`;
+WHERE account = '${params.accountName}'`;
 	const { columns, rows, errors } = await fullLedgerService.query(bql);
 	if (errors?.length) console.warn('Ledger xact query errors:', errors);
 
