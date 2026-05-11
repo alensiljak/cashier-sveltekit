@@ -2,9 +2,10 @@
     Account Transactions
 */
 
-import { Account, Money } from '$lib/data/model.js';
+import { Account, Money, type Xact } from '$lib/data/model.js';
 import ledgerService from '$lib/services/ledgerService.js';
 import fullLedgerService from '$lib/services/ledgerWorkerClient';
+import type { DirectiveSpan } from '$lib/rledger/sourceEditor';
 
 export type UnifiedXact = {
 	date: string;
@@ -13,6 +14,8 @@ export type UnifiedXact = {
 	amount: number;
 	currency: string;
 	isDevice: boolean;
+	xact?: Xact;
+	span?: DirectiveSpan;
 };
 
 export async function load({ params }) {
@@ -32,9 +35,10 @@ export async function load({ params }) {
 
 	// On-device transactions
 	await ledgerService.load();
-	const xacts = ledgerService
-		.getXacts()
-		.filter((xact) => xact.postings?.some((p) => p.account === params.accountName));
+	const xactsWithSpans = await ledgerService.getXactsWithSpans();
+	const deviceXacts = xactsWithSpans.filter(({ xact }) =>
+		xact.postings?.some((p) => p.account === params.accountName)
+	);
 
 	// Full ledger transactions for this account
 	const bql = `SELECT date, payee, narration, number, currency \
@@ -43,7 +47,7 @@ WHERE account = '${params.accountName}'`;
 	if (errors?.length) console.warn('Ledger xact query errors:', errors);
 
 	// Normalize device xacts
-	const deviceRows: UnifiedXact[] = xacts.map((xact) => {
+	const deviceRows: UnifiedXact[] = deviceXacts.map(({ xact, span }) => {
 		const posting = xact.postings?.find((p) => p.account === params.accountName);
 		return {
 			date: xact.date ?? '',
@@ -51,7 +55,9 @@ WHERE account = '${params.accountName}'`;
 			narration: xact.note ?? '',
 			amount: posting?.amount ?? 0,
 			currency: posting?.currency ?? '',
-			isDevice: true
+			isDevice: true,
+			xact,
+			span
 		};
 	});
 
@@ -85,6 +91,8 @@ WHERE account = '${params.accountName}'`;
 		);
 		if (matchIdx !== -1) {
 			ledgerNormalized[matchIdx].isDevice = true;
+			ledgerNormalized[matchIdx].xact = dr.xact;
+			ledgerNormalized[matchIdx].span = dr.span;
 		} else {
 			unmatchedDeviceRows.push(dr);
 		}

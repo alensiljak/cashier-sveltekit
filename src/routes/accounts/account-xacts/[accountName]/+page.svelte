@@ -6,10 +6,18 @@
 	import type { UnifiedXact } from './+page.js';
 	import * as Formatter from '$lib/utils/formatter';
 	import { ScaleIcon } from '@lucide/svelte';
+	import { xact, xactSpan } from '$lib/data/mainStore';
 
 	const PAGE_SIZE = 30;
 	let visibleCount = $state(PAGE_SIZE);
 	let sentinel = $state<HTMLElement | null>(null);
+
+	async function onRowClick(row: UnifiedXact) {
+		if (!row.isDevice || !row.xact || !row.span) return;
+		xact.set(row.xact);
+		xactSpan.set(row.span);
+		await goto('/xact-actions');
+	}
 
 	const allRows = $derived(page.data.unifiedRows as UnifiedXact[]);
 	const visibleRows = $derived(allRows.slice(0, visibleCount));
@@ -69,8 +77,11 @@
 			{#each visibleRows as row (row)}
 				<div
 					class="flex flex-row px-2 {row.isDevice
-						? 'border-l-2 border-amber-400 bg-amber-50/60 dark:bg-amber-950/25'
+						? 'cursor-pointer border-l-2 border-amber-400 bg-amber-50/60 dark:bg-amber-950/25'
 						: ''}"
+					onclick={() => onRowClick(row)}
+					onkeypress={() => onRowClick(row)}
+					{...row.isDevice ? { role: 'button', tabindex: 0 } : {}}
 				>
 					<data class="mr-4 shrink-0">{row.date}</data>
 					<data class="grow">
