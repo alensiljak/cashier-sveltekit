@@ -3,7 +3,7 @@
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import Notifier from '$lib/utils/notifier';
 	import { settings, SettingKeys } from '$lib/settings';
-	import { WebDavClient } from '$lib/utils/webdav';
+	import { WebDavClient, type WebDavEntry } from '$lib/utils/webdav';
 	import { ChevronRight, ChevronUp } from '@lucide/svelte';
 
 	let url = '';
@@ -18,6 +18,9 @@
 	let corsError = false;
 	let uploadOpen = false;
 	let downloadOpen = false;
+	let isTesting = false;
+	let remoteFiles: WebDavEntry[] = [];
+	let testDone = false;
 
 	onMount(async () => {
 		const saved = await settings.get<{ url: string; username: string; password: string }>(
@@ -29,6 +32,30 @@
 			password = saved.password ?? '';
 		}
 	});
+
+	async function testSettings(): Promise<void> {
+		if (!url) {
+			Notifier.error('WebDAV URL is required');
+			return;
+		}
+		isTesting = true;
+		corsError = false;
+		remoteFiles = [];
+		testDone = false;
+		try {
+			remoteFiles = await new WebDavClient(url, username, password).list();
+			testDone = true;
+			Notifier.success(`Found ${remoteFiles.length} item(s)`);
+		} catch (err) {
+			const msg = (err as Error).message;
+			if (msg.toLowerCase().includes('cors') || msg.toLowerCase().includes('network')) {
+				corsError = true;
+			}
+			Notifier.error('Test failed: ' + msg);
+		} finally {
+			isTesting = false;
+		}
+	}
 
 	async function saveSettings() {
 		await settings.set(SettingKeys.webdavSettings, { url, username, password });
@@ -134,6 +161,46 @@
 						class="input input-bordered md:flex-1"
 					/>
 				</div>
+			</div>
+		</div>
+
+		<!-- Test Settings -->
+		<div class="card bg-base-200 shadow-xl">
+			<div class="card-body p-4">
+				<h2 class="card-title text-lg">Test Settings</h2>
+				<p class="text-sm opacity-70">List the files in the configured directory to verify connectivity and credentials.</p>
+				<button class="btn btn-secondary mt-2 self-start" onclick={testSettings} disabled={isTesting}>
+					{#if isTesting}
+						<span class="loading loading-spinner loading-sm"></span>
+					{/if}
+					Test Settings
+				</button>
+				{#if testDone}
+					{#if remoteFiles.length === 0}
+						<p class="mt-3 text-sm opacity-70">Directory is empty.</p>
+					{:else}
+						<div class="overflow-x-auto mt-3">
+							<table class="table table-sm">
+								<thead>
+									<tr>
+										<th>Name</th>
+										<th class="text-right">Size</th>
+										<th>Last Modified</th>
+									</tr>
+								</thead>
+								<tbody>
+									{#each remoteFiles as f}
+										<tr>
+											<td class="font-mono text-xs">{f.isDirectory ? '📁 ' : ''}{f.name}</td>
+											<td class="text-right text-xs tabular-nums">{f.size != null ? f.size.toLocaleString() + ' B' : '—'}</td>
+											<td class="text-xs">{f.lastModified ? f.lastModified.toLocaleString() : '—'}</td>
+										</tr>
+									{/each}
+								</tbody>
+							</table>
+						</div>
+					{/if}
+				{/if}
 			</div>
 		</div>
 

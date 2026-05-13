@@ -1,3 +1,10 @@
+export interface WebDavEntry {
+    name: string;
+    isDirectory: boolean;
+    size: number | null;
+    lastModified: Date | null;
+}
+
 export class WebDavClient {
     private baseUrl: string;
     private username: string;
@@ -30,6 +37,33 @@ export class WebDavClient {
             method: 'GET',
             headers: { Authorization: this.authHeader() }
         });
+    }
+
+    async list(): Promise<WebDavEntry[]> {
+        const res = await fetch(this.baseUrl, {
+            method: 'PROPFIND',
+            headers: {
+                Authorization: this.authHeader(),
+                Depth: '1',
+                'Content-Type': 'application/xml'
+            },
+            body: `<?xml version="1.0"?><d:propfind xmlns:d="DAV:"><d:prop><d:displayname/><d:getlastmodified/><d:getcontentlength/><d:resourcetype/></d:prop></d:propfind>`
+        });
+        if (!res.ok) throw new Error(`PROPFIND failed: ${res.status} ${res.statusText}`);
+        const doc = new DOMParser().parseFromString(await res.text(), 'application/xml');
+        const ns = 'DAV:';
+        return Array.from(doc.getElementsByTagNameNS(ns, 'response'))
+            .slice(1) // skip the directory itself
+            .map(r => {
+                const href = r.getElementsByTagNameNS(ns, 'href')[0]?.textContent ?? '';
+                const name = decodeURIComponent(href.split('/').filter(Boolean).pop() ?? href);
+                const isDirectory = r.getElementsByTagNameNS(ns, 'collection').length > 0;
+                const sizeEl = r.getElementsByTagNameNS(ns, 'getcontentlength')[0];
+                const size = sizeEl?.textContent ? parseInt(sizeEl.textContent, 10) : null;
+                const lmEl = r.getElementsByTagNameNS(ns, 'getlastmodified')[0];
+                const lastModified = lmEl?.textContent ? new Date(lmEl.textContent) : null;
+                return { name, isDirectory, size, lastModified };
+            });
     }
 
     async lastModified(filename: string): Promise<Date | null> {

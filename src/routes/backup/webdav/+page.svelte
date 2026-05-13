@@ -143,7 +143,7 @@
     </section>
     {/if}
     <section class="my-4">
-        <div class="flex items-center gap-2 mb-3">
+        <div class="flex items-center justify-between mb-3">
             <h2 class="text-lg font-semibold">Files</h2>
             {#if isCheckingRemote}
             <RefreshCwIcon size={14} class="animate-spin text-base-content/40" />
@@ -157,21 +157,17 @@
         <div class="flex flex-col gap-3">
             <label class="flex items-center gap-3 cursor-pointer">
                 <input type="checkbox" class="checkbox checkbox-primary" bind:checked={includeSettings} />
-                <div>
-                    <span>Settings</span>
-                    {#if settingsLastModified}
-                    <span class="text-xs text-base-content/50 block">{settingsLastModified.toLocaleString()}</span>
-                    {/if}
-                </div>
+                <span class="flex-1">Settings</span>
+                {#if settingsLastModified}
+                <span class="text-xs text-base-content/50">{settingsLastModified.toLocaleString()}</span>
+                {/if}
             </label>
             <label class="flex items-center gap-3 cursor-pointer">
                 <input type="checkbox" class="checkbox checkbox-primary" bind:checked={includeCashierBean} />
-                <div>
-                    <span>cashier.bean</span>
-                    {#if cashierBeanLastModified}
-                    <span class="text-xs text-base-content/50 block">{cashierBeanLastModified.toLocaleString()}</span>
-                    {/if}
-                </div>
+                <span class="flex-1">cashier.bean</span>
+                {#if cashierBeanLastModified}
+                <span class="text-xs text-base-content/50">{cashierBeanLastModified.toLocaleString()}</span>
+                {/if}
             </label>
         </div>
     </section>
