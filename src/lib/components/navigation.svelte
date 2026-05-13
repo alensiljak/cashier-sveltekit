@@ -27,7 +27,10 @@
 		MicIcon,
 
 		ListTreeIcon,
-		ShieldCheckIcon
+		ShieldCheckIcon,
+
+		CloudUploadIcon
+
 
 	} from '@lucide/svelte';
 
@@ -242,6 +245,18 @@
 							>
 								<DatabaseIcon />
 								<span>Backup</span>
+							</a>
+						</li>
+						<li>
+							<a
+								href="/backup/webdav"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/backup/webdav'
+									? 'active bg-secondary text-secondary-content'
+									: ''}"
+								onclick={closeDrawer}
+							>
+								<CloudUploadIcon />
+								<span>WebDAV Backup</span>
 							</a>
 						</li>
 						<li>

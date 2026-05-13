@@ -85,7 +85,9 @@ export const SettingKeys = {
 	// Whether to use the binary ledger cache on load (default: true)
 	ledgerCacheEnabled: 'ledgerCacheEnabled',
 	// Account groups for the groups page
-	accountGroups: 'accountGroups'
+	accountGroups: 'accountGroups',
+	// WebDAV backup configuration
+	webdavSettings: 'webdav-settings'
 };
 
 export const CardNames = {

@@ -9,7 +9,7 @@
 	import { goto, replaceState } from '$app/navigation';
 	import { DefaultCurrencyStore, PendingSettingsStore } from '$lib/data/mainStore.js';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
-	import { BoxIcon, Check, FileBraces, RotateCcw } from '@lucide/svelte';
+	import { BoxIcon, Check, FileBraces, NetworkIcon, RotateCcw } from '@lucide/svelte';
 	import Fab from '$lib/components/FAB.svelte';
 	import { page } from '$app/state';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
@@ -159,6 +159,7 @@
 	{#snippet menuItems()}
 		<ToolbarMenuItem text="OPFS Storage" Icon={BoxIcon} onclick={onOpfsClick} />
 		<ToolbarMenuItem text="JSON Editor" Icon={FileBraces} targetNav="/settings/json-editor" />
+		<ToolbarMenuItem text="WebDAV Config" Icon={NetworkIcon} targetNav="/settings/webdav-cfg" />
 	{/snippet}
 </Toolbar>
 

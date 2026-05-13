@@ -1,42 +1,48 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import Notifier from '$lib/utils/notifier';
+	import { settings, SettingKeys } from '$lib/settings';
+	import { WebDavClient } from '$lib/utils/webdav';
+	import { ChevronRight, ChevronUp } from '@lucide/svelte';
 
 	let url = '';
 	let username = '';
 	let password = '';
-	let filename = 'cashier.bean';
+	let uploadFilename = 'cashier.bean';
+	let downloadFilename = 'cashier.bean';
 	let content = '';
 	let readContent = '';
 	let isUploading = false;
 	let isDownloading = false;
 	let corsError = false;
+	let uploadOpen = false;
+	let downloadOpen = false;
 
-	function buildAuthHeader(): string {
-		return 'Basic ' + btoa(`${username}:${password}`);
-	}
+	onMount(async () => {
+		const saved = await settings.get<{ url: string; username: string; password: string }>(
+			SettingKeys.webdavSettings
+		);
+		if (saved) {
+			url = saved.url ?? '';
+			username = saved.username ?? '';
+			password = saved.password ?? '';
+		}
+	});
 
-	function fileUrl(): string {
-		const base = url.endsWith('/') ? url : url + '/';
-		return base + filename;
+	async function saveSettings() {
+		await settings.set(SettingKeys.webdavSettings, { url, username, password });
 	}
 
 	async function upload(): Promise<void> {
-		if (!url || !filename || !content) {
+		if (!url || !uploadFilename || !content) {
 			Notifier.error('URL, filename, and content are required');
 			return;
 		}
 		isUploading = true;
 		corsError = false;
 		try {
-			const res = await fetch(fileUrl(), {
-				method: 'PUT',
-				headers: {
-					Authorization: buildAuthHeader(),
-					'Content-Type': 'text/plain; charset=utf-8'
-				},
-				body: content
-			});
+			const res = await new WebDavClient(url, username, password).put(uploadFilename, content);
 			if (res.ok) {
 				Notifier.success(`Uploaded: ${res.status} ${res.statusText}`);
 			} else {
@@ -54,19 +60,14 @@
 	}
 
 	async function download(): Promise<void> {
-		if (!url || !filename) {
+		if (!url || !downloadFilename) {
 			Notifier.error('URL and filename are required');
 			return;
 		}
 		isDownloading = true;
 		corsError = false;
 		try {
-			const res = await fetch(fileUrl(), {
-				method: 'GET',
-				headers: {
-					Authorization: buildAuthHeader()
-				}
-			});
+			const res = await new WebDavClient(url, username, password).get(downloadFilename);
 			if (res.ok) {
 				readContent = await res.text();
 				Notifier.success('File downloaded');
@@ -94,53 +95,43 @@
 			<div class="card-body p-4">
 				<h2 class="card-title text-lg">Configuration</h2>
 
-				<div class="form-control">
-					<label class="label" for="dav-url">
+				<div class="form-control md:flex-row md:items-center md:gap-3">
+					<label class="label md:w-40 md:flex-shrink-0" for="dav-url">
 						<span class="label-text">WebDAV folder URL</span>
 					</label>
 					<input
 						id="dav-url"
 						type="url"
 						bind:value={url}
+						onchange={saveSettings}
 						placeholder="https://nextcloud.example.com/remote.php/dav/files/user/cashier/"
-						class="input input-bordered font-mono text-sm"
+						class="input input-bordered font-mono text-sm md:flex-1"
 					/>
 				</div>
 
-				<div class="grid grid-cols-2 gap-2 mt-2">
-					<div class="form-control">
-						<label class="label" for="dav-user">
-							<span class="label-text">Username</span>
-						</label>
-						<input
-							id="dav-user"
-							type="text"
-							bind:value={username}
-							class="input input-bordered"
-						/>
-					</div>
-					<div class="form-control">
-						<label class="label" for="dav-pass">
-							<span class="label-text">Password / App token</span>
-						</label>
-						<input
-							id="dav-pass"
-							type="password"
-							bind:value={password}
-							class="input input-bordered"
-						/>
-					</div>
-				</div>
-
-				<div class="form-control mt-2">
-					<label class="label" for="dav-filename">
-						<span class="label-text">File name</span>
+				<div class="form-control mt-2 md:flex-row md:items-center md:gap-3 md:mt-0">
+					<label class="label md:w-40 md:flex-shrink-0" for="dav-user">
+						<span class="label-text">Username</span>
 					</label>
 					<input
-						id="dav-filename"
+						id="dav-user"
 						type="text"
-						bind:value={filename}
-						class="input input-bordered font-mono"
+						bind:value={username}
+						onchange={saveSettings}
+						class="input input-bordered md:flex-1"
+					/>
+				</div>
+
+				<div class="form-control mt-2 md:flex-row md:items-center md:gap-3 md:mt-0">
+					<label class="label md:w-40 md:flex-shrink-0" for="dav-pass">
+						<span class="label-text">Password / App token</span>
+					</label>
+					<input
+						id="dav-pass"
+						type="password"
+						bind:value={password}
+						onchange={saveSettings}
+						class="input input-bordered md:flex-1"
 					/>
 				</div>
 			</div>
@@ -160,10 +151,25 @@
 		{/if}
 
 		<!-- Upload Card -->
-		<div class="card bg-base-200 shadow-xl">
-			<div class="card-body p-4">
+		<details class="card bg-base-200 shadow-xl" bind:open={uploadOpen}>
+			<summary class="card-body p-4 cursor-pointer flex flex-row justify-between items-center">
 				<h2 class="card-title text-lg">Upload (PUT)</h2>
-				<p class="text-sm opacity-70">Paste or type the content to send to the remote file.</p>
+				{#if uploadOpen}<ChevronUp size={20} />{:else}<ChevronRight size={20} />{/if}
+			</summary>
+			<div class="card-body p-4 pt-0">
+				<div class="form-control md:flex-row md:items-center md:gap-3">
+					<label class="label md:w-32 md:flex-shrink-0" for="upload-filename">
+						<span class="label-text">File name</span>
+					</label>
+					<input
+						id="upload-filename"
+						type="text"
+						bind:value={uploadFilename}
+						class="input input-bordered font-mono md:flex-1"
+					/>
+				</div>
+
+				<p class="text-sm opacity-70 mt-2">Paste or type the content to send to the remote file.</p>
 
 				<div class="form-control mt-2">
 					<label class="label" for="upload-content">
@@ -179,7 +185,7 @@
 
 				<button
 					class="btn btn-primary mt-3"
-					on:click={upload}
+					onclick={upload}
 					disabled={isUploading}
 				>
 					{#if isUploading}
@@ -188,16 +194,30 @@
 					Upload file
 				</button>
 			</div>
-		</div>
+		</details>
 
 		<!-- Download Card -->
-		<div class="card bg-base-200 shadow-xl">
-			<div class="card-body p-4">
+		<details class="card bg-base-200 shadow-xl" bind:open={downloadOpen}>
+			<summary class="card-body p-4 cursor-pointer flex flex-row justify-between items-center">
 				<h2 class="card-title text-lg">Download (GET)</h2>
+				{#if downloadOpen}<ChevronUp size={20} />{:else}<ChevronRight size={20} />{/if}
+			</summary>
+			<div class="card-body p-4 pt-0">
+				<div class="form-control md:flex-row md:items-center md:gap-3">
+					<label class="label md:w-32 md:flex-shrink-0" for="download-filename">
+						<span class="label-text">File name</span>
+					</label>
+					<input
+						id="download-filename"
+						type="text"
+						bind:value={downloadFilename}
+						class="input input-bordered font-mono md:flex-1"
+					/>
+				</div>
 
 				<button
-					class="btn btn-primary"
-					on:click={download}
+					class="btn btn-primary mt-3"
+					onclick={download}
 					disabled={isDownloading}
 				>
 					{#if isDownloading}
@@ -220,7 +240,7 @@
 					</div>
 				{/if}
 			</div>
-		</div>
+		</details>
 
 		<!-- Notes -->
 		<div class="card bg-base-200 shadow-xl">
@@ -237,3 +257,8 @@
 
 	</section>
 </article>
+
+<style>
+	details > summary { list-style: none; }
+	details > summary::-webkit-details-marker { display: none; }
+</style>
