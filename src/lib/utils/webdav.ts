@@ -31,4 +31,18 @@ export class WebDavClient {
             headers: { Authorization: this.authHeader() }
         });
     }
+
+    async lastModified(filename: string): Promise<Date | null> {
+        try {
+            const res = await fetch(this.fileUrl(filename), {
+                method: 'HEAD',
+                headers: { Authorization: this.authHeader() }
+            });
+            if (!res.ok) return null;
+            const lm = res.headers.get('Last-Modified');
+            return lm ? new Date(lm) : null;
+        } catch {
+            return null;
+        }
+    }
 }

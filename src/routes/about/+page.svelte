@@ -71,9 +71,6 @@
 			<li>
 				<a class="link link-primary" href="/ledger/multi">Parsed Multi Ledger</a>
 			</li>
-			<li>
-				<a class="link link-primary" href="/demo/webdav">WebDAV demo</a>
-			</li>
 		</ul>
 	</section>
 </article>

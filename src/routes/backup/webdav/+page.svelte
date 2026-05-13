@@ -7,7 +7,7 @@
     import { readFile, saveFile } from '$lib/utils/opfslib';
     import Notifier from '$lib/utils/notifier';
     import { WebDavClient } from '$lib/utils/webdav';
-    import { SettingsIcon } from '@lucide/svelte';
+    import { SettingsIcon, RefreshCwIcon } from '@lucide/svelte';
 
     let includeSettings = $state(false);
     let includeCashierBean = $state(false);
@@ -17,13 +17,33 @@
     let webdavPassword = $state('');
     let isUploading = $state(false);
     let isDownloading = $state(false);
+    let isCheckingRemote = $state(false);
+    let settingsLastModified = $state<Date | null>(null);
+    let cashierBeanLastModified = $state<Date | null>(null);
 
     onMount(async () => {
         const saved = await settings.get<{ url: string; username: string; password: string }>(SettingKeys.webdavSettings);
         webdavUrl = saved?.url ?? '';
         webdavUsername = saved?.username ?? '';
         webdavPassword = saved?.password ?? '';
+        fetchLastModified();
     });
+
+    async function fetchLastModified() {
+        if (!webdavUrl) return;
+        isCheckingRemote = true;
+        const dav = client();
+        try {
+            const [sm, cm] = await Promise.allSettled([
+                dav.lastModified('settings.json'),
+                dav.lastModified('cashier.bean'),
+            ]);
+            if (sm.status === 'fulfilled') settingsLastModified = sm.value;
+            if (cm.status === 'fulfilled') cashierBeanLastModified = cm.value;
+        } finally {
+            isCheckingRemote = false;
+        }
+    }
 
     function client() {
         return new WebDavClient(webdavUrl, webdavUsername, webdavPassword);
@@ -54,6 +74,7 @@
             Notifier.error('Upload error: ' + (err as Error).message);
         } finally {
             isUploading = false;
+            fetchLastModified();
         }
     }
 
@@ -122,20 +143,40 @@
     </section>
     {/if}
     <section class="my-4">
-        <h2 class="text-lg font-semibold mb-3">Files</h2>
+        <div class="flex items-center gap-2 mb-3">
+            <h2 class="text-lg font-semibold">Files</h2>
+            {#if isCheckingRemote}
+            <RefreshCwIcon size={14} class="animate-spin text-base-content/40" />
+            {:else if webdavUrl}
+            <button class="text-xs text-base-content/40 hover:text-base-content/70 flex items-center gap-1 cursor-pointer" onclick={fetchLastModified}>
+                <RefreshCwIcon size={12} />
+                refresh
+            </button>
+            {/if}
+        </div>
         <div class="flex flex-col gap-3">
             <label class="flex items-center gap-3 cursor-pointer">
                 <input type="checkbox" class="checkbox checkbox-primary" bind:checked={includeSettings} />
-                <span>Settings</span>
+                <div>
+                    <span>Settings</span>
+                    {#if settingsLastModified}
+                    <span class="text-xs text-base-content/50 block">{settingsLastModified.toLocaleString()}</span>
+                    {/if}
+                </div>
             </label>
             <label class="flex items-center gap-3 cursor-pointer">
                 <input type="checkbox" class="checkbox checkbox-primary" bind:checked={includeCashierBean} />
-                <span>cashier.bean</span>
+                <div>
+                    <span>cashier.bean</span>
+                    {#if cashierBeanLastModified}
+                    <span class="text-xs text-base-content/50 block">{cashierBeanLastModified.toLocaleString()}</span>
+                    {/if}
+                </div>
             </label>
         </div>
     </section>
 
-    <section class="flex gap-3">
+    <section class="flex gap-3 justify-center">
         <button class="btn btn-primary" disabled={!includeSettings && !includeCashierBean || isUploading} onclick={upload}>
             {#if isUploading}<span class="loading loading-spinner loading-sm"></span>{/if}
             Upload
