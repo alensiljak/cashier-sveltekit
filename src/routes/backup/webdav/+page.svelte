@@ -7,7 +7,8 @@
     import { readFile, saveFile } from '$lib/utils/opfslib';
     import Notifier from '$lib/utils/notifier';
     import { WebDavClient } from '$lib/utils/webdav';
-    import { SettingsIcon, RefreshCwIcon } from '@lucide/svelte';
+    import { SettingsIcon, RefreshCwIcon, GitCompareArrowsIcon, EyeIcon } from '@lucide/svelte';
+    import { goto } from '$app/navigation';
 
     let includeSettings = $state(false);
     let includeCashierBean = $state(false);
@@ -20,6 +21,8 @@
     let isCheckingRemote = $state(false);
     let settingsLastModified = $state<Date | null>(null);
     let cashierBeanLastModified = $state<Date | null>(null);
+
+    const noneSelected = $derived(!includeSettings && !includeCashierBean);
 
     onMount(async () => {
         const saved = await settings.get<{ url: string; username: string; password: string }>(SettingKeys.webdavSettings);
@@ -47,6 +50,13 @@
 
     function client() {
         return new WebDavClient(webdavUrl, webdavUsername, webdavPassword);
+    }
+
+    function fileParams(): URLSearchParams {
+        const p = new URLSearchParams();
+        if (includeSettings) p.append('f', 'settings');
+        if (includeCashierBean) p.append('f', 'bean');
+        return p;
     }
 
     async function upload() {
@@ -119,6 +129,14 @@
         showDownloadDialog = false;
     }
 
+    function openDiff() {
+        goto(`/backup/webdav/diff?${fileParams()}`);
+    }
+
+    function openPreview(source: 'local' | 'remote') {
+        goto(`/backup/webdav/preview?source=${source}&${fileParams()}`);
+    }
+
     const selectedLabels = $derived([
         ...(includeSettings ? ['Settings'] : []),
         ...(includeCashierBean ? ['cashier.bean'] : [])
@@ -172,18 +190,31 @@
         </div>
     </section>
 
+    <!-- Primary actions -->
     <section class="flex gap-3 justify-center">
-        <button class="btn btn-primary" disabled={!includeSettings && !includeCashierBean || isUploading} onclick={upload}>
+        <button class="btn btn-primary" disabled={noneSelected || isUploading} onclick={upload}>
             {#if isUploading}<span class="loading loading-spinner loading-sm"></span>{/if}
             Upload
         </button>
-        <button
-            class="btn btn-outline btn-error"
-            disabled={!includeSettings && !includeCashierBean || isDownloading}
-            onclick={onDownloadClick}
-        >
+        <button class="btn btn-outline btn-error" disabled={noneSelected || isDownloading} onclick={onDownloadClick}>
             {#if isDownloading}<span class="loading loading-spinner loading-sm"></span>{/if}
             Download
+        </button>
+    </section>
+
+    <!-- View actions -->
+    <section class="flex gap-3 justify-center flex-wrap">
+        <button class="btn btn-secondary" disabled={noneSelected} onclick={openDiff}>
+            <GitCompareArrowsIcon size={16} />
+            Diff
+        </button>
+        <button class="btn btn-outline" disabled={noneSelected} onclick={() => openPreview('local')}>
+            <EyeIcon size={16} />
+            Preview Local
+        </button>
+        <button class="btn btn-outline" disabled={noneSelected} onclick={() => openPreview('remote')}>
+            <EyeIcon size={16} />
+            Preview Remote
         </button>
     </section>
 </main>
