@@ -77,9 +77,6 @@ export const SettingKeys = {
 	// import book from filesystem via File System API
 	importBookDirectory: 'importBookDirectory',
 	importBookFileSpec: 'importBookFileSpec',
-	// Full path to the main book/journal file (set via fs-sync page) on external filesystem.
-	// externalBook: 'externalBook',
-	// externalAssetAllocation: 'externalAssetAllocation',
 	// SHA-256 hash of source files at last serialization, stored alongside the OPFS binary cache
 	ledgerCacheHash: 'ledgerCacheHash',
 	// Whether to use the binary ledger cache on load (default: true)

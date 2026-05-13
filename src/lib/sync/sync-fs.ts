@@ -59,38 +59,38 @@ async function loadPersistedHandle(): Promise<FileSystemDirectoryHandle | null> 
 	}
 }
 
-async function readExternalBeancountFile(): Promise<{
-	fileName: string;
-	content: string;
-	dirHandle: FileSystemDirectoryHandle;
-}> {
-	const externalBook = await settings.get<string>(SettingKeys.externalBook);
-	if (!externalBook) {
-		throw new Error('No book root file configured. Please select a file in the fs-sync page.');
-	}
+// async function readExternalBeancountFile(): Promise<{
+// 	fileName: string;
+// 	content: string;
+// 	dirHandle: FileSystemDirectoryHandle;
+// }> {
+// 	const externalBook = await settings.get<string>(SettingKeys.externalBook);
+// 	if (!externalBook) {
+// 		throw new Error('No book root file configured. Please select a file in the fs-sync page.');
+// 	}
 
-	const parts = externalBook.split('/');
-	const fileName = parts.pop();
-	if (!fileName) {
-		throw new Error('Invalid externalBook path');
-	}
+// 	const parts = externalBook.split('/');
+// 	const fileName = parts.pop();
+// 	if (!fileName) {
+// 		throw new Error('Invalid externalBook path');
+// 	}
 
-	const dirHandle = await loadPersistedHandle();
-	if (!dirHandle) {
-		throw new Error('No directory selected. Please open a directory in the fs-sync page.');
-	}
+// 	const dirHandle = await loadPersistedHandle();
+// 	if (!dirHandle) {
+// 		throw new Error('No directory selected. Please open a directory in the fs-sync page.');
+// 	}
 
-	const permission = await (dirHandle as any).requestPermission({ mode: 'read' });
-	if (permission !== 'granted') {
-		throw new Error('Read permission denied for directory');
-	}
+// 	const permission = await (dirHandle as any).requestPermission({ mode: 'read' });
+// 	if (permission !== 'granted') {
+// 		throw new Error('Read permission denied for directory');
+// 	}
 
-	const fileHandle = await dirHandle.getFileHandle(fileName);
-	const file = await fileHandle.getFile();
-	const content = await file.text();
+// 	const fileHandle = await dirHandle.getFileHandle(fileName);
+// 	const file = await fileHandle.getFile();
+// 	const content = await file.text();
 
-	return { fileName, content, dirHandle };
-}
+// 	return { fileName, content, dirHandle };
+// }
 
 function parseIncludeFilenames(content: string): string[] {
 	const filenames: string[] = [];
@@ -144,39 +144,39 @@ async function collectAllFiles(
 /**
  * Load all beancount files from the filesystem, resolving includes.
  */
-export async function loadFileMap(): Promise<{
-	fileMap: Record<string, string>;
-	mainFileName: string;
-	dirHandle: FileSystemDirectoryHandle;
-}> {
-	const {
-		fileName: mainFileName,
-		content: mainContent,
-		dirHandle
-	} = await readExternalBeancountFile();
+// export async function loadFileMap(): Promise<{
+// 	fileMap: Record<string, string>;
+// 	mainFileName: string;
+// 	dirHandle: FileSystemDirectoryHandle;
+// }> {
+// 	const {
+// 		fileName: mainFileName,
+// 		content: mainContent,
+// 		dirHandle
+// 	} = await readExternalBeancountFile();
 
-	const fileMap: Record<string, string> = {};
-	await collectAllFiles(dirHandle, mainFileName, mainContent, fileMap);
+// 	const fileMap: Record<string, string> = {};
+// 	await collectAllFiles(dirHandle, mainFileName, mainContent, fileMap);
 
-	return { fileMap, mainFileName, dirHandle };
-}
+// 	return { fileMap, mainFileName, dirHandle };
+// }
 
 async function synchronize(syncOptions: syncCommon.SyncSteps): Promise<boolean> {
 	try {
 		// Initialize sync progress
-		initializeSyncProgress();
+		// initializeSyncProgress();
 
 		// Parse all files once and cache in the full ledger singleton.
-		await fullLedgerService.invalidate();
+		// await fullLedgerService.invalidate();
 
-		const errors = await fullLedgerService.getErrors();
-		if (errors.length > 0) {
-			console.log('Parse errors:', errors);
-			throw new Error('Parsing errors occurred. See console for details.');
-		}
+		// const errors = await fullLedgerService.getErrors();
+		// if (errors.length > 0) {
+		// 	console.log('Parse errors:', errors);
+		// 	throw new Error('Parsing errors occurred. See console for details.');
+		// }
 
 		// Run queries and store results via sync-common.
-		const queries = getQueries(PtaSystems.rledger);
+		// const queries = getQueries(PtaSystems.rledger);
 
 		// Synchronization steps:
 
@@ -195,20 +195,21 @@ async function synchronize(syncOptions: syncCommon.SyncSteps): Promise<boolean> 
 		// }
 
 		// - current values in the base currency (for asset allocation)
-		if (syncOptions.syncAaValues) {
-			updateSyncStep(3, 'in-progress');
-			await syncCurrentValues(queries);
-			updateSyncStep(3, 'completed');
-		}
+		// if (syncOptions.syncAaValues) {
+		// 	updateSyncStep(3, 'in-progress');
+		// 	await syncCurrentValues(queries);
+		// 	updateSyncStep(3, 'completed');
+		// }
 
 		// - payees
-		if (syncOptions.syncPayees) {
-			updateSyncStep(4, 'in-progress');
-			await syncPayees(queries);
-			updateSyncStep(4, 'completed');
-		}
+		// if (syncOptions.syncPayees) {
+		// 	updateSyncStep(4, 'in-progress');
+		// 	await syncPayees(queries);
+		// 	updateSyncStep(4, 'completed');
+		// }
 
-		return true;
+		// return true;
+		return false;
 	} catch (error) {
 		console.error('Synchronization error:', error);
 		// Update the current step to error
@@ -314,36 +315,36 @@ async function synchronize(syncOptions: syncCommon.SyncSteps): Promise<boolean> 
  * @param fileMap
  * @param mainFileName
  */
-async function syncCurrentValues(queries: ReturnType<typeof getQueries>) {
-	// currentValues query
-	const rootAccount = (await settings.get(SettingKeys.rootInvestmentAccount)) as string;
-	if (!rootAccount) {
-		throw new Error('No root investment account set!');
-	}
-	const currency = await settings.get<string>(SettingKeys.currency);
-	if (!currency) {
-		throw new Error('No default currency set!');
-	}
+// async function syncCurrentValues(queries: ReturnType<typeof getQueries>) {
+// 	// currentValues query
+// 	const rootAccount = (await settings.get(SettingKeys.rootInvestmentAccount)) as string;
+// 	if (!rootAccount) {
+// 		throw new Error('No root investment account set!');
+// 	}
+// 	const currency = await settings.get<string>(SettingKeys.currency);
+// 	if (!currency) {
+// 		throw new Error('No default currency set!');
+// 	}
 
-	const query = queries.currentValues(rootAccount, currency);
-	const result = await fullLedgerService.query(query);
-	// result = { columns, errors, rows }
+// 	const query = queries.currentValues(rootAccount, currency);
+// 	const result = await fullLedgerService.query(query);
+// 	// result = { columns, errors, rows }
 
-	if (result.errors.length > 0) {
-		console.log('Query errors:', result.errors);
-		throw new Error('Errors occurred during query execution. See console for details.');
-	}
+// 	if (result.errors.length > 0) {
+// 		console.log('Query errors:', result.errors);
+// 		throw new Error('Errors occurred during query execution. See console for details.');
+// 	}
 
-	// row = [account, value]
-	// creates { "account": amount }
-	const currentValues: CurrentValuesDict = {};
-	result.rows.forEach((row: any) => {
-		currentValues[row[0]] = Money.fromString(row[1]);
-	});
+// 	// row = [account, value]
+// 	// creates { "account": amount }
+// 	const currentValues: CurrentValuesDict = {};
+// 	result.rows.forEach((row: any) => {
+// 		currentValues[row[0]] = Money.fromString(row[1]);
+// 	});
 
-	const aa = new AssetAllocationEngine();
-	await aa.importCurrentValues(currentValues);
-}
+// 	const aa = new AssetAllocationEngine();
+// 	await aa.importCurrentValues(currentValues);
+// }
 
 async function syncPayees(queries: ReturnType<typeof getQueries>) {
 	// const from = moment().subtract(20, 'years').format(ISODATEFORMAT);
