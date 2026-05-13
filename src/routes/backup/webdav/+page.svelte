@@ -63,7 +63,7 @@
             }
             if (includeCashierBean) {
                 const content = await readFile('cashier.bean');
-                if (!content) { Notifier.error('cashier.bean not found in local storage'); }
+                if (content === undefined) { Notifier.error('cashier.bean not found in private filesystem'); }
                 else {
                     const res = await dav.put('cashier.bean', content);
                     if (res.ok) Notifier.success('cashier.bean uploaded');
