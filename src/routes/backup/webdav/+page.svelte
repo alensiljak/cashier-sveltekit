@@ -234,6 +234,6 @@
                 <button class="btn btn-warning" onclick={confirmDownload}>Overwrite</button>
             </div>
         </div>
-        <div class="modal-backdrop" onclick={cancelDownload}></div>
+        <button class="modal-backdrop" aria-label="Close" onclick={cancelDownload}></button>
     </div>
 {/if}
