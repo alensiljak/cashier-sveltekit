@@ -18,7 +18,9 @@
 		FileTextIcon,
 		CirclePlusIcon,
 		TriangleAlertIcon,
-		CircleCheckIcon
+		CircleCheckIcon,
+		ChevronLeftIcon,
+		ChevronRightIcon
 	} from '@lucide/svelte';
 	import { Big } from 'big.js';
 
@@ -192,11 +194,19 @@
 		}
 	}
 
+	function shiftDate(days: number) {
+		if (!$xact?.date) return;
+		const d = new Date($xact.date);
+		d.setDate(d.getDate() + days);
+		$xact.date = d.toISOString().slice(0, 10);
+	}
+
 </script>
 
 <div class="flex h-full flex-col space-y-3 py-2">
 	<div class="flex items-center">
 		<CalendarIcon class="h-5 w-5 mr-2 opacity-70" />
+		<button type="button" class="btn btn-ghost h-11 w-11 p-0" onclick={() => shiftDate(-1)}><ChevronLeftIcon class="h-4 w-4" /></button>
 		<input
 			title="Date"
 			placeholder="Date"
@@ -204,6 +214,7 @@
 			class="input rounded"
 			bind:value={$xact.date}
 		/>
+		<button type="button" class="btn btn-ghost h-11 w-11 p-0" onclick={() => shiftDate(1)}><ChevronRightIcon class="h-4 w-4" /></button>
 	</div>
 	<div class="flex items-center">
 		<UserIcon class="h-5 w-5 mr-2 opacity-70" />
