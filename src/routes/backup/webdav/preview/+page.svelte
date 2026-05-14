@@ -5,6 +5,7 @@
     import { settings, SettingKeys } from '$lib/settings';
     import { readFile } from '$lib/utils/opfslib';
     import { WebDavClient } from '$lib/utils/webdav';
+    import { CheckIcon, CopyIcon } from '@lucide/svelte';
 
     type PreviewSection = { filename: string; content: string };
 
@@ -12,6 +13,13 @@
     let loading = $state(true);
     let error = $state('');
     let source = $state<'local' | 'remote'>('local');
+    let copiedIndex = $state<number | null>(null);
+
+    async function copySection(content: string, index: number) {
+        await navigator.clipboard.writeText(content);
+        copiedIndex = index;
+        setTimeout(() => { copiedIndex = null; }, 1500);
+    }
 
     onMount(async () => {
         const params = page.url.searchParams;
@@ -69,9 +77,24 @@
         {:else if error}
             <div class="alert alert-error text-sm">{error}</div>
         {:else}
-            {#each sections as section}
+            {#each sections as section, i}
                 <div>
-                    <p class="font-mono text-sm font-semibold mb-1 text-base-content/70">{section.filename}</p>
+                    <div class="flex items-center gap-2 mb-1">
+                        <p class="font-mono text-sm font-semibold text-base-content/70 flex-1">{section.filename}</p>
+                        <button
+                            class="btn btn-ghost btn-xs gap-1"
+                            onclick={() => copySection(section.content, i)}
+                            title="Copy to clipboard"
+                        >
+                            {#if copiedIndex === i}
+                                <CheckIcon size={14} />
+                                Copied
+                            {:else}
+                                <CopyIcon size={14} />
+                                Copy
+                            {/if}
+                        </button>
+                    </div>
                     <pre class="text-xs font-mono leading-5 overflow-x-auto rounded bg-base-200 p-2 select-text whitespace-pre">{section.content}</pre>
                 </div>
             {/each}
