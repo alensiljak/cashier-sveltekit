@@ -2,8 +2,19 @@
 	import { onMount } from 'svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import rustledger from '$lib/services/rustledger';
+	import { useRegisterSW } from 'virtual:pwa-register/svelte';
+	import { RefreshCw } from '@lucide/svelte';
 
 	let wasmVersion = '';
+	let checking = false;
+	let updateChecked = false;
+	let registration: ServiceWorkerRegistration | undefined;
+
+	const { needRefresh, updateServiceWorker } = useRegisterSW({
+		onRegistered(r) {
+			registration = r;
+		}
+	});
 
 	onMount(async () => {
 		try {
@@ -13,6 +24,17 @@
 			wasmVersion = 'unavailable';
 		}
 	});
+
+	async function checkForUpdates() {
+		checking = true;
+		updateChecked = false;
+		try {
+			await registration?.update();
+		} finally {
+			checking = false;
+			updateChecked = true;
+		}
+	}
 </script>
 
 <article class="flex h-screen flex-col">
@@ -58,6 +80,19 @@
 		<p>
 			RustLedger WASM: <code>{wasmVersion || 'loading…'}</code>
 		</p>
+		<p>
+			<button class="link link-primary inline-flex items-center gap-1" onclick={checkForUpdates} disabled={checking}>
+				<RefreshCw size={14} class={checking ? 'animate-spin' : ''} />
+				{checking ? 'Checking…' : 'Check for updates'}
+			</button>
+		</p>
+		{#if updateChecked && !$needRefresh}
+			<p>You are on the latest version.</p>
+		{/if}
+		{#if $needRefresh}
+			<p>A new version is available.</p>
+			<button class="btn btn-sm btn-primary" onclick={() => updateServiceWorker(true)}>Update</button>
+		{/if}
 
 		<h3 class="text-3xl font-semibold">Experiments</h3>
 
