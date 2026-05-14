@@ -35,6 +35,7 @@ export class WebDavClient {
     async get(filename: string): Promise<Response> {
         return fetch(this.fileUrl(filename), {
             method: 'GET',
+            cache: 'no-store',
             headers: { Authorization: this.authHeader() }
         });
     }
@@ -42,6 +43,7 @@ export class WebDavClient {
     async list(): Promise<WebDavEntry[]> {
         const res = await fetch(this.baseUrl, {
             method: 'PROPFIND',
+            cache: 'no-store',
             headers: {
                 Authorization: this.authHeader(),
                 Depth: '1',
@@ -70,6 +72,7 @@ export class WebDavClient {
         try {
             const res = await fetch(this.fileUrl(filename), {
                 method: 'HEAD',
+                cache: 'no-store',
                 headers: { Authorization: this.authHeader() }
             });
             if (!res.ok) return null;
