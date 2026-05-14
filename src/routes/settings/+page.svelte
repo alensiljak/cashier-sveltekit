@@ -17,6 +17,16 @@
 
 	Notifier.init();
 
+	const DATE_FORMAT_DEFAULT = 'D MMM YYYY';
+
+	const dateFormatOptions = [
+		{ label: '29 Aug 2026', value: 'D MMM YYYY' },
+		{ label: 'Aug 29, 2026', value: 'MMM D, YYYY' },
+		{ label: '2026-08-29 (ISO)', value: 'YYYY-MM-DD' },
+		{ label: '29/08/2026', value: 'DD/MM/YYYY' },
+		{ label: '08/29/2026', value: 'MM/DD/YYYY' }
+	];
+
 	let rememberLastTransaction = $state<boolean>();
 	let ledgerCacheEnabled = $state<boolean>(true);
 	let currency = $state<string>();
@@ -24,6 +34,7 @@
 	let bookFilename = $state<string | null>(null);
 	let assetAllocationDefinition = $state<string | null>(null);
 	let rootInvestmentAccount = $state<string>();
+	let dateFormat = $state<string>(DATE_FORMAT_DEFAULT);
 	let loaded = $state(false);
 
 	// Saved (DB) values for revert comparison
@@ -32,6 +43,7 @@
 	let savedAssetAllocationDefinition = $state<string | null>(null);
 	let savedRootInvestmentAccount = $state<string | undefined>(undefined);
 	let savedRememberLastTransaction = $state<boolean | undefined>(undefined);
+	let savedDateFormat = $state<string>(DATE_FORMAT_DEFAULT);
 
 	// Dirty flags — only meaningful after initial load
 	let currencyDirty = $derived(loaded && currency !== savedCurrency);
@@ -42,6 +54,7 @@
 	let rootInvestmentDirty = $derived(
 		loaded && rootInvestmentAccount !== savedRootInvestmentAccount
 	);
+	let dateFormatDirty = $derived(loaded && dateFormat !== savedDateFormat);
 
 	// Save form state before navigating away (e.g. to file picker)
 	beforeNavigate(() => {
@@ -51,7 +64,8 @@
 				rememberLastTransaction,
 				bookFilename,
 				assetAllocationDefinition,
-				rootInvestmentAccount
+				rootInvestmentAccount,
+				dateFormat
 			});
 		}
 	});
@@ -108,6 +122,8 @@
 		ledgerCacheEnabled = (await settings.get<boolean>(SettingKeys.ledgerCacheEnabled)) ?? true;
 		savedAssetAllocationDefinition =
 			(await settings.get<string>(SettingKeys.assetAllocationDefinition)) ?? null;
+		savedDateFormat =
+			(await settings.get<string>(SettingKeys.dateFormat)) ?? DATE_FORMAT_DEFAULT;
 
 		// Auto-detect currency from book if not saved yet
 		if (!savedCurrency && bookCurrencies.length > 0) {
@@ -124,6 +140,7 @@
 			assetAllocationDefinition =
 				pending?.assetAllocationDefinition ?? savedAssetAllocationDefinition;
 		rootInvestmentAccount = pending?.rootInvestmentAccount ?? savedRootInvestmentAccount;
+		dateFormat = pending?.dateFormat ?? savedDateFormat;
 	}
 
 	async function onOpfsClick() {
@@ -138,6 +155,7 @@
 		await settings.set(SettingKeys.rememberLastTransaction, rememberLastTransaction);
 		await settings.set(SettingKeys.ledgerCacheEnabled, ledgerCacheEnabled);
 		await settings.set(SettingKeys.assetAllocationDefinition, assetAllocationDefinition);
+		await settings.set(SettingKeys.dateFormat, dateFormat);
 
 		// Save book filename in cashier.bean
 		if (bookFilename) {
@@ -308,6 +326,31 @@
 		</label>
 		</div>
 	</section>
+
+	<h3 class="text-xl font-bold">Formatting</h3>
+
+	<div class="form-control w-full">
+		<label for="date-format" class="label">
+			<span class="label-text">Date Format</span>
+		</label>
+		<div class="flex gap-2">
+			<select id="date-format" class="select rounded flex-1" bind:value={dateFormat}>
+				{#each dateFormatOptions as opt}
+					<option value={opt.value}>{opt.label}</option>
+				{/each}
+			</select>
+			{#if dateFormatDirty}
+				<button
+					type="button"
+					class="btn btn-outline btn-error btn-sm btn-square rounded"
+					title="Revert change"
+					onclick={() => (dateFormat = savedDateFormat)}
+				>
+					<RotateCcw size={16} />
+				</button>
+			{/if}
+		</div>
+	</div>
 
 	<Fab Icon={Check} onclick={saveSettings} />
 </main>

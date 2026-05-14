@@ -41,6 +41,7 @@ export interface PendingSettings {
 	bookFilename?: string | null;
 	assetAllocationDefinition?: string | null;
 	rootInvestmentAccount?: string;
+	dateFormat?: string;
 }
 
 export const PendingSettingsStore: Writable<PendingSettings | undefined> = writable(undefined);

@@ -84,7 +84,9 @@ export const SettingKeys = {
 	// Account groups for the groups page
 	accountGroups: 'accountGroups',
 	// WebDAV backup configuration
-	webdavSettings: 'webdav-settings'
+	webdavSettings: 'webdav-settings',
+	// Date display format (moment.js format string)
+	dateFormat: 'dateFormat'
 };
 
 export const CardNames = {
