@@ -23,8 +23,18 @@
 		ChevronRightIcon
 	} from '@lucide/svelte';
 	import { Big } from 'big.js';
+	import moment from 'moment';
 
 	Notifier.init();
+
+	const DATE_FORMAT_DEFAULT = 'D MMM YYYY';
+	let dateFormatValue = $state(DATE_FORMAT_DEFAULT);
+	let dateInputEl: HTMLInputElement | undefined;
+
+	let formattedDate = $derived.by(() => {
+		if (!$xact?.date) return 'Date';
+		return moment($xact.date).format(dateFormatValue);
+	});
 
 	let sum = $derived.by(() => {
 		if (!$xact?.postings?.length) return new Big(0);
@@ -60,7 +70,10 @@
 		goto('/');
 	}
 
-	onMount(() => {
+	onMount(async () => {
+		const fmt = await settings.get<string>(SettingKeys.dateFormat);
+		if (fmt) dateFormatValue = fmt;
+
 		if ($selectionMetadata) {
 			handleEntitySelection();
 		}
@@ -207,13 +220,21 @@
 	<div class="flex items-center">
 		<CalendarIcon class="h-5 w-5 mr-2 opacity-70" />
 		<button type="button" class="btn btn-ghost h-11 w-11 p-0" onclick={() => shiftDate(-1)}><ChevronLeftIcon class="h-4 w-4" /></button>
-		<input
-			title="Date"
-			placeholder="Date"
-			type="date"
-			class="input rounded"
-			bind:value={$xact.date}
-		/>
+		<div class="relative flex-1">
+			<div
+				class="input rounded flex items-center cursor-pointer px-3 w-full"
+				onclick={() => dateInputEl?.showPicker?.()}
+			>
+				{formattedDate}
+			</div>
+			<input
+				bind:this={dateInputEl}
+				title="Date"
+				type="date"
+				class="sr-only"
+				bind:value={$xact.date}
+			/>
+		</div>
 		<button type="button" class="btn btn-ghost h-11 w-11 p-0" onclick={() => shiftDate(1)}><ChevronRightIcon class="h-4 w-4" /></button>
 	</div>
 	<div class="flex items-center">

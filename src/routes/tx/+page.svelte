@@ -26,6 +26,7 @@
 		message: string;
 	}
 	let validationIssues: ValidationIssue[] = [];
+	// oxlint-disable-next-line no-unassigned-vars
 	let validationDialog: HTMLDialogElement | undefined;
 
 	onMount(async () => {
