@@ -5,7 +5,8 @@ It is implemented as a PWA using Svelte and DaisyUI frameworks.
 
 ## Projects
 
-- Project plans are stored in `/docs/projects` folder.
+- Project plans and docs are stored in the `/doc/` folder.
+- Completed project docs are in `/doc/completed-projects/`.
 
 ## Usage Scenarios
 
@@ -23,9 +24,11 @@ It is implemented as a PWA using Svelte and DaisyUI frameworks.
 ## Architecture
 
 - The app is a PWA with a single page application (SPA) architecture, using SvelteKit and DaisyUI frameworks.
+- Uses **Svelte 5** with runes syntax (`$state`, `$derived`, `$effect`) — do NOT use Svelte 4 store or `$:` reactive patterns.
+- Uses **TailwindCSS v4** and **DaisyUI v5** — class names and config differ from v3/v4 respectively.
 - It is deployed as a static website to Netlify (via `npm run deploy`).
-- The ledger files are stored in OPFS, in Beancount format. The app data is in IndexedDb.
-- The configuration information is in Settinsg table in IndexedDb.
+- The ledger files are stored in OPFS, in Beancount format. The app data is in IndexedDb (via **Dexie**).
+- The configuration information is in Settings table in IndexedDb.
 - The app uses File System API to access the ledger files on the device.
 
 ### Rust Ledger WASM
@@ -45,7 +48,10 @@ It is implemented as a PWA using Svelte and DaisyUI frameworks.
 - `src/lib/sync/` — synchronization logic
 - `src/lib/rledger/` — Rust Ledger WASM integration
 - `src/lib/utils/` — utility functions
-- `src/routes/` — SvelteKit file-based routes (~30+ pages)
+- `src/lib/assetAllocation/` — asset allocation logic, validation, and sync API client
+- `src/lib/webrtc/` — WebRTC peer-to-peer sync
+- `src/lib/workers/` — background web workers (e.g. ledger worker)
+- `src/routes/` — SvelteKit file-based routes (~60+ pages)
 
 ## Dev Server
 
@@ -60,7 +66,7 @@ It is implemented as a PWA using Svelte and DaisyUI frameworks.
 - **Linting**: `oxlint` for JS/TS; `eslint-plugin-svelte` via ESLint for Svelte templates.
 - **Unit tests**: Vitest — `npm run test:unit`
 - **E2E tests**: Playwright — `npm run test:e2e`
-- Run `npm run format` to format, `npm run lint` to lint.
+- Run `npm run format` to format, `npm run lint` to lint, `npm run check` to type-check (svelte-check + TypeScript).
 - Use Serena MCP for codebase navigation.
 
 ### Code Intelligence (LSP)
