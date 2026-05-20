@@ -3,7 +3,7 @@
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import rustledger from '$lib/services/rustledger';
 	import { useRegisterSW } from 'virtual:pwa-register/svelte';
-	import { RefreshCw } from '@lucide/svelte';
+	import { MicIcon, RefreshCw } from '@lucide/svelte';
 
 	let wasmVersion = '';
 	let checking = false;
@@ -105,6 +105,12 @@
 			</li>
 			<li>
 				<a class="link link-primary" href="/ledger/multi">Parsed Multi Ledger</a>
+			</li>
+			<li>
+				<a href="/tools/voice-entry" class="flex w-full items-center gap-2 py-2" onclick={closeDrawer}>
+					<MicIcon />
+					<span>Voice Entry</span>
+				</a>
 			</li>
 		</ul>
 	</section>

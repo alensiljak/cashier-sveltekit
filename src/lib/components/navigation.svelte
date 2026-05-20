@@ -29,7 +29,10 @@
 		ListTreeIcon,
 		ShieldCheckIcon,
 
-		CloudUploadIcon
+		CloudUploadIcon,
+
+		SquarePenIcon
+
 
 
 	} from '@lucide/svelte';
@@ -101,9 +104,9 @@
 				</a>
 			</li>
 			<li>
-				<a href="/tools/voice-entry" class="flex w-full items-center gap-2 py-2" onclick={closeDrawer}>
-					<MicIcon />
-					<span>Voice Entry</span>
+				<a href="/tx/search-new" class="flex w-full items-center gap-2 py-2" onclick={closeDrawer}>
+					<SquarePenIcon />
+					<span>Quick Entry</span>
 				</a>
 			</li>
 		</ul>
