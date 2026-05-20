@@ -98,18 +98,17 @@
 
 		<ul>
 			<li>
-				<a class="link link-primary" href="/demo/rledger">RustLedger demo</a>
+				<a class="link" href="/demo/rledger">RustLedger demo</a>
 			</li>
 			<li>
-				<a class="link link-primary" href="/ledger">Parsed Ledger</a>
+				<a class="link" href="/ledger">Parsed Ledger</a>
 			</li>
 			<li>
-				<a class="link link-primary" href="/ledger/multi">Parsed Multi Ledger</a>
+				<a class="link" href="/ledger/multi">Parsed Multi Ledger</a>
 			</li>
 			<li>
-				<a href="/tools/voice-entry" class="flex w-full items-center gap-2 py-2" onclick={closeDrawer}>
-					<MicIcon />
-					<span>Voice Entry</span>
+				<a class="link inline-flex items-center gap-1" href="/tools/voice-entry">
+					<MicIcon size={16} /> Voice Entry
 				</a>
 			</li>
 		</ul>

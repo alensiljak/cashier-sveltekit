@@ -15,7 +15,7 @@
     let error = $state('');
 
     function buildDiffLines(local: string, remote: string): DiffLine[] {
-        const changes = diffLines(local, remote);
+        const changes = diffLines(remote, local);
         const lines: DiffLine[] = [];
         for (const part of changes) {
             const partLines = part.value.split('\n');
@@ -80,8 +80,8 @@
             <div class="alert alert-error text-sm">{error}</div>
         {:else}
             <div class="flex gap-4 text-xs text-base-content/60">
-                <span class="flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded-sm bg-error/40"></span>local only</span>
-                <span class="flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded-sm bg-success/40"></span>remote only</span>
+                <span class="flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded-sm bg-success/40"></span>local only</span>
+                <span class="flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded-sm bg-error/40"></span>remote only</span>
             </div>
 
             {#each sections as section}
