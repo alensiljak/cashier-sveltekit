@@ -21,7 +21,6 @@
 			const initialValue = $selectionMetadata.initialValue;
 			displayValue = initialValue.toString();
 			currentExpression = initialValue.toString();
-			lastExpression = initialValue.toString();
 		}
 	});
 
