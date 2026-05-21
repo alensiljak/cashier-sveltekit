@@ -10,7 +10,7 @@
 	} from '$lib/services/currencyConverter';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import { settings, SettingKeys } from '$lib/settings';
-	import { ArrowUpDownIcon } from '@lucide/svelte';
+	import { ArrowUpDownIcon, XIcon } from '@lucide/svelte';
 
 	let currencies: string[] = $state([]);
 	let fromCurrency = $state('');
@@ -89,12 +89,23 @@
 			<!-- Amount input -->
 			<label class="form-control w-full">
 				<div class="label"><span class="label-text">Amount</span></div>
-				<input
-					type="number"
-					class="input input-bordered w-full"
-					placeholder="0.00"
-					bind:value={inputAmount}
-				/>
+				<div class="relative">
+					<input
+						type="number"
+						class="input input-bordered w-full pr-10"
+						placeholder="0.00"
+						bind:value={inputAmount}
+					/>
+					{#if inputAmount}
+						<button
+							class="absolute right-2 top-1/2 -translate-y-1/2 btn btn-ghost btn-xs btn-circle"
+							onclick={() => { inputAmount = ''; result = null; }}
+							title="Clear"
+						>
+							<XIcon size={14} />
+						</button>
+					{/if}
+				</div>
 			</label>
 
 			<!-- From / swap / To row -->
