@@ -1,13 +1,15 @@
 <script lang="ts">
 	import Toolbar from '$lib/components/Toolbar.svelte';
+	import SearchableSelect from '$lib/components/SearchableSelect.svelte';
 	import {
 		getCurrencyConverter,
-		getConverterMode,
-		setConverterMode,
-		type ConverterMode,
+		// getConverterMode,
+		// setConverterMode,
+		// type ConverterMode,
 		type ConversionResult
 	} from '$lib/services/currencyConverter';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
+	import { settings, SettingKeys } from '$lib/settings';
 	import { ArrowUpDownIcon } from '@lucide/svelte';
 
 	let currencies: string[] = $state([]);
@@ -16,12 +18,19 @@
 	let inputAmount = $state('');
 	let result: ConversionResult | null = $state(null);
 	let isLoadingCurrencies = $state(true);
-	let isConverting = $state(false);
 	let error: string | null = $state(null);
-	let mode: ConverterMode = $state(getConverterMode());
+	// let mode: ConverterMode = $state(getConverterMode());
 
 	$effect(() => {
 		loadCurrencies();
+	});
+
+	$effect(() => {
+		const amount = parseFloat(inputAmount);
+		if (!inputAmount || isNaN(amount) || !fromCurrency || !toCurrency) return;
+
+		const timeout = setTimeout(() => convert(), 400);
+		return () => clearTimeout(timeout);
 	});
 
 	async function loadCurrencies() {
@@ -30,8 +39,14 @@
 		try {
 			await fullLedgerService.ensureLoaded();
 			currencies = await getCurrencyConverter().getCurrencies();
+			const baseCurrency = await settings.get<string>(SettingKeys.currency);
 			if (currencies.length > 0 && !fromCurrency) fromCurrency = currencies[0];
-			if (currencies.length > 1 && !toCurrency) toCurrency = currencies[1];
+			if (!toCurrency) {
+				toCurrency =
+					baseCurrency && currencies.includes(baseCurrency)
+						? baseCurrency
+						: currencies[1] ?? '';
+			}
 		} catch (e) {
 			error = String(e);
 		} finally {
@@ -43,28 +58,23 @@
 		const amount = parseFloat(inputAmount);
 		if (!inputAmount || isNaN(amount) || !fromCurrency || !toCurrency) return;
 
-		isConverting = true;
 		error = null;
 		result = null;
 		try {
 			result = await getCurrencyConverter().convert(amount, fromCurrency, toCurrency);
 		} catch (e) {
 			error = String(e);
-		} finally {
-			isConverting = false;
 		}
 	}
 
 	function swap() {
 		[fromCurrency, toCurrency] = [toCurrency, fromCurrency];
-		result = null;
 	}
 
-	function onModeChange(newMode: ConverterMode) {
-		mode = newMode;
-		setConverterMode(newMode);
-		result = null;
-	}
+	// function onModeChange(newMode: ConverterMode) {
+	// 	mode = newMode;
+	// 	setConverterMode(newMode);
+	// }
 </script>
 
 <main class="flex flex-col flex-1">
@@ -84,7 +94,6 @@
 					class="input input-bordered w-full"
 					placeholder="0.00"
 					bind:value={inputAmount}
-					onkeydown={(e) => e.key === 'Enter' && convert()}
 				/>
 			</label>
 
@@ -92,11 +101,7 @@
 			<div class="flex items-end gap-2">
 				<label class="form-control flex-1">
 					<div class="label"><span class="label-text">From</span></div>
-					<select class="select select-bordered w-full" bind:value={fromCurrency} onchange={() => (result = null)}>
-						{#each currencies as c}
-							<option value={c}>{c}</option>
-						{/each}
-					</select>
+					<SearchableSelect options={currencies} bind:value={fromCurrency} />
 				</label>
 
 				<button class="btn btn-circle btn-outline mb-0.5" onclick={swap} title="Swap currencies">
@@ -105,27 +110,9 @@
 
 				<label class="form-control flex-1">
 					<div class="label"><span class="label-text">To</span></div>
-					<select class="select select-bordered w-full" bind:value={toCurrency} onchange={() => (result = null)}>
-						{#each currencies as c}
-							<option value={c}>{c}</option>
-						{/each}
-					</select>
+					<SearchableSelect options={currencies} bind:value={toCurrency} />
 				</label>
 			</div>
-
-			<!-- Convert button -->
-			<button
-				class="btn btn-primary w-full"
-				onclick={convert}
-				disabled={isConverting || !inputAmount}
-			>
-				{#if isConverting}
-					<span class="loading loading-spinner loading-sm"></span>
-					Converting...
-				{:else}
-					Convert
-				{/if}
-			</button>
 
 			<!-- Result -->
 			{#if result}
@@ -148,7 +135,7 @@
 				</div>
 			{/if}
 
-			<!-- Implementation selector -->
+			<!-- Implementation selector (hidden for now, working well on default engine)
 			<div class="divider text-xs text-base-content/40">Engine</div>
 			<div class="flex gap-2 justify-center">
 				<button
@@ -164,6 +151,7 @@
 					Price Graph
 				</button>
 			</div>
+			-->
 		{/if}
 	</div>
 </main>
