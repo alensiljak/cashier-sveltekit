@@ -2,11 +2,13 @@
 	import { goto } from '$app/navigation';
 	import { tick } from 'svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
+	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import AccordionSection from '$lib/components/AccordionSection.svelte';
 	import JournalXactRow from '$lib/components/JournalXactRow.svelte';
 	import { Xact, Posting } from '$lib/data/model';
 	import { xact as xactStore, xactSpan } from '$lib/data/mainStore';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
+	import { CodeIcon } from '@lucide/svelte';
 
 	const ACCOUNT_TYPES = ['Assets', 'Liabilities', 'Income', 'Expenses', 'Equity'] as const;
 	const MAX_RESULTS = 15;
@@ -25,6 +27,9 @@
 	let filterAccountType = $state('');
 
 	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+	let lastQuery = $state('');
+	let queryDialog: HTMLDialogElement | undefined;
+	let copySuccess = $state(false);
 
 	function onInput() {
 		if (debounceTimer) clearTimeout(debounceTimer);
@@ -70,7 +75,9 @@
 		await tick();
 
 		try {
-			const result = await fullLedgerService.query(buildQuery(text));
+			const bql = buildQuery(text);
+			lastQuery = bql;
+			const result = await fullLedgerService.query(bql);
 			if (result.errors?.length > 0) {
 				error = (result.errors[0] as { message: string }).message;
 				templates = [];
@@ -149,6 +156,12 @@
 		return result;
 	}
 
+	async function copyQuery() {
+		await navigator.clipboard.writeText(lastQuery);
+		copySuccess = true;
+		setTimeout(() => (copySuccess = false), 2000);
+	}
+
 	async function selectTemplate(template: Xact) {
 		isSelecting = true;
 		try {
@@ -205,7 +218,11 @@
 </script>
 
 <article class="flex h-screen flex-col">
-	<Toolbar title="Quick Entry" />
+	<Toolbar title="Quick Entry">
+		{#snippet menuItems()}
+			<ToolbarMenuItem text="Show Query" Icon={CodeIcon} onclick={() => queryDialog?.showModal()} />
+		{/snippet}
+	</Toolbar>
 
 	<section class="flex flex-1 flex-col gap-3 overflow-y-auto touch-pan-y p-3">
 		<!-- Search input -->
@@ -308,4 +325,29 @@
 			</div>
 		{/if}
 	</section>
+
+	<!-- BQL query debug dialog -->
+	<dialog bind:this={queryDialog} class="modal">
+		<div class="modal-box flex flex-col gap-3">
+			<h3 class="font-bold text-lg">Last BQL Query</h3>
+			{#if lastQuery}
+				<pre class="bg-base-200 rounded p-3 text-xs overflow-x-auto whitespace-pre-wrap break-all">{lastQuery}</pre>
+				<button
+					type="button"
+					class="btn btn-sm {copySuccess ? 'btn-success' : 'btn-outline'} self-start"
+					onclick={copyQuery}
+				>
+					{copySuccess ? 'Copied!' : 'Copy'}
+				</button>
+			{:else}
+				<p class="text-sm text-base-content/60">No query run yet — type something to search first.</p>
+			{/if}
+			<div class="modal-action mt-0">
+				<button type="button" class="btn" onclick={() => queryDialog?.close()}>Close</button>
+			</div>
+		</div>
+		<form method="dialog" class="modal-backdrop">
+			<button>close</button>
+		</form>
+	</dialog>
 </article>
