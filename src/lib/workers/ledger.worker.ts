@@ -449,21 +449,15 @@ async function handleMessage(e: MessageEvent<WorkerRequest>): Promise<void> {
 				lines.push(`  Assets:Convert  ${amount} ${fromCurrency}`);
 				lines.push(`  Equity:Opening`);
 
-				const tempLedger = wasmModule!.Ledger.fromFiles(
-					{ 'main.bean': lines.join('\n') },
-					'main.bean'
+				// Use the standalone query() function — no class instantiation or free() needed
+				const convertResult = wasmModule!.query(
+					lines.join('\n'),
+					`SELECT CONVERT(sum(position), '${toCurrency}') FROM postings WHERE account = "Assets:Convert"`
 				);
-				try {
-					const convertResult = tempLedger.query(
-						`SELECT CONVERT(sum(position), '${toCurrency}') FROM postings WHERE account = "Assets:Convert"`
-					);
-					const resultRow = ((convertResult.rows ?? []) as any[])[0];
-					const resultAmt = resultRow ? (resultRow as any[])[0] as { number: string; currency: string } | null : null;
-					if (!resultAmt) throw new Error(`No conversion path from ${fromCurrency} to ${toCurrency}`);
-					reply({ type: 'convert-currency-done', number: resultAmt.number, currency: resultAmt.currency });
-				} finally {
-					tempLedger.free();
-				}
+				const resultRow = ((convertResult.rows ?? []) as any[])[0];
+				const resultAmt = resultRow ? (resultRow as any[])[0] as { number: string; currency: string } | null : null;
+				if (!resultAmt) throw new Error(`No conversion path from ${fromCurrency} to ${toCurrency}`);
+				reply({ type: 'convert-currency-done', number: resultAmt.number, currency: resultAmt.currency });
 				break;
 			}
 
