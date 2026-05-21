@@ -240,6 +240,27 @@ class LedgerWorkerClient {
 		return resp.operatingCurrencies;
 	}
 
+	/** Return all currencies available for conversion (base + quote sides of prices table). */
+	async getCurrencies(): Promise<string[]> {
+		const resp = await this.send<'currencies-done'>({ type: 'get-currencies' });
+		return resp.currencies;
+	}
+
+	/** Convert an amount between currencies using a synthetic ephemeral ledger in the worker. */
+	async convertCurrency(
+		amount: number,
+		fromCurrency: string,
+		toCurrency: string
+	): Promise<{ number: string; currency: string }> {
+		const resp = await this.send<'convert-currency-done'>({
+			type: 'convert-currency',
+			amount,
+			fromCurrency,
+			toCurrency
+		});
+		return { number: resp.number, currency: resp.currency };
+	}
+
 	/**
 	 * Fetch a single account with balances in all currencies.
 	 * Uses the accounts query (SELECT sum(number), currency, account) filtered

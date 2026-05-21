@@ -25,6 +25,7 @@
 		CalculatorIcon,
 		CalendarIcon,
 		MicIcon,
+		CoinsIcon,
 
 		ListTreeIcon,
 		ShieldCheckIcon,
@@ -308,6 +309,18 @@
 							>
 								<CalculatorIcon />
 								<span>Calculator</span>
+							</a>
+						</li>
+						<li>
+							<a
+								href="/currency-converter"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/currency-converter'
+									? 'active bg-secondary text-secondary-content'
+									: ''}"
+								onclick={closeDrawer}
+							>
+								<CoinsIcon />
+								<span>Currency Converter</span>
 							</a>
 						</li>
 						<li>
