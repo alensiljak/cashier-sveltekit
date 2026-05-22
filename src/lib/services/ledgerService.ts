@@ -7,7 +7,8 @@ import {
 	version as wasmVersion
 } from './rustledger';
 import type { Directive, BeancountError, ParsedLedger } from '@rustledger/wasm';
-import { Account, Xact, Posting } from '$lib/data/model';
+import { Account, Xact } from '$lib/data/model';
+import { directiveToXact } from '$lib/utils/transactionParser';
 import * as opfslib from '$lib/utils/opfslib';
 import {
 	mapDirectiveSpans,
@@ -291,22 +292,7 @@ class LedgerService {
 		}
 	}
 
-	/** Convert a WASM TransactionDirective to an Xact view model. */
-	private directiveToXact(directive: any): Xact {
-		const tx = new Xact();
-		tx.date = directive.date;
-		tx.payee = directive.payee ?? '';
-		tx.note = directive.narration ?? '';
-		tx.flag = directive.flag ?? '*';
-		tx.postings = (directive.postings ?? []).map((p: any) => {
-			const posting = new Posting();
-			posting.account = p.account ?? '';
-			if (p.units?.number != null) posting.amount = parseFloat(p.units.number);
-			if (p.units?.currency) posting.currency = p.units.currency;
-			return posting;
-		});
-		return tx;
-	}
+	private directiveToXact = directiveToXact;
 
 	/** Free the current ledger instance */
 	free(): void {
