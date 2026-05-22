@@ -3,6 +3,7 @@
  * Used for calculation of the empty postings
  */
 import { Posting, Xact } from '$lib/data/model';
+import rustledger from '$lib/services/rustledger';
 
 export class TransactionParser {
 	/**
@@ -20,81 +21,46 @@ export class TransactionParser {
 	}
 }
 
-function validateEmptyString(input: string) {
+/**
+ * Map a raw WASM transaction directive object to an Xact view model.
+ * Works with directives from both ParsedLedger.getDirectives() and
+ * parse(source).ledger.directives.
+ */
+export function directiveToXact(directive: any): Xact {
+	const tx = new Xact();
+	tx.date = directive.date;
+	tx.payee = directive.payee ?? '';
+	tx.note = directive.narration ?? '';
+	tx.flag = directive.flag ?? '*';
+	tx.postings = (directive.postings ?? []).map((p: any) => {
+		const posting = new Posting();
+		posting.account = p.account ?? '';
+		if (p.units?.number != null) posting.amount = parseFloat(p.units.number);
+		if (p.units?.currency) posting.currency = p.units.currency;
+		if (p.price?.number != null) posting.priceAmount = parseFloat(p.price.number);
+		if (p.price?.currency) posting.priceCurrency = p.price.currency;
+		if (p.price) posting.totalPrice = !!p.price.total;
+		if (p.cost?.number != null) posting.costAmount = parseFloat(p.cost.number);
+		if (p.cost?.currency) posting.costCurrency = p.cost.currency;
+		if (p.cost?.date) posting.costDate = p.cost.date;
+		return posting;
+	});
+	return tx;
+}
+
+export function parseXact(input: string): Xact {
 	if (!input) {
 		throw new Error('Missing input');
 	}
-}
 
-export function parseXact(input: string) {
-	validateEmptyString(input);
+	const result = rustledger.parseSource(input);
+	const directive = (result.ledger as any)?.directives?.find(
+		(d: any) => d.type === 'transaction'
+	);
 
-	const lines = input.split('\n');
-
-	const xact = new Xact();
-	let postingIndex = 1;
-
-	// date
-	let line = lines[0];
-	validateEmptyString(line);
-	let separatorIndex = lines[0].indexOf(' ');
-	const date = lines[0].substring(0, separatorIndex);
-	xact.date = date;
-	// payee
-	xact.payee = lines[0].substring(separatorIndex + 1);
-
-	// note?
-	line = lines[1].trim();
-	validateEmptyString(line);
-	if (line.startsWith(';')) {
-		xact.note = line.substring(1).trim();
-		postingIndex = 2;
+	if (!directive) {
+		throw new Error('No transaction found in input');
 	}
 
-	// postings
-	for (let i = postingIndex; i < lines.length; i++) {
-		line = lines[i].trim();
-		validateEmptyString(line);
-
-		const posting = new Posting();
-
-		// separator
-		separatorIndex = line.indexOf('  ');
-		if (separatorIndex === -1) {
-			// no separator
-			posting.account = line;
-		} else {
-			// account
-			posting.account = line.substring(0, separatorIndex);
-
-			const amountPart = line.substring(separatorIndex).trimStart();
-			separatorIndex = amountPart.indexOf(' ');
-			if (separatorIndex !== -1) {
-				posting.amount = Number(amountPart.substring(0, separatorIndex));
-				const restAfterAmount = amountPart.substring(separatorIndex + 1).trim();
-				const spaceAfterCurrency = restAfterAmount.indexOf(' ');
-				if (spaceAfterCurrency === -1) {
-					posting.currency = restAfterAmount;
-				} else {
-					posting.currency = restAfterAmount.substring(0, spaceAfterCurrency);
-					const annotation = restAfterAmount.substring(spaceAfterCurrency + 1).trim();
-					// Check @@ before @ to avoid partial match
-					const totalPriceMatch = annotation.match(/^@@\s+(\S+)\s+(\S+)/);
-					const unitPriceMatch = annotation.match(/^@\s+(\S+)\s+(\S+)/);
-					if (totalPriceMatch) {
-						posting.totalPrice = true;
-						posting.priceAmount = Number(totalPriceMatch[1]);
-						posting.priceCurrency = totalPriceMatch[2];
-					} else if (unitPriceMatch) {
-						posting.totalPrice = false;
-						posting.priceAmount = Number(unitPriceMatch[1]);
-						posting.priceCurrency = unitPriceMatch[2];
-					}
-				}
-			}
-		}
-		xact.postings.push(posting);
-	}
-
-	return xact;
+	return directiveToXact(directive);
 }

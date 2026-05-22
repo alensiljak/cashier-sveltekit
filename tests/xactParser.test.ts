@@ -1,100 +1,103 @@
 /*
     Tests for transaction parser.
-    Parsing a Ledger transaction record.
+    directiveToXact maps a raw WASM directive object to an Xact view model.
 */
 import { expect, test } from 'vitest';
-import { parseXact } from '$lib/utils/transactionParser';
-import { Posting, Xact } from '$lib/data/model';
+import { directiveToXact } from '$lib/utils/transactionParser';
 
-test('parsing a typical xact', () => {
-	// arrange
-	const ledgerXact: string = `2024-12-01 Supermarket
-    ; some food
-    Expenses:Food  13 EUR
-    Assets:Cash`;
+function makeDirective(overrides: any = {}) {
+	return {
+		type: 'transaction',
+		date: '2024-12-01',
+		payee: 'Supermarket',
+		narration: 'some food',
+		flag: '*',
+		postings: [],
+		...overrides
+	};
+}
 
-	const p1 = new Posting();
-	p1.account = 'Expenses:Food';
-	p1.amount = 13;
-	p1.currency = 'EUR';
-	const p2 = new Posting();
-	p2.account = 'Assets:Cash';
+test('maps basic transaction fields', () => {
+	const result = directiveToXact(makeDirective());
 
-	const expected = new Xact();
-	expected.date = '2024-12-01';
-	expected.payee = 'Supermarket';
-	expected.note = 'some food';
-	expected.postings = [p1, p2];
-
-	// act
-	const result = parseXact(ledgerXact);
-
-	// assert
-	expect(result).toStrictEqual(expected);
+	expect(result.date).toBe('2024-12-01');
+	expect(result.payee).toBe('Supermarket');
+	expect(result.note).toBe('some food');
+	expect(result.flag).toBe('*');
 });
 
-test('parse a posting with @@ total price annotation', () => {
-	const ledgerXact = `2026-05-22 * "Poliklinika Agram" "Uzorak stolice, 35 BAM"
-    Expenses:Health:Diagnostics  35 BAM @@ 17.9 EUR
-    Assets:Bank-Accounts:N26  -17.9 EUR`;
+test('maps posting with account and units', () => {
+	const directive = makeDirective({
+		postings: [
+			{ account: 'Expenses:Food', units: { number: '13', currency: 'EUR' } },
+			{ account: 'Assets:Cash' }
+		]
+	});
 
-	const result = parseXact(ledgerXact);
+	const result = directiveToXact(directive);
 
-	const p1 = result.postings[0];
-	expect(p1.account).toBe('Expenses:Health:Diagnostics');
-	expect(p1.amount).toBe(35);
-	expect(p1.currency).toBe('BAM');
-	expect(p1.totalPrice).toBe(true);
-	expect(p1.priceAmount).toBe(17.9);
-	expect(p1.priceCurrency).toBe('EUR');
+	expect(result.postings[0].account).toBe('Expenses:Food');
+	expect(result.postings[0].amount).toBe(13);
+	expect(result.postings[0].currency).toBe('EUR');
+	expect(result.postings[1].account).toBe('Assets:Cash');
+	expect(result.postings[1].amount).toBeUndefined();
 });
 
-test('parse a posting with @ unit price annotation', () => {
-	const ledgerXact = `2026-05-22 Buy commodity
-    Assets:Portfolio  10 AAPL @ 150 USD
-    Assets:Bank  -1500 USD`;
+test('maps @@ total price annotation', () => {
+	const directive = makeDirective({
+		postings: [
+			{
+				account: 'Expenses:Health:Diagnostics',
+				units: { number: '35', currency: 'BAM' },
+				price: { number: '17.9', currency: 'EUR', total: true }
+			}
+		]
+	});
 
-	const result = parseXact(ledgerXact);
+	const result = directiveToXact(directive);
+	const p = result.postings[0];
 
-	const p1 = result.postings[0];
-	expect(p1.currency).toBe('AAPL');
-	expect(p1.totalPrice).toBe(false);
-	expect(p1.priceAmount).toBe(150);
-	expect(p1.priceCurrency).toBe('USD');
+	expect(p.currency).toBe('BAM');
+	expect(p.priceAmount).toBe(17.9);
+	expect(p.priceCurrency).toBe('EUR');
+	expect(p.totalPrice).toBe(true);
 });
 
-test('parse a transfer', () => {
-	// arrange
-	const ledgerXact: string = `2024-12-02 Transfer
-    ; cash deposit
-    Assets:Bank  100 EUR
-    Assets:Cash  -100 EUR`;
-
-	const p1 = new Posting();
-	Object.assign(p1, {
-		account: 'Assets:Bank',
-		amount: 100,
-		currency: 'EUR'
+test('maps @ unit price annotation', () => {
+	const directive = makeDirective({
+		postings: [
+			{
+				account: 'Assets:Portfolio',
+				units: { number: '10', currency: 'AAPL' },
+				price: { number: '150', currency: 'USD', total: false }
+			}
+		]
 	});
 
-	const p2 = new Posting();
-	Object.assign(p2, {
-		account: 'Assets:Cash',
-		amount: -100,
-		currency: 'EUR'
+	const result = directiveToXact(directive);
+	const p = result.postings[0];
+
+	expect(p.currency).toBe('AAPL');
+	expect(p.priceAmount).toBe(150);
+	expect(p.priceCurrency).toBe('USD');
+	expect(p.totalPrice).toBe(false);
+});
+
+test('maps cost annotation', () => {
+	const directive = makeDirective({
+		postings: [
+			{
+				account: 'Assets:Portfolio',
+				units: { number: '10', currency: 'AAPL' },
+				cost: { number: '140', currency: 'USD', date: '2024-01-01' }
+			}
+		]
 	});
 
-	const expected = new Xact();
-	Object.assign(expected, {
-		date: '2024-12-02',
-		payee: 'Transfer',
-		note: 'cash deposit',
-		postings: [p1, p2]
-	});
+	const result = directiveToXact(directive);
+	const p = result.postings[0];
 
-	// act
-	const result = parseXact(ledgerXact);
-
-	// assert
-	expect(result).toStrictEqual(expected);
+	expect(p.costAmount).toBe(140);
+	expect(p.costCurrency).toBe('USD');
+	expect(p.costDate).toBe('2024-01-01');
 });
