@@ -303,6 +303,12 @@ class LedgerService {
 			posting.account = p.account ?? '';
 			if (p.units?.number != null) posting.amount = parseFloat(p.units.number);
 			if (p.units?.currency) posting.currency = p.units.currency;
+			if (p.price?.number != null) posting.priceAmount = parseFloat(p.price.number);
+			if (p.price?.currency) posting.priceCurrency = p.price.currency;
+			if (p.price) posting.totalPrice = !!p.price.total;
+			if (p.cost?.number != null) posting.costAmount = parseFloat(p.cost.number);
+			if (p.cost?.currency) posting.costCurrency = p.cost.currency;
+			if (p.cost?.date) posting.costDate = p.cost.date;
 			return posting;
 		});
 		return tx;

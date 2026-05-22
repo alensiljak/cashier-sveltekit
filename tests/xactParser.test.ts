@@ -33,6 +33,36 @@ test('parsing a typical xact', () => {
 	expect(result).toStrictEqual(expected);
 });
 
+test('parse a posting with @@ total price annotation', () => {
+	const ledgerXact = `2026-05-22 * "Poliklinika Agram" "Uzorak stolice, 35 BAM"
+    Expenses:Health:Diagnostics  35 BAM @@ 17.9 EUR
+    Assets:Bank-Accounts:N26  -17.9 EUR`;
+
+	const result = parseXact(ledgerXact);
+
+	const p1 = result.postings[0];
+	expect(p1.account).toBe('Expenses:Health:Diagnostics');
+	expect(p1.amount).toBe(35);
+	expect(p1.currency).toBe('BAM');
+	expect(p1.totalPrice).toBe(true);
+	expect(p1.priceAmount).toBe(17.9);
+	expect(p1.priceCurrency).toBe('EUR');
+});
+
+test('parse a posting with @ unit price annotation', () => {
+	const ledgerXact = `2026-05-22 Buy commodity
+    Assets:Portfolio  10 AAPL @ 150 USD
+    Assets:Bank  -1500 USD`;
+
+	const result = parseXact(ledgerXact);
+
+	const p1 = result.postings[0];
+	expect(p1.currency).toBe('AAPL');
+	expect(p1.totalPrice).toBe(false);
+	expect(p1.priceAmount).toBe(150);
+	expect(p1.priceCurrency).toBe('USD');
+});
+
 test('parse a transfer', () => {
 	// arrange
 	const ledgerXact: string = `2024-12-02 Transfer

@@ -70,10 +70,27 @@ export function parseXact(input: string) {
 			const amountPart = line.substring(separatorIndex).trimStart();
 			separatorIndex = amountPart.indexOf(' ');
 			if (separatorIndex !== -1) {
-				// amount
 				posting.amount = Number(amountPart.substring(0, separatorIndex));
-				// currency
-				posting.currency = amountPart.substring(separatorIndex + 1);
+				const restAfterAmount = amountPart.substring(separatorIndex + 1).trim();
+				const spaceAfterCurrency = restAfterAmount.indexOf(' ');
+				if (spaceAfterCurrency === -1) {
+					posting.currency = restAfterAmount;
+				} else {
+					posting.currency = restAfterAmount.substring(0, spaceAfterCurrency);
+					const annotation = restAfterAmount.substring(spaceAfterCurrency + 1).trim();
+					// Check @@ before @ to avoid partial match
+					const totalPriceMatch = annotation.match(/^@@\s+(\S+)\s+(\S+)/);
+					const unitPriceMatch = annotation.match(/^@\s+(\S+)\s+(\S+)/);
+					if (totalPriceMatch) {
+						posting.totalPrice = true;
+						posting.priceAmount = Number(totalPriceMatch[1]);
+						posting.priceCurrency = totalPriceMatch[2];
+					} else if (unitPriceMatch) {
+						posting.totalPrice = false;
+						posting.priceAmount = Number(unitPriceMatch[1]);
+						posting.priceCurrency = unitPriceMatch[2];
+					}
+				}
 			}
 		}
 		xact.postings.push(posting);
