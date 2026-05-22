@@ -56,6 +56,10 @@
 			return;
 		}
 		output = await appService.sortTransactionsByDate(output);
+		if (dataType === 'journal') {
+			await appService.saveCashierFile(output);
+			Notifier.success('Transactions sorted and saved to cashier.bean.');
+		}
 	}
 
 	async function loadScheduledTransactions() {

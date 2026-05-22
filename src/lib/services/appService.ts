@@ -538,6 +538,11 @@ class AppService {
 		return (await readFile(CASHIER_XACT_FILE)) ?? '';
 	}
 
+	/** Overwrite cashier.bean with the given content. */
+	async saveCashierFile(content: string): Promise<void> {
+		await saveFile(CASHIER_XACT_FILE, content);
+	}
+
 	/**
 	 * Sort transactions in a Beancount source string by date.
 	 * Uses the WASM parser to extract directive spans, then reorders them.

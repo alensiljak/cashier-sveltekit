@@ -38,13 +38,8 @@
 	}
 
 	async function onCopyClicked() {
-		// get a journal version
-		let text = '';
-		text = appService.translateToBeancount($xact);
-
-		// copy to clipboard
+		const text = xactToBeancountText($xact);
 		await navigator.clipboard.writeText(text);
-
 		Notifier.success('Transaction copied to clipboard');
 	}
 

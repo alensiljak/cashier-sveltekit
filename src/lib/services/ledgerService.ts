@@ -106,8 +106,27 @@ class LedgerService {
 		return formatWasm(source);
 	}
 
-	/** Append a formatted transaction to cashier.bean → invalidate. */
+	/** Sort a Beancount source string by directive date, preserving raw source text. */
+	private async _sortSource(source: string): Promise<string> {
+		if (!source.trim()) return source;
+		const tempLedger = createParsedLedger(source);
+		if (!tempLedger) return source;
+		try {
+			const spans = mapDirectiveSpans(source, tempLedger);
+			const pairs = spans.map((span) => ({
+				date: span.sourceText.slice(0, 10),
+				sourceText: span.sourceText
+			}));
+			pairs.sort((a, b) => a.date.localeCompare(b.date));
+			return pairs.map((p) => p.sourceText).join('\n\n') + '\n';
+		} finally {
+			tempLedger.free();
+		}
+	}
+
+	/** Append a formatted transaction to cashier.bean → sort by date → invalidate. */
 	async appendTransaction(beancountText: string): Promise<void> {
+		await ensureInitialized();
 		let content = (await opfslib.readFile(CASHIER_XACT_FILE)) ?? '';
 
 		// Ensure a blank-line separator before the new entry.
@@ -116,6 +135,7 @@ class LedgerService {
 		}
 		content += beancountText.trimEnd() + '\n';
 
+		content = await this._sortSource(content);
 		await opfslib.saveFile(CASHIER_XACT_FILE, content);
 		await this.invalidate();
 	}
@@ -123,9 +143,10 @@ class LedgerService {
 	/**
 	 * Edit a transaction in cashier.bean identified by its DirectiveSpan.
 	 * Parses cashier.bean independently, locates the span by startLine,
-	 * splices in the new text, writes back, and invalidates.
+	 * splices in the new text, sorts by date, writes back, and invalidates.
 	 */
 	async editTransaction(span: DirectiveSpan, newBeancountText: string): Promise<void> {
+		await ensureInitialized();
 		const source = (await opfslib.readFile(CASHIER_XACT_FILE)) ?? '';
 		const tempLedger = createParsedLedger(source);
 		if (!tempLedger) throw new Error('Failed to parse cashier.bean');
@@ -137,7 +158,8 @@ class LedgerService {
 					`Could not locate directive at line ${span.startLine} in ${CASHIER_XACT_FILE}`
 				);
 			}
-			const updated = replaceDirectiveBySpan(source, spans, idx, newBeancountText.trimEnd());
+			let updated = replaceDirectiveBySpan(source, spans, idx, newBeancountText.trimEnd());
+			updated = await this._sortSource(updated);
 			await opfslib.saveFile(CASHIER_XACT_FILE, updated);
 		} finally {
 			tempLedger.free();
