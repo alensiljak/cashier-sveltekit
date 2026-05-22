@@ -73,9 +73,7 @@ export function parseXact(input: string): Xact {
 	}
 
 	const result = rustledger.parseSource(input);
-	const directive = (result.ledger as any)?.directives?.find(
-		(d: any) => d.type === 'transaction'
-	);
+	const directive = (result.ledger as any)?.directives?.find((d: any) => d.type === 'transaction');
 
 	if (!directive) {
 		throw new Error('No transaction found in input');

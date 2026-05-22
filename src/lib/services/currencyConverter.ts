@@ -46,9 +46,7 @@ class SyntheticLedgerConverter implements CurrencyConverter {
 class PriceGraphConverter implements CurrencyConverter {
 	async getCurrencies(): Promise<string[]> {
 		await fullLedgerService.ensureLoaded();
-		const { rows, columns } = await fullLedgerService.query(
-			'SELECT currency, amount FROM prices'
-		);
+		const { rows, columns } = await fullLedgerService.query('SELECT currency, amount FROM prices');
 		const colCurrency = columns.indexOf('currency');
 		const colAmount = columns.indexOf('amount');
 		const set = new Set<string>();

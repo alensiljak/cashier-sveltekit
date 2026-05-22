@@ -7,10 +7,10 @@ description: Practical guide to using the Rust Ledger WASM in Cashier — which 
 
 ## Two services, two purposes
 
-| Service | File | Use for |
-|---|---|---|
+| Service             | File                                     | Use for                                                        |
+| ------------------- | ---------------------------------------- | -------------------------------------------------------------- |
 | `fullLedgerService` | `src/lib/services/ledgerWorkerClient.ts` | Full multi-file book: reports, BQL queries, accounts, balances |
-| `ledgerService` | `src/lib/services/ledgerService.ts` | Single transaction file only: LSP, editing, saving xacts |
+| `ledgerService`     | `src/lib/services/ledgerService.ts`      | Single transaction file only: LSP, editing, saving xacts       |
 
 Never use `ledgerService` for financial queries — it does not load the full book.
 
@@ -36,15 +36,17 @@ import fullLedgerService from '$lib/services/ledgerWorkerClient';
 import { derived } from 'svelte/store';
 
 // Re-query when the ledger reloads
-$: if ($fullLedgerService.version) { /* run query */ }
+$: if ($fullLedgerService.version) {
+	/* run query */
+}
 ```
 
-| Store | Type | Meaning |
-|---|---|---|
-| `.loaded` | `Readable<boolean>` | True once at least one successful load |
-| `.version` | `Readable<number>` | Increments on every load/invalidate — use to trigger reactive re-queries |
-| `.isConfigured` | `Readable<boolean>` | False until .bean files are present |
-| `.isReloading` | `Readable<boolean>` | True during background invalidate |
+| Store           | Type                | Meaning                                                                  |
+| --------------- | ------------------- | ------------------------------------------------------------------------ |
+| `.loaded`       | `Readable<boolean>` | True once at least one successful load                                   |
+| `.version`      | `Readable<number>`  | Increments on every load/invalidate — use to trigger reactive re-queries |
+| `.isConfigured` | `Readable<boolean>` | False until .bean files are present                                      |
+| `.isReloading`  | `Readable<boolean>` | True during background invalidate                                        |
 
 ## BQL query pattern
 
@@ -60,11 +62,11 @@ Returns `{ columns: [], rows: [], errors: [] }` (empty, no throw) if not loaded.
 ## Other fullLedgerService methods
 
 ```ts
-await fullLedgerService.getAllAccounts();          // open accounts + currencies
-await fullLedgerService.getOperatingCurrencies();  // from ledger options
+await fullLedgerService.getAllAccounts(); // open accounts + currencies
+await fullLedgerService.getOperatingCurrencies(); // from ledger options
 await fullLedgerService.getAccountWithBalances(accountName); // returns Account | null
-await fullLedgerService.getDirectives();           // all parsed directives
-await fullLedgerService.getErrors();               // parse/validation errors
+await fullLedgerService.getDirectives(); // all parsed directives
+await fullLedgerService.getErrors(); // parse/validation errors
 ```
 
 ## File loading architecture
@@ -81,9 +83,9 @@ Use `src/lib/services/rustledger.ts` only for single-file or utility operations:
 import rustledger from '$lib/services/rustledger';
 
 await rustledger.ensureInitialized(); // always call first
-rustledger.parseSource(source);       // ParseResult
-rustledger.validateSource(source);    // ValidationResult
-rustledger.format(source);            // { formatted?, errors[] }
+rustledger.parseSource(source); // ParseResult
+rustledger.validateSource(source); // ValidationResult
+rustledger.format(source); // { formatted?, errors[] }
 rustledger.createLedger(files, entryPoint); // Ledger (multi-file, manual)
 ```
 

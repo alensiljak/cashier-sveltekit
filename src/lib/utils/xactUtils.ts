@@ -38,7 +38,11 @@ export function xactToBeancountText(tx: Xact): string {
 
 			let price: Record<string, unknown> | undefined;
 			if (p.priceAmount != null && p.priceCurrency) {
-				price = { number: String(p.priceAmount), currency: p.priceCurrency, total: p.totalPrice ?? false };
+				price = {
+					number: String(p.priceAmount),
+					currency: p.priceCurrency,
+					total: p.totalPrice ?? false
+				};
 			}
 
 			return {

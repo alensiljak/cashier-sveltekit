@@ -121,7 +121,7 @@ Characteristics
 ## Examples of Apps That Get Many of These Right
 
 | App                           | Best for                          | Lacks sometimes          |
-|-------------------------------|-----------------------------------|--------------------------|
+| ----------------------------- | --------------------------------- | ------------------------ |
 | **YNAB**                      | Zero-based budgeting              | Free investment tracking |
 | **Mint** (sunsetting)         | Aggregation & credit score        | Real-time reliability    |
 | **Copilot** (iOS)             | Design & automation               | Android version          |

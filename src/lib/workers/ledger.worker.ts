@@ -242,7 +242,11 @@ async function handleMessage(e: MessageEvent<WorkerRequest>): Promise<void> {
 			case 'ensure-loaded': {
 				if (!ledger) {
 					const t0 = performance.now();
-					await loadFromCacheOrFiles(e.data.mainFileName, e.data.userBookFilename, e.data.useCaching ?? true);
+					await loadFromCacheOrFiles(
+						e.data.mainFileName,
+						e.data.userBookFilename,
+						e.data.useCaching ?? true
+					);
 					const ms = performance.now() - t0;
 					reply({
 						type: 'load-done',
@@ -455,9 +459,15 @@ async function handleMessage(e: MessageEvent<WorkerRequest>): Promise<void> {
 					`SELECT CONVERT(sum(position), '${toCurrency}') FROM postings WHERE account = "Assets:Convert"`
 				);
 				const resultRow = ((convertResult.rows ?? []) as any[])[0];
-				const resultAmt = resultRow ? (resultRow as any[])[0] as { number: string; currency: string } | null : null;
+				const resultAmt = resultRow
+					? ((resultRow as any[])[0] as { number: string; currency: string } | null)
+					: null;
 				if (!resultAmt) throw new Error(`No conversion path from ${fromCurrency} to ${toCurrency}`);
-				reply({ type: 'convert-currency-done', number: resultAmt.number, currency: resultAmt.currency });
+				reply({
+					type: 'convert-currency-done',
+					number: resultAmt.number,
+					currency: resultAmt.currency
+				});
 				break;
 			}
 
