@@ -283,7 +283,7 @@ class LedgerService {
 				if (directive.type !== 'transaction') continue;
 				const spanIdx = findSpanForDirective(spans, i, source, directives);
 				if (spanIdx >= 0) {
-					result.push({ xact: this.directiveToXact(directive), span: spans[spanIdx] });
+					result.push({ xact: this.directiveToXact(directive, source), span: spans[spanIdx] });
 				}
 			}
 			return result;

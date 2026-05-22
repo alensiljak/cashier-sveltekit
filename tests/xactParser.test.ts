@@ -83,6 +83,46 @@ test('maps @ unit price annotation', () => {
 	expect(p.totalPrice).toBe(false);
 });
 
+test('detects @@ totalPrice from rawSource when WASM omits price.total', () => {
+	const directive = makeDirective({
+		postings: [
+			{
+				account: 'Expenses:Health:Diagnostics',
+				units: { number: '35', currency: 'BAM' },
+				price: { number: '17.9', currency: 'EUR' }
+			}
+		]
+	});
+	const rawSource = `2024-12-01 * "Clinic"
+  Expenses:Health:Diagnostics  35 BAM @@ 17.9 EUR
+  Assets:Cash`;
+
+	const result = directiveToXact(directive, rawSource);
+	const p = result.postings[0];
+
+	expect(p.priceAmount).toBe(17.9);
+	expect(p.priceCurrency).toBe('EUR');
+	expect(p.totalPrice).toBe(true);
+});
+
+test('does not set totalPrice for @ when rawSource has no @@', () => {
+	const directive = makeDirective({
+		postings: [
+			{
+				account: 'Assets:Portfolio',
+				units: { number: '10', currency: 'AAPL' },
+				price: { number: '150', currency: 'USD' }
+			}
+		]
+	});
+	const rawSource = `2024-12-01 * "Buy"
+  Assets:Portfolio  10 AAPL @ 150 USD
+  Assets:Cash`;
+
+	const result = directiveToXact(directive, rawSource);
+	expect(result.postings[0].totalPrice).toBe(false);
+});
+
 test('maps cost annotation', () => {
 	const directive = makeDirective({
 		postings: [

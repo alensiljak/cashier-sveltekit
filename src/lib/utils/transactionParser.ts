@@ -25,8 +25,11 @@ export class TransactionParser {
  * Map a raw WASM transaction directive object to an Xact view model.
  * Works with directives from both ParsedLedger.getDirectives() and
  * parse(source).ledger.directives.
+ *
+ * Pass rawSource when available so @@ vs @ can be detected from the text —
+ * the WASM Amount type has no `total` field and never sets it at runtime.
  */
-export function directiveToXact(directive: any): Xact {
+export function directiveToXact(directive: any, rawSource?: string): Xact {
 	const tx = new Xact();
 	tx.date = directive.date;
 	tx.payee = directive.payee ?? '';
@@ -39,13 +42,29 @@ export function directiveToXact(directive: any): Xact {
 		if (p.units?.currency) posting.currency = p.units.currency;
 		if (p.price?.number != null) posting.priceAmount = parseFloat(p.price.number);
 		if (p.price?.currency) posting.priceCurrency = p.price.currency;
-		if (p.price) posting.totalPrice = !!p.price.total;
+		if (p.price) {
+			// p.price.total is absent from the WASM Amount type and is always
+			// undefined at runtime. Fall back to scanning the raw source text.
+			posting.totalPrice = !!p.price.total || isTotalPrice(rawSource, p.account);
+		}
 		if (p.cost?.number != null) posting.costAmount = parseFloat(p.cost.number);
 		if (p.cost?.currency) posting.costCurrency = p.cost.currency;
 		if (p.cost?.date) posting.costDate = p.cost.date;
 		return posting;
 	});
 	return tx;
+}
+
+/**
+ * Returns true if the source line for `account` uses @@ (total price).
+ * Matches by first token to avoid substring collisions between account names.
+ */
+function isTotalPrice(source: string | undefined, account: string): boolean {
+	if (!source || !account) return false;
+	return source.split('\n').some((line) => {
+		const trimmed = line.trimStart();
+		return trimmed.split(/\s+/)[0] === account && /@@/.test(line);
+	});
 }
 
 export function parseXact(input: string): Xact {
@@ -62,5 +81,5 @@ export function parseXact(input: string): Xact {
 		throw new Error('No transaction found in input');
 	}
 
-	return directiveToXact(directive);
+	return directiveToXact(directive, input);
 }
