@@ -68,6 +68,14 @@ export class Posting {
 	account: string;
 	amount?: number;
 	currency: string;
+	// Price annotation: `@ priceAmount priceCurrency` or `@@ priceAmount priceCurrency` when totalPrice=true
+	priceAmount?: number;
+	priceCurrency?: string;
+	totalPrice?: boolean;
+	// Cost annotation: `{costAmount costCurrency[, costDate]}`
+	costAmount?: number;
+	costCurrency?: string;
+	costDate?: string;
 
 	constructor() {
 		// Id is inserted automatically.

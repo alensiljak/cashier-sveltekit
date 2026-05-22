@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { xact, selectionMetadata } from '$lib/data/mainStore';
-	import { CalculatorIcon, DiffIcon } from '@lucide/svelte';
+	import { xact, selectionMetadata, postingEditorIndex } from '$lib/data/mainStore';
+	import { CalculatorIcon, DiffIcon, PencilLineIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import type { EventHandler } from 'svelte/elements';
 	import { goto } from '$app/navigation';
@@ -48,6 +48,11 @@
 		await goto('/calculator');
 	}
 
+	async function openAdvancedEditor() {
+		postingEditorIndex.set(index);
+		await goto('/postings/editor');
+	}
+
 	/**
 	 * Change amount sign.
 	 */
@@ -73,8 +78,16 @@
 	/>
 
 	<div class="mb-2 flex flex-row items-center">
-		<!-- amount sign -->
-		<div>
+		<!-- amount sign + advanced editor -->
+		<div class="flex gap-1">
+			<button
+				type="button"
+				class="btn btn-outline btn-primary-content w-10 grow-0 rounded px-1"
+				onclick={openAdvancedEditor}
+				title="Advanced posting editor"
+			>
+				<PencilLineIcon class="h-4 w-4" />
+			</button>
 			<button
 				type="button"
 				class="btn btn-outline btn-primary-content w-12 grow-0 rounded px-1"

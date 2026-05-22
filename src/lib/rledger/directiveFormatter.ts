@@ -351,7 +351,9 @@ class DirectiveFormatter {
 
 		const record = cost as Record<string, unknown>;
 		if (record.number != null) {
-			return ` {${this.formatAmount(cost)}}`;
+			const amountStr = this.formatAmount(cost);
+			const datePart = typeof record.date === 'string' && record.date ? `, ${record.date}` : '';
+			return ` {${amountStr}${datePart}}`;
 		}
 
 		return ` {${JSON.stringify(cost)}}`;
@@ -361,7 +363,9 @@ class DirectiveFormatter {
 		if (!price) {
 			return '';
 		}
-		return ` @ ${this.formatAmount(price)}`;
+		const record = price as Record<string, unknown>;
+		const operator = record.total ? '@@' : '@';
+		return ` ${operator} ${this.formatAmount(price)}`;
 	}
 
 	private static formatExtraFields(

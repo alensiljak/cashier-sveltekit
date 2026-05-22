@@ -29,9 +29,23 @@ export function xactToBeancountText(tx: Xact): string {
 				units = { number: '0', currency: p.currency };
 			}
 			// Account set with no amount, or neither → omit units (Beancount auto-balance posting).
+
+			let cost: Record<string, unknown> | undefined;
+			if (p.costAmount != null && p.costCurrency) {
+				cost = { number: String(p.costAmount), currency: p.costCurrency };
+				if (p.costDate) cost.date = p.costDate;
+			}
+
+			let price: Record<string, unknown> | undefined;
+			if (p.priceAmount != null && p.priceCurrency) {
+				price = { number: String(p.priceAmount), currency: p.priceCurrency, total: p.totalPrice ?? false };
+			}
+
 			return {
 				account: p.account || PLACEHOLDER_ACCOUNT,
-				units
+				units,
+				cost,
+				price
 			};
 		})
 	};
