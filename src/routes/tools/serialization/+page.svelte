@@ -8,7 +8,6 @@
 	import { onMount } from 'svelte';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import { computeSourceHash } from '$lib/services/rustledger';
-	import { settings, SettingKeys } from '$lib/settings';
 	import { getFileMetadata } from '$lib/utils/opfslib';
 	import { listFileTree } from '$lib/utils/opfslib';
 	import { OPFSBackend } from '$lib/storage';
@@ -20,7 +19,6 @@
 	let loading = false;
 	let loadError: string | null = null;
 	let cacheSize: number | null = null;
-	let storedHash = '';
 	let currentHash = '';
 	let directiveCount = 0;
 	let isWorking = false;
@@ -48,8 +46,6 @@
 
 		const meta = await getFileMetadata(LEDGER_CACHE_FILE);
 		cacheSize = meta?.size ?? null;
-
-		storedHash = (await settings.get<string>(SettingKeys.ledgerCacheHash)) ?? '';
 	}
 
 	async function handleSerialize() {
@@ -61,12 +57,10 @@
 			status = 'Serializing...';
 			const result = await fullLedgerService.serialize();
 
-			// Compute hash from source files and persist it
 			const fileMap = await loadOpfsFileMap();
 			currentHash = hashFileMap(fileMap);
-			await settings.set(SettingKeys.ledgerCacheHash, currentHash);
 
-			status = `Serialized ${result.bytes.toLocaleString()} bytes to OPFS. Hash saved.`;
+			status = `Serialized ${result.bytes.toLocaleString()} bytes to OPFS.`;
 			await refreshStatus();
 		} catch (e) {
 			status = `Error: ${e}`;
@@ -81,12 +75,7 @@
 		try {
 			const result = await fullLedgerService.loadFromCache();
 
-			// Hash comparison
-			const fileMap = await loadOpfsFileMap();
-			currentHash = hashFileMap(fileMap);
-			const hashMatch = storedHash && currentHash === storedHash;
-
-			status = `Restored from cache (${result.directiveCount} directives). Hash ${hashMatch ? 'matches' : 'mismatch — sources may have changed'}.`;
+			status = `Restored from cache (${result.directiveCount} directives).`;
 			await refreshStatus();
 		} catch (e) {
 			status = `Error: ${e}`;
@@ -149,13 +138,6 @@
 		return h ? h.slice(0, 12) + '…' : '—';
 	}
 
-	$: hashState =
-		!storedHash || !currentHash ? 'unknown' :
-		storedHash === currentHash   ? 'match'   : 'mismatch';
-
-	$: hashBadgeClass =
-		hashState === 'match'    ? 'badge-success' :
-		hashState === 'mismatch' ? 'badge-error'   : 'badge-ghost';
 </script>
 
 <Toolbar title="Ledger Serialization"></Toolbar>
@@ -217,13 +199,8 @@
 					</span>
 				</div>
 				<div class="flex items-center gap-4 text-sm">
-					<span class="w-36 opacity-60 shrink-0">Stored hash</span>
-					<span class="font-mono font-medium">{hashShort(storedHash)}</span>
-				</div>
-				<div class="flex items-center gap-4 text-sm">
-					<span class="w-36 opacity-60 shrink-0">Current hash</span>
+					<span class="w-36 opacity-60 shrink-0">Source hash</span>
 					<span class="font-mono font-medium">{hashShort(currentHash)}</span>
-					<span class="badge {hashBadgeClass} badge-sm">{hashState}</span>
 				</div>
 			</div>
 		</div>
