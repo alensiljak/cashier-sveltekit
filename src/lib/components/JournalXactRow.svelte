@@ -29,16 +29,9 @@
 			{#if xact.flag === '!'}
 				<TriangleAlertIcon class="text-warning size-4 shrink-0" />
 			{/if}
-			{xact.payee}
+			{xact.payee}{#if xact.payee && xact.note}<span class="opacity-50"> · {xact.note}</span>{:else if xact.note}{xact.note}{/if}
 		</div>
 	</div>
-
-	<!-- note -->
-	{#if xact.note}
-		<div class="text-primary pl-6 leading-4">
-			<small>; {xact.note}</small>
-		</div>
-	{/if}
 
 	<!-- postings -->
 	{#if xact.postings}
