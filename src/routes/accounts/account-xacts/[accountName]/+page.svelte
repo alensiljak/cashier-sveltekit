@@ -85,7 +85,7 @@
 				>
 					<data class="mr-4 shrink-0">{row.date}</data>
 					<data class="grow">
-						{row.payee}{row.payee && row.narration ? ' | ' : ''}{row.narration}
+						{row.payee}{#if row.payee && row.narration}<span class="opacity-50"> · {row.narration}</span>{:else if row.narration}{row.narration}{/if}
 					</data>
 					<data class="shrink-0 {Formatter.getAmountColour(row.amount)}">
 						{Formatter.formatAmount(row.amount)}

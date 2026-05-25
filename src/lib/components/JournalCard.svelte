@@ -125,7 +125,7 @@
 							{#if xact.flag === '!'}
 								<TriangleAlertIcon class="text-warning size-4 shrink-0" />
 							{/if}
-							{xact.payee}
+							{xact.payee}{#if xact.payee && xact.note}<span class="opacity-50"> · {xact.note}</span>{:else if xact.note}{xact.note}{/if}
 						</div>
 						<div class={`${getXactColour(index)}`}>
 							{formatAmount(xactBalances[index].quantity)}
