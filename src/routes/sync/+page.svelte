@@ -10,6 +10,7 @@
 	import { goto } from '$app/navigation';
 	import * as cashierFsSync from '$lib/sync/sync-fs';
 	import ledgerService from '$lib/services/ledgerService';
+	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import { syncProgress } from '$lib/stores/syncProgressStore';
 
 	Notifier.init();
@@ -104,8 +105,13 @@
 				throw new Error('Synchronization failed. Please check the logs for more details.');
 			}
 
-			// invalidate cache and reload data
+			// Invalidate both ledger services so stale data is never served after sync.
+			// ledgerService (ParsedLedger) is used for formatting/editing; fullLedgerService
+			// (worker-based Ledger) is used for BQL queries, balances, and the binary cache.
+			// We drop the binary cache lazily (deleteCache) rather than re-parsing eagerly
+			// so the sync call returns quickly; the re-parse happens on the next ledger access.
 			await ledgerService.invalidate();
+			await fullLedgerService.deleteCache();
 
 			Notifier.success('Synchronization completed successfully!');
 			rotationClass = '';

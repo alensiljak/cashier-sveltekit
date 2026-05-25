@@ -101,25 +101,82 @@ async function opfsListBeanFiles(): Promise<Array<{ path: string; content: strin
 	return results;
 }
 
+/**
+ * Returns the lastModified timestamp (ms since epoch) of the binary cache file,
+ * or 0 if the cache does not exist. Used for staleness detection.
+ */
+async function opfsCacheLastModified(): Promise<number> {
+	const handle = await opfsGetHandle(LEDGER_CACHE_FILE);
+	if (!handle) return 0;
+	try {
+		const file = await handle.getFile();
+		return file.lastModified;
+	} catch {
+		return 0;
+	}
+}
+
+/**
+ * Returns the maximum lastModified timestamp (ms since epoch) across all .bean
+ * files in OPFS. Used alongside opfsCacheLastModified to detect whether source
+ * files have changed since the binary cache was written.
+ */
+async function opfsBeanFilesMaxModified(): Promise<number> {
+	const root = await navigator.storage.getDirectory();
+	let maxModified = 0;
+
+	async function walk(dir: FileSystemDirectoryHandle): Promise<void> {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		for await (const [name, handle] of (dir as any).entries()) {
+			if (handle.kind === 'directory') {
+				await walk(handle as FileSystemDirectoryHandle);
+			} else if (name.endsWith('.bean')) {
+				try {
+					const file = await (handle as FileSystemFileHandle).getFile();
+					if (file.lastModified > maxModified) maxModified = file.lastModified;
+				} catch {
+					// Skip files we can't read metadata for
+				}
+			}
+		}
+	}
+
+	await walk(root);
+	return maxModified;
+}
+
 async function loadFromCacheOrFiles(
 	mainFileName: string,
 	userBookFilename?: string,
 	useCaching = true
 ): Promise<void> {
 	if (useCaching) {
-		const bytes = await opfsReadBinary(LEDGER_CACHE_FILE);
-		if (bytes) {
-			try {
-				if (ledger) {
-					ledger.free();
-					ledger = null;
+		// Check timestamps before reading the (potentially large) cache binary.
+		// If any .bean source file is newer than the cache, the cache is stale —
+		// this catches changes made between sessions (e.g. a sync that ran while
+		// the app was closed, or a manual OPFS edit) without requiring a content hash.
+		const cacheModified = await opfsCacheLastModified();
+		if (cacheModified > 0) {
+			const beanModified = await opfsBeanFilesMaxModified();
+			if (beanModified <= cacheModified) {
+				// Cache is at least as recent as all source files — attempt to load it.
+				const bytes = await opfsReadBinary(LEDGER_CACHE_FILE);
+				if (bytes) {
+					try {
+						if (ledger) {
+							ledger.free();
+							ledger = null;
+						}
+						ledger = wasmModule!.Ledger.fromCache(bytes);
+						return;
+					} catch {
+						// Cache corrupt or version mismatch — fall through to file parse
+					}
 				}
-				ledger = wasmModule!.Ledger.fromCache(bytes);
-				return;
-			} catch {
-				// Cache corrupt or version mismatch — fall through to file parse
 			}
+			// .bean files are newer than the cache — fall through to re-parse
 		}
+		// No cache exists — fall through to file parse
 	}
 	await loadFromFiles(mainFileName, userBookFilename);
 }

@@ -6,6 +6,7 @@
 	import { ArrowDownToLineIcon, SaveIcon, XIcon } from '@lucide/svelte';
 	import * as OpfsLib from '$lib/utils/opfslib.js';
 	import Notifier from '$lib/utils/notifier';
+	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 
 	Notifier.init();
 
@@ -43,6 +44,13 @@
 			await OpfsLib.saveFile(filePath, fileContent);
 			originalContent = fileContent;
 			hasUnsavedChanges = false;
+			// A .bean file was manually edited — drop the binary cache so the next
+			// ledger load re-parses fresh source instead of serving a stale snapshot.
+			// We use deleteCache (lazy) rather than invalidate (eager) because the
+			// user may not navigate to a ledger page immediately after saving.
+			if (filePath.endsWith('.bean')) {
+				await fullLedgerService.deleteCache();
+			}
 			Notifier.success('File saved successfully');
 		} catch (error: any) {
 			Notifier.error(error.message || 'Failed to save file');
