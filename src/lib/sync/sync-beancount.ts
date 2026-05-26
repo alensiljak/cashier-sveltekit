@@ -254,7 +254,7 @@ async function synchronize(syncOptions?: SyncSteps): Promise<boolean> {
 		// Asset Allocation definition (.toml)
 		if (syncOptions.syncAssetAllocation) {
 			updateSyncStep(3, 'in-progress');
-			await syncAssetAllocation(sync);
+			// await syncAssetAllocation(sync);
 			updateSyncStep(3, 'completed');
 		}
 

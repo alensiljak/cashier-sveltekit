@@ -19,7 +19,7 @@ export class SyncApiClient {
 
 	async init() {
 		// Server base url
-		this.serverUrl = await settings.get(SettingKeys.syncServerUrl);
+		this.serverUrl = await settings.get(SettingKeys.syncServerUrl) as string;
 	}
 
 	/**
