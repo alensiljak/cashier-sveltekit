@@ -1,5 +1,10 @@
 <script lang="ts">
 	import type { AssetClass } from '$lib/assetAllocation/AssetClass.js';
+	import AaEditorNode from './AaEditorNode.svelte';
+
+	function focusOnMount(node: HTMLElement) {
+		node.focus();
+	}
 
 	type Props = {
 		ac: AssetClass;
@@ -101,7 +106,7 @@
 				bind:value={nameInput}
 				onblur={confirmRename}
 				onkeydown={handleNameKey}
-				autofocus
+				use:focusOnMount
 			/>
 		{:else}
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -189,7 +194,7 @@
 	<!-- Children (recursive) -->
 	{#if !collapsed}
 		{#each children as child (child.fullname)}
-			<svelte:self
+			<AaEditorNode
 				ac={child}
 				{childrenIndex}
 				{commodities}
