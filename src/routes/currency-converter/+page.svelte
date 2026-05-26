@@ -4,7 +4,7 @@
 	import { getCurrencies, convert, type ConversionResult } from '$lib/services/currencyConverter';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import { settings, SettingKeys } from '$lib/settings';
-	import { ArrowUpDownIcon, XIcon } from '@lucide/svelte';
+	import { ArrowUpDownIcon, XIcon, CopyIcon } from '@lucide/svelte';
 
 	let currencies: string[] = $state([]);
 	let fromCurrency = $state('');
@@ -63,6 +63,11 @@
 	function swap() {
 		[fromCurrency, toCurrency] = [toCurrency, fromCurrency];
 	}
+
+	function copyResult() {
+		if (!result) return;
+		navigator.clipboard.writeText(`${result.amount.toFixed(4)} ${result.currency}`);
+	}
 </script>
 
 <main class="flex flex-col flex-1">
@@ -96,18 +101,20 @@
 				</div>
 			</label>
 
-			<!-- From / swap / To row -->
-			<div class="flex items-end gap-2">
-				<label class="form-control flex-1">
+			<!-- From / swap / To column -->
+			<div class="flex flex-col gap-2">
+				<label class="form-control w-full">
 					<div class="label"><span class="label-text">From</span></div>
 					<SearchableSelect options={currencies} bind:value={fromCurrency} />
 				</label>
 
-				<button class="btn btn-circle btn-outline mb-0.5" onclick={swap} title="Swap currencies">
-					<ArrowUpDownIcon size={18} />
-				</button>
+				<div class="flex justify-center">
+					<button class="btn btn-circle btn-outline" onclick={swap} title="Swap currencies">
+						<ArrowUpDownIcon size={18} />
+					</button>
+				</div>
 
-				<label class="form-control flex-1">
+				<label class="form-control w-full">
 					<div class="label"><span class="label-text">To</span></div>
 					<SearchableSelect options={currencies} bind:value={toCurrency} />
 				</label>
@@ -115,7 +122,10 @@
 
 			<!-- Result -->
 			{#if result}
-				<div class="card bg-base-200">
+				<div class="card bg-base-200 relative">
+					<button class="btn btn-ghost btn-sm btn-circle absolute right-2 top-2" onclick={copyResult} title="Copy result">
+						<CopyIcon size={16} />
+					</button>
 					<div class="card-body items-center py-6">
 						<p class="text-sm text-base-content/60">
 							{inputAmount} {fromCurrency} =
