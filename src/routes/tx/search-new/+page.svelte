@@ -10,6 +10,10 @@
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import { CodeIcon } from '@lucide/svelte';
 
+	function focusOnMount(el: HTMLElement) {
+		el.focus();
+	}
+
 	const ACCOUNT_TYPES = ['Assets', 'Liabilities', 'Income', 'Expenses', 'Equity'] as const;
 	const MAX_RESULTS = 15;
 
@@ -230,7 +234,7 @@
 			class="input input-bordered w-full"
 			type="search"
 			placeholder="Search payee, narration, account…"
-			autofocus
+			use:focusOnMount
 			bind:value={searchText}
 			oninput={onInput}
 		/>
