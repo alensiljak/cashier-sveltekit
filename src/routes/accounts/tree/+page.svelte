@@ -12,12 +12,12 @@
 		label: string;
 		level: number;
 		children: string[];
-		expanded: boolean;
 		balances: Record<string, number>;
 	}
 
 	let nodeMap = $state(new Map<string, TreeNode>());
 	let rootNames: string[] = $state([]);
+	let expandedNodes = $state(new Set<string>());
 	let dataLoaded = $state(false);
 	let defaultCurrency = $state('');
 
@@ -75,6 +75,7 @@
 
 		nodeMap = map;
 		rootNames = [...map.keys()].filter((n) => !n.includes(':')).sort();
+		expandedNodes = new Set(rootNames);
 		dataLoaded = true;
 		document.body.style.cursor = 'default';
 	}
@@ -87,7 +88,6 @@
 			label: parts[parts.length - 1],
 			level: parts.length - 1,
 			children: [],
-			expanded: parts.length === 1,
 			balances: {}
 		});
 		if (parts.length > 1) {
@@ -121,8 +121,13 @@
 	function toggleNode(name: string) {
 		const node = nodeMap.get(name);
 		if (node && node.children.length > 0) {
-			node.expanded = !node.expanded;
-			nodeMap = new Map(nodeMap);
+			const next = new Set(expandedNodes);
+			if (next.has(name)) {
+				next.delete(name);
+			} else {
+				next.add(name);
+			}
+			expandedNodes = next;
 		}
 	}
 
@@ -142,7 +147,7 @@
 				const node = nodeMap.get(name);
 				if (!node) continue;
 				result.push(node);
-				if (node.expanded) walk(node.children);
+				if (expandedNodes.has(name)) walk(node.children);
 			}
 		}
 		walk(rootNames);
@@ -165,10 +170,10 @@
 								class="w-5 h-5 flex items-center justify-center shrink-0 mr-1 rounded hover:bg-base-300"
 								onclick={() => toggleNode(node.name)}
 								tabindex={node.children.length > 0 ? 0 : -1}
-								aria-label={node.expanded ? 'Collapse' : 'Expand'}
+								aria-label={expandedNodes.has(node.name) ? 'Collapse' : 'Expand'}
 							>
 								{#if node.children.length > 0}
-									{#if node.expanded}
+									{#if expandedNodes.has(node.name)}
 										<ChevronDown class="w-4 h-4 opacity-60" />
 									{:else}
 										<ChevronRight class="w-4 h-4 opacity-60" />
