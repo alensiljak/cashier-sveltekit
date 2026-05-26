@@ -6,9 +6,10 @@
 	// Props
 	type Props = {
 		title?: string;
+		actions?: Snippet;
 		menuItems?: Snippet;
 	};
-	let { title = 'Cashier', menuItems }: Props = $props();
+	let { title = 'Cashier', actions, menuItems }: Props = $props();
 
 	let dropdownBtn: HTMLButtonElement = $state()!;
 
@@ -36,6 +37,11 @@
 		<div class="flex-1">
 			<p class="w-full pl-0 text-xl leading-7 font-bold">{title}</p>
 		</div>
+		{#if actions}
+			<div class="flex-none">
+				{@render actions()}
+			</div>
+		{/if}
 		{#if menuItems}
 			<div class="flex-none">
 				<div class="dropdown dropdown-end">

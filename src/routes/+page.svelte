@@ -1,6 +1,6 @@
 <script lang="ts">
 	import JournalCard from '$lib/components/JournalCard.svelte';
-	import { ArrowDownUpIcon, PlusIcon, SettingsIcon } from '@lucide/svelte';
+	import { ArrowDownUpIcon, CircleAlert, PlusIcon, SettingsIcon } from '@lucide/svelte';
 	import Toolbar from '../lib/components/Toolbar.svelte';
 	import { goto } from '$app/navigation';
 	import { xact } from '$lib/data/mainStore';
@@ -14,8 +14,10 @@
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import { CardNames } from '$lib/settings';
 	import appService from '$lib/services/appService';
+	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 
 	let cards: Array<Component> = $state([]);
+	let hasErrors = $state(false);
 
 	onMount(async () => {
 		// display the cards ordered.
@@ -50,6 +52,20 @@
 		});
 	}
 
+	// When the ledger becomes loaded, check for validation errors.
+	$effect(() => {
+		const unsubscribe = fullLedgerService.loaded.subscribe(async (isLoaded) => {
+			if (!isLoaded) return;
+			try {
+				const allErrors = (await fullLedgerService.getErrors()) as Array<{ severity: string }>;
+				hasErrors = allErrors.some((e) => e.severity === 'error');
+			} catch {
+				// Ledger not ready yet; ignore.
+			}
+		});
+		return unsubscribe;
+	});
+
 	async function onFab() {
 		// create a new transaction in the app store
 		const tx = Xact.create();
@@ -61,6 +77,17 @@
 
 <article class="flex h-screen flex-col">
 	<Toolbar>
+		{#snippet actions()}
+			{#if hasErrors}
+				<button
+					class="btn btn-ghost btn-circle hover-transparent"
+					title="Validation errors found"
+					onclick={() => goto('/util/validation')}
+				>
+					<CircleAlert size={20} class="text-error" />
+				</button>
+			{/if}
+		{/snippet}
 		{#snippet menuItems()}
 			<ToolbarMenuItem text="Home Settings" Icon={SettingsIcon} targetNav="/home-settings" />
 			<ToolbarMenuItem text="Reorder Cards" targetNav="/home-reorder" Icon={ArrowDownUpIcon} />
