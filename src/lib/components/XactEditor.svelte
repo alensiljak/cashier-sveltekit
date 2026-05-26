@@ -221,12 +221,13 @@
 		<CalendarIcon class="h-5 w-5 mr-2 opacity-70" />
 		<button type="button" class="btn btn-ghost h-11 w-11 p-0" onclick={() => shiftDate(-1)}><ChevronLeftIcon class="h-4 w-4" /></button>
 		<div class="relative flex-1">
-			<div
-				class="input rounded flex items-center cursor-pointer px-3 w-full"
+			<button
+				type="button"
+				class="input rounded flex items-center cursor-pointer px-3 w-full text-left"
 				onclick={() => dateInputEl?.showPicker?.()}
 			>
 				{formattedDate}
-			</div>
+			</button>
 			<input
 				bind:this={dateInputEl}
 				title="Date"
