@@ -5,6 +5,7 @@
     import { settings, SettingKeys } from '$lib/settings';
     import { readFile } from '$lib/utils/opfslib';
     import { WebDavClient } from '$lib/utils/webdav';
+    import db from '$lib/data/db';
     import { CheckIcon, CopyIcon } from '@lucide/svelte';
 
     type PreviewSection = { filename: string; content: string };
@@ -55,6 +56,17 @@
                     content = res.ok ? await res.text() : `Error ${res.status}: ${res.statusText}`;
                 }
                 result.push({ filename: 'cashier.bean', content });
+            }
+            if (files.includes('scheduled')) {
+                let content: string;
+                if (source === 'local') {
+                    const all = await db.scheduled.toArray();
+                    content = JSON.stringify(all, null, 2);
+                } else {
+                    const res = await dav!.get('scheduled.json');
+                    content = res.ok ? await res.text() : `Error ${res.status}: ${res.statusText}`;
+                }
+                result.push({ filename: 'scheduled.json', content });
             }
         } catch (err) {
             error = (err as Error).message;

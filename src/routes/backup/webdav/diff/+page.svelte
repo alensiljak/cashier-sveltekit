@@ -5,6 +5,7 @@
     import { settings, SettingKeys } from '$lib/settings';
     import { readFile } from '$lib/utils/opfslib';
     import { WebDavClient } from '$lib/utils/webdav';
+    import db from '$lib/data/db';
     import { diffLines } from 'diff';
 
     type DiffLine = { type: 'added' | 'removed' | 'context'; content: string };
@@ -56,6 +57,18 @@
                     result.push({ filename: 'cashier.bean', lines, identical: lines.every(l => l.type === 'context') });
                 } else {
                     error = `Cannot fetch remote cashier.bean: ${res.status} ${res.statusText}`;
+                }
+            }
+            if (files.includes('scheduled')) {
+                const all = await db.scheduled.toArray();
+                const localContent = JSON.stringify(all, null, 2);
+                const res = await dav.get('scheduled.json');
+                if (res.ok) {
+                    const remoteContent = await res.text();
+                    const lines = buildDiffLines(localContent, remoteContent);
+                    result.push({ filename: 'scheduled.json', lines, identical: lines.every(l => l.type === 'context') });
+                } else {
+                    error = `Cannot fetch remote scheduled.json: ${res.status} ${res.statusText}`;
                 }
             }
         } catch (err) {

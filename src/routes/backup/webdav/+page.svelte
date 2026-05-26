@@ -2,7 +2,7 @@
     import { onMount } from 'svelte';
     import Toolbar from '$lib/components/Toolbar.svelte';
     import { settings, SettingKeys } from '$lib/settings';
-    import { Setting } from '$lib/data/model';
+    import { ScheduledTransaction, Setting } from '$lib/data/model';
     import db from '$lib/data/db';
     import { readFile, saveFile } from '$lib/utils/opfslib';
     import Notifier from '$lib/utils/notifier';
@@ -12,6 +12,7 @@
 
     let includeSettings = $state(false);
     let includeCashierBean = $state(false);
+    let includeScheduled = $state(false);
     let showDownloadDialog = $state(false);
     let webdavUrl = $state('');
     let webdavUsername = $state('');
@@ -21,8 +22,9 @@
     let isCheckingRemote = $state(false);
     let settingsLastModified = $state<Date | null>(null);
     let cashierBeanLastModified = $state<Date | null>(null);
+    let scheduledLastModified = $state<Date | null>(null);
 
-    const noneSelected = $derived(!includeSettings && !includeCashierBean);
+    const noneSelected = $derived(!includeSettings && !includeCashierBean && !includeScheduled);
 
     onMount(async () => {
         const saved = await settings.get<{ url: string; username: string; password: string }>(SettingKeys.webdavSettings);
@@ -37,12 +39,14 @@
         isCheckingRemote = true;
         const dav = client();
         try {
-            const [sm, cm] = await Promise.allSettled([
+            const [sm, cm, scm] = await Promise.allSettled([
                 dav.lastModified('settings.json'),
                 dav.lastModified('cashier.bean'),
+                dav.lastModified('scheduled.json'),
             ]);
             if (sm.status === 'fulfilled') settingsLastModified = sm.value;
             if (cm.status === 'fulfilled') cashierBeanLastModified = cm.value;
+            if (scm.status === 'fulfilled') scheduledLastModified = scm.value;
         } finally {
             isCheckingRemote = false;
         }
@@ -56,6 +60,7 @@
         const p = new URLSearchParams();
         if (includeSettings) p.append('f', 'settings');
         if (includeCashierBean) p.append('f', 'bean');
+        if (includeScheduled) p.append('f', 'scheduled');
         return p;
     }
 
@@ -79,6 +84,13 @@
                     if (res.ok) Notifier.success('cashier.bean uploaded');
                     else Notifier.error(`Upload failed for cashier.bean: ${res.status} ${res.statusText}`);
                 }
+            }
+            if (includeScheduled) {
+                const all = await db.scheduled.toArray();
+                const json = JSON.stringify(all, null, 2);
+                const res = await dav.put('scheduled.json', json, 'application/json; charset=utf-8');
+                if (res.ok) Notifier.success('Scheduled transactions uploaded');
+                else Notifier.error(`Upload failed for scheduled.json: ${res.status} ${res.statusText}`);
             }
         } catch (err) {
             Notifier.error('Upload error: ' + (err as Error).message);
@@ -118,6 +130,17 @@
                     Notifier.error(`Download failed for cashier.bean: ${res.status} ${res.statusText}`);
                 }
             }
+            if (includeScheduled) {
+                const res = await dav.get('scheduled.json');
+                if (res.ok) {
+                    const entries: ScheduledTransaction[] = JSON.parse(await res.text());
+                    await db.scheduled.clear();
+                    await db.scheduled.bulkPut(entries);
+                    Notifier.success('Scheduled transactions restored');
+                } else {
+                    Notifier.error(`Download failed for scheduled.json: ${res.status} ${res.statusText}`);
+                }
+            }
         } catch (err) {
             Notifier.error('Download error: ' + (err as Error).message);
         } finally {
@@ -139,7 +162,8 @@
 
     const selectedLabels = $derived([
         ...(includeSettings ? ['Settings'] : []),
-        ...(includeCashierBean ? ['cashier.bean'] : [])
+        ...(includeCashierBean ? ['cashier.bean'] : []),
+        ...(includeScheduled ? ['Scheduled Transactions'] : [])
     ]);
 </script>
 
@@ -174,6 +198,13 @@
         </div>
         <div class="flex flex-col gap-3">
             <label class="flex items-center gap-3 cursor-pointer">
+                <input type="checkbox" class="checkbox checkbox-primary" bind:checked={includeCashierBean} />
+                <span class="flex-1">cashier.bean</span>
+                {#if cashierBeanLastModified}
+                <span class="text-xs text-base-content/50">{cashierBeanLastModified.toLocaleString()}</span>
+                {/if}
+            </label>
+            <label class="flex items-center gap-3 cursor-pointer">
                 <input type="checkbox" class="checkbox checkbox-primary" bind:checked={includeSettings} />
                 <span class="flex-1">Settings</span>
                 {#if settingsLastModified}
@@ -181,10 +212,10 @@
                 {/if}
             </label>
             <label class="flex items-center gap-3 cursor-pointer">
-                <input type="checkbox" class="checkbox checkbox-primary" bind:checked={includeCashierBean} />
-                <span class="flex-1">cashier.bean</span>
-                {#if cashierBeanLastModified}
-                <span class="text-xs text-base-content/50">{cashierBeanLastModified.toLocaleString()}</span>
+                <input type="checkbox" class="checkbox checkbox-primary" bind:checked={includeScheduled} />
+                <span class="flex-1">Scheduled Transactions</span>
+                {#if scheduledLastModified}
+                <span class="text-xs text-base-content/50">{scheduledLastModified.toLocaleString()}</span>
                 {/if}
             </label>
         </div>
