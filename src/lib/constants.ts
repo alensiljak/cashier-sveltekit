@@ -12,5 +12,8 @@ export const ISODATEFORMAT = 'YYYY-MM-DD';
 export const LONGTIMEFORMAT = 'HHmmss';
 export const NUMBER_FORMAT = '#,##0.00';
 
+/** Default OPFS filename for asset allocation definition. */
+export const AA_DEFINITION_FILE = 'asset-allocation.toml';
+
 // settings key
 export const USER_BOOK_FILENAME = 'userBookFilename';

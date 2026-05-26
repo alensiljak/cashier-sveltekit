@@ -13,7 +13,8 @@
 	import Fab from '$lib/components/FAB.svelte';
 	import { page } from '$app/state';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
-	import { USER_BOOK_FILENAME } from '$lib/constants';
+	import { AA_DEFINITION_FILE, USER_BOOK_FILENAME } from '$lib/constants';
+	import { saveFile, fileExists } from '$lib/utils/opfslib';
 
 	Notifier.init();
 
@@ -147,6 +148,16 @@
 		await goto('/opfs');
 	}
 
+	async function onCreateOrEditAA() {
+		if (!assetAllocationDefinition) {
+			if (!(await fileExists(AA_DEFINITION_FILE))) {
+				await saveFile(AA_DEFINITION_FILE, '');
+			}
+			assetAllocationDefinition = AA_DEFINITION_FILE;
+		}
+		await goto('/asset-allocation/editor');
+	}
+
 	async function saveSettings() {
 		await settings.set(SettingKeys.currency, currency);
 		DefaultCurrencyStore.set(currency as string);
@@ -272,6 +283,9 @@
 				<RotateCcw size={16} />
 			</button>
 		{/if}
+		<button class="btn btn-secondary btn-sm rounded" type="button" onclick={onCreateOrEditAA}>
+			{assetAllocationDefinition ? 'Edit' : 'Create'}
+		</button>
 		<button
 			class="btn btn-primary btn-sm rounded"
 			type="button"

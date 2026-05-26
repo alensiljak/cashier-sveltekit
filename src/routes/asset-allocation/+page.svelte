@@ -9,7 +9,7 @@
 	import AssetClassRow from '$lib/components/AssetClassRow.svelte';
 	import { AaStocksStore, AssetAllocationStore, AssetAllocationLoadedAtStore } from '$lib/data/mainStore.js';
 	import Notifier from '$lib/utils/notifier.js';
-	import { RefreshCwIcon, FileDownIcon, ScaleIcon } from '@lucide/svelte';
+	import { RefreshCwIcon, FileDownIcon, ScaleIcon, PencilIcon } from '@lucide/svelte';
 
 	Notifier.init();
 
@@ -98,6 +98,7 @@
 <article class="flex h-screen flex-col">
 	<Toolbar title="Asset Allocation">
 		{#snippet menuItems()}
+			<ToolbarMenuItem text="Edit" Icon={PencilIcon} targetNav="/asset-allocation/editor" />
 			<ToolbarMenuItem text="Export" Icon={FileDownIcon} onclick={onExportClick} />
 			<ToolbarMenuItem text="Validate" Icon={ScaleIcon} onclick={onValidateClick} />
 			<ToolbarMenuItem text="Help" />

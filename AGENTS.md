@@ -61,24 +61,17 @@ It is implemented as a PWA using Svelte and DaisyUI frameworks.
 
 - `npm` is the package manager.
 - Use ripgrep (`rg`) CLI for fast text search across text files. Prefer over `grep`.
+- For running Python code, use `uv run`.
 - Use `agent-browser` CLI to run the browser.
 - **Formatting**: `oxfmt` (with Prettier as fallback for `.svelte` files via `prettier-plugin-svelte`).
 - **Linting**: `oxlint` for JS/TS; `eslint-plugin-svelte` via ESLint for Svelte templates.
 - **Unit tests**: Vitest — `npm run test:unit`
 - **E2E tests**: Playwright — `npm run test:e2e`
 - Run `npm run format` to format, `npm run lint` to lint, `npm run check` to type-check (svelte-check + TypeScript).
-- Use Serena MCP for codebase navigation.
 
 ### Code Intelligence (LSP)
 
-Prefer LSP over Grep/Glob/Read for code navigation:
+Use Serena for symbol navigation — finding definitions, implementations, and references — rather than Grep/Glob/Read. Reserve Grep/Glob for text/pattern searches (comments, strings, config values) where LSP doesn't help.
 
-- `goToDefinition` / `goToImplementation` to jump to source
-- `findReferences` to see all usages across the codebase
-- `workspaceSymbol` to find where something is defined
-- `documentSymbol` to list all symbols in a file
-- `hover` for type info without reading the file
-
-Before renaming or changing a function signature, use `findReferences` to find all call sites first.
-Use Grep/Glob only for text/pattern searches (comments, strings, config values) where LSP doesn't help.
-After writing or editing code, check LSP diagnostics before moving on. Fix any type errors or missing imports immediately.
+Before renaming or changing a function signature, find all call sites via Serena first.
+After writing or editing code, check diagnostics before moving on. Fix any type errors or missing imports immediately.
