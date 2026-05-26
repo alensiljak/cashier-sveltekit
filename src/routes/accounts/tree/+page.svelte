@@ -20,6 +20,7 @@
 	let expandedNodes = $state(new Set<string>());
 	let dataLoaded = $state(false);
 	let defaultCurrency = $state('');
+	let showBaseCurrency = $state(false);
 
 	onMount(async () => {
 		await loadData();
@@ -33,7 +34,12 @@
 
 		const allAccounts = await fullLedgerService.getAllAccounts();
 
-		const result = await fullLedgerService.query('SELECT account, sum(position) AS balance');
+		const balanceExpr = showBaseCurrency
+			? `convert(sum(position), '${defaultCurrency}')`
+			: 'sum(position)';
+		const result = await fullLedgerService.query(
+			`SELECT account, ${balanceExpr} AS balance`
+		);
 		const accountIdx = result.columns.indexOf('account');
 		const balanceIdx = result.columns.indexOf('balance');
 
@@ -118,6 +124,12 @@
 		return out;
 	}
 
+	async function toggleBaseCurrency() {
+		showBaseCurrency = !showBaseCurrency;
+		dataLoaded = false;
+		await loadData();
+	}
+
 	function toggleNode(name: string) {
 		const node = nodeMap.get(name);
 		if (node && node.children.length > 0) {
@@ -156,7 +168,15 @@
 </script>
 
 <main class="flex flex-col flex-1">
-	<Toolbar title="Account Tree" />
+	<Toolbar title="Account Tree">
+		{#snippet menuItems()}
+			<li>
+				<button onclick={toggleBaseCurrency}>
+					{showBaseCurrency ? 'Show original balances' : 'Show balances in base currency'}
+				</button>
+			</li>
+		{/snippet}
+	</Toolbar>
 	<div class="flex-1 overflow-y-auto overflow-x-auto touch-pan-y">
 		{#if dataLoaded}
 			<div class="min-w-max">
