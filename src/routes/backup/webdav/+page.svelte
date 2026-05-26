@@ -25,6 +25,17 @@
     let scheduledLastModified = $state<Date | null>(null);
 
     const noneSelected = $derived(!includeSettings && !includeCashierBean && !includeScheduled);
+    const allSelected = $derived(includeSettings && includeCashierBean && includeScheduled);
+    const someSelected = $derived(includeSettings || includeCashierBean || includeScheduled);
+    let indeterminate = $state(false);
+    $effect(() => { indeterminate = someSelected && !allSelected; });
+
+    function toggleSelectAll() {
+        const next = !allSelected;
+        includeSettings = next;
+        includeCashierBean = next;
+        includeScheduled = next;
+    }
 
     onMount(async () => {
         const saved = await settings.get<{ url: string; username: string; password: string }>(SettingKeys.webdavSettings);
@@ -197,6 +208,11 @@
             {/if}
         </div>
         <div class="flex flex-col gap-3">
+            <label class="flex items-center gap-3 cursor-pointer">
+                <input type="checkbox" class="checkbox checkbox-primary" checked={allSelected} bind:indeterminate={indeterminate} onclick={toggleSelectAll} />
+                <span class="flex-1 text-sm text-base-content/60">Select all</span>
+            </label>
+            <div class="divider my-0"></div>
             <label class="flex items-center gap-3 cursor-pointer">
                 <input type="checkbox" class="checkbox checkbox-primary" bind:checked={includeCashierBean} />
                 <span class="flex-1">cashier.bean</span>
