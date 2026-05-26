@@ -1,13 +1,7 @@
 <script lang="ts">
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import SearchableSelect from '$lib/components/SearchableSelect.svelte';
-	import {
-		getCurrencyConverter,
-		// getConverterMode,
-		// setConverterMode,
-		// type ConverterMode,
-		type ConversionResult
-	} from '$lib/services/currencyConverter';
+	import { getCurrencies, convert, type ConversionResult } from '$lib/services/currencyConverter';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import { settings, SettingKeys } from '$lib/settings';
 	import { ArrowUpDownIcon, XIcon } from '@lucide/svelte';
@@ -19,7 +13,6 @@
 	let result: ConversionResult | null = $state(null);
 	let isLoadingCurrencies = $state(true);
 	let error: string | null = $state(null);
-	// let mode: ConverterMode = $state(getConverterMode());
 
 	$effect(() => {
 		loadCurrencies();
@@ -29,7 +22,7 @@
 		const amount = parseFloat(inputAmount);
 		if (!inputAmount || isNaN(amount) || !fromCurrency || !toCurrency) return;
 
-		const timeout = setTimeout(() => convert(), 400);
+		const timeout = setTimeout(() => runConvert(), 400);
 		return () => clearTimeout(timeout);
 	});
 
@@ -38,7 +31,7 @@
 		error = null;
 		try {
 			await fullLedgerService.ensureLoaded();
-			currencies = await getCurrencyConverter().getCurrencies();
+			currencies = await getCurrencies();
 			const baseCurrency = await settings.get<string>(SettingKeys.currency);
 			if (currencies.length > 0 && !fromCurrency) fromCurrency = currencies[0];
 			if (!toCurrency) {
@@ -54,14 +47,14 @@
 		}
 	}
 
-	async function convert() {
+	async function runConvert() {
 		const amount = parseFloat(inputAmount);
 		if (!inputAmount || isNaN(amount) || !fromCurrency || !toCurrency) return;
 
 		error = null;
 		result = null;
 		try {
-			result = await getCurrencyConverter().convert(amount, fromCurrency, toCurrency);
+			result = await convert(amount, fromCurrency, toCurrency);
 		} catch (e) {
 			error = String(e);
 		}
@@ -70,11 +63,6 @@
 	function swap() {
 		[fromCurrency, toCurrency] = [toCurrency, fromCurrency];
 	}
-
-	// function onModeChange(newMode: ConverterMode) {
-	// 	mode = newMode;
-	// 	setConverterMode(newMode);
-	// }
 </script>
 
 <main class="flex flex-col flex-1">
@@ -145,24 +133,6 @@
 					<span class="text-sm">{error}</span>
 				</div>
 			{/if}
-
-			<!-- Implementation selector (hidden for now, working well on default engine)
-			<div class="divider text-xs text-base-content/40">Engine</div>
-			<div class="flex gap-2 justify-center">
-				<button
-					class="btn btn-sm {mode === 'synthetic-ledger' ? 'btn-primary' : 'btn-outline'}"
-					onclick={() => onModeChange('synthetic-ledger')}
-				>
-					Synthetic Ledger
-				</button>
-				<button
-					class="btn btn-sm {mode === 'price-graph' ? 'btn-primary' : 'btn-outline'}"
-					onclick={() => onModeChange('price-graph')}
-				>
-					Price Graph
-				</button>
-			</div>
-			-->
 		{/if}
 	</div>
 </main>

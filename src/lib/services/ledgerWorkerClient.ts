@@ -246,7 +246,7 @@ class LedgerWorkerClient {
 		return resp.currencies;
 	}
 
-	/** Convert an amount between currencies using a synthetic ephemeral ledger in the worker. */
+	/** Convert an amount between currencies using BQL CONVERT() on the live ledger. */
 	async convertCurrency(
 		amount: number,
 		fromCurrency: string,

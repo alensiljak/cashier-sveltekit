@@ -211,7 +211,7 @@ export type WorkerRequestPayload =
 	| { type: 'get-options' }
 	/** Return all currencies available for conversion (base + quote from prices table). */
 	| { type: 'get-currencies' }
-	/** Convert an amount from one currency to another via a synthetic ephemeral book. */
+	/** Convert an amount from one currency to another via BQL CONVERT(). */
 	| { type: 'convert-currency'; amount: number; fromCurrency: string; toCurrency: string };
 
 export type WorkerRequest = { id: number } & WorkerRequestPayload;
@@ -475,56 +475,20 @@ async function handleMessage(e: MessageEvent<WorkerRequest>): Promise<void> {
 			case 'convert-currency': {
 				if (!ledger) throw new Error('Ledger not loaded');
 				const { amount, fromCurrency, toCurrency } = e.data;
-
 				if (fromCurrency === toCurrency) {
 					reply({ type: 'convert-currency-done', number: String(amount), currency: toCurrency });
 					break;
 				}
-
-				// Collect latest prices from the persistent ledger
-				const pricesResult = ledger.query('SELECT currency, amount FROM prices ORDER BY date DESC');
-				const pColCurrency = (pricesResult.columns ?? []).indexOf('currency');
-				const pColAmount = (pricesResult.columns ?? []).indexOf('amount');
-				const priceMap = new Map<string, { number: string; currency: string }>();
-				for (const row of (pricesResult.rows ?? []) as any[]) {
-					const base = row[pColCurrency] as string;
-					const amt = row[pColAmount] as { number: string; currency: string } | null;
-					if (base && amt?.number && amt?.currency && !priceMap.has(base)) {
-						priceMap.set(base, amt);
-					}
-				}
-
-				// Build a tiny synthetic beancount book with those prices + a fictional posting
-				const today = new Date().toISOString().slice(0, 10);
-				const lines: string[] = [
-					`option "operating_currency" "${toCurrency}"`,
-					``,
-					`2000-01-01 open Assets:Convert ${fromCurrency}`,
-					`2000-01-01 open Equity:Opening`,
-					``
-				];
-				for (const [base, price] of priceMap) {
-					lines.push(`${today} price ${base} ${price.number} ${price.currency}`);
-				}
-				lines.push(``, `${today} * "Convert"`);
-				lines.push(`  Assets:Convert  ${amount} ${fromCurrency}`);
-				lines.push(`  Equity:Opening`);
-
-				// Use the standalone query() function — no class instantiation or free() needed
-				const convertResult = wasmModule!.query(
-					lines.join('\n'),
-					`SELECT CONVERT(sum(position), '${toCurrency}') FROM postings WHERE account = "Assets:Convert"`
+				const convertResult = ledger.query(
+					`SELECT CONVERT('${amount} ${fromCurrency}', '${toCurrency}')`
 				);
-				const resultRow = ((convertResult.rows ?? []) as any[])[0];
-				const resultAmt = resultRow
-					? ((resultRow as any[])[0] as { number: string; currency: string } | null)
-					: null;
-				if (!resultAmt) throw new Error(`No conversion path from ${fromCurrency} to ${toCurrency}`);
-				reply({
-					type: 'convert-currency-done',
-					number: resultAmt.number,
-					currency: resultAmt.currency
-				});
+				if ((convertResult.errors ?? []).length > 0) {
+					throw new Error(String((convertResult.errors as any[])[0]));
+				}
+				const row = ((convertResult.rows ?? []) as any[])[0];
+				const val = row ? ((row as any[])[0] as { number: string; currency: string } | null) : null;
+				if (!val?.number) throw new Error(`No conversion path from ${fromCurrency} to ${toCurrency}`);
+				reply({ type: 'convert-currency-done', number: val.number, currency: val.currency });
 				break;
 			}
 
