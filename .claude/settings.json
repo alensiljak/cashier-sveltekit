@@ -1,4 +1,7 @@
 {
+  "env": {
+      "ENABLE_LSP_TOOL": "1"
+    },
 	"permissions": {
 		"allow": [
 			"mcp__serena__search_for_pattern",
@@ -12,6 +15,8 @@
 		"additionalDirectories": ["d:\\src\\cashier-sveltekit\\src\\lib"]
 	},
 	"enabledPlugins": {
-		"vtsls@claude-code-lsps": true
+		"vtsls@claude-code-lsps": true,
+		"typescript-lsp@claude-plugins-official": true,
+		"pyright-lsp@claude-plugins-official": true
 	}
 }

@@ -71,7 +71,8 @@ It is implemented as a PWA using Svelte and DaisyUI frameworks.
 
 ### Code Intelligence (LSP)
 
-Use Serena for symbol navigation — finding definitions, implementations, and references — rather than Grep/Glob/Read. Reserve Grep/Glob for text/pattern searches (comments, strings, config values) where LSP doesn't help.
+Prefer LSP over grep.
+Reserve Grep/Glob for text/pattern searches (comments, strings, config values) where LSP doesn't help.
 
-Before renaming or changing a function signature, find all call sites via Serena first.
+Before renaming or changing a function signature, find all call sites via LSP first.
 After writing or editing code, check diagnostics before moving on. Fix any type errors or missing imports immediately.
