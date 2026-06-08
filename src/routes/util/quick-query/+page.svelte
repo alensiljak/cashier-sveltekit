@@ -197,6 +197,70 @@
 	function handleKeydown(e: KeyboardEvent) {
 		if (e.key === 'Enter' && e.ctrlKey) runQuery()
 	}
+
+	function handleInputEnter(e: KeyboardEvent) {
+		if (e.key === 'Enter') runQuery()
+	}
+
+	// --- Running totals (computed client-side, matching qqrl behaviour) ---
+
+	function extractPositionUnits(value: unknown): { number: number; currency: string }[] {
+		if (typeof value !== 'object' || value === null) return []
+		const v = value as Record<string, unknown>
+		if (typeof v.units === 'object' && v.units !== null) {
+			const u = v.units as Record<string, unknown>
+			if (typeof u.number === 'string' && typeof u.currency === 'string') {
+				const n = parseFloat(u.number)
+				if (!isNaN(n)) return [{ number: n, currency: u.currency }]
+			}
+		}
+		if (typeof v.number === 'string' && typeof v.currency === 'string') {
+			const n = parseFloat(v.number)
+			if (!isNaN(n)) return [{ number: n, currency: v.currency }]
+		}
+		if (Array.isArray(v.positions)) {
+			return (v.positions as unknown[]).flatMap((p) => extractPositionUnits(p))
+		}
+		return []
+	}
+
+	function computeRunningTotals(): string[] {
+		if (!total || command !== 'register') return []
+		const posIdx = columns.indexOf('position')
+		if (posIdx === -1) return []
+		const accumulated = new Map<string, number>()
+		return rows.map((row) => {
+			for (const { number: n, currency: cur } of extractPositionUnits((row as unknown[])[posIdx])) {
+				accumulated.set(cur, (accumulated.get(cur) ?? 0) + n)
+			}
+			return [...accumulated.entries()]
+				.map(([cur, amt]) => `${formatNumber(amt.toFixed(2))} ${cur}`)
+				.sort()
+				.join(' | ')
+		})
+	}
+
+	let rowRunningTotals = $derived(computeRunningTotals())
+
+	// --- Copy results ---
+
+	let resultsCopied = $state(false)
+
+	async function copyResults() {
+		const hasRunning = rowRunningTotals.length > 0
+		const allCols = hasRunning ? [...columns, 'Running Total'] : columns
+		const header = allCols.join('\t')
+		const body = rows.map((row, rowIdx) => {
+			const cells = columns.map((_col, colIdx) =>
+				formatCell((row as unknown[])[colIdx]).replace(/\t/g, ' ').replace(/\n/g, ' | ')
+			)
+			if (hasRunning) cells.push(rowRunningTotals[rowIdx] ?? '')
+			return cells.join('\t')
+		})
+		await navigator.clipboard.writeText([header, ...body].join('\n'))
+		resultsCopied = true
+		setTimeout(() => (resultsCopied = false), 1500)
+	}
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
@@ -229,6 +293,7 @@
 				class="input input-bordered input-sm w-full font-mono"
 				placeholder={command === 'price' ? 'EUR' : 'Assets'}
 				bind:value={pattern}
+				onkeydown={handleInputEnter}
 			/>
 		</label>
 
@@ -248,6 +313,7 @@
 							class="input input-bordered input-sm font-mono"
 							placeholder="2025-01"
 							bind:value={begin}
+							onkeydown={handleInputEnter}
 						/>
 					</label>
 					<label class="form-control">
@@ -257,6 +323,7 @@
 							class="input input-bordered input-sm font-mono"
 							placeholder="2025-12"
 							bind:value={end}
+							onkeydown={handleInputEnter}
 						/>
 					</label>
 				</div>
@@ -270,6 +337,7 @@
 						class="input input-bordered input-sm font-mono"
 						placeholder="2025-01..2025-06"
 						bind:value={dateRange}
+						onkeydown={handleInputEnter}
 					/>
 				</label>
 
@@ -282,6 +350,7 @@
 							class="input input-bordered input-sm font-mono"
 							placeholder="EUR,USD"
 							bind:value={currency}
+							onkeydown={handleInputEnter}
 						/>
 					</label>
 					<label class="form-control">
@@ -291,6 +360,7 @@
 							class="input input-bordered input-sm font-mono"
 							placeholder="EUR"
 							bind:value={exchange}
+							onkeydown={handleInputEnter}
 						/>
 					</label>
 				</div>
@@ -307,6 +377,7 @@
 							class="input input-bordered input-sm font-mono"
 							placeholder="-date"
 							bind:value={sort}
+							onkeydown={handleInputEnter}
 						/>
 					</label>
 					<label class="form-control">
@@ -316,6 +387,7 @@
 							class="input input-bordered input-sm font-mono"
 							placeholder="100"
 							bind:value={limitStr}
+							onkeydown={handleInputEnter}
 						/>
 					</label>
 				</div>
@@ -349,6 +421,7 @@
 							class="input input-bordered input-sm font-mono"
 							placeholder="2"
 							bind:value={depth}
+							onkeydown={handleInputEnter}
 						/>
 					</label>
 				{/if}
@@ -392,7 +465,7 @@
 
 		<!-- BQL preview -->
 		<div class="form-control w-full">
-			<div class="label py-1">
+			<div class="flex items-center justify-between py-1">
 				<span class="label-text text-xs text-base-content/60">Generated BQL</span>
 				<button
 					class="btn btn-ghost btn-xs gap-1"
@@ -436,26 +509,44 @@
 		<!-- Results -->
 		{#if columns.length > 0}
 			<div class="flex flex-col gap-2">
-				<span class="text-sm text-base-content/60">
-					{rows.length} row{rows.length !== 1 ? 's' : ''}
-				</span>
+				<div class="flex items-center justify-between">
+					<span class="text-sm text-base-content/60">
+						{rows.length} row{rows.length !== 1 ? 's' : ''}
+					</span>
+					<button
+						class="btn btn-ghost btn-xs gap-1"
+						onclick={copyResults}
+						title="Copy results to clipboard"
+					>
+						<CopyIcon size={14} />
+						{#if resultsCopied}<span class="text-xs">Copied!</span>{/if}
+					</button>
+				</div>
 				<div class="overflow-x-auto">
-					<table class="table table-sm table-zebra w-full">
+					<table class="table table-sm w-full">
 						<thead>
 							<tr>
 								{#each columns as col}
 									<th>{col}</th>
 								{/each}
+								{#if rowRunningTotals.length > 0}
+									<th class="text-right">Running Total</th>
+								{/if}
 							</tr>
 						</thead>
 						<tbody>
-							{#each rows as row}
-								<tr>
-									{#each columns as _col, i}
+							{#each rows as row, rowIdx}
+								<tr class={rowIdx % 2 === 1 ? 'bg-base-300/60' : ''}>
+									{#each columns as _col, colIdx}
 										<td class="font-mono text-xs whitespace-pre-wrap">
-											{formatCell((row as unknown[])[i])}
+											{formatCell((row as unknown[])[colIdx])}
 										</td>
 									{/each}
+									{#if rowRunningTotals.length > 0}
+										<td class="font-mono text-xs text-right whitespace-pre-wrap">
+											{rowRunningTotals[rowIdx] ?? ''}
+										</td>
+									{/if}
 								</tr>
 							{/each}
 						</tbody>
