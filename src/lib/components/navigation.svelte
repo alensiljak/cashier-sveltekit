@@ -32,7 +32,9 @@
 
 		CloudUploadIcon,
 
-		SquarePenIcon
+		SquarePenIcon,
+
+		TerminalSquareIcon
 
 
 
@@ -333,6 +335,18 @@
 							>
 								<ShieldCheckIcon />
 								<span>Validation</span>
+							</a>
+						</li>
+						<li>
+							<a
+								href="/util/quick-query"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/util/quick-query'
+									? 'active bg-secondary text-secondary-content'
+									: ''}"
+								onclick={closeDrawer}
+							>
+								<TerminalSquareIcon />
+								<span>Quick Query</span>
 							</a>
 						</li>
 					</ul>
