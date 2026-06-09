@@ -30,6 +30,7 @@
 	import { XactAugmenter } from '$lib/utils/xactAugmenter';
 	import { ISODATEFORMAT } from '$lib/constants';
 	import Notifier from '$lib/utils/notifier';
+	import { type CreditCardSettings, SettingKeys, settings } from '$lib/settings';
 
 	interface Props {
 		daysCount: number;
@@ -194,6 +195,46 @@
 		return balances;
 	}
 
+	async function loadCreditCardDataset(): Promise<{ label: string; data: number[] } | null> {
+		const ccSettings = await settings.get<CreditCardSettings>(SettingKeys.creditCardSettings);
+		if (!ccSettings?.rootAccount || !ccSettings?.paymentDay) return null;
+
+		const { rootAccount, paymentDay } = ccSettings;
+
+		// Query the total balance across all sub-accounts of the root credit card account.
+		const bql = `SELECT sum(number) as balance, currency WHERE account ~ '^${rootAccount}' GROUP BY currency`;
+		const result = await fullLedgerService.query(bql);
+
+		const colBalance = result.columns.indexOf('balance');
+		const colCurrency = result.columns.indexOf('currency');
+
+		let totalBalance = 0;
+		for (const row of result.rows as unknown[][]) {
+			const currency = row[colCurrency] as string;
+			const balance = Number(row[colBalance]) || 0;
+			if (currency === defaultCurrency || totalBalance === 0) {
+				totalBalance = balance;
+			}
+		}
+
+		if (totalBalance === 0) return null;
+
+		// Place the payment amount on each occurrence of the payment day within the forecast window.
+		// Credit card balances in Beancount are negative (liability convention), so totalBalance is
+		// already negative — the correct sign for reducing asset totals in the stacked chart.
+		const data = Array.from<number>({ length: daysCount + 1 }).fill(0);
+		const today = moment().startOf('day');
+
+		for (let offset = 0; offset <= daysCount; offset++) {
+			const day = today.clone().add(offset, 'days');
+			if (day.date() === paymentDay) {
+				data[offset] = totalBalance;
+			}
+		}
+
+		return { label: 'CC Payment', data };
+	}
+
 	async function loadData(): Promise<ChartData<'bar'>> {
 		const balances = await loadAccountBalances();
 		const datasets = [];
@@ -201,6 +242,11 @@
 		for (const accountName of accountNames) {
 			let dataset = await createDatasetFor(accountName, balances[accountName] ?? 0);
 			datasets.push(dataset);
+		}
+
+		const ccDataset = await loadCreditCardDataset();
+		if (ccDataset) {
+			datasets.push(ccDataset);
 		}
 
 		return {

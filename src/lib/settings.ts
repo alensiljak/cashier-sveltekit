@@ -36,6 +36,13 @@ export interface AccountGroup {
 	color?: string;
 }
 
+export interface CreditCardSettings {
+	rootAccount: string;
+	paymentDay: number;
+}
+
+export const DEFAULT_CREDIT_CARD_ROOT_ACCOUNT = 'Liabilities:CreditCards';
+
 export const defaultAccountGroups: AccountGroup[] = [
 	{ title: 'Cash Accounts', accounts: [] },
 	{ title: 'Bank Accounts', accounts: [] },
@@ -84,7 +91,9 @@ export const SettingKeys = {
 	// WebDAV backup configuration
 	webdavSettings: 'webdav-settings',
 	// Date display format (moment.js format string)
-	dateFormat: 'dateFormat'
+	dateFormat: 'dateFormat',
+	// Credit card forecast settings
+	creditCardSettings: 'creditCard.settings'
 };
 
 export const CardNames = {
