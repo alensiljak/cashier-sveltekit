@@ -9,7 +9,7 @@
 	import { goto, replaceState } from '$app/navigation';
 	import { DefaultCurrencyStore, PendingSettingsStore } from '$lib/data/mainStore.js';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
-	import { BoxIcon, Check, FileBraces, NetworkIcon, RotateCcw } from '@lucide/svelte';
+	import { BoxIcon, Check, CreditCardIcon, FileBraces, NetworkIcon, RotateCcw, TrendingUpIcon } from '@lucide/svelte';
 	import Fab from '$lib/components/FAB.svelte';
 	import { page } from '$app/state';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
@@ -364,6 +364,19 @@
 				</button>
 			{/if}
 		</div>
+	</div>
+
+	<h3 class="text-xl font-bold">Forecast</h3>
+
+	<div class="flex flex-col gap-2">
+		<a href="/forecast-settings" class="btn btn-outline w-full gap-2">
+			<TrendingUpIcon size={18} />
+			Forecast Settings
+		</a>
+		<a href="/credit-card-settings" class="btn btn-outline w-full gap-2">
+			<CreditCardIcon size={18} />
+			Credit Card Settings
+		</a>
 	</div>
 
 	<Fab Icon={Check} onclick={saveSettings} />
