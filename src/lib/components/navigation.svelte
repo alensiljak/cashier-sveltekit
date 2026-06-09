@@ -32,7 +32,7 @@
 
 		CloudUploadIcon,
 
-		SquarePenIcon,
+		FilePlusIcon,
 
 		TerminalSquareIcon
 
@@ -107,9 +107,9 @@
 				</a>
 			</li>
 			<li>
-				<a href="/tx/search-new" class="flex w-full items-center gap-2 py-2" onclick={closeDrawer}>
-					<SquarePenIcon />
-					<span>Quick Entry</span>
+				<a href="/tx" class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/tx' ? 'active bg-secondary text-secondary-content' : ''}" onclick={closeDrawer}>
+					<FilePlusIcon />
+					<span>New Transaction</span>
 				</a>
 			</li>
 		</ul>

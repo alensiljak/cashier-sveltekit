@@ -5,10 +5,11 @@
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import AccordionSection from '$lib/components/AccordionSection.svelte';
 	import JournalXactRow from '$lib/components/JournalXactRow.svelte';
+	import Fab from '$lib/components/FAB.svelte';
 	import { Xact, Posting } from '$lib/data/model';
 	import { xact as xactStore, xactSpan } from '$lib/data/mainStore';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
-	import { CodeIcon } from '@lucide/svelte';
+	import { CodeIcon, PlusIcon } from '@lucide/svelte';
 
 	function focusOnMount(el: HTMLElement) {
 		el.focus();
@@ -329,6 +330,8 @@
 			</div>
 		{/if}
 	</section>
+
+	<Fab Icon={PlusIcon} onclick={() => goto('/tx')} />
 
 	<!-- BQL query debug dialog -->
 	<dialog bind:this={queryDialog} class="modal">

@@ -71,7 +71,8 @@
 		const tx = Xact.create();
 		xact.set(tx);
 
-		await goto('/tx');
+		// await goto('/tx');
+		await goto('/tx/search-new');
 	}
 </script>
 
