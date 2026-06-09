@@ -14,6 +14,7 @@
 
 	let rootAccount = $state(DEFAULT_CREDIT_CARD_ROOT_ACCOUNT);
 	let paymentDay = $state(1);
+	let paymentAccount = $state('');
 	let allAccounts: string[] = $state([]);
 
 	onMount(async () => {
@@ -25,6 +26,7 @@
 		if (saved) {
 			rootAccount = saved.rootAccount ?? DEFAULT_CREDIT_CARD_ROOT_ACCOUNT;
 			paymentDay = saved.paymentDay ?? 1;
+			paymentAccount = saved.paymentAccount ?? '';
 		}
 
 		await fullLedgerService.ensureLoaded();
@@ -35,7 +37,8 @@
 	async function onFabClicked() {
 		const config: CreditCardSettings = {
 			rootAccount,
-			paymentDay
+			paymentDay,
+			paymentAccount
 		};
 		await settings.set(SettingKeys.creditCardSettings, config);
 		history.back();
@@ -57,6 +60,14 @@
 			bind:value={rootAccount}
 			placeholder={DEFAULT_CREDIT_CARD_ROOT_ACCOUNT}
 		/>
+	</section>
+
+	<section>
+		<h4 class="h4 mb-1">Payment Account</h4>
+		<p class="text-sm text-base-content/60 mb-2">
+			Asset account that the credit card balance is paid from.
+		</p>
+		<SearchableSelect options={allAccounts} bind:value={paymentAccount} placeholder="e.g. Assets:Checking" />
 	</section>
 
 	<section>

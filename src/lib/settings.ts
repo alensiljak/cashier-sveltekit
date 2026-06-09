@@ -39,6 +39,7 @@ export interface AccountGroup {
 export interface CreditCardSettings {
 	rootAccount: string;
 	paymentDay: number;
+	paymentAccount: string;
 }
 
 export const DEFAULT_CREDIT_CARD_ROOT_ACCOUNT = 'Liabilities:CreditCards';
