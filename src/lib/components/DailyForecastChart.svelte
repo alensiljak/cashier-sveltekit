@@ -195,13 +195,21 @@
 		return balances;
 	}
 
-	async function loadCreditCardDataset(): Promise<{ label: string; data: number[] } | null> {
+	/**
+	 * Returns per-day deduction amounts and the account to inject them into.
+	 * The amounts are already negative (Beancount liability sign convention),
+	 * so adding them to an asset account's daily array reduces its running balance.
+	 */
+	async function loadCreditCardPaymentAmounts(): Promise<{
+		account: string;
+		amounts: number[];
+	} | null> {
 		const ccSettings = await settings.get<CreditCardSettings>(SettingKeys.creditCardSettings);
-		if (!ccSettings?.rootAccount || !ccSettings?.paymentDay) return null;
+		if (!ccSettings?.rootAccount || !ccSettings?.paymentDay || !ccSettings?.paymentAccount)
+			return null;
 
-		const { rootAccount, paymentDay } = ccSettings;
+		const { rootAccount, paymentDay, paymentAccount } = ccSettings;
 
-		// Query the total balance across all sub-accounts of the root credit card account.
 		const bql = `SELECT sum(number) as balance, currency WHERE account ~ '^${rootAccount}' GROUP BY currency`;
 		const result = await fullLedgerService.query(bql);
 
@@ -219,34 +227,28 @@
 
 		if (totalBalance === 0) return null;
 
-		// Place the payment amount on each occurrence of the payment day within the forecast window.
-		// Credit card balances in Beancount are negative (liability convention), so totalBalance is
-		// already negative — the correct sign for reducing asset totals in the stacked chart.
-		const data = Array.from<number>({ length: daysCount + 1 }).fill(0);
+		// Build a per-day array: place the deduction on each payment day in the window.
+		const amounts = Array.from<number>({ length: daysCount + 1 }).fill(0);
 		const today = moment().startOf('day');
-
 		for (let offset = 0; offset <= daysCount; offset++) {
-			const day = today.clone().add(offset, 'days');
-			if (day.date() === paymentDay) {
-				data[offset] = totalBalance;
+			if (today.clone().add(offset, 'days').date() === paymentDay) {
+				amounts[offset] = totalBalance;
 			}
 		}
 
-		return { label: 'CC Payment', data };
+		return { account: paymentAccount, amounts };
 	}
 
 	async function loadData(): Promise<ChartData<'bar'>> {
 		const balances = await loadAccountBalances();
 		const datasets = [];
 
-		for (const accountName of accountNames) {
-			let dataset = await createDatasetFor(accountName, balances[accountName] ?? 0);
-			datasets.push(dataset);
-		}
+		const ccPayment = await loadCreditCardPaymentAmounts();
 
-		const ccDataset = await loadCreditCardDataset();
-		if (ccDataset) {
-			datasets.push(ccDataset);
+		for (const accountName of accountNames) {
+			const extraAmounts = ccPayment?.account === accountName ? ccPayment.amounts : undefined;
+			let dataset = await createDatasetFor(accountName, balances[accountName] ?? 0, extraAmounts);
+			datasets.push(dataset);
 		}
 
 		return {
@@ -266,7 +268,11 @@
 		return scxsForAccount;
 	}
 
-	async function createDatasetFor(accountName: string, currentBalance: number) {
+	async function createDatasetFor(
+		accountName: string,
+		currentBalance: number,
+		extraAmounts?: number[]
+	) {
 		let dataset = {
 			label: getShortAccountName(accountName),
 			data: Array.from<number>({ length: daysCount + 1 }).fill(0)
@@ -275,7 +281,14 @@
 		// Day-0 is the current balance from BQL.
 		dataset.data[0] = currentBalance;
 
-		// add scheduled transactions
+		// Inject additional per-day amounts (e.g. CC payment) before running balance is calculated.
+		if (extraAmounts) {
+			for (let i = 0; i < extraAmounts.length && i < dataset.data.length; i++) {
+				dataset.data[i] += extraAmounts[i];
+			}
+		}
+
+		// add scheduled transactions and compute running balance
 		dataset.data = await addScxData(accountName, dataset.data);
 
 		return dataset;
