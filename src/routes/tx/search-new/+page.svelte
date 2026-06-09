@@ -178,7 +178,7 @@
 			if (origPayee) conditions.push(`payee = "${origPayee}"`);
 
 			const fetchQuery =
-				`SELECT account, number, currency WHERE ${conditions.join(' AND ')} ORDER BY account`;
+				`SELECT account, number, currency WHERE ${conditions.join(' AND ')}`;
 			const result = await fullLedgerService.query(fetchQuery);
 
 			let postings: Posting[];
