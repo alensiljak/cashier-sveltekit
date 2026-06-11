@@ -80,6 +80,8 @@ export const SettingKeys = {
 	visibleCards: 'homeCardNames',
 	// Peer sync
 	peerId: 'peerId',
+	peerName: 'peerName',
+	peerRoom: 'peerRoom',
 	syncServers: 'syncServers',
 	syncActiveServerId: 'syncActiveServerId',
 	// import book from filesystem via File System API

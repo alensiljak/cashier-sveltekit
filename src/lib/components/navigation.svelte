@@ -31,6 +31,7 @@
 		ShieldCheckIcon,
 
 		CloudUploadIcon,
+		WifiIcon,
 
 		FilePlusIcon,
 
@@ -277,6 +278,18 @@
 								<span>File Storage</span>
 							</a>
 						</li>
+						<li>
+							<a
+								href="/peer-sync"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/peer-sync'
+									? 'active bg-secondary text-secondary-content'
+									: ''}"
+								onclick={closeDrawer}
+							>
+								<WifiIcon />
+								<span>Peer Sync</span>
+							</a>
+						</li>
 					</ul>
 				</details>
 			</li>
@@ -290,9 +303,8 @@
 					<ul>
 						<li>
 							<a
-								href="/tools/serialization"
-								class="flex w-full items-center gap-2 py-2 {page.url.pathname ===
-								'/tools/serialization'
+								href="/util/serialization"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/util/serialization'
 									? 'active bg-secondary text-secondary-content'
 									: ''}"
 								onclick={closeDrawer}

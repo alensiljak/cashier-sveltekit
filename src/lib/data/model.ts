@@ -160,3 +160,10 @@ export class Setting {
 		this.value = value;
 	}
 }
+
+export class TrustedPeer {
+	id: string = '';
+	name: string = '';
+	trustedAt: string = '';
+	lastSeen?: string;
+}

@@ -9,7 +9,8 @@ import {
 	// Payee,
 	// Posting,
 	ScheduledTransaction,
-	Setting
+	Setting,
+	TrustedPeer
 } from '$lib/data/model';
 
 // Define the schema
@@ -20,6 +21,7 @@ interface CashierDatabase extends Dexie {
 	// payees: Table;
 	scheduled: Table;
 	settings: Table;
+	peers: Table;
 	// xacts: Table;
 }
 
@@ -36,6 +38,13 @@ db.version(1).stores({
 	// xacts: '++id, date'
 });
 
+db.version(2).stores({
+	lastXact: 'payee',
+	scheduled: '++id, nextDate',
+	settings: 'key',
+	peers: 'id'
+});
+
 // Mappings
 
 // db.accounts.mapToClass(Account);
@@ -44,5 +53,6 @@ db.lastXact.mapToClass(LastXact);
 // db.xacts.mapToClass(Xact);
 db.settings.mapToClass(Setting);
 db.scheduled.mapToClass(ScheduledTransaction);
+db.peers.mapToClass(TrustedPeer);
 
 export default db;
