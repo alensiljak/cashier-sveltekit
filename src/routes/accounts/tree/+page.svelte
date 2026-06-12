@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { ChevronDown, ChevronRight } from '@lucide/svelte';
+	import { ChevronDown, ChevronRight, CoinsIcon } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import Toolbar from '$lib/components/Toolbar.svelte';
+	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import MultiCurrencyBalance from '$lib/components/MultiCurrencyBalance.svelte';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import appService from '$lib/services/appService';
@@ -170,11 +171,11 @@
 <main class="flex flex-col flex-1">
 	<Toolbar title="Account Tree">
 		{#snippet menuItems()}
-			<li>
-				<button onclick={toggleBaseCurrency}>
-					{showBaseCurrency ? 'Show original balances' : 'Show balances in base currency'}
-				</button>
-			</li>
+			<ToolbarMenuItem
+				text={showBaseCurrency ? 'Show original balances' : 'Show balances in base currency'}
+				Icon={CoinsIcon}
+				onclick={toggleBaseCurrency}
+			/>
 		{/snippet}
 	</Toolbar>
 	<div class="flex-1 overflow-y-auto overflow-x-auto touch-pan-y">
