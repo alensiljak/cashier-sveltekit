@@ -1,10 +1,12 @@
 # cashier-sveltekit
 
-Cashier PWA implementation with SvelteKit.
+Cashier progressive-web-application (PWA) implementation with SvelteKit.
 
-The synchronization is done via Cashier Server, [repo](https://github.com/alensiljak/cashier-server-python).
+For previous versions of cashier, see [Cashier](https://github.com/alensiljak/cashier) and Cashier-Blazor.
 
-For previous versions of cashier, see Cashier and Cashier-Blazor.
+## Introduction
+
+Cashier is a personal finance app. It includes a full Beancount engine running offline on your device.
 
 ## Palette
 
@@ -30,3 +32,9 @@ To use a yet-unpublished version of rustledger, compile the WASM and reference w
 ```json
 d:/src/rustledger/crates/rustledger-wasm/pkg
 ```
+
+## Related Projects
+
+- Ledger-CLI
+- Beancount
+- RustLedger
