@@ -6,9 +6,12 @@
 		targetNav?: string;
 		text?: string;
 		Icon?: any;
+		iconClass?: string;
+		disabled?: boolean;
+		class?: string;
 		onclick?: () => void;
 	};
-	let { targetNav, text, Icon, onclick }: Props = $props();
+	let { targetNav, text, Icon, iconClass, disabled = false, class: extraClass = '', onclick }: Props = $props();
 
 	async function onMenuClicked(event: Event) {
 		event.preventDefault();
@@ -30,10 +33,17 @@ Example usage:
 -->
 
 <div>
-	<button type="button" class="btn btn-primary flex w-full flex-row border-0" onclick={onMenuClicked}>
+	<button
+		type="button"
+		class="btn btn-primary flex w-full flex-row border-0 {extraClass}"
+		{disabled}
+		onclick={onMenuClicked}
+	>
 		<span class="grow text-start">{text}</span>
-		<span class="badge bg-primary/80 border-0">
-			<Icon />
-		</span>
+		{#if Icon}
+			<span class="badge bg-primary/80 border-0">
+				<Icon class={iconClass} />
+			</span>
+		{/if}
 	</button>
 </div>

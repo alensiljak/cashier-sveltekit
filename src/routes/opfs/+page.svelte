@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import OpfsFilePicker from '$lib/components/OpfsFilePicker.svelte';
+	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import { FilePlusIcon, UploadIcon, Trash2Icon } from '@lucide/svelte';
 	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
@@ -198,27 +199,14 @@
 <article class="h-screen flex flex-col overflow-hidden">
 	<Toolbar title="OPFS Files">
 		{#snippet menuItems()}
-			<li>
-				<button class="btn btn-sm btn-ghost gap-2" onclick={openNewFileDialog}>
-					<FilePlusIcon class="w-5 h-5" />
-					<span>New File</span>
-				</button>
-			</li>
-			<li>
-				<button class="btn btn-sm btn-ghost gap-2" onclick={() => fileUploadInput?.click()}>
-					<UploadIcon class="w-5 h-5" />
-					<span>Upload File</span>
-				</button>
-			</li>
-			<li>
-				<button
-					class="btn btn-sm btn-ghost gap-2 text-error"
-					onclick={() => (showDeleteAllConfirm = true)}
-				>
-					<Trash2Icon class="w-5 h-5" />
-					<span>Delete All</span>
-				</button>
-			</li>
+			<ToolbarMenuItem text="New File" Icon={FilePlusIcon} onclick={openNewFileDialog} />
+			<ToolbarMenuItem text="Upload File" Icon={UploadIcon} onclick={() => fileUploadInput?.click()} />
+			<ToolbarMenuItem
+				text="Delete All"
+				Icon={Trash2Icon}
+				class="text-error"
+				onclick={() => (showDeleteAllConfirm = true)}
+			/>
 		{/snippet}
 	</Toolbar>
 

@@ -8,6 +8,7 @@
     import Notifier from '$lib/utils/notifier';
     import { WebDavClient } from '$lib/utils/webdav';
     import { SettingsIcon, RefreshCwIcon, GitCompareArrowsIcon, EyeIcon } from '@lucide/svelte';
+    import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
     import { goto } from '$app/navigation';
 
     let includeSettings = $state(false);
@@ -179,12 +180,7 @@
 </script>
 
 {#snippet menuItems()}
-    <li>
-        <a href="/settings/webdav-cfg">
-            <SettingsIcon size={16} />
-            WebDAV Config
-        </a>
-    </li>
+    <ToolbarMenuItem text="WebDAV Config" Icon={SettingsIcon} targetNav="/settings/webdav-cfg" />
 {/snippet}
 
 <Toolbar title="WebDAV Backup" {menuItems} />

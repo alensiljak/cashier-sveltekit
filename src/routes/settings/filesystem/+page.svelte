@@ -6,6 +6,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
+	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import {
 		RefreshCcwIcon,
 		FolderOpenIcon,
@@ -321,29 +322,21 @@
 <article>
 	<Toolbar title="File System Synchronization">
 		{#snippet menuItems()}
-			<li>
-				<button class="btn btn-sm btn-ghost gap-2" onclick={pickDirectory}>
-					<FolderOpenIcon class="w-5 h-5" />
-					<span>Open Directory</span>
-				</button>
-			</li>
+			<ToolbarMenuItem text="Open Directory" Icon={FolderOpenIcon} onclick={pickDirectory} />
 			{#if dirHandle}
-				<li>
-					<button class="btn btn-sm btn-ghost gap-2" onclick={loadEntries} disabled={isLoading}>
-						<RefreshCcwIcon class="w-5 h-5 {isLoading ? 'animate-spin' : ''}" />
-						<span>Refresh</span>
-					</button>
-				</li>
-				<li>
-					<button
-						class="btn btn-sm btn-ghost gap-2"
-						onclick={selectBookFile}
-						disabled={!selectedEntry || selectedEntry.kind !== 'file'}
-					>
-						<BookOpenIcon class="w-5 h-5" />
-						<span>Set book file</span>
-					</button>
-				</li>
+				<ToolbarMenuItem
+					text="Refresh"
+					Icon={RefreshCcwIcon}
+					iconClass={isLoading ? 'animate-spin' : ''}
+					disabled={isLoading}
+					onclick={loadEntries}
+				/>
+				<ToolbarMenuItem
+					text="Set book file"
+					Icon={BookOpenIcon}
+					disabled={!selectedEntry || selectedEntry.kind !== 'file'}
+					onclick={selectBookFile}
+				/>
 			{/if}
 		{/snippet}
 	</Toolbar>

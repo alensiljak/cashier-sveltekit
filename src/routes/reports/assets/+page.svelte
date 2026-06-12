@@ -27,11 +27,13 @@
 	let showBase = $derived(currencyMode === 'base');
 	let baseCurrency = $state('');
 	let showClosed = $state(false);
+	let hideEmpty = $state(false);
 
 	let totalValue = $derived(roots.reduce((s, n) => s + n.value, 0));
 
 	function isVisible(node: AssetNode): boolean {
 		if (node.closed && !showClosed) return false;
+		if (hideEmpty && node.value === 0) return false;
 		if (node.children.length > 0) return node.children.some((c) => isVisible(c));
 		return true;
 	}
@@ -246,6 +248,12 @@
 <article class="flex h-screen flex-col" class:cursor-wait={isLoading}>
 	<Toolbar title="Assets">
 		{#snippet menuItems()}
+			<li>
+				<label class="flex cursor-pointer items-center justify-between px-2 py-1.5">
+					<span class="text-sm">Hide empty</span>
+					<input type="checkbox" class="toggle toggle-sm toggle-accent" bind:checked={hideEmpty} />
+				</label>
+			</li>
 			<li>
 				<label class="flex cursor-pointer items-center justify-between px-2 py-1.5">
 					<span class="text-sm">Show closed</span>
