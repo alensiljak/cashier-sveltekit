@@ -248,18 +248,14 @@
 <article class="flex h-screen flex-col" class:cursor-wait={isLoading}>
 	<Toolbar title="Assets">
 		{#snippet menuItems()}
-			<li>
-				<label class="flex cursor-pointer items-center justify-between px-2 py-1.5">
-					<span class="text-sm">Hide empty</span>
-					<input type="checkbox" class="toggle toggle-sm toggle-accent" bind:checked={hideEmpty} />
-				</label>
-			</li>
-			<li>
-				<label class="flex cursor-pointer items-center justify-between px-2 py-1.5">
-					<span class="text-sm">Show closed</span>
-					<input type="checkbox" class="toggle toggle-sm toggle-accent" bind:checked={showClosed} />
-				</label>
-			</li>
+			<label class="btn btn-primary flex w-full flex-row border-0 cursor-pointer">
+				<span class="grow text-start font-normal">Hide empty</span>
+				<input type="checkbox" class="toggle toggle-sm" bind:checked={hideEmpty} />
+			</label>
+			<label class="btn btn-primary flex w-full flex-row border-0 cursor-pointer">
+				<span class="grow text-start font-normal">Show closed</span>
+				<input type="checkbox" class="toggle toggle-sm" bind:checked={showClosed} />
+			</label>
 		{/snippet}
 	</Toolbar>
 
