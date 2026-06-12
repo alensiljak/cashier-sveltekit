@@ -192,163 +192,56 @@
 	{/snippet}
 </Toolbar>
 
-<main class="mx-auto max-w-6xl space-y-4 p-1">
-	<!-- currency -->
-	<div class="form-control w-full">
-		<div class="flex items-baseline gap-4">
-			<label for="currency" class="label">
-				<span class="label-text">Main Currency</span>
-			</label>
-		</div>
-		<div class="flex gap-2">
+<main class="mx-auto max-w-2xl space-y-3 p-3 pb-20">
+
+	<!-- ── General ─────────────────────────────────────────── -->
+	<div class="divider text-sm font-semibold uppercase tracking-widest">General</div>
+
+	<!-- Currency -->
+	<div class="flex items-center gap-3">
+		<label for="currency" class="flex-1 text-sm font-medium">Main Currency</label>
+		<div class="flex shrink-0 items-center gap-1">
 			<input
 				id="currency"
-				class="input rounded flex-1"
+				class="input input-sm w-28 rounded"
 				type="text"
-				placeholder="EUR, USD, etc."
+				placeholder="EUR, USD…"
 				bind:value={currency}
 			/>
 			{#if currencyDirty}
 				<button
 					type="button"
-					class="btn btn-outline btn-error btn-sm btn-square rounded"
-					title="Revert change"
+					class="btn btn-ghost btn-xs btn-square"
+					title="Revert"
 					onclick={() => (currency = savedCurrency)}
 				>
-					<RotateCcw size={16} />
+					<RotateCcw size={14} />
 				</button>
 			{/if}
 		</div>
-		{#if bookCurrencies.length > 0}
-			<span class="text-sm opacity-70">Book currencies: {bookCurrencies.join(', ')}</span>
-		{/if}
 	</div>
+	{#if bookCurrencies.length > 0}
+		<p class="text-right text-xs opacity-60">Book: {bookCurrencies.join(', ')}</p>
+	{/if}
 
-	<!-- last transaction -->
-	<label for="remember-last-transaction" class="flex items-center space-x-2">
+	<!-- Remember last transaction -->
+	<div class="flex items-center gap-3">
+		<label for="remember-last-transaction" class="flex-1 text-sm font-medium">
+			Remember last transaction for payees
+		</label>
 		<input
 			id="remember-last-transaction"
-			class="checkbox checkbox-primary rounded"
+			class="checkbox checkbox-primary checkbox-sm shrink-0 rounded"
 			type="checkbox"
 			bind:checked={rememberLastTransaction}
 		/>
-		<p>Remember last transaction for payees.</p>
-	</label>
-
-	<h3 class="text-xl font-bold">Ledger Configuration</h3>
-
-	<p class="text-sm">
-		<a href="/opfs/import-ledger" class="link">Import Ledger files</a>
-		first, then choose the book file here.
-	</p>
-
-	<div class="flex items-center gap-4">
-		<div class="flex-1">
-			<p class="text-sm font-medium">Book file:</p>
-			<p class="font-mono text-sm opacity-70">{bookFilename ?? 'Not set'}</p>
-		</div>
-		{#if bookFilenameDirty}
-			<button
-				type="button"
-				class="btn btn-outline btn-error btn-sm btn-square rounded"
-				title="Revert change"
-				onclick={() => (bookFilename = savedBookFilename)}
-			>
-				<RotateCcw size={16} />
-			</button>
-		{/if}
-		<button
-			class="btn btn-primary btn-sm rounded"
-			type="button"
-			onclick={() => goto(`/opfs/file-picker?returnSetting=${USER_BOOK_FILENAME}`)}
-		>
-			Select
-		</button>
 	</div>
 
-	<h3 class="text-xl font-bold">Asset Allocation</h3>
-
-	<div class="flex items-center gap-4">
-		<div class="flex-1">
-			<p class="text-sm font-medium">Asset allocation definition</p>
-			<p class="font-mono text-sm opacity-70">{assetAllocationDefinition ?? 'Not set'}</p>
-		</div>
-		{#if assetAllocationDirty}
-			<button
-				type="button"
-				class="btn btn-outline btn-error btn-sm btn-square rounded"
-				title="Revert change"
-				onclick={() => (assetAllocationDefinition = savedAssetAllocationDefinition)}
-			>
-				<RotateCcw size={16} />
-			</button>
-		{/if}
-		<button class="btn btn-secondary btn-sm rounded" type="button" onclick={onCreateOrEditAA}>
-			{assetAllocationDefinition ? 'Edit' : 'Create'}
-		</button>
-		<button
-			class="btn btn-primary btn-sm rounded"
-			type="button"
-			onclick={() =>
-				goto(`/opfs/file-picker?returnSetting=${SettingKeys.assetAllocationDefinition}`)}
-		>
-			Select
-		</button>
-	</div>
-
-	<!-- investment account -->
-	<div class="form-control w-full">
-		<div>
-			<label for="investment-account-root" class="label">
-				<span class="label-text">Investment account root:</span>
-			</label>
-		</div>
-		<div class="flex gap-2">
-			<input
-				id="investment-account-root"
-				class="input rounded flex-1"
-				type="text"
-				placeholder="i.e. Assets:Investments"
-				bind:value={rootInvestmentAccount}
-			/>
-			{#if rootInvestmentDirty}
-				<button
-					type="button"
-					class="btn btn-outline btn-error btn-sm btn-square rounded"
-					title="Revert change"
-					onclick={() => (rootInvestmentAccount = savedRootInvestmentAccount)}
-				>
-					<RotateCcw size={16} />
-				</button>
-			{/if}
-		</div>
-	</div>
-
-	<!-- Ledger cache -->
-	<section>
-		<h3 class="text-xl font-bold">Ledger Caching</h3>
-
-		<div class="my-3">
-		<label for="ledger-cache-enabled" class="flex items-center space-x-2">
-			<input
-				id="ledger-cache-enabled"
-				class="checkbox checkbox-primary rounded"
-				type="checkbox"
-				bind:checked={ledgerCacheEnabled}
-			/>
-			<p>Enable ledger cache (load from binary cache on startup).</p>
-		</label>
-		</div>
-	</section>
-
-	<h3 class="text-xl font-bold">Formatting</h3>
-
-	<div class="form-control w-full">
-		<label for="date-format" class="label">
-			<span class="label-text">Date Format</span>
-		</label>
-		<div class="flex gap-2">
-			<select id="date-format" class="select rounded flex-1" bind:value={dateFormat}>
+	<!-- Date Format -->
+	<div class="flex items-center gap-3">
+		<label for="date-format" class="flex-1 text-sm font-medium">Date Format</label>
+		<div class="flex shrink-0 items-center gap-1">
+			<select id="date-format" class="select select-sm w-40 rounded" bind:value={dateFormat}>
 				{#each dateFormatOptions as opt}
 					<option value={opt.value}>{opt.label}</option>
 				{/each}
@@ -356,25 +249,140 @@
 			{#if dateFormatDirty}
 				<button
 					type="button"
-					class="btn btn-outline btn-error btn-sm btn-square rounded"
-					title="Revert change"
+					class="btn btn-ghost btn-xs btn-square"
+					title="Revert"
 					onclick={() => (dateFormat = savedDateFormat)}
 				>
-					<RotateCcw size={16} />
+					<RotateCcw size={14} />
 				</button>
 			{/if}
 		</div>
 	</div>
 
-	<h3 class="text-xl font-bold">Forecast</h3>
+	<!-- ── Ledger Configuration ────────────────────────────── -->
+	<div class="divider text-sm font-semibold uppercase tracking-widest">Ledger Configuration</div>
+
+	<p class="text-xs opacity-60">
+		<a href="/opfs/import-ledger" class="link">Import Ledger files</a> first, then choose the book
+		file below.
+	</p>
+
+	<!-- Book file -->
+	<div class="flex items-center gap-3">
+		<div class="min-w-0 flex-1">
+			<p class="text-sm font-medium">Book file</p>
+			<p class="truncate font-mono text-xs opacity-60">{bookFilename ?? 'Not set'}</p>
+		</div>
+		<div class="flex shrink-0 items-center gap-1">
+			{#if bookFilenameDirty}
+				<button
+					type="button"
+					class="btn btn-ghost btn-xs btn-square"
+					title="Revert"
+					onclick={() => (bookFilename = savedBookFilename)}
+				>
+					<RotateCcw size={14} />
+				</button>
+			{/if}
+			<button
+				class="btn btn-primary btn-xs rounded"
+				type="button"
+				onclick={() => goto(`/opfs/file-picker?returnSetting=${USER_BOOK_FILENAME}`)}
+			>
+				Select
+			</button>
+		</div>
+	</div>
+
+	<!-- Ledger cache -->
+	<div class="flex items-center gap-3">
+		<label for="ledger-cache-enabled" class="flex-1 text-sm font-medium">
+			Enable ledger cache
+		</label>
+		<input
+			id="ledger-cache-enabled"
+			class="checkbox checkbox-primary checkbox-sm shrink-0 rounded"
+			type="checkbox"
+			bind:checked={ledgerCacheEnabled}
+		/>
+	</div>
+
+	<!-- ── Asset Allocation ────────────────────────────────── -->
+	<div class="divider text-sm font-semibold uppercase tracking-widest">Asset Allocation</div>
+
+	<!-- AA definition file -->
+	<div class="flex items-center gap-3">
+		<div class="min-w-0 flex-1">
+			<p class="text-sm font-medium">Definition file</p>
+			<p class="truncate font-mono text-xs opacity-60">
+				{assetAllocationDefinition ?? 'Not set'}
+			</p>
+		</div>
+		<div class="flex shrink-0 items-center gap-1">
+			{#if assetAllocationDirty}
+				<button
+					type="button"
+					class="btn btn-ghost btn-xs btn-square"
+					title="Revert"
+					onclick={() => (assetAllocationDefinition = savedAssetAllocationDefinition)}
+				>
+					<RotateCcw size={14} />
+				</button>
+			{/if}
+			<button
+				class="btn btn-secondary btn-xs rounded"
+				type="button"
+				onclick={onCreateOrEditAA}
+			>
+				{assetAllocationDefinition ? 'Edit' : 'Create'}
+			</button>
+			<button
+				class="btn btn-primary btn-xs rounded"
+				type="button"
+				onclick={() =>
+					goto(`/opfs/file-picker?returnSetting=${SettingKeys.assetAllocationDefinition}`)}
+			>
+				Select
+			</button>
+		</div>
+	</div>
+
+	<!-- Investment account root -->
+	<div class="flex items-center gap-3">
+		<label for="investment-account-root" class="flex-1 text-sm font-medium">
+			Investment account root
+		</label>
+		<div class="flex shrink-0 items-center gap-1">
+			<input
+				id="investment-account-root"
+				class="input input-sm w-44 rounded"
+				type="text"
+				placeholder="Assets:Investments"
+				bind:value={rootInvestmentAccount}
+			/>
+			{#if rootInvestmentDirty}
+				<button
+					type="button"
+					class="btn btn-ghost btn-xs btn-square"
+					title="Revert"
+					onclick={() => (rootInvestmentAccount = savedRootInvestmentAccount)}
+				>
+					<RotateCcw size={14} />
+				</button>
+			{/if}
+		</div>
+	</div>
+
+	<!-- ── Forecast ────────────────────────────────────────── -->
+	<div class="divider text-sm font-semibold uppercase tracking-widest">Forecast</div>
 
 	<div class="flex flex-col gap-2">
-		<a href="/forecast-settings" class="btn btn-outline w-full gap-2">
-			<TrendingUpIcon size={18} />
+		<a href="/forecast-settings" class="btn btn-outline btn-sm w-full gap-2">
+			<TrendingUpIcon size={16} />
 			Forecast Settings
 		</a>
-		<a href="/credit-card-settings" class="btn btn-outline w-full gap-2">
-			<CreditCardIcon size={18} />
+		<a href="/credit-card-settings" class="btn btn-outline btn-sm w-full gap-2">
+			<CreditCardIcon size={16} />
 			Credit Card Settings
 		</a>
 	</div>
