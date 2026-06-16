@@ -45,6 +45,7 @@
 	let maxDate: moment.Moment;
 	let chartDiv: HTMLCanvasElement | null = null;
 	let chart: Chart<'bar'> | null = null;
+	let renderedFromCache = false;
 
 	Chart.register(Title, Legend, BarElement, CategoryScale, LinearScale, BarController);
 
@@ -86,6 +87,7 @@
 		// Only paint if WASM hasn't already provided fresh data.
 		if (!fullLedgerService.isLoaded) {
 			updateChart({ labels: createXAxis(), datasets });
+			renderedFromCache = true;
 		}
 	}
 
@@ -95,6 +97,11 @@
 
 		try {
 			const balances = await loadAccountBalances();
+
+			// Skip redraw if we already rendered from cache and the balances haven't changed.
+			const cachedBalances = homeCache.getForecastBalances();
+			if (renderedFromCache && cachedBalances && balancesEqual(balances, cachedBalances)) return;
+
 			homeCache.saveForecastBalances(balances);
 			let data = await loadDataWithBalances(balances);
 			updateChart(data);
@@ -102,6 +109,13 @@
 			Notifier.error('Error loading data for the chart.');
 			console.error(error);
 		}
+	}
+
+	function balancesEqual(a: Record<string, number>, b: Record<string, number>): boolean {
+		const aKeys = Object.keys(a);
+		const bKeys = Object.keys(b);
+		if (aKeys.length !== bKeys.length) return false;
+		return aKeys.every((key) => a[key] === b[key]);
 	}
 
 	async function addScxData(accountName: string, amounts: number[]): Promise<number[]> {
