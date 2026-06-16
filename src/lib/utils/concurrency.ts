@@ -23,43 +23,33 @@ export async function processInBatches<T>(
  * @param concurrency - Maximum number of concurrent operations
  * @param processor - Async function to process each item
  */
-export async function processWithConcurrencyLimit<T>(
+export function processWithConcurrencyLimit<T>(
 	items: T[],
 	concurrency: number,
 	processor: (item: T) => Promise<void>
 ): Promise<void> {
+	if (items.length === 0) return Promise.resolve();
+
+	const queue = items.map((item) => () => processor(item));
 	let activeCount = 0;
-	const queue: (() => Promise<void>)[] = [];
+	let resolveAll: () => void;
+	const allDone = new Promise<void>((r) => (resolveAll = r));
 
-	const processNext = async (): Promise<void> => {
-		if (queue.length === 0) return;
-
-		const task = queue.shift()!;
-		activeCount++;
-
-		try {
-			await task();
-		} finally {
-			activeCount--;
-			// Start next queued item if any
-			if (queue.length > 0) {
-				processNext();
-			}
+	const next = () => {
+		while (activeCount < concurrency && queue.length > 0) {
+			const task = queue.shift()!;
+			activeCount++;
+			task().finally(() => {
+				activeCount--;
+				if (activeCount === 0 && queue.length === 0) {
+					resolveAll();
+				} else {
+					next();
+				}
+			});
 		}
 	};
 
-	// Queue all items
-	for (const item of items) {
-		queue.push(() => processor(item));
-
-		// Start processing if under concurrency limit
-		if (activeCount < concurrency) {
-			processNext();
-		}
-	}
-
-	// Wait for all to complete
-	while (activeCount > 0 || queue.length > 0) {
-		await new Promise((resolve) => setTimeout(resolve, 10));
-	}
+	next();
+	return allDone;
 }

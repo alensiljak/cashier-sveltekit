@@ -10,9 +10,11 @@
 		requestReadPermission,
 		requestWritePermission
 	} from '$lib/utils/fsHandleStore';
-	import { getManifest, putManifestEntry, type ImportedFileMeta } from '$lib/utils/importManifest';
+	import { getManifest, putManifestEntries, type ImportedFileMeta } from '$lib/utils/importManifest';
 	import * as OpfsLib from '$lib/utils/opfslib.js';
 	import { parseSpecs, collectFsFileHandles } from '$lib/utils/fsScan';
+
+	let scannedFsHandles = $state(new Map<string, FileSystemFileHandle>());
 	import { processWithConcurrencyLimit } from '$lib/utils/concurrency';
 
 	const HANDLE_KEY = 'importLedgerDirectoryHandle';
@@ -138,13 +140,14 @@
 
 			const fsHandles: Array<{ path: string; handle: FileSystemFileHandle }> = [];
 			await collectFsFileHandles(dirHandle, '', patterns, fsHandles);
+			scannedFsHandles = new Map(fsHandles.map(({ path, handle }) => [path, handle]));
 
 			const [manifest, fsMetaList] = await Promise.all([
 				getManifest(),
 				Promise.all(
 					fsHandles.map(async ({ path, handle }) => {
 						const file = await handle.getFile();
-						return { path, handle, lastModified: file.lastModified, size: file.size };
+						return { path, lastModified: file.lastModified, size: file.size };
 					})
 				)
 			]);
@@ -152,10 +155,15 @@
 			const fsFiles = new Map(fsMetaList.map((f) => [f.path, f]));
 			const result: SyncEntry[] = [];
 
-			for (const [path, fsEntry] of fsFiles) {
-				const meta = manifest.get(path);
-				const opfsMeta = await OpfsLib.getFileMetadata(path);
+			const scanResults = await Promise.all(
+				Array.from(fsFiles.entries()).map(async ([path, fsEntry]) => {
+					const meta = manifest.get(path);
+					const opfsMeta = await OpfsLib.getFileMetadata(path);
+					return { path, fsEntry, meta, opfsMeta };
+				})
+			);
 
+			for (const { path, fsEntry, meta, opfsMeta } of scanResults) {
 				const fsChanged = !meta || fsEntry.lastModified !== meta.lastModified || fsEntry.size !== meta.size;
 				const opfsChanged = opfsMeta && meta ? opfsMeta.lastModified > meta.importedAt : false;
 
@@ -193,21 +201,14 @@
 		progress = { done: 0, total: toSync.length };
 
 		try {
-			const patterns = parseSpecs(fileSpec);
-			const fsHandles: Array<{ path: string; handle: FileSystemFileHandle }> = [];
-			await collectFsFileHandles(dirHandle, '', patterns, fsHandles);
-			const fsFiles = new Map(
-				await Promise.all(
-					fsHandles.map(async ({ path, handle }) => [path, handle] as const)
-				)
-			);
+			const fsFiles = scannedFsHandles;
+			const manifestEntries: ImportedFileMeta[] = [];
 
 			await processWithConcurrencyLimit(toSync, CONCURRENCY, async (entry) => {
 				if (entry.action === 'fs-to-opfs') {
 					const handle = fsFiles.get(entry.path);
 					if (!handle) return;
 					const file = await handle.getFile();
-					// write to OPFS
 					const root = await navigator.storage.getDirectory();
 					const parts = entry.path.split('/');
 					let dir: FileSystemDirectoryHandle = root;
@@ -218,7 +219,7 @@
 					const writable = await fh.createWritable();
 					await writable.write(file);
 					await writable.close();
-					await putManifestEntry({
+					manifestEntries.push({
 						path: entry.path,
 						size: file.size,
 						lastModified: file.lastModified,
@@ -231,7 +232,7 @@
 					await writeFsFile(dirHandle!, entry.path, content);
 					const meta = await OpfsLib.getFileMetadata(entry.path);
 					if (meta) {
-						await putManifestEntry({
+						manifestEntries.push({
 							path: entry.path,
 							size: meta.size,
 							lastModified: meta.lastModified,
@@ -242,6 +243,8 @@
 				}
 				progress.done++;
 			});
+
+			await putManifestEntries(manifestEntries);
 
 			phase = 'done';
 			logLines = [...logLines, `Done — ${progress.done} / ${progress.total} synced.`];

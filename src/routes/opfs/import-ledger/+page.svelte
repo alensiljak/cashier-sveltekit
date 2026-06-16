@@ -10,9 +10,9 @@
 		requestReadPermission
 	} from '$lib/utils/fsHandleStore';
 	import {
-		deleteManifestEntry,
 		getManifest,
-		putManifestEntry,
+		putManifestEntries,
+		deleteManifestEntries,
 		type ImportedFileMeta
 	} from '$lib/utils/importManifest';
 	import { processWithConcurrencyLimit } from '$lib/utils/concurrency';
@@ -307,11 +307,13 @@
 
 			statusMsg = `Syncing ${progress.total} file(s)…`;
 
+			const manifestEntries: ImportedFileMeta[] = [];
+
 			await processWithConcurrencyLimit(toCopy, CONCURRENCY, async (entry) => {
 				if (!entry.getFile) return;
 				const file = await entry.getFile();
 				await writeOpfsFile(entry.path, file);
-				await putManifestEntry({
+				manifestEntries.push({
 					path: entry.path,
 					size: file.size,
 					lastModified: file.lastModified,
@@ -322,13 +324,19 @@
 				statusMsg = `Synced ${progress.done} / ${progress.total}`;
 			});
 
+			await putManifestEntries(manifestEntries);
+
+			const deletedPaths: string[] = [];
+
 			await processWithConcurrencyLimit(toDelete, CONCURRENCY, async (entry) => {
 				await deleteOpfsFile(entry.path);
-				await deleteManifestEntry(entry.path);
+				deletedPaths.push(entry.path);
 				logLines = [...logLines, `deleted: ${entry.path}`];
 				progress.done++;
 				statusMsg = `Synced ${progress.done} / ${progress.total}`;
 			});
+
+			await deleteManifestEntries(deletedPaths);
 
 			phase = 'done';
 			statusMsg = `Done — ${progress.done} of ${progress.total} file(s) synced.`;

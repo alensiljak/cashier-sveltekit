@@ -61,6 +61,46 @@ export async function putManifestEntry(meta: ImportedFileMeta): Promise<void> {
 	});
 }
 
+export async function putManifestEntries(entries: ImportedFileMeta[]): Promise<void> {
+	if (entries.length === 0) return;
+	const db = await openDb();
+	return new Promise((resolve, reject) => {
+		const tx = db.transaction(STORE, 'readwrite');
+		const store = tx.objectStore(STORE);
+		for (const entry of entries) {
+			store.put(entry);
+		}
+		tx.oncomplete = () => {
+			db.close();
+			resolve();
+		};
+		tx.onerror = () => {
+			db.close();
+			reject(tx.error);
+		};
+	});
+}
+
+export async function deleteManifestEntries(paths: string[]): Promise<void> {
+	if (paths.length === 0) return;
+	const db = await openDb();
+	return new Promise((resolve, reject) => {
+		const tx = db.transaction(STORE, 'readwrite');
+		const store = tx.objectStore(STORE);
+		for (const path of paths) {
+			store.delete(path);
+		}
+		tx.oncomplete = () => {
+			db.close();
+			resolve();
+		};
+		tx.onerror = () => {
+			db.close();
+			reject(tx.error);
+		};
+	});
+}
+
 export async function deleteManifestEntry(path: string): Promise<void> {
 	const db = await openDb();
 	return new Promise((resolve, reject) => {
