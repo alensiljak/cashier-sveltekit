@@ -31,54 +31,24 @@
 	}
 
 	let accounts: Array<Account> = $state(cachedAccountsToState());
+	let maxBalance: number = $state(0);
 
 	$effect(() => {
 		if (accounts.length > 0) {
 			const quantities = accounts
 				.map((account) => Math.abs(account.balance?.quantity as number))
 				.filter((q) => !isNaN(q) && q > 0);
-			if (quantities.length > 0) {
-				maxBalance = Math.max(...quantities);
-			} else {
-				maxBalance = 0;
-			}
+			maxBalance = quantities.length > 0 ? Math.max(...quantities) : 0;
 		}
 	});
-
-	let maxBalance: number = $state(0);
 
 	const lsVersion = fullLedgerService.version;
-	const isReloading = fullLedgerService.isReloading;
+	let isLoading = $state(false);
 
-	let balancesLoaded = $state(false);
-
-	// Immediately show account names with placeholders, then load balances.
 	$effect(() => {
 		const _v = $lsVersion;
-		balancesLoaded = false;
-		showPlaceholders();
 		loadData();
 	});
-
-	async function showPlaceholders() {
-		if (balancesLoaded) return;
-
-		const favNames: string[] =
-			((await settings.get<string[]>(SettingKeys.favouriteAccounts)) ?? []).slice(0, 5);
-		if (favNames.length === 0) return;
-
-		// If accounts are already populated from cache, just ensure names match settings.
-		// Otherwise set placeholders so the list isn't empty.
-		if (accounts.length === 0) {
-			accounts = favNames.map((name) => {
-				const account = new Account(name);
-				account.balance = new Money();
-				account.balance.currency = '---';
-				account.balance.quantity = 0;
-				return account;
-			});
-		}
-	}
 
 	async function queryFavouriteBalances(favNames: string[]): Promise<Map<string, Account>> {
 		const result = new Map<string, Account>();
@@ -138,6 +108,7 @@
 	}
 
 	async function loadData() {
+		isLoading = true;
 		try {
 			const favNames: string[] =
 				((await settings.get<string[]>(SettingKeys.favouriteAccounts)) ?? [])
@@ -177,7 +148,6 @@
 					return account;
 				}
 			});
-			balancesLoaded = true;
 
 			homeCache.saveFavouriteAccounts(
 				accounts.map((a) => ({
@@ -189,6 +159,8 @@
 		} catch (error: any) {
 			console.error(error);
 			Notifier.error(error.message);
+		} finally {
+			isLoading = false;
 		}
 	}
 
@@ -209,14 +181,14 @@
 
 	{#snippet title()}
 		Favourites
-		{#if $isReloading}<span class="loading loading-spinner loading-xs ml-2 opacity-70"></span>{/if}
+		{#if isLoading}<span class="loading loading-spinner loading-xs ml-2 opacity-70"></span>{/if}
 	{/snippet}
 	{#snippet content()}
-		{#if !accounts}
+		{#if accounts.length === 0}
 			<p>There are no favourite accounts defined</p>
 		{:else}
 			{#each accounts as account: Account (account.name)}
-				<AccountRow {account} {balancesLoaded} {maxBalance} compact />
+				<AccountRow {account} balancesLoaded={true} {maxBalance} compact />
 			{/each}
 		{/if}
 	{/snippet}
