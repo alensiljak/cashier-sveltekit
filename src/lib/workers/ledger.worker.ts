@@ -190,6 +190,13 @@ async function loadFromCacheOrFiles(
  * client can resolve the correct promise.
  */
 export type WorkerRequestPayload =
+	// --- Lifecycle ---
+	/**
+	 * Pre-warm: initialises the WASM module without touching the ledger.
+	 * Send this immediately after spawning the worker so that the first real
+	 * operation (load / ensure-loaded) does not pay the WASM compile cost.
+	 */
+	| { type: 'warmup' }
 	// --- Persistent-ledger operations ---
 	| { type: 'load'; mainFileName: string; userBookFilename?: string }
 	| { type: 'ensure-loaded'; mainFileName: string; userBookFilename?: string; useCaching?: boolean }
@@ -217,6 +224,7 @@ export type WorkerRequestPayload =
 export type WorkerRequest = { id: number } & WorkerRequestPayload;
 
 export type WorkerResponsePayload =
+	| { type: 'warmup-done' }
 	| { type: 'load-done'; directiveCount: number; errorCount: number; ms: number }
 	| { type: 'query-done'; columns: string[]; rows: unknown[]; errors: unknown[] }
 	| { type: 'directives-done'; directives: unknown[] }
@@ -283,6 +291,14 @@ async function handleMessage(e: MessageEvent<WorkerRequest>): Promise<void> {
 		await initWasm();
 
 		switch (e.data.type) {
+			case 'warmup': {
+				// initWasm() was already called at the top of handleMessage.
+				// Nothing more to do — just acknowledge so the client knows
+				// the WASM module is ready for the first real operation.
+				reply({ type: 'warmup-done' });
+				break;
+			}
+
 			case 'load': {
 				const t0 = performance.now();
 				await loadFromFiles(e.data.mainFileName, e.data.userBookFilename);

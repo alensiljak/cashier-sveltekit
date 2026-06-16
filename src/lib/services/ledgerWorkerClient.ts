@@ -26,7 +26,7 @@ type ResponseOf<T extends WorkerResponsePayload['type']> = Extract<
 >;
 
 class LedgerWorkerClient {
-	private _worker: Worker | null = null;
+	private _worker: Worker;
 	private _pending = new Map<
 		number,
 		{ resolve: (v: WorkerResponsePayload) => void; reject: (e: Error) => void }
@@ -49,29 +49,40 @@ class LedgerWorkerClient {
 	// Worker lifecycle
 	// -------------------------------------------------------------------------
 
+	constructor() {
+		// Spawn the worker eagerly so the OS can schedule it and the WASM binary
+		// download begins immediately, rather than waiting for the first page that
+		// needs ledger data.
+		this._worker = new Worker(new URL('$lib/workers/ledger.worker.ts', import.meta.url), {
+			type: 'module'
+		});
+		this._worker.onmessage = (e: MessageEvent<WorkerResponse>) => {
+			const { id, ...payload } = e.data;
+			const pending = this._pending.get(id);
+			if (!pending) return;
+			this._pending.delete(id);
+			if (payload.type === 'error') {
+				pending.reject(new Error((payload as { type: 'error'; message: string }).message));
+			} else {
+				pending.resolve(payload as WorkerResponsePayload);
+			}
+		};
+		this._worker.onerror = (e) => {
+			const err = new Error(e.message ?? 'Ledger worker crashed');
+			for (const p of this._pending.values()) p.reject(err);
+			this._pending.clear();
+		};
+
+		// Send a warmup message so the worker calls initWasm() right away.
+		// By the time the user navigates to a report page and triggers ensureLoaded(),
+		// the WASM module will already be compiled and instantiated — removing that
+		// latency from the critical path of the first real operation.
+		this.send<'warmup-done'>({ type: 'warmup' }).catch(() => {
+			// Non-fatal — if warmup fails the next real operation will retry initWasm().
+		});
+	}
+
 	private get worker(): Worker {
-		if (!this._worker) {
-			this._worker = new Worker(new URL('$lib/workers/ledger.worker.ts', import.meta.url), {
-				type: 'module'
-			});
-			this._worker.onmessage = (e: MessageEvent<WorkerResponse>) => {
-				const { id, ...payload } = e.data;
-				const pending = this._pending.get(id);
-				if (!pending) return;
-				this._pending.delete(id);
-				if (payload.type === 'error') {
-					pending.reject(new Error((payload as { type: 'error'; message: string }).message));
-				} else {
-					pending.resolve(payload as WorkerResponsePayload);
-				}
-			};
-			this._worker.onerror = (e) => {
-				const err = new Error(e.message ?? 'Ledger worker crashed');
-				for (const p of this._pending.values()) p.reject(err);
-				this._pending.clear();
-				this._worker = null;
-			};
-		}
 		return this._worker;
 	}
 
