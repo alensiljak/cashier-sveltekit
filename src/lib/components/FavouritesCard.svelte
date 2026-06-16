@@ -12,7 +12,25 @@
 
 	Notifier.init();
 
-	let accounts: Array<Account> = $state([]);
+	function cachedAccountsToState(): Account[] {
+		const cached = homeCache.getFavouriteAccounts();
+		if (!cached || cached.length === 0) return [];
+		return cached.map((c) => {
+			const account = new Account(c.name);
+			account.balance = new Money();
+			if (c.balance) {
+				account.balance.quantity = c.balance.quantity ?? 0;
+				account.balance.currency = c.balance.currency;
+			} else {
+				account.balance.currency = '---';
+				account.balance.quantity = 0;
+			}
+			if (c.balances) account.balances = c.balances;
+			return account;
+		});
+	}
+
+	let accounts: Array<Account> = $state(cachedAccountsToState());
 
 	$effect(() => {
 		if (accounts.length > 0) {
@@ -43,27 +61,20 @@
 	});
 
 	async function showPlaceholders() {
+		if (balancesLoaded) return;
+
 		const favNames: string[] =
 			((await settings.get<string[]>(SettingKeys.favouriteAccounts)) ?? []).slice(0, 5);
 		if (favNames.length === 0) return;
 
-		// Only set placeholders if balances haven't loaded yet.
-		if (!balancesLoaded) {
-			const cached = homeCache.getFavouriteAccounts();
-			const cachedByName = new Map(cached?.map((c) => [c.name, c]) ?? []);
-
+		// If accounts are already populated from cache, just ensure names match settings.
+		// Otherwise set placeholders so the list isn't empty.
+		if (accounts.length === 0) {
 			accounts = favNames.map((name) => {
 				const account = new Account(name);
-				const hit = cachedByName.get(name);
 				account.balance = new Money();
-				if (hit?.balance) {
-					account.balance.quantity = hit.balance.quantity ?? 0;
-					account.balance.currency = hit.balance.currency;
-					if (hit.balances) account.balances = hit.balances;
-				} else {
-					account.balance.currency = '---';
-					account.balance.quantity = 0;
-				}
+				account.balance.currency = '---';
+				account.balance.quantity = 0;
 				return account;
 			});
 		}
