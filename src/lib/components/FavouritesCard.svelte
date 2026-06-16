@@ -8,6 +8,7 @@
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import Notifier from '$lib/utils/notifier';
 	import { SettingKeys, settings } from '$lib/settings';
+	import { homeCache } from '$lib/services/homeCache';
 
 	Notifier.init();
 
@@ -48,11 +49,21 @@
 
 		// Only set placeholders if balances haven't loaded yet.
 		if (!balancesLoaded) {
+			const cached = homeCache.getFavouriteAccounts();
+			const cachedByName = new Map(cached?.map((c) => [c.name, c]) ?? []);
+
 			accounts = favNames.map((name) => {
 				const account = new Account(name);
+				const hit = cachedByName.get(name);
 				account.balance = new Money();
-				account.balance.currency = '---';
-				account.balance.quantity = 0;
+				if (hit?.balance) {
+					account.balance.quantity = hit.balance.quantity ?? 0;
+					account.balance.currency = hit.balance.currency;
+					if (hit.balances) account.balances = hit.balances;
+				} else {
+					account.balance.currency = '---';
+					account.balance.quantity = 0;
+				}
 				return account;
 			});
 		}
@@ -156,6 +167,14 @@
 				}
 			});
 			balancesLoaded = true;
+
+			homeCache.saveFavouriteAccounts(
+				accounts.map((a) => ({
+					name: a.name,
+					balance: a.balance ? { quantity: a.balance.quantity ?? null, currency: a.balance.currency } : null,
+					balances: a.balances ?? null
+				}))
+			);
 		} catch (error: any) {
 			console.error(error);
 			Notifier.error(error.message);

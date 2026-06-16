@@ -22,6 +22,7 @@
 	// @ts-ignore
 	import { Composite6 } from 'hw-chartjs-plugin-colorschemes/src/colorschemes/colorschemes.office';
 	import { getShortAccountName } from '$lib/services/accountsService';
+	import { homeCache } from '$lib/services/homeCache';
 	import db from '$lib/data/db';
 	import { type ScheduledTransaction, type Xact } from '$lib/data/model';
 	import appService from '$lib/services/appService';
@@ -50,6 +51,9 @@
 	onMount(() => {
 		chart = renderChart(createEmptyChartData());
 
+		// Render from cache immediately so the chart is visible before WASM loads.
+		void renderFromCache();
+
 		const unsubscribe: Unsubscriber = fullLedgerService.loaded.subscribe((loaded) => {
 			if (!loaded) {
 				updateChart(createEmptyChartData());
@@ -66,12 +70,33 @@
 		};
 	});
 
+	async function renderFromCache() {
+		const cachedBalances = homeCache.getForecastBalances();
+		if (!cachedBalances) return;
+
+		// maxDate is needed by loadScxsFor inside createDatasetFor.
+		maxDate = moment().add(daysCount, 'days');
+
+		const datasets = [];
+		for (const accountName of accountNames) {
+			const dataset = await createDatasetFor(accountName, cachedBalances[accountName] ?? 0);
+			datasets.push(dataset);
+		}
+
+		// Only paint if WASM hasn't already provided fresh data.
+		if (!fullLedgerService.isLoaded) {
+			updateChart({ labels: createXAxis(), datasets });
+		}
+	}
+
 	async function loadAndRenderChart() {
 		defaultCurrency = await appService.getDefaultCurrency();
 		maxDate = moment().add(daysCount, 'days');
 
 		try {
-			let data = await loadData();
+			const balances = await loadAccountBalances();
+			homeCache.saveForecastBalances(balances);
+			let data = await loadDataWithBalances(balances);
 			updateChart(data);
 		} catch (error) {
 			Notifier.error('Error loading data for the chart.');
@@ -239,8 +264,7 @@
 		return { account: paymentAccount, amounts };
 	}
 
-	async function loadData(): Promise<ChartData<'bar'>> {
-		const balances = await loadAccountBalances();
+	async function loadDataWithBalances(balances: Record<string, number>): Promise<ChartData<'bar'>> {
 		const datasets = [];
 
 		const ccPayment = await loadCreditCardPaymentAmounts();
