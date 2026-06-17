@@ -2,7 +2,7 @@
     Pure helper functions for the RLedger page.
 */
 
-import type { Directive } from '@rustledger/wasm';
+import type { DirectiveJson as Directive } from '@rustledger/wasm';
 
 /**
  * Human-readable one-line summary for a directive, used in the directives table.

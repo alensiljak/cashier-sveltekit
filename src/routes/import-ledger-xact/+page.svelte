@@ -13,7 +13,7 @@
 	let inputControl: HTMLTextAreaElement | undefined = undefined;
 
 	onMount(() => {
-		inputControl.focus();
+		inputControl?.focus();
 	});
 
 	async function onImportClicked() {

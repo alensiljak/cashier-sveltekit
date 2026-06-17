@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Directive, ParsedLedger } from '@rustledger/wasm';
+	import type { DirectiveJson as Directive, ParsedLedger } from '@rustledger/wasm';
 	import { formatDirectiveSummary } from '$lib/rledger/rledgerPageService';
 
 	type Props = {

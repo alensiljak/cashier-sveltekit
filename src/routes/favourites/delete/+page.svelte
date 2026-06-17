@@ -14,7 +14,7 @@
 	let _accounts: string[] = $state([]);
 
 	onMount(async () => {
-		_accounts = await settings.get(SettingKeys.favouriteAccounts);
+		_accounts = (await settings.get(SettingKeys.favouriteAccounts)) ?? [];
 	});
 
 	/**

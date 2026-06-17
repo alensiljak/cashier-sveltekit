@@ -3,7 +3,7 @@
 	import Toolbar from "$lib/components/Toolbar.svelte";
 	import AccordionSection from '$lib/components/AccordionSection.svelte';
 	import ledgerService from '$lib/services/ledgerService';
-	import type { BeancountError, Directive, ParsedLedger } from '@rustledger/wasm';
+	import type { BeancountError, DirectiveJson as Directive, ParsedLedger } from '@rustledger/wasm';
 	import { DirectiveFormatter } from '$lib/rledger/directiveFormatter';
 	import { Account } from '$lib/data/model';
 	import rustledger from '$lib/services/rustledger';

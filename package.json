@@ -30,6 +30,7 @@
 		"@tailwindcss/vite": "^4.1.18",
 		"@testing-library/svelte": "^5.2.6",
 		"@types/big.js": "^7.0.0",
+		"@types/diff": "^7.0.2",
 		"@types/node": "^25.0.0",
 		"@types/numeral": "^2.0.5",
 		"@typescript-eslint/eslint-plugin": "^8.58.0",
@@ -67,7 +68,5 @@
 		"vitest": "^3.2.4",
 		"webdav": "^5.7.1",
 		"workbox-window": "^7.4.0"
-	},
-	"dependencies": {
 	}
 }

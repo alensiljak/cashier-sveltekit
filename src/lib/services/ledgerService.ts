@@ -6,7 +6,7 @@ import {
 	getAccountsFromTransactions,
 	version as wasmVersion
 } from './rustledger';
-import type { Directive, BeancountError, ParsedLedger } from '@rustledger/wasm';
+import type { DirectiveJson as Directive, BeancountError, ParsedLedger } from '@rustledger/wasm';
 import { Account, Xact } from '$lib/data/model';
 import { directiveToXact } from '$lib/utils/transactionParser';
 import * as opfslib from '$lib/utils/opfslib';

@@ -2,7 +2,7 @@
     Provides string representation of Directives.
 */
 
-import type { Directive, TransactionDirective } from '@rustledger/wasm';
+import type { DirectiveJson as Directive } from '@rustledger/wasm';
 
 class DirectiveFormatter {
 	static toString(directive: Directive): string {
@@ -37,7 +37,7 @@ class DirectiveFormatter {
 	}
 
 	private static formatTransaction(
-		directive: TransactionDirective & { type: 'transaction' }
+		directive: Directive & { type: 'transaction' }
 	): string {
 		const tx = directive as unknown as Record<string, unknown>;
 		const txMeta = (tx.meta ?? {}) as Record<string, unknown>;
