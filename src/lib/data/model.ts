@@ -48,11 +48,6 @@ export class Account {
 	}
 }
 
-export class LastXact {
-	payee = '';
-	transaction?: Xact;
-}
-
 export class Payee {
 	// id?: number
 	name = '';

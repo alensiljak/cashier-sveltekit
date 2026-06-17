@@ -39,7 +39,6 @@ export const drawerState: Writable<boolean> = writable(false);
 
 export interface PendingSettings {
 	currency?: string;
-	rememberLastTransaction?: boolean;
 	bookFilename?: string | null;
 	assetAllocationDefinition?: string | null;
 	rootInvestmentAccount?: string;

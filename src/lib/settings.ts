@@ -59,7 +59,6 @@ export const SettingKeys = {
 	//
 	backupServerUrl: 'backupServerUrl', // Server for online backup (pCloud).
 	currency: 'currency',
-	rememberLastTransaction: 'rememberLastTransaction',
 	favouriteAccounts: 'favouriteAccounts',
 	// forecast
 	forecastAccounts: 'forecast.accounts',

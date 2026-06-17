@@ -2,7 +2,7 @@
 	Provide service layer for the application.
 */
 import db from '$lib/data/db';
-import { LastXact, ScheduledTransaction, Xact } from '$lib/data/model';
+import { ScheduledTransaction, Xact } from '$lib/data/model';
 import { settings, SettingKeys } from '$lib/settings';
 import { HomeCardNames } from '$lib/enums';
 import { DefaultCurrencyStore, ScheduledXact, xact } from '$lib/data/mainStore';
@@ -481,27 +481,6 @@ class AppService {
 	// saveAccount(account: Account) {
 	// 	return db.accounts.put(account);
 	// }
-
-	/**
-	 * Saves the given transaction as the Last Xact for the Payee.
-	 * This is retrieved when the Payee is selected on a new transaction, or when editing.
-	 * @param {Xact} tx
-	 */
-	async saveLastTransaction(tx: Xact) {
-		const lastTx = new LastXact();
-		lastTx.payee = tx.payee as string;
-		lastTx.transaction = tx;
-
-		// Delete unneeded properties - the ids, date, etc.
-		this.clearIds(lastTx.transaction);
-
-		// no need to remember the date
-		delete lastTx.transaction.date;
-
-		await this.db.lastXact.put(lastTx);
-
-		return true;
-	}
 
 	serialize(content: unknown) {
 		return JSON.stringify(content);

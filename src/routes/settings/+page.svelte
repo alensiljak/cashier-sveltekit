@@ -38,7 +38,6 @@
 		{ label: '08/05 (US)', value: 'MM/DD' }
 	];
 
-	let rememberLastTransaction = $state<boolean>();
 	let ledgerCacheEnabled = $state<boolean>(true);
 	let currency = $state<string>();
 	let bookCurrencies = $state<string[]>([]);
@@ -54,7 +53,6 @@
 	let savedBookFilename = $state<string | null>(null);
 	let savedAssetAllocationDefinition = $state<string | null>(null);
 	let savedRootInvestmentAccount = $state<string | undefined>(undefined);
-	let savedRememberLastTransaction = $state<boolean | undefined>(undefined);
 	let savedDateFormat = $state<string>(DATE_FORMAT_DEFAULT);
 	let savedShortDateFormat = $state<string>(SHORT_DATE_FORMAT_DEFAULT);
 
@@ -75,7 +73,6 @@
 		if (loaded) {
 			PendingSettingsStore.set({
 				currency,
-				rememberLastTransaction,
 				bookFilename,
 				assetAllocationDefinition,
 				rootInvestmentAccount,
@@ -131,9 +128,6 @@
 		savedRootInvestmentAccount = (await settings.get<string>(SettingKeys.rootInvestmentAccount)) as
 			| string
 			| undefined;
-		savedRememberLastTransaction = (await settings.get<boolean>(
-			SettingKeys.rememberLastTransaction
-		)) as boolean | undefined;
 		ledgerCacheEnabled = (await settings.get<boolean>(SettingKeys.ledgerCacheEnabled)) ?? true;
 		savedAssetAllocationDefinition =
 			(await settings.get<string>(SettingKeys.assetAllocationDefinition)) ?? null;
@@ -151,7 +145,6 @@
 		// Populate form: pending values take precedence over saved values.
 		// URL-param values (set by handleFilePickerReturn above) take precedence over pending.
 		currency = pending?.currency ?? savedCurrency;
-		rememberLastTransaction = pending?.rememberLastTransaction ?? savedRememberLastTransaction;
 		if (!bookFilename) bookFilename = pending?.bookFilename ?? savedBookFilename;
 		if (!assetAllocationDefinition)
 			assetAllocationDefinition =
@@ -180,7 +173,6 @@
 		DefaultCurrencyStore.set(currency as string);
 
 		await settings.set(SettingKeys.rootInvestmentAccount, rootInvestmentAccount);
-		await settings.set(SettingKeys.rememberLastTransaction, rememberLastTransaction);
 		await settings.set(SettingKeys.ledgerCacheEnabled, ledgerCacheEnabled);
 		await settings.set(SettingKeys.assetAllocationDefinition, assetAllocationDefinition);
 		await settings.set(SettingKeys.dateFormat, dateFormat);
@@ -242,19 +234,6 @@
 	{#if bookCurrencies.length > 0}
 		<p class="text-right text-xs opacity-60">Book: {bookCurrencies.join(', ')}</p>
 	{/if}
-
-	<!-- Remember last transaction -->
-	<div class="flex items-center gap-3">
-		<label for="remember-last-transaction" class="flex-1 text-sm font-medium">
-			Remember last transaction for payees
-		</label>
-		<input
-			id="remember-last-transaction"
-			class="checkbox checkbox-primary checkbox-sm shrink-0 rounded"
-			type="checkbox"
-			bind:checked={rememberLastTransaction}
-		/>
-	</div>
 
 	<!-- Long Date Format -->
 	<div class="flex items-center gap-3">

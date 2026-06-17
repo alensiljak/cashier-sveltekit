@@ -8,8 +8,6 @@
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import { afterNavigate, goto } from '$app/navigation';
 	import Notifier from '$lib/utils/notifier';
-	import { SettingKeys, settings } from '$lib/settings';
-	import appService from '$lib/services/appService';
 	import ledgerService from '$lib/services/ledgerService';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import { xactToBeancountText } from '$lib/utils/xactUtils';
@@ -59,12 +57,6 @@
 			await ledgerService.appendTransaction(beancountText);
 		}
 		xactSpan.set(undefined);
-
-		// Remember Last Transaction?
-		const remember = await settings.get(SettingKeys.rememberLastTransaction);
-		if (remember) {
-			await appService.saveLastTransaction(clonedXact);
-		}
 
 		// Re-parse the full book in the background — cards show a loading indicator.
 		fullLedgerService.invalidate();

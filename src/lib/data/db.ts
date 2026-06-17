@@ -4,7 +4,6 @@
 import Dexie, { type Table } from 'dexie';
 import {
 	// Account,
-	LastXact,
 	// Xact,
 	// Payee,
 	// Posting,
@@ -17,7 +16,6 @@ import {
 
 interface CashierDatabase extends Dexie {
 	// accounts: Table;
-	lastXact: Table;
 	// payees: Table;
 	scheduled: Table;
 	settings: Table;
@@ -45,10 +43,16 @@ db.version(2).stores({
 	peers: 'id'
 });
 
+db.version(3).stores({
+	lastXact: null,
+	scheduled: '++id, nextDate',
+	settings: 'key',
+	peers: 'id'
+});
+
 // Mappings
 
 // db.accounts.mapToClass(Account);
-db.lastXact.mapToClass(LastXact);
 // db.payees.mapToClass(Payee);
 // db.xacts.mapToClass(Xact);
 db.settings.mapToClass(Setting);

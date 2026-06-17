@@ -100,7 +100,7 @@
 				if ($selectionMetadata.selectedId) {
 					$xact.payee = id as string;
 
-					await loadLastTransaction(id);
+	
 				}
 				break;
 
@@ -145,32 +145,6 @@
 
 		// reset the selection mode
 		selectionMetadata.set(undefined);
-	}
-
-	/**
-	 * Load the last transaction for the payee
-	 */
-	async function loadLastTransaction(payee: string) {
-		if (!$xact) {
-			throw new Error('No transaction loaded!');
-		}
-
-		// Do this only if enabled
-		const enabled = await settings.get(SettingKeys.rememberLastTransaction);
-		if (!enabled) return;
-		// and we are not on an existing transaction,
-		if ($xact.id) return;
-		// and no accounts have been selected in Postings.
-		if (!$xact.postings.every((posting) => posting.account === '')) return;
-
-		const lastTx = await appService.db.lastXact.get(payee);
-		if (!lastTx) return;
-
-		// use the current date
-		lastTx.transaction.date = $xact.date;
-
-		// Replace the current transaction.
-		xact.set(lastTx.transaction);
 	}
 
 	function onAddPostingClicked() {
