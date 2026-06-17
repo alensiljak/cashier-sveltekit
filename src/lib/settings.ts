@@ -95,6 +95,8 @@ export const SettingKeys = {
 	webdavSettings: 'webdav-settings',
 	// Date display format (moment.js format string)
 	dateFormat: 'dateFormat',
+	// Short date display format — day and month only
+	shortDateFormat: 'shortDateFormat',
 	// Credit card forecast settings
 	creditCardSettings: 'creditCard.settings'
 };

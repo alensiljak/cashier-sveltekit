@@ -9,10 +9,12 @@
 	import { pwaAssetsHead } from 'virtual:pwa-assets/head';
 	import { onMount } from 'svelte';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
-	import { drawerState } from '$lib/data/mainStore';
+	import { drawerState, ShortDateFormatStore } from '$lib/data/mainStore';
 	import NavigationV3 from '$lib/components/navigation.svelte';
 	import Notifier from '$lib/utils/notifier';
 	import { ensureInitialized } from '$lib/data/initializer';
+	import { SettingKeys, settings } from '$lib/settings';
+	import { SHORT_DATE_FORMAT_DEFAULT } from '$lib/constants';
 
 	let { children } = $props();
 
@@ -46,6 +48,9 @@
 	async function initializeApp(): Promise<boolean> {
 		// Check if the main ledger file exists?
 		await ensureInitialized();
+
+		const savedShortDateFormat = await settings.get<string>(SettingKeys.shortDateFormat);
+		ShortDateFormatStore.set(savedShortDateFormat ?? SHORT_DATE_FORMAT_DEFAULT);
 
 		try {
 			await fullLedgerService.ensureLoaded();

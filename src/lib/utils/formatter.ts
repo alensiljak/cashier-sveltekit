@@ -73,10 +73,11 @@ export function getDateColour(dateString: string): string | undefined {
 /**
  * Converts the ISO date to a readable date, only shorter
  * @param dateString ISO date string, '2025-12-07'
+ * @param format moment.js format string; defaults to 'MMM DD'
  */
-export function getReadableDate(dateString: string): string {
+export function getReadableDate(dateString: string, format = 'MMM DD'): string {
 	const date = moment(dateString);
-	return date.format('MMM DD');
+	return date.format(format);
 }
 
 /**

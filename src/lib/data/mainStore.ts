@@ -6,6 +6,7 @@ import { ScheduledTransaction, Xact } from './model';
 import type { SelectionModeMetadata } from '$lib/settings';
 import type { AssetClass, StockCache } from '$lib/assetAllocation/AssetClass';
 import type { DirectiveSpan } from '$lib/rledger/sourceEditor';
+import { SHORT_DATE_FORMAT_DEFAULT } from '$lib/constants';
 
 interface MainStore {
 	name: string;
@@ -43,6 +44,10 @@ export interface PendingSettings {
 	assetAllocationDefinition?: string | null;
 	rootInvestmentAccount?: string;
 	dateFormat?: string;
+	shortDateFormat?: string;
 }
 
 export const PendingSettingsStore: Writable<PendingSettings | undefined> = writable(undefined);
+
+export { SHORT_DATE_FORMAT_DEFAULT };
+export const ShortDateFormatStore: Writable<string> = writable(SHORT_DATE_FORMAT_DEFAULT);

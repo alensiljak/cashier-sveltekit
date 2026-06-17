@@ -4,10 +4,11 @@
 	import { get } from 'svelte/store';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { SettingKeys, settings } from '$lib/settings';
+	import { SHORT_DATE_FORMAT_DEFAULT } from '$lib/constants';
 	import Notifier from '$lib/utils/notifier';
 	import appService from '$lib/services/appService';
 	import { goto, replaceState } from '$app/navigation';
-	import { DefaultCurrencyStore, PendingSettingsStore } from '$lib/data/mainStore.js';
+	import { DefaultCurrencyStore, PendingSettingsStore, ShortDateFormatStore } from '$lib/data/mainStore.js';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import { BoxIcon, Check, CreditCardIcon, FileBraces, NetworkIcon, RotateCcw, TrendingUpIcon } from '@lucide/svelte';
 	import Fab from '$lib/components/FAB.svelte';
@@ -19,13 +20,22 @@
 	Notifier.init();
 
 	const DATE_FORMAT_DEFAULT = 'D MMM YYYY';
-
 	const dateFormatOptions = [
 		{ label: '29 Aug 2026', value: 'D MMM YYYY' },
 		{ label: 'Aug 29, 2026', value: 'MMM D, YYYY' },
 		{ label: '2026-08-29 (ISO)', value: 'YYYY-MM-DD' },
 		{ label: '29/08/2026', value: 'DD/MM/YYYY' },
 		{ label: '08/29/2026', value: 'MM/DD/YYYY' }
+	];
+
+	const shortDateFormatOptions = [
+		{ label: 'Aug 05', value: 'MMM DD' },
+		{ label: '5.8.', value: 'D.M.' },
+		{ label: '5/8', value: 'D/M' },
+		{ label: '8/5 (US)', value: 'M/D' },
+		{ label: '05.08.', value: 'DD.MM.' },
+		{ label: '05/08', value: 'DD/MM' },
+		{ label: '08/05 (US)', value: 'MM/DD' }
 	];
 
 	let rememberLastTransaction = $state<boolean>();
@@ -36,6 +46,7 @@
 	let assetAllocationDefinition = $state<string | null>(null);
 	let rootInvestmentAccount = $state<string>();
 	let dateFormat = $state<string>(DATE_FORMAT_DEFAULT);
+	let shortDateFormat = $state<string>(SHORT_DATE_FORMAT_DEFAULT);
 	let loaded = $state(false);
 
 	// Saved (DB) values for revert comparison
@@ -45,6 +56,7 @@
 	let savedRootInvestmentAccount = $state<string | undefined>(undefined);
 	let savedRememberLastTransaction = $state<boolean | undefined>(undefined);
 	let savedDateFormat = $state<string>(DATE_FORMAT_DEFAULT);
+	let savedShortDateFormat = $state<string>(SHORT_DATE_FORMAT_DEFAULT);
 
 	// Dirty flags — only meaningful after initial load
 	let currencyDirty = $derived(loaded && currency !== savedCurrency);
@@ -56,6 +68,7 @@
 		loaded && rootInvestmentAccount !== savedRootInvestmentAccount
 	);
 	let dateFormatDirty = $derived(loaded && dateFormat !== savedDateFormat);
+	let shortDateFormatDirty = $derived(loaded && shortDateFormat !== savedShortDateFormat);
 
 	// Save form state before navigating away (e.g. to file picker)
 	beforeNavigate(() => {
@@ -66,7 +79,8 @@
 				bookFilename,
 				assetAllocationDefinition,
 				rootInvestmentAccount,
-				dateFormat
+				dateFormat,
+				shortDateFormat
 			});
 		}
 	});
@@ -125,6 +139,8 @@
 			(await settings.get<string>(SettingKeys.assetAllocationDefinition)) ?? null;
 		savedDateFormat =
 			(await settings.get<string>(SettingKeys.dateFormat)) ?? DATE_FORMAT_DEFAULT;
+		savedShortDateFormat =
+			(await settings.get<string>(SettingKeys.shortDateFormat)) ?? SHORT_DATE_FORMAT_DEFAULT;
 
 		// Auto-detect currency from book if not saved yet
 		if (!savedCurrency && bookCurrencies.length > 0) {
@@ -142,6 +158,7 @@
 				pending?.assetAllocationDefinition ?? savedAssetAllocationDefinition;
 		rootInvestmentAccount = pending?.rootInvestmentAccount ?? savedRootInvestmentAccount;
 		dateFormat = pending?.dateFormat ?? savedDateFormat;
+		shortDateFormat = pending?.shortDateFormat ?? savedShortDateFormat;
 	}
 
 	async function onOpfsClick() {
@@ -167,6 +184,8 @@
 		await settings.set(SettingKeys.ledgerCacheEnabled, ledgerCacheEnabled);
 		await settings.set(SettingKeys.assetAllocationDefinition, assetAllocationDefinition);
 		await settings.set(SettingKeys.dateFormat, dateFormat);
+		await settings.set(SettingKeys.shortDateFormat, shortDateFormat);
+		ShortDateFormatStore.set(shortDateFormat);
 
 		// Save book filename in cashier.bean
 		if (bookFilename) {
@@ -237,9 +256,9 @@
 		/>
 	</div>
 
-	<!-- Date Format -->
+	<!-- Long Date Format -->
 	<div class="flex items-center gap-3">
-		<label for="date-format" class="flex-1 text-sm font-medium">Date Format</label>
+		<label for="date-format" class="flex-1 text-sm font-medium">Long Date Format</label>
 		<div class="flex shrink-0 items-center gap-1">
 			<select id="date-format" class="select select-sm w-40 rounded" bind:value={dateFormat}>
 				{#each dateFormatOptions as opt}
@@ -252,6 +271,28 @@
 					class="btn btn-ghost btn-xs btn-square"
 					title="Revert"
 					onclick={() => (dateFormat = savedDateFormat)}
+				>
+					<RotateCcw size={14} />
+				</button>
+			{/if}
+		</div>
+	</div>
+
+	<!-- Short Date Format -->
+	<div class="flex items-center gap-3">
+		<label for="short-date-format" class="flex-1 text-sm font-medium">Short Date Format</label>
+		<div class="flex shrink-0 items-center gap-1">
+			<select id="short-date-format" class="select select-sm w-40 rounded" bind:value={shortDateFormat}>
+				{#each shortDateFormatOptions as opt}
+					<option value={opt.value}>{opt.label}</option>
+				{/each}
+			</select>
+			{#if shortDateFormatDirty}
+				<button
+					type="button"
+					class="btn btn-ghost btn-xs btn-square"
+					title="Revert"
+					onclick={() => (shortDateFormat = savedShortDateFormat)}
 				>
 					<RotateCcw size={14} />
 				</button>

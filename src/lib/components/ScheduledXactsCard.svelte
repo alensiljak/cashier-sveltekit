@@ -7,6 +7,7 @@
 	import db from '$lib/data/db';
 	import { XactAugmenter } from '$lib/utils/xactAugmenter';
 	import { formatAmount, getAmountColour, getDateColour, getReadableDate } from '$lib/utils/formatter';
+	import { ShortDateFormatStore } from '$lib/data/mainStore';
 
 	let scxs: ScheduledTransaction[] = $state([]);
 	let amounts: Money[] = $state([]);
@@ -53,7 +54,7 @@
 					<!-- row -->
 					<div class="flex flex-row space-x-2">
 						<time class={`${getDateColour(scx.nextDate)}`}>
-							{getReadableDate(scx.nextDate)}
+							{getReadableDate(scx.nextDate, $ShortDateFormatStore)}
 						</time>
 						<data class="min-w-0 grow truncate">
 							{scx.transaction?.payee}

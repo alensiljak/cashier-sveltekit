@@ -10,6 +10,7 @@ export const CASHIER_XACT_FILE = 'cashier.bean' as const;
 export const LEDGER_CACHE_FILE = 'ledger-cache.bin';
 export const ISODATEFORMAT = 'YYYY-MM-DD';
 export const LONGTIMEFORMAT = 'HHmmss';
+export const SHORT_DATE_FORMAT_DEFAULT = 'DD.MM.';
 export const NUMBER_FORMAT = '#,##0.00';
 
 /** Default OPFS filename for asset allocation definition. */
