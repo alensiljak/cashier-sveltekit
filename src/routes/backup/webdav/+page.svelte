@@ -4,10 +4,10 @@
     import { settings, SettingKeys } from '$lib/settings';
     import { ScheduledTransaction, Setting } from '$lib/data/model';
     import db from '$lib/data/db';
-    import { readFile, saveFile } from '$lib/utils/opfslib';
+    import { readFile, saveFile, getFileMetadata } from '$lib/utils/opfslib';
     import Notifier from '$lib/utils/notifier';
     import { WebDavClient } from '$lib/utils/webdav';
-    import { SettingsIcon, RefreshCwIcon, GitCompareArrowsIcon, EyeIcon } from '@lucide/svelte';
+    import { SettingsIcon, RefreshCwIcon, GitCompareArrowsIcon, EyeIcon, CloudUploadIcon } from '@lucide/svelte';
     import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
     import { goto } from '$app/navigation';
 
@@ -23,7 +23,13 @@
     let isCheckingRemote = $state(false);
     let settingsLastModified = $state<Date | null>(null);
     let cashierBeanLastModified = $state<Date | null>(null);
+    let cashierBeanLocalLastModified = $state<Date | null>(null);
     let scheduledLastModified = $state<Date | null>(null);
+
+    const cashierBeanNeedsBackup = $derived(
+        cashierBeanLocalLastModified !== null &&
+        (cashierBeanLastModified === null || cashierBeanLocalLastModified > cashierBeanLastModified)
+    );
 
     const noneSelected = $derived(!includeSettings && !includeCashierBean && !includeScheduled);
     const allSelected = $derived(includeSettings && includeCashierBean && includeScheduled);
@@ -47,10 +53,13 @@
     });
 
     async function fetchLastModified() {
-        if (!webdavUrl) return;
         isCheckingRemote = true;
-        const dav = client();
         try {
+            const localMeta = await getFileMetadata('cashier.bean');
+            if (localMeta) cashierBeanLocalLastModified = new Date(localMeta.lastModified);
+
+            if (!webdavUrl) return;
+            const dav = client();
             const [sm, cm, scm] = await Promise.allSettled([
                 dav.lastModified('settings.json'),
                 dav.lastModified('cashier.bean'),
@@ -212,6 +221,11 @@
             <label class="flex items-center gap-3 cursor-pointer">
                 <input type="checkbox" class="checkbox checkbox-primary" bind:checked={includeCashierBean} />
                 <span class="flex-1">cashier.bean</span>
+                {#if cashierBeanNeedsBackup}
+                <span title="Local file has changes not yet backed up">
+                    <CloudUploadIcon size={14} class="text-warning" />
+                </span>
+                {/if}
                 {#if cashierBeanLastModified}
                 <span class="text-xs text-base-content/50">{cashierBeanLastModified.toLocaleString()}</span>
                 {/if}
