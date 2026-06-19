@@ -215,6 +215,12 @@ export async function deleteFiles(
 	return { deleted, failed };
 }
 
+export async function writeFileObject(path: string, file: File): Promise<void> {
+	const stream = await openWrite(path);
+	await stream?.write(file);
+	await stream?.close();
+}
+
 export async function saveBinaryFile(filename: string, data: Uint8Array): Promise<void> {
 	const stream = await openWrite(filename);
 	await stream?.write(data.buffer as ArrayBuffer);

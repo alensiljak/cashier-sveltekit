@@ -17,41 +17,10 @@
 	} from '$lib/utils/importManifest';
 	import { processWithConcurrencyLimit } from '$lib/utils/concurrency';
 	import { parseSpecs, matchesAny, collectFsFileHandles } from '$lib/utils/fsScan';
+	import { writeFileObject, deleteFile as deleteOpfsFile } from '$lib/utils/opfslib';
 
 	const HANDLE_KEY = 'importLedgerDirectoryHandle';
 	const CONCURRENCY = 4;
-
-	// ── OPFS helpers ──────────────────────────────────────────────────────────────
-	async function writeOpfsFile(path: string, file: File): Promise<void> {
-		const root = await navigator.storage.getDirectory();
-		const parts = path.split('/');
-		let dir: FileSystemDirectoryHandle = root;
-		for (const part of parts.slice(0, -1)) {
-			dir = await dir.getDirectoryHandle(part, { create: true });
-		}
-		const fh = await dir.getFileHandle(parts[parts.length - 1], { create: true });
-		const writable = await fh.createWritable();
-		await writable.write(file);
-		await writable.close();
-	}
-
-	async function deleteOpfsFile(path: string): Promise<void> {
-		const root = await navigator.storage.getDirectory();
-		const parts = path.split('/');
-		let dir: FileSystemDirectoryHandle = root;
-		for (const part of parts.slice(0, -1)) {
-			try {
-				dir = await dir.getDirectoryHandle(part);
-			} catch {
-				return;
-			}
-		}
-		try {
-			await dir.removeEntry(parts[parts.length - 1]);
-		} catch {
-			// already gone
-		}
-	}
 
 	// ── State ─────────────────────────────────────────────────────────────────────
 	type Phase = 'idle' | 'scanning' | 'copying' | 'done' | 'error';
@@ -312,7 +281,7 @@
 			await processWithConcurrencyLimit(toCopy, CONCURRENCY, async (entry) => {
 				if (!entry.getFile) return;
 				const file = await entry.getFile();
-				await writeOpfsFile(entry.path, file);
+				await writeFileObject(entry.path, file);
 				manifestEntries.push({
 					path: entry.path,
 					size: file.size,
