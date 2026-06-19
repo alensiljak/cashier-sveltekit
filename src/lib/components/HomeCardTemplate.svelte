@@ -29,11 +29,11 @@
 				{@render menu()}
 			{/if}
 		</div>
-		<section class="px-1 py-2">
+		<section class="px-1 py-2" class:pb-0={!!footer}>
 			{#if content}{@render content()}{/if}
 		</section>
 		{#if footer}
-			<footer class="card-actions justify-center p-0 pt-2">
+			<footer class="card-actions justify-center p-0">
 				{@render footer()}
 			</footer>
 		{/if}

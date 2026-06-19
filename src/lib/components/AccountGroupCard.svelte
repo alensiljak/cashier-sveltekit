@@ -19,6 +19,18 @@
 	let maxBalance = $state(0);
 	let balancesLoaded = $state(false);
 
+	const currencyTotals = $derived.by(() => {
+		const totals: Record<string, number> = {};
+		for (const account of accounts) {
+			if (account.balances) {
+				for (const [currency, amount] of Object.entries(account.balances)) {
+					totals[currency] = (totals[currency] ?? 0) + amount;
+				}
+			}
+		}
+		return totals;
+	});
+
 	const lsVersion = fullLedgerService.version;
 	const isReloading = fullLedgerService.isReloading;
 
@@ -146,6 +158,15 @@
 			{#each accounts as account (account.name)}
 				<AccountRow {account} {balancesLoaded} {maxBalance} onclick={onAccountClick} />
 			{/each}
+		{/if}
+	{/snippet}
+	{#snippet footer()}
+		{#if accounts.length > 0 && balancesLoaded}
+			<div class="flex w-full flex-wrap justify-end gap-x-4 gap-y-0.5 border-t-4 border-double border-base-200 px-3 py-1 text-sm font-semibold">
+				{#each Object.entries(currencyTotals) as [currency, total]}
+					<span>{total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currency}</span>
+				{/each}
+			</div>
 		{/if}
 	{/snippet}
 </HomeCardTemplate>
