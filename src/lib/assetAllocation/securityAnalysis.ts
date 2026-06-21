@@ -58,21 +58,7 @@ export class SecurityAnalyser {
 
 	private async getPtaSystem(): Promise<string> {
 		if (!this.ptaSystem) {
-			if (this.wasmQueryFn) {
-				this.ptaSystem = PtaSystems.rledger;
-			} else {
-				// Map ledgerDataSource to PTA system for query selection
-				const dataSource = (await settings.get(SettingKeys.ledgerDataSource)) as string;
-				if (dataSource === LedgerDataSource.filesystem || dataSource === LedgerDataSource.rledger) {
-					this.ptaSystem = PtaSystems.rledger;
-				} else if (dataSource === LedgerDataSource.beancount) {
-					this.ptaSystem = PtaSystems.beancount;
-				} else if (dataSource === LedgerDataSource.ledger) {
-					this.ptaSystem = PtaSystems.ledger;
-				} else {
-					this.ptaSystem = PtaSystems.rledger;
-				}
-			}
+			this.ptaSystem = PtaSystems.rledger;
 		}
 		return this.ptaSystem;
 	}

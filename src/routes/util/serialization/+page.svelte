@@ -10,7 +10,7 @@
 	import { computeSourceHash } from '$lib/services/rustledger';
 	import { getFileMetadata } from '$lib/utils/opfslib';
 	import { listFileTree } from '$lib/utils/opfslib';
-	import { OPFSBackend } from '$lib/storage';
+	import { OPFSBackend } from '$lib/storage/opfsBackend';
 	import { LEDGER_CACHE_FILE } from '$lib/constants';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 

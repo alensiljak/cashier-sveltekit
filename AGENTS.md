@@ -34,8 +34,7 @@ It is implemented as a PWA using Svelte and DaisyUI frameworks.
 ### Rust Ledger WASM
 
 - `ledgerService` is the light version, loading only the Transactions. It provides the LSP features and is used for saving the Xact record to a correct place in the source file.
-- `fullLedgerService` loads the complete book, with all files, and is used to run financial reports and queries.
-- `ledgerWorkerClient` is the interface to the fullLedgerService, running in a Worker and handling data in the background.
+- `ledgerWorkerClient` (imported as `fullLedgerService`) loads the complete book in a background Worker and is used to run financial reports and queries. It reads all `.bean` files from OPFS and injects the user's book include into `cashier.bean` in memory at load time.
 - Individual pages send queries and use the returned data asynchronously.
 
 ### Key directories

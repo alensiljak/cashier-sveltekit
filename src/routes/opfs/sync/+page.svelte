@@ -280,7 +280,7 @@
 
 		<!-- Directory picker -->
 		<section class="flex flex-col gap-2">
-			<label class="label font-semibold">Source Directory</label>
+			<span class="label font-semibold">Source Directory</span>
 			<div class="flex items-center gap-2 flex-wrap">
 				{#if dirName}
 					<span class="font-mono text-sm bg-base-200 rounded px-3 py-2 flex-1 truncate">{dirName}/</span>
