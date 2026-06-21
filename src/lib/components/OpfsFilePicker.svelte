@@ -81,7 +81,7 @@
 		}
 	}
 
-	function formatFileSize(bytes?: number): string {
+	function formatFileSize(bytes: number | undefined = undefined): string {
 		if (bytes === undefined) return '--';
 		if (bytes === 0) return '0 B';
 		const units = ['B', 'KB', 'MB', 'GB'];
@@ -89,7 +89,7 @@
 		return `${(bytes / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
 	}
 
-	function formatDate(ms?: number): string {
+	function formatDate(ms: number | undefined = undefined): string {
 		if (!ms) return '--';
 		return new Date(ms).toLocaleString();
 	}

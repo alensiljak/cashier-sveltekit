@@ -173,7 +173,7 @@
 		});
 	}
 
-	async function onAccountClick(accountName?: string) {
+	async function onAccountClick(accountName: string | undefined = undefined) {
 		goto('/accounts/account-xacts/' + accountName);
 	}
 

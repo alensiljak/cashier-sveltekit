@@ -91,7 +91,7 @@
 		return items.map((m) => ({ ...m, isOutlier: m.total > 0 && Math.abs(m.total - mean) > threshold }));
 	}
 
-	function txSearchUrl(accountPattern: string, monthKey?: string, singleDate?: string): string {
+	function txSearchUrl(accountPattern: string, monthKey: string | undefined = undefined, singleDate: string | undefined = undefined): string {
 		const params = new URLSearchParams({ account: accountPattern });
 		if (singleDate) {
 			params.set('dateFrom', singleDate);

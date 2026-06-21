@@ -143,7 +143,7 @@
 		return lines;
 	}
 
-	function formatDate(iso?: string): string {
+	function formatDate(iso: string | undefined = undefined): string {
 		if (!iso) return '—';
 		return new Date(iso).toLocaleString();
 	}

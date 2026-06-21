@@ -267,7 +267,7 @@
 		}
 	}
 
-	function formatDate(ms?: number): string {
+	function formatDate(ms: number | undefined = undefined): string {
 		if (!ms) return '—';
 		return new Date(ms).toLocaleString();
 	}

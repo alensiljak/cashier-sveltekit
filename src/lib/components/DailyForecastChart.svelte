@@ -309,7 +309,7 @@
 	async function createDatasetFor(
 		accountName: string,
 		currentBalance: number,
-		extraAmounts?: number[]
+		extraAmounts: number[] | undefined = undefined
 	) {
 		let dataset = {
 			label: getShortAccountName(accountName),

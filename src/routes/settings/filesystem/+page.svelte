@@ -194,14 +194,14 @@
 		}
 	}
 
-	function formatSize(bytes?: number): string {
+	function formatSize(bytes: number | undefined = undefined): string {
 		if (bytes === undefined) return '--';
 		if (bytes < 1024) return `${bytes} B`;
 		if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
 		return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 	}
 
-	function formatDate(ms?: number): string {
+	function formatDate(ms: number | undefined = undefined): string {
 		if (!ms) return '--';
 		return new Date(ms).toLocaleString();
 	}
