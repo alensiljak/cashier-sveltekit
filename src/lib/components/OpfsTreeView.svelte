@@ -10,7 +10,7 @@
 
 	async function readDir(dirHandle: FileSystemDirectoryHandle): Promise<TreeNodeType[]> {
 		const nodes: TreeNodeType[] = [];
-		for await (const [name, handle] of dirHandle) {
+		for await (const [name, handle] of dirHandle.entries()) {
 			if (handle.kind === 'directory') {
 				const children = await readDir(handle as FileSystemDirectoryHandle);
 				nodes.push({ name, kind: 'directory', children, expanded: false });

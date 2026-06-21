@@ -20,13 +20,13 @@
 	});
 
 	async function loadData() {
-		let accounts = await settings.get(SettingKeys.forecastAccounts);
+		let accounts = await settings.get<string[]>(SettingKeys.forecastAccounts);
 		if (!accounts) return;
 
 		accountNames = accounts;
 
 		// days
-		days = await settings.get(SettingKeys.forecastDays);
+		days = (await settings.get(SettingKeys.forecastDays)) ?? DEFAULT_FORECAST_DAYS;
 	}
 
 	async function handleAccountSelection() {
