@@ -8,7 +8,6 @@
 
 import { writable, derived, type Readable } from 'svelte/store';
 import { ensureInitialized, createLedger } from './rustledger';
-import { loadFileMap } from '$lib/sync/sync-fs';
 import type { Ledger, QueryResult, BeancountError, DirectiveJson as Directive } from '@rustledger/wasm';
 
 class LocalLedgerService {
