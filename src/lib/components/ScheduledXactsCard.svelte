@@ -6,7 +6,7 @@
 	import { onMount } from 'svelte';
 	import db from '$lib/data/db';
 	import { XactAugmenter } from '$lib/utils/xactAugmenter';
-	import { formatAmount, getAmountColour, getDateColour, getReadableDate } from '$lib/utils/formatter';
+	import { formatAmount, getXactAmountColour, getDateColour, getReadableDate } from '$lib/utils/formatter';
 	import { ShortDateFormatStore } from '$lib/data/mainStore';
 
 	let scxs: ScheduledTransaction[] = $state([]);
@@ -59,7 +59,7 @@
 						<data class="min-w-0 grow truncate">
 							{scx.transaction?.payee}
 						</data>
-						<data class={`whitespace-nowrap ${getAmountColour(amounts[index]?.quantity)}`}>{formatAmount(amounts[index]?.quantity)} {amounts[index]?.currency}</data>
+						<data class={`whitespace-nowrap ${scx.transaction ? getXactAmountColour(scx.transaction, amounts[index]) : ''}`}>{formatAmount(amounts[index]?.quantity)} {amounts[index]?.currency}</data>
 					</div>
 				{/each}
 			</div>
