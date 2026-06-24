@@ -62,7 +62,7 @@
 		{#if page.data.hasDeviceXacts}
 			<div class="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-400">
 				<span class="inline-block h-3 w-1 rounded-sm bg-amber-400"></span>
-				<span>Records only on device</span>
+				<span>Local records</span>
 			</div>
 		{/if}
 

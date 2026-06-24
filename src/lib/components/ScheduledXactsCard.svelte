@@ -59,7 +59,7 @@
 						<data class="min-w-0 grow truncate">
 							{scx.transaction?.payee}
 						</data>
-						<data class={`whitespace-nowrap ${scx.transaction ? getXactAmountColour(scx.transaction, amounts[index]) : ''}`}>{formatAmount(amounts[index]?.quantity)} {amounts[index]?.currency}</data>
+						<data class={`whitespace-nowrap ${scx.transaction && amounts[index] ? getXactAmountColour(scx.transaction, amounts[index]) : ''}`}>{formatAmount(amounts[index]?.quantity)} {amounts[index]?.currency}</data>
 					</div>
 				{/each}
 			</div>
