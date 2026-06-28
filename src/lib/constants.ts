@@ -8,6 +8,8 @@ export const DEFAULT_FORECAST_DAYS = 7 as const;
 export const CASHIER_XACT_FILE = 'cashier.bean' as const;
 /** OPFS filename for the serialized ledger binary cache. */
 export const LEDGER_CACHE_FILE = 'ledger-cache.bin';
+/** OPFS filename for the source hash recorded at last serialization. */
+export const LEDGER_CACHE_HASH_FILE = 'ledger-cache.hash';
 export const ISODATEFORMAT = 'YYYY-MM-DD';
 export const LONGTIMEFORMAT = 'HHmmss';
 export const SHORT_DATE_FORMAT_DEFAULT = 'DD.MM.';

@@ -11,7 +11,7 @@
 	import { getFileMetadata } from '$lib/utils/opfslib';
 	import { listFileTree } from '$lib/utils/opfslib';
 	import { OPFSBackend } from '$lib/storage/opfsBackend';
-	import { LEDGER_CACHE_FILE } from '$lib/constants';
+	import { LEDGER_CACHE_FILE, LEDGER_CACHE_HASH_FILE } from '$lib/constants';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 
 	let status = '';
@@ -20,6 +20,7 @@
 	let loadError: string | null = null;
 	let cacheSize: number | null = null;
 	let currentHash = '';
+	let cachedHash = '';
 	let directiveCount = 0;
 	let isWorking = false;
 
@@ -46,6 +47,9 @@
 
 		const meta = await getFileMetadata(LEDGER_CACHE_FILE);
 		cacheSize = meta?.size ?? null;
+
+		const opfs = new OPFSBackend();
+		cachedHash = (await opfs.readFile(LEDGER_CACHE_HASH_FILE)) ?? '';
 	}
 
 	async function handleSerialize() {
@@ -59,6 +63,9 @@
 
 			const fileMap = await loadOpfsFileMap();
 			currentHash = hashFileMap(fileMap);
+
+			const opfs = new OPFSBackend();
+			await opfs.writeFile(LEDGER_CACHE_HASH_FILE, currentHash);
 
 			status = `Serialized ${result.bytes.toLocaleString()} bytes to OPFS.`;
 			await refreshStatus();
@@ -107,7 +114,10 @@
 
 	async function handleDeleteCache() {
 		await fullLedgerService.deleteCache();
+		const opfs = new OPFSBackend();
+		await opfs.writeFile(LEDGER_CACHE_HASH_FILE, '');
 		currentHash = '';
+		cachedHash = '';
 		status = 'Cache deleted and ledger instance freed.';
 		await refreshStatus();
 	}
@@ -199,16 +209,30 @@
 					</span>
 				</div>
 				<div class="flex items-center gap-4 text-sm">
-					<span class="w-36 opacity-60 shrink-0">Source hash</span>
+					<span class="w-36 opacity-60 shrink-0">Current hash</span>
 					<span class="font-mono font-medium">{hashShort(currentHash)}</span>
 				</div>
+				<div class="flex items-center gap-4 text-sm">
+					<span class="w-36 opacity-60 shrink-0">Cached hash</span>
+					<span class="font-mono font-medium">{hashShort(cachedHash)}</span>
+				</div>
+				{#if currentHash && cachedHash}
+					<div class="flex items-center gap-4 text-sm">
+						<span class="w-36 opacity-60 shrink-0">Status</span>
+						{#if currentHash === cachedHash}
+							<span class="text-success font-medium">Cache is current</span>
+						{:else}
+							<span class="text-warning font-medium">Cache is stale — re-serialize</span>
+						{/if}
+					</div>
+				{/if}
 			</div>
 		</div>
 
 		<!-- OPFS actions -->
 		<div class="flex flex-wrap gap-2">
-			<button class="btn btn-outline btn-sm" on:click={handleCalculateHash} disabled={isWorking}>
-				Calculate hash
+			<button class="btn btn-outline btn-sm" on:click={handleCalculateHash} disabled={isWorking} title="Hash all .bean source files currently in OPFS">
+				Hash source files
 			</button>
 			<button class="btn btn-outline btn-error btn-sm" on:click={handleDeleteCache} disabled={isWorking}>
 				Delete cache
