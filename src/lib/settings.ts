@@ -57,14 +57,11 @@ export const SettingKeys = {
 	assetAllocationDefinition: 'aa.definition',
 	rootInvestmentAccount: 'aa.rootAccount',
 	//
-	backupServerUrl: 'backupServerUrl', // Server for online backup (pCloud).
 	currency: 'currency',
 	favouriteAccounts: 'favouriteAccounts',
 	// forecast
 	forecastAccounts: 'forecast.accounts',
 	forecastDays: 'forecast.days',
-	//
-	pCloudToken: 'pCloudToken',
 	// Cashier Server Sync
 	syncServerUrl: 'syncServerUrl',
 	// External data source system
@@ -81,8 +78,6 @@ export const SettingKeys = {
 	peerId: 'peerId',
 	peerName: 'peerName',
 	peerRoom: 'peerRoom',
-	syncServers: 'syncServers',
-	syncActiveServerId: 'syncActiveServerId',
 	// import book from filesystem via File System API
 	importBookDirectory: 'importBookDirectory',
 	importBookFileSpec: 'importBookFileSpec',
