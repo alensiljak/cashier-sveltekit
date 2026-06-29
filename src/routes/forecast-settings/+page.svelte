@@ -8,7 +8,7 @@
 	import { selectionMetadata } from '$lib/data/mainStore';
 	import { SelectionType } from '$lib/enums';
 	import { SelectionModeMetadata, SettingKeys, settings } from '$lib/settings';
-	import { CheckIcon, CreditCardIcon, TrashIcon } from '@lucide/svelte';
+	import { CheckIcon, CreditCardIcon, PlusIcon, TrashIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 
 	let days = $state(DEFAULT_FORECAST_DAYS);
@@ -79,7 +79,17 @@
 	<h4 class="h4">Forecast for days:</h4>
 	<input type="number" class="input text-right" bind:value={days} />
 
-	<h4 class="h4">Accounts</h4>
+	<div class="flex items-center justify-between py-2">
+		<h4 class="h4">Accounts</h4>
+		<button
+			type="button"
+			class="btn btn-primary btn-sm"
+			onclick={onAddAccountClicked}
+			aria-label="Add account"
+		>
+			<PlusIcon size={18} />
+		</button>
+	</div>
 
 	<DragReorderList bind:items={accountNames} getLabel={(n) => n}>
 		{#snippet empty()}
@@ -87,8 +97,8 @@
 		{/snippet}
 		{#snippet row(item, index)}
 			<span class="grow">{item}</span>
-			<button class="btn btn-error btn-icon" onclick={() => onDeleteClicked(index)}>
-				<TrashIcon />
+			<button type="button" class="btn btn-outline btn-secondary btn-sm mr-1" onclick={() => onDeleteClicked(index)} aria-label="Remove account">
+				<TrashIcon size={16} />
 			</button>
 		{/snippet}
 	</DragReorderList>
