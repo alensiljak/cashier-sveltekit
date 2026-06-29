@@ -24,26 +24,24 @@ export function matchesAny(name: string, patterns: RegExp[]): boolean {
 }
 
 /**
- * Collects all file handles from a File System Access API directory.
- * @param dir 
- * @param prefix 
- * @param patterns 
- * @param out 
+ * Traverses a File System Access API directory tree and invokes onFile for each
+ * matching file as it is discovered, allowing callers to pipeline work (e.g.
+ * getFile() calls) concurrently with the ongoing traversal.
  */
 export async function collectFsFileHandles(
 	dir: FileSystemDirectoryHandle,
 	prefix: string,
 	patterns: RegExp[],
-	out: Array<{ path: string; handle: FileSystemFileHandle }>
+	onFile: (path: string, handle: FileSystemFileHandle) => void
 ): Promise<void> {
 	const subdirPromises: Promise<void>[] = [];
 	for await (const [name, handle] of dir.entries()) {
 		const path = prefix ? `${prefix}/${name}` : name;
 		if (handle.kind === 'file' && matchesAny(name, patterns)) {
-			out.push({ path, handle: handle as FileSystemFileHandle });
+			onFile(path, handle as FileSystemFileHandle);
 		} else if (handle.kind === 'directory' && !name.startsWith('.')) {
 			subdirPromises.push(
-				collectFsFileHandles(handle as FileSystemDirectoryHandle, path, patterns, out)
+				collectFsFileHandles(handle as FileSystemDirectoryHandle, path, patterns, onFile)
 			);
 		}
 	}

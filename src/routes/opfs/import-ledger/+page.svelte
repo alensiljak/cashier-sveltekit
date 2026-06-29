@@ -145,82 +145,74 @@
 			const patterns = parseSpecs(fileSpec);
 			if (patterns.length === 0) throw new Error('No valid file specs provided.');
 
-			type RawFile = {
-				path: string;
-				getFile: () => Promise<File>;
-				sizeHint?: number;
-				mtimeHint?: number;
-			};
-			const rawFiles: RawFile[] = [];
+			const manifest = await getManifest();
+			const seen = new Set<string>();
+			const result: ScannedFile[] = [];
+			const stats = { new: 0, modified: 0, identical: 0, deleted: 0 };
 
 			if (dirHandle) {
-				const handles: Array<{ path: string; handle: FileSystemFileHandle }> = [];
-				await collectFsFileHandles(dirHandle, '', patterns, handles);
-				for (const { path, handle } of handles) {
-					rawFiles.push({ path, getFile: () => handle.getFile() });
-				}
+				// Pipeline: fire getFile() for each file as it is discovered during
+				// traversal so metadata reads overlap with ongoing directory scanning.
+				const metadataPromises: Promise<void>[] = [];
+
+				await collectFsFileHandles(dirHandle, '', patterns, (path, handle) => {
+					const idx = result.length;
+					result.push(null!); // placeholder filled by the promise below
+					scanProgress.total++;
+
+					metadataPromises.push(
+						handle.getFile().then((file) => {
+							const prev = manifest.get(path);
+							let status: FileStatus;
+							if (!prev) {
+								status = 'new';
+							} else if (prev.size === file.size && prev.lastModified === file.lastModified) {
+								status = 'identical';
+							} else {
+								status = 'modified';
+							}
+							result[idx] = {
+								path,
+								size: file.size,
+								lastModified: file.lastModified,
+								getFile: () => handle.getFile(),
+								status
+							};
+							seen.add(path);
+							stats[status]++;
+							scanProgress.done++;
+						})
+					);
+				});
+
+				await Promise.all(metadataPromises);
 			} else if (fallbackFiles) {
+				// Fallback: metadata already on the File objects, no async reads needed.
 				for (const f of fallbackFiles) {
 					const parts = f.webkitRelativePath.split('/');
 					const path = parts.slice(1).join('/');
-					if (path && matchesAny(parts[parts.length - 1], patterns)) {
-						const captured = f;
-						rawFiles.push({
-							path,
-							getFile: async () => captured,
-							sizeHint: f.size,
-							mtimeHint: f.lastModified
-						});
-					}
-				}
-			}
-
-			scanProgress.total = rawFiles.length;
-
-			const manifest = await getManifest();
-			const seen = new Set<string>();
-			const result: ScannedFile[] = Array.from({ length: rawFiles.length });
-			const stats = { new: 0, modified: 0, identical: 0, deleted: 0 };
-
-			await Promise.all(
-				rawFiles.map(async ({ path, getFile, sizeHint, mtimeHint }, idx) => {
-					let size: number;
-					let lastModified: number;
-					if (sizeHint !== undefined && mtimeHint !== undefined) {
-						size = sizeHint;
-						lastModified = mtimeHint;
-					} else {
-						const file = await getFile();
-						size = file.size;
-						lastModified = file.lastModified;
-					}
-
+					if (!path || !matchesAny(parts[parts.length - 1], patterns)) continue;
 					const prev = manifest.get(path);
 					let status: FileStatus;
 					if (!prev) {
 						status = 'new';
-					} else if (prev.size === size && prev.lastModified === lastModified) {
+					} else if (prev.size === f.size && prev.lastModified === f.lastModified) {
 						status = 'identical';
 					} else {
 						status = 'modified';
 					}
-
-					result[idx] = { path, size, lastModified, getFile, status };
+					const captured = f;
+					result.push({ path, size: f.size, lastModified: f.lastModified, getFile: async () => captured, status });
 					seen.add(path);
 					stats[status]++;
-					scanProgress.done++;
-				})
-			);
+				}
+				scanProgress = { done: result.length, total: result.length };
+			}
 
 			// Detect deletions: manifest entries that no longer exist in source
 			for (const [path, meta] of manifest) {
 				if (!seen.has(path)) {
-					result.push({
-						path,
-						size: meta.size,
-						lastModified: meta.lastModified,
-						status: 'deleted'
-					});
+					result.push({ path, size: meta.size, lastModified: meta.lastModified, status: 'deleted' });
 					stats.deleted++;
 				}
 			}

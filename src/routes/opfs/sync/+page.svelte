@@ -139,7 +139,9 @@
 			if (patterns.length === 0) throw new Error('No valid file specs provided.');
 
 			const fsHandles: Array<{ path: string; handle: FileSystemFileHandle }> = [];
-			await collectFsFileHandles(dirHandle, '', patterns, fsHandles);
+			await collectFsFileHandles(dirHandle, '', patterns, (path, handle) => {
+				fsHandles.push({ path, handle });
+			});
 			scannedFsHandles = new Map(fsHandles.map(({ path, handle }) => [path, handle]));
 
 			const [manifest, fsMetaList] = await Promise.all([
