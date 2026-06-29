@@ -1,6 +1,6 @@
 <script lang="ts">
 	import JournalCard from '$lib/components/JournalCard.svelte';
-	import { ArrowDownUpIcon, CircleAlert, PlusIcon, SettingsIcon } from '@lucide/svelte';
+	import { ArrowDownUpIcon, CircleAlert, PlusIcon, RefreshCwIcon, SettingsIcon } from '@lucide/svelte';
 	import Toolbar from '../lib/components/Toolbar.svelte';
 	import { goto } from '$app/navigation';
 	import { xact } from '$lib/data/mainStore';
@@ -15,13 +15,29 @@
 	import { CardNames } from '$lib/settings';
 	import appService from '$lib/services/appService';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
+	import { checkOpfsStale, saveOpfsMetaSnapshot } from '$lib/services/opfsMetaCheck';
 
 	let cards: Array<Component> = $state([]);
 	let hasErrors = $state(false);
+	let isStale = $state(false);
+	let isChecking = $state(false);
+	let showStaleDialog = $state(false);
+	let isReloading = $state(false);
 
 	onMount(async () => {
 		// display the cards ordered.
 		await loadCardList();
+		// background staleness check — does not block render.
+		// checkOpfsStale() caches per session, so only the first mount actually runs I/O.
+		const p = checkOpfsStale();
+		// Show spinner only if the promise hasn't resolved yet.
+		let settled = false;
+		p.then((stale) => {
+			isStale = stale;
+			settled = true;
+			isChecking = false;
+		});
+		if (!settled) isChecking = true;
 	});
 
 	async function loadCardList() {
@@ -74,11 +90,36 @@
 		// await goto('/tx');
 		await goto('/tx/search-new');
 	}
+
+	async function handleReload() {
+		isReloading = true;
+		try {
+			await fullLedgerService.load();
+			await fullLedgerService.serialize();
+			await saveOpfsMetaSnapshot();
+			isStale = false;
+			showStaleDialog = false;
+		} finally {
+			isReloading = false;
+		}
+	}
 </script>
 
 <article class="flex h-screen flex-col">
 	<Toolbar>
 		{#snippet actions()}
+			{#if isChecking}
+				<span class="loading loading-spinner loading-xs opacity-50 mr-1"></span>
+			{/if}
+			{#if isStale}
+				<button
+					class="btn btn-ghost btn-circle hover-transparent"
+					title="Ledger files have changed — tap to reload"
+					onclick={() => (showStaleDialog = true)}
+				>
+					<RefreshCwIcon size={20} class="text-warning" />
+				</button>
+			{/if}
 			{#if hasErrors}
 				<button
 					class="btn btn-ghost btn-circle hover-transparent"
@@ -105,4 +146,24 @@
 		<!-- FAB -->
 		<Fab onclick={onFab} Icon={PlusIcon} />
 	</section>
+
+	{#if showStaleDialog}
+		<div class="modal modal-open">
+			<div class="modal-box">
+				<h3 class="font-bold text-lg">Ledger files updated</h3>
+				<p class="py-3 text-sm">
+					One or more ledger files have changed since the last load. Reload now to update the ledger
+					and rebuild the cache?
+				</p>
+				<div class="modal-action">
+					<button class="btn" onclick={() => (showStaleDialog = false)} disabled={isReloading}>
+						Not now
+					</button>
+					<button class="btn btn-primary" onclick={handleReload} disabled={isReloading}>
+						{isReloading ? 'Reloading…' : 'Reload'}
+					</button>
+				</div>
+			</div>
+		</div>
+	{/if}
 </article>

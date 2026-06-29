@@ -97,7 +97,9 @@ export const SettingKeys = {
 	// Short date display format — day and month only
 	shortDateFormat: 'shortDateFormat',
 	// Credit card forecast settings
-	creditCardSettings: 'creditCard.settings'
+	creditCardSettings: 'creditCard.settings',
+	// OPFS file metadata snapshot for staleness detection (path -> "size|lastModified")
+	ledgerMetaSnapshot: 'ledger.metaSnapshot'
 };
 
 export const CardNames = {
