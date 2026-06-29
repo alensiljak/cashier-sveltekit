@@ -119,9 +119,11 @@
 
 	<!-- button grid -->
 	<div class="mt-4 inline-grid w-full grid-cols-3 gap-4 justify-self-center">
-		<SquareButton Icon={SquarePenIcon} classes="bg-accent text-secondary" onclick={onEditClicked}>
-			Edit
-		</SquareButton>
+		{#if $xactSpan}
+			<SquareButton Icon={SquarePenIcon} classes="bg-accent text-secondary" onclick={onEditClicked}>
+				Edit
+			</SquareButton>
+		{/if}
 		<SquareButton Icon={ClipboardIcon} classes="bg-primary text-accent" onclick={onDuplicateClick}>
 			Duplicate
 		</SquareButton>
@@ -135,9 +137,11 @@
 		<SquareButton Icon={CopyIcon} classes="bg-primary text-accent" onclick={onCopyClicked}>
 			Copy
 		</SquareButton>
-		<SquareButton Icon={TrashIcon} classes="bg-secondary text-accent" onclick={onDeleteClicked}>
-			Delete
-		</SquareButton>
+		{#if $xactSpan}
+			<SquareButton Icon={TrashIcon} classes="bg-secondary text-accent" onclick={onDeleteClicked}>
+				Delete
+			</SquareButton>
+		{/if}
 	</div>
 </main>
 <!-- "Delete" dialog -->

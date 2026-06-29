@@ -20,6 +20,8 @@
 		Notifier.success('Copied to clipboard');
 	}
 	import { xact, xactSpan } from '$lib/data/mainStore';
+	import { Xact, Posting } from '$lib/data/model';
+	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import Notifier from '$lib/utils/notifier';
 
 	const PAGE_SIZE = 30;
@@ -27,9 +29,49 @@
 	let sentinel = $state<HTMLElement | null>(null);
 
 	async function onRowClick(row: UnifiedXact) {
-		if (!row.isDevice || !row.xact || !row.span) return;
-		xact.set(row.xact);
-		xactSpan.set(row.span);
+		if (row.isDevice && row.xact && row.span) {
+			xact.set(row.xact);
+			xactSpan.set(row.span);
+			await goto('/xact-actions');
+			return;
+		}
+
+		// Read-only transaction: fetch postings from the full ledger
+		const payeeClause = row.payee
+			? `AND payee = "${row.payee.replace(/"/g, '\\"')}"`
+			: `AND payee = ""`;
+		const narrationClause = `AND narration = "${(row.narration ?? '').replace(/"/g, '\\"')}"`;
+		const bql = `SELECT flag, account, number, currency WHERE date = ${row.date} ${payeeClause} ${narrationClause}`;
+
+		const { columns, rows: postingRows, errors } = await fullLedgerService.query(bql);
+		if (errors?.length) console.warn('Posting query errors:', errors);
+
+		const safeRows = (postingRows ?? []) as unknown[][];
+		if (!safeRows.length) {
+			Notifier.error('Could not load transaction details');
+			return;
+		}
+
+		const flagIdx = columns.indexOf('flag');
+		const accountIdx = columns.indexOf('account');
+		const numberIdx = columns.indexOf('number');
+		const currencyIdx = columns.indexOf('currency');
+
+		const xactObj = new Xact();
+		xactObj.date = row.date;
+		xactObj.payee = row.payee;
+		xactObj.note = row.narration;
+		xactObj.flag = (safeRows[0][flagIdx] as string) ?? '*';
+		xactObj.postings = safeRows.map((pr) => {
+			const p = new Posting();
+			p.account = pr[accountIdx] as string;
+			p.amount = parseFloat(pr[numberIdx] as string);
+			p.currency = pr[currencyIdx] as string;
+			return p;
+		});
+
+		xact.set(xactObj);
+		xactSpan.set(undefined);
 		await goto('/xact-actions');
 	}
 
@@ -107,12 +149,13 @@
 		<div class="space-y-1">
 			{#each visibleRows as row (row)}
 				<div
-					class="flex flex-row px-2 {row.isDevice
-						? 'cursor-pointer border-l-2 border-amber-400 bg-amber-50/60 dark:bg-amber-950/25'
+					class="flex flex-row px-2 cursor-pointer {row.isDevice
+						? 'border-l-2 border-amber-400 bg-amber-50/60 dark:bg-amber-950/25'
 						: ''}"
 					onclick={() => onRowClick(row)}
 					onkeypress={() => onRowClick(row)}
-					{...row.isDevice ? { role: 'button', tabindex: 0 } : {}}
+					role="button"
+					tabindex="0"
 				>
 					<data class="mr-4 shrink-0">{row.date}</data>
 					<data class="grow">
