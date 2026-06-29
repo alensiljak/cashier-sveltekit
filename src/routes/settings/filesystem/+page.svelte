@@ -52,12 +52,6 @@
 	let aaDefinitionFileName = $state(''); // same
 
 	onMount(async () => {
-		// const externalBook = await settings.get<string>(SettingKeys.externalBook);
-		// bookRootFileName = externalBook ?? '';
-
-		// const aaDef = await settings.get<string>(SettingKeys.externalAssetAllocation);
-		// aaDefinitionFileName = aaDef ?? '';
-
 		const stored = await loadPersistedHandle(HANDLE_KEY);
 		if (stored && (await requestReadPermission(stored))) {
 			dirHandle = stored;
@@ -297,20 +291,10 @@
 	}
 
 	async function selectBookFile() {
-		// if (!selectedEntry || selectedEntry.kind !== 'file') return;
-		// const fullPath = `${dirName}/${selectedEntry.path}`;
-		// await settings.set(SettingKeys.externalBook, fullPath);
-		// bookRootFileName = fullPath;
-		// Notifier.success(`Book file set to: ${selectedEntry.path}`);
 		Notifier.warning('Not implemented!');
 	}
 
 	async function selectAssetAllocationFile() {
-		// if (!selectedEntry || selectedEntry.kind !== 'file') return;
-		// const fullPath = `${dirName}/${selectedEntry.path}`;
-		// await settings.set(SettingKeys.externalAssetAllocation, fullPath);
-		// aaDefinitionFileName = fullPath;
-		// Notifier.success(`Asset Allocation file set to: ${selectedEntry.path}`);
 		Notifier.warning('Not implemented!');
 	}
 
@@ -450,7 +434,6 @@
 							<span>Book set: {bookRootFileName}</span>
 							<button class="btn btn-xs btn-ghost border border-warning" onclick={() => {
 								bookRootFileName = '';
-								// settings.set(SettingKeys.externalBook, null);
 							}}>
 								<XIcon class="w-4 h-4" /> Unset
 							</button>
@@ -462,7 +445,6 @@
 							<span>Asset Allocation set: {aaDefinitionFileName}</span>
 							<button class="btn btn-xs btn-ghost border border-warning" onclick={() => {
 								aaDefinitionFileName = '';
-								// settings.set(SettingKeys.externalAssetAllocation, null);
 							}}>
 								<XIcon class="w-4 h-4" /> Unset
 							</button>
