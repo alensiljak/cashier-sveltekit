@@ -19,6 +19,7 @@ interface CashierDatabase extends Dexie {
 	// payees: Table;
 	scheduled: Table;
 	settings: Table;
+	deviceSettings: Table;
 	peers: Table;
 	// xacts: Table;
 }
@@ -50,12 +51,40 @@ db.version(3).stores({
 	peers: 'id'
 });
 
+// Keys that moved from settings → deviceSettings in v4 (mirrors DeviceSettingKeys values)
+const DEVICE_KEYS_V4 = [
+	'peerId',
+	'peerName',
+	'importBookDirectory',
+	'importBookFileSpec',
+	'ledgerCacheEnabled',
+	'ledger.metaSnapshot'
+];
+
+db.version(4)
+	.stores({
+		scheduled: '++id, nextDate',
+		settings: 'key',
+		deviceSettings: 'key',
+		peers: 'id'
+	})
+	.upgrade(async (tx) => {
+		for (const key of DEVICE_KEYS_V4) {
+			const record = await tx.table('settings').get(key);
+			if (record) {
+				await tx.table('deviceSettings').put(record);
+				await tx.table('settings').delete(key);
+			}
+		}
+	});
+
 // Mappings
 
 // db.accounts.mapToClass(Account);
 // db.payees.mapToClass(Payee);
 // db.xacts.mapToClass(Xact);
 db.settings.mapToClass(Setting);
+db.deviceSettings.mapToClass(Setting);
 db.scheduled.mapToClass(ScheduledTransaction);
 db.peers.mapToClass(TrustedPeer);
 

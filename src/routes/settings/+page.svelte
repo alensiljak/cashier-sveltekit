@@ -3,7 +3,7 @@
 	import { beforeNavigate } from '$app/navigation';
 	import { get } from 'svelte/store';
 	import Toolbar from '$lib/components/Toolbar.svelte';
-	import { SettingKeys, settings } from '$lib/settings';
+	import { SettingKeys, settings, DeviceSettingKeys, deviceSettings } from '$lib/settings';
 	import { SHORT_DATE_FORMAT_DEFAULT } from '$lib/constants';
 	import Notifier from '$lib/utils/notifier';
 	import appService from '$lib/services/appService';
@@ -128,7 +128,7 @@
 		savedRootInvestmentAccount = (await settings.get<string>(SettingKeys.rootInvestmentAccount)) as
 			| string
 			| undefined;
-		ledgerCacheEnabled = (await settings.get<boolean>(SettingKeys.ledgerCacheEnabled)) ?? true;
+		ledgerCacheEnabled = (await deviceSettings.get<boolean>(DeviceSettingKeys.ledgerCacheEnabled)) ?? true;
 		savedAssetAllocationDefinition =
 			(await settings.get<string>(SettingKeys.assetAllocationDefinition)) ?? null;
 		savedDateFormat =
@@ -173,7 +173,7 @@
 		DefaultCurrencyStore.set(currency as string);
 
 		await settings.set(SettingKeys.rootInvestmentAccount, rootInvestmentAccount);
-		await settings.set(SettingKeys.ledgerCacheEnabled, ledgerCacheEnabled);
+		await deviceSettings.set(DeviceSettingKeys.ledgerCacheEnabled, ledgerCacheEnabled);
 		await settings.set(SettingKeys.assetAllocationDefinition, assetAllocationDefinition);
 		await settings.set(SettingKeys.dateFormat, dateFormat);
 		await settings.set(SettingKeys.shortDateFormat, shortDateFormat);

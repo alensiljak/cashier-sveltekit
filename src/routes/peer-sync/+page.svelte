@@ -4,7 +4,7 @@
 	import type { Room, MessageAction } from '@trystero-p2p/core';
 	// @ts-ignore – no type declarations for 'diff'
 	import { diffLines } from 'diff';
-	import { settings, SettingKeys } from '$lib/settings';
+	import { settings, SettingKeys, deviceSettings, DeviceSettingKeys } from '$lib/settings';
 	import db from '$lib/data/db';
 	import { readFile, saveFile } from '$lib/utils/opfslib';
 	import Toolbar from '$lib/components/Toolbar.svelte';
@@ -151,14 +151,14 @@
 	// ─── Mount ───────────────────────────────────────────────────────────────────
 
 	onMount(async () => {
-		let id = await settings.get<string>(SettingKeys.peerId);
+		let id = await deviceSettings.get<string>(DeviceSettingKeys.peerId);
 		if (!id) {
 			id = crypto.randomUUID();
-			await settings.set(SettingKeys.peerId, id);
+			await deviceSettings.set(DeviceSettingKeys.peerId, id);
 		}
 		myId = id;
 
-		const savedName = await settings.get<string>(SettingKeys.peerName);
+		const savedName = await deviceSettings.get<string>(DeviceSettingKeys.peerName);
 		myName = savedName ?? 'My Device';
 		nameInput = myName;
 
@@ -181,7 +181,7 @@
 		const trimmed = nameInput.trim();
 		if (!trimmed) return;
 		myName = trimmed;
-		await settings.set(SettingKeys.peerName, trimmed);
+		await deviceSettings.set(DeviceSettingKeys.peerName, trimmed);
 		editingName = false;
 		Notifier.success('Name saved');
 	}

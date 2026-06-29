@@ -1,5 +1,5 @@
 import { listFileTree } from '$lib/utils/opfslib';
-import { settings, SettingKeys } from '$lib/settings';
+import { deviceSettings, DeviceSettingKeys } from '$lib/settings';
 
 type MetaMap = Record<string, string>;
 
@@ -11,7 +11,7 @@ function metaEntry(size: number, lastModified: number): string {
 }
 
 async function runCheck(): Promise<boolean> {
-	const stored = await settings.get<MetaMap>(SettingKeys.ledgerMetaSnapshot);
+	const stored = await deviceSettings.get<MetaMap>(DeviceSettingKeys.ledgerMetaSnapshot);
 	if (!stored) return true;
 
 	const tree = await listFileTree();
@@ -60,6 +60,6 @@ export async function saveOpfsMetaSnapshot(): Promise<void> {
 		map[entry.path] = metaEntry(entry.size!, entry.lastModified!);
 	}
 
-	await settings.set(SettingKeys.ledgerMetaSnapshot, map);
+	await deviceSettings.set(DeviceSettingKeys.ledgerMetaSnapshot, map);
 	sessionCheck = Promise.resolve(false);
 }

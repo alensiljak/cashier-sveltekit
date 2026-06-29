@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { onMount, onDestroy } from 'svelte';
-	import { SettingKeys, settings } from '$lib/settings';
+	import { SettingKeys, settings, DeviceSettingKeys, deviceSettings } from '$lib/settings';
 	import Notifier from '$lib/utils/notifier';
 	import { PeerConnectionManager } from '$lib/webrtc/PeerConnectionManager';
 
@@ -63,14 +63,14 @@
 
 	// Initialize peer ID from settings
 	onMount(async () => {
-		const saved = await settings.get<string>(SettingKeys.peerId);
+		const saved = await deviceSettings.get<string>(DeviceSettingKeys.peerId);
 		if (saved) {
 			myPeerId = saved;
 			editablePeerId = saved;
 		} else {
 			myPeerId = generatePeerId();
 			editablePeerId = myPeerId;
-			await settings.set(SettingKeys.peerId, myPeerId);
+			await deviceSettings.set(DeviceSettingKeys.peerId, myPeerId);
 		}
 	});
 
@@ -82,7 +82,7 @@
 			return;
 		}
 		myPeerId = newId;
-		await settings.set(SettingKeys.peerId, newId);
+		await deviceSettings.set(DeviceSettingKeys.peerId, newId);
 		isEditingPeerId = false;
 		Notifier.success('Peer ID saved');
 	}

@@ -1,12 +1,10 @@
 import moment from 'moment';
 import { settings, SettingKeys } from '../settings';
-import { SyncApiClient } from './syncApiClient';
 import appService from '$lib/services/appService';
 import { getQueries } from '$lib/sync/sync-queries';
 import * as BeancountParser from '$lib/utils/beancountParser';
-import * as LedgerParser from '$lib/utils/ledgerParser';
 import { UserError } from '$lib/utils/errors';
-import { LedgerDataSource, PtaSystems } from '$lib/enums';
+import { PtaSystems } from '$lib/enums';
 
 const DATE_FORMAT = 'YYYY-MM-DD';
 
@@ -24,43 +22,19 @@ export type QueryFn = (bql: string) => Promise<{ columns: string[]; rows: any[];
 
 export class SecurityAnalyser {
 	currency: string | undefined;
-	private syncApiClient: SyncApiClient | null = null;
-	private wasmQueryFn: QueryFn | null = null;
+	private wasmQueryFn: QueryFn;
 	private ptaSystem: string | null = null;
 
-	constructor(wasmQueryFn?: QueryFn) {
-		if (wasmQueryFn) {
-			this.wasmQueryFn = wasmQueryFn;
-		} else {
-			this.syncApiClient = new SyncApiClient();
-		}
+	constructor(wasmQueryFn: QueryFn) {
+		this.wasmQueryFn = wasmQueryFn;
 	}
 
-	/**
-	 * Execute a query using either WASM or server backend.
-	 */
 	private async query(command: string): Promise<Array<any>> {
-		if (this.wasmQueryFn) {
-			const result = await this.wasmQueryFn(command);
-			if (result.errors.length > 0) {
-				throw new Error(`BQL query failed: ${result.errors.map((e: any) => e.message).join('; ')}`);
-			}
-			return result.rows;
+		const result = await this.wasmQueryFn(command);
+		if (result.errors.length > 0) {
+			throw new Error(`BQL query failed: ${result.errors.map((e: any) => e.message).join('; ')}`);
 		}
-
-		// Fall back to server
-		if (!this.syncApiClient) {
-			throw new Error('No query backend available');
-		}
-		await this.syncApiClient.init();
-		return this.syncApiClient.query(command);
-	}
-
-	private async getPtaSystem(): Promise<string> {
-		if (!this.ptaSystem) {
-			this.ptaSystem = PtaSystems.rledger;
-		}
-		return this.ptaSystem;
+		return result.rows;
 	}
 
 	/**
@@ -98,7 +72,7 @@ export class SecurityAnalyser {
 		const currency = await appService.getDefaultCurrency();
 		this.currency = currency;
 
-		const ptaSystem = await this.getPtaSystem();
+		const ptaSystem = PtaSystems.rledger;
 		const queries = getQueries(ptaSystem);
 		const command = queries.gainLoss(symbol, currency);
 
@@ -132,7 +106,7 @@ export class SecurityAnalyser {
 		const currency = this.currency as string;
 		const yieldFrom = moment().subtract(1, 'year').format(DATE_FORMAT);
 
-		const ptaSystem = await this.getPtaSystem();
+		const ptaSystem = PtaSystems.rledger;
 		const queries = getQueries(ptaSystem);
 		const command = queries.incomeBalance(symbol, yieldFrom, currency);
 
@@ -143,40 +117,19 @@ export class SecurityAnalyser {
 		}
 
 		let total;
-		if (ptaSystem == PtaSystems.ledger) {
-			total = LedgerParser.getNumberFromBalanceRow(report);
-		} else if (ptaSystem == PtaSystems.beancount || ptaSystem == PtaSystems.rledger) {
-			const line = report[0];
-			total = BeancountParser.getMoneyFromTupleString(line[0]).quantity;
-		} else {
-			throw new UserError(
-				`Unsupported accounting system: "${ptaSystem}"`,
-				'Please set a valid PTA system in settings (ledger or beancount)',
-				`Received: "${ptaSystem}". Supported systems are: ledger, beancount, rledger`
-			);
-		}
+		const line = report[0];
+		total = BeancountParser.getMoneyFromTupleString(line[0]).quantity;
 
 		return total;
 	}
 
 	async #getValueBalance(symbol: string, currency: string) {
-		const ptaSystem = await this.getPtaSystem();
-		const queries = getQueries(ptaSystem);
+		const queries = getQueries(PtaSystems.rledger);
 		const command = queries.valueBalance(symbol, currency);
 
 		const report = await this.query(command);
 
-		if (ptaSystem == PtaSystems.ledger) {
-			return LedgerParser.getNumberFromBalanceRow(report);
-		} else if (ptaSystem == PtaSystems.beancount || ptaSystem == PtaSystems.rledger) {
-			const line = report[0];
-			return BeancountParser.getMoneyFromTupleString(line[0]).quantity;
-		} else {
-			throw new UserError(
-				`Unsupported accounting system: "${ptaSystem}"`,
-				'Please set a valid PTA system in settings (ledger or beancount)',
-				`Received: "${ptaSystem}". Supported systems are: ledger, beancount, rledger`
-			);
-		}
+		const line = report[0];
+		return BeancountParser.getMoneyFromTupleString(line[0]).quantity;
 	}
 }

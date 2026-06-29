@@ -52,6 +52,7 @@ export const defaultAccountGroups: AccountGroup[] = [
 	{ title: 'Loans', accounts: [] }
 ];
 
+/** Settings shared across all devices (exported/importable). */
 export const SettingKeys = {
 	// asset allocation settings
 	assetAllocationDefinition: 'aa.definition',
@@ -62,10 +63,6 @@ export const SettingKeys = {
 	// forecast
 	forecastAccounts: 'forecast.accounts',
 	forecastDays: 'forecast.days',
-	// Cashier Server Sync
-	syncServerUrl: 'syncServerUrl',
-	// External data source system
-	// ledgerDataSource: 'ledgerDataSource', // beancount, rledger, ledger, filesystem
 	// synchronization choices
 	syncAccounts: 'syncAccounts',
 	syncAaValues: 'syncAaValues',
@@ -75,14 +72,7 @@ export const SettingKeys = {
 	// Home cards
 	visibleCards: 'homeCardNames',
 	// Peer sync
-	peerId: 'peerId',
-	peerName: 'peerName',
 	peerRoom: 'peerRoom',
-	// import book from filesystem via File System API
-	importBookDirectory: 'importBookDirectory',
-	importBookFileSpec: 'importBookFileSpec',
-	// Whether to use the binary ledger cache on load (default: true)
-	ledgerCacheEnabled: 'ledgerCacheEnabled',
 	// Account groups for the groups page
 	accountGroups: 'accountGroups',
 	// WebDAV backup configuration
@@ -92,7 +82,19 @@ export const SettingKeys = {
 	// Short date display format — day and month only
 	shortDateFormat: 'shortDateFormat',
 	// Credit card forecast settings
-	creditCardSettings: 'creditCard.settings',
+	creditCardSettings: 'creditCard.settings'
+};
+
+/** Settings specific to this device (not exported). */
+export const DeviceSettingKeys = {
+	// Peer sync identity for this device
+	peerId: 'peerId',
+	peerName: 'peerName',
+	// import book from filesystem via File System API
+	importBookDirectory: 'importBookDirectory',
+	importBookFileSpec: 'importBookFileSpec',
+	// Whether to use the binary ledger cache on load (default: true)
+	ledgerCacheEnabled: 'ledgerCacheEnabled',
 	// OPFS file metadata snapshot for staleness detection (path -> "size|lastModified")
 	ledgerMetaSnapshot: 'ledger.metaSnapshot'
 };
@@ -105,12 +107,7 @@ export const CardNames = {
 	// SyncCard: 'SyncCard'
 };
 
-class Settings {
-	/**
-	 *
-	 * @param {any} key
-	 * @returns Promise with the Setting object
-	 */
+class UserSettings {
 	async get<T>(key: unknown): Promise<T | null> {
 		const setting = await db.settings.get(key);
 
@@ -138,5 +135,35 @@ class Settings {
 	}
 }
 
-const settings = new Settings();
-export { settings };
+class DeviceSettings {
+	async get<T>(key: unknown): Promise<T | null> {
+		const setting = await db.deviceSettings.get(key);
+
+		if (!setting) return null;
+
+		let value = null;
+		try {
+			value = JSON.parse(setting.value);
+		} catch {
+			value = setting.value;
+		}
+
+		return value;
+	}
+
+	async getAll() {
+		return db.deviceSettings.toArray();
+	}
+
+	async set(key: string, value: unknown) {
+		const jsonValue = JSON.stringify(value);
+		const setting = new Setting(key, jsonValue);
+
+		await db.deviceSettings.put(setting);
+	}
+}
+
+const settings = new UserSettings();
+const deviceSettings = new DeviceSettings();
+
+export { settings, deviceSettings };

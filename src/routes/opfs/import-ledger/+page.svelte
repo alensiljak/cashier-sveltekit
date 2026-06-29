@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { FolderOpenIcon, RefreshCcwIcon } from '@lucide/svelte';
-	import { settings, SettingKeys } from '$lib/settings';
+	import { settings, SettingKeys, deviceSettings, DeviceSettingKeys } from '$lib/settings';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import {
 		loadPersistedHandle,
@@ -83,8 +83,8 @@
 
 	onMount(async () => {
 		hasDirectoryPicker = 'showDirectoryPicker' in window;
-		dirName = (await settings.get<string>(SettingKeys.importBookDirectory)) ?? '';
-		fileSpec = (await settings.get<string>(SettingKeys.importBookFileSpec)) ?? fileSpec;
+		dirName = (await deviceSettings.get<string>(DeviceSettingKeys.importBookDirectory)) ?? '';
+		fileSpec = (await deviceSettings.get<string>(DeviceSettingKeys.importBookFileSpec)) ?? fileSpec;
 		if (hasDirectoryPicker) {
 			const stored = await loadPersistedHandle(HANDLE_KEY);
 			if (stored && (await requestReadPermission(stored))) {
@@ -101,7 +101,7 @@
 		fallbackFiles = Array.from(files);
 		dirHandle = null;
 		dirName = rootName;
-		settings.set(SettingKeys.importBookDirectory, dirName);
+		deviceSettings.set(DeviceSettingKeys.importBookDirectory, dirName);
 		phase = 'idle';
 		statusMsg = '';
 		errorMsg = '';
@@ -117,7 +117,7 @@
 			).showDirectoryPicker({ mode: 'read' });
 			dirHandle = handle;
 			dirName = handle.name;
-			await settings.set(SettingKeys.importBookDirectory, dirName);
+			await deviceSettings.set(DeviceSettingKeys.importBookDirectory, dirName);
 			await persistHandle(HANDLE_KEY, handle);
 			phase = 'idle';
 			statusMsg = '';
@@ -370,7 +370,7 @@
 				placeholder="*.bean, *.toml"
 				bind:value={fileSpec}
 				onblur={async () => {
-					await settings.set(SettingKeys.importBookFileSpec, fileSpec);
+					await deviceSettings.set(DeviceSettingKeys.importBookFileSpec, fileSpec);
 				}}
 			/>
 			<p class="text-xs text-base-content/50">
