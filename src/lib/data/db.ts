@@ -61,6 +61,9 @@ const DEVICE_KEYS_V4 = [
 	'ledger.metaSnapshot'
 ];
 
+// Keys that moved back from deviceSettings → settings in v5
+const USER_KEYS_V5 = ['importBookFileSpec'];
+
 db.version(4)
 	.stores({
 		scheduled: '++id, nextDate',
@@ -74,6 +77,23 @@ db.version(4)
 			if (record) {
 				await tx.table('deviceSettings').put(record);
 				await tx.table('settings').delete(key);
+			}
+		}
+	});
+
+db.version(5)
+	.stores({
+		scheduled: '++id, nextDate',
+		settings: 'key',
+		deviceSettings: 'key',
+		peers: 'id'
+	})
+	.upgrade(async (tx) => {
+		for (const key of USER_KEYS_V5) {
+			const record = await tx.table('deviceSettings').get(key);
+			if (record) {
+				await tx.table('settings').put(record);
+				await tx.table('deviceSettings').delete(key);
 			}
 		}
 	});

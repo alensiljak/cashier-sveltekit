@@ -82,7 +82,9 @@ export const SettingKeys = {
 	// Short date display format — day and month only
 	shortDateFormat: 'shortDateFormat',
 	// Credit card forecast settings
-	creditCardSettings: 'creditCard.settings'
+	creditCardSettings: 'creditCard.settings',
+	// import book file spec (same across all devices)
+	importBookFileSpec: 'importBookFileSpec'
 };
 
 /** Settings specific to this device (not exported). */
@@ -92,7 +94,6 @@ export const DeviceSettingKeys = {
 	peerName: 'peerName',
 	// import book from filesystem via File System API
 	importBookDirectory: 'importBookDirectory',
-	importBookFileSpec: 'importBookFileSpec',
 	// Whether to use the binary ledger cache on load (default: true)
 	ledgerCacheEnabled: 'ledgerCacheEnabled',
 	// OPFS file metadata snapshot for staleness detection (path -> "size|lastModified")

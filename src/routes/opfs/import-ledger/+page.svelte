@@ -84,7 +84,7 @@
 	onMount(async () => {
 		hasDirectoryPicker = 'showDirectoryPicker' in window;
 		dirName = (await deviceSettings.get<string>(DeviceSettingKeys.importBookDirectory)) ?? '';
-		fileSpec = (await deviceSettings.get<string>(DeviceSettingKeys.importBookFileSpec)) ?? fileSpec;
+		fileSpec = (await settings.get<string>(SettingKeys.importBookFileSpec)) ?? fileSpec;
 		if (hasDirectoryPicker) {
 			const stored = await loadPersistedHandle(HANDLE_KEY);
 			if (stored && (await requestReadPermission(stored))) {
@@ -362,7 +362,7 @@
 				placeholder="*.bean, *.toml"
 				bind:value={fileSpec}
 				onblur={async () => {
-					await deviceSettings.set(DeviceSettingKeys.importBookFileSpec, fileSpec);
+					await settings.set(SettingKeys.importBookFileSpec, fileSpec);
 				}}
 			/>
 			<p class="text-xs text-base-content/50">
