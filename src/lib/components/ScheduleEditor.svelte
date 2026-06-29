@@ -48,6 +48,15 @@
 
 <h3 class="h3 text-center">Schedule</h3>
 
+<!-- Repayment -->
+<div class="flex flex-row items-center justify-between">
+	<div>
+		<p>Repayment</p>
+		<p class="text-sm opacity-60">Amount is auto-calculated from the Liabilities account balance</p>
+	</div>
+	<input class="toggle" type="checkbox" bind:checked={$ScheduledXact.repayment} />
+</div>
+
 <!-- Recurrence -->
 <div>
 	<p>Repeats:</p>
@@ -112,15 +121,6 @@
 	{#if hasEndDate}
 		<input type="date" class="input rounded" bind:value={$ScheduledXact.endDate} />
 	{/if}
-</div>
-
-<!-- Repayment -->
-<div class="flex flex-row items-center justify-between">
-	<div>
-		<p>Repayment</p>
-		<p class="text-sm opacity-60">Amount is auto-calculated from the Liabilities account balance</p>
-	</div>
-	<input class="toggle" type="checkbox" bind:checked={$ScheduledXact.repayment} />
 </div>
 
 <!-- Remarks -->
