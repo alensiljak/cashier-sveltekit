@@ -40,6 +40,14 @@ export function checkOpfsStale(): Promise<boolean> {
 }
 
 /**
+ * Forces a fresh check regardless of the session cache. Useful for manual re-checks.
+ */
+export function recheckOpfsStale(): Promise<boolean> {
+	sessionCheck = runCheck();
+	return sessionCheck;
+}
+
+/**
  * Saves the current .bean file metadata to settings as the new snapshot baseline.
  * Call this after a successful reload + re-serialize.
  */

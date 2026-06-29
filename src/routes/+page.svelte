@@ -1,6 +1,6 @@
 <script lang="ts">
 	import JournalCard from '$lib/components/JournalCard.svelte';
-	import { ArrowDownUpIcon, CircleAlert, PlusIcon, RefreshCwIcon, SettingsIcon } from '@lucide/svelte';
+	import { ArrowDownUpIcon, CircleAlert, PlusIcon, RefreshCwIcon, ScanSearchIcon, SettingsIcon } from '@lucide/svelte';
 	import Toolbar from '../lib/components/Toolbar.svelte';
 	import { goto } from '$app/navigation';
 	import { xact } from '$lib/data/mainStore';
@@ -15,7 +15,7 @@
 	import { CardNames } from '$lib/settings';
 	import appService from '$lib/services/appService';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
-	import { checkOpfsStale, saveOpfsMetaSnapshot } from '$lib/services/opfsMetaCheck';
+	import { checkOpfsStale, recheckOpfsStale, saveOpfsMetaSnapshot } from '$lib/services/opfsMetaCheck';
 
 	let cards: Array<Component> = $state([]);
 	let hasErrors = $state(false);
@@ -91,6 +91,15 @@
 		await goto('/tx/search-new');
 	}
 
+	async function handleManualCheck() {
+		isChecking = true;
+		isStale = false;
+		recheckOpfsStale().then((stale) => {
+			isStale = stale;
+			isChecking = false;
+		});
+	}
+
 	async function handleReload() {
 		isReloading = true;
 		try {
@@ -133,6 +142,7 @@
 		{#snippet menuItems()}
 			<ToolbarMenuItem text="Home Settings" Icon={SettingsIcon} targetNav="/home-settings" />
 			<ToolbarMenuItem text="Reorder Cards" targetNav="/home-reorder" Icon={ArrowDownUpIcon} />
+			<ToolbarMenuItem text="Check files" Icon={ScanSearchIcon} onclick={handleManualCheck} />
 		{/snippet}
 	</Toolbar>
 
