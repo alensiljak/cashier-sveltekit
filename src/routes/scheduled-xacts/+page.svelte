@@ -112,7 +112,7 @@
 							</div>
 						</div>
 						<data class={`${getMoneyColour(scx.amount as Money)}`}>
-							{scx.amount?.quantity}
+							{#if scx.repayment}<span class="opacity-50" title="Auto-calculated">~</span>{/if}{scx.amount?.quantity}
 							{scx.amount?.currency}
 						</data>
 					</div>

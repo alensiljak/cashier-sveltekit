@@ -10,7 +10,7 @@
 	import { goto, replaceState } from '$app/navigation';
 	import { DefaultCurrencyStore, PendingSettingsStore, ShortDateFormatStore } from '$lib/data/mainStore.js';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
-	import { BoxIcon, Check, CreditCardIcon, FileBraces, NetworkIcon, RotateCcw, TrendingUpIcon } from '@lucide/svelte';
+	import { BoxIcon, Check, FileBraces, NetworkIcon, RotateCcw, TrendingUpIcon } from '@lucide/svelte';
 	import Fab from '$lib/components/FAB.svelte';
 	import { page } from '$app/state';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
@@ -387,10 +387,6 @@
 		<a href="/forecast-settings" class="btn btn-outline btn-sm w-full gap-2">
 			<TrendingUpIcon size={16} />
 			Forecast Settings
-		</a>
-		<a href="/credit-card-settings" class="btn btn-outline btn-sm w-full gap-2">
-			<CreditCardIcon size={16} />
-			Credit Card Settings
 		</a>
 	</div>
 

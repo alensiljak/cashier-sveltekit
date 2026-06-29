@@ -104,6 +104,7 @@ export class ScheduledTransaction {
 	count?: number;
 	endDate: unknown;
 	remarks?: string;
+	repayment?: boolean;
 
 	// Transaction Amount, for display only.
 	amount?: Money;

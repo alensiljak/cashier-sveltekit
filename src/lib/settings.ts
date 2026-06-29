@@ -36,14 +36,6 @@ export interface AccountGroup {
 	color?: string;
 }
 
-export interface CreditCardSettings {
-	rootAccount: string;
-	paymentDay: number;
-	paymentAccount: string;
-}
-
-export const DEFAULT_CREDIT_CARD_ROOT_ACCOUNT = 'Liabilities:CreditCards';
-
 export const defaultAccountGroups: AccountGroup[] = [
 	{ title: 'Cash Accounts', accounts: [] },
 	{ title: 'Bank Accounts', accounts: [] },
@@ -81,8 +73,6 @@ export const SettingKeys = {
 	dateFormat: 'dateFormat',
 	// Short date display format — day and month only
 	shortDateFormat: 'shortDateFormat',
-	// Credit card forecast settings
-	creditCardSettings: 'creditCard.settings',
 	// import book file spec (same across all devices)
 	importBookFileSpec: 'importBookFileSpec'
 };

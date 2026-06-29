@@ -114,6 +114,15 @@
 	{/if}
 </div>
 
+<!-- Repayment -->
+<div class="flex flex-row items-center justify-between">
+	<div>
+		<p>Repayment</p>
+		<p class="text-sm opacity-60">Amount is auto-calculated from the Liabilities account balance</p>
+	</div>
+	<input class="toggle" type="checkbox" bind:checked={$ScheduledXact.repayment} />
+</div>
+
 <!-- Remarks -->
 <div class="mb-10">
 	<p>Remarks</p>

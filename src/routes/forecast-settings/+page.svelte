@@ -8,7 +8,7 @@
 	import { selectionMetadata } from '$lib/data/mainStore';
 	import { SelectionType } from '$lib/enums';
 	import { SelectionModeMetadata, SettingKeys, settings } from '$lib/settings';
-	import { CheckIcon, CreditCardIcon, PlusIcon, TrashIcon } from '@lucide/svelte';
+	import { CheckIcon, PlusIcon, TrashIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 
 	let days = $state(DEFAULT_FORECAST_DAYS);
@@ -103,10 +103,5 @@
 		{/snippet}
 	</DragReorderList>
 
-	<div class="divider"></div>
 
-	<a href="/credit-card-settings" class="btn btn-outline w-full gap-2">
-		<CreditCardIcon size={18} />
-		Credit Card Settings
-	</a>
 </main>

@@ -27,11 +27,11 @@
 	import { type ScheduledTransaction, type Xact } from '$lib/data/model';
 	import appService from '$lib/services/appService';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
+	import { updateRepaymentAmounts } from '$lib/services/repaymentService';
 	import moment from 'moment';
 	import { XactAugmenter } from '$lib/utils/xactAugmenter';
 	import { ISODATEFORMAT } from '$lib/constants';
 	import Notifier from '$lib/utils/notifier';
-	import { type CreditCardSettings, SettingKeys, settings } from '$lib/settings';
 
 	interface Props {
 		daysCount: number;
@@ -96,6 +96,8 @@
 		maxDate = moment().add(daysCount, 'days');
 
 		try {
+			await updateRepaymentAmounts();
+
 			const balances = await loadAccountBalances();
 
 			// Skip redraw if we already rendered from cache and the balances haven't changed.
@@ -234,58 +236,11 @@
 		return balances;
 	}
 
-	/**
-	 * Returns per-day deduction amounts and the account to inject them into.
-	 * The amounts are already negative (Beancount liability sign convention),
-	 * so adding them to an asset account's daily array reduces its running balance.
-	 */
-	async function loadCreditCardPaymentAmounts(): Promise<{
-		account: string;
-		amounts: number[];
-	} | null> {
-		const ccSettings = await settings.get<CreditCardSettings>(SettingKeys.creditCardSettings);
-		if (!ccSettings?.rootAccount || !ccSettings?.paymentDay || !ccSettings?.paymentAccount)
-			return null;
-
-		const { rootAccount, paymentDay, paymentAccount } = ccSettings;
-
-		const bql = `SELECT sum(number) as balance, currency WHERE account ~ '^${rootAccount}' GROUP BY currency`;
-		const result = await fullLedgerService.query(bql);
-
-		const colBalance = result.columns.indexOf('balance');
-		const colCurrency = result.columns.indexOf('currency');
-
-		let totalBalance = 0;
-		for (const row of result.rows as unknown[][]) {
-			const currency = row[colCurrency] as string;
-			const balance = Number(row[colBalance]) || 0;
-			if (currency === defaultCurrency || totalBalance === 0) {
-				totalBalance = balance;
-			}
-		}
-
-		if (totalBalance === 0) return null;
-
-		// Build a per-day array: place the deduction on each payment day in the window.
-		const amounts = Array.from<number>({ length: daysCount + 1 }).fill(0);
-		const today = moment().startOf('day');
-		for (let offset = 0; offset <= daysCount; offset++) {
-			if (today.clone().add(offset, 'days').date() === paymentDay) {
-				amounts[offset] = totalBalance;
-			}
-		}
-
-		return { account: paymentAccount, amounts };
-	}
-
 	async function loadDataWithBalances(balances: Record<string, number>): Promise<ChartData<'bar'>> {
 		const datasets = [];
 
-		const ccPayment = await loadCreditCardPaymentAmounts();
-
 		for (const accountName of accountNames) {
-			const extraAmounts = ccPayment?.account === accountName ? ccPayment.amounts : undefined;
-			let dataset = await createDatasetFor(accountName, balances[accountName] ?? 0, extraAmounts);
+			let dataset = await createDatasetFor(accountName, balances[accountName] ?? 0);
 			datasets.push(dataset);
 		}
 
@@ -306,11 +261,7 @@
 		return scxsForAccount;
 	}
 
-	async function createDatasetFor(
-		accountName: string,
-		currentBalance: number,
-		extraAmounts: number[] | undefined = undefined
-	) {
+	async function createDatasetFor(accountName: string, currentBalance: number) {
 		let dataset = {
 			label: getShortAccountName(accountName),
 			data: Array.from<number>({ length: daysCount + 1 }).fill(0)
@@ -318,13 +269,6 @@
 
 		// Day-0 is the current balance from BQL.
 		dataset.data[0] = currentBalance;
-
-		// Inject additional per-day amounts (e.g. CC payment) before running balance is calculated.
-		if (extraAmounts) {
-			for (let i = 0; i < extraAmounts.length && i < dataset.data.length; i++) {
-				dataset.data[i] += extraAmounts[i];
-			}
-		}
 
 		// add scheduled transactions and compute running balance
 		dataset.data = await addScxData(accountName, dataset.data);
