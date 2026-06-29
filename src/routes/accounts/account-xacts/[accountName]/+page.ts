@@ -6,6 +6,7 @@ import { Account, Money, type Xact } from '$lib/data/model.js';
 import ledgerService from '$lib/services/ledgerService.js';
 import fullLedgerService from '$lib/services/ledgerWorkerClient';
 import type { DirectiveSpan } from '$lib/rledger/sourceEditor';
+import type { MetaValueJson } from '@rustledger/wasm';
 
 export type UnifiedXact = {
 	date: string;
@@ -17,6 +18,8 @@ export type UnifiedXact = {
 	xact?: Xact;
 	span?: DirectiveSpan;
 };
+
+export type AccountMeta = Record<string, MetaValueJson>;
 
 export async function load({ params }) {
 	if (!params.accountName) {
@@ -105,5 +108,12 @@ WHERE account = '${params.accountName}'`;
 
 	const hasDeviceXacts = deviceRows.length > 0;
 
-	return { account, total, unifiedRows, hasDeviceXacts };
+	// Extract metadata from the account's open directive
+	const directives = await fullLedgerService.getDirectives();
+	const openDirective = directives.find(
+		(d) => (d as { type: string }).type === 'open' && (d as { account: string }).account === params.accountName
+	) as { meta?: AccountMeta } | undefined;
+	const accountMeta: AccountMeta = openDirective?.meta ?? {};
+
+	return { account, total, unifiedRows, hasDeviceXacts, accountMeta };
 }

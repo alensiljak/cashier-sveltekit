@@ -3,10 +3,24 @@
 	import { goto } from '$app/navigation';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
-	import type { UnifiedXact } from './+page.js';
+	import type { UnifiedXact, AccountMeta } from './+page.js';
+	import type { MetaValueJson } from '@rustledger/wasm';
+
+	function formatMetaValue(value: MetaValueJson): string {
+		if (value === null || value === undefined) return '';
+		if (typeof value === 'string') return value;
+		if (typeof value === 'boolean') return value ? 'true' : 'false';
+		return `${value.number} ${value.currency}`;
+	}
 	import * as Formatter from '$lib/utils/formatter';
-	import { ScaleIcon } from '@lucide/svelte';
+	import { ScaleIcon, CopyIcon } from '@lucide/svelte';
+
+	function copyToClipboard(text: string) {
+		navigator.clipboard.writeText(text);
+		Notifier.success('Copied to clipboard');
+	}
 	import { xact, xactSpan } from '$lib/data/mainStore';
+	import Notifier from '$lib/utils/notifier';
 
 	const PAGE_SIZE = 30;
 	let visibleCount = $state(PAGE_SIZE);
@@ -57,6 +71,23 @@
 					{page.data.total.currency}
 				</data>
 			</div>
+			{#if Object.keys(page.data.accountMeta as AccountMeta).length > 0}
+				<dl class="mt-2 space-y-0.5 text-sm">
+					{#each Object.entries(page.data.accountMeta as AccountMeta) as [key, value]}
+						<div class="flex gap-2 items-center">
+							<dt class="text-base-content/50 shrink-0">{key}:</dt>
+							<dd>{formatMetaValue(value)}</dd>
+							<button
+								class="text-base-content/40 hover:text-base-content/80 cursor-pointer"
+								onclick={() => copyToClipboard(formatMetaValue(value))}
+								aria-label="Copy {key}"
+							>
+								<CopyIcon size={14} />
+							</button>
+						</div>
+					{/each}
+				</dl>
+			{/if}
 		</header>
 
 		{#if page.data.hasDeviceXacts}

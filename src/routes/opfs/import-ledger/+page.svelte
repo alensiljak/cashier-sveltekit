@@ -319,9 +319,7 @@
 		<section class="flex flex-col gap-2">
 			<label for="directoryPicker" class="label font-semibold">Source Directory</label>
 			<div class="flex items-center gap-2">
-				{#if dirName}
-					<span class="font-mono text-sm bg-base-200 rounded px-3 py-2 flex-1 truncate">{dirName}/</span>
-				{/if}
+				<span class="font-mono text-sm bg-base-200 rounded px-3 py-2 flex-1 truncate {dirName ? '' : 'text-base-content/40'}">{dirName ? dirName + '/' : 'Not selected'}</span>
 				{#if hasDirectoryPicker}
 					<button id="directoryPicker" class="btn btn-primary gap-2" onclick={pickDirectory}>
 						<FolderOpenIcon class="w-5 h-5" />
