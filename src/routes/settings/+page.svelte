@@ -314,19 +314,6 @@
 		</div>
 	</div>
 
-	<!-- Ledger cache -->
-	<div class="flex items-center gap-3">
-		<label for="ledger-cache-enabled" class="flex-1 text-sm font-medium">
-			Enable ledger cache
-		</label>
-		<input
-			id="ledger-cache-enabled"
-			class="checkbox checkbox-primary checkbox-sm shrink-0 rounded"
-			type="checkbox"
-			bind:checked={ledgerCacheEnabled}
-		/>
-	</div>
-
 	<!-- ── Asset Allocation ────────────────────────────────── -->
 	<div class="divider text-sm font-semibold uppercase tracking-widest">Asset Allocation</div>
 
@@ -405,6 +392,24 @@
 			<CreditCardIcon size={16} />
 			Credit Card Settings
 		</a>
+	</div>
+
+	<!-- ── Device Settings ────────────────────────────────── -->
+	<div class="divider text-sm font-semibold uppercase tracking-widest">Device Settings</div>
+
+	<p class="text-xs opacity-60">These settings apply only to this device and are not exported.</p>
+
+	<!-- Ledger cache -->
+	<div class="flex items-center gap-3">
+		<label for="ledger-cache-enabled" class="flex-1 text-sm font-medium">
+			Enable ledger cache
+		</label>
+		<input
+			id="ledger-cache-enabled"
+			class="checkbox checkbox-primary checkbox-sm shrink-0 rounded"
+			type="checkbox"
+			bind:checked={ledgerCacheEnabled}
+		/>
 	</div>
 
 	<Fab Icon={Check} onclick={saveSettings} />
