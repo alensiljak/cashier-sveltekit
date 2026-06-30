@@ -233,7 +233,7 @@
 				{#each data.stocks || [] as stock}
 					<li class="mt-3">
 						<h6 class="h6 flex items-center gap-2">
-							• {stock.name}
+							• <a href={`/commodities/detail?symbol=${encodeURIComponent(stock.name)}`} class="link link-primary">{stock.name}</a>
 							{#if stock.loading}
 								<Loader class="h-4 w-4 animate-spin" />
 							{/if}
