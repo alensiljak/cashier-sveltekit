@@ -4,8 +4,11 @@
 	import { goto } from '$app/navigation';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
+	import PriceHistoryChart from '$lib/components/PriceHistoryChart.svelte';
+	import type { PricePoint } from '$lib/components/PriceHistoryChart.svelte';
 	import { ArrowLeftRightIcon } from '@lucide/svelte';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
+
 	type CommodityDirective = {
 		currency: string;
 		date: string;
@@ -16,6 +19,8 @@
 
 	let commodity: CommodityDirective | null = $state(null);
 	let dataLoaded = $state(false);
+	let pricePoints: PricePoint[] = $state([]);
+	let lastPrice: PricePoint | null = $state(null);
 
 	onMount(async () => {
 		await loadData();
@@ -23,6 +28,8 @@
 
 	async function loadData() {
 		await fullLedgerService.ensureLoaded();
+
+		// Load commodity directive
 		const directives = (await fullLedgerService.getDirectives()) as any[];
 		const found = directives.find((d) => d.type === 'commodity' && d.currency === symbol);
 		if (found) {
@@ -32,6 +39,31 @@
 				meta: (found.meta as Record<string, unknown>) ?? {}
 			};
 		}
+
+		// Load full price history for this symbol via BQL — runs against in-memory
+		// WASM data so no disk I/O; even 5y of daily prices (~1300 rows) is sub-ms.
+		const { columns, rows } = await fullLedgerService.query(
+			`SELECT date, currency, amount FROM prices WHERE currency = '${symbol}' ORDER BY date`
+		);
+		if (rows.length > 0) {
+			const dateIdx = columns.indexOf('date');
+			const amtIdx = columns.indexOf('amount');
+			pricePoints = (rows as any[]).flatMap((row) => {
+				const rawDate = row[dateIdx];
+				const rawAmt = row[amtIdx] as { number?: string | number; currency?: string } | null;
+				const price = rawAmt?.number != null ? parseFloat(String(rawAmt.number)) : NaN;
+				if (isNaN(price)) return [];
+				const dateStr =
+					typeof rawDate === 'string'
+						? rawDate.slice(0, 10)
+						: rawDate instanceof Date
+							? rawDate.toISOString().slice(0, 10)
+							: String(rawDate).slice(0, 10);
+				return [{ date: dateStr, price, priceCurrency: rawAmt?.currency ?? '' }];
+			});
+			lastPrice = pricePoints.length > 0 ? pricePoints[pricePoints.length - 1] : null;
+		}
+
 		dataLoaded = true;
 	}
 
@@ -84,9 +116,25 @@
 				<p class="mt-1 text-xs opacity-40">Declared {commodity.date}</p>
 			</div>
 
+			<!-- Last price box -->
+			{#if lastPrice}
+				<div class="mx-auto max-w-md mt-4 overflow-hidden rounded-xl bg-base-100 shadow">
+					<div class="flex items-center justify-between px-4 py-3">
+						<span class="text-sm font-medium opacity-50">Last price</span>
+						<div class="text-right">
+							<span class="font-mono font-semibold">
+								{lastPrice.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
+								{lastPrice.priceCurrency}
+							</span>
+							<span class="ml-2 text-xs opacity-40">{lastPrice.date}</span>
+						</div>
+					</div>
+				</div>
+			{/if}
+
 			<!-- Metadata table -->
 			{#if visibleMeta(commodity.meta).length > 0}
-				<div class="mx-auto max-w-md overflow-hidden rounded-xl bg-base-100 shadow">
+				<div class="mx-auto max-w-md mt-4 overflow-hidden rounded-xl bg-base-100 shadow">
 					{#each visibleMeta(commodity.meta) as [key, value], i (key)}
 						<div
 							class="flex items-start justify-between px-4 py-3 {i > 0
@@ -97,6 +145,17 @@
 							<span class="ml-4 text-right text-sm break-all">{formatMetaValue(value)}</span>
 						</div>
 					{/each}
+				</div>
+			{/if}
+
+			<!-- Price history chart -->
+			{#if pricePoints.length > 0}
+				<div class="mx-auto max-w-md mt-6 overflow-hidden rounded-xl bg-base-100 shadow p-3">
+					<p class="text-xs font-medium opacity-50 mb-1 px-1">Price history</p>
+					<PriceHistoryChart
+						points={pricePoints}
+						priceCurrency={lastPrice?.priceCurrency ?? ''}
+					/>
 				</div>
 			{/if}
 		{/if}
