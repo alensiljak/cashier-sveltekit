@@ -74,7 +74,9 @@ export const SettingKeys = {
 	// Short date display format — day and month only
 	shortDateFormat: 'shortDateFormat',
 	// import book file spec (same across all devices)
-	importBookFileSpec: 'importBookFileSpec'
+	importBookFileSpec: 'importBookFileSpec',
+	// Expenses report filter
+	expensesHiddenAccounts: 'expenses.hiddenAccounts'
 };
 
 /** Settings specific to this device (not exported). */

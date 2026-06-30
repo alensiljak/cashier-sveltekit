@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { ChartBar, ChartPie } from '@lucide/svelte';
+	import { ChartBar, ChartPie, Funnel, FunnelX, ListFilter } from '@lucide/svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import PeriodSelector, { type Period } from '$lib/components/PeriodSelector.svelte';
 	import ExpensesBarChart from '$lib/components/ExpensesBarChart.svelte';
@@ -13,10 +13,33 @@
 	let chartType = $state<ChartType>('bar');
 	let isLoading = $state(false);
 	let error = $state<string | null>(null);
-	let chartLabels = $state<string[]>([]);
-	let chartValues = $state<number[]>([]);
-	let expenseTotal = $derived(chartValues.reduce((sum, v) => sum + v, 0));
+
+	// Raw data from the ledger query (all expense accounts for the period)
+	let rawLabels = $state<string[]>([]);
+	let rawValues = $state<number[]>([]);
+
+	// Filter state: hiddenAccounts persisted; filterEnabled is session-only,
+	// defaulting to true whenever hidden accounts are configured.
+	let hiddenAccounts = $state<string[]>([]);
+	let filterEnabled = $state(false);
+	let filterSettingsLoaded = false;
+
 	let currentPeriod = $state<Period | null>(null);
+
+	// Visible data: apply filter only when enabled AND there is something to hide
+	const chartLabels = $derived.by(() => {
+		if (!filterEnabled || hiddenAccounts.length === 0) return rawLabels;
+		const hidden = new Set(hiddenAccounts);
+		return rawLabels.filter((l) => !hidden.has(l));
+	});
+
+	const chartValues = $derived.by(() => {
+		if (!filterEnabled || hiddenAccounts.length === 0) return rawValues;
+		const hidden = new Set(hiddenAccounts);
+		return rawLabels.flatMap((l, i) => (hidden.has(l) ? [] : [rawValues[i]]));
+	});
+
+	const expenseTotal = $derived(chartValues.reduce((sum, v) => sum + v, 0));
 
 	function handleBarClick(account: string) {
 		if (!currentPeriod) return;
@@ -35,6 +58,16 @@
 		await tick();
 
 		try {
+			// Load hidden accounts once per page lifetime so changes from the
+			// filter page are picked up on first period load after returning.
+			if (!filterSettingsLoaded) {
+				filterSettingsLoaded = true;
+				hiddenAccounts = (await settings.get<string[]>(SettingKeys.expensesHiddenAccounts)) ?? [];
+				// Default: filter is ON whenever there is something to hide.
+				filterEnabled = hiddenAccounts.length > 0;
+			}
+
+
 			const defaultCurrency = await settings.get<string>(SettingKeys.currency);
 			await fullLedgerService.ensureLoaded();
 
@@ -43,8 +76,8 @@
 
 			if (result?.errors?.length) {
 				error = (result.errors as any[]).map((e) => e.message).join('; ');
-				chartLabels = [];
-				chartValues = [];
+				rawLabels = [];
+				rawValues = [];
 				return;
 			}
 
@@ -70,18 +103,45 @@
 			// Sort descending by amount
 			const sorted = [...totals.entries()].sort((a, b) => b[1] - a[1]);
 
-			chartLabels = sorted.map(([acc]) => acc);
-			chartValues = sorted.map(([, val]) => val);
+			rawLabels = sorted.map(([acc]) => acc);
+			rawValues = sorted.map(([, val]) => val);
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
 		} finally {
 			isLoading = false;
 		}
 	}
+
+	function toggleFilter() {
+		filterEnabled = !filterEnabled;
+	}
 </script>
 
 <article class="flex h-screen flex-col" class:cursor-wait={isLoading}>
-	<Toolbar title="Expenses" />
+	<Toolbar title="Expenses">
+		{#snippet actions()}
+			<!-- Filter toggle: always visible; icon shows what clicking will do -->
+			<button
+				class="btn btn-ghost btn-sm btn-square"
+				onclick={toggleFilter}
+				title={filterEnabled ? 'Disable filter' : 'Enable filter'}
+			>
+				{#if filterEnabled}
+					<FunnelX size={18} />
+				{:else}
+					<Funnel size={18} class="opacity-50" />
+				{/if}
+			</button>
+			<!-- Open filter settings -->
+			<button
+				class="btn btn-ghost btn-sm btn-square"
+				onclick={() => goto('/reports/expenses/filter')}
+				title="Edit expense filter"
+			>
+				<ListFilter size={18} />
+			</button>
+		{/snippet}
+	</Toolbar>
 
 	<!-- Period selector + chart type toggle -->
 	<div class="flex items-center gap-3 px-4 pt-3 pb-2">
@@ -128,8 +188,11 @@
 
 	<!-- Total -->
 	{#if chartValues.length > 0}
-		<div class="flex justify-end px-4 py-2 border-t border-base-300 text-sm font-medium">
-			<span class="text-base-content/60 mr-2">Total:</span>
+		<div class="flex items-center justify-end gap-2 px-4 py-2 border-t border-base-300 text-sm font-medium">
+			{#if filterEnabled && hiddenAccounts.length > 0}
+				<span class="text-xs text-primary opacity-70">filtered</span>
+			{/if}
+			<span class="text-base-content/60">Total:</span>
 			<span>{expenseTotal.toFixed(2)}</span>
 		</div>
 	{/if}

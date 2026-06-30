@@ -33,6 +33,18 @@
 				key: 'last_month',
 				dateFrom: now.clone().subtract(1, 'month').startOf('month').format(ISODATEFORMAT),
 				dateTo: now.clone().subtract(1, 'month').endOf('month').format(ISODATEFORMAT)
+			},
+			{
+				label: 'Last 3 Months',
+				key: 'last_3_months',
+				dateFrom: now.clone().subtract(3, 'months').startOf('month').format(ISODATEFORMAT),
+				dateTo: now.clone().endOf('month').format(ISODATEFORMAT)
+			},
+			{
+				label: 'Last 12 Months',
+				key: 'last_12_months',
+				dateFrom: now.clone().subtract(12, 'months').startOf('month').format(ISODATEFORMAT),
+				dateTo: now.clone().endOf('month').format(ISODATEFORMAT)
 			}
 		];
 	}

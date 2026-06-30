@@ -11,7 +11,8 @@
 				"--context",
 				"ide-assistant",
 				"--open-web-dashboard",
-				"false"
+				"false",
+				"--project-from-cwd"
 			]
 		}
 	}
