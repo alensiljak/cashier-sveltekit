@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { page } from '$app/state';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import SearchableSelect from '$lib/components/SearchableSelect.svelte';
 	import { getCurrencies, convert, type ConversionResult } from '$lib/services/currencyConverter';
@@ -6,13 +7,17 @@
 	import { settings, SettingKeys } from '$lib/settings';
 	import { ArrowUpDownIcon, XIcon, CopyIcon } from '@lucide/svelte';
 
+	// Pre-seed from URL params: ?from=EUR&to=USD
+	const urlFrom = page.url.searchParams.get('from') ?? '';
+	const urlTo = page.url.searchParams.get('to') ?? '';
+
 	let currencies: string[] = $state([]);
-	let fromCurrency = $state('');
-	let toCurrency = $state('');
-	let inputAmount = $state('');
-	let result: ConversionResult | null = $state(null);
+	let fromCurrency = $state(urlFrom);
+	let toCurrency = $state(urlTo);
 	let isLoadingCurrencies = $state(true);
 	let error: string | null = $state(null);
+	let inputAmount = $state('');
+	let result: ConversionResult | null = $state(null);
 
 	$effect(() => {
 		loadCurrencies();
@@ -33,8 +38,9 @@
 			await fullLedgerService.ensureLoaded();
 			currencies = await getCurrencies();
 			const baseCurrency = await settings.get<string>(SettingKeys.currency);
-			if (currencies.length > 0 && !fromCurrency) fromCurrency = currencies[0];
-			if (!toCurrency) {
+			if (currencies.length > 0 && (!fromCurrency || !currencies.includes(fromCurrency)))
+				fromCurrency = currencies[0];
+			if (!toCurrency || !currencies.includes(toCurrency)) {
 				toCurrency =
 					baseCurrency && currencies.includes(baseCurrency)
 						? baseCurrency
