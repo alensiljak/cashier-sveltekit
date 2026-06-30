@@ -206,6 +206,18 @@
 								<span>Payees</span>
 							</a>
 						</li>
+						<li>
+							<a
+								href="/commodities"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/commodities'
+									? 'active bg-secondary text-secondary-content'
+									: ''}"
+								onclick={closeDrawer}
+							>
+								<CoinsIcon />
+								<span>Commodities</span>
+							</a>
+						</li>
 					</ul>
 				</details>
 			</li>
