@@ -75,7 +75,7 @@
 	}
 </script>
 
-<main class="flex flex-col flex-1">
+<main class="flex flex-col h-full">
 	<Toolbar title="Accounts" />
 	<!-- search toolbar -->
 	<SearchToolbar focus {onSearch} />
