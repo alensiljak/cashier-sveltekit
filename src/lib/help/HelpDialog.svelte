@@ -22,4 +22,5 @@
 			{@html html}
 		</article>
 	</div>
+	<button type="button" class="modal-backdrop" aria-label="Close" onclick={() => (isOpen = false)}></button>
 </dialog>
