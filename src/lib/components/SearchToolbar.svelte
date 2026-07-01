@@ -13,7 +13,7 @@
 
 	onMount(() => {
 		if (focus) {
-			searchField.focus();
+			searchField?.focus();
 		}
 	});
 
