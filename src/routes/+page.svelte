@@ -169,7 +169,12 @@
 						Not now
 					</button>
 					<button class="btn btn-primary" onclick={handleReload} disabled={isReloading}>
-						{isReloading ? 'Reloading…' : 'Reload'}
+						{#if isReloading}
+							Reloading…
+							<span class="loading loading-spinner loading-sm"></span>
+						{:else}
+							Reload
+						{/if}
 					</button>
 				</div>
 			</div>
