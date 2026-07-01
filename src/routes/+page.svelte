@@ -17,6 +17,7 @@
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import { checkOpfsStale, recheckOpfsStale } from '$lib/services/opfsMetaCheck';
 	import { reloadLedgerFromOpfs } from '$lib/services/ledgerReload';
+	import HelpButton from '$lib/help/HelpButton.svelte';
 
 	let cards: Array<Component> = $state([]);
 	let hasErrors = $state(false);
@@ -137,6 +138,7 @@
 					<CircleAlert size={20} class="text-error" />
 				</button>
 			{/if}
+			<HelpButton topic="home" />
 		{/snippet}
 		{#snippet menuItems()}
 			<ToolbarMenuItem text="Home Settings" Icon={SettingsIcon} targetNav="/home-settings" />

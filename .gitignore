@@ -30,3 +30,6 @@ vite.config.*.timestamp-*
 
 # SSL keys
 /**/localhost*.pem
+
+# Old help files, migration
+/doc/old-help
