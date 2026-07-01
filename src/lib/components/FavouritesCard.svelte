@@ -179,23 +179,25 @@
 		<StarIcon />
 	{/snippet}
 	{#snippet menu()}
-		{#if accounts.length > 5}
-			<button
-				type="button"
-				class="btn btn-ghost btn-square btn-sm"
-				aria-label={expanded ? 'Collapse favourites' : 'Expand favourites'}
-				onclick={onToggleExpand}
-			>
-				{#if expanded}
-					<ChevronUpIcon />
-				{:else}
-					<ChevronDownIcon />
-				{/if}
-			</button>
-		{/if}
-		<a href="/favourites">
-			<Settings2Icon />
-		</a>
+		<div class="flex items-center gap-1">
+			{#if accounts.length > 5}
+				<button
+					type="button"
+					class="btn btn-ghost btn-square btn-sm"
+					aria-label={expanded ? 'Collapse favourites' : 'Expand favourites'}
+					onclick={onToggleExpand}
+				>
+					{#if expanded}
+						<ChevronUpIcon />
+					{:else}
+						<ChevronDownIcon />
+					{/if}
+				</button>
+			{/if}
+			<a href="/favourites" class="btn btn-ghost btn-square btn-sm">
+				<Settings2Icon />
+			</a>
+		</div>
 	{/snippet}
 
 	{#snippet title()}
