@@ -12,6 +12,7 @@
 	import Notifier from '$lib/utils/notifier';
 	import { FileDownIcon, ImportIcon, PlusIcon, TrashIcon } from '@lucide/svelte';
 	import appService from '$lib/services/appService';
+	import HelpButton from '$lib/help/HelpButton.svelte';
 
 	Notifier.init();
 
@@ -66,6 +67,9 @@
 
 <article class="flex h-screen flex-col">
 	<Toolbar title="Journal">
+		{#snippet actions()}
+			<HelpButton topic="journal" />
+		{/snippet}
 		{#snippet menuItems()}
 			<!-- Export -->
 			<ToolbarMenuItem text="Export" Icon={FileDownIcon} onclick={onExportClick} />

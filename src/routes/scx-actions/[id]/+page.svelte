@@ -18,6 +18,7 @@
 	} from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import db from '$lib/data/db';
+	import HelpButton from '$lib/help/HelpButton.svelte';
 
 	Notifier.init();
 
@@ -174,7 +175,11 @@
 </script>
 
 <article>
-	<Toolbar title="Scheduled Transaction Actions"></Toolbar>
+	<Toolbar title="Scheduled Transaction Actions">
+		{#snippet actions()}
+			<HelpButton topic="scx-actions" />
+		{/snippet}
+	</Toolbar>
 
 	<section class="p-1">
 		<JournalXactRow xact={$xact} />

@@ -6,6 +6,7 @@
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import { ArrowUpDownIcon, CirclePlusIcon } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
+	import HelpButton from '$lib/help/HelpButton.svelte';
 
 	let groups: AccountGroup[] = $state([]);
 	let isAddGroupModalOpen = $state(false);
@@ -47,6 +48,9 @@
 
 <article class="flex h-screen flex-col">
 	<Toolbar title="Account Groups">
+		{#snippet actions()}
+			<HelpButton topic="my-accounts" />
+		{/snippet}
 		{#snippet menuItems()}
 			<ToolbarMenuItem
 				text="Add Group"

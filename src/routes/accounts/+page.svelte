@@ -7,6 +7,7 @@
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import type { Account } from '$lib/data/model';
 	import { goto } from '$app/navigation';
+	import HelpButton from '$lib/help/HelpButton.svelte';
 
 	let searchTerm = $state('');
 	let isInSelectionMode = $derived($selectionMetadata !== undefined);
@@ -76,7 +77,11 @@
 </script>
 
 <main class="flex flex-col h-full">
-	<Toolbar title="Accounts" />
+	<Toolbar title="Accounts">
+		{#snippet actions()}
+			<HelpButton topic="accounts" />
+		{/snippet}
+	</Toolbar>
 	<!-- search toolbar -->
 	<SearchToolbar focus {onSearch} />
 	<!-- Account list -->

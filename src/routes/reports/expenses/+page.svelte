@@ -8,6 +8,7 @@
 	import ExpensesDonutChart from '$lib/components/ExpensesDonutChart.svelte';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import { SettingKeys, settings } from '$lib/settings';
+	import HelpButton from '$lib/help/HelpButton.svelte';
 
 	type ChartType = 'bar' | 'donut';
 	let chartType = $state<ChartType>('bar');
@@ -140,6 +141,7 @@
 			>
 				<ListFilter size={18} />
 			</button>
+			<HelpButton topic="report-expenses" />
 		{/snippet}
 	</Toolbar>
 

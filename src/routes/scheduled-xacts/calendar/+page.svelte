@@ -6,6 +6,7 @@
 	import appService from '$lib/services/appService';
 	import { ChevronLeftIcon, ChevronRightIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
+	import HelpButton from '$lib/help/HelpButton.svelte';
 
 	const today = new Date();
 	today.setHours(0, 0, 0, 0);
@@ -97,7 +98,11 @@
 </script>
 
 <article class="flex h-screen flex-col">
-	<Toolbar title="Calendar" />
+	<Toolbar title="Calendar">
+		{#snippet actions()}
+			<HelpButton topic="scheduled-calendar" />
+		{/snippet}
+	</Toolbar>
 
 	<!-- Month navigation -->
 	<div class="flex items-center justify-between px-4 py-2">

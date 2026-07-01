@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Toolbar from '$lib/components/Toolbar.svelte';
+	import HelpButton from '$lib/help/HelpButton.svelte';
 	import * as BackupService from '$lib/services/backupService';
 	import Notifier from '$lib/utils/notifier';
 	import { FileDownIcon, Share2Icon } from '@lucide/svelte';
@@ -80,7 +81,11 @@
 </script>
 
 <article>
-	<Toolbar title="Backup"></Toolbar>
+	<Toolbar title="Backup">
+		{#snippet actions()}
+			<HelpButton topic="backup" />
+		{/snippet}
+	</Toolbar>
 	<section class="p-1">
 		<h3 class="text-3xl font-semibold">Create Backup</h3>
 

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
+	import HelpButton from '$lib/help/HelpButton.svelte';
 	import { FolderOpenIcon, RefreshCcwIcon } from '@lucide/svelte';
 	import { settings, SettingKeys, deviceSettings, DeviceSettingKeys } from '$lib/settings';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
@@ -312,7 +313,11 @@
 </script>
 
 <div class="h-screen flex flex-col overflow-hidden">
-	<Toolbar title="Import Ledger to OPFS" />
+	<Toolbar title="Import Ledger to OPFS">
+		{#snippet actions()}
+			<HelpButton topic="ledger-import" />
+		{/snippet}
+	</Toolbar>
 
 	<div class="flex-1 overflow-y-auto touch-pan-y p-4 flex flex-col gap-4">
 

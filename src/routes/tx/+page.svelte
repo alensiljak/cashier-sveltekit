@@ -14,6 +14,7 @@
 	import { base } from '$app/paths';
 	import TransactionEditor from '$lib/components/XactEditor.svelte';
 	import type { Xact } from '$lib/data/model';
+	import HelpButton from '$lib/help/HelpButton.svelte';
 
 	Notifier.init();
 
@@ -155,6 +156,9 @@
 
 <article class="flex h-screen flex-col">
 	<Toolbar title="Journal Entry">
+		{#snippet actions()}
+			<HelpButton topic="transaction-editor" />
+		{/snippet}
 		{#snippet menuItems()}
 			<ToolbarMenuItem text="Validate" Icon={ShieldCheck} onclick={validateXact} />
 			<ToolbarMenuItem text="Save" />

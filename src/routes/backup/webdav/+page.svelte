@@ -1,6 +1,7 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import Toolbar from '$lib/components/Toolbar.svelte';
+    import HelpButton from '$lib/help/HelpButton.svelte';
     import { settings, SettingKeys } from '$lib/settings';
     import { ScheduledTransaction, Setting } from '$lib/data/model';
     import db from '$lib/data/db';
@@ -192,7 +193,11 @@
     <ToolbarMenuItem text="WebDAV Config" Icon={SettingsIcon} targetNav="/settings/webdav-cfg" />
 {/snippet}
 
-<Toolbar title="WebDAV Backup" {menuItems} />
+{#snippet actions()}
+    <HelpButton topic="webdav-backup" />
+{/snippet}
+
+<Toolbar title="WebDAV Backup" {menuItems} {actions} />
 
 <main class="p-4 flex flex-col gap-6">
     {#if !webdavUrl}

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Toolbar from '$lib/components/Toolbar.svelte';
+	import HelpButton from '$lib/help/HelpButton.svelte';
 	import OpfsFilePicker from '$lib/components/OpfsFilePicker.svelte';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import { FilePlusIcon, UploadIcon, Trash2Icon } from '@lucide/svelte';
@@ -198,6 +199,9 @@
 
 <article class="h-screen flex flex-col overflow-hidden">
 	<Toolbar title="OPFS Files">
+		{#snippet actions()}
+			<HelpButton topic="opfs-file-storage" />
+		{/snippet}
 		{#snippet menuItems()}
 			<ToolbarMenuItem text="New File" Icon={FilePlusIcon} onclick={openNewFileDialog} />
 			<ToolbarMenuItem text="Upload File" Icon={UploadIcon} onclick={() => fileUploadInput?.click()} />

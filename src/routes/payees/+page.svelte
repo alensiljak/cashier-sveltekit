@@ -8,6 +8,7 @@
 	import { ListSearch } from '$lib/utils/ListSearch';
 	import Notifier from '$lib/utils/notifier';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
+	import HelpButton from '$lib/help/HelpButton.svelte';
 
 	Notifier.init();
 
@@ -97,7 +98,11 @@
 {/if}
 
 <section class="flex flex-col h-full">
-	<Toolbar title="Payees" />
+	<Toolbar title="Payees">
+		{#snippet actions()}
+			<HelpButton topic="payees" />
+		{/snippet}
+	</Toolbar>
 	<!-- search toolbar -->
 	<SearchToolbar focus {onSearch} />
 

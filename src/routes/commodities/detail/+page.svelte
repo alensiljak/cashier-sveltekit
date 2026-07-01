@@ -8,6 +8,7 @@
 	import type { PricePoint } from '$lib/components/PriceHistoryChart.svelte';
 	import { ArrowLeftRightIcon } from '@lucide/svelte';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
+	import HelpButton from '$lib/help/HelpButton.svelte';
 
 	type CommodityDirective = {
 		currency: string;
@@ -88,6 +89,9 @@
 
 <article class="flex h-screen flex-col">
 	<Toolbar title="Commodity">
+		{#snippet actions()}
+			<HelpButton topic="commodity-detail" />
+		{/snippet}
 		{#snippet menuItems()}
 			<ToolbarMenuItem
 				text="Currency Converter"

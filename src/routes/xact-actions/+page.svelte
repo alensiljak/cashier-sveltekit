@@ -18,6 +18,7 @@
 		TrashIcon
 	} from '@lucide/svelte';
 	import { onMount } from 'svelte';
+	import HelpButton from '$lib/help/HelpButton.svelte';
 
 	Notifier.init();
 
@@ -112,7 +113,11 @@
 	}
 </script>
 
-<Toolbar title="Transaction Actions" />
+<Toolbar title="Transaction Actions">
+	{#snippet actions()}
+		<HelpButton topic="xact-actions" />
+	{/snippet}
+</Toolbar>
 
 <main class="p-1">
 	<JournalXactRow xact={$xact} />

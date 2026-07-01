@@ -14,7 +14,6 @@
 		LandmarkIcon,
 		ScrollIcon,
 		SettingsIcon,
-		StarIcon,
 		UsersRoundIcon,
 		ContainerIcon,
 		FolderOpenIcon,
@@ -149,18 +148,6 @@
 							>
 								<ListTreeIcon />
 								<span>Account Tree</span>
-							</a>
-						</li>
-						<li>
-							<a
-								href="/favourites"
-								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/favourites'
-									? 'active bg-secondary text-secondary-content'
-									: ''}"
-								onclick={closeDrawer}
-							>
-								<StarIcon />
-								<span>Favourites</span>
 							</a>
 						</li>
 						<li>

@@ -13,6 +13,7 @@
 	import { ArrowUpDownIcon, PlusCircleIcon, PlusIcon, Trash2Icon, TrashIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
+	import HelpButton from '$lib/help/HelpButton.svelte';
 
 	Notifier.init();
 
@@ -206,6 +207,9 @@
 
 <article class="flex h-screen flex-col">
 	<Toolbar title="Favourites">
+		{#snippet actions()}
+			<HelpButton topic="favourites" />
+		{/snippet}
 		{#snippet menuItems()}
 			<ToolbarMenuItem text="Add" Icon={PlusCircleIcon} onclick={onAddClicked} />
 			<ToolbarMenuItem text="Delete" Icon={TrashIcon} onclick={onDeleteClicked} />

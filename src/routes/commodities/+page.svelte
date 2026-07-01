@@ -5,6 +5,7 @@
 	import { onMount } from 'svelte';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import { goto } from '$app/navigation';
+	import HelpButton from '$lib/help/HelpButton.svelte';
 
 	type CommodityRow = { currency: string; date: string; meta: Record<string, unknown> };
 
@@ -51,7 +52,11 @@
 </script>
 
 <main class="flex flex-col h-full">
-	<Toolbar title="Commodities" />
+	<Toolbar title="Commodities">
+		{#snippet actions()}
+			<HelpButton topic="commodities" />
+		{/snippet}
+	</Toolbar>
 	<!-- search toolbar -->
 	<SearchToolbar focus {onSearch} />
 	<!-- Commodity list -->

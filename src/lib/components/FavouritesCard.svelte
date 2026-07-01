@@ -110,9 +110,7 @@
 	async function loadData() {
 		isLoading = true;
 		try {
-			const favNames: string[] =
-				((await settings.get<string[]>(SettingKeys.favouriteAccounts)) ?? [])
-					.slice(0, 5);
+			const favNames: string[] = (await settings.get<string[]>(SettingKeys.favouriteAccounts)) ?? [];
 			if (favNames.length === 0) {
 				accounts = [];
 				return;

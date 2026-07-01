@@ -38,3 +38,9 @@ d:/src/rustledger/crates/rustledger-wasm/pkg
 - Ledger-CLI
 - Beancount
 - RustLedger
+
+# ToDo
+
+- favourites card. Don't limit to 5. Use the whole Favourites list. That way the Favourites page makes sense as the config. Remove from the navbar.
+- Fix tests blocking the deployment
+- remove the reference to Cashier book

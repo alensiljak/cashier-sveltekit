@@ -7,6 +7,7 @@
 	import MultiCurrencyBalance from '$lib/components/MultiCurrencyBalance.svelte';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import appService from '$lib/services/appService';
+	import HelpButton from '$lib/help/HelpButton.svelte';
 
 	interface TreeNode {
 		name: string;
@@ -170,6 +171,9 @@
 
 <main class="flex flex-col flex-1">
 	<Toolbar title="Account Tree">
+		{#snippet actions()}
+			<HelpButton topic="account-tree" />
+		{/snippet}
 		{#snippet menuItems()}
 			<ToolbarMenuItem
 				text={showBaseCurrency ? 'Show original balances' : 'Show balances in base currency'}

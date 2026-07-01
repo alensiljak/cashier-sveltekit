@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
+	import HelpButton from '$lib/help/HelpButton.svelte';
 	import type { UnifiedXact, AccountMeta } from './+page.js';
 	import type { MetaValueJson } from '@rustledger/wasm';
 
@@ -92,6 +93,9 @@
 
 <article class="flex h-screen flex-col">
 	<Toolbar title="Account Transactions">
+		{#snippet actions()}
+			<HelpButton topic="account-transactions" />
+		{/snippet}
 		{#snippet menuItems()}
 			<ToolbarMenuItem
 				Icon={ScaleIcon}

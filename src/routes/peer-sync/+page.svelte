@@ -8,6 +8,7 @@
 	import db from '$lib/data/db';
 	import { readFile, saveFile } from '$lib/utils/opfslib';
 	import Toolbar from '$lib/components/Toolbar.svelte';
+	import HelpButton from '$lib/help/HelpButton.svelte';
 	import { TrustedPeer, Setting, ScheduledTransaction } from '$lib/data/model';
 	import Notifier from '$lib/utils/notifier';
 	import { GitCompareArrowsIcon, EyeIcon, DownloadIcon } from '@lucide/svelte';
@@ -388,7 +389,11 @@
 </script>
 
 <article class="flex h-screen flex-col">
-	<Toolbar title="Peer Sync" />
+	<Toolbar title="Peer Sync">
+		{#snippet actions()}
+			<HelpButton topic="peer-sync" />
+		{/snippet}
+	</Toolbar>
 	<section class="flex-1 space-y-3 overflow-y-auto p-4">
 
 		<!-- Config collapse -->

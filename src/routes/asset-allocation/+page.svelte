@@ -7,6 +7,7 @@
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import AssetClassRow from '$lib/components/AssetClassRow.svelte';
+	import HelpButton from '$lib/help/HelpButton.svelte';
 	import { AaStocksStore, AssetAllocationStore, AssetAllocationLoadedAtStore } from '$lib/data/mainStore.js';
 	import Notifier from '$lib/utils/notifier.js';
 	import { RefreshCwIcon, FileDownIcon, ScaleIcon, PencilIcon } from '@lucide/svelte';
@@ -97,11 +98,13 @@
 
 <article class="flex h-screen flex-col">
 	<Toolbar title="Asset Allocation">
+		{#snippet actions()}
+			<HelpButton topic="asset-allocation" />
+		{/snippet}
 		{#snippet menuItems()}
 			<ToolbarMenuItem text="Edit" Icon={PencilIcon} targetNav="/asset-allocation/editor" />
 			<ToolbarMenuItem text="Export" Icon={FileDownIcon} onclick={onExportClick} />
 			<ToolbarMenuItem text="Validate" Icon={ScaleIcon} onclick={onValidateClick} />
-			<ToolbarMenuItem text="Help" />
 		{/snippet}
 	</Toolbar>
 

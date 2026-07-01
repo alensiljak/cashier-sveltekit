@@ -10,6 +10,7 @@
 	import { xact as xactStore, xactSpan } from '$lib/data/mainStore';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import { CodeIcon, PlusIcon } from '@lucide/svelte';
+	import HelpButton from '$lib/help/HelpButton.svelte';
 
 	function focusOnMount(el: HTMLElement) {
 		el.focus();
@@ -226,6 +227,9 @@
 
 <article class="flex h-screen flex-col">
 	<Toolbar title="Quick Entry">
+		{#snippet actions()}
+			<HelpButton topic="quick-entry" />
+		{/snippet}
 		{#snippet menuItems()}
 			<ToolbarMenuItem text="Show Query" Icon={CodeIcon} onclick={() => queryDialog?.showModal()} />
 		{/snippet}
