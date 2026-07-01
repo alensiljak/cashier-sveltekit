@@ -36,9 +36,7 @@ class DirectiveFormatter {
 		}
 	}
 
-	private static formatTransaction(
-		directive: Directive & { type: 'transaction' }
-	): string {
+	private static formatTransaction(directive: Directive & { type: 'transaction' }): string {
 		const tx = directive as unknown as Record<string, unknown>;
 		const txMeta = (tx.meta ?? {}) as Record<string, unknown>;
 		const tags = Array.isArray(tx.tags) ? tx.tags : [];

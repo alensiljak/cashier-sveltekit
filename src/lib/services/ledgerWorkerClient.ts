@@ -160,7 +160,8 @@ class LedgerWorkerClient {
 		if (this._isLoaded) return;
 		if (get(this._isReloading)) return;
 		try {
-			const useCaching = (await deviceSettings.get<boolean>(DeviceSettingKeys.ledgerCacheEnabled)) ?? true;
+			const useCaching =
+				(await deviceSettings.get<boolean>(DeviceSettingKeys.ledgerCacheEnabled)) ?? true;
 			await this.send<'load-done'>({
 				type: 'ensure-loaded',
 				mainFileName: await this.mainFileName(),
@@ -186,7 +187,8 @@ class LedgerWorkerClient {
 		this._isReloading.set(true);
 		this.setLoaded(false); // prevent queries from reaching the worker while re-parsing
 		try {
-			const useCaching = (await deviceSettings.get<boolean>(DeviceSettingKeys.ledgerCacheEnabled)) ?? true;
+			const useCaching =
+				(await deviceSettings.get<boolean>(DeviceSettingKeys.ledgerCacheEnabled)) ?? true;
 			await this.send<'load-done'>({
 				type: 'invalidate',
 				mainFileName: await this.mainFileName(),

@@ -503,7 +503,8 @@ async function handleMessage(e: MessageEvent<WorkerRequest>): Promise<void> {
 				}
 				const row = ((convertResult.rows ?? []) as any[])[0];
 				const val = row ? ((row as any[])[0] as { number: string; currency: string } | null) : null;
-				if (!val?.number) throw new Error(`No conversion path from ${fromCurrency} to ${toCurrency}`);
+				if (!val?.number)
+					throw new Error(`No conversion path from ${fromCurrency} to ${toCurrency}`);
 				reply({ type: 'convert-currency-done', number: val.number, currency: val.currency });
 				break;
 			}

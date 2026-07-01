@@ -111,7 +111,9 @@ WHERE account = '${params.accountName}'`;
 	// Extract metadata from the account's open directive
 	const directives = await fullLedgerService.getDirectives();
 	const openDirective = directives.find(
-		(d) => (d as { type: string }).type === 'open' && (d as { account: string }).account === params.accountName
+		(d) =>
+			(d as { type: string }).type === 'open' &&
+			(d as { account: string }).account === params.accountName
 	) as { meta?: AccountMeta } | undefined;
 	const accountMeta: AccountMeta = openDirective?.meta ?? {};
 
