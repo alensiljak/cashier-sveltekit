@@ -11,7 +11,7 @@
 
 import { writable, derived, get, type Readable } from 'svelte/store';
 import { Account } from '$lib/data/model';
-import { settings, SettingKeys, deviceSettings, DeviceSettingKeys } from '$lib/settings';
+import { settings, deviceSettings, DeviceSettingKeys } from '$lib/settings';
 import type {
 	WorkerRequestPayload,
 	WorkerResponse,

@@ -9,7 +9,7 @@
 	}
 	let { focus = false, onSearch }: Props = $props();
 
-	let searchField: HTMLInputElement;
+	let searchField = $state<HTMLInputElement | null>(null);
 
 	onMount(() => {
 		if (focus) {

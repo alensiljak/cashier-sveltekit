@@ -6,13 +6,25 @@
 	import { ChevronDown, ChevronRight } from '@lucide/svelte';
 	import AssetClassRow from './AssetClassRow.svelte';
 
-	export let assetClass: AssetClass;
-	export let children: AssetClass[] = [];
-	export let depth: number = 0;
-	export let collapsedState: Record<string, boolean> = {};
-	export let onToggle: (fullname: string) => void = () => {};
-	export let childrenIndex: Map<string, AssetClass[]> = new Map();
-	export let viewMode: 'allocation' | 'value' = 'allocation';
+	interface Props {
+		assetClass: AssetClass;
+		children?: AssetClass[];
+		depth?: number;
+		collapsedState?: Record<string, boolean>;
+		onToggle?: (fullname: string) => void;
+		childrenIndex?: Map<string, AssetClass[]>;
+		viewMode?: 'allocation' | 'value';
+	}
+
+	let {
+		assetClass,
+		children = [],
+		depth = 0,
+		collapsedState = {},
+		onToggle = () => {},
+		childrenIndex = new Map(),
+		viewMode = 'allocation'
+	}: Props = $props();
 
 	function isCollapsible(ac: AssetClass): boolean {
 		return !ac.symbols?.length && children.length > 0;
@@ -38,8 +50,8 @@
 		return childrenIndex.get(fullname) || [];
 	}
 
-	$: allocHidden = viewMode !== 'allocation' ? ' hidden lg:table-cell' : '';
-	$: valueHidden = viewMode !== 'value' ? ' hidden lg:table-cell' : '';
+	let allocHidden = $derived(viewMode !== 'allocation' ? ' hidden lg:table-cell' : '');
+	let valueHidden = $derived(viewMode !== 'value' ? ' hidden lg:table-cell' : '');
 </script>
 
 <!-- Row for this asset class -->
@@ -49,7 +61,11 @@
 			{#if isCollapsible(assetClass)}
 				<button
 					class="hover:bg-base-300 mr-2 rounded p-1 transition-colors duration-200"
-					on:click|preventDefault|stopPropagation={toggleCollapse}
+					onclick={(e) => {
+						e.preventDefault();
+						e.stopPropagation();
+						toggleCollapse();
+					}}
 				>
 					{#if collapsedState[assetClass.fullname]}
 						<ChevronRight class="h-4 w-4" />

@@ -16,7 +16,7 @@
 	Notifier.init();
 
 	let isDeleteAllConfirmationOpen = $state(false);
-	let listContainer: any;
+	let listContainer = $state<HTMLElement | null>(null);
 
 	const lsVersion = ledgerService.version;
 	let xactsWithSpans: Array<{ xact: Xact; span: DirectiveSpan }> = $state([]);

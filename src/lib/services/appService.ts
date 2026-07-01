@@ -8,8 +8,6 @@ import { HomeCardNames } from '$lib/enums';
 import { DefaultCurrencyStore, ScheduledXact, xact } from '$lib/data/mainStore';
 import { loadInvestmentAccounts } from './accountsService';
 import { get } from 'svelte/store';
-// import * as LedgerParser from '$lib/utils/ledgerParser';
-// import * as BeancountParser from '$lib/utils/beancountParser';
 import { formatAmount } from '$lib/utils/formatter';
 import { readFile, saveFile } from '$lib/utils/opfslib';
 import { CASHIER_XACT_FILE, USER_BOOK_FILENAME } from '$lib/constants';
@@ -27,17 +25,8 @@ class AppService {
 	 */
 	clearIds(tx: Xact) {
 		delete tx.id;
-		// tx.postings.forEach((posting: Posting) => {
-		//   delete posting.id
-		//   // delete posting.transactionId
-		// })
 		return tx;
 	}
-
-	// createAccount(name: string) {
-	// 	const acc = new Account(name);
-	// 	return db.accounts.add(acc);
-	// }
 
 	createXactFrom(existing: Xact): Xact {
 		const newXact = new Xact();
@@ -55,30 +44,6 @@ class AppService {
 
 	get db() {
 		return db;
-	}
-
-	// deleteAccount(name: string) {
-	// 	return db.accounts.delete(name);
-	// }
-
-	// async deleteAccounts() {
-	// 	return db.accounts.clear();
-	// }
-
-	/**
-	 * Delete transaction and related postings.
-	 * @param {*} id Int/long id of the transaction to delete
-	 */
-	async deleteTransaction(id: number) {
-		if (typeof id === 'string') {
-			id = Number(id);
-		}
-
-		throw new Error('Delete transaction not implemented yet!');
-
-		// await this.db.xacts.delete(id);
-
-		console.log('Delete transaction completed.', id);
 	}
 
 	/**

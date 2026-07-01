@@ -153,8 +153,7 @@
 			return;
 		}
 
-		$xact.postings.push(new Posting());
-		$xact.postings = $xact.postings;
+		xact.update((current) => ({ ...current, postings: [...current.postings, new Posting()] }));
 	}
 
 	const onAccountClicked = async (index: number) => {

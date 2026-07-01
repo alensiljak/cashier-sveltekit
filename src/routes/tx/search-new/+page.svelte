@@ -43,8 +43,10 @@
 
 	// Re-run search when filters change while there is active search text
 	$effect(() => {
-		// touch reactive filter values
-		filterDateFrom; filterDateTo; filterAccountType;
+		// touch reactive filter values so the effect re-runs when they change
+		void filterDateFrom;
+		void filterDateTo;
+		void filterAccountType;
 		if (searchText.trim().length >= 2) {
 			if (debounceTimer) clearTimeout(debounceTimer);
 			debounceTimer = setTimeout(runSearch, 400);
