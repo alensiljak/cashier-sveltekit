@@ -18,6 +18,7 @@
 	import { processWithConcurrencyLimit } from '$lib/utils/concurrency';
 	import { parseSpecs, matchesAny, collectFsFileHandles } from '$lib/utils/fsScan';
 	import { writeFileObject, deleteFile as deleteOpfsFile } from '$lib/utils/opfslib';
+	import { reloadLedgerFromOpfs } from '$lib/services/ledgerReload';
 
 	const HANDLE_KEY = 'importLedgerDirectoryHandle';
 	const CONCURRENCY = 4;
@@ -232,7 +233,7 @@
 		reloadPhase = 'reloading';
 		reloadError = '';
 		try {
-			await fullLedgerService.invalidate();
+			await reloadLedgerFromOpfs();
 			reloadPhase = 'done';
 		} catch (e) {
 			const err = e as { message?: string };

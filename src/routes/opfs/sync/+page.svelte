@@ -13,6 +13,7 @@
 	import { getManifest, putManifestEntries, type ImportedFileMeta } from '$lib/utils/importManifest';
 	import * as OpfsLib from '$lib/utils/opfslib.js';
 	import { parseSpecs, collectFsFileHandles } from '$lib/utils/fsScan';
+	import { reloadLedgerFromOpfs } from '$lib/services/ledgerReload';
 
 	let scannedFsHandles = $state(new Map<string, FileSystemFileHandle>());
 	import { processWithConcurrencyLimit } from '$lib/utils/concurrency';
@@ -260,7 +261,7 @@
 		reloadPhase = 'reloading';
 		reloadError = '';
 		try {
-			await fullLedgerService.invalidate();
+			await reloadLedgerFromOpfs();
 			reloadPhase = 'done';
 		} catch (e) {
 			const err = e as { message?: string };

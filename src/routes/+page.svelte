@@ -15,7 +15,8 @@
 	import { CardNames } from '$lib/settings';
 	import appService from '$lib/services/appService';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
-	import { checkOpfsStale, recheckOpfsStale, saveOpfsMetaSnapshot } from '$lib/services/opfsMetaCheck';
+	import { checkOpfsStale, recheckOpfsStale } from '$lib/services/opfsMetaCheck';
+	import { reloadLedgerFromOpfs } from '$lib/services/ledgerReload';
 
 	let cards: Array<Component> = $state([]);
 	let hasErrors = $state(false);
@@ -103,9 +104,7 @@
 	async function handleReload() {
 		isReloading = true;
 		try {
-			await fullLedgerService.load();
-			await fullLedgerService.serialize();
-			await saveOpfsMetaSnapshot();
+			await reloadLedgerFromOpfs();
 			isStale = false;
 			showStaleDialog = false;
 		} finally {
