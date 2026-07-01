@@ -4,10 +4,11 @@
 	import ScheduleEditor from '$lib/components/ScheduleEditor.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import XactEditor from '$lib/components/XactEditor.svelte';
+	import HelpButton from '$lib/help/HelpButton.svelte';
+	import Notifier from '$lib/utils/notifier';
 	import { saveScheduledTransaction } from '$lib/data/dbdal';
 	import { ScheduledXact, xact } from '$lib/data/mainStore';
 	import type { ScheduledTransaction } from '$lib/data/model';
-	import Notifier from '$lib/utils/notifier';
 
 	const id = page.params.id;
 
@@ -46,7 +47,11 @@
 </script>
 
 <article>
-	<Toolbar title="Scheduled Transaction Edit" />
+	<Toolbar title="Scheduled Transaction Edit">
+		{#snippet actions()}
+			<HelpButton topic="scx-edit" />
+		{/snippet}
+	</Toolbar>
 	<section class="p-1">
 		<XactEditor />
 

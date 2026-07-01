@@ -13,6 +13,7 @@
 	import Notifier from '$lib/utils/notifier';
 	import { XactAugmenter } from '$lib/utils/xactAugmenter';
 	import { CalendarIcon, PackageIcon, PackageOpenIcon, PlusIcon } from '@lucide/svelte';
+	import HelpButton from '$lib/help/HelpButton.svelte';
 	import { onMount } from 'svelte';
 	import type { PageData } from './$types';
 
@@ -81,6 +82,9 @@
 			<ToolbarMenuItem Icon={PackageIcon} text="Backup" targetNav="/export/scheduled" />
 			<ToolbarMenuItem Icon={PackageOpenIcon} text="Restore" targetNav="/restore/scheduled" />
 			<ToolbarMenuItem Icon={CalendarIcon} text="Calendar" targetNav="/scheduled-xacts/calendar" />
+		{/snippet}
+		{#snippet actions()}
+			<HelpButton topic="scheduled-transactions" />
 		{/snippet}
 	</Toolbar>
 	<!-- search toolbar -->

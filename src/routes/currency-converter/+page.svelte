@@ -6,6 +6,7 @@
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import { settings, SettingKeys } from '$lib/settings';
 	import { ArrowUpDownIcon, XIcon, CopyIcon } from '@lucide/svelte';
+	import HelpButton from '$lib/help/HelpButton.svelte';
 
 	// Pre-seed from URL params: ?from=EUR&to=USD
 	const urlFrom = page.url.searchParams.get('from') ?? '';
@@ -77,7 +78,11 @@
 </script>
 
 <main class="flex flex-col flex-1">
-	<Toolbar title="Currency Converter" />
+	<Toolbar title="Currency Converter">
+		{#snippet actions()}
+			<HelpButton topic="currency-converter" />
+		{/snippet}
+	</Toolbar>
 
 	<div class="flex flex-col gap-4 p-4">
 		{#if isLoadingCurrencies}

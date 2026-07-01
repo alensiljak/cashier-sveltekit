@@ -16,6 +16,7 @@
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import { AA_DEFINITION_FILE, USER_BOOK_FILENAME } from '$lib/constants';
 	import { saveFile, fileExists } from '$lib/utils/opfslib';
+	import HelpButton from '$lib/help/HelpButton.svelte';
 
 	Notifier.init();
 
@@ -196,6 +197,9 @@
 </script>
 
 <Toolbar title="Settings">
+	{#snippet actions()}
+		<HelpButton topic="settings" />
+	{/snippet}
 	{#snippet menuItems()}
 		<ToolbarMenuItem text="OPFS Storage" Icon={BoxIcon} onclick={onOpfsClick} />
 		<ToolbarMenuItem text="JSON Editor" Icon={FileBraces} targetNav="/settings/json-editor" />

@@ -1,8 +1,7 @@
 /*
 	Loads in-app help content from markdown files kept in `doc/help/` at the
-	repo root — deliberately outside `src/` so the content can later be
-	swapped for a git submodule (e.g. the `cashier-book` repo) pointed at the
-	same path, with no changes to the loading code below.
+	repo root — deliberately outside `src/` so content stays easy to browse
+	and edit independently of the app source.
 
 	Each file's basename (without extension) is its topic key, referenced by
 	`<HelpButton topic="..." />` on a page's toolbar.

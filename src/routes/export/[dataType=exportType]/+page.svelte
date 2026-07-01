@@ -8,6 +8,7 @@
 	import { ArrowDownNarrowWideIcon, CopyIcon, FileDownIcon, Share2Icon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import { CASHIER_XACT_FILE } from '$lib/constants';
+	import HelpButton from '$lib/help/HelpButton.svelte';
 
 	Notifier.init();
 
@@ -151,6 +152,9 @@
 
 <article class="flex h-screen flex-col">
 	<Toolbar title="Export {dataType}">
+		{#snippet actions()}
+			<HelpButton topic="export" />
+		{/snippet}
 		{#snippet menuItems()}
 			<ToolbarMenuItem text="Sort by Date" Icon={ArrowDownNarrowWideIcon} onclick={onSortByDateClick} />
 		{/snippet}

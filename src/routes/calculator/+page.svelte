@@ -1,6 +1,8 @@
 <script lang="ts">
 	// For complex expressions with parentheses, we'll use a more sophisticated approach
 	import Fab from '$lib/components/FAB.svelte';
+	import Toolbar from '$lib/components/Toolbar.svelte';
+	import HelpButton from '$lib/help/HelpButton.svelte';
 	import { Check } from '@lucide/svelte';
 	import { selectionMetadata, xact } from '$lib/data/mainStore';
 	import { goto } from '$app/navigation';
@@ -250,7 +252,13 @@
 	}
 </script>
 
-<article class="bg-base-300 flex h-screen flex-col items-center justify-center p-4">
+<article class="bg-base-300 flex h-screen flex-col">
+	<Toolbar title="Calculator">
+		{#snippet actions()}
+			<HelpButton topic="calculator" />
+		{/snippet}
+	</Toolbar>
+	<div class="flex flex-1 flex-col items-center justify-center p-4">
 	<div
 		class="w-full max-w-xs rounded-2xl border-2 border-gray-500 bg-gradient-to-b from-gray-400 to-gray-600 p-5 shadow-2xl"
 	>
@@ -414,6 +422,7 @@
 				=
 			</button>
 		</div>
+	</div>
 	</div>
 	<Fab Icon={Check} onclick={onFabClicked} />
 </article>

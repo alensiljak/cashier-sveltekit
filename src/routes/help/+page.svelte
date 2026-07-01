@@ -1,13 +1,9 @@
 <script lang="ts">
 	import Toolbar from '$lib/components/Toolbar.svelte';
-	import { BookTextIcon, ChevronRightIcon } from '@lucide/svelte';
+	import { ChevronRightIcon } from '@lucide/svelte';
 	import { listHelpTopics } from '$lib/help/helpContent';
 
 	const topics = listHelpTopics();
-
-	function openBook() {
-		window.open('https://alensiljak.github.io/cashier-book/', '_blank');
-	}
 </script>
 
 <article>
@@ -30,16 +26,4 @@
 		{/if}
 	</section>
 
-	<section class="p-1">
-		<p>
-			For topics not yet covered here, see the full
-			<a class="link link-primary" href="https://alensiljak.github.io/cashier-book/">Cashier Book</a>.
-		</p>
-	</section>
-	<section class="p-5 text-center m-5 border border-primary rounded-xl h-50 flex items-center justify-center">
-		<button class="btn btn-primary gap-2" onclick={openBook}>
-			<BookTextIcon class="w-5 h-5" />
-			<span>Open Book</span>
-		</button>
-	</section>
 </article>

@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
+	import HelpButton from '$lib/help/HelpButton.svelte';
 
 	type ErrorItem = { severity: string; line: number; column: number; message: string };
 	type Status = 'idle' | 'loading' | 'done' | 'error';
@@ -43,7 +44,11 @@
 	let totalIssues = $derived(errors.length + warnings.length);
 </script>
 
-<Toolbar title="Ledger Validation" />
+<Toolbar title="Ledger Validation">
+	{#snippet actions()}
+		<HelpButton topic="validation" />
+	{/snippet}
+</Toolbar>
 
 <main class="mx-auto max-w-4xl space-y-4 p-4">
 	<!-- Controls -->

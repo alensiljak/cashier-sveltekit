@@ -14,6 +14,7 @@
 	import { OPFSBackend } from '$lib/storage/opfsBackend';
 	import { LEDGER_CACHE_FILE, LEDGER_CACHE_HASH_FILE } from '$lib/constants';
 	import Toolbar from '$lib/components/Toolbar.svelte';
+	import HelpButton from '$lib/help/HelpButton.svelte';
 
 	let status = '';
 	let isLoaded = false;
@@ -151,7 +152,11 @@
 
 </script>
 
-<Toolbar title="Ledger Serialization"></Toolbar>
+<Toolbar title="Ledger Serialization">
+	{#snippet actions()}
+		<HelpButton topic="serialization" />
+	{/snippet}
+</Toolbar>
 <article class="p-4 max-w-xl space-y-6">
 
 	<!-- Section 1: Ledger Instance -->

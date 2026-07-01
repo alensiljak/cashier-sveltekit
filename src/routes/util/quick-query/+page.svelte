@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Toolbar from '$lib/components/Toolbar.svelte';
+	import HelpButton from '$lib/help/HelpButton.svelte';
 	import AccordionSection from '$lib/components/AccordionSection.svelte';
 	import { CopyIcon } from '@lucide/svelte';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
@@ -266,7 +267,11 @@
 <svelte:window onkeydown={handleKeydown} />
 
 <main class="flex flex-col flex-1">
-	<Toolbar title="Quick Query" />
+	<Toolbar title="Quick Query">
+		{#snippet actions()}
+			<HelpButton topic="quick-query" />
+		{/snippet}
+	</Toolbar>
 
 	<div class="flex flex-col gap-4 p-4">
 		<!-- Command selector -->
