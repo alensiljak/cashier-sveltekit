@@ -9,12 +9,14 @@
 		"preview": "vite preview",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-		"test:unit": "vitest",
+		"test:unit": "vitest run",
+		"test:unit:watch": "vitest",
 		"test:e2e": "playwright test",
+		"verify": "npm run lint && npm run check && npm run test:unit && npm run test:e2e",
 		"lint": "oxfmt --check && oxlint .",
 		"format": "oxfmt",
 		"deploy": "netlify deploy --prod",
-		"publish": "npm run deploy"
+		"publish": "npm run verify && npm run deploy"
 	},
 	"devDependencies": {
 		"@floating-ui/dom": "^1.6.13",

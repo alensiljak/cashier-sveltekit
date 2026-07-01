@@ -1,3 +1,4 @@
+include "book.bean"
 
 2024-01-01 * "Initial balance"
   Assets:Cash 100 EUR

@@ -11,7 +11,9 @@ describe('RustLedger Service', () => {
 	beforeEach(async () => {
 		// Reset module state between tests
 		await vi.resetModules();
-		// Re-initialize WASM for each test
+		// Dynamic import is required here: vi.resetModules() just cleared the
+		// module cache, so a static import wouldn't observe the reset — this
+		// test intentionally exercises module-reload behavior.
 		await import('$lib/services/rustledger').then((module) => {
 			module.default.ensureInitialized();
 		});
@@ -74,10 +76,16 @@ describe('RustLedger Service', () => {
 			expect(accounts[0].name).toBe('Assets:Bank:Checking');
 			expect(accounts[0].balances?.EUR).toBe(2000.0);
 
-			// Parse current values for Assets root
-			const currentValues = parseCurrentValues(beancountOutput);
-			expect(Object.keys(currentValues).length).toBeGreaterThan(0);
+			// parseCurrentValues expects [account, "(amount CUR)"] rows, distinct
+			// shape from the balance-sheet rows above.
+			const currentValueRows: Array<[string, string]> = [
+				['Assets:Bank:Checking', '(2000.00 EUR)'],
+				['Assets:Bank:Savings', '(1000.00 EUR)']
+			];
+			const currentValues = parseCurrentValues(currentValueRows);
+			expect(Object.keys(currentValues).length).toBe(2);
 			expect(currentValues['Assets:Bank:Checking'].quantity).toBe(2000.0);
+			expect(currentValues['Assets:Bank:Checking'].currency).toBe('EUR');
 		});
 	});
 
