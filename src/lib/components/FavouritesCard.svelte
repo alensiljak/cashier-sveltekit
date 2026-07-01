@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Settings2Icon, StarIcon } from '@lucide/svelte';
+	import { ChevronDownIcon, ChevronUpIcon, Settings2Icon, StarIcon } from '@lucide/svelte';
 	import HomeCardTemplate from './HomeCardTemplate.svelte';
 	import AccountRow from './AccountRow.svelte';
 	import { goto } from '$app/navigation';
@@ -32,6 +32,8 @@
 
 	let accounts: Array<Account> = $state(cachedAccountsToState());
 	let maxBalance: number = $state(0);
+	let expanded = $state(false);
+	const visibleAccounts = $derived(expanded ? accounts : accounts.slice(0, 5));
 
 	$effect(() => {
 		if (accounts.length > 0) {
@@ -165,6 +167,11 @@
 	async function onClick() {
 		await goto('/accounts/groups', { replaceState: false });
 	}
+
+	function onToggleExpand(e: MouseEvent) {
+		e.stopPropagation();
+		expanded = !expanded;
+	}
 </script>
 
 <HomeCardTemplate onclick={onClick}>
@@ -172,6 +179,20 @@
 		<StarIcon />
 	{/snippet}
 	{#snippet menu()}
+		{#if accounts.length > 5}
+			<button
+				type="button"
+				class="btn btn-ghost btn-square btn-sm"
+				aria-label={expanded ? 'Collapse favourites' : 'Expand favourites'}
+				onclick={onToggleExpand}
+			>
+				{#if expanded}
+					<ChevronUpIcon />
+				{:else}
+					<ChevronDownIcon />
+				{/if}
+			</button>
+		{/if}
 		<a href="/favourites">
 			<Settings2Icon />
 		</a>
@@ -185,7 +206,7 @@
 		{#if accounts.length === 0}
 			<p>There are no favourite accounts defined</p>
 		{:else}
-			{#each accounts as account: Account (account.name)}
+			{#each visibleAccounts as account: Account (account.name)}
 				<AccountRow {account} balancesLoaded={true} {maxBalance} compact />
 			{/each}
 		{/if}
