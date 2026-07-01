@@ -65,7 +65,9 @@
 			let search = new ListSearch();
 			let regex = search.getRegex(value);
 
-			filteredList = allItems.filter((sx) => regex.test(sx.transaction?.payee as string));
+			filteredList = allItems.filter(
+				(sx) => regex.test(sx.transaction?.payee as string) || regex.test(sx.remarks ?? '')
+			);
 		} else {
 			// Clear filter. Use all records.
 			filteredList = allItems;
