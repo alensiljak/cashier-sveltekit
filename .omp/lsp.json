@@ -1,0 +1,7 @@
+{
+	"servers": {
+		"vscode-css-language-server": {
+			"disabled": true
+		}
+	}
+}

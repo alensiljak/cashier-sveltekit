@@ -1,6 +1,6 @@
 import svelte from 'eslint-plugin-svelte';
+import tsParser from '@typescript-eslint/parser';
 import svelteConfig from './svelte.config.js';
-import tseslint from '@typescript-eslint/eslint-plugin';
 
 // Note: JS/TS linting is handled by oxlint (see package.json lint script).
 // This ESLint config only covers Svelte template linting via eslint-plugin-svelte.
@@ -26,10 +26,10 @@ export default [
 		files: ['**/*.svelte', '**/*.svelte.ts', '**/*.svelte.js'],
 		languageOptions: {
 			parserOptions: {
+				parser: tsParser,
 				extraFileExtensions: ['.svelte'],
 				svelteConfig
 			}
 		}
-	},
-	tseslint.configs.recommended
+	}
 ];
