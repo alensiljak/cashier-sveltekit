@@ -18,6 +18,7 @@
 		ContainerIcon,
 		FolderOpenIcon,
 		FolderInputIcon,
+		FolderOutputIcon,
 		ArrowLeftRightIcon,
 		ChartNoAxesCombinedIcon,
 		HardDriveIcon,
@@ -227,6 +228,19 @@
 							>
 								<FolderInputIcon />
 								<span>Ledger Import</span>
+							</a>
+						</li>
+						<li>
+							<a
+								href="/opfs/export-ledger"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname ===
+								'/opfs/export-ledger'
+									? 'active bg-secondary text-secondary-content'
+									: ''}"
+								onclick={closeDrawer}
+							>
+								<FolderOutputIcon />
+								<span>Ledger Export</span>
 							</a>
 						</li>
 						<li>

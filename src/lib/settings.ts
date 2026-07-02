@@ -86,6 +86,8 @@ export const DeviceSettingKeys = {
 	peerName: 'peerName',
 	// import book from filesystem via File System API
 	importBookDirectory: 'importBookDirectory',
+	// export book to filesystem via File System API
+	exportBookDirectory: 'exportBookDirectory',
 	// Whether to use the binary ledger cache on load (default: true)
 	ledgerCacheEnabled: 'ledgerCacheEnabled',
 	// OPFS file metadata snapshot for staleness detection (path -> "size|lastModified")

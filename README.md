@@ -38,4 +38,3 @@ d:/src/rustledger/crates/rustledger-wasm/pkg
 - Ledger-CLI
 - Beancount
 - RustLedger
-

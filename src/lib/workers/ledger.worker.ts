@@ -85,10 +85,10 @@ async function opfsListBeanFiles(): Promise<Array<{ path: string; content: strin
 	const results: Array<{ path: string; content: string }> = [];
 
 	async function walk(dir: FileSystemDirectoryHandle, prefix: string) {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		for await (const [name, handle] of (dir as any).entries()) {
+		for await (const [name, handle] of dir.entries()) {
 			const path = prefix ? `${prefix}/${name}` : name;
 			if (handle.kind === 'directory') {
+				if (name.startsWith('.')) continue;
 				await walk(handle as FileSystemDirectoryHandle, path);
 			} else if (name.endsWith('.bean')) {
 				const file = await (handle as FileSystemFileHandle).getFile();
@@ -124,11 +124,10 @@ async function opfsCacheLastModified(): Promise<number> {
 async function opfsBeanFilesMaxModified(): Promise<number> {
 	const root = await navigator.storage.getDirectory();
 	let maxModified = 0;
-
 	async function walk(dir: FileSystemDirectoryHandle): Promise<void> {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		for await (const [name, handle] of (dir as any).entries()) {
+		for await (const [name, handle] of dir.entries()) {
 			if (handle.kind === 'directory') {
+				if (name.startsWith('.')) continue;
 				await walk(handle as FileSystemDirectoryHandle);
 			} else if (name.endsWith('.bean')) {
 				try {
