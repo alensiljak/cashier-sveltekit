@@ -11,7 +11,7 @@ import {
 } from '$lib/utils/opfslib';
 import { parseSpecs, matchesAny } from '$lib/utils/fsScan';
 import { settings, SettingKeys } from '$lib/settings';
-import type { SyncEntry, SyncSource } from './SyncSource';
+import { normalizeEol, type SyncEntry, type SyncSource } from './SyncSource';
 
 const DEFAULT_FILE_SPEC = '*.bean, *.toml';
 const CACHE_DIR_PREFIX = '.cashier/';
@@ -49,12 +49,20 @@ export class OpfsSource implements SyncSource {
 		await opfsDeleteFile(path);
 	}
 
-	/** SHA-256 digest (hex) of the file's own content, computed on this device. */
+	/**
+	 * SHA-256 digest (hex) of the file's content, computed on this device.
+	 * Hashes EOL-normalized content — Android/desktop editors disagree on
+	 * line endings and trailing newlines, and a peer's byte-identical file
+	 * must still verify as a match despite that (see `normalizeEol`).
+	 */
 	async hashFile(path: string): Promise<string | undefined> {
 		const content = await opfsReadFile(path);
 		if (content === undefined) return undefined;
 
-		const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(content));
+		const digest = await crypto.subtle.digest(
+			'SHA-256',
+			new TextEncoder().encode(normalizeEol(content))
+		);
 		return Array.from(new Uint8Array(digest))
 			.map((b) => b.toString(16).padStart(2, '0'))
 			.join('');

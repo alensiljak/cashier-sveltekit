@@ -26,7 +26,7 @@
 		type RelayStrategy
 	} from '$lib/sync/peerPresence.svelte';
 	import { OpfsSource } from '$lib/sync/OpfsSource';
-	import type { SyncEntry } from '$lib/sync/SyncSource';
+	import { normalizeEol, type SyncEntry } from '$lib/sync/SyncSource';
 	import {
 		diffAgainstBaseline,
 		type DiffEntry,
@@ -368,14 +368,17 @@
 		status?: SyncStatus;
 		/** User override if set, else the diff's default action. Undefined when no diff is available yet. */
 		effectiveAction?: SyncAction;
+		/** Directories only: count of conflicted files anywhere in this subtree, shown even while collapsed. */
+		conflictCount?: number;
 	}
 
-	let collapsedDirs = $state(new Set<string>());
+	/** Paths the user has explicitly expanded — folders default to collapsed. */
+	let expandedDirs = $state(new Set<string>());
 
 	function buildTree(
 		localList: SyncEntry[],
 		remoteList: SyncEntry[],
-		collapsed: Set<string>,
+		expandedPaths: Set<string>,
 		diffs: Map<string, DiffEntry>,
 		userOverrides: Map<string, SyncAction>
 	): TreeRow[] {
@@ -395,15 +398,19 @@
 			const parts = path.split('/');
 			for (let i = 1; i < parts.length; i++) dirPaths.add(parts.slice(0, i).join('/'));
 		}
+		const dirRowByPath = new Map<string, TreeRow>();
 		for (const dirPath of dirPaths) {
 			const parent = dirPath.includes('/') ? dirPath.slice(0, dirPath.lastIndexOf('/')) : '';
-			addChild(parent, {
+			const dirRow: TreeRow = {
 				path: dirPath,
 				name: dirPath.split('/').pop()!,
 				kind: 'directory',
 				depth: parent ? parent.split('/').length : 0,
-				expanded: !collapsed.has(dirPath)
-			});
+				expanded: expandedPaths.has(dirPath),
+				conflictCount: 0
+			};
+			dirRowByPath.set(dirPath, dirRow);
+			addChild(parent, dirRow);
 		}
 		for (const [path, { local, remote }] of byPath) {
 			const parent = path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '';
@@ -419,6 +426,13 @@
 				status: diff?.status,
 				effectiveAction: diff ? (userOverrides.get(path) ?? diff.action) : undefined
 			});
+			if (diff?.status === 'conflict') {
+				const parts = path.split('/');
+				for (let i = 1; i < parts.length; i++) {
+					const dirRow = dirRowByPath.get(parts.slice(0, i).join('/'));
+					if (dirRow) dirRow.conflictCount!++;
+				}
+			}
 		}
 
 		const rows: TreeRow[] = [];
@@ -436,7 +450,7 @@
 	}
 
 	let treeRows = $derived(
-		buildTree(localEntries, remoteEntries ?? [], collapsedDirs, diffByPath, overrides)
+		buildTree(localEntries, remoteEntries ?? [], expandedDirs, diffByPath, overrides)
 	);
 
 	// ─── Per-file diff/preview ───────────────────────────────────────────────
@@ -478,7 +492,7 @@
 	let diffModalIdentical = $derived(
 		diffModalLocalContent !== undefined &&
 			diffModalRemoteContent !== undefined &&
-			diffModalLocalContent === diffModalRemoteContent
+			normalizeEol(diffModalLocalContent) === normalizeEol(diffModalRemoteContent)
 	);
 
 	/** Start index (into diffModalLines) of each contiguous run of added/removed lines. */
@@ -626,10 +640,10 @@
 	);
 
 	function toggleDir(path: string) {
-		const next = new Set(collapsedDirs);
+		const next = new Set(expandedDirs);
 		if (next.has(path)) next.delete(path);
 		else next.add(path);
-		collapsedDirs = next;
+		expandedDirs = next;
 	}
 
 	// ─── Row-expand state, used by the "Compact" view mode ─────────────────────
@@ -643,8 +657,7 @@
 		expandedRows = next;
 	}
 
-	// ─── View mode — three row-layout candidates, switchable for side-by-side
-	// evaluation. Pick a winner and delete the other two + this switcher.
+	// ─── View mode — three row-layout candidates (cards / compact / grouped) ──
 
 	type ViewMode = 'cards' | 'compact' | 'grouped';
 	let viewMode = $state<ViewMode>('cards');
@@ -723,11 +736,14 @@
 		onclick={() => toggleDir(row.path)}
 	>
 		{#if row.expanded}
-			<FolderOpenIcon class="h-4 w-4 shrink-0 opacity-60" />
+			<FolderOpenIcon class="h-4 w-4 shrink-0 {row.conflictCount ? 'text-error' : 'opacity-60'}" />
 		{:else}
-			<FolderIcon class="h-4 w-4 shrink-0 opacity-60" />
+			<FolderIcon class="h-4 w-4 shrink-0 {row.conflictCount ? 'text-error' : 'opacity-60'}" />
 		{/if}
-		{row.name}
+		<span class="truncate">{row.name}</span>
+		{#if row.conflictCount}
+			<span class="badge badge-error badge-sm ml-auto">{row.conflictCount}</span>
+		{/if}
 	</button>
 {/snippet}
 
@@ -883,17 +899,17 @@
 			<div class="join w-full">
 				<button
 					type="button"
-					class="btn btn-xs join-item flex-1 {viewMode === 'cards' ? 'btn-active' : ''}"
+					class="btn btn-xs join-item flex-1 {viewMode === 'cards' ? 'btn-outline btn-primary' : ''}"
 					onclick={() => (viewMode = 'cards')}>Cards</button
 				>
 				<button
 					type="button"
-					class="btn btn-xs join-item flex-1 {viewMode === 'compact' ? 'btn-active' : ''}"
+					class="btn btn-xs join-item flex-1 {viewMode === 'compact' ? 'btn-outline btn-primary' : ''}"
 					onclick={() => (viewMode = 'compact')}>Compact</button
 				>
 				<button
 					type="button"
-					class="btn btn-xs join-item flex-1 {viewMode === 'grouped' ? 'btn-active' : ''}"
+					class="btn btn-xs join-item flex-1 {viewMode === 'grouped' ? 'btn-outline btn-primary' : ''}"
 					onclick={() => (viewMode = 'grouped')}>Grouped</button
 				>
 			</div>

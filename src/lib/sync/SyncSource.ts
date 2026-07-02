@@ -38,3 +38,16 @@ export interface SyncSource {
 	 */
 	hashFile(path: string): Promise<string | undefined>;
 }
+
+/**
+ * Normalizes text for content-equality checks: CRLF/CR → LF, then drops one
+ * trailing newline so "file ends with \n" vs "doesn't" isn't a difference
+ * either. Android and Windows/desktop editors disagree on both, so a
+ * byte-identical comparison (hashing, the diff modal's "identical" check)
+ * flags files as changed even when their content is the same. Comparison
+ * only — never applied to what actually gets read/written, so pulled files
+ * stay byte-faithful to the peer's copy.
+ */
+export function normalizeEol(content: string): string {
+	return content.replace(/\r\n?/g, '\n').replace(/\n$/, '');
+}

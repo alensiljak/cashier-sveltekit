@@ -17,9 +17,31 @@ export async function readFile(filename: string) {
 
 export async function saveFile(filename: string, content: string) {
 	const stream = await openWrite(filename);
-	const data = new TextEncoder().encode(content);
+	const data = new TextEncoder().encode(canonicalizeEol(filename, content));
 	await stream?.write(data);
 	await stream?.close();
+}
+
+/**
+ * Canonicalizes line endings before persisting: CRLF/CR → LF for any text
+ * file, plus — for `.bean` files specifically — exactly one trailing
+ * newline. Beancount requires the final newline: `ledgerWorkerClient`
+ * concatenates included book files in memory at load time, and a missing
+ * one merges the last directive of one file into the first line of the
+ * next. Android and Windows/desktop editors disagree on both, which
+ * otherwise makes byte-identical files look changed to peer sync
+ * (src/lib/sync/SyncSource.ts's `normalizeEol` handles the comparison side
+ * for content already on disk). Every write funnels through here, so files
+ * converge to the same bytes regardless of what platform last touched them
+ * — checks for existence of CR / a trailing newline first so
+ * already-canonical content (the steady-state case) skips the regex pass
+ * and allocation entirely.
+ */
+function canonicalizeEol(filename: string, content: string): string {
+	if (content === '') return content;
+	let out = content.includes('\r') ? content.replace(/\r\n?/g, '\n') : content;
+	if (filename.endsWith('.bean') && !out.endsWith('\n')) out += '\n';
+	return out;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
