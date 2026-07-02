@@ -1,13 +1,26 @@
 <script lang="ts">
 	import Toolbar from '$lib/components/Toolbar.svelte';
-	import { ChevronRightIcon } from '@lucide/svelte';
+	import { ChevronRightIcon, SearchIcon, XIcon } from '@lucide/svelte';
 	import { listHelpTopics } from '$lib/help/helpContent';
 
-	const topics = listHelpTopics();
+	let query = $state('');
+	const topics = $derived(listHelpTopics(query));
 </script>
 
 <article>
 	<Toolbar title="Help"></Toolbar>
+
+	<section class="p-3 pb-0">
+		<label class="input input-bordered flex w-full items-center gap-2">
+			<SearchIcon size={16} class="opacity-50" />
+			<input type="search" placeholder="Search help…" class="grow" bind:value={query} />
+			{#if query}
+				<button type="button" aria-label="Clear search" onclick={() => (query = '')}>
+					<XIcon size={16} class="opacity-50" />
+				</button>
+			{/if}
+		</label>
+	</section>
 
 	<section class="p-1">
 		{#if topics.length}
@@ -22,7 +35,7 @@
 				{/each}
 			</ul>
 		{:else}
-			<p>No in-app help topics yet.</p>
+			<p class="p-3 opacity-70">No help topics match "{query}".</p>
 		{/if}
 	</section>
 

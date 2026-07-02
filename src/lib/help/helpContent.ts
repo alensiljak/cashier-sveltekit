@@ -39,12 +39,24 @@ export function getHelpHtml(topic: string): string | null {
  * All topics with a display title (the markdown's first `# ` heading, or
  * the topic key itself if none), sorted alphabetically by title — used by
  * the /help index page to list every available topic.
+ *
+ * When `query` is given, only topics whose title or body text contains it
+ * (case-insensitive) are returned — a simple full-text filter rather than
+ * a title-only one, since topic titles are short and often don't mention
+ * the terms someone would search for.
  */
-export function listHelpTopics(): Array<{ topic: string; title: string }> {
+export function listHelpTopics(query?: string): Array<{ topic: string; title: string }> {
+	const needle = query?.trim().toLowerCase();
 	return Object.keys(helpTopics)
 		.map((topic) => ({
 			topic,
-			title: helpTopics[topic].match(/^#\s+(.+)$/m)?.[1] ?? topic
+			title: helpTopics[topic].match(/^#\s+(.+)$/m)?.[1] ?? topic,
+			body: helpTopics[topic]
 		}))
+		.filter(
+			({ title, body }) =>
+				!needle || title.toLowerCase().includes(needle) || body.toLowerCase().includes(needle)
+		)
+		.map(({ topic, title }) => ({ topic, title }))
 		.sort((a, b) => a.title.localeCompare(b.title));
 }
