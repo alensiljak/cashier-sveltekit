@@ -11,7 +11,7 @@
 		TriangleAlertIcon,
 		Check
 	} from '@lucide/svelte';
-	import type { RequestAction } from '@trystero-p2p/core';
+	import { PeerSource } from '$lib/sync/PeerSource';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import {
@@ -72,14 +72,8 @@
 		goto(page.url.pathname, { replaceState: true, keepFocus: true, noScroll: true });
 	}
 
-	function registerListFilesAction() {
-		listFilesAction = presence.makeRequestAction<null, SyncEntry[]>(
-			'list-files',
-			async (_request, { peerId: fromId }) => {
-				if (!presence.peersMap[fromId]?.isTrusted) return [];
-				return await opfsSource.listTree();
-			}
-		);
+	function makePeerSource(): PeerSource {
+		return new PeerSource(presence, opfsSource, () => activePeerId);
 	}
 
 	onMount(async () => {
@@ -91,7 +85,7 @@
 		// device. Gating this on `trustedPeers.length > 0` broke discovery whenever
 		// trust wasn't yet fully mutual.
 		await presence.join(presence.roomCode);
-		registerListFilesAction();
+		peerSource = makePeerSource();
 	});
 
 	/** Switches the signaling network. Reconnects a live room so the new strategy takes effect immediately. */
@@ -102,7 +96,7 @@
 		await presence.setStrategy(value);
 		if (wasInRoom) {
 			await presence.join(presence.roomCode);
-			registerListFilesAction();
+			peerSource = makePeerSource();
 		}
 		// Peer set differs on the new network — force a refetch.
 		fetchedTrysteroId = null;
@@ -128,7 +122,7 @@
 	// Display-only for now: no diff classification / baseline comparison yet
 	// (see doc/projects/2026-07-02_beancount-peer-sync.md, Foundation phase).
 
-	let listFilesAction: RequestAction<null, SyncEntry[]> | null = null;
+	let peerSource: PeerSource | null = null;
 
 	let localEntries = $state<SyncEntry[]>([]);
 	let localLoaded = $state(false);
@@ -154,10 +148,7 @@
 		remoteLoading = true;
 		remoteError = null;
 		try {
-			remoteEntries = await listFilesAction!.request(null, {
-				target: trysteroId,
-				timeoutMs: 10_000
-			});
+			remoteEntries = await peerSource!.listTree();
 		} catch (e) {
 			remoteError = (e as Error).message;
 			remoteEntries = null;
@@ -171,7 +162,7 @@
 	});
 
 	$effect(() => {
-		if (!activePeer || !listFilesAction) return;
+		if (!activePeer || !peerSource) return;
 		const trysteroId = presence.onlineTrysteroId(activePeer.id);
 		if (!trysteroId) {
 			fetchedTrysteroId = null;

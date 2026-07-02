@@ -11,10 +11,10 @@ absorb `opfs/sync` (FS↔OPFS) onto the same code path.
 
 Two narrow, unrelated sync surfaces exist:
 
-| Page        | Transport                                      | Scope                                                            | Baseline                                                                                                      | Diff                                                                   |
-| ----------- | ---------------------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `opfs/sync` | File System Access API (`showDirectoryPicker`) | one local dir ↔ OPFS                                             | `importManifest.ts` — raw IndexedDB (not Dexie), single global `{path,size,lastModified,importedAt}` baseline | none — flat table, metadata-only, no tree, no content preview          |
-| `peer-sync` | `@trystero-p2p/*` (WebRTC; Nostr/MQTT/BitTorrent relay, switchable) | hardcoded 3 items: `cashier.bean`, settings JSON, scheduled JSON | none — always fetches full remote snapshot | yes, via `diff` pkg, but pull-only, no baseline-aware change detection |
+| Page        | Transport                                                           | Scope                                                            | Baseline                                                                                                      | Diff                                                                   |
+| ----------- | ------------------------------------------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `opfs/sync` | File System Access API (`showDirectoryPicker`)                      | one local dir ↔ OPFS                                             | `importManifest.ts` — raw IndexedDB (not Dexie), single global `{path,size,lastModified,importedAt}` baseline | none — flat table, metadata-only, no tree, no content preview          |
+| `peer-sync` | `@trystero-p2p/*` (WebRTC; Nostr/MQTT/BitTorrent relay, switchable) | hardcoded 3 items: `cashier.bean`, settings JSON, scheduled JSON | none — always fetches full remote snapshot                                                                    | yes, via `diff` pkg, but pull-only, no baseline-aware change detection |
 
 ## Design
 
@@ -79,8 +79,8 @@ A client can currently only pull remote changes. Pushing (writing to a peer) is 
 ### Peer Protocol
 
 - [x] Implement `list-files` as a `kind:'request'` trystero action via `PeerPresence.makeRequestAction`, trust-checked against `TrustedPeer` (untrusted callers get `[]`)
-- [ ] Implement `read-file`/`hash-file` the same way; remove `sync-request`/`sync-response` and the hand-rolled `pendingRequests` map from `peer-sync/+page.svelte` once `PeerSource` replaces them
-- [ ] Implement `PeerSource` on top of the generalized protocol
+- [x] Implement `read-file`/`hash-file` the same way; removed `sync-request`/`sync-response` and the hand-rolled `pendingRequests` map from `peer-sync/+page.svelte` now that `PeerSource` replaces them
+- [x] Implement `PeerSource` on top of the generalized protocol — registers all three request actions (responder side, backed by a `SyncSource`) and issues them against a resolved target peer (querying side); `writeFile`/`deleteFile` throw until push ships
 
 ### Relay Strategy
 
@@ -93,14 +93,14 @@ A client can currently only pull remote changes. Pushing (writing to a peer) is 
 
 - [ ] Build `src/routes/sync/beancount/+page.svelte`: tree view (extend `OpfsFilePicker.svelte`), per-row status + direction toggle (pull/skip only), apply action
   - [x] Peer selection: joins the room unconditionally on mount (gating on `trustedPeers.length > 0` broke discovery whenever trust wasn't yet mutual); 15s post-join discovery grace window (was 3s — real Nostr-relay joins can take longer) before an absent trusted peer reads as offline rather than connecting; no trusted peers → link to `/peer-sync`; trusted peers but none online → waiting spinner; peers online → single-select list with a live connection dot
-  - [x] Real local + remote file listing: local via `OpfsSource.listLocalTree()`, remote via the `list-files` request action (10s timeout); side-by-side table (name, local size/date, direction arrow, remote size/date)
+  - [x] Real local + remote file listing: local via `OpfsSource.listTree()`, remote via `PeerSource.listTree()` (10s timeout); side-by-side table (name, local size/date, direction arrow, remote size/date)
   - [x] Room join/identity/trust logic extracted into shared `src/lib/sync/peerPresence.svelte.ts` (`PeerPresence`), also used by `peer-sync/+page.svelte`; nav entry added under Data
   - [x] Fixed peer-selection URL to build off `page.url.pathname` instead of a hardcoded relative path; added a global `window.onerror`/`unhandledrejection` logger in `+layout.svelte` to catch this class of silent failure earlier
   - [ ] Per-row status pill (unchanged / local-newer / remote-newer / conflict) and direction toggle — blocked on diff classification (Foundation) landing
   - [ ] Diff/verify/apply buttons — present in the layout, disabled pending the sync engine
 - [ ] Wire per-file diff preview using the shared diff util
 - [ ] Wire the conflict-row "Verify" action: `hashFile(path)` on both sources, downgrade to unchanged/skip on match, else keep as conflict
-- [ ] Strip sync-panel/preview/diff/pull UI out of `peer-sync/+page.svelte`, replace "Sync from" with a link into the new page
+- [x] Strip sync-panel/preview/diff/pull UI out of `peer-sync/+page.svelte`, replace "Sync from" with a link into the new page
 - [ ] Update baseline (`syncBaseline` table) after each applied sync
 
 ### Verification
