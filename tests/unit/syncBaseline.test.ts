@@ -52,7 +52,10 @@ test('getBaseline scopes strictly to the given endpointId', async () => {
 
 	assert.equal(baselineB.size, 1);
 	assert.isTrue(baselineB.has('other.beancount'));
-	assert.isFalse(baselineB.has('shared-name.beancount'), "endpoint B must not see endpoint A's rows");
+	assert.isFalse(
+		baselineB.has('shared-name.beancount'),
+		"endpoint B must not see endpoint A's rows"
+	);
 });
 
 test('updateBaseline overwrites an existing row for the same endpointId+path (upsert)', async () => {

@@ -73,7 +73,13 @@ export function diffAgainstBaseline(
 			changedSinceBaseline(localEntry, base),
 			changedSinceBaseline(remoteEntry, base)
 		);
-		result.push({ path, status, action: defaultActionFor(status), local: localEntry, remote: remoteEntry });
+		result.push({
+			path,
+			status,
+			action: defaultActionFor(status),
+			local: localEntry,
+			remote: remoteEntry
+		});
 	}
 
 	return result.sort((a, b) => a.path.localeCompare(b.path));

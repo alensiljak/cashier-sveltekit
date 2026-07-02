@@ -6,14 +6,19 @@
 		FolderIcon,
 		FolderOpenIcon,
 		FileIcon,
-		ArrowLeftIcon,
-		ArrowRightIcon,
 		TriangleAlertIcon,
-		Check
+		Check,
+		DownloadIcon,
+		ShieldCheckIcon,
+		GitCompareArrowsIcon,
+		ChevronDownIcon,
+		ChevronRightIcon
 	} from '@lucide/svelte';
 	import { PeerSource } from '$lib/sync/PeerSource';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
+	import HelpButton from '$lib/help/HelpButton.svelte';
+	import Notifier from '$lib/utils/notifier';
 	import {
 		PeerPresence,
 		RELAY_STRATEGIES,
@@ -21,6 +26,11 @@
 	} from '$lib/sync/peerPresence.svelte';
 	import { OpfsSource } from '$lib/sync/OpfsSource';
 	import type { SyncEntry } from '$lib/sync/SyncSource';
+	import { diffAgainstBaseline, type DiffEntry, type SyncStatus, type SyncAction } from '$lib/sync/syncDiff';
+	import { getBaseline, updateBaseline, removeBaselineEntries } from '$lib/sync/syncBaseline';
+	import { buildDiffLines, type DiffLine } from '$lib/utils/diffText';
+	import type { PeerSyncBaseline } from '$lib/data/model';
+
 	// ─── Peer selection & connection state ──────────────────────────────────────
 
 	const presence = new PeerPresence();
@@ -58,8 +68,20 @@
 		}
 	}
 
+	function resetSyncState() {
+		overrides = new Map();
+		verifying = new Set();
+		expandedRows = new Set();
+		baseline = new Map();
+		localEntries = [];
+		localLoaded = false;
+		remoteEntries = null;
+		fetchedTrysteroId = null;
+	}
+
 	function selectPeer(id: string) {
 		activePeerId = id;
+		resetSyncState();
 		goto(`${page.url.pathname}?peer=${id}`, {
 			replaceState: true,
 			keepFocus: true,
@@ -69,6 +91,7 @@
 
 	function changePeer() {
 		activePeerId = null;
+		resetSyncState();
 		goto(page.url.pathname, { replaceState: true, keepFocus: true, noScroll: true });
 	}
 
@@ -119,8 +142,6 @@
 	onDestroy(() => presence.leave());
 
 	// ─── File listing (local + remote) ──────────────────────────────────────────
-	// Display-only for now: no diff classification / baseline comparison yet
-	// (see doc/projects/2026-07-02_beancount-peer-sync.md, Foundation phase).
 
 	let peerSource: PeerSource | null = null;
 
@@ -172,6 +193,165 @@
 		if (trysteroId !== fetchedTrysteroId) loadRemoteTree(trysteroId);
 	});
 
+	// ─── Diff classification against the last-synced baseline ─────────────────
+	// Metadata-only (never hashes automatically) — see doc/projects/2026-07-02_beancount-peer-sync.md.
+
+	let baseline = $state(new Map<string, PeerSyncBaseline>());
+
+	$effect(() => {
+		if (!activePeer) {
+			baseline = new Map();
+			return;
+		}
+		getBaseline(activePeer.id).then((b) => (baseline = b));
+	});
+
+	/** Per-path action chosen by the user, overriding the diff's default. Reset whenever the peer or file set changes. */
+	let overrides = $state(new Map<string, SyncAction>());
+
+	function setAction(path: string, action: SyncAction) {
+		const next = new Map(overrides);
+		next.set(path, action);
+		overrides = next;
+	}
+
+	function pullAll(rows: { path: string }[]) {
+		const next = new Map(overrides);
+		for (const r of rows) next.set(r.path, 'pull');
+		overrides = next;
+	}
+
+	// Only classify once we actually have a remote scan — an offline/not-yet-loaded
+	// peer must never be treated as "remote deleted everything".
+	let diffByPath = $derived.by(() => {
+		if (!activePeer || remoteEntries === null) return new Map<string, DiffEntry>();
+		const entries = diffAgainstBaseline(localEntries, remoteEntries, baseline);
+		return new Map(entries.map((e) => [e.path, e]));
+	});
+
+	// ─── Verify (hash-confirm) a conflict row without pulling content ──────────
+
+	let verifying = $state(new Set<string>());
+
+	async function verifyRow(path: string) {
+		if (!activePeer || !peerSource) return;
+		verifying = new Set(verifying).add(path);
+		try {
+			const [localHash, remoteHash] = await Promise.all([
+				opfsSource.hashFile(path),
+				peerSource.hashFile(path)
+			]);
+			if (localHash !== undefined && localHash === remoteHash) {
+				const localEntry = localEntries.find((e) => e.path === path);
+				if (localEntry) {
+					await updateBaseline(activePeer.id, [localEntry]);
+					baseline = await getBaseline(activePeer.id);
+				}
+				const next = new Map(overrides);
+				next.delete(path);
+				overrides = next;
+				Notifier.success(`${path}: contents match — marked as synced.`);
+			} else {
+				Notifier.warning(`${path}: contents differ — still a conflict.`);
+			}
+		} catch (e) {
+			Notifier.error(`Verify failed: ${(e as Error).message}`);
+		} finally {
+			const next = new Set(verifying);
+			next.delete(path);
+			verifying = next;
+		}
+	}
+
+	// ─── Per-file diff preview ──────────────────────────────────────────────────
+
+	let diffModalPath = $state<string | null>(null);
+	let diffModalLines = $state<DiffLine[]>([]);
+	let diffModalLoading = $state(false);
+	let diffModalError = $state<string | null>(null);
+
+	async function openDiffFor(path: string) {
+		if (!peerSource) return;
+		diffModalPath = path;
+		diffModalLoading = true;
+		diffModalError = null;
+		diffModalLines = [];
+		try {
+			const [localContent, remoteContent] = await Promise.all([
+				opfsSource.readFile(path),
+				peerSource.readFile(path)
+			]);
+			diffModalLines = buildDiffLines(localContent ?? '', remoteContent ?? '');
+		} catch (e) {
+			diffModalError = (e as Error).message;
+		} finally {
+			diffModalLoading = false;
+		}
+	}
+
+	function closeDiffModal() {
+		diffModalPath = null;
+	}
+
+	// ─── Apply (pull) ────────────────────────────────────────────────────────────
+
+	let applying = $state(false);
+	let applyError = $state<string | null>(null);
+
+	async function applyChanges() {
+		if (!activePeer || !peerSource) return;
+		const toPull = treeRows.filter((r) => r.kind === 'file' && r.effectiveAction === 'pull');
+		if (toPull.length === 0) return;
+
+		applying = true;
+		applyError = null;
+		const baselineUpserts: SyncEntry[] = [];
+		const baselineRemovals: string[] = [];
+		const failures: string[] = [];
+
+		for (const row of toPull) {
+			try {
+				if (row.remote) {
+					const content = await peerSource.readFile(row.path);
+					if (content === undefined) {
+						// Peer no longer has it (race since the list was fetched) — mirror the deletion.
+						await opfsSource.deleteFile(row.path);
+						baselineRemovals.push(row.path);
+					} else {
+						await opfsSource.writeFile(row.path, content);
+						baselineUpserts.push({
+							path: row.path,
+							size: row.remote.size,
+							lastModified: row.remote.lastModified
+						});
+					}
+				} else {
+					// Remote no longer has this file — pulling mirrors the deletion locally.
+					await opfsSource.deleteFile(row.path);
+					baselineRemovals.push(row.path);
+				}
+			} catch (e) {
+				failures.push(`${row.path}: ${(e as Error).message}`);
+			}
+		}
+
+		if (baselineUpserts.length) await updateBaseline(activePeer.id, baselineUpserts);
+		if (baselineRemovals.length) await removeBaselineEntries(activePeer.id, baselineRemovals);
+
+		overrides = new Map();
+		localLoaded = false; // re-triggers the local-scan effect
+		fetchedTrysteroId = null; // re-triggers the remote-scan effect
+		baseline = await getBaseline(activePeer.id);
+		applying = false;
+
+		if (failures.length) {
+			applyError = failures.join('; ');
+			Notifier.error(`${failures.length} file${failures.length === 1 ? '' : 's'} failed to sync`);
+		} else {
+			Notifier.success(`Synced ${toPull.length} file${toPull.length === 1 ? '' : 's'}`);
+		}
+	}
+
 	// ─── Tree building — union local + remote flat paths into aligned rows ─────
 
 	interface TreeRow {
@@ -182,6 +362,9 @@
 		expanded: boolean;
 		local?: SyncEntry;
 		remote?: SyncEntry;
+		status?: SyncStatus;
+		/** User override if set, else the diff's default action. Undefined when no diff is available yet. */
+		effectiveAction?: SyncAction;
 	}
 
 	let collapsedDirs = $state(new Set<string>());
@@ -189,7 +372,9 @@
 	function buildTree(
 		localList: SyncEntry[],
 		remoteList: SyncEntry[],
-		collapsed: Set<string>
+		collapsed: Set<string>,
+		diffs: Map<string, DiffEntry>,
+		userOverrides: Map<string, SyncAction>
 	): TreeRow[] {
 		const byPath = new Map<string, { local?: SyncEntry; remote?: SyncEntry }>();
 		for (const e of localList) byPath.set(e.path, { ...byPath.get(e.path), local: e });
@@ -219,6 +404,7 @@
 		}
 		for (const [path, { local, remote }] of byPath) {
 			const parent = path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '';
+			const diff = diffs.get(path);
 			addChild(parent, {
 				path,
 				name: path.split('/').pop()!,
@@ -226,7 +412,9 @@
 				depth: parent ? parent.split('/').length : 0,
 				expanded: false,
 				local,
-				remote
+				remote,
+				status: diff?.status,
+				effectiveAction: diff ? (userOverrides.get(path) ?? diff.action) : undefined
 			});
 		}
 
@@ -244,7 +432,18 @@
 		return rows;
 	}
 
-	let treeRows = $derived(buildTree(localEntries, remoteEntries ?? [], collapsedDirs));
+	let treeRows = $derived(
+		buildTree(localEntries, remoteEntries ?? [], collapsedDirs, diffByPath, overrides)
+	);
+
+	let fileRows = $derived(treeRows.filter((r) => r.kind === 'file'));
+	let conflictRows = $derived(fileRows.filter((r) => r.status === 'conflict'));
+	let remoteNewerRows = $derived(fileRows.filter((r) => r.status === 'remote-newer'));
+	let localNewerRows = $derived(fileRows.filter((r) => r.status === 'local-newer'));
+	let unchangedRows = $derived(fileRows.filter((r) => !r.status || r.status === 'unchanged'));
+
+	let pullCount = $derived(fileRows.filter((r) => r.effectiveAction === 'pull').length);
+	let conflictCount = $derived(fileRows.filter((r) => r.effectiveAction === 'conflict').length);
 
 	function toggleDir(path: string) {
 		const next = new Set(collapsedDirs);
@@ -252,6 +451,23 @@
 		else next.add(path);
 		collapsedDirs = next;
 	}
+
+	// ─── Row-expand state, used by the "Compact" view mode ─────────────────────
+
+	let expandedRows = $state(new Set<string>());
+
+	function toggleRowExpand(path: string) {
+		const next = new Set(expandedRows);
+		if (next.has(path)) next.delete(path);
+		else next.add(path);
+		expandedRows = next;
+	}
+
+	// ─── View mode — three row-layout candidates, switchable for side-by-side
+	// evaluation. Pick a winner and delete the other two + this switcher.
+
+	type ViewMode = 'cards' | 'compact' | 'grouped';
+	let viewMode = $state<ViewMode>('cards');
 
 	function formatFileSize(bytes: number): string {
 		if (bytes === 0) return '0 B';
@@ -262,6 +478,50 @@
 
 	function formatDate(ms: number): string {
 		return new Date(ms).toLocaleString();
+	}
+
+	function statusBadgeClass(status: SyncStatus): string {
+		switch (status) {
+			case 'local-newer':
+				return 'badge-info';
+			case 'remote-newer':
+				return 'badge-success';
+			case 'conflict':
+				return 'badge-error';
+			default:
+				return 'badge-ghost';
+		}
+	}
+
+	function statusDotClass(status: SyncStatus | undefined): string {
+		switch (status) {
+			case 'local-newer':
+				return 'status-info';
+			case 'remote-newer':
+				return 'status-success';
+			case 'conflict':
+				return 'status-error';
+			default:
+				return 'status-neutral';
+		}
+	}
+
+	function statusLabel(status: SyncStatus): string {
+		switch (status) {
+			case 'local-newer':
+				return 'Local newer';
+			case 'remote-newer':
+				return 'Remote newer';
+			case 'conflict':
+				return 'Conflict';
+			default:
+				return 'Unchanged';
+		}
+	}
+
+	function metaLine(entry: SyncEntry | undefined, sideLabel: string, missingLabel: string): string {
+		if (!entry) return `${sideLabel}: ${missingLabel}`;
+		return `${sideLabel}: ${formatFileSize(entry.size)} · ${formatDate(entry.lastModified)}`;
 	}
 </script>
 
@@ -275,16 +535,74 @@
 	{/each}
 {/snippet}
 
-<article class="flex h-screen flex-col">
-	<Toolbar title="Beancount Sync" {menuItems} />
-
-	<div
-		role="alert"
-		class="flex items-center gap-2 border-y-4 border-dashed border-black bg-yellow-400 px-4 py-1.5 text-sm font-semibold text-black"
+{#snippet directoryRow(row: TreeRow)}
+	<button
+		type="button"
+		class="btn btn-ghost btn-sm w-full justify-start gap-1.5 font-mono"
+		style="padding-left: {row.depth * 1.25 + 0.5}rem"
+		onclick={() => toggleDir(row.path)}
 	>
-		<TriangleAlertIcon class="h-4 w-4 shrink-0" />
-		<span>Incomplete — work in progress. Expect rough edges.</span>
+		{#if row.expanded}
+			<FolderOpenIcon class="h-4 w-4 shrink-0 opacity-60" />
+		{:else}
+			<FolderIcon class="h-4 w-4 shrink-0 opacity-60" />
+		{/if}
+		{row.name}
+	</button>
+{/snippet}
+
+{#snippet rowActions(row: TreeRow)}
+	<div class="flex flex-wrap items-center gap-2">
+		{#if row.status === 'remote-newer' || row.status === 'conflict'}
+			<div class="join">
+				<button
+					type="button"
+					class="btn btn-xs join-item {row.effectiveAction === 'pull' ? 'btn-primary' : 'btn-outline'}"
+					onclick={() => setAction(row.path, 'pull')}
+				>
+					Pull
+				</button>
+				<button
+					type="button"
+					class="btn btn-xs join-item {row.effectiveAction === 'skip' ? 'btn-primary' : 'btn-outline'}"
+					onclick={() => setAction(row.path, 'skip')}
+				>
+					Skip
+				</button>
+			</div>
+		{:else if row.status === 'local-newer'}
+			<span class="badge badge-ghost badge-sm">Skipped — local is ahead</span>
+		{/if}
+		{#if row.status === 'conflict'}
+			<button
+				type="button"
+				class="btn btn-xs btn-outline"
+				disabled={verifying.has(row.path)}
+				onclick={() => verifyRow(row.path)}
+			>
+				{#if verifying.has(row.path)}
+					<span class="loading loading-spinner loading-xs"></span>
+				{:else}
+					<ShieldCheckIcon class="h-3.5 w-3.5" />
+				{/if}
+				Verify
+			</button>
+		{/if}
+		{#if row.local && row.remote}
+			<button type="button" class="btn btn-xs btn-ghost" onclick={() => openDiffFor(row.path)}>
+				<GitCompareArrowsIcon class="h-3.5 w-3.5" />
+				Diff
+			</button>
+		{/if}
 	</div>
+{/snippet}
+
+<article class="flex h-screen flex-col">
+	<Toolbar title="Beancount Sync" {menuItems}>
+		{#snippet actions()}
+			<HelpButton topic="beancount-sync" />
+		{/snippet}
+	</Toolbar>
 
 	<section class="flex-1 space-y-3 overflow-y-auto p-4">
 		{#if !activePeer}
@@ -331,12 +649,39 @@
 				<button class="btn btn-ghost btn-xs" onclick={changePeer}>Change</button>
 			</div>
 
+			<!-- View-mode switcher — TEMPORARY, for side-by-side evaluation only. -->
+			<div class="join w-full">
+				<button
+					type="button"
+					class="btn btn-xs join-item flex-1 {viewMode === 'cards' ? 'btn-active' : ''}"
+					onclick={() => (viewMode = 'cards')}>Cards</button
+				>
+				<button
+					type="button"
+					class="btn btn-xs join-item flex-1 {viewMode === 'compact' ? 'btn-active' : ''}"
+					onclick={() => (viewMode = 'compact')}>Compact</button
+				>
+				<button
+					type="button"
+					class="btn btn-xs join-item flex-1 {viewMode === 'grouped' ? 'btn-active' : ''}"
+					onclick={() => (viewMode = 'grouped')}>Grouped</button
+				>
+			</div>
+
 			<!-- Summary -->
-			<div class="flex flex-wrap items-center gap-3 text-sm opacity-70">
+			<div class="flex flex-wrap items-center gap-2 text-sm opacity-70">
 				<span>{localEntries.length} local file{localEntries.length === 1 ? '' : 's'}</span>
 				{#if remoteEntries}
 					<span>·</span>
 					<span>{remoteEntries.length} remote file{remoteEntries.length === 1 ? '' : 's'}</span>
+					{#if pullCount > 0}
+						<span class="badge badge-success badge-sm ml-1">{pullCount} to pull</span>
+					{/if}
+					{#if conflictCount > 0}
+						<span class="badge badge-error badge-sm"
+							>{conflictCount} conflict{conflictCount === 1 ? '' : 's'}</span
+						>
+					{/if}
 				{/if}
 			</div>
 
@@ -353,89 +698,267 @@
 				</div>
 			{/if}
 
-			<!-- Tree -->
-			<div class="overflow-x-auto">
-				<table class="table table-sm table-zebra w-full">
-					<thead>
-						<tr>
-							<th>Name</th>
-							<th>Local</th>
-							<th class="w-8"></th>
-							<th>
-								Remote
-								{#if remoteLoading}<span class="loading loading-spinner loading-xs ml-1"
-									></span>{/if}
-							</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#if treeRows.length === 0}
-							<tr>
-								<td colspan="4" class="text-base-content/50 py-6 text-center text-sm">
-									{localLoaded ? 'No matching files found.' : 'Scanning local files…'}
-								</td>
-							</tr>
+			{#if treeRows.length === 0}
+				<p class="text-base-content/50 py-6 text-center text-sm">
+					{localLoaded ? 'No matching files found.' : 'Scanning local files…'}
+				</p>
+			{:else if viewMode === 'cards'}
+				<!-- Variant 1: "Cards" — one roomy card per file, everything visible at once. -->
+				<ul class="flex flex-col gap-1.5">
+					{#each treeRows as row (row.path)}
+						{#if row.kind === 'directory'}
+							<li>{@render directoryRow(row)}</li>
+						{:else}
+							<li class="rounded-box bg-base-200 p-3" style="margin-left: {row.depth * 1.25}rem">
+								<div class="flex items-center gap-2">
+									<FileIcon class="h-4 w-4 shrink-0 opacity-50" />
+									<span class="font-mono text-sm truncate flex-1">{row.name}</span>
+									{#if row.status && row.status !== 'unchanged'}
+										<span class="badge badge-sm {statusBadgeClass(row.status)}"
+											>{statusLabel(row.status)}</span
+										>
+									{/if}
+								</div>
+								<div class="mt-1 flex flex-col gap-0.5 pl-6 text-xs opacity-60">
+									<span>{metaLine(row.local, 'Local', '— missing')}</span>
+									<span
+										>{metaLine(
+											row.remote,
+											'Remote',
+											remoteEntries ? '— missing' : '— unknown (peer offline)'
+										)}</span
+									>
+								</div>
+								{#if row.status && row.status !== 'unchanged'}
+									<div class="mt-2 pl-6">{@render rowActions(row)}</div>
+								{/if}
+							</li>
 						{/if}
-						{#each treeRows as row (row.path)}
-							<tr
-								class="hover {row.kind === 'directory' ? 'cursor-pointer' : ''}"
-								onclick={() => row.kind === 'directory' && toggleDir(row.path)}
-							>
-								<td class="font-mono text-sm">
-									<span class="flex items-center gap-1" style="padding-left: {row.depth * 1.25}rem">
-										{#if row.kind === 'directory'}
-											{#if row.expanded}
-												<FolderOpenIcon class="w-4 h-4 opacity-60 shrink-0" />
-											{:else}
-												<FolderIcon class="w-4 h-4 opacity-60 shrink-0" />
-											{/if}
-										{:else}
-											<FileIcon class="w-4 h-4 opacity-60 shrink-0" />
+					{/each}
+				</ul>
+			{:else if viewMode === 'compact'}
+				<!-- Variant 2: "Compact" — one line per file; tap to expand metadata/actions. Best for long books. -->
+				<ul class="flex flex-col divide-y divide-base-300">
+					{#each treeRows as row (row.path)}
+						{#if row.kind === 'directory'}
+							<li>{@render directoryRow(row)}</li>
+						{:else}
+							{@const isOpen = expandedRows.has(row.path)}
+							<li>
+								<button
+									type="button"
+									class="flex w-full items-center gap-2 py-2 text-left"
+									style="padding-left: {row.depth * 1.25}rem"
+									onclick={() => toggleRowExpand(row.path)}
+								>
+									{#if isOpen}
+										<ChevronDownIcon class="h-3.5 w-3.5 shrink-0 opacity-40" />
+									{:else}
+										<ChevronRightIcon class="h-3.5 w-3.5 shrink-0 opacity-40" />
+									{/if}
+									{#if row.status}
+										<span class="status {statusDotClass(row.status)} status-sm shrink-0"></span>
+									{/if}
+									<span class="font-mono text-sm truncate flex-1">{row.name}</span>
+									{#if row.effectiveAction === 'pull'}
+										<DownloadIcon class="h-3.5 w-3.5 shrink-0 opacity-50" />
+									{/if}
+								</button>
+								{#if isOpen}
+									<div
+										class="flex flex-col gap-2 pb-3 text-xs"
+										style="padding-left: {row.depth * 1.25 + 1.375}rem"
+									>
+										{#if row.status}
+											<span class="badge badge-sm {statusBadgeClass(row.status)} w-fit"
+												>{statusLabel(row.status)}</span
+											>
 										{/if}
-										{row.name}
-									</span>
-								</td>
-								<td class="text-xs">
-									{#if row.local}
-										<div>{formatFileSize(row.local.size)}</div>
-										<div class="opacity-50">{formatDate(row.local.lastModified)}</div>
-									{:else if row.kind === 'file'}
-										<span class="opacity-30">—</span>
-									{/if}
-								</td>
-								<td class="text-center">
-									{#if row.kind === 'file'}
-										{#if row.local && row.remote}
-											<span class="opacity-30">·</span>
-										{:else if row.local}
-											<ArrowLeftIcon class="mx-auto h-3.5 w-3.5 opacity-50" />
-										{:else if row.remote}
-											<ArrowRightIcon class="mx-auto h-3.5 w-3.5 opacity-50" />
+										<span class="opacity-60">{metaLine(row.local, 'Local', '— missing')}</span>
+										<span class="opacity-60"
+											>{metaLine(
+												row.remote,
+												'Remote',
+												remoteEntries ? '— missing' : '— unknown (peer offline)'
+											)}</span
+										>
+										{#if row.status && row.status !== 'unchanged'}
+											{@render rowActions(row)}
 										{/if}
-									{/if}
-								</td>
-								<td class="text-xs">
-									{#if row.remote}
-										<div>{formatFileSize(row.remote.size)}</div>
-										<div class="opacity-50">{formatDate(row.remote.lastModified)}</div>
-									{:else if row.kind === 'file'}
-										<span class="opacity-30">—</span>
-									{/if}
-								</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
+									</div>
+								{/if}
+							</li>
+						{/if}
+					{/each}
+				</ul>
+			{:else}
+				<!-- Variant 3: "Grouped" — sections by status, with bulk actions. Ignores folder nesting. -->
+				<div class="flex flex-col gap-3">
+					{#if conflictRows.length > 0}
+						<div class="rounded-box bg-error/10 p-3">
+							<div class="mb-2 flex items-center gap-2">
+								<h3 class="flex-1 text-sm font-semibold">
+									Conflicts <span class="badge badge-error badge-sm">{conflictRows.length}</span>
+								</h3>
+							</div>
+							<ul class="flex flex-col gap-2">
+								{#each conflictRows as row (row.path)}
+									<li class="rounded-box bg-base-100 p-2.5">
+										<div class="flex items-center gap-2">
+											<FileIcon class="h-3.5 w-3.5 shrink-0 opacity-50" />
+											<span class="font-mono text-sm truncate flex-1">{row.path}</span>
+										</div>
+										<div class="mt-1 flex flex-col gap-0.5 text-xs opacity-60">
+											<span>{metaLine(row.local, 'Local', '— missing')}</span>
+											<span>{metaLine(row.remote, 'Remote', '— missing')}</span>
+										</div>
+										<div class="mt-2">{@render rowActions(row)}</div>
+									</li>
+								{/each}
+							</ul>
+						</div>
+					{/if}
+
+					{#if remoteNewerRows.length > 0}
+						<div class="rounded-box bg-success/10 p-3">
+							<div class="mb-2 flex items-center gap-2">
+								<h3 class="flex-1 text-sm font-semibold">
+									Remote newer <span class="badge badge-success badge-sm"
+										>{remoteNewerRows.length}</span
+									>
+								</h3>
+								<button
+									type="button"
+									class="btn btn-xs btn-success"
+									onclick={() => pullAll(remoteNewerRows)}
+								>
+									Pull all
+								</button>
+							</div>
+							<ul class="flex flex-col gap-2">
+								{#each remoteNewerRows as row (row.path)}
+									<li class="rounded-box bg-base-100 p-2.5">
+										<div class="flex items-center gap-2">
+											<FileIcon class="h-3.5 w-3.5 shrink-0 opacity-50" />
+											<span class="font-mono text-sm truncate flex-1">{row.path}</span>
+										</div>
+										<div class="mt-1 flex flex-col gap-0.5 text-xs opacity-60">
+											<span>{metaLine(row.local, 'Local', '— missing')}</span>
+											<span>{metaLine(row.remote, 'Remote', '— missing')}</span>
+										</div>
+										<div class="mt-2">{@render rowActions(row)}</div>
+									</li>
+								{/each}
+							</ul>
+						</div>
+					{/if}
+
+					{#if localNewerRows.length > 0}
+						<div class="collapse-arrow bg-info/10 rounded-box collapse">
+							<input type="checkbox" />
+							<div class="collapse-title min-h-0 py-2 text-sm font-semibold">
+								Local newer <span class="badge badge-info badge-sm">{localNewerRows.length}</span> —
+								no push in v1, always skipped
+							</div>
+							<div class="collapse-content">
+								<ul class="flex flex-col gap-1 pt-1 text-xs opacity-70">
+									{#each localNewerRows as row (row.path)}
+										<li class="font-mono">{row.path}</li>
+									{/each}
+								</ul>
+							</div>
+						</div>
+					{/if}
+
+					{#if unchangedRows.length > 0}
+						<div class="collapse-arrow bg-base-200 rounded-box collapse">
+							<input type="checkbox" />
+							<div class="collapse-title min-h-0 py-2 text-sm font-semibold opacity-60">
+								Unchanged <span class="badge badge-ghost badge-sm">{unchangedRows.length}</span>
+							</div>
+							<div class="collapse-content">
+								<ul class="flex flex-col gap-1 pt-1 text-xs opacity-50">
+									{#each unchangedRows as row (row.path)}
+										<li class="font-mono">{row.path}</li>
+									{/each}
+								</ul>
+							</div>
+						</div>
+					{/if}
+				</div>
+			{/if}
 		{/if}
 	</section>
 
 	{#if activePeer}
 		<!-- Apply bar -->
 		<div class="border-base-300 border-t p-4">
-			<button class="btn btn-primary w-full" disabled title="Sync engine not yet implemented"
-				>Apply</button
+			{#if applyError}
+				<div class="alert alert-error mb-2 text-xs"><span>{applyError}</span></div>
+			{/if}
+			<button
+				class="btn btn-primary w-full"
+				disabled={pullCount === 0 || applying}
+				onclick={applyChanges}
 			>
+				{#if applying}
+					<span class="loading loading-spinner loading-sm"></span>
+				{:else}
+					<DownloadIcon class="h-4 w-4" />
+				{/if}
+				{pullCount > 0 ? `Pull ${pullCount} file${pullCount === 1 ? '' : 's'}` : 'Nothing to pull'}
+			</button>
+			{#if conflictCount > 0}
+				<p class="mt-2 text-center text-xs opacity-60">
+					{conflictCount} conflict{conflictCount === 1 ? '' : 's'} need a decision above.
+				</p>
+			{/if}
 		</div>
 	{/if}
 </article>
+
+<!-- ─── Per-file diff modal ────────────────────────────────────────────────── -->
+{#if diffModalPath}
+	<div class="modal modal-open">
+		<div class="modal-box flex h-[90vh] max-w-2xl flex-col p-0">
+			<div class="border-base-300 flex items-center justify-between border-b px-4 py-3">
+				<h3 class="truncate font-mono font-bold text-sm">{diffModalPath}</h3>
+				<button class="btn btn-ghost btn-sm" onclick={closeDiffModal}>✕</button>
+			</div>
+			<div class="flex-1 overflow-y-auto p-4">
+				{#if diffModalLoading}
+					<div class="flex justify-center p-8"><span class="loading loading-spinner"></span></div>
+				{:else if diffModalError}
+					<div class="alert alert-error text-sm"><span>{diffModalError}</span></div>
+				{:else if diffModalLines.every((l) => l.type === 'context')}
+					<p class="text-success text-sm">Files are identical.</p>
+				{:else}
+					<div class="flex gap-4 pb-2 text-xs opacity-50">
+						<span class="flex items-center gap-1.5"
+							><span class="bg-success/40 inline-block h-3 w-3 rounded-sm"></span>remote only</span
+						>
+						<span class="flex items-center gap-1.5"
+							><span class="bg-error/40 inline-block h-3 w-3 rounded-sm"></span>local only</span
+						>
+					</div>
+					<div class="rounded bg-base-200 p-2 font-mono text-xs leading-5">
+						{#each diffModalLines as line}
+							{#if line.type === 'removed'}
+								<div class="bg-error/20 text-error-content break-all whitespace-pre-wrap">
+									- {line.content}
+								</div>
+							{:else if line.type === 'added'}
+								<div class="bg-success/20 text-success-content break-all whitespace-pre-wrap">
+									+ {line.content}
+								</div>
+							{:else}
+								<div class="break-all whitespace-pre-wrap opacity-50">&nbsp; {line.content}</div>
+							{/if}
+						{/each}
+					</div>
+				{/if}
+			</div>
+		</div>
+		<button class="modal-backdrop" aria-label="Close" onclick={closeDiffModal}></button>
+	</div>
+{/if}

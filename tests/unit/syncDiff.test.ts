@@ -16,7 +16,13 @@ function entry(path: string, size: number, lastModified: number): SyncEntry {
 
 /** Builds a PeerSyncBaseline-shaped row (syncedAt is irrelevant to diffing, so it's fixed). */
 function baselineRow(path: string, size: number, lastModified: number): PeerSyncBaseline {
-	return { endpointId: 'endpoint-1', path, size, lastModified, syncedAt: '2026-01-01T00:00:00.000Z' };
+	return {
+		endpointId: 'endpoint-1',
+		path,
+		size,
+		lastModified,
+		syncedAt: '2026-01-01T00:00:00.000Z'
+	};
 }
 
 function baselineMap(...rows: PeerSyncBaseline[]): Map<string, PeerSyncBaseline> {

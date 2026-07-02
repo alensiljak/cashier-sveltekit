@@ -91,19 +91,20 @@ A client can currently only pull remote changes. Pushing (writing to a peer) is 
 
 ### UI
 
-- [ ] Build `src/routes/sync/beancount/+page.svelte`: tree view (extend `OpfsFilePicker.svelte`), per-row status + direction toggle (pull/skip only), apply action
+- [x] Build `src/routes/sync/beancount/+page.svelte`: tree view (extend `OpfsFilePicker.svelte`), per-row status + direction toggle (pull/skip only), apply action
   - [x] Peer selection: joins the room unconditionally on mount (gating on `trustedPeers.length > 0` broke discovery whenever trust wasn't yet mutual); 15s post-join discovery grace window (was 3s — real Nostr-relay joins can take longer) before an absent trusted peer reads as offline rather than connecting; no trusted peers → link to `/peer-sync`; trusted peers but none online → waiting spinner; peers online → single-select list with a live connection dot
-  - [x] Real local + remote file listing: local via `OpfsSource.listTree()`, remote via `PeerSource.listTree()` (10s timeout); side-by-side table (name, local size/date, direction arrow, remote size/date)
+  - [x] Real local + remote file listing: local via `OpfsSource.listTree()`, remote via `PeerSource.listTree()` (10s timeout)
   - [x] Room join/identity/trust logic extracted into shared `src/lib/sync/peerPresence.svelte.ts` (`PeerPresence`), also used by `peer-sync/+page.svelte`; nav entry added under Data
   - [x] Fixed peer-selection URL to build off `page.url.pathname` instead of a hardcoded relative path; added a global `window.onerror`/`unhandledrejection` logger in `+layout.svelte` to catch this class of silent failure earlier
-  - [ ] Per-row status pill (unchanged / local-newer / remote-newer / conflict) and direction toggle — blocked on diff classification (Foundation) landing
-  - [ ] Diff/verify/apply buttons — present in the layout, disabled pending the sync engine
-- [ ] Wire per-file diff preview using the shared diff util
-- [ ] Wire the conflict-row "Verify" action: `hashFile(path)` on both sources, downgrade to unchanged/skip on match, else keep as conflict
+  - [x] Per-row status pill (unchanged / local-newer / remote-newer / conflict) and direction toggle, wired to `diffAgainstBaseline` against the `syncBaseline` table; local-newer is skip-only (no push in v1), remote-newer/conflict toggle pull ⇄ skip
+  - [x] Diff/verify/apply buttons wired: Verify calls `hashFile` on both sources; Apply pulls every row whose effective action is `pull`
+  - [x] Replaced the side-by-side table (name/local/arrow/remote columns, needs horizontal scroll on a phone) with a vertical list. Ships **three switchable row-layout variants** (Cards / Compact / Grouped-by-status) behind a temporary top toggle so we can pick one on a real phone before deleting the other two — see the page's `viewMode` state
+- [x] Wire per-file diff preview using the shared diff util (`buildDiffLines`, single-file modal)
+- [x] Wire the conflict-row "Verify" action: `hashFile(path)` on both sources; match clears the row's override and re-baselines from the local entry (baseline is metadata-only, so a cross-device `lastModified` mismatch can still resurface the row as `remote-newer` next scan — cheap to re-resolve, but not a permanent guarantee); mismatch keeps it a conflict
 - [x] Added a link below `peer-sync/+page.svelte`'s existing sync options into `/sync/beancount?peer=<id>` for full ledger-file sync; the page's own cashier.bean/settings/scheduled sync panel is unchanged
-- [ ] Update baseline (`syncBaseline` table) after each applied sync
+- [x] Update baseline (`syncBaseline` table) after each applied sync — pulled files upsert baseline from the remote entry's metadata; remote-side deletions (pulled with no `row.remote`) remove the baseline row instead
 
 ### Verification
 
-- [ ] Manual two-browser-instance smoke test: pull direction, conflict row, hash-verify match and mismatch
-- [ ] `npm run check` / `npm run lint` clean
+- [ ] Manual two-browser-instance smoke test: pull direction, conflict row, hash-verify match and mismatch, all three view-mode variants — pending, needs a second device/profile
+- [x] `npm run check` clean (0 errors). `npm run lint` (`oxfmt --check`) flags 3 pre-existing files unrelated to this change (`syncDiff.ts`, `tests/unit/syncBaseline.test.ts`, `tests/unit/syncDiff.test.ts`); `oxlint` itself is clean
