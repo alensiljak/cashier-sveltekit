@@ -53,7 +53,7 @@ Trystero's monolithic `trystero` package bundled every signaling backend (BitTor
 - Tree UI extends `OpfsFilePicker.svelte`'s flat depth-indented list (closest reusable shape — already carries path/size/lastModified/expanded) with a per-row status pill (unchanged / local-newer / remote-newer / conflict) and a per-row direction toggle (mirrors `opfs/sync`'s `cycleAction`).
 - Conflict rows get a manual "Verify" action: calls `hashFile(path)` on both sources. Matching hashes downgrade the row to unchanged/skip and refresh the baseline without a content pull; a mismatch keeps it a conflict pending a manual diff/direction decision.
 - Per-file "preview diff" reuses `buildDiffLines`, extracted into `src/lib/utils/diffText.ts` (dedup of the `peer-sync`/`backup/webdav/diff` copies).
-- `peer-sync/+page.svelte` stays as pure identity/pairing: device name, room code, device ID, trusted-peers list. Strip its current sync-panel/preview/diff/pull modals; the "Sync from" action on a trusted peer links into `/sync/beancount?peer=<id>` instead.
+- `peer-sync/+page.svelte` keeps its own identity/pairing UI **and** its existing cashier.bean/settings/scheduled-transactions sync panel (`sync-request`/`sync-response`, preview/diff/pull) — those three items live outside OPFS and are out of scope for the generic `SyncSource` engine (glob-based, OPFS-only). It gains one addition: a link below the existing sync options into `/sync/beancount?peer=<id>` for syncing the full ledger book.
 - v1 is download-only: the direction toggle offers pull or skip per row; a conflict (both sides changed since baseline) can only be resolved by pulling (overwrite local) or skipping — never pushed to the peer.
 
 ### Migration of `opfs/sync`
@@ -79,7 +79,7 @@ A client can currently only pull remote changes. Pushing (writing to a peer) is 
 ### Peer Protocol
 
 - [x] Implement `list-files` as a `kind:'request'` trystero action via `PeerPresence.makeRequestAction`, trust-checked against `TrustedPeer` (untrusted callers get `[]`)
-- [x] Implement `read-file`/`hash-file` the same way; removed `sync-request`/`sync-response` and the hand-rolled `pendingRequests` map from `peer-sync/+page.svelte` now that `PeerSource` replaces them
+- [x] Implement `read-file`/`hash-file` the same way (used by `PeerSource`, below); `peer-sync/+page.svelte`'s own `sync-request`/`sync-response`/`pendingRequests` protocol is kept as-is — it syncs `cashier.bean`/settings/scheduled transactions, which are out of the generic engine's OPFS-only scope
 - [x] Implement `PeerSource` on top of the generalized protocol — registers all three request actions (responder side, backed by a `SyncSource`) and issues them against a resolved target peer (querying side); `writeFile`/`deleteFile` throw until push ships
 
 ### Relay Strategy
@@ -100,7 +100,7 @@ A client can currently only pull remote changes. Pushing (writing to a peer) is 
   - [ ] Diff/verify/apply buttons — present in the layout, disabled pending the sync engine
 - [ ] Wire per-file diff preview using the shared diff util
 - [ ] Wire the conflict-row "Verify" action: `hashFile(path)` on both sources, downgrade to unchanged/skip on match, else keep as conflict
-- [x] Strip sync-panel/preview/diff/pull UI out of `peer-sync/+page.svelte`, replace "Sync from" with a link into the new page
+- [x] Added a link below `peer-sync/+page.svelte`'s existing sync options into `/sync/beancount?peer=<id>` for full ledger-file sync; the page's own cashier.bean/settings/scheduled sync panel is unchanged
 - [ ] Update baseline (`syncBaseline` table) after each applied sync
 
 ### Verification

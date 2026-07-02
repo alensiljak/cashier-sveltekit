@@ -18,3 +18,5 @@ Trusted devices are remembered and listed under **Trusted Devices**, where you c
 2. Check which items to pull: **cashier.bean**, **Settings**, and/or **Scheduled Transactions**.
 3. Use **Preview** to see the raw remote content, or **Diff** to compare it against your local copy, before committing to anything.
 4. Tap **Pull** and confirm — this overwrites your local data with the peer's version and cannot be undone.
+
+Need to sync the rest of your Beancount book (all files, not just `cashier.bean`)? Use the **Open Beancount Sync** link below the sync options instead — it compares your full local ledger against the peer's and lets you pull individual files.
