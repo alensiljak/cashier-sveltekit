@@ -15,8 +15,6 @@ import { normalizeEol, type SyncEntry, type SyncSource } from './SyncSource';
 
 const DEFAULT_FILE_SPEC = '*.bean, *.toml';
 const CACHE_DIR_PREFIX = '.cashier/';
-// Device-local pending-transaction staging file — never part of the synced book (see project doc).
-const STAGING_FILE = 'cashier.bean';
 
 /** This device's OPFS-backed copy of the ledger book, as a SyncSource. */
 export class OpfsSource implements SyncSource {
@@ -29,10 +27,7 @@ export class OpfsSource implements SyncSource {
 		return entries
 			.filter(
 				(e) =>
-					e.kind === 'file' &&
-					matchesAny(e.name, patterns) &&
-					e.path !== STAGING_FILE &&
-					!e.path.startsWith(CACHE_DIR_PREFIX)
+					e.kind === 'file' && matchesAny(e.name, patterns) && !e.path.startsWith(CACHE_DIR_PREFIX)
 			)
 			.map((e) => ({ path: e.path, size: e.size ?? 0, lastModified: e.lastModified ?? 0 }));
 	}
