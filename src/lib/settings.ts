@@ -65,6 +65,9 @@ export const SettingKeys = {
 	visibleCards: 'homeCardNames',
 	// Peer sync
 	peerRoom: 'peerRoom',
+	// Relay network used for peer discovery signaling — must match between
+	// devices to find each other (see src/lib/sync/peerPresence.svelte.ts)
+	peerRelayStrategy: 'peerRelayStrategy',
 	// Account groups for the groups page
 	accountGroups: 'accountGroups',
 	// WebDAV backup configuration

@@ -11,19 +11,42 @@
 	Each consumer creates its own instance (one trystero room per mounted
 	page) and calls `leave()` on unmount.
 */
-import { joinRoom } from 'trystero';
 import type {
 	Room,
 	MessageAction,
 	DataPayload,
 	RequestAction,
-	RequestContext
+	RequestContext,
+	JoinRoom,
+	JoinRoomConfig
 } from '@trystero-p2p/core';
 import { settings, SettingKeys, deviceSettings, DeviceSettingKeys } from '$lib/settings';
 import db from '$lib/data/db';
 import { TrustedPeer } from '$lib/data/model';
 
 const APP_ID = 'cashier-peer-sync';
+
+/**
+ * Signaling network used to discover peers. All three share the exact same
+ * `joinRoom`/`Room` API (trystero's whole point), so swapping is just a
+ * matter of choosing which module to dynamically import — no other code in
+ * this class is strategy-specific. IMPORTANT: peers only find each other if
+ * BOTH sides pick the same strategy; it's a separate signaling network per
+ * choice, not a fallback chain.
+ */
+export type RelayStrategy = 'nostr' | 'mqtt' | 'torrent';
+export const RELAY_STRATEGIES: { value: RelayStrategy; label: string }[] = [
+	{ value: 'nostr', label: 'Nostr (default)' },
+	{ value: 'mqtt', label: 'MQTT' },
+	{ value: 'torrent', label: 'BitTorrent' }
+];
+
+type StrategyModule = { joinRoom: JoinRoom<JoinRoomConfig> };
+const STRATEGY_LOADERS: Record<RelayStrategy, () => Promise<StrategyModule>> = {
+	nostr: () => import('@trystero-p2p/nostr'),
+	mqtt: () => import('@trystero-p2p/mqtt'),
+	torrent: () => import('@trystero-p2p/torrent')
+};
 
 export interface ActivePeer {
 	trysteroId: string;
@@ -45,6 +68,7 @@ export class PeerPresence {
 	myId = $state('');
 	myName = $state('');
 	roomCode = $state('cashier');
+	strategy = $state<RelayStrategy>('nostr');
 	isInRoom = $state(false);
 	peersMap = $state<Record<string, ActivePeer>>({});
 	trustedPeers = $state<TrustedPeer[]>([]);
@@ -69,12 +93,21 @@ export class PeerPresence {
 		const savedRoom = await settings.get<string>(SettingKeys.peerRoom);
 		if (savedRoom) this.roomCode = savedRoom;
 
+		const savedStrategy = await settings.get<RelayStrategy>(SettingKeys.peerRelayStrategy);
+		if (savedStrategy) this.strategy = savedStrategy;
+
 		this.trustedPeers = await db.peers.toArray();
 	}
 
 	async setName(name: string): Promise<void> {
 		this.myName = name;
 		await deviceSettings.set(DeviceSettingKeys.peerName, name);
+	}
+
+	/** Persists the relay strategy. Does NOT reconnect a live room — call `leave()` then `join()` to apply it. */
+	async setStrategy(strategy: RelayStrategy): Promise<void> {
+		this.strategy = strategy;
+		await settings.set(SettingKeys.peerRelayStrategy, strategy);
 	}
 
 	/** Registers an additional trystero action on the shared room (e.g. a sync protocol). Room must already be joined. */
@@ -97,6 +130,7 @@ export class PeerPresence {
 		const trimmed = roomCode.trim();
 		if (!trimmed || this.isInRoom) return;
 
+		const { joinRoom } = await STRATEGY_LOADERS[this.strategy]();
 		this.room = joinRoom({ appId: APP_ID }, trimmed);
 		this.roomCode = trimmed;
 

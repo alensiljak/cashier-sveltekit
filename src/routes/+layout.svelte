@@ -18,6 +18,17 @@
 
 	let { children } = $props();
 
+	onMount(() => {
+		// Surface otherwise-silent failures (e.g. the sync/beancount redirect bug)
+		// loudly in the console instead of letting them fail invisibly.
+		window.addEventListener('error', (event) => {
+			console.error('[GlobalError]', event.error ?? event.message, event);
+		});
+		window.addEventListener('unhandledrejection', (event) => {
+			console.error('[UnhandledRejection]', event.reason);
+		});
+	});
+
 	onMount(async () => {
 		// Initialize the Ledger service.
 		const initialized = await initializeApp();
@@ -100,22 +111,26 @@
 				<NavigationV3 />
 			</aside>
 
-			<main class="col-span-1 bg-base-300 h-full overflow-auto touch-pan-y"
+			<main
+				class="col-span-1 bg-base-300 h-full overflow-auto touch-pan-y"
 				{...useSwipe(handleSwipe, () => ({
 					timeframe: 350,
 					minSwipeDistance: 25,
 					touchAction: 'pan-y'
-				}))}>
+				}))}
+			>
 				{@render children()}
 			</main>
 		</div>
 	</div>
-	<div class="drawer-side"
+	<div
+		class="drawer-side"
 		{...useSwipe(handleDrawerSideSwipe, () => ({
 			timeframe: 350,
 			minSwipeDistance: 25,
 			touchAction: 'pan-y'
-		}))}>
+		}))}
+	>
 		<label for="drawer-modal" class="drawer-overlay"></label>
 		<div class="bg-base-200 w-[288px] h-screen overflow-y-auto">
 			<!-- <Navigation /> -->
