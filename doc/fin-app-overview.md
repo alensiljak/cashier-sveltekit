@@ -11,8 +11,8 @@ Characteristics
 - **Security-first** – biometric login, encryption, read-only access where possible.
 - **Minimal friction** – quick to log transactions, easy to reconcile accounts.
 - **Actionable insights** – not just tracking, but helping you change behavior.
-- **Cross-platform sync** – works seamlessly on phone, tablet, and web.
-- **Privacy** – clear data usage policy, no selling of transaction data.
+- ✅ **Cross-platform sync** – works seamlessly on phone, tablet, and web.
+- ✅ **Privacy** – clear data usage policy, no selling of transaction data.
 
 ---
 
@@ -23,7 +23,7 @@ Characteristics
 - **Link financial accounts** – bank, credit cards, loans, investments, crypto, cash.
 - **Automatic transaction syncing** (Plaid, Yodlee, or similar).
 - **Manual transaction entry** with receipt image attachment.
-- **Real-time balance updates** and pending transaction visibility.
+- ✅ **Real-time balance updates** and pending transaction visibility.
 - ✅ **Multi-currency support** (if traveling or holding foreign accounts).
 
 ### 2. Budgeting
@@ -44,7 +44,7 @@ Characteristics
 
 ### 4. Bill Management
 
-- **Bill calendar** with due dates & recurring amounts.
+- ✅ **Bill calendar** with due dates & recurring amounts.
 - **Payment reminders** (push, email, or SMS).
 - **Integration with payment systems** (not always possible securely, but some apps offer bill pay).
 - **Subscription tracker** – automatically detect recurring charges.
@@ -60,7 +60,7 @@ Characteristics
 
 - **Spending trends** (pie charts, bar graphs, heatmaps).
 - **Net worth timeline** (assets minus liabilities over time).
-- **Cash flow view** (income vs. expenses by month).
+- ✅ **Cash flow view** (income vs. expenses by month).
 - **Filterable reports** – by date, category, tag, account.
 - **Export to CSV/PDF** for tax or spreadsheet use.
 

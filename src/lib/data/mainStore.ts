@@ -36,6 +36,9 @@ export const AaStocksStore: Writable<StockCache | undefined> = writable();
 export const AssetAllocationLoadedAtStore: Writable<Date | undefined> = writable();
 // Drawer/sidebar store.
 export const drawerState: Writable<boolean> = writable(false);
+// Full-text search box value on /search — kept for the session only (module
+// state, not persisted) so navigating to a result and back leaves it intact.
+export const SearchTermStore: Writable<string> = writable('');
 
 export interface PendingSettings {
 	currency?: string;

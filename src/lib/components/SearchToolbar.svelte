@@ -6,12 +6,19 @@
 	interface Props {
 		focus: boolean;
 		onSearch?: (arg0: string) => void;
+		/** Debounce delay in ms before a keystroke triggers onSearch. */
+		delay?: number;
+		/** Initial input value, set once on mount (not reactively bound). */
+		value?: string;
 	}
-	let { focus = false, onSearch }: Props = $props();
+	let { focus = false, onSearch, delay = 400, value = '' }: Props = $props();
 
 	let searchField = $state<HTMLInputElement | null>(null);
 
 	onMount(() => {
+		if (searchField && value) {
+			searchField.value = value;
+		}
 		if (focus) {
 			searchField?.focus();
 		}
@@ -37,7 +44,7 @@
 			type="search"
 			placeholder="Search..."
 			bind:this={searchField}
-			use:debounceAction={{ callback: handleSearch, delay: 400 }}
+			use:debounceAction={{ callback: handleSearch, delay }}
 			class="w-full rounded-full border-0 bg-base-200 py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-base"
 		/>
 	</div>

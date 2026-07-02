@@ -13,10 +13,10 @@ import * as opfslib from '$lib/utils/opfslib';
 import {
 	mapDirectiveSpans,
 	replaceDirectiveBySpan,
-	findSpanForDirective,
 	type DirectiveSpan
 } from '$lib/rledger/sourceEditor';
 import { CASHIER_XACT_FILE } from '$lib/constants';
+import { locateXactsInSource } from '$lib/utils/xactLocator';
 
 interface QueryError {
 	message: string;
@@ -286,32 +286,7 @@ class LedgerService {
 	 */
 	async getXactsWithSpans(): Promise<Array<{ xact: Xact; span: DirectiveSpan }>> {
 		const source = (await opfslib.readFile(CASHIER_XACT_FILE)) ?? '';
-		if (!source.trim()) return [];
-
-		const tempLedger = createParsedLedger(source);
-		if (!tempLedger) return [];
-
-		try {
-			const directives: any[] = tempLedger.getDirectives();
-			const spans = mapDirectiveSpans(source, tempLedger);
-
-			// Match each transaction directive to its source span by date-based lookup.
-			// getDirectives() may return directives in chronological order while
-			// getDocumentSymbols() (used by mapDirectiveSpans) returns in file order,
-			// so we cannot assume a 1:1 index alignment.
-			const result: Array<{ xact: Xact; span: DirectiveSpan }> = [];
-			for (let i = 0; i < directives.length; i++) {
-				const directive = directives[i];
-				if (directive.type !== 'transaction') continue;
-				const spanIdx = findSpanForDirective(spans, i, source, directives);
-				if (spanIdx >= 0) {
-					result.push({ xact: this.directiveToXact(directive, source), span: spans[spanIdx] });
-				}
-			}
-			return result;
-		} finally {
-			tempLedger.free();
-		}
+		return locateXactsInSource(source);
 	}
 
 	private directiveToXact = directiveToXact;

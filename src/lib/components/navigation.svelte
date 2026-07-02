@@ -26,19 +26,13 @@
 		CalendarIcon,
 		MicIcon,
 		CoinsIcon,
-
 		ListTreeIcon,
 		ShieldCheckIcon,
-
 		CloudUploadIcon,
 		WifiIcon,
-
 		FilePlusIcon,
-
-		TerminalSquareIcon
-
-
-
+		TerminalSquareIcon,
+		SearchIcon
 	} from '@lucide/svelte';
 
 	function closeDrawer(): void {
@@ -108,7 +102,13 @@
 				</a>
 			</li>
 			<li>
-				<a href="/tx" class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/tx' ? 'active bg-secondary text-secondary-content' : ''}" onclick={closeDrawer}>
+				<a
+					href="/tx"
+					class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/tx'
+						? 'active bg-secondary text-secondary-content'
+						: ''}"
+					onclick={closeDrawer}
+				>
 					<FilePlusIcon />
 					<span>New Transaction</span>
 				</a>
@@ -140,9 +140,20 @@
 						</li>
 						<li>
 							<a
+								href="/search"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/search'
+									? 'active bg-secondary text-secondary-content'
+									: ''}"
+								onclick={closeDrawer}
+							>
+								<SearchIcon />
+								<span>Search</span>
+							</a>
+						</li>
+						<li>
+							<a
 								href="/accounts/tree"
-								class="flex w-full items-center gap-2 py-2 {page.url.pathname ===
-								'/accounts/tree'
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/accounts/tree'
 									? 'active bg-secondary text-secondary-content'
 									: ''}"
 								onclick={closeDrawer}
@@ -152,7 +163,11 @@
 							</a>
 						</li>
 						<li>
-							<a href="/scheduled-xacts/calendar" class="flex w-full items-center gap-2 py-2" onclick={closeDrawer}>
+							<a
+								href="/scheduled-xacts/calendar"
+								class="flex w-full items-center gap-2 py-2"
+								onclick={closeDrawer}
+							>
 								<CalendarIcon />
 								<span>Calendar</span>
 							</a>
@@ -329,7 +344,8 @@
 						<li>
 							<a
 								href="/util/serialization"
-								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/util/serialization'
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname ===
+								'/util/serialization'
 									? 'active bg-secondary text-secondary-content'
 									: ''}"
 								onclick={closeDrawer}
@@ -353,7 +369,8 @@
 						<li>
 							<a
 								href="/currency-converter"
-								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/currency-converter'
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname ===
+								'/currency-converter'
 									? 'active bg-secondary text-secondary-content'
 									: ''}"
 								onclick={closeDrawer}
@@ -377,7 +394,8 @@
 						<li>
 							<a
 								href="/util/quick-query"
-								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/util/quick-query'
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname ===
+								'/util/quick-query'
 									? 'active bg-secondary text-secondary-content'
 									: ''}"
 								onclick={closeDrawer}
