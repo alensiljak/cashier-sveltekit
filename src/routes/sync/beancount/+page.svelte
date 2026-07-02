@@ -495,19 +495,78 @@
 			normalizeEol(diffModalLocalContent) === normalizeEol(diffModalRemoteContent)
 	);
 
-	/** Start index (into diffModalLines) of each contiguous run of added/removed lines. */
-	let diffHunks = $derived.by(() => {
-		const starts: number[] = [];
-		let inHunk = false;
+	/** Contiguous run of added/removed lines in diffModalLines — the unit a hunk decision applies to. */
+	let diffHunkRanges = $derived.by(() => {
+		const ranges: { start: number; end: number }[] = [];
+		let start = -1;
 		diffModalLines.forEach((line, i) => {
 			if (line.type === 'context') {
-				inHunk = false;
-			} else if (!inHunk) {
-				starts.push(i);
-				inHunk = true;
+				if (start !== -1) ranges.push({ start, end: i });
+				start = -1;
+			} else if (start === -1) {
+				start = i;
 			}
 		});
-		return starts;
+		if (start !== -1) ranges.push({ start, end: diffModalLines.length });
+		return ranges;
+	});
+
+	/** Start index (into diffModalLines) of each hunk — kept for the existing prev/next-change nav. */
+	let diffHunks = $derived(diffHunkRanges.map((r) => r.start));
+
+	/** Hunk index for each line, or null on a context line. */
+	let lineHunkIndex = $derived.by(() => {
+		const arr: (number | null)[] = [];
+		let idx = -1;
+		let inHunk = false;
+		for (const line of diffModalLines) {
+			if (line.type === 'context') {
+				inHunk = false;
+				arr.push(null);
+			} else {
+				if (!inHunk) {
+					idx += 1;
+					inHunk = true;
+				}
+				arr.push(idx);
+			}
+		}
+		return arr;
+	});
+
+	/**
+	 * Hunks the user has flipped to "Mine" (keep the local lines, drop the
+	 * incoming ones) — indices missing from this set default to "Theirs",
+	 * matching today's whole-file pull. Reset whenever the previewed file or
+	 * its diff changes (see the effect below).
+	 */
+	let rejectedHunks = $state(new Set<number>());
+
+	function setHunkChoice(hunkIndex: number, theirs: boolean) {
+		const next = new Set(rejectedHunks);
+		if (theirs) next.delete(hunkIndex);
+		else next.add(hunkIndex);
+		rejectedHunks = next;
+	}
+
+	/**
+	 * Reconstructs file content by walking diffModalLines and, per hunk,
+	 * keeping either the incoming ("added") or the local ("removed") lines
+	 * per `rejectedHunks` — context lines are always kept. All-Theirs
+	 * reproduces a plain pull; all-Mine reproduces the local file untouched.
+	 */
+	let diffModalMergedContent = $derived.by(() => {
+		const out: string[] = [];
+		diffModalLines.forEach((line, i) => {
+			const hunkIndex = lineHunkIndex[i];
+			if (hunkIndex === null) {
+				out.push(line.content);
+				return;
+			}
+			const theirs = !rejectedHunks.has(hunkIndex);
+			if ((line.type === 'added') === theirs) out.push(line.content);
+		});
+		return out.length ? out.join('\n') + '\n' : '';
 	});
 
 	/** Index into diffHunks of the hunk last scrolled to; -1 = none visited yet. */
@@ -534,10 +593,12 @@
 	}
 
 	// The set of hunks changes whenever the previewed file or its selected
-	// action changes (diffModalLines is recomputed) — restart navigation.
+	// action changes (diffModalLines is recomputed) — restart navigation and
+	// discard any per-hunk Theirs/Mine choices from the previous file.
 	$effect(() => {
 		void diffModalLines;
 		currentHunk = -1;
+		rejectedHunks = new Set();
 	});
 
 	/** Explains, in the modal, exactly what applying the row's current selection will do. */
@@ -604,6 +665,48 @@
 			closeDiffModal();
 		} finally {
 			markingIdentical = false;
+		}
+	}
+
+	let applyingMerge = $state(false);
+
+	/** True once the current Theirs/Mine picks would actually change the local file. */
+	let diffModalMergeIsNoOp = $derived(
+		diffModalLocalContent === undefined ||
+			normalizeEol(diffModalMergedContent) === normalizeEol(diffModalLocalContent)
+	);
+
+	/**
+	 * Writes the merged content (this modal's per-hunk Theirs/Mine picks)
+	 * straight to OPFS for just this file — independent of the row's
+	 * pull/skip toggle in the tree below. Updates the baseline the same way
+	 * a full pull does (the merge result becomes the new sync point for both
+	 * sides) and clears any pending override so the row re-classifies
+	 * against it, typically dropping back to unchanged.
+	 */
+	async function applyMergeForModal() {
+		if (!activePeer || !diffModalPath) return;
+		const path = diffModalPath;
+		applyingMerge = true;
+		try {
+			await opfsSource.writeFile(path, diffModalMergedContent);
+			const freshLocal = await opfsSource.listTree();
+			localEntries = freshLocal;
+			const local = freshLocal.find((e) => e.path === path);
+			const remoteEntry = remoteEntries?.find((e) => e.path === path);
+			if (local && remoteEntry) {
+				await updateBaseline(activePeer.id, [{ path, local, remote: remoteEntry }]);
+				baseline = await getBaseline(activePeer.id);
+			}
+			const next = new Map(overrides);
+			next.delete(path);
+			overrides = next;
+			Notifier.success(`${path}: merge applied.`);
+			closeDiffModal();
+		} catch (e) {
+			Notifier.error(`Merge failed: ${(e as Error).message}`);
+		} finally {
+			applyingMerge = false;
 		}
 	}
 
@@ -899,17 +1002,23 @@
 			<div class="join w-full">
 				<button
 					type="button"
-					class="btn btn-xs join-item flex-1 {viewMode === 'cards' ? 'btn-outline btn-primary' : ''}"
+					class="btn btn-xs join-item flex-1 {viewMode === 'cards'
+						? 'btn-outline btn-primary'
+						: ''}"
 					onclick={() => (viewMode = 'cards')}>Cards</button
 				>
 				<button
 					type="button"
-					class="btn btn-xs join-item flex-1 {viewMode === 'compact' ? 'btn-outline btn-primary' : ''}"
+					class="btn btn-xs join-item flex-1 {viewMode === 'compact'
+						? 'btn-outline btn-primary'
+						: ''}"
 					onclick={() => (viewMode = 'compact')}>Compact</button
 				>
 				<button
 					type="button"
-					class="btn btn-xs join-item flex-1 {viewMode === 'grouped' ? 'btn-outline btn-primary' : ''}"
+					class="btn btn-xs join-item flex-1 {viewMode === 'grouped'
+						? 'btn-outline btn-primary'
+						: ''}"
 					onclick={() => (viewMode = 'grouped')}>Grouped</button
 				>
 			</div>
@@ -1232,17 +1341,43 @@
 							</button>
 						{/if}
 					{:else}
-						<div class="flex gap-4 pb-2 text-xs opacity-50">
-							<span class="flex items-center gap-1.5"
-								><span class="bg-success/40 inline-block h-3 w-3 rounded-sm"></span>added</span
-							>
-							<span class="flex items-center gap-1.5"
-								><span class="bg-error/40 inline-block h-3 w-3 rounded-sm"></span>removed</span
-							>
+						<div class="flex items-center justify-between gap-4 pb-2 text-xs opacity-50">
+							<div class="flex gap-4">
+								<span class="flex items-center gap-1.5"
+									><span class="bg-success/40 inline-block h-3 w-3 rounded-sm"></span>added</span
+								>
+								<span class="flex items-center gap-1.5"
+									><span class="bg-error/40 inline-block h-3 w-3 rounded-sm"></span>removed</span
+								>
+							</div>
+							<span>Dimmed lines are dropped by the picks below.</span>
 						</div>
 						<div class="rounded bg-base-200 p-2 font-mono text-xs leading-5">
 							{#each diffModalLines as line, i}
-								<div id="diff-line-{i}">
+								{@const hunkIndex = lineHunkIndex[i]}
+								{@const theirs = hunkIndex !== null && !rejectedHunks.has(hunkIndex)}
+								{@const included =
+									hunkIndex === null ||
+									(line.type === 'added' ? theirs : line.type === 'removed' ? !theirs : true)}
+								{#if hunkIndex !== null && diffHunkRanges[hunkIndex].start === i}
+									<div class="join mt-2 mb-1">
+										<button
+											type="button"
+											class="btn btn-xs join-item {theirs ? 'btn-primary' : 'btn-outline'}"
+											onclick={() => setHunkChoice(hunkIndex, true)}
+										>
+											Theirs
+										</button>
+										<button
+											type="button"
+											class="btn btn-xs join-item {!theirs ? 'btn-neutral' : 'btn-outline'}"
+											onclick={() => setHunkChoice(hunkIndex, false)}
+										>
+											Mine
+										</button>
+									</div>
+								{/if}
+								<div id="diff-line-{i}" class:opacity-30={!included}>
 									{#if line.type === 'removed'}
 										<div class="bg-error/20 text-error-content break-all whitespace-pre-wrap">
 											- {line.content}
@@ -1262,6 +1397,24 @@
 					{/if}
 				{/if}
 			</div>
+			{#if diffHunks.length > 0}
+				<div class="border-base-300 flex items-center justify-between gap-3 border-t px-4 py-3">
+					<span class="text-xs opacity-60">
+						{diffHunks.length - rejectedHunks.size} theirs · {rejectedHunks.size} mine
+					</span>
+					<button
+						type="button"
+						class="btn btn-primary btn-sm"
+						disabled={applyingMerge || diffModalMergeIsNoOp}
+						onclick={applyMergeForModal}
+					>
+						{#if applyingMerge}
+							<span class="loading loading-spinner loading-xs"></span>
+						{/if}
+						Apply merge
+					</button>
+				</div>
+			{/if}
 		</div>
 		<button class="modal-backdrop" aria-label="Close" onclick={closeDiffModal}></button>
 	</div>
