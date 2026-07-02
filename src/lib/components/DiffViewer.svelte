@@ -145,34 +145,54 @@
 </script>
 
 <div class="flex flex-col gap-2">
-	{#if title || hunkRanges.length > 0}
-		<div class="flex items-center gap-2">
-			{#if title}
-				<p class="min-w-0 flex-1 truncate font-mono text-sm font-semibold opacity-60">{title}</p>
-			{/if}
-			{#if hunkRanges.length > 0}
-				<span class="shrink-0 text-xs opacity-50">{currentHunk + 1}/{hunkRanges.length}</span>
-				<button
-					type="button"
-					class="btn btn-ghost btn-xs btn-square"
-					disabled={currentHunk <= 0}
-					aria-label="Previous change"
-					onclick={prevHunk}
-				>
-					<ChevronUpIcon class="h-4 w-4" />
-				</button>
-				<button
-					type="button"
-					class="btn btn-ghost btn-xs btn-square"
-					disabled={currentHunk >= hunkRanges.length - 1}
-					aria-label="Next change"
-					onclick={nextHunk}
-				>
-					<ChevronDownIcon class="h-4 w-4" />
-				</button>
-			{/if}
-		</div>
-	{/if}
+	<div class="bg-base-100 sticky top-0 z-10 flex flex-col gap-2 pb-2">
+		{#if title || hunkRanges.length > 0}
+			<div class="flex items-center gap-2">
+				{#if title}
+					<p class="min-w-0 flex-1 truncate font-mono text-sm font-semibold opacity-60">{title}</p>
+				{/if}
+				{#if hunkRanges.length > 0}
+					<span class="shrink-0 text-xs opacity-50">{currentHunk + 1}/{hunkRanges.length}</span>
+					<button
+						type="button"
+						class="btn btn-ghost btn-xs btn-square"
+						disabled={currentHunk <= 0}
+						aria-label="Previous change"
+						onclick={prevHunk}
+					>
+						<ChevronUpIcon class="h-4 w-4" />
+					</button>
+					<button
+						type="button"
+						class="btn btn-ghost btn-xs btn-square"
+						disabled={currentHunk >= hunkRanges.length - 1}
+						aria-label="Next change"
+						onclick={nextHunk}
+					>
+						<ChevronDownIcon class="h-4 w-4" />
+					</button>
+				{/if}
+			</div>
+		{/if}
+
+		{#if hunkRanges.length > 0}
+			<div
+				class="border-base-300 flex items-center justify-between gap-4 border-b pb-2 text-xs opacity-50"
+			>
+				<div class="flex gap-4">
+					<span class="flex items-center gap-1.5"
+						><span class="bg-success/40 inline-block h-3 w-3 rounded-sm"></span>added</span
+					>
+					<span class="flex items-center gap-1.5"
+						><span class="bg-error/40 inline-block h-3 w-3 rounded-sm"></span>removed</span
+					>
+				</div>
+				{#if onApplyMerge}
+					<span>Dimmed lines are dropped by the picks below.</span>
+				{/if}
+			</div>
+		{/if}
+	</div>
 
 	{#if banner}
 		<div class="alert {banner.alertClass} text-xs">
@@ -198,19 +218,6 @@
 			</button>
 		{/if}
 	{:else}
-		<div class="flex items-center justify-between gap-4 text-xs opacity-50">
-			<div class="flex gap-4">
-				<span class="flex items-center gap-1.5"
-					><span class="bg-success/40 inline-block h-3 w-3 rounded-sm"></span>added</span
-				>
-				<span class="flex items-center gap-1.5"
-					><span class="bg-error/40 inline-block h-3 w-3 rounded-sm"></span>removed</span
-				>
-			</div>
-			{#if onApplyMerge}
-				<span>Dimmed lines are dropped by the picks below.</span>
-			{/if}
-		</div>
 		<div class="rounded bg-base-200 p-2 font-mono text-xs leading-5">
 			{#each diffLines as line, i}
 				{@const hunkIndex = lineHunkIndex[i]}
