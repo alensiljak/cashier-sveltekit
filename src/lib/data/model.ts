@@ -163,3 +163,18 @@ export class TrustedPeer {
 	trustedAt: string = '';
 	lastSeen?: string;
 }
+
+/**
+ * Last-synced file metadata for one path against one peer endpoint. Compared
+ * against a fresh SyncEntry scan (see src/lib/sync/syncDiff.ts) to classify
+ * each path as unchanged / local-newer / remote-newer / conflict.
+ * Keyed `[endpointId+path]` — one baseline per (peer, file), since a device
+ * may sync with multiple peers. See doc/projects/2026-07-02_beancount-peer-sync.md.
+ */
+export class PeerSyncBaseline {
+	endpointId: string = '';
+	path: string = '';
+	size: number = 0;
+	lastModified: number = 0;
+	syncedAt: string = '';
+}

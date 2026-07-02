@@ -9,7 +9,8 @@ import {
 	// Posting,
 	ScheduledTransaction,
 	Setting,
-	TrustedPeer
+	TrustedPeer,
+	PeerSyncBaseline
 } from '$lib/data/model';
 
 // Define the schema
@@ -21,6 +22,7 @@ interface CashierDatabase extends Dexie {
 	settings: Table;
 	deviceSettings: Table;
 	peers: Table;
+	peerSyncBaseline: Table;
 	// xacts: Table;
 }
 
@@ -95,11 +97,20 @@ db.version(5)
 		}
 	});
 
+db.version(6).stores({
+	scheduled: '++id, nextDate',
+	settings: 'key',
+	deviceSettings: 'key',
+	peers: 'id',
+	peerSyncBaseline: '[endpointId+path]'
+});
+
 // Mappings
 
 db.settings.mapToClass(Setting);
 db.deviceSettings.mapToClass(Setting);
 db.scheduled.mapToClass(ScheduledTransaction);
 db.peers.mapToClass(TrustedPeer);
+db.peerSyncBaseline.mapToClass(PeerSyncBaseline);
 
 export default db;

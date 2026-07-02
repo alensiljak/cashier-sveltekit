@@ -73,8 +73,8 @@ A client can currently only pull remote changes. Pushing (writing to a peer) is 
 - [x] Remove dead `StorageBackendType` export from `storageBackend.ts`
 - [x] Create `src/lib/sync/` with a `SyncSource` interface (`SyncEntry` moved here from `OpfsSource.ts`)
 - [x] Implement `OpfsSource` as a full `SyncSource` class (`listTree`/`readFile`/`writeFile`/`deleteFile`/`hashFile`), with `hashFile(path)` via `crypto.subtle.digest('SHA-256', …)` over the file's own content
-- [ ] Add Dexie `syncBaseline` table (new db version), keyed `[endpointId+path]`
-- [ ] Implement diff classification (`pull`/`conflict`/`skip`) against baseline
+- [x] Add Dexie `peerSyncBaseline` table (new db version), keyed `[endpointId+path]` (`src/lib/data/db.ts` v6, `PeerSyncBaseline` model, CRUD in `src/lib/sync/syncBaseline.ts`)
+- [x] Implement diff classification (`pull`/`conflict`/`skip`) against baseline (`src/lib/sync/syncDiff.ts`'s `diffAgainstBaseline`); added `fake-indexeddb` devDependency + `tests/setup.ts` wiring so Dexie-backed modules are unit-testable
 
 ### Peer Protocol
 
