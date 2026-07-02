@@ -6,26 +6,11 @@
     import { readFile } from '$lib/utils/opfslib';
     import { WebDavClient } from '$lib/utils/webdav';
     import db from '$lib/data/db';
-    import { diffLines } from 'diff';
-
-    type DiffLine = { type: 'added' | 'removed' | 'context'; content: string };
-    type DiffSection = { filename: string; lines: DiffLine[]; identical: boolean };
+    import { buildDiffLines, type DiffSection } from '$lib/utils/diffText';
 
     let sections = $state<DiffSection[]>([]);
     let loading = $state(true);
     let error = $state('');
-
-    function buildDiffLines(local: string, remote: string): DiffLine[] {
-        const changes = diffLines(remote, local);
-        const lines: DiffLine[] = [];
-        for (const part of changes) {
-            const partLines = part.value.split('\n');
-            if (partLines[partLines.length - 1] === '') partLines.pop();
-            const type = part.added ? 'added' : part.removed ? 'removed' : 'context';
-            for (const content of partLines) lines.push({ type, content });
-        }
-        return lines;
-    }
 
     onMount(async () => {
         const files = page.url.searchParams.getAll('f');
@@ -42,7 +27,7 @@
                 const res = await dav.get('settings.json');
                 if (res.ok) {
                     const remoteContent = await res.text();
-                    const lines = buildDiffLines(localContent, remoteContent);
+                    const lines = buildDiffLines(remoteContent, localContent);
                     result.push({ filename: 'settings.json', lines, identical: lines.every(l => l.type === 'context') });
                 } else {
                     error = `Cannot fetch remote settings.json: ${res.status} ${res.statusText}`;
@@ -53,7 +38,7 @@
                 const res = await dav.get('cashier.bean');
                 if (res.ok) {
                     const remoteContent = await res.text();
-                    const lines = buildDiffLines(localContent, remoteContent);
+                    const lines = buildDiffLines(remoteContent, localContent);
                     result.push({ filename: 'cashier.bean', lines, identical: lines.every(l => l.type === 'context') });
                 } else {
                     error = `Cannot fetch remote cashier.bean: ${res.status} ${res.statusText}`;
@@ -65,7 +50,7 @@
                 const res = await dav.get('scheduled.json');
                 if (res.ok) {
                     const remoteContent = await res.text();
-                    const lines = buildDiffLines(localContent, remoteContent);
+                    const lines = buildDiffLines(remoteContent, localContent);
                     result.push({ filename: 'scheduled.json', lines, identical: lines.every(l => l.type === 'context') });
                 } else {
                     error = `Cannot fetch remote scheduled.json: ${res.status} ${res.statusText}`;

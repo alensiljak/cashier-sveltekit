@@ -2,8 +2,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { joinRoom } from 'trystero';
 	import type { Room, MessageAction } from '@trystero-p2p/core';
-	// @ts-ignore – no type declarations for 'diff'
-	import { diffLines } from 'diff';
+	import { buildDiffLines, type DiffSection } from '$lib/utils/diffText';
 	import { settings, SettingKeys, deviceSettings, DeviceSettingKeys } from '$lib/settings';
 	import db from '$lib/data/db';
 	import { readFile, saveFile } from '$lib/utils/opfslib';
@@ -29,8 +28,6 @@
 		scheduled: string | null;
 	}
 
-	type DiffLine = { type: 'added' | 'removed' | 'context'; content: string };
-	type DiffSection = { filename: string; lines: DiffLine[]; identical: boolean };
 	type PreviewSection = { filename: string; content: string };
 
 	// Message types for sync protocol
@@ -130,18 +127,6 @@
 				? JSON.stringify(await db.scheduled.toArray(), null, 2)
 				: null
 		};
-	}
-
-	function buildDiffLines(local: string, remote: string): DiffLine[] {
-		const changes = diffLines(local, remote);
-		const lines: DiffLine[] = [];
-		for (const part of changes) {
-			const partLines = part.value.split('\n');
-			if (partLines[partLines.length - 1] === '') partLines.pop();
-			const type = part.added ? 'added' : part.removed ? 'removed' : 'context';
-			for (const content of partLines) lines.push({ type, content });
-		}
-		return lines;
 	}
 
 	function formatDate(iso: string | undefined = undefined): string {

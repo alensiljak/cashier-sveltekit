@@ -8,5 +8,3 @@ export interface StorageBackend {
 	listFiles(): Promise<string[]>;
 	lastModified(filename: string): Promise<number | undefined>;
 }
-
-export type StorageBackendType = 'opfs' | 'filesystem' | 'indexeddb';
