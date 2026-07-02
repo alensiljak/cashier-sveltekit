@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import type { MessageAction } from '@trystero-p2p/core';
-	import { buildDiffLines, type DiffSection } from '$lib/utils/diffText';
+	import DiffViewer from '$lib/components/DiffViewer.svelte';
 	import { settings } from '$lib/settings';
 	import db from '$lib/data/db';
 	import { readFile, saveFile } from '$lib/utils/opfslib';
@@ -26,6 +26,14 @@
 	}
 
 	type PreviewSection = { filename: string; content: string };
+
+	/**
+	 * One file's raw local/remote text for the Diff modal — DiffViewer computes
+	 * the line diff itself. `mergeable` enables its per-hunk Theirs/Mine picker;
+	 * only cashier.bean (line-oriented, append-only) makes sense to merge —
+	 * settings/scheduled are single JSON blobs, so they stay read-only diffs.
+	 */
+	type RawDiffSection = { filename: string; local: string; remote: string; mergeable: boolean };
 
 	// Message types for sync protocol
 	type SyncRequestMsg = { requestId: string; files: string[] };
@@ -97,7 +105,7 @@
 	let showDiff = $state(false);
 	let showPreview = $state(false);
 	let showPullConfirm = $state(false);
-	let diffSections = $state<DiffSection[]>([]);
+	let diffSections = $state<RawDiffSection[]>([]);
 	let previewSections = $state<PreviewSection[]>([]);
 
 	// ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -262,29 +270,29 @@
 		try {
 			const files = selectedFiles();
 			const [remote, local] = await Promise.all([fetchRemoteData(files), getLocalData(files)]);
-			const sections: DiffSection[] = [];
+			const sections: RawDiffSection[] = [];
 			if (remote.bean !== null && local.bean !== null) {
-				const lines = buildDiffLines(local.bean, remote.bean);
 				sections.push({
 					filename: 'cashier.bean',
-					lines,
-					identical: lines.every((l) => l.type === 'context')
+					local: local.bean,
+					remote: remote.bean,
+					mergeable: true
 				});
 			}
 			if (remote.settings !== null && local.settings !== null) {
-				const lines = buildDiffLines(local.settings, remote.settings);
 				sections.push({
 					filename: 'settings.json',
-					lines,
-					identical: lines.every((l) => l.type === 'context')
+					local: local.settings,
+					remote: remote.settings,
+					mergeable: false
 				});
 			}
 			if (remote.scheduled !== null && local.scheduled !== null) {
-				const lines = buildDiffLines(local.scheduled, remote.scheduled);
 				sections.push({
 					filename: 'scheduled.json',
-					lines,
-					identical: lines.every((l) => l.type === 'context')
+					local: local.scheduled,
+					remote: remote.scheduled,
+					mergeable: false
 				});
 			}
 			diffSections = sections;
@@ -322,6 +330,22 @@
 			Notifier.error('Pull failed: ' + (e as Error).message);
 		} finally {
 			isPulling = false;
+		}
+	}
+
+	let applyingCashierMerge = $state(false);
+
+	/** Writes a hunk-level Theirs/Mine merge of cashier.bean straight to OPFS — see DiffViewer. */
+	async function applyCashierMerge(mergedContent: string) {
+		applyingCashierMerge = true;
+		try {
+			await saveFile('cashier.bean', mergedContent);
+			Notifier.success('cashier.bean: merge applied.');
+			showDiff = false;
+		} catch (e) {
+			Notifier.error(`Merge failed: ${(e as Error).message}`);
+		} finally {
+			applyingCashierMerge = false;
 		}
 	}
 
@@ -639,32 +663,14 @@
 				<button class="btn btn-ghost btn-sm" onclick={() => (showDiff = false)}>✕</button>
 			</div>
 			<div class="flex-1 overflow-y-auto touch-pan-y p-4 flex flex-col gap-6">
-				<div class="flex gap-4 text-xs opacity-50">
-					<span class="flex items-center gap-1.5"
-						><span class="inline-block w-3 h-3 rounded-sm bg-success/40"></span>incoming (peer only)</span
-					>
-					<span class="flex items-center gap-1.5"
-						><span class="inline-block w-3 h-3 rounded-sm bg-error/40"></span>will be removed (local
-						only)</span
-					>
-				</div>
-				{#each diffSections as section}
-					<div>
-						<p class="font-mono text-sm font-semibold mb-1 opacity-60">{section.filename}</p>
-						{#if section.identical}
-							<p class="text-sm text-success">Files are identical.</p>
-						{:else}
-							<pre
-								class="text-xs font-mono leading-5 overflow-x-auto rounded bg-base-200 p-2 select-text">{#each section.lines as line}{#if line.type === 'removed'}<span
-											class="block bg-error/20 text-error-content whitespace-pre"
-											>- {line.content}</span
-										>{:else if line.type === 'added'}<span
-											class="block bg-success/20 text-success-content whitespace-pre"
-											>+ {line.content}</span
-										>{:else}<span class="block opacity-50 whitespace-pre">  {line.content}</span
-										>{/if}{/each}</pre>
-						{/if}
-					</div>
+				{#each diffSections as section (section.filename)}
+					<DiffViewer
+						title={section.filename}
+						oldText={section.local}
+						newText={section.remote}
+						onApplyMerge={section.mergeable ? applyCashierMerge : undefined}
+						applyingMerge={applyingCashierMerge}
+					/>
 				{/each}
 			</div>
 		</div>

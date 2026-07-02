@@ -11,7 +11,6 @@
 		DownloadIcon,
 		ShieldCheckIcon,
 		GitCompareArrowsIcon,
-		ChevronUpIcon,
 		ChevronDownIcon,
 		ChevronRightIcon
 	} from '@lucide/svelte';
@@ -39,7 +38,7 @@
 		removeBaselineEntries,
 		type BaselineEntry
 	} from '$lib/sync/syncBaseline';
-	import { buildDiffLines } from '$lib/utils/diffText';
+	import DiffViewer from '$lib/components/DiffViewer.svelte';
 	import type { PeerSyncBaseline } from '$lib/data/model';
 
 	// ─── Peer selection & connection state ──────────────────────────────────────
@@ -478,10 +477,6 @@
 		diffModalRow?.effectiveAction === 'skip' ? diffModalLocalContent : diffModalRemoteContent
 	);
 
-	let diffModalLines = $derived(
-		buildDiffLines(diffModalLocalContent ?? '', diffModalAfterContent ?? '')
-	);
-
 	/**
 	 * True once both sides of the previewed file have loaded and their raw
 	 * content matches byte-for-byte — independent of the row's pull/skip
@@ -494,112 +489,6 @@
 			diffModalRemoteContent !== undefined &&
 			normalizeEol(diffModalLocalContent) === normalizeEol(diffModalRemoteContent)
 	);
-
-	/** Contiguous run of added/removed lines in diffModalLines — the unit a hunk decision applies to. */
-	let diffHunkRanges = $derived.by(() => {
-		const ranges: { start: number; end: number }[] = [];
-		let start = -1;
-		diffModalLines.forEach((line, i) => {
-			if (line.type === 'context') {
-				if (start !== -1) ranges.push({ start, end: i });
-				start = -1;
-			} else if (start === -1) {
-				start = i;
-			}
-		});
-		if (start !== -1) ranges.push({ start, end: diffModalLines.length });
-		return ranges;
-	});
-
-	/** Start index (into diffModalLines) of each hunk — kept for the existing prev/next-change nav. */
-	let diffHunks = $derived(diffHunkRanges.map((r) => r.start));
-
-	/** Hunk index for each line, or null on a context line. */
-	let lineHunkIndex = $derived.by(() => {
-		const arr: (number | null)[] = [];
-		let idx = -1;
-		let inHunk = false;
-		for (const line of diffModalLines) {
-			if (line.type === 'context') {
-				inHunk = false;
-				arr.push(null);
-			} else {
-				if (!inHunk) {
-					idx += 1;
-					inHunk = true;
-				}
-				arr.push(idx);
-			}
-		}
-		return arr;
-	});
-
-	/**
-	 * Hunks the user has flipped to "Mine" (keep the local lines, drop the
-	 * incoming ones) — indices missing from this set default to "Theirs",
-	 * matching today's whole-file pull. Reset whenever the previewed file or
-	 * its diff changes (see the effect below).
-	 */
-	let rejectedHunks = $state(new Set<number>());
-
-	function setHunkChoice(hunkIndex: number, theirs: boolean) {
-		const next = new Set(rejectedHunks);
-		if (theirs) next.delete(hunkIndex);
-		else next.add(hunkIndex);
-		rejectedHunks = next;
-	}
-
-	/**
-	 * Reconstructs file content by walking diffModalLines and, per hunk,
-	 * keeping either the incoming ("added") or the local ("removed") lines
-	 * per `rejectedHunks` — context lines are always kept. All-Theirs
-	 * reproduces a plain pull; all-Mine reproduces the local file untouched.
-	 */
-	let diffModalMergedContent = $derived.by(() => {
-		const out: string[] = [];
-		diffModalLines.forEach((line, i) => {
-			const hunkIndex = lineHunkIndex[i];
-			if (hunkIndex === null) {
-				out.push(line.content);
-				return;
-			}
-			const theirs = !rejectedHunks.has(hunkIndex);
-			if ((line.type === 'added') === theirs) out.push(line.content);
-		});
-		return out.length ? out.join('\n') + '\n' : '';
-	});
-
-	/** Index into diffHunks of the hunk last scrolled to; -1 = none visited yet. */
-	let currentHunk = $state(-1);
-
-	function scrollToHunk(index: number) {
-		const lineIndex = diffHunks[index];
-		if (lineIndex === undefined) return;
-		document
-			.getElementById(`diff-line-${lineIndex}`)
-			?.scrollIntoView({ block: 'center', behavior: 'smooth' });
-	}
-
-	function prevHunk() {
-		if (currentHunk <= 0) return;
-		currentHunk -= 1;
-		scrollToHunk(currentHunk);
-	}
-
-	function nextHunk() {
-		if (currentHunk >= diffHunks.length - 1) return;
-		currentHunk += 1;
-		scrollToHunk(currentHunk);
-	}
-
-	// The set of hunks changes whenever the previewed file or its selected
-	// action changes (diffModalLines is recomputed) — restart navigation and
-	// discard any per-hunk Theirs/Mine choices from the previous file.
-	$effect(() => {
-		void diffModalLines;
-		currentHunk = -1;
-		rejectedHunks = new Set();
-	});
 
 	/** Explains, in the modal, exactly what applying the row's current selection will do. */
 	function previewBanner(row: TreeRow | null): { text: string; alertClass: string } | null {
@@ -670,26 +559,20 @@
 
 	let applyingMerge = $state(false);
 
-	/** True once the current Theirs/Mine picks would actually change the local file. */
-	let diffModalMergeIsNoOp = $derived(
-		diffModalLocalContent === undefined ||
-			normalizeEol(diffModalMergedContent) === normalizeEol(diffModalLocalContent)
-	);
-
 	/**
-	 * Writes the merged content (this modal's per-hunk Theirs/Mine picks)
+	 * Writes the merged content (DiffViewer's per-hunk Theirs/Mine picks)
 	 * straight to OPFS for just this file — independent of the row's
 	 * pull/skip toggle in the tree below. Updates the baseline the same way
 	 * a full pull does (the merge result becomes the new sync point for both
 	 * sides) and clears any pending override so the row re-classifies
 	 * against it, typically dropping back to unchanged.
 	 */
-	async function applyMergeForModal() {
+	async function applyMergeForModal(mergedContent: string) {
 		if (!activePeer || !diffModalPath) return;
 		const path = diffModalPath;
 		applyingMerge = true;
 		try {
-			await opfsSource.writeFile(path, diffModalMergedContent);
+			await opfsSource.writeFile(path, mergedContent);
 			const freshLocal = await opfsSource.listTree();
 			localEntries = freshLocal;
 			const local = freshLocal.find((e) => e.path === path);
@@ -1284,27 +1167,6 @@
 		<div class="modal-box flex h-[90vh] max-w-2xl flex-col p-0">
 			<div class="border-base-300 flex items-center gap-2 border-b px-4 py-3">
 				<h3 class="min-w-0 flex-1 truncate font-mono font-bold text-sm">{diffModalPath}</h3>
-				{#if diffHunks.length > 0}
-					<span class="shrink-0 text-xs opacity-50">{currentHunk + 1}/{diffHunks.length}</span>
-					<button
-						type="button"
-						class="btn btn-ghost btn-xs btn-square"
-						disabled={currentHunk <= 0}
-						aria-label="Previous change"
-						onclick={prevHunk}
-					>
-						<ChevronUpIcon class="h-4 w-4" />
-					</button>
-					<button
-						type="button"
-						class="btn btn-ghost btn-xs btn-square"
-						disabled={currentHunk >= diffHunks.length - 1}
-						aria-label="Next change"
-						onclick={nextHunk}
-					>
-						<ChevronDownIcon class="h-4 w-4" />
-					</button>
-				{/if}
 				<button class="btn btn-ghost btn-sm" onclick={closeDiffModal}>✕</button>
 			</div>
 			<div class="flex-1 overflow-y-auto touch-pan-y p-4">
@@ -1313,108 +1175,20 @@
 				{:else if diffModalError}
 					<div class="alert alert-error text-sm"><span>{diffModalError}</span></div>
 				{:else}
-					{@const banner = previewBanner(diffModalRow)}
-					{#if banner}
-						<div class="alert {banner.alertClass} mb-3 text-xs">
-							<span>{banner.text}</span>
-						</div>
-					{/if}
-					{#if diffModalLines.every((l) => l.type === 'context')}
-						<p class="text-success text-sm">
-							{diffModalRow?.effectiveAction === 'skip'
-								? 'No changes will be applied.'
-								: 'Files are identical.'}
-						</p>
-						{#if diffModalIdentical}
-							<button
-								type="button"
-								class="btn btn-success btn-xs mt-2"
-								disabled={markingIdentical}
-								onclick={markDiffModalIdentical}
-							>
-								{#if markingIdentical}
-									<span class="loading loading-spinner loading-xs"></span>
-								{:else}
-									<ShieldCheckIcon class="h-3.5 w-3.5" />
-								{/if}
-								Mark as identical
-							</button>
-						{/if}
-					{:else}
-						<div class="flex items-center justify-between gap-4 pb-2 text-xs opacity-50">
-							<div class="flex gap-4">
-								<span class="flex items-center gap-1.5"
-									><span class="bg-success/40 inline-block h-3 w-3 rounded-sm"></span>added</span
-								>
-								<span class="flex items-center gap-1.5"
-									><span class="bg-error/40 inline-block h-3 w-3 rounded-sm"></span>removed</span
-								>
-							</div>
-							<span>Dimmed lines are dropped by the picks below.</span>
-						</div>
-						<div class="rounded bg-base-200 p-2 font-mono text-xs leading-5">
-							{#each diffModalLines as line, i}
-								{@const hunkIndex = lineHunkIndex[i]}
-								{@const theirs = hunkIndex !== null && !rejectedHunks.has(hunkIndex)}
-								{@const included =
-									hunkIndex === null ||
-									(line.type === 'added' ? theirs : line.type === 'removed' ? !theirs : true)}
-								{#if hunkIndex !== null && diffHunkRanges[hunkIndex].start === i}
-									<div class="join mt-2 mb-1">
-										<button
-											type="button"
-											class="btn btn-xs join-item {theirs ? 'btn-primary' : 'btn-outline'}"
-											onclick={() => setHunkChoice(hunkIndex, true)}
-										>
-											Theirs
-										</button>
-										<button
-											type="button"
-											class="btn btn-xs join-item {!theirs ? 'btn-neutral' : 'btn-outline'}"
-											onclick={() => setHunkChoice(hunkIndex, false)}
-										>
-											Mine
-										</button>
-									</div>
-								{/if}
-								<div id="diff-line-{i}" class:opacity-30={!included}>
-									{#if line.type === 'removed'}
-										<div class="bg-error/20 text-error-content break-all whitespace-pre-wrap">
-											- {line.content}
-										</div>
-									{:else if line.type === 'added'}
-										<div class="bg-success/20 text-success-content break-all whitespace-pre-wrap">
-											+ {line.content}
-										</div>
-									{:else}
-										<div class="break-all whitespace-pre-wrap opacity-50">
-											&nbsp; {line.content}
-										</div>
-									{/if}
-								</div>
-							{/each}
-						</div>
-					{/if}
+					<DiffViewer
+						oldText={diffModalLocalContent ?? ''}
+						newText={diffModalAfterContent ?? ''}
+						banner={previewBanner(diffModalRow)}
+						identicalMessage={diffModalRow?.effectiveAction === 'skip'
+							? 'No changes will be applied.'
+							: 'Files are identical.'}
+						onMarkIdentical={diffModalIdentical ? markDiffModalIdentical : undefined}
+						{markingIdentical}
+						onApplyMerge={applyMergeForModal}
+						{applyingMerge}
+					/>
 				{/if}
 			</div>
-			{#if diffHunks.length > 0}
-				<div class="border-base-300 flex items-center justify-between gap-3 border-t px-4 py-3">
-					<span class="text-xs opacity-60">
-						{diffHunks.length - rejectedHunks.size} theirs · {rejectedHunks.size} mine
-					</span>
-					<button
-						type="button"
-						class="btn btn-primary btn-sm"
-						disabled={applyingMerge || diffModalMergeIsNoOp}
-						onclick={applyMergeForModal}
-					>
-						{#if applyingMerge}
-							<span class="loading loading-spinner loading-xs"></span>
-						{/if}
-						Apply merge
-					</button>
-				</div>
-			{/if}
 		</div>
 		<button class="modal-backdrop" aria-label="Close" onclick={closeDiffModal}></button>
 	</div>
