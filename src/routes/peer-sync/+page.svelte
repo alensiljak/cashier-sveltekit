@@ -340,13 +340,13 @@
 	{/each}
 {/snippet}
 
-<article class="flex h-screen flex-col">
+<article class="flex h-full flex-col">
 	<Toolbar title="Peer Sync" {menuItems}>
 		{#snippet actions()}
 			<HelpButton topic="peer-sync" />
 		{/snippet}
 	</Toolbar>
-	<section class="flex-1 space-y-3 overflow-y-auto p-4">
+	<section class="flex-1 space-y-3 overflow-y-auto touch-pan-y p-4">
 		<!-- Config collapse -->
 		<div class="collapse collapse-arrow bg-base-200 rounded-box">
 			<input type="checkbox" bind:checked={configExpanded} />
@@ -615,7 +615,7 @@
 				<h3 class="font-bold">Preview — {syncTarget?.name}</h3>
 				<button class="btn btn-ghost btn-sm" onclick={() => (showPreview = false)}>✕</button>
 			</div>
-			<div class="flex-1 overflow-y-auto p-4 flex flex-col gap-6">
+			<div class="flex-1 overflow-y-auto touch-pan-y p-4 flex flex-col gap-6">
 				{#each previewSections as section}
 					<div>
 						<p class="font-mono text-sm font-semibold mb-1 opacity-60">{section.filename}</p>
@@ -638,7 +638,7 @@
 				<h3 class="font-bold">Diff — Local vs {syncTarget?.name}</h3>
 				<button class="btn btn-ghost btn-sm" onclick={() => (showDiff = false)}>✕</button>
 			</div>
-			<div class="flex-1 overflow-y-auto p-4 flex flex-col gap-6">
+			<div class="flex-1 overflow-y-auto touch-pan-y p-4 flex flex-col gap-6">
 				<div class="flex gap-4 text-xs opacity-50">
 					<span class="flex items-center gap-1.5"
 						><span class="inline-block w-3 h-3 rounded-sm bg-success/40"></span>incoming (peer only)</span

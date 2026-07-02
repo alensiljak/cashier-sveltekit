@@ -900,14 +900,14 @@
 	</div>
 {/snippet}
 
-<article class="flex h-screen flex-col">
+<article class="flex h-full flex-col">
 	<Toolbar title="Beancount Sync" {menuItems}>
 		{#snippet actions()}
 			<HelpButton topic="beancount-sync" />
 		{/snippet}
 	</Toolbar>
 
-	<section class="flex-1 space-y-3 overflow-y-auto p-4">
+	<section class="flex-1 space-y-3 overflow-y-auto touch-pan-y p-4">
 		{#if !activePeer}
 			<!-- Peer selection -->
 			{#if !presenceReady}
@@ -1307,7 +1307,7 @@
 				{/if}
 				<button class="btn btn-ghost btn-sm" onclick={closeDiffModal}>✕</button>
 			</div>
-			<div class="flex-1 overflow-y-auto p-4">
+			<div class="flex-1 overflow-y-auto touch-pan-y p-4">
 				{#if diffModalLoading}
 					<div class="flex justify-center p-8"><span class="loading loading-spinner"></span></div>
 				{:else if diffModalError}
