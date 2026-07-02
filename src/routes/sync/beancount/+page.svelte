@@ -7,11 +7,18 @@
 		FolderOpenIcon,
 		FileIcon,
 		ArrowLeftIcon,
-		ArrowRightIcon
+		ArrowRightIcon,
+		TriangleAlertIcon,
+		Check
 	} from '@lucide/svelte';
 	import type { RequestAction } from '@trystero-p2p/core';
 	import Toolbar from '$lib/components/Toolbar.svelte';
-	import { PeerPresence } from '$lib/sync/peerPresence.svelte';
+	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
+	import {
+		PeerPresence,
+		RELAY_STRATEGIES,
+		type RelayStrategy
+	} from '$lib/sync/peerPresence.svelte';
 	import { listLocalTree, type SyncEntry } from '$lib/sync/OpfsSource';
 	// ─── Peer selection & connection state ──────────────────────────────────────
 
@@ -63,6 +70,16 @@
 		goto(page.url.pathname, { replaceState: true, keepFocus: true, noScroll: true });
 	}
 
+	function registerListFilesAction() {
+		listFilesAction = presence.makeRequestAction<null, SyncEntry[]>(
+			'list-files',
+			async (_request, { peerId: fromId }) => {
+				if (!presence.peersMap[fromId]?.isTrusted) return [];
+				return await listLocalTree();
+			}
+		);
+	}
+
 	onMount(async () => {
 		await presence.init();
 		if (urlPeerId) activePeerId = urlPeerId;
@@ -72,14 +89,23 @@
 		// device. Gating this on `trustedPeers.length > 0` broke discovery whenever
 		// trust wasn't yet fully mutual.
 		await presence.join(presence.roomCode);
-		listFilesAction = presence.makeRequestAction<null, SyncEntry[]>(
-			'list-files',
-			async (_request, { peerId: fromId }) => {
-				if (!presence.peersMap[fromId]?.isTrusted) return [];
-				return await listLocalTree();
-			}
-		);
+		registerListFilesAction();
 	});
+
+	/** Switches the signaling network. Reconnects a live room so the new strategy takes effect immediately. */
+	async function selectStrategy(value: RelayStrategy) {
+		if (presence.strategy === value) return;
+		const wasInRoom = presence.isInRoom;
+		if (wasInRoom) await presence.leave();
+		await presence.setStrategy(value);
+		if (wasInRoom) {
+			await presence.join(presence.roomCode);
+			registerListFilesAction();
+		}
+		// Peer set differs on the new network — force a refetch.
+		fetchedTrysteroId = null;
+		remoteEntries = null;
+	}
 
 	$effect(() => {
 		if (!presence.isInRoom) {
@@ -246,8 +272,26 @@
 	}
 </script>
 
+{#snippet menuItems()}
+	{#each RELAY_STRATEGIES as s (s.value)}
+		<ToolbarMenuItem
+			text={s.label}
+			Icon={presence.strategy === s.value ? Check : undefined}
+			onclick={() => selectStrategy(s.value)}
+		/>
+	{/each}
+{/snippet}
+
 <article class="flex h-screen flex-col">
-	<Toolbar title="Beancount Sync" />
+	<Toolbar title="Beancount Sync" {menuItems} />
+
+	<div
+		role="alert"
+		class="flex items-center gap-2 border-y-4 border-dashed border-black bg-yellow-400 px-4 py-1.5 text-sm font-semibold text-black"
+	>
+		<TriangleAlertIcon class="h-4 w-4 shrink-0" />
+		<span>Incomplete — work in progress. Expect rough edges.</span>
+	</div>
 
 	<section class="flex-1 space-y-3 overflow-y-auto p-4">
 		{#if !activePeer}
