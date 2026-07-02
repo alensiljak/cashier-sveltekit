@@ -14,7 +14,7 @@ Two narrow, unrelated sync surfaces exist:
 | Page        | Transport                                      | Scope                                                            | Baseline                                                                                                      | Diff                                                                   |
 | ----------- | ---------------------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
 | `opfs/sync` | File System Access API (`showDirectoryPicker`) | one local dir ↔ OPFS                                             | `importManifest.ts` — raw IndexedDB (not Dexie), single global `{path,size,lastModified,importedAt}` baseline | none — flat table, metadata-only, no tree, no content preview          |
-| `peer-sync` | `trystero` (WebRTC)                            | hardcoded 3 items: `cashier.bean`, settings JSON, scheduled JSON | none — always fetches full remote snapshot                                                                    | yes, via `diff` pkg, but pull-only, no baseline-aware change detection |
+| `peer-sync` | `@trystero-p2p/*` (WebRTC; Nostr/MQTT/BitTorrent relay, switchable) | hardcoded 3 items: `cashier.bean`, settings JSON, scheduled JSON | none — always fetches full remote snapshot | yes, via `diff` pkg, but pull-only, no baseline-aware change detection |
 
 ## Design
 
@@ -37,6 +37,10 @@ Replace the 3-hardcoded-files protocol (`sync-request`/`sync-response`) with `ki
 - `hash-file` — request: `{path}`. response: `{hash: string} | {missing: true}`. The receiving peer computes the digest itself and returns only that — used to cheaply confirm whether a metadata-flagged conflict is a real content difference.
 - `write-file` — deferred to a later phase (push, see Future below). Shape carried forward so adding it later doesn't require a protocol rework: request `{path, content: string | null}` (`null` = delete), response `{ok: true} | {ok: false, error: string}`.
 - Use trystero's built-in request/response plumbing (`room.makeAction(name, {kind:'request', onRequest})`) instead of the hand-rolled `pendingRequests` map + manual 30s timeout.
+
+### Relay strategy (signaling network) selection
+
+Trystero's monolithic `trystero` package bundled every signaling backend (BitTorrent, Nostr, MQTT, Firebase) behind one import. Switched to the `@trystero-p2p/*` split (`core` + one package per strategy) so only the chosen strategy's client library loads. `PeerPresence.strategy: 'nostr' | 'mqtt' | 'torrent'` (Firebase not exposed) defaults to `nostr`, is persisted via `Settings.peerRelayStrategy`, and is dynamically imported inside `join()`. Both peers MUST pick the same strategy to discover each other — a separate signaling network per choice, not a fallback chain. Switching strategy live leaves and rejoins the current room. Exposed via a toolbar menu on `/sync/beancount`; `/peer-sync` doesn't have the switcher yet (same `PeerPresence`, so trivial to add later).
 
 ### Scope — which files sync
 
@@ -67,20 +71,33 @@ A client can currently only pull remote changes. Pushing (writing to a peer) is 
 - [x] Declare `diff` as a direct dependency in `package.json` (bumped to v9, which bundles its own types; dropped the deprecated `@types/diff` stub)
 - [x] Extract `buildDiffLines`/`DiffLine`/`DiffSection` into `src/lib/utils/diffText.ts`, update `peer-sync` and `backup/webdav/diff` to use it
 - [x] Remove dead `StorageBackendType` export from `storageBackend.ts`
-- [ ] Create `src/lib/sync/` with `SyncSource` interface and `SyncEntry` type
-- [ ] Implement `OpfsSource`, including `hashFile(path)` via `crypto.subtle.digest('SHA-256', …)` over the file's own content
+- [x] Create `src/lib/sync/` with a `SyncSource` interface (`SyncEntry` moved here from `OpfsSource.ts`)
+- [x] Implement `OpfsSource` as a full `SyncSource` class (`listTree`/`readFile`/`writeFile`/`deleteFile`/`hashFile`), with `hashFile(path)` via `crypto.subtle.digest('SHA-256', …)` over the file's own content
 - [ ] Add Dexie `syncBaseline` table (new db version), keyed `[endpointId+path]`
 - [ ] Implement diff classification (`pull`/`conflict`/`skip`) against baseline
 
 ### Peer Protocol
 
-- [ ] Implement `list-files`/`read-file`/`hash-file` trystero actions using `kind:'request'`, replacing `sync-request`/`sync-response` and the hand-rolled `pendingRequests` map
-- [ ] Trust-check each `onRequest` handler against `TrustedPeer`
+- [x] Implement `list-files` as a `kind:'request'` trystero action via `PeerPresence.makeRequestAction`, trust-checked against `TrustedPeer` (untrusted callers get `[]`)
+- [ ] Implement `read-file`/`hash-file` the same way; remove `sync-request`/`sync-response` and the hand-rolled `pendingRequests` map from `peer-sync/+page.svelte` once `PeerSource` replaces them
 - [ ] Implement `PeerSource` on top of the generalized protocol
+
+### Relay Strategy
+
+- [x] Split the `trystero` dependency into `@trystero-p2p/{core,nostr,mqtt,torrent}`
+- [x] Add `PeerPresence.strategy`, persisted via `Settings.peerRelayStrategy`, dynamically imported per strategy in `join()`
+- [x] Toolbar menu on `/sync/beancount` to switch strategy (leaves + rejoins the room, re-registers `list-files`, forces a remote refetch)
+- [ ] Add the same strategy switcher to `/peer-sync`
 
 ### UI
 
-- [ ] Build `src/routes/sync/beancount/+page.svelte`: tree view (extend `OpfsFilePicker.svelte`), per-row status + direction toggle (pull/skip only), apply action — **layout + peer selection done**: static mock data, tree collapse/expand, status pills, direction toggle all clickable; diff/verify/apply buttons present but disabled pending the sync engine. No-peer-selected states now wired: no trusted peers → link to `/peer-sync` setup; trusted peers exist → joins the room and lists them for single-selection, each with a live connection dot (green=online/red=offline/yellow=connecting during the post-join discovery window). Room join/identity/trust logic extracted into shared `src/lib/sync/peerPresence.svelte.ts` (`PeerPresence`), also now used by `peer-sync/+page.svelte`. Nav entry added under Data.
+- [ ] Build `src/routes/sync/beancount/+page.svelte`: tree view (extend `OpfsFilePicker.svelte`), per-row status + direction toggle (pull/skip only), apply action
+  - [x] Peer selection: joins the room unconditionally on mount (gating on `trustedPeers.length > 0` broke discovery whenever trust wasn't yet mutual); 15s post-join discovery grace window (was 3s — real Nostr-relay joins can take longer) before an absent trusted peer reads as offline rather than connecting; no trusted peers → link to `/peer-sync`; trusted peers but none online → waiting spinner; peers online → single-select list with a live connection dot
+  - [x] Real local + remote file listing: local via `OpfsSource.listLocalTree()`, remote via the `list-files` request action (10s timeout); side-by-side table (name, local size/date, direction arrow, remote size/date)
+  - [x] Room join/identity/trust logic extracted into shared `src/lib/sync/peerPresence.svelte.ts` (`PeerPresence`), also used by `peer-sync/+page.svelte`; nav entry added under Data
+  - [x] Fixed peer-selection URL to build off `page.url.pathname` instead of a hardcoded relative path; added a global `window.onerror`/`unhandledrejection` logger in `+layout.svelte` to catch this class of silent failure earlier
+  - [ ] Per-row status pill (unchanged / local-newer / remote-newer / conflict) and direction toggle — blocked on diff classification (Foundation) landing
+  - [ ] Diff/verify/apply buttons — present in the layout, disabled pending the sync engine
 - [ ] Wire per-file diff preview using the shared diff util
 - [ ] Wire the conflict-row "Verify" action: `hashFile(path)` on both sources, downgrade to unchanged/skip on match, else keep as conflict
 - [ ] Strip sync-panel/preview/diff/pull UI out of `peer-sync/+page.svelte`, replace "Sync from" with a link into the new page

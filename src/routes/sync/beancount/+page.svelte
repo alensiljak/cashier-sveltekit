@@ -19,10 +19,12 @@
 		RELAY_STRATEGIES,
 		type RelayStrategy
 	} from '$lib/sync/peerPresence.svelte';
-	import { listLocalTree, type SyncEntry } from '$lib/sync/OpfsSource';
+	import { OpfsSource } from '$lib/sync/OpfsSource';
+	import type { SyncEntry } from '$lib/sync/SyncSource';
 	// ─── Peer selection & connection state ──────────────────────────────────────
 
 	const presence = new PeerPresence();
+	const opfsSource = new OpfsSource();
 	let presenceReady = $state(false);
 	// Grace window after joining the room during which an absent trusted peer
 	// still reads as "connecting" rather than "offline" (discovery isn't instant).
@@ -75,7 +77,7 @@
 			'list-files',
 			async (_request, { peerId: fromId }) => {
 				if (!presence.peersMap[fromId]?.isTrusted) return [];
-				return await listLocalTree();
+				return await opfsSource.listTree();
 			}
 		);
 	}
@@ -139,7 +141,7 @@
 
 	async function loadLocalTree() {
 		try {
-			localEntries = await listLocalTree();
+			localEntries = await opfsSource.listTree();
 		} catch (e) {
 			localError = (e as Error).message;
 		} finally {
