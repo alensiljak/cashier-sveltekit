@@ -15,8 +15,19 @@
 	import { ensureInitialized } from '$lib/data/initializer';
 	import { SettingKeys, settings } from '$lib/settings';
 	import { SHORT_DATE_FORMAT_DEFAULT } from '$lib/constants';
+	import { navigating } from '$app/state';
 
 	let { children } = $props();
+
+	// Immediate feedback while a client-side navigation is in flight — some
+	// routes take ~1s to render, and without this the tap/click looks like it
+	// did nothing. Touch devices get a visible top progress bar (cursor changes
+	// are invisible there); desktop/mouse users additionally get a wait cursor.
+	let isNavigating = $derived(navigating.to !== null);
+
+	$effect(() => {
+		document.documentElement.classList.toggle('app-navigating', isNavigating);
+	});
 
 	onMount(() => {
 		// Surface otherwise-silent failures (e.g. the sync/beancount redirect bug)
@@ -90,6 +101,10 @@
 	}
 </script>
 
+{#if isNavigating}
+	<div class="nav-progress bg-primary" aria-hidden="true"></div>
+{/if}
+
 <svelte:head>
 	<title>Cashier</title>
 
@@ -142,3 +157,31 @@
 {#await import('$lib/components/ReloadPrompt.svelte') then { default: ReloadPrompt }}
 	<ReloadPrompt />
 {/await}
+
+<style>
+	.nav-progress {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		height: 3px;
+		z-index: 1000;
+		transform-origin: left;
+		animation: nav-progress-grow 1s ease-out infinite;
+	}
+
+	@keyframes nav-progress-grow {
+		0% {
+			transform: scaleX(0);
+			opacity: 1;
+		}
+		70% {
+			transform: scaleX(0.85);
+			opacity: 1;
+		}
+		100% {
+			transform: scaleX(0.95);
+			opacity: 0.6;
+		}
+	}
+</style>

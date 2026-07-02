@@ -22,3 +22,11 @@ body {
 #toast-container .alert {
 	pointer-events: auto;
 }
+
+/* Force a wait cursor everywhere during client-side navigation, overriding
+   any element (e.g. clickable rows with cursor-pointer) the mouse happens to
+   be resting on right after the click that triggered the navigation. */
+html.app-navigating,
+html.app-navigating * {
+	cursor: wait !important;
+}

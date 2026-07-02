@@ -4,10 +4,12 @@
 	import { goto } from '$app/navigation';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
+	import SearchToolbar from '$lib/components/SearchToolbar.svelte';
 	import MultiCurrencyBalance from '$lib/components/MultiCurrencyBalance.svelte';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import appService from '$lib/services/appService';
 	import HelpButton from '$lib/help/HelpButton.svelte';
+	import { ListSearch } from '$lib/utils/ListSearch';
 
 	interface TreeNode {
 		name: string;
@@ -23,6 +25,7 @@
 	let dataLoaded = $state(false);
 	let defaultCurrency = $state('');
 	let showBaseCurrency = $state(false);
+	let searchTerm = $state('');
 
 	onMount(async () => {
 		await loadData();
@@ -145,6 +148,10 @@
 		}
 	}
 
+	function onSearch(value: string) {
+		searchTerm = value;
+	}
+
 
 	function getAccountTypeColour(name: string): string {
 		const root = name.split(':')[0];
@@ -154,14 +161,35 @@
 		return '';
 	}
 
+	/** Names of nodes matching the search term plus all of their ancestors, so matches stay
+	 *  connected to the tree root. Undefined when there is no active search. */
+	let searchVisibleNames: Set<string> | undefined = $derived.by(() => {
+		if (!searchTerm) return undefined;
+		const search = new ListSearch();
+		const regex = search.getRegex(searchTerm);
+		const visible = new Set<string>();
+		for (const name of nodeMap.keys()) {
+			if (!regex.test(name)) continue;
+			let current: string | undefined = name;
+			while (current && !visible.has(current)) {
+				visible.add(current);
+				const parts: string[] = current.split(':');
+				current = parts.length > 1 ? parts.slice(0, -1).join(':') : undefined;
+			}
+		}
+		return visible;
+	});
+
 	let visibleNodes: TreeNode[] = $derived.by(() => {
 		const result: TreeNode[] = [];
+		const filter = searchVisibleNames;
 		function walk(names: string[]) {
 			for (const name of [...names].sort()) {
+				if (filter && !filter.has(name)) continue;
 				const node = nodeMap.get(name);
 				if (!node) continue;
 				result.push(node);
-				if (expandedNodes.has(name)) walk(node.children);
+				if (filter ? true : expandedNodes.has(name)) walk(node.children);
 			}
 		}
 		walk(rootNames);
@@ -182,6 +210,7 @@
 			/>
 		{/snippet}
 	</Toolbar>
+	<SearchToolbar focus={false} {onSearch} />
 	<div class="flex-1 overflow-y-auto overflow-x-auto touch-pan-y">
 		{#if dataLoaded}
 			<div class="min-w-max">
