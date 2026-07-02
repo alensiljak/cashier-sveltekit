@@ -303,6 +303,18 @@
 								<span>Peer Sync</span>
 							</a>
 						</li>
+						<li>
+							<a
+								href="/sync/beancount"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/sync/beancount'
+									? 'active bg-secondary text-secondary-content'
+									: ''}"
+								onclick={closeDrawer}
+							>
+								<ArrowLeftRightIcon />
+								<span>Beancount Sync</span>
+							</a>
+						</li>
 					</ul>
 				</details>
 			</li>

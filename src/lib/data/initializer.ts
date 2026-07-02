@@ -14,7 +14,6 @@ import * as OpfsLib from '$lib/utils/opfslib';
  * Initialize the application.
  */
 export async function ensureInitialized() {
-
 	// check if the ledger file exists in OPFS
 	const mainFileExists = await OpfsLib.fileExists(CASHIER_XACT_FILE);
 	if (mainFileExists) return;

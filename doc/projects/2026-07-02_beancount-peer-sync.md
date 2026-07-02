@@ -80,7 +80,7 @@ A client can currently only pull remote changes. Pushing (writing to a peer) is 
 
 ### UI
 
-- [ ] Build `src/routes/sync/beancount/+page.svelte`: tree view (extend `OpfsFilePicker.svelte`), per-row status + direction toggle (pull/skip only), apply action
+- [ ] Build `src/routes/sync/beancount/+page.svelte`: tree view (extend `OpfsFilePicker.svelte`), per-row status + direction toggle (pull/skip only), apply action — **layout + peer selection done**: static mock data, tree collapse/expand, status pills, direction toggle all clickable; diff/verify/apply buttons present but disabled pending the sync engine. No-peer-selected states now wired: no trusted peers → link to `/peer-sync` setup; trusted peers exist → joins the room and lists them for single-selection, each with a live connection dot (green=online/red=offline/yellow=connecting during the post-join discovery window). Room join/identity/trust logic extracted into shared `src/lib/sync/peerPresence.svelte.ts` (`PeerPresence`), also now used by `peer-sync/+page.svelte`. Nav entry added under Data.
 - [ ] Wire per-file diff preview using the shared diff util
 - [ ] Wire the conflict-row "Verify" action: `hashFile(path)` on both sources, downgrade to unchanged/skip on match, else keep as conflict
 - [ ] Strip sync-panel/preview/diff/pull UI out of `peer-sync/+page.svelte`, replace "Sync from" with a link into the new page

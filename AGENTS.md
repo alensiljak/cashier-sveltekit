@@ -48,7 +48,6 @@ It is implemented as a PWA using Svelte and DaisyUI frameworks.
 - `src/lib/rledger/` — Rust Ledger WASM integration
 - `src/lib/utils/` — utility functions
 - `src/lib/assetAllocation/` — asset allocation logic, validation, and sync API client
-- `src/lib/webrtc/` — WebRTC peer-to-peer sync
 - `src/lib/workers/` — background web workers (e.g. ledger worker)
 - `src/routes/` — SvelteKit file-based routes (~60+ pages)
 
