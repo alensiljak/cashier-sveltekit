@@ -74,35 +74,75 @@ export async function loadSearchableFiles(): Promise<SearchFile[]> {
 	return files;
 }
 
-/** Splits a search box value on whitespace into non-empty, lower-cased terms. */
-export function splitSearchTerms(searchTerm: string): string[] {
+/**
+ * One parsed search term. Plain terms match either the line text or the
+ * file's path (so "checking 2026" finds "Checking" postings inside a file
+ * named "2026.bean" even though "2026" never appears in that line). A
+ * `file:`/`path:` prefix narrows a term to the path only, so it doesn't
+ * also match the term against unrelated line content — e.g. `file:2026`
+ * won't pull in a "2026-…" date from a differently-named file.
+ */
+export interface SearchTerm {
+	/** Lower-cased term text, prefix stripped. */
+	value: string;
+	/** "path" (from a `file:`/`path:` prefix) restricts matching to the file path. */
+	scope: 'any' | 'path';
+}
+
+const SCOPE_PREFIX = /^(?:file|path):(.+)$/i;
+
+/** Splits a search box value on whitespace into parsed, lower-cased terms. */
+export function parseSearchTerms(searchTerm: string): SearchTerm[] {
 	return searchTerm
 		.split(/\s+/)
 		.map((term) => term.trim())
-		.filter((term) => term.length > 0);
+		.filter((term) => term.length > 0)
+		.map((raw) => {
+			const prefixed = SCOPE_PREFIX.exec(raw);
+			if (prefixed && prefixed[1]) {
+				return { value: prefixed[1].toLowerCase(), scope: 'path' as const };
+			}
+			return { value: raw.toLowerCase(), scope: 'any' as const };
+		});
 }
 
 /**
- * Finds every line across `files` that contains all `terms` (case-insensitive,
- * plain substring — no regex metacharacters to worry about since arbitrary
- * ledger text, amounts, and account names are searched). Stops once `limit`
- * matches have been collected so a broad query on a large book stays fast.
+ * Finds every line across `files` that satisfies every term (case-insensitive,
+ * plain substring). A term matches a line when the line's text contains it,
+ * or — for "any"-scoped terms — when the file's path contains it instead;
+ * "path"-scoped terms (`file:`/`path:` prefix) only ever match the path.
+ * Stops once `limit` matches have been collected so a broad query on a large
+ * book stays fast.
  */
-export function searchInFiles(files: SearchFile[], terms: string[], limit = 300): SearchMatch[] {
+export function searchInFiles(
+	files: SearchFile[],
+	terms: SearchTerm[],
+	limit = 300
+): SearchMatch[] {
 	if (terms.length === 0) return [];
-	const lowerTerms = terms.map((term) => term.toLowerCase());
 	const results: SearchMatch[] = [];
 
 	outer: for (const file of files) {
+		const lowerPath = file.path.toLowerCase();
+		const pathMatches = terms.map((term) => lowerPath.includes(term.value));
+
+		// A path-scoped term that doesn't match this file's name rules out
+		// every line in it — skip the file without scanning its lines.
+		if (terms.some((term, i) => term.scope === 'path' && !pathMatches[i])) continue;
+
 		for (let i = 0; i < file.lines.length; i++) {
 			const line = file.lines[i];
 			const lower = line.toLowerCase();
 			let firstIdx = -1;
 			let matchedAll = true;
 
-			for (const term of lowerTerms) {
-				const idx = lower.indexOf(term);
+			for (let t = 0; t < terms.length; t++) {
+				const term = terms[t];
+				if (term.scope === 'path') continue; // already confirmed at file level
+
+				const idx = lower.indexOf(term.value);
 				if (idx === -1) {
+					if (pathMatches[t]) continue; // satisfied via the filename instead
 					matchedAll = false;
 					break;
 				}
@@ -110,7 +150,12 @@ export function searchInFiles(files: SearchFile[], terms: string[], limit = 300)
 			}
 
 			if (matchedAll) {
-				results.push({ path: file.path, line: i + 1, col: firstIdx + 1, text: line });
+				results.push({
+					path: file.path,
+					line: i + 1,
+					col: firstIdx === -1 ? 1 : firstIdx + 1,
+					text: line
+				});
 				if (results.length >= limit) break outer;
 			}
 		}

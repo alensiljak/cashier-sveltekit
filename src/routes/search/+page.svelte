@@ -10,7 +10,7 @@
 	import {
 		loadSearchableFiles,
 		searchInFiles,
-		splitSearchTerms,
+		parseSearchTerms,
 		type SearchFile,
 		type SearchMatch
 	} from '$lib/utils/fullTextSearch';
@@ -100,7 +100,8 @@
 		}
 	}
 
-	const searchTerms = $derived.by(() => splitSearchTerms($SearchTermStore));
+	const searchTerms = $derived.by(() => parseSearchTerms($SearchTermStore));
+	const highlightValues = $derived.by(() => searchTerms.map((term) => term.value));
 
 	const results: SearchMatch[] = $derived.by(() => {
 		if (searchTerms.length === 0 || !filesLoaded) return [];
@@ -198,11 +199,19 @@
 					role="listitem"
 				>
 					<div class="flex items-center justify-between gap-2">
-						<span class="text-sm font-medium truncate">{match.path}</span>
+						<span class="text-sm font-medium truncate">
+							{#each highlight(match.path, highlightValues) as segment, i (i)}
+								{#if segment.hit}
+									<mark class="bg-primary/40 text-inherit rounded-none">{segment.text}</mark>
+								{:else}
+									{segment.text}
+								{/if}
+							{/each}
+						</span>
 						<span class="text-xs opacity-50 whitespace-nowrap">{match.line}:{match.col}</span>
 					</div>
 					<div class="font-mono text-xs opacity-80 truncate">
-						{#each highlight(match.text, searchTerms) as segment, i (i)}
+						{#each highlight(match.text, highlightValues) as segment, i (i)}
 							{#if segment.hit}
 								<mark class="bg-primary/40 text-inherit rounded-none">{segment.text}</mark>
 							{:else}
