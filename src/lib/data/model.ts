@@ -170,11 +170,19 @@ export class TrustedPeer {
  * each path as unchanged / local-newer / remote-newer / conflict.
  * Keyed `[endpointId+path]` — one baseline per (peer, file), since a device
  * may sync with multiple peers. See doc/projects/2026-07-02_beancount-peer-sync.md.
+ *
+ * Local and remote metadata are recorded separately (not one shared
+ * size/lastModified) because the two devices' filesystems assign
+ * independent mtimes to byte-identical content — an OPFS write always gets
+ * a fresh "now" timestamp, and a hash-verified match never touches either
+ * file — so a single shared value could never equal both sides at once.
  */
 export class PeerSyncBaseline {
 	endpointId: string = '';
 	path: string = '';
-	size: number = 0;
-	lastModified: number = 0;
+	localSize: number = 0;
+	localModified: number = 0;
+	remoteSize: number = 0;
+	remoteModified: number = 0;
 	syncedAt: string = '';
 }

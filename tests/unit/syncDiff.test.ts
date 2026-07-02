@@ -14,13 +14,26 @@ function entry(path: string, size: number, lastModified: number): SyncEntry {
 	return { path, size, lastModified };
 }
 
-/** Builds a PeerSyncBaseline-shaped row (syncedAt is irrelevant to diffing, so it's fixed). */
-function baselineRow(path: string, size: number, lastModified: number): PeerSyncBaseline {
+/**
+ * Builds a PeerSyncBaseline-shaped row (syncedAt is irrelevant to diffing, so
+ * it's fixed). Local and remote halves are independent — see
+ * PeerSyncBaseline's doc comment for why a single shared value can't
+ * represent both sides.
+ */
+function baselineRow(
+	path: string,
+	localSize: number,
+	localModified: number,
+	remoteSize: number,
+	remoteModified: number
+): PeerSyncBaseline {
 	return {
 		endpointId: 'endpoint-1',
 		path,
-		size,
-		lastModified,
+		localSize,
+		localModified,
+		remoteSize,
+		remoteModified,
 		syncedAt: '2026-01-01T00:00:00.000Z'
 	};
 }
@@ -29,10 +42,10 @@ function baselineMap(...rows: PeerSyncBaseline[]): Map<string, PeerSyncBaseline>
 	return new Map(rows.map((r) => [r.path, r]));
 }
 
-test('unchanged: both local and remote match the baseline', () => {
+test('unchanged: both local and remote match their own half of the baseline', () => {
 	const local = [entry('a.beancount', 100, 1000)];
 	const remote = [entry('a.beancount', 100, 1000)];
-	const baseline = baselineMap(baselineRow('a.beancount', 100, 1000));
+	const baseline = baselineMap(baselineRow('a.beancount', 100, 1000, 100, 1000));
 
 	const result = diffAgainstBaseline(local, remote, baseline);
 
@@ -42,10 +55,26 @@ test('unchanged: both local and remote match the baseline', () => {
 	assert.equal(result[0].action, 'skip');
 });
 
-test('local-newer: only local metadata differs from baseline', () => {
+test('unchanged despite differing local/remote metadata, as long as each side matches its own recorded baseline half', () => {
+	// The two devices' filesystems never agree on an mtime for byte-identical
+	// content (a fresh OPFS write always gets a "now" timestamp). A baseline
+	// recorded from a hash-verified match (or a pull) captures each side's
+	// own real metadata, so both read back unchanged even though their sizes
+	// happen to differ too — this is the exact bug the split-baseline fixed.
+	const local = [entry('a.beancount', 100, 1000)];
+	const remote = [entry('a.beancount', 105, 9999)];
+	const baseline = baselineMap(baselineRow('a.beancount', 100, 1000, 105, 9999));
+
+	const result = diffAgainstBaseline(local, remote, baseline);
+
+	assert.equal(result[0].status, 'unchanged');
+	assert.equal(result[0].action, 'skip');
+});
+
+test('local-newer: only local metadata differs from its baseline half', () => {
 	const local = [entry('a.beancount', 200, 2000)];
 	const remote = [entry('a.beancount', 100, 1000)];
-	const baseline = baselineMap(baselineRow('a.beancount', 100, 1000));
+	const baseline = baselineMap(baselineRow('a.beancount', 100, 1000, 100, 1000));
 
 	const result = diffAgainstBaseline(local, remote, baseline);
 
@@ -53,10 +82,10 @@ test('local-newer: only local metadata differs from baseline', () => {
 	assert.equal(result[0].action, 'skip');
 });
 
-test('remote-newer: only remote metadata differs from baseline', () => {
+test('remote-newer: only remote metadata differs from its baseline half', () => {
 	const local = [entry('a.beancount', 100, 1000)];
 	const remote = [entry('a.beancount', 200, 2000)];
-	const baseline = baselineMap(baselineRow('a.beancount', 100, 1000));
+	const baseline = baselineMap(baselineRow('a.beancount', 100, 1000, 100, 1000));
 
 	const result = diffAgainstBaseline(local, remote, baseline);
 
@@ -64,10 +93,10 @@ test('remote-newer: only remote metadata differs from baseline', () => {
 	assert.equal(result[0].action, 'pull');
 });
 
-test('conflict: both local and remote differ from baseline', () => {
+test('conflict: both local and remote differ from their baseline halves', () => {
 	const local = [entry('a.beancount', 200, 2000)];
 	const remote = [entry('a.beancount', 300, 3000)];
-	const baseline = baselineMap(baselineRow('a.beancount', 100, 1000));
+	const baseline = baselineMap(baselineRow('a.beancount', 100, 1000, 100, 1000));
 
 	const result = diffAgainstBaseline(local, remote, baseline);
 
@@ -78,7 +107,7 @@ test('conflict: both local and remote differ from baseline', () => {
 test('no baseline at all, present on both sides: both sides count as changed -> conflict', () => {
 	// Neither side has ever been recorded for this path, so there is nothing to
 	// confirm a match against — changedSinceBaseline returns true for a
-	// present entry when baseline is undefined, on both sides.
+	// present entry when its baseline half is undefined, on both sides.
 	const local = [entry('never-synced.beancount', 100, 1000)];
 	const remote = [entry('never-synced.beancount', 100, 1000)];
 	const baseline = baselineMap(); // empty — no row for this path
@@ -90,10 +119,10 @@ test('no baseline at all, present on both sides: both sides count as changed -> 
 });
 
 test('new remote file: no local entry and no baseline -> remote-newer/pull', () => {
-	// Local side: entry undefined AND baseline undefined -> changedSinceBaseline
-	// returns `baseline !== undefined` which is false, so local counts as
-	// UNCHANGED here (nothing local ever existed to be behind on).
-	// Remote side: entry present, baseline undefined -> changed (true).
+	// Local side: entry undefined AND baseline half undefined -> changedSinceBaseline
+	// returns false, so local counts as UNCHANGED here (nothing local ever
+	// existed to be behind on).
+	// Remote side: entry present, baseline half undefined -> changed (true).
 	const local: SyncEntry[] = [];
 	const remote = [entry('new-remote-only.beancount', 50, 500)];
 	const baseline = baselineMap();
@@ -108,9 +137,9 @@ test('new remote file: no local entry and no baseline -> remote-newer/pull', () 
 });
 
 test('local-only file: no remote entry and no baseline -> local-newer/skip', () => {
-	// Mirror of the previous case: remote entry undefined + baseline undefined
-	// -> remote counts as unchanged; local entry present + baseline undefined
-	// -> local counts as changed.
+	// Mirror of the previous case: remote entry undefined + baseline half
+	// undefined -> remote counts as unchanged; local entry present + baseline
+	// half undefined -> local counts as changed.
 	const local = [entry('local-only.beancount', 50, 500)];
 	const remote: SyncEntry[] = [];
 	const baseline = baselineMap();
@@ -125,11 +154,11 @@ test('local-only file: no remote entry and no baseline -> local-newer/skip', () 
 });
 
 test('deletion: local side deleted since baseline, remote unchanged -> local-newer/skip', () => {
-	// entry undefined + baseline defined -> changedSinceBaseline returns true
-	// (baseline !== undefined), so a deletion counts as "changed" on that side.
+	// entry undefined + baseline half defined -> changedSinceBaseline returns
+	// true, so a deletion counts as "changed" on that side.
 	const local: SyncEntry[] = [];
 	const remote = [entry('deleted-locally.beancount', 100, 1000)];
-	const baseline = baselineMap(baselineRow('deleted-locally.beancount', 100, 1000));
+	const baseline = baselineMap(baselineRow('deleted-locally.beancount', 100, 1000, 100, 1000));
 
 	const result = diffAgainstBaseline(local, remote, baseline);
 
@@ -142,7 +171,7 @@ test('deletion: local side deleted since baseline, remote unchanged -> local-new
 test('deletion: remote side deleted since baseline, local unchanged -> remote-newer/pull', () => {
 	const local = [entry('deleted-remotely.beancount', 100, 1000)];
 	const remote: SyncEntry[] = [];
-	const baseline = baselineMap(baselineRow('deleted-remotely.beancount', 100, 1000));
+	const baseline = baselineMap(baselineRow('deleted-remotely.beancount', 100, 1000, 100, 1000));
 
 	const result = diffAgainstBaseline(local, remote, baseline);
 
@@ -159,7 +188,7 @@ test('deletion: both sides deleted since baseline -> path is dropped entirely', 
 	// it produces no output row at all — there's nothing left to sync.
 	const local: SyncEntry[] = [];
 	const remote: SyncEntry[] = [];
-	const baseline = baselineMap(baselineRow('deleted-both.beancount', 100, 1000));
+	const baseline = baselineMap(baselineRow('deleted-both.beancount', 100, 1000, 100, 1000));
 
 	const result = diffAgainstBaseline(local, remote, baseline);
 
@@ -172,7 +201,7 @@ test('result is sorted by path regardless of scrambled input order', () => {
 	// all unchanged against a matching baseline so status doesn't matter here.
 	const scrambledLocal = [paths[2], paths[0], paths[3], paths[1]].map((p) => entry(p, 10, 100));
 	const scrambledRemote = [paths[1], paths[3], paths[0], paths[2]].map((p) => entry(p, 10, 100));
-	const baseline = baselineMap(...paths.map((p) => baselineRow(p, 10, 100)));
+	const baseline = baselineMap(...paths.map((p) => baselineRow(p, 10, 100, 10, 100)));
 
 	const result = diffAgainstBaseline(scrambledLocal, scrambledRemote, baseline);
 

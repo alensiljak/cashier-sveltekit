@@ -23,20 +23,24 @@ export interface DiffEntry {
 }
 
 /**
- * A side "changed" when its current metadata doesn't match the baseline
- * recorded at the last sync. A missing baseline (this path was never synced
- * with this endpoint before) counts as changed too — there's nothing to
- * confirm it matches, so it can't be reported unchanged. A side that no
- * longer has the file, but did at the last sync, also counts as changed
- * (deletion).
+ * A side "changed" when its current metadata doesn't match *that side's*
+ * half of the baseline recorded at the last sync — local and remote are
+ * compared against separate baseline fields, never against each other's,
+ * because two devices' filesystems assign independent mtimes to
+ * byte-identical content (see PeerSyncBaseline's doc comment). A missing
+ * baseline half (this path/side was never synced with this endpoint before)
+ * counts as changed too — there's nothing to confirm it matches, so it
+ * can't be reported unchanged. A side that no longer has the file, but did
+ * at the last sync, also counts as changed (deletion).
  */
 function changedSinceBaseline(
 	entry: SyncEntry | undefined,
-	baseline: PeerSyncBaseline | undefined
+	baselineSize: number | undefined,
+	baselineModified: number | undefined
 ): boolean {
-	if (!entry) return baseline !== undefined;
-	if (!baseline) return true;
-	return entry.size !== baseline.size || entry.lastModified !== baseline.lastModified;
+	if (!entry) return baselineSize !== undefined;
+	if (baselineSize === undefined) return true;
+	return entry.size !== baselineSize || entry.lastModified !== baselineModified;
 }
 
 function classify(localChanged: boolean, remoteChanged: boolean): SyncStatus {
@@ -70,8 +74,8 @@ export function diffAgainstBaseline(
 	for (const [path, { local: localEntry, remote: remoteEntry }] of byPath) {
 		const base = baseline.get(path);
 		const status = classify(
-			changedSinceBaseline(localEntry, base),
-			changedSinceBaseline(remoteEntry, base)
+			changedSinceBaseline(localEntry, base?.localSize, base?.localModified),
+			changedSinceBaseline(remoteEntry, base?.remoteSize, base?.remoteModified)
 		);
 		result.push({
 			path,

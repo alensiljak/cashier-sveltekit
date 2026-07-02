@@ -11,6 +11,7 @@
 		DownloadIcon,
 		ShieldCheckIcon,
 		GitCompareArrowsIcon,
+		ChevronUpIcon,
 		ChevronDownIcon,
 		ChevronRightIcon
 	} from '@lucide/svelte';
@@ -26,9 +27,19 @@
 	} from '$lib/sync/peerPresence.svelte';
 	import { OpfsSource } from '$lib/sync/OpfsSource';
 	import type { SyncEntry } from '$lib/sync/SyncSource';
-	import { diffAgainstBaseline, type DiffEntry, type SyncStatus, type SyncAction } from '$lib/sync/syncDiff';
-	import { getBaseline, updateBaseline, removeBaselineEntries } from '$lib/sync/syncBaseline';
-	import { buildDiffLines, type DiffLine } from '$lib/utils/diffText';
+	import {
+		diffAgainstBaseline,
+		type DiffEntry,
+		type SyncStatus,
+		type SyncAction
+	} from '$lib/sync/syncDiff';
+	import {
+		getBaseline,
+		updateBaseline,
+		removeBaselineEntries,
+		type BaselineEntry
+	} from '$lib/sync/syncBaseline';
+	import { buildDiffLines } from '$lib/utils/diffText';
 	import type { PeerSyncBaseline } from '$lib/data/model';
 
 	// ─── Peer selection & connection state ──────────────────────────────────────
@@ -233,6 +244,19 @@
 
 	let verifying = $state(new Set<string>());
 
+	/** Records local↔remote agreement for `path`: clears any pending override and updates the baseline so it drops out of future diffs. Shared by the hash-based Verify action and the preview modal's identical-content shortcut (which already has both sides' text in memory and has no need to re-hash). */
+	async function markSynced(path: string) {
+		if (!activePeer) return;
+		const localEntry = localEntries.find((e) => e.path === path);
+		const remoteEntry = remoteEntries?.find((e) => e.path === path);
+		if (!localEntry || !remoteEntry) return;
+		await updateBaseline(activePeer.id, [{ path, local: localEntry, remote: remoteEntry }]);
+		baseline = await getBaseline(activePeer.id);
+		const next = new Map(overrides);
+		next.delete(path);
+		overrides = next;
+	}
+
 	async function verifyRow(path: string) {
 		if (!activePeer || !peerSource) return;
 		verifying = new Set(verifying).add(path);
@@ -242,17 +266,10 @@
 				peerSource.hashFile(path)
 			]);
 			if (localHash !== undefined && localHash === remoteHash) {
-				const localEntry = localEntries.find((e) => e.path === path);
-				if (localEntry) {
-					await updateBaseline(activePeer.id, [localEntry]);
-					baseline = await getBaseline(activePeer.id);
-				}
-				const next = new Map(overrides);
-				next.delete(path);
-				overrides = next;
+				await markSynced(path);
 				Notifier.success(`${path}: contents match — marked as synced.`);
 			} else {
-				Notifier.warning(`${path}: contents differ — still a conflict.`);
+				Notifier.warning(`${path}: contents differ — no changes made.`);
 			}
 		} catch (e) {
 			Notifier.error(`Verify failed: ${(e as Error).message}`);
@@ -263,34 +280,11 @@
 		}
 	}
 
-	// ─── Per-file diff preview ──────────────────────────────────────────────────
-
-	let diffModalPath = $state<string | null>(null);
-	let diffModalLines = $state<DiffLine[]>([]);
-	let diffModalLoading = $state(false);
-	let diffModalError = $state<string | null>(null);
-
-	async function openDiffFor(path: string) {
-		if (!peerSource) return;
-		diffModalPath = path;
-		diffModalLoading = true;
-		diffModalError = null;
-		diffModalLines = [];
-		try {
-			const [localContent, remoteContent] = await Promise.all([
-				opfsSource.readFile(path),
-				peerSource.readFile(path)
-			]);
-			diffModalLines = buildDiffLines(localContent ?? '', remoteContent ?? '');
-		} catch (e) {
-			diffModalError = (e as Error).message;
-		} finally {
-			diffModalLoading = false;
-		}
-	}
-
-	function closeDiffModal() {
-		diffModalPath = null;
+	/** Hash-verifies every row in the given set in one batch (conflict or local-newer rows). */
+	async function verifyRows(rows: { path: string }[]) {
+		if (!activePeer || rows.length === 0) return;
+		await Promise.all(rows.map((r) => verifyRow(r.path)));
+		baseline = await getBaseline(activePeer.id);
 	}
 
 	// ─── Apply (pull) ────────────────────────────────────────────────────────────
@@ -305,7 +299,7 @@
 
 		applying = true;
 		applyError = null;
-		const baselineUpserts: SyncEntry[] = [];
+		const pulledRemote = new Map<string, SyncEntry>();
 		const baselineRemovals: string[] = [];
 		const failures: string[] = [];
 
@@ -319,11 +313,7 @@
 						baselineRemovals.push(row.path);
 					} else {
 						await opfsSource.writeFile(row.path, content);
-						baselineUpserts.push({
-							path: row.path,
-							size: row.remote.size,
-							lastModified: row.remote.lastModified
-						});
+						pulledRemote.set(row.path, row.remote);
 					}
 				} else {
 					// Remote no longer has this file — pulling mirrors the deletion locally.
@@ -335,11 +325,24 @@
 			}
 		}
 
+		// Re-scan local so the baseline records each written file's *actual*
+		// post-write metadata — OPFS always assigns a fresh "now" mtime on
+		// write, never the remote's original one, so pairing that with the
+		// remote entry from this pull is what lets both sides read back as
+		// unchanged next time (see syncDiff.ts / PeerSyncBaseline).
+		const freshLocal = await opfsSource.listTree();
+		const baselineUpserts: BaselineEntry[] = [];
+		for (const [path, remote] of pulledRemote) {
+			const local = freshLocal.find((e) => e.path === path);
+			if (local) baselineUpserts.push({ path, local, remote });
+		}
+
 		if (baselineUpserts.length) await updateBaseline(activePeer.id, baselineUpserts);
 		if (baselineRemovals.length) await removeBaselineEntries(activePeer.id, baselineRemovals);
 
 		overrides = new Map();
-		localLoaded = false; // re-triggers the local-scan effect
+		localEntries = freshLocal;
+		localLoaded = true;
 		fetchedTrysteroId = null; // re-triggers the remote-scan effect
 		baseline = await getBaseline(activePeer.id);
 		applying = false;
@@ -436,14 +439,191 @@
 		buildTree(localEntries, remoteEntries ?? [], collapsedDirs, diffByPath, overrides)
 	);
 
+	// ─── Per-file diff/preview ───────────────────────────────────────────────
+	// Shows what applying the row's current pull/skip selection will actually do,
+	// not just a raw local-vs-remote diff — see doc/projects/2026-07-02_beancount-peer-sync.md.
+
+	let diffModalPath = $state<string | null>(null);
+	let diffModalLocalContent = $state<string | undefined>(undefined);
+	let diffModalRemoteContent = $state<string | undefined>(undefined);
+	let diffModalLoading = $state(false);
+	let diffModalError = $state<string | null>(null);
+
+	/** The tree row for the file currently previewed — re-derives live as the user toggles pull/skip. */
+	let diffModalRow = $derived(
+		diffModalPath ? (treeRows.find((r) => r.path === diffModalPath) ?? null) : null
+	);
+
+	/**
+	 * Content the local file would hold *after* applying the row's current
+	 * effective action — 'skip' keeps the local file as-is; 'pull' (or an
+	 * unresolved conflict, previewed as if it were pulled) makes it the remote
+	 * content, or deletes it if the remote no longer has the file.
+	 */
+	let diffModalAfterContent = $derived(
+		diffModalRow?.effectiveAction === 'skip' ? diffModalLocalContent : diffModalRemoteContent
+	);
+
+	let diffModalLines = $derived(
+		buildDiffLines(diffModalLocalContent ?? '', diffModalAfterContent ?? '')
+	);
+
+	/**
+	 * True once both sides of the previewed file have loaded and their raw
+	 * content matches byte-for-byte — independent of the row's pull/skip
+	 * selection (unlike diffModalLines, which diffs against the *post-apply*
+	 * content, always trivially "equal" for a skip). Lets the modal offer the
+	 * same "mark as synced" outcome as Verify without re-fetching to hash.
+	 */
+	let diffModalIdentical = $derived(
+		diffModalLocalContent !== undefined &&
+			diffModalRemoteContent !== undefined &&
+			diffModalLocalContent === diffModalRemoteContent
+	);
+
+	/** Start index (into diffModalLines) of each contiguous run of added/removed lines. */
+	let diffHunks = $derived.by(() => {
+		const starts: number[] = [];
+		let inHunk = false;
+		diffModalLines.forEach((line, i) => {
+			if (line.type === 'context') {
+				inHunk = false;
+			} else if (!inHunk) {
+				starts.push(i);
+				inHunk = true;
+			}
+		});
+		return starts;
+	});
+
+	/** Index into diffHunks of the hunk last scrolled to; -1 = none visited yet. */
+	let currentHunk = $state(-1);
+
+	function scrollToHunk(index: number) {
+		const lineIndex = diffHunks[index];
+		if (lineIndex === undefined) return;
+		document
+			.getElementById(`diff-line-${lineIndex}`)
+			?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+	}
+
+	function prevHunk() {
+		if (currentHunk <= 0) return;
+		currentHunk -= 1;
+		scrollToHunk(currentHunk);
+	}
+
+	function nextHunk() {
+		if (currentHunk >= diffHunks.length - 1) return;
+		currentHunk += 1;
+		scrollToHunk(currentHunk);
+	}
+
+	// The set of hunks changes whenever the previewed file or its selected
+	// action changes (diffModalLines is recomputed) — restart navigation.
+	$effect(() => {
+		void diffModalLines;
+		currentHunk = -1;
+	});
+
+	/** Explains, in the modal, exactly what applying the row's current selection will do. */
+	function previewBanner(row: TreeRow | null): { text: string; alertClass: string } | null {
+		if (!row) return null;
+		if (row.effectiveAction === 'pull') {
+			if (!row.remote)
+				return {
+					text: 'Pull will delete this file locally — removed on remote.',
+					alertClass: 'alert-warning'
+				};
+			if (!row.local)
+				return { text: 'Pull will create this file locally.', alertClass: 'alert-info' };
+			return {
+				text: 'Pull will overwrite the local file with the remote content shown below.',
+				alertClass: 'alert-info'
+			};
+		}
+		if (row.effectiveAction === 'skip') {
+			return {
+				text: 'Skip selected — no changes will be applied to the local file.',
+				alertClass: 'alert-success'
+			};
+		}
+		return {
+			text: 'Unresolved conflict — previewing the Pull outcome. Choose Skip above to keep the local file unchanged instead.',
+			alertClass: 'alert-warning'
+		};
+	}
+
+	async function openDiffFor(path: string) {
+		if (!peerSource) return;
+		diffModalPath = path;
+		diffModalLoading = true;
+		diffModalError = null;
+		diffModalLocalContent = undefined;
+		diffModalRemoteContent = undefined;
+		try {
+			const [localContent, remoteContent] = await Promise.all([
+				opfsSource.readFile(path),
+				peerSource.readFile(path)
+			]);
+			diffModalLocalContent = localContent;
+			diffModalRemoteContent = remoteContent;
+		} catch (e) {
+			diffModalError = (e as Error).message;
+		} finally {
+			diffModalLoading = false;
+		}
+	}
+
+	function closeDiffModal() {
+		diffModalPath = null;
+	}
+
+	let markingIdentical = $state(false);
+
+	async function markDiffModalIdentical() {
+		if (!diffModalPath) return;
+		markingIdentical = true;
+		try {
+			await markSynced(diffModalPath);
+			Notifier.success(`${diffModalPath}: contents match — marked as synced.`);
+			closeDiffModal();
+		} finally {
+			markingIdentical = false;
+		}
+	}
+
 	let fileRows = $derived(treeRows.filter((r) => r.kind === 'file'));
 	let conflictRows = $derived(fileRows.filter((r) => r.status === 'conflict'));
 	let remoteNewerRows = $derived(fileRows.filter((r) => r.status === 'remote-newer'));
 	let localNewerRows = $derived(fileRows.filter((r) => r.status === 'local-newer'));
 	let unchangedRows = $derived(fileRows.filter((r) => !r.status || r.status === 'unchanged'));
+	/** Rows with a remote counterpart to hash-compare against (pure local-only or pure remote-only files have nothing to verify). */
+	let verifiableLocalNewerRows = $derived(localNewerRows.filter((r) => r.remote));
+	let verifiableRemoteNewerRows = $derived(remoteNewerRows.filter((r) => r.remote));
+	/** Non-conflict rows whose differing metadata might still hide identical content — the "Newer" verify scope. */
+	let diffRows = $derived([...verifiableRemoteNewerRows, ...verifiableLocalNewerRows]);
+	/** Every row a bulk verify could act on, across all three scopes. */
+	let allVerifiableRows = $derived([...conflictRows, ...diffRows]);
 
 	let pullCount = $derived(fileRows.filter((r) => r.effectiveAction === 'pull').length);
 	let conflictCount = $derived(fileRows.filter((r) => r.effectiveAction === 'conflict').length);
+
+	/**
+	 * Scope for the top-level bulk "Verify" bar. Conflicts default because
+	 * they're usually few and each blocks a pull/skip decision — verifying
+	 * can resolve the decision outright. "Newer"/"All" scale with total
+	 * changed files: cheap to hash on a LAN, wasteful to hash over the
+	 * internet on a large book, so they're opt-in rather than default.
+	 */
+	let verifyScope = $state<'conflicts' | 'diffs' | 'all'>('conflicts');
+	let verifyTargetRows = $derived(
+		verifyScope === 'conflicts'
+			? conflictRows
+			: verifyScope === 'diffs'
+				? diffRows
+				: allVerifiableRows
+	);
 
 	function toggleDir(path: string) {
 		const next = new Set(collapsedDirs);
@@ -557,14 +737,18 @@
 			<div class="join">
 				<button
 					type="button"
-					class="btn btn-xs join-item {row.effectiveAction === 'pull' ? 'btn-primary' : 'btn-outline'}"
+					class="btn btn-xs join-item {row.effectiveAction === 'pull'
+						? 'btn-primary'
+						: 'btn-outline'}"
 					onclick={() => setAction(row.path, 'pull')}
 				>
 					Pull
 				</button>
 				<button
 					type="button"
-					class="btn btn-xs join-item {row.effectiveAction === 'skip' ? 'btn-primary' : 'btn-outline'}"
+					class="btn btn-xs join-item {row.effectiveAction === 'skip'
+						? 'btn-neutral'
+						: 'btn-outline'}"
 					onclick={() => setAction(row.path, 'skip')}
 				>
 					Skip
@@ -573,7 +757,7 @@
 		{:else if row.status === 'local-newer'}
 			<span class="badge badge-ghost badge-sm">Skipped — local is ahead</span>
 		{/if}
-		{#if row.status === 'conflict'}
+		{#if row.status === 'conflict' || row.status === 'remote-newer' || (row.status === 'local-newer' && row.remote)}
 			<button
 				type="button"
 				class="btn btn-xs btn-outline"
@@ -588,10 +772,10 @@
 				Verify
 			</button>
 		{/if}
-		{#if row.local && row.remote}
+		{#if row.status && row.status !== 'unchanged'}
 			<button type="button" class="btn btn-xs btn-ghost" onclick={() => openDiffFor(row.path)}>
 				<GitCompareArrowsIcon class="h-3.5 w-3.5" />
-				Diff
+				Preview
 			</button>
 		{/if}
 	</div>
@@ -648,6 +832,52 @@
 				<span class="flex-1 font-semibold">{activePeer.name}</span>
 				<button class="btn btn-ghost btn-xs" onclick={changePeer}>Change</button>
 			</div>
+
+			<!-- Bulk verify — always visible; pick a scope, then hash-confirm every row in it in one go. -->
+			{#if remoteEntries && allVerifiableRows.length > 0}
+				<div class="rounded-box bg-base-200 flex flex-wrap items-center gap-2 p-2.5 text-sm">
+					<ShieldCheckIcon class="h-4 w-4 shrink-0 opacity-60" />
+					<div class="join">
+						<button
+							type="button"
+							class="btn btn-xs join-item {verifyScope === 'conflicts' ? 'btn-active' : ''}"
+							disabled={conflictRows.length === 0}
+							onclick={() => (verifyScope = 'conflicts')}
+						>
+							Conflicts ({conflictRows.length})
+						</button>
+						<button
+							type="button"
+							class="btn btn-xs join-item {verifyScope === 'diffs' ? 'btn-active' : ''}"
+							disabled={diffRows.length === 0}
+							onclick={() => (verifyScope = 'diffs')}
+						>
+							Newer ({diffRows.length})
+						</button>
+						<button
+							type="button"
+							class="btn btn-xs join-item {verifyScope === 'all' ? 'btn-active' : ''}"
+							onclick={() => (verifyScope = 'all')}
+						>
+							All ({allVerifiableRows.length})
+						</button>
+					</div>
+					<button
+						type="button"
+						class="btn btn-xs btn-outline ml-auto"
+						disabled={verifyTargetRows.length === 0 ||
+							verifyTargetRows.some((r) => verifying.has(r.path))}
+						onclick={() => verifyRows(verifyTargetRows)}
+					>
+						{#if verifyTargetRows.some((r) => verifying.has(r.path))}
+							<span class="loading loading-spinner loading-xs"></span>
+						{:else}
+							<ShieldCheckIcon class="h-3.5 w-3.5" />
+						{/if}
+						Verify {verifyTargetRows.length}
+					</button>
+				</div>
+			{/if}
 
 			<!-- View-mode switcher — TEMPORARY, for side-by-side evaluation only. -->
 			<div class="join w-full">
@@ -857,13 +1087,19 @@
 						<div class="collapse-arrow bg-info/10 rounded-box collapse">
 							<input type="checkbox" />
 							<div class="collapse-title min-h-0 py-2 text-sm font-semibold">
-								Local newer <span class="badge badge-info badge-sm">{localNewerRows.length}</span> —
-								no push in v1, always skipped
+								Local newer <span class="badge badge-info badge-sm">{localNewerRows.length}</span> — no
+								push in v1, always skipped
 							</div>
 							<div class="collapse-content">
-								<ul class="flex flex-col gap-1 pt-1 text-xs opacity-70">
+								<ul class="flex flex-col gap-2 pt-1">
 									{#each localNewerRows as row (row.path)}
-										<li class="font-mono">{row.path}</li>
+										<li class="rounded-box bg-base-100 p-2.5">
+											<div class="flex items-center gap-2">
+												<FileIcon class="h-3.5 w-3.5 shrink-0 opacity-50" />
+												<span class="font-mono text-sm truncate flex-1">{row.path}</span>
+											</div>
+											<div class="mt-2">{@render rowActions(row)}</div>
+										</li>
 									{/each}
 								</ul>
 							</div>
@@ -917,12 +1153,33 @@
 	{/if}
 </article>
 
-<!-- ─── Per-file diff modal ────────────────────────────────────────────────── -->
+<!-- ─── Per-file diff/preview modal ───────────────────────────────────────── -->
 {#if diffModalPath}
 	<div class="modal modal-open">
 		<div class="modal-box flex h-[90vh] max-w-2xl flex-col p-0">
-			<div class="border-base-300 flex items-center justify-between border-b px-4 py-3">
-				<h3 class="truncate font-mono font-bold text-sm">{diffModalPath}</h3>
+			<div class="border-base-300 flex items-center gap-2 border-b px-4 py-3">
+				<h3 class="min-w-0 flex-1 truncate font-mono font-bold text-sm">{diffModalPath}</h3>
+				{#if diffHunks.length > 0}
+					<span class="shrink-0 text-xs opacity-50">{currentHunk + 1}/{diffHunks.length}</span>
+					<button
+						type="button"
+						class="btn btn-ghost btn-xs btn-square"
+						disabled={currentHunk <= 0}
+						aria-label="Previous change"
+						onclick={prevHunk}
+					>
+						<ChevronUpIcon class="h-4 w-4" />
+					</button>
+					<button
+						type="button"
+						class="btn btn-ghost btn-xs btn-square"
+						disabled={currentHunk >= diffHunks.length - 1}
+						aria-label="Next change"
+						onclick={nextHunk}
+					>
+						<ChevronDownIcon class="h-4 w-4" />
+					</button>
+				{/if}
 				<button class="btn btn-ghost btn-sm" onclick={closeDiffModal}>✕</button>
 			</div>
 			<div class="flex-1 overflow-y-auto p-4">
@@ -930,32 +1187,63 @@
 					<div class="flex justify-center p-8"><span class="loading loading-spinner"></span></div>
 				{:else if diffModalError}
 					<div class="alert alert-error text-sm"><span>{diffModalError}</span></div>
-				{:else if diffModalLines.every((l) => l.type === 'context')}
-					<p class="text-success text-sm">Files are identical.</p>
 				{:else}
-					<div class="flex gap-4 pb-2 text-xs opacity-50">
-						<span class="flex items-center gap-1.5"
-							><span class="bg-success/40 inline-block h-3 w-3 rounded-sm"></span>remote only</span
-						>
-						<span class="flex items-center gap-1.5"
-							><span class="bg-error/40 inline-block h-3 w-3 rounded-sm"></span>local only</span
-						>
-					</div>
-					<div class="rounded bg-base-200 p-2 font-mono text-xs leading-5">
-						{#each diffModalLines as line}
-							{#if line.type === 'removed'}
-								<div class="bg-error/20 text-error-content break-all whitespace-pre-wrap">
-									- {line.content}
+					{@const banner = previewBanner(diffModalRow)}
+					{#if banner}
+						<div class="alert {banner.alertClass} mb-3 text-xs">
+							<span>{banner.text}</span>
+						</div>
+					{/if}
+					{#if diffModalLines.every((l) => l.type === 'context')}
+						<p class="text-success text-sm">
+							{diffModalRow?.effectiveAction === 'skip'
+								? 'No changes will be applied.'
+								: 'Files are identical.'}
+						</p>
+						{#if diffModalIdentical}
+							<button
+								type="button"
+								class="btn btn-success btn-xs mt-2"
+								disabled={markingIdentical}
+								onclick={markDiffModalIdentical}
+							>
+								{#if markingIdentical}
+									<span class="loading loading-spinner loading-xs"></span>
+								{:else}
+									<ShieldCheckIcon class="h-3.5 w-3.5" />
+								{/if}
+								Mark as identical
+							</button>
+						{/if}
+					{:else}
+						<div class="flex gap-4 pb-2 text-xs opacity-50">
+							<span class="flex items-center gap-1.5"
+								><span class="bg-success/40 inline-block h-3 w-3 rounded-sm"></span>added</span
+							>
+							<span class="flex items-center gap-1.5"
+								><span class="bg-error/40 inline-block h-3 w-3 rounded-sm"></span>removed</span
+							>
+						</div>
+						<div class="rounded bg-base-200 p-2 font-mono text-xs leading-5">
+							{#each diffModalLines as line, i}
+								<div id="diff-line-{i}">
+									{#if line.type === 'removed'}
+										<div class="bg-error/20 text-error-content break-all whitespace-pre-wrap">
+											- {line.content}
+										</div>
+									{:else if line.type === 'added'}
+										<div class="bg-success/20 text-success-content break-all whitespace-pre-wrap">
+											+ {line.content}
+										</div>
+									{:else}
+										<div class="break-all whitespace-pre-wrap opacity-50">
+											&nbsp; {line.content}
+										</div>
+									{/if}
 								</div>
-							{:else if line.type === 'added'}
-								<div class="bg-success/20 text-success-content break-all whitespace-pre-wrap">
-									+ {line.content}
-								</div>
-							{:else}
-								<div class="break-all whitespace-pre-wrap opacity-50">&nbsp; {line.content}</div>
-							{/if}
-						{/each}
-					</div>
+							{/each}
+						</div>
+					{/if}
 				{/if}
 			</div>
 		</div>

@@ -16,16 +16,25 @@ export async function getBaseline(endpointId: string): Promise<Map<string, PeerS
 	return new Map(rows.map((row: PeerSyncBaseline) => [row.path, row]));
 }
 
+/** A path's local + remote metadata snapshot as of the last confirmed sync (pull or hash-verify). */
+export interface BaselineEntry {
+	path: string;
+	local: SyncEntry;
+	remote: SyncEntry;
+}
+
 /** Records (or updates) the baseline for the given paths as just synced. */
-export async function updateBaseline(endpointId: string, entries: SyncEntry[]): Promise<void> {
+export async function updateBaseline(endpointId: string, entries: BaselineEntry[]): Promise<void> {
 	if (entries.length === 0) return;
 	const syncedAt = new Date().toISOString();
 	const rows: PeerSyncBaseline[] = entries.map((e) =>
 		Object.assign(new PeerSyncBaseline(), {
 			endpointId,
 			path: e.path,
-			size: e.size,
-			lastModified: e.lastModified,
+			localSize: e.local.size,
+			localModified: e.local.lastModified,
+			remoteSize: e.remote.size,
+			remoteModified: e.remote.lastModified,
 			syncedAt
 		})
 	);

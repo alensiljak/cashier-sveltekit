@@ -77,6 +77,12 @@ export class PeerPresence {
 
 	room: Room | null = null;
 	private helloAction: MessageAction<{ id: string; name: string }> | null = null;
+	/** Polls `room.getPeers()` so a dead RTCPeerConnection is evicted even when
+	 *  `onPeerLeave` never fires — WebRTC's own disconnect detection can take
+	 *  tens of seconds to minutes, which otherwise leaves a since-refreshed
+	 *  peer looking "online" indefinitely. */
+	private pruneTimer: number | null = null;
+	private handlePageHide: (() => void) | null = null;
 
 	/** Loads identity/room/trusted-peers from storage. Call once before `join()`. */
 	async init(): Promise<void> {
@@ -172,9 +178,49 @@ export class PeerPresence {
 
 		this.isInRoom = true;
 		await settings.set(SettingKeys.peerRoom, trimmed);
+
+		// Best-effort: lets the relay propagate an immediate leave signal on tab
+		// close/refresh/navigation instead of the remaining peer waiting out
+		// WebRTC's own (often 30s+) disconnect-detection timeout. Not awaited —
+		// pagehide can't wait on async work.
+		this.handlePageHide = () => {
+			this.room?.leave();
+		};
+		window.addEventListener('pagehide', this.handlePageHide);
+
+		// Self-heals the case above's counterpart doesn't fire on the OTHER
+		// end (e.g. the leave signal is dropped, or the peer's process is
+		// killed rather than gracefully unloaded) by evicting any peer whose
+		// underlying RTCPeerConnection is no longer actually connected.
+		this.pruneTimer = window.setInterval(() => this.pruneStaleConnections(), 5000);
+	}
+
+	/** Drops any `peersMap` entry whose RTCPeerConnection has gone dead without `onPeerLeave` firing. */
+	private pruneStaleConnections(): void {
+		if (!this.room) return;
+		const live = this.room.getPeers();
+		const deadStates = new Set(['disconnected', 'failed', 'closed']);
+		let changed = false;
+		const next = { ...this.peersMap };
+		for (const trysteroId of Object.keys(next)) {
+			const pc = live[trysteroId];
+			if (!pc || deadStates.has(pc.connectionState)) {
+				delete next[trysteroId];
+				changed = true;
+			}
+		}
+		if (changed) this.peersMap = next;
 	}
 
 	async leave(): Promise<void> {
+		if (this.pruneTimer !== null) {
+			window.clearInterval(this.pruneTimer);
+			this.pruneTimer = null;
+		}
+		if (this.handlePageHide) {
+			window.removeEventListener('pagehide', this.handlePageHide);
+			this.handlePageHide = null;
+		}
 		if (this.room) {
 			await this.room.leave();
 			this.room = null;
