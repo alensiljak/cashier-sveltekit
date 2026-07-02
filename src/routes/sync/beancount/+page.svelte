@@ -51,12 +51,16 @@
 
 	function selectPeer(id: string) {
 		activePeerId = id;
-		goto(`?peer=${id}`, { replaceState: true, keepFocus: true, noScroll: true });
+		goto(`${page.url.pathname}?peer=${id}`, {
+			replaceState: true,
+			keepFocus: true,
+			noScroll: true
+		});
 	}
 
 	function changePeer() {
 		activePeerId = null;
-		goto('?', { replaceState: true, keepFocus: true, noScroll: true });
+		goto(page.url.pathname, { replaceState: true, keepFocus: true, noScroll: true });
 	}
 
 	onMount(async () => {
