@@ -7,6 +7,7 @@ import appService from '$lib/services/appService';
 import fullLedgerService from '$lib/services/ledgerWorkerClient';
 import { version as getWasmVersion } from '$lib/services/rustledger';
 import { get } from 'svelte/store';
+import type { PageLoad } from './$types';
 
 export type WasmQueryFn = (
 	bql: string
@@ -22,7 +23,7 @@ export interface RawQueryResult {
 /*
     Asset Class Detail
  */
-export async function load({ params }) {
+export const load: PageLoad = async ({ params }) => {
 	// load asset classes.
 	const aa = get(AssetAllocationStore);
 	if (!aa) {
@@ -62,7 +63,7 @@ export async function load({ params }) {
 		stocks,
 		wasmVersion
 	};
-}
+};
 
 function populateStocksWithCaching(assetClass: AssetClass, investmentAccounts: Account[]) {
 	const stocks = populateStocks(assetClass, investmentAccounts);

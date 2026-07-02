@@ -87,7 +87,7 @@ A client can currently only pull remote changes. Pushing (writing to a peer) is 
 - [x] Split the `trystero` dependency into `@trystero-p2p/{core,nostr,mqtt,torrent}`
 - [x] Add `PeerPresence.strategy`, persisted via `Settings.peerRelayStrategy`, dynamically imported per strategy in `join()`
 - [x] Toolbar menu on `/sync/beancount` to switch strategy (leaves + rejoins the room, re-registers `list-files`, forces a remote refetch)
-- [ ] Add the same strategy switcher to `/peer-sync`
+- [x] Add the same strategy switcher to `/peer-sync`
 
 ### UI
 

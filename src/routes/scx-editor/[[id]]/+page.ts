@@ -1,15 +1,16 @@
 import appService from '$lib/services/appService';
 import { get } from 'svelte/store';
 import { ScheduledXact } from '$lib/data/mainStore';
+import type { PageLoad } from './$types';
 
 /**
  * Load data used in the page.
  * @returns
  */
-export async function load({ params }) {
+export const load: PageLoad = async ({ params }) => {
 	// if there is an Id, and no record, load the transaction.
 	await loadData(params.id);
-}
+};
 
 async function loadData(id?: string) {
 	if (!id) return;

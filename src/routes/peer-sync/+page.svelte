@@ -6,11 +6,17 @@
 	import db from '$lib/data/db';
 	import { readFile, saveFile } from '$lib/utils/opfslib';
 	import Toolbar from '$lib/components/Toolbar.svelte';
+	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import HelpButton from '$lib/help/HelpButton.svelte';
 	import { Setting, ScheduledTransaction } from '$lib/data/model';
 	import Notifier from '$lib/utils/notifier';
-	import { GitCompareArrowsIcon, EyeIcon, DownloadIcon } from '@lucide/svelte';
-	import { PeerPresence, type ActivePeer } from '$lib/sync/peerPresence.svelte';
+	import { GitCompareArrowsIcon, EyeIcon, DownloadIcon, Check } from '@lucide/svelte';
+	import {
+		PeerPresence,
+		RELAY_STRATEGIES,
+		type ActivePeer,
+		type RelayStrategy
+	} from '$lib/sync/peerPresence.svelte';
 
 	// ─── Types ───────────────────────────────────────────────────────────────────
 	interface RemoteData {
@@ -188,6 +194,17 @@
 		Notifier.info('Left room');
 	}
 
+	// ─── Relay strategy ──────────────────────────────────────────────────────────
+
+	/** Switches the signaling network. Reconnects a live room so the new strategy takes effect immediately. */
+	async function selectStrategy(value: RelayStrategy) {
+		if (presence.strategy === value) return;
+		const wasInRoom = presence.isInRoom;
+		if (wasInRoom) await leaveRoom();
+		await presence.setStrategy(value);
+		if (wasInRoom) await joinPeerRoom(presence.roomCode);
+	}
+
 	// ─── Trust ───────────────────────────────────────────────────────────────────
 
 	async function trustPeer(peer: ActivePeer) {
@@ -313,8 +330,18 @@
 	});
 </script>
 
+{#snippet menuItems()}
+	{#each RELAY_STRATEGIES as s (s.value)}
+		<ToolbarMenuItem
+			text={s.label}
+			Icon={presence.strategy === s.value ? Check : undefined}
+			onclick={() => selectStrategy(s.value)}
+		/>
+	{/each}
+{/snippet}
+
 <article class="flex h-screen flex-col">
-	<Toolbar title="Peer Sync">
+	<Toolbar title="Peer Sync" {menuItems}>
 		{#snippet actions()}
 			<HelpButton topic="peer-sync" />
 		{/snippet}

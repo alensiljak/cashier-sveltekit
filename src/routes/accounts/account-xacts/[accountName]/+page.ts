@@ -7,6 +7,7 @@ import ledgerService from '$lib/services/ledgerService.js';
 import fullLedgerService from '$lib/services/ledgerWorkerClient';
 import type { DirectiveSpan } from '$lib/rledger/sourceEditor';
 import type { MetaValueJson } from '@rustledger/wasm';
+import type { PageLoad } from './$types';
 
 export type UnifiedXact = {
 	date: string;
@@ -21,7 +22,7 @@ export type UnifiedXact = {
 
 export type AccountMeta = Record<string, MetaValueJson>;
 
-export async function load({ params }) {
+export const load: PageLoad = async ({ params }) => {
 	if (!params.accountName) {
 		throw new Error('Account must be specified!');
 	}
@@ -118,4 +119,4 @@ WHERE account = '${params.accountName}'`;
 	const accountMeta: AccountMeta = openDirective?.meta ?? {};
 
 	return { account, total, unifiedRows, hasDeviceXacts, accountMeta };
-}
+};
