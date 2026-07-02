@@ -63,16 +63,18 @@
 		await presence.init();
 		if (urlPeerId) activePeerId = urlPeerId;
 		presenceReady = true;
-		if (presence.trustedPeers.length > 0) {
-			await presence.join(presence.roomCode);
-			listFilesAction = presence.makeRequestAction<null, SyncEntry[]>(
-				'list-files',
-				async (_request, { peerId: fromId }) => {
-					if (!presence.peersMap[fromId]?.isTrusted) return [];
-					return await listLocalTree();
-				}
-			);
-		}
+		// Join unconditionally (mirrors peer-sync) — even with zero trusted peers
+		// recorded locally, joining lets a peer who *does* trust us discover this
+		// device. Gating this on `trustedPeers.length > 0` broke discovery whenever
+		// trust wasn't yet fully mutual.
+		await presence.join(presence.roomCode);
+		listFilesAction = presence.makeRequestAction<null, SyncEntry[]>(
+			'list-files',
+			async (_request, { peerId: fromId }) => {
+				if (!presence.peersMap[fromId]?.isTrusted) return [];
+				return await listLocalTree();
+			}
+		);
 	});
 
 	$effect(() => {
@@ -81,7 +83,10 @@
 			return;
 		}
 		discoveryDone = false;
-		const timer = setTimeout(() => (discoveryDone = true), 3000);
+		// Nostr-relay discovery latency is highly variable (real-world joins have
+		// taken well past a few seconds) — generous window avoids flagging a
+		// still-arriving peer as offline.
+		const timer = setTimeout(() => (discoveryDone = true), 15_000);
 		return () => clearTimeout(timer);
 	});
 
