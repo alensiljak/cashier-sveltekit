@@ -180,6 +180,29 @@
 		return visible;
 	});
 
+	// Auto-expand ancestor chains the first time a node becomes part of the
+	// search results, so matches are visible without extra taps — but never
+	// re-expand a branch the user has since collapsed while still searching.
+	let previousSearchVisible: Set<string> | undefined;
+	$effect(() => {
+		const filter = searchVisibleNames;
+		if (!filter) {
+			previousSearchVisible = undefined;
+			return;
+		}
+		const prev = previousSearchVisible;
+		previousSearchVisible = filter;
+		const next = new Set(expandedNodes);
+		let changed = false;
+		for (const name of filter) {
+			if ((!prev || !prev.has(name)) && !next.has(name)) {
+				next.add(name);
+				changed = true;
+			}
+		}
+		if (changed) expandedNodes = next;
+	});
+
 	let visibleNodes: TreeNode[] = $derived.by(() => {
 		const result: TreeNode[] = [];
 		const filter = searchVisibleNames;
@@ -189,7 +212,7 @@
 				const node = nodeMap.get(name);
 				if (!node) continue;
 				result.push(node);
-				if (filter ? true : expandedNodes.has(name)) walk(node.children);
+				if (expandedNodes.has(name)) walk(node.children);
 			}
 		}
 		walk(rootNames);
