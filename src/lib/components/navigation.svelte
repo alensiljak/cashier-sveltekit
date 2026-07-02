@@ -243,7 +243,7 @@
 								<span>Ledger Export</span>
 							</a>
 						</li>
-						<li>
+						<!-- <li>
 							<a
 								href="/opfs/sync"
 								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/opfs/sync'
@@ -254,7 +254,7 @@
 								<ArrowLeftRightIcon />
 								<span>Sync</span>
 							</a>
-						</li>
+						</li> -->
 						<li>
 							<a
 								href="/backup"

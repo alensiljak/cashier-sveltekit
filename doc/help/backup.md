@@ -6,7 +6,6 @@ The Backup screen lets you save all locally-created data to a file, and restore 
 
 The backup includes:
 
-- Transactions
 - Scheduled Transactions
 - Settings
 

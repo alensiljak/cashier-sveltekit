@@ -5,7 +5,6 @@
 	import Notifier from '$lib/utils/notifier';
 	import { FileDownIcon, Share2Icon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
-	// import type { FileChangeDetails } from '@zag-js/file-upload';
 
 	type FileChangeDetails = {
 		acceptedFiles: File[];
@@ -91,7 +90,6 @@
 
 		<p>You can backup all local data:</p>
 		<ul class="list mx-8">
-			<li>transactions</li>
 			<li>scheduled transactions</li>
 			<li>settings</li>
 		</ul>
