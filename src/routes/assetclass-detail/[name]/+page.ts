@@ -1,11 +1,12 @@
 import { goto } from '$app/navigation';
 import type { AssetClass, StockSymbol } from '$lib/assetAllocation/AssetClass';
+import { commoditiesFromDirectives } from '$lib/assetAllocation/commodityYield';
 import { AaStocksStore, AssetAllocationStore } from '$lib/data/mainStore';
 import type { Account } from '$lib/data/model.js';
 import * as AccountService from '$lib/services/accountsService';
 import appService from '$lib/services/appService';
 import fullLedgerService from '$lib/services/ledgerWorkerClient';
-import { version as getWasmVersion } from '$lib/services/rustledger';
+import rustledger, { version as getWasmVersion } from '$lib/services/rustledger';
 import { get } from 'svelte/store';
 import type { PageLoad } from './$types';
 
@@ -42,6 +43,8 @@ export const load: PageLoad = async ({ params }) => {
 		console.warn('No investment accounts found');
 	}
 
+	const commodities = commoditiesFromDirectives(await fullLedgerService.getDirectives());
+
 	// add the balances.
 	await AccountService.populateAccountBalances(investmentAccounts);
 
@@ -52,7 +55,13 @@ export const load: PageLoad = async ({ params }) => {
 	}
 	const stocks = populateStocksWithCaching(assetClass, investmentAccounts);
 
-	const wasmVersion = getWasmVersion();
+	let wasmVersion: string;
+	try {
+		await rustledger.ensureInitialized();
+		wasmVersion = getWasmVersion();
+	} catch {
+		wasmVersion = 'unavailable';
+	}
 
 	return {
 		wasmQuery,
@@ -61,6 +70,7 @@ export const load: PageLoad = async ({ params }) => {
 		aa,
 		assetClass,
 		stocks,
+		commodities,
 		wasmVersion
 	};
 };

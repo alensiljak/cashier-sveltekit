@@ -81,6 +81,11 @@ include "prices.bean"
   Assets:Bank:Savings    6.50 EUR
   Income:Interest
 
+2024-01-31 * "Vanguard" "VTI dividend"
+  isin: "US9229087690"
+  Income:Dividends                     -4.50 EUR
+  Assets:Investments:Brokerage:Cash     4.50 EUR
+
 ;; ── February 2024 ───────────────────────────────────────────────────────
 
 2024-02-01 * "Acme Corp" "Monthly salary"
@@ -146,6 +151,10 @@ include "prices.bean"
 2024-02-29 * "Savings Bank" "Interest"
   Assets:Bank:Savings    6.80 EUR
   Income:Interest
+
+2024-02-29 * "Vanguard" "BND distribution (legacy account-name convention, no isin tag)"
+  Income:Dividends:BND                  -2.10 EUR
+  Assets:Investments:Brokerage:Cash      2.10 EUR
 
 ;; ── March 2024 ──────────────────────────────────────────────────────────
 

@@ -5,9 +5,13 @@
 
 2020-01-01 commodity VTI
   name: "Vanguard Total Stock Market ETF"
+  isin: "US9229087690"
+  ticker: "VTI"
 
 2020-01-01 commodity BND
   name: "Vanguard Total Bond Market ETF"
+  isin: "US9219378356"
+  ticker: "BND"
 
 2020-01-01 commodity USD
   name: "US Dollar"

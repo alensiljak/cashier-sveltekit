@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import type { StockSymbol } from '$lib/assetAllocation/AssetClass.js';
+	import type { CommodityDirective } from '$lib/assetAllocation/commodityYield.js';
 	import {
 		SecurityAnalyser,
 		type SecurityAnalysis,
@@ -51,12 +52,20 @@
 
 	onMount(async () => {
 		cursor = 'cursor-wait';
-		data.stocks = await loadSecurityAnalysis(data.wasmQuery as QueryFn, data.stocks as StockSymbol[]);
+		data.stocks = await loadSecurityAnalysis(
+			data.wasmQuery as QueryFn,
+			data.stocks as StockSymbol[],
+			(data.commodities as CommodityDirective[]) ?? []
+		);
 		cursor = '';
 	});
 
-	async function fetchAnalysisFor(queryFn: QueryFn, symbol: string): Promise<SecurityAnalysis> {
-		const svc = new SecurityAnalyser(queryFn);
+	async function fetchAnalysisFor(
+		queryFn: QueryFn,
+		symbol: string,
+		commodities: CommodityDirective[]
+	): Promise<SecurityAnalysis> {
+		const svc = new SecurityAnalyser(queryFn, commodities);
 		const [yieldResult, gainlossResult] = await Promise.all([
 			svc.getYield(symbol),
 			svc.getGainLoss(symbol)
@@ -66,7 +75,8 @@
 
 	async function loadSecurityAnalysis(
 		queryFn: QueryFn,
-		symbols: StockSymbol[]
+		symbols: StockSymbol[],
+		commodities: CommodityDirective[]
 	): Promise<StockSymbol[]> {
 		const stocksToLoad = symbols.filter((stock) => !stock.analysis);
 		await processWithConcurrencyLimit(stocksToLoad, 10, async (stock) => {
@@ -75,7 +85,7 @@
 			stock.error = undefined;
 			data.stocks = [...data.stocks];
 			try {
-				const analysis = await fetchAnalysisFor(queryFn, symbol);
+				const analysis = await fetchAnalysisFor(queryFn, symbol, commodities);
 				stock.analysis = analysis;
 				stock.loading = false;
 				AaStocksStore.update((cache) => {
@@ -186,7 +196,13 @@
 		GROUP BY account
 		HAVING number(value(sum(position), '${currency}')) != 0
 		ORDER BY account`;
-			rawAccountsResult = { query: accountsQuery, loaded: false, columns: [], rows: [], errors: [] };
+			rawAccountsResult = {
+				query: accountsQuery,
+				loaded: false,
+				columns: [],
+				rows: [],
+				errors: []
+			};
 			try {
 				const result = await queryFn(accountsQuery);
 				rawAccountsResult = { query: accountsQuery, loaded: true, ...result };
@@ -233,7 +249,10 @@
 				{#each data.stocks || [] as stock}
 					<li class="mt-3">
 						<h6 class="h6 flex items-center gap-2">
-							• <a href={`/commodities/detail?symbol=${encodeURIComponent(stock.name)}`} class="link link-primary">{stock.name}</a>
+							• <a
+								href={`/commodities/detail?symbol=${encodeURIComponent(stock.name)}`}
+								class="link link-primary">{stock.name}</a
+							>
 							{#if stock.loading}
 								<Loader class="h-4 w-4 animate-spin" />
 							{/if}
@@ -337,7 +356,6 @@
 
 			{#if debugOpen}
 				<div class="mt-3 space-y-6 font-mono text-xs">
-
 					<!-- Environment -->
 					<section>
 						<h3 class="mb-1 font-sans text-sm font-semibold">Environment</h3>
@@ -357,22 +375,51 @@
 							class="flex items-center gap-1 font-sans text-sm font-semibold hover:opacity-80"
 							onclick={() => (assetClassValuesOpen = !assetClassValuesOpen)}
 						>
-							{#if assetClassValuesOpen}<ChevronDown class="h-3 w-3" />{:else}<ChevronRight class="h-3 w-3" />{/if}
+							{#if assetClassValuesOpen}<ChevronDown class="h-3 w-3" />{:else}<ChevronRight
+									class="h-3 w-3"
+								/>{/if}
 							Asset Class Values
 						</button>
 						{#if assetClassValuesOpen && data.assetClass}
 							{@const ac = data.assetClass}
 							<table class="mt-1 border-collapse">
 								<tbody>
-									<tr class="border-b"><td class="pr-4 py-0.5 opacity-60">fullname</td><td>{ac.fullname}</td></tr>
-									<tr class="border-b"><td class="pr-4 py-0.5 opacity-60">allocation (target %)</td><td>{ac.allocation}</td></tr>
-									<tr class="border-b"><td class="pr-4 py-0.5 opacity-60">allocatedValue</td><td>{ac.allocatedValue?.toString()} {ac.currency}</td></tr>
-									<tr class="border-b"><td class="pr-4 py-0.5 opacity-60">currentValue</td><td>{ac.currentValue?.toString()} {ac.currency}</td></tr>
-									<tr class="border-b"><td class="pr-4 py-0.5 opacity-60">currentAllocation %</td><td>{ac.currentAllocation}</td></tr>
-									<tr class="border-b"><td class="pr-4 py-0.5 opacity-60">diff (pp)</td><td>{ac.diff}</td></tr>
-									<tr class="border-b"><td class="pr-4 py-0.5 opacity-60">diffAmount</td><td>{ac.diffAmount}</td></tr>
-									<tr class="border-b"><td class="pr-4 py-0.5 opacity-60">diffPerc %</td><td>{ac.diffPerc}</td></tr>
-									<tr class="border-b"><td class="pr-4 py-0.5 opacity-60">symbols</td><td>{ac.symbols?.join(', ')}</td></tr>
+									<tr class="border-b"
+										><td class="pr-4 py-0.5 opacity-60">fullname</td><td>{ac.fullname}</td></tr
+									>
+									<tr class="border-b"
+										><td class="pr-4 py-0.5 opacity-60">allocation (target %)</td><td
+											>{ac.allocation}</td
+										></tr
+									>
+									<tr class="border-b"
+										><td class="pr-4 py-0.5 opacity-60">allocatedValue</td><td
+											>{ac.allocatedValue?.toString()} {ac.currency}</td
+										></tr
+									>
+									<tr class="border-b"
+										><td class="pr-4 py-0.5 opacity-60">currentValue</td><td
+											>{ac.currentValue?.toString()} {ac.currency}</td
+										></tr
+									>
+									<tr class="border-b"
+										><td class="pr-4 py-0.5 opacity-60">currentAllocation %</td><td
+											>{ac.currentAllocation}</td
+										></tr
+									>
+									<tr class="border-b"
+										><td class="pr-4 py-0.5 opacity-60">diff (pp)</td><td>{ac.diff}</td></tr
+									>
+									<tr class="border-b"
+										><td class="pr-4 py-0.5 opacity-60">diffAmount</td><td>{ac.diffAmount}</td></tr
+									>
+									<tr class="border-b"
+										><td class="pr-4 py-0.5 opacity-60">diffPerc %</td><td>{ac.diffPerc}</td></tr
+									>
+									<tr class="border-b"
+										><td class="pr-4 py-0.5 opacity-60">symbols</td><td>{ac.symbols?.join(', ')}</td
+										></tr
+									>
 								</tbody>
 							</table>
 						{/if}
@@ -384,7 +431,9 @@
 							class="flex items-center gap-1 font-sans text-sm font-semibold hover:opacity-80"
 							onclick={toggleAccounts}
 						>
-							{#if accountsOpen}<ChevronDown class="h-3 w-3" />{:else}<ChevronRight class="h-3 w-3" />{/if}
+							{#if accountsOpen}<ChevronDown class="h-3 w-3" />{:else}<ChevronRight
+									class="h-3 w-3"
+								/>{/if}
 							All Investment Accounts ({data.investmentAccounts?.length ?? 0})
 						</button>
 						{#if accountsOpen}
@@ -458,18 +507,16 @@
 										{:else if symbolDebug[stock.name]}
 											{@const sd = symbolDebug[stock.name]}
 
-											{#each [
-												{ label: 'income balance', result: sd.income },
-												{ label: 'value balance', result: sd.value },
-												{ label: 'gain/loss (cost + convert)', result: sd.gainLoss },
-												{ label: 'cost only (no convert) — isolates cost() vs convert()', result: sd.costOnly },
-												{ label: 'raw positions per lot', result: sd.rawPositions }
-											] as { label, result }}
+											{#each [{ label: 'income balance', result: sd.income }, { label: 'value balance', result: sd.value }, { label: 'gain/loss (cost + convert)', result: sd.gainLoss }, { label: 'cost only (no convert) — isolates cost() vs convert()', result: sd.costOnly }, { label: 'raw positions per lot', result: sd.rawPositions }] as { label, result }}
 												<div>
 													<div class="mb-0.5 opacity-60">{label}</div>
-													<div class="break-all rounded bg-gray-100 p-1 dark:bg-gray-800">{result?.query}</div>
+													<div class="break-all rounded bg-gray-100 p-1 dark:bg-gray-800">
+														{result?.query}
+													</div>
 													{#if result?.errors?.length}
-														<div class="text-error">Errors: {result.errors.map((e: any) => e.message).join('; ')}</div>
+														<div class="text-error">
+															Errors: {result.errors.map((e: any) => e.message).join('; ')}
+														</div>
 													{/if}
 													{#if result?.rows?.length}
 														<div class="mt-0.5 opacity-60">cols: {result.columns.join(', ')}</div>
@@ -487,7 +534,6 @@
 							</div>
 						{/each}
 					</section>
-
 				</div>
 			{/if}
 		</div>

@@ -9,6 +9,12 @@
 	import { ArrowLeftRightIcon } from '@lucide/svelte';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import HelpButton from '$lib/help/HelpButton.svelte';
+	import appService from '$lib/services/appService';
+	import {
+		computeCommodityYield,
+		commoditiesFromDirectives,
+		type CommodityYieldResult
+	} from '$lib/assetAllocation/commodityYield';
 
 	type CommodityDirective = {
 		currency: string;
@@ -22,6 +28,8 @@
 	let dataLoaded = $state(false);
 	let pricePoints: PricePoint[] = $state([]);
 	let lastPrice: PricePoint | null = $state(null);
+	let securityYield: CommodityYieldResult | null = $state(null);
+	let yieldError: string | null = $state(null);
 
 	onMount(async () => {
 		await loadData();
@@ -32,6 +40,7 @@
 
 		// Load commodity directive
 		const directives = (await fullLedgerService.getDirectives()) as any[];
+		const allCommodities = commoditiesFromDirectives(directives);
 		const found = directives.find((d) => d.type === 'commodity' && d.currency === symbol);
 		if (found) {
 			commodity = {
@@ -41,6 +50,19 @@
 			};
 		}
 
+		if (commodity) {
+			try {
+				const reportCurrency = await appService.getDefaultCurrency();
+				securityYield = await computeCommodityYield(
+					fullLedgerService.query.bind(fullLedgerService),
+					commodity,
+					allCommodities,
+					reportCurrency
+				);
+			} catch (e) {
+				yieldError = e instanceof Error ? e.message : String(e);
+			}
+		}
 		// Load full price history for this symbol via BQL — runs against in-memory
 		// WASM data so no disk I/O; even 5y of daily prices (~1300 rows) is sub-ms.
 		const { columns, rows } = await fullLedgerService.query(
@@ -127,12 +149,40 @@
 						<span class="text-sm font-medium opacity-50">Last price</span>
 						<div class="text-right">
 							<span class="font-mono font-semibold">
-								{lastPrice.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
+								{lastPrice.price.toLocaleString(undefined, {
+									minimumFractionDigits: 2,
+									maximumFractionDigits: 4
+								})}
 								{lastPrice.priceCurrency}
 							</span>
 							<span class="ml-2 text-xs opacity-40">{lastPrice.date}</span>
 						</div>
 					</div>
+				</div>
+			{/if}
+
+			<!-- Yield (TTM) box — linked via isin/ticker metadata when declared -->
+			{#if securityYield}
+				<div class="mx-auto max-w-md mt-4 overflow-hidden rounded-xl bg-base-100 shadow">
+					<div class="flex items-center justify-between px-4 py-3">
+						<span class="text-sm font-medium opacity-50">Yield (TTM)</span>
+						<span class="font-mono font-semibold">{securityYield.yieldPct}</span>
+					</div>
+					<div class="flex items-center justify-between border-t border-base-content/10 px-4 py-2">
+						<span class="text-xs opacity-40">Linked by</span>
+						<span class="text-xs opacity-60">
+							{securityYield.matchedBy === 'symbol'
+								? 'currency code (no isin/ticker meta)'
+								: securityYield.matchedBy}
+							{#if securityYield.linkedCurrencies.length > 1}
+								&nbsp;({securityYield.linkedCurrencies.join(', ')})
+							{/if}
+						</span>
+					</div>
+				</div>
+			{:else if yieldError}
+				<div class="mx-auto max-w-md mt-4 overflow-hidden rounded-xl bg-base-100 shadow px-4 py-3">
+					<span class="text-xs text-error">Yield unavailable: {yieldError}</span>
 				</div>
 			{/if}
 
@@ -156,10 +206,7 @@
 			{#if pricePoints.length > 0}
 				<div class="mx-auto max-w-md mt-6 overflow-hidden rounded-xl bg-base-100 shadow p-3">
 					<p class="text-xs font-medium opacity-50 mb-1 px-1">Price history</p>
-					<PriceHistoryChart
-						points={pricePoints}
-						priceCurrency={lastPrice?.priceCurrency ?? ''}
-					/>
+					<PriceHistoryChart points={pricePoints} priceCurrency={lastPrice?.priceCurrency ?? ''} />
 				</div>
 			{/if}
 		{/if}
