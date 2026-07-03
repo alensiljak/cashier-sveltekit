@@ -8,4 +8,8 @@ This list doubles as a payee picker. When you tap the **Payee** field in the [Tr
 
 While in selection mode, if your search term doesn't match any existing payee, a checkmark button appears — tap it to use the typed text as a brand-new payee.
 
+## Viewing a payee's transactions
+
+Outside selection mode, tapping a payee opens [Payee Transactions](/help/payee-transactions), listing every transaction made to it.
+
 Use the search bar at the top to filter the list.

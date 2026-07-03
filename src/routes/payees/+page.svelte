@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Toolbar from '$lib/components/Toolbar.svelte';
+	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { selectionMetadata } from '$lib/data/mainStore';
 	import Fab from '$lib/components/FAB.svelte';
@@ -68,7 +69,7 @@
 
 			history.back();
 		} else {
-			// goto(resolve('/payee')); // todo: show payee details
+			goto('/payees/payee-xacts/' + encodeURIComponent(name));
 		}
 	}
 

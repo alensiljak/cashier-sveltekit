@@ -4,7 +4,8 @@
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import HelpButton from '$lib/help/HelpButton.svelte';
-	import type { UnifiedXact, AccountMeta } from './+page.js';
+	import TransactionList from '$lib/components/TransactionList.svelte';
+	import type { AccountMeta } from './+page.js';
 	import type { MetaValueJson } from '@rustledger/wasm';
 
 	function formatMetaValue(value: MetaValueJson): string {
@@ -20,75 +21,8 @@
 		navigator.clipboard.writeText(text);
 		Notifier.success('Copied to clipboard');
 	}
-	import { xact, xactSpan } from '$lib/data/mainStore';
-	import { Xact, Posting } from '$lib/data/model';
-	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import Notifier from '$lib/utils/notifier';
-
-	const PAGE_SIZE = 30;
-	let visibleCount = $state(PAGE_SIZE);
-	let sentinel = $state<HTMLElement | null>(null);
-
-	async function onRowClick(row: UnifiedXact) {
-		if (row.isDevice && row.xact && row.span) {
-			xact.set(row.xact);
-			xactSpan.set(row.span);
-			await goto('/xact-actions');
-			return;
-		}
-
-		// Read-only transaction: fetch postings from the full ledger
-		const payeeClause = row.payee
-			? `AND payee = "${row.payee.replace(/"/g, '\\"')}"`
-			: `AND payee = ""`;
-		const narrationClause = `AND narration = "${(row.narration ?? '').replace(/"/g, '\\"')}"`;
-		const bql = `SELECT flag, account, number, currency WHERE date = ${row.date} ${payeeClause} ${narrationClause}`;
-
-		const { columns, rows: postingRows, errors } = await fullLedgerService.query(bql);
-		if (errors?.length) console.warn('Posting query errors:', errors);
-
-		const safeRows = (postingRows ?? []) as unknown[][];
-		if (!safeRows.length) {
-			Notifier.error('Could not load transaction details');
-			return;
-		}
-
-		const flagIdx = columns.indexOf('flag');
-		const accountIdx = columns.indexOf('account');
-		const numberIdx = columns.indexOf('number');
-		const currencyIdx = columns.indexOf('currency');
-
-		const xactObj = new Xact();
-		xactObj.date = row.date;
-		xactObj.payee = row.payee;
-		xactObj.note = row.narration;
-		xactObj.flag = (safeRows[0][flagIdx] as string) ?? '*';
-		xactObj.postings = safeRows.map((pr) => {
-			const p = new Posting();
-			p.account = pr[accountIdx] as string;
-			p.amount = parseFloat(pr[numberIdx] as string);
-			p.currency = pr[currencyIdx] as string;
-			return p;
-		});
-
-		xact.set(xactObj);
-		xactSpan.set(undefined);
-		await goto('/xact-actions');
-	}
-
-	const allRows = $derived(page.data.unifiedRows as UnifiedXact[]);
-	const visibleRows = $derived(allRows.slice(0, visibleCount));
-
-	$effect(() => {
-		if (!sentinel) return;
-		const observer = new IntersectionObserver((entries) => {
-			if (entries[0].isIntersecting && visibleCount < allRows.length) {
-				visibleCount = Math.min(visibleCount + PAGE_SIZE, allRows.length);
-			}
-		});
-		observer.observe(sentinel);
-		return () => observer.disconnect();
-	});
+	import { openXactDetails } from '$lib/utils/unifiedXacts';
 </script>
 
 <main class="flex h-screen flex-col">
@@ -149,29 +83,6 @@
 			<hr class="border-gray-400" />
 		</div>
 
-		<!-- Unified transaction list -->
-		<div class="space-y-1">
-			{#each visibleRows as row (row)}
-				<div
-					class="flex flex-row px-2 cursor-pointer {row.isDevice
-						? 'border-l-2 border-amber-400 bg-amber-50/60 dark:bg-amber-950/25'
-						: ''}"
-					onclick={() => onRowClick(row)}
-					onkeypress={() => onRowClick(row)}
-					role="button"
-					tabindex="0"
-				>
-					<data class="mr-4 shrink-0">{row.date}</data>
-					<data class="grow">
-						{row.payee}{#if row.payee && row.narration}<span class="opacity-50"> · {row.narration}</span>{:else if row.narration}{row.narration}{/if}
-					</data>
-					<data class="shrink-0 {Formatter.getAmountColour(row.amount)}">
-						{Formatter.formatAmount(row.amount)}
-						{row.currency}
-					</data>
-				</div>
-			{/each}
-			<div bind:this={sentinel}></div>
-		</div>
+		<TransactionList rows={page.data.unifiedRows} onRowClick={openXactDetails} />
 	</section>
 </main>
