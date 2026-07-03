@@ -152,12 +152,12 @@
 
 </script>
 
-<Toolbar title="Ledger Serialization">
+<Toolbar title="Ledger Cache">
 	{#snippet actions()}
-		<HelpButton topic="serialization" />
+		<HelpButton topic="cache" />
 	{/snippet}
 </Toolbar>
-<article class="p-4 max-w-xl space-y-6">
+<article class="mx-auto max-w-xl space-y-6 p-4">
 
 	<!-- Section 1: Ledger Instance -->
 	<section>

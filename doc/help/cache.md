@@ -1,4 +1,4 @@
-# Ledger Serialization
+# Ledger Cache
 
 Ledger Serialization is a developer utility for inspecting and controlling Cashier's ledger cache — a binary snapshot of your parsed ledger that lets the app skip expensive re-parsing and booking on future loads.
 

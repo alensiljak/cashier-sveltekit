@@ -32,7 +32,7 @@ Open the navigation drawer from the menu icon (☰) in the toolbar, or swipe rig
 
 ## Utilities
 
-- Serialization
+- Cache
 - [Calculator](/help/calculator)
 - [Currency Converter](/help/currency-converter)
 - Validation

@@ -199,18 +199,6 @@
 						</li>
 						<li>
 							<a
-								href="/accounts"
-								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/accounts'
-									? 'active bg-secondary text-secondary-content'
-									: ''}"
-								onclick={closeDrawer}
-							>
-								<LandmarkIcon />
-								<span>Accounts</span>
-							</a>
-						</li>
-						<li>
-							<a
 								href="/asset-allocation"
 								class="flex w-full items-center gap-2 py-2 {page.url.pathname ===
 								'/asset-allocation'
@@ -220,6 +208,29 @@
 							>
 								<ChartPieIcon />
 								<span>Asset Allocation</span>
+							</a>
+						</li>
+					</ul>
+				</details>
+			</li>
+			<li>
+				<details>
+					<summary class="flex w-full items-center gap-2 py-2 text-lg font-medium">
+						<ScrollIcon size={22} />
+						<span>Ledger</span>
+						<span class="flex-1"></span>
+					</summary>
+					<ul>
+						<li>
+							<a
+								href="/accounts"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/accounts'
+									? 'active bg-secondary text-secondary-content'
+									: ''}"
+								onclick={closeDrawer}
+							>
+								<LandmarkIcon />
+								<span>Accounts</span>
 							</a>
 						</li>
 						<li>
@@ -368,15 +379,15 @@
 					<ul>
 						<li>
 							<a
-								href="/util/serialization"
+								href="/util/cache"
 								class="flex w-full items-center gap-2 py-2 {page.url.pathname ===
-								'/util/serialization'
+								'/util/cache'
 									? 'active bg-secondary text-secondary-content'
 									: ''}"
 								onclick={closeDrawer}
 							>
 								<ContainerIcon />
-								<span>Serialization</span>
+								<span>Cache</span>
 							</a>
 						</li>
 						<li>
