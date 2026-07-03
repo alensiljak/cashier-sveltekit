@@ -163,7 +163,7 @@
 	}
 </script>
 
-<main class="flex flex-col h-full">
+<main class="flex h-screen flex-col">
 	<Toolbar title="Search">
 		{#snippet actions()}
 			<HelpButton topic="search" />

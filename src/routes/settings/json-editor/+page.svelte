@@ -44,23 +44,24 @@
 	}
 </script>
 
-<Toolbar title="Settings JSON Editor" />
+<main class="flex h-screen flex-col">
+	<Toolbar title="Settings JSON Editor" />
 
-<div class="flex items-center gap-2 px-3 py-2">
-	{#if isValid}
-		<CircleCheck size={20} class="text-success" />
-		<span class="text-sm text-success">Valid JSON</span>
-	{:else}
-		<CircleAlert size={20} class="text-error" />
-		<span class="text-sm text-error">Invalid JSON</span>
-	{/if}
-</div>
+	<div class="flex items-center gap-2 px-3 py-2">
+		{#if isValid}
+			<CircleCheck size={20} class="text-success" />
+			<span class="text-sm text-success">Valid JSON</span>
+		{:else}
+			<CircleAlert size={20} class="text-error" />
+			<span class="text-sm text-error">Invalid JSON</span>
+		{/if}
+	</div>
 
-<textarea
-	class="font-mono text-sm w-full resize-none p-3 outline-none bg-base-100 text-base-content"
-	style="height: calc(100dvh - 7rem);"
-	spellcheck="false"
-	bind:value={jsonText}
-></textarea>
+	<textarea
+		class="font-mono text-sm w-full resize-none p-3 outline-none bg-base-100 text-base-content flex-1"
+		spellcheck="false"
+		bind:value={jsonText}
+	></textarea>
 
-<Fab Icon={Check} onclick={save} />
+	<Fab Icon={Check} onclick={save} />
+</main>
