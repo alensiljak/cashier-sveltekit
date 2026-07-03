@@ -10,7 +10,7 @@
 <main>
 	<Toolbar title="Help"></Toolbar>
 
-	<section class="p-3 pb-0">
+	<section class="p-3 pb-0 mx-auto max-w-2xl w-full">
 		<label class="input input-bordered flex w-full items-center gap-2">
 			<SearchIcon size={16} class="opacity-50" />
 			<input type="search" placeholder="Search help…" class="grow" bind:value={query} />
@@ -22,7 +22,7 @@
 		</label>
 	</section>
 
-	<section class="p-1">
+	<section class="p-1 mx-auto max-w-2xl w-full">
 		{#if topics.length}
 			<ul class="menu menu-lg w-full">
 				{#each topics as { topic, title } (topic)}

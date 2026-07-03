@@ -84,7 +84,7 @@
 		{/snippet}
 	</Toolbar>
 
-	<div class="flex flex-col gap-4 p-4">
+	<div class="flex flex-col gap-4 p-4 mx-auto max-w-2xl w-full">
 		{#if isLoadingCurrencies}
 			<div class="flex justify-center py-8">
 				<span class="loading loading-spinner loading-md"></span>

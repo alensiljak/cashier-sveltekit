@@ -38,7 +38,7 @@ test.describe('critical pages render', () => {
 		test(`${path} renders its toolbar title`, async ({ page }) => {
 			await page.goto(path);
 
-			await expect(page.locator('.navbar p', { hasText: title })).toBeVisible();
+			await expect(page.locator('.navbar p.font-bold', { hasText: title })).toBeVisible();
 		});
 	}
 });
