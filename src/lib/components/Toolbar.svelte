@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { EllipsisVertical, Menu } from '@lucide/svelte';
 	import type { Snippet } from 'svelte';
-	import { drawerState } from '$lib/data/mainStore';
+	import { desktopNavVisible, drawerState } from '$lib/data/mainStore';
 
 	// Props
 	type Props = {
@@ -16,7 +16,9 @@
 	// methods
 
 	function toggleSidebar() {
-		// toggle sidebar state.
+		// Hamburger always opens/closes the temporary overlay drawer; it never
+		// reflows the layout. Only the pin button in the nav itself (see
+		// navigation.svelte) toggles the permanent, reflowing sidebar.
 		drawerState.update((state) => !state);
 	}
 </script>
@@ -26,7 +28,9 @@
 	<div class="navbar bg-primary text-base-content h-12 min-h-12 py-1 shadow-sm">
 		<div class="flex-none">
 			<button
-				class="btn btn-square btn-ghost hover-transparent rounded border-0 lg:hidden"
+				class="btn btn-square btn-ghost hover-transparent rounded border-0 {$desktopNavVisible
+					? 'lg:hidden'
+					: ''}"
 				onclick={toggleSidebar}
 			>
 				<span>

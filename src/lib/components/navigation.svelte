@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { drawerState } from '$lib/data/mainStore';
+	import { desktopNavVisible, drawerState } from '$lib/data/mainStore';
 	import { page } from '$app/state';
 	// Icons
 	import {
@@ -32,17 +32,42 @@
 		WifiIcon,
 		FilePlusIcon,
 		TerminalSquareIcon,
-		SearchIcon
+		SearchIcon,
+		PinIcon,
+		PinOffIcon
 	} from '@lucide/svelte';
 
 	function closeDrawer(): void {
 		// the new drawer
 		drawerState.update((state) => false);
 	}
+
+	function togglePin(): void {
+		if ($desktopNavVisible) {
+			// unpinning: also close the mobile overlay checkbox so the nav
+			// collapses fully instead of reappearing as an open overlay.
+			desktopNavVisible.set(false);
+			drawerState.set(false);
+		} else {
+			desktopNavVisible.set(true);
+		}
+	}
 </script>
 
 <div class="bg-base-200 flex h-screen flex-col">
-	<div class="bg-primary w-full p-4">
+	<div class="bg-primary relative w-full p-4">
+		<button
+			class="btn btn-square btn-ghost absolute top-2 right-2 hidden rounded border-0 lg:inline-flex"
+			onclick={togglePin}
+			title={$desktopNavVisible ? 'Unpin sidebar' : 'Pin sidebar'}
+			aria-label={$desktopNavVisible ? 'Unpin sidebar' : 'Pin sidebar'}
+		>
+			{#if $desktopNavVisible}
+				<PinOffIcon size={20} />
+			{:else}
+				<PinIcon size={20} />
+			{/if}
+		</button>
 		<div class="flex w-full items-center justify-center">
 			<img src="/icons/icon-192.png" class="w-1/3 lg:w-1/2" alt="logo" />
 		</div>

@@ -36,6 +36,24 @@ export const AaStocksStore: Writable<StockCache | undefined> = writable();
 export const AssetAllocationLoadedAtStore: Writable<Date | undefined> = writable();
 // Drawer/sidebar store.
 export const drawerState: Writable<boolean> = writable(false);
+// Whether the sidebar nav is pinned open on desktop (lg+). Persisted so the
+// preference survives reloads; toggled from the nav's collapse button and
+// the Toolbar hamburger (which doubles as the "show" action once hidden).
+const DESKTOP_NAV_VISIBLE_KEY = 'desktopNavVisible';
+function createDesktopNavVisibleStore(): Writable<boolean> {
+	const initial =
+		typeof localStorage === 'undefined'
+			? true
+			: (localStorage.getItem(DESKTOP_NAV_VISIBLE_KEY) ?? 'true') === 'true';
+	const store = writable<boolean>(initial);
+	store.subscribe((value) => {
+		if (typeof localStorage !== 'undefined') {
+			localStorage.setItem(DESKTOP_NAV_VISIBLE_KEY, String(value));
+		}
+	});
+	return store;
+}
+export const desktopNavVisible: Writable<boolean> = createDesktopNavVisibleStore();
 // Full-text search box value on /search — kept for the session only (module
 // state, not persisted) so navigating to a result and back leaves it intact.
 export const SearchTermStore: Writable<string> = writable('');

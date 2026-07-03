@@ -9,7 +9,7 @@
 	import { pwaAssetsHead } from 'virtual:pwa-assets/head';
 	import { onMount } from 'svelte';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
-	import { drawerState, ShortDateFormatStore } from '$lib/data/mainStore';
+	import { desktopNavVisible, drawerState, ShortDateFormatStore } from '$lib/data/mainStore';
 	import NavigationV3 from '$lib/components/navigation.svelte';
 	import Notifier from '$lib/utils/notifier';
 	import { ensureInitialized } from '$lib/data/initializer';
@@ -115,28 +115,20 @@
 	{/each}
 </svelte:head>
 
-<div class="drawer">
-	<!-- sidebar as modal -->
+<div class="drawer h-screen {$desktopNavVisible ? 'lg:drawer-open' : ''}">
+	<!-- sidebar as modal on mobile; pinned open on desktop when desktopNavVisible -->
 	<input type="checkbox" id="drawer-modal" class="drawer-toggle" bind:checked={$drawerState} />
 	<div class="drawer-content h-screen">
-		<!-- former AppShell -->
-		<div class="grid grid-cols-1 lg:grid-cols-[288px_1fr] h-screen">
-			<aside class="sticky top-0 col-span-1 hidden h-screen overflow-y-auto lg:block">
-				<!-- <Navigation /> -->
-				<NavigationV3 />
-			</aside>
-
-			<main
-				class="col-span-1 bg-base-300 h-full overflow-auto touch-pan-y"
-				{...useSwipe(handleSwipe, () => ({
-					timeframe: 350,
-					minSwipeDistance: 25,
-					touchAction: 'pan-y'
-				}))}
-			>
-				{@render children()}
-			</main>
-		</div>
+		<main
+			class="bg-base-300 h-full overflow-auto touch-pan-y"
+			{...useSwipe(handleSwipe, () => ({
+				timeframe: 350,
+				minSwipeDistance: 25,
+				touchAction: 'pan-y'
+			}))}
+		>
+			{@render children()}
+		</main>
 	</div>
 	<div
 		class="drawer-side"
@@ -148,7 +140,6 @@
 	>
 		<label for="drawer-modal" class="drawer-overlay"></label>
 		<div class="bg-base-200 w-[288px] h-screen overflow-y-auto">
-			<!-- <Navigation /> -->
 			<NavigationV3 />
 		</div>
 	</div>
