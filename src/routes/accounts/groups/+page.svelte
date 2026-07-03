@@ -52,11 +52,7 @@
 			<HelpButton topic="my-accounts" />
 		{/snippet}
 		{#snippet menuItems()}
-			<ToolbarMenuItem
-				text="Add Group"
-				Icon={CirclePlusIcon}
-				onclick={openAddGroupModal}
-			/>
+			<ToolbarMenuItem text="Add Group" Icon={CirclePlusIcon} onclick={openAddGroupModal} />
 			<ToolbarMenuItem
 				text="Reorder Groups"
 				Icon={ArrowUpDownIcon}
@@ -64,9 +60,13 @@
 			/>
 		{/snippet}
 	</Toolbar>
-	<section class="flex grow flex-col gap-3 p-2">
+	<section class="flex grow flex-col gap-3 p-2 mx-auto max-w-2xl w-full">
 		{#each groups as group, i (group.title)}
-			<AccountGroupCard {group} index={i} onAccountClick={(name) => goto(`/accounts/account-xacts/${encodeURIComponent(name)}`)} />
+			<AccountGroupCard
+				{group}
+				index={i}
+				onAccountClick={(name) => goto(`/accounts/account-xacts/${encodeURIComponent(name)}`)}
+			/>
 		{/each}
 	</section>
 </article>
@@ -94,7 +94,7 @@
 					placeholder="Enter group name"
 					class="input input-bordered w-full"
 					bind:value={newGroupName}
-					onkeydown={e => e.key === 'Enter' && createGroup()}
+					onkeydown={(e) => e.key === 'Enter' && createGroup()}
 				/>
 			</div>
 		</article>

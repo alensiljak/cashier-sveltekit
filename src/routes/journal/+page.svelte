@@ -83,15 +83,12 @@
 		{/snippet}
 	</Toolbar>
 
-	<section class="grow space-y-2 p-1 pb-3" bind:this={listContainer}>
+	<section class="grow space-y-2 p-1 pb-3 mx-auto max-w-2xl w-full" bind:this={listContainer}>
 		{#if xactsWithSpans.length === 0}
 			<p>The device journal is empty</p>
 		{:else}
 			{#each xactsWithSpans as item (item.span.startLine)}
-				<JournalXactRow
-					xact={item.xact}
-					onclick={() => onRowClick(item.xact, item.span)}
-				/>
+				<JournalXactRow xact={item.xact} onclick={() => onRowClick(item.xact, item.span)} />
 			{/each}
 		{/if}
 	</section>
@@ -100,7 +97,12 @@
 </article>
 
 <!-- "Delete All" dialog -->
-<input type="checkbox" id="delete-all-journal-confirmation-modal" class="modal-toggle" bind:checked={isDeleteAllConfirmationOpen} />
+<input
+	type="checkbox"
+	id="delete-all-journal-confirmation-modal"
+	class="modal-toggle"
+	bind:checked={isDeleteAllConfirmationOpen}
+/>
 <dialog class="modal">
 	<div class="modal-box">
 		<header class="flex justify-between">

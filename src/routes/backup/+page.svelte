@@ -85,62 +85,64 @@
 			<HelpButton topic="backup" />
 		{/snippet}
 	</Toolbar>
-	<section class="p-1">
-		<h3 class="text-3xl font-semibold">Create Backup</h3>
+	<div class="mx-auto max-w-2xl">
+		<section class="p-1">
+			<h3 class="text-3xl font-semibold">Create Backup</h3>
 
-		<p>You can backup all local data:</p>
-		<ul class="list mx-8">
-			<li>scheduled transactions</li>
-			<li>settings</li>
-		</ul>
-		<p>into</p>
-
-		<div class="flex flex-row">
-			<input type="text" class="input" bind:value={_filename} readonly />
-		</div>
-
-		<center class="pt-4">
-			<button type="button" class="btn btn-primary rounded" onclick={onBackupClick}>
-				<FileDownIcon />
-				<span>Backup</span>
-			</button>
-			<button type="button" class="btn btn-primary rounded" onclick={onShareClick}>
-				<Share2Icon />
-				<span>Share</span>
-			</button>
-		</center>
-	</section>
-	<hr class="my-8" />
-	<section class="p-1">
-		<h3 class="text-3xl font-semibold">Restore Backup</h3>
-		<div class="flex flex-row items-center space-x-4">
-			<p>To restore (overwriting any existing records!):</p>
-			<input
-				id="backupFile"
-				type="file"
-				name="files"
-				accept=".json"
-				class="file-input file-input-secondary rounded"
-				onchange={(e) => {
-					const target = e.target as HTMLInputElement;
-					onChangeHandler({ acceptedFiles: Array.from(target.files || []) });
-				}}
-			/>
-			<label class="label" for="backupFile">
-				<span>Click to choose the backup file</span>
-			</label>
-		</div>
-		<div>
-			<p>After restoring a backup, you should</p>
-			<ul>
-				<li>
-					load the Asset Allocation definition file (it is then stored in OPFS, which is not backed
-					up)
-				</li>
-				<li>perform a Cashier Sync to populate the latest financial data</li>
+			<p>You can backup all local data:</p>
+			<ul class="list-disc mx-8 pl-4">
+				<li>scheduled transactions</li>
+				<li>settings</li>
 			</ul>
-		</div>
-	</section>
+			<p>into</p>
+
+			<div class="flex flex-row">
+				<input type="text" class="input" bind:value={_filename} readonly />
+			</div>
+
+			<center class="pt-4">
+				<button type="button" class="btn btn-primary rounded" onclick={onBackupClick}>
+					<FileDownIcon />
+					<span>Backup</span>
+				</button>
+				<button type="button" class="btn btn-primary rounded" onclick={onShareClick}>
+					<Share2Icon />
+					<span>Share</span>
+				</button>
+			</center>
+		</section>
+		<hr class="my-8" />
+		<section class="p-1">
+			<h3 class="text-3xl font-semibold">Restore Backup</h3>
+			<div class="flex flex-row items-center space-x-4">
+				<p>To restore (overwriting any existing records!):</p>
+				<input
+					id="backupFile"
+					type="file"
+					name="files"
+					accept=".json"
+					class="file-input file-input-secondary rounded"
+					onchange={(e) => {
+						const target = e.target as HTMLInputElement;
+						onChangeHandler({ acceptedFiles: Array.from(target.files || []) });
+					}}
+				/>
+				<label class="label" for="backupFile">
+					<span>Click to choose the backup file</span>
+				</label>
+			</div>
+			<div>
+				<p>After restoring a backup, you should</p>
+				<ul>
+					<li>
+						load the Asset Allocation definition file (it is then stored in OPFS, which is not
+						backed up)
+					</li>
+					<li>perform a Cashier Sync to populate the latest financial data</li>
+				</ul>
+			</div>
+		</section>
+	</div>
 </article>
 
 <!-- "Restore" dialog -->

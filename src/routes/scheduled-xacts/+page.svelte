@@ -54,8 +54,8 @@
 	}
 
 	async function onItemClicked(id: number) {
-	    // load Scheduled Transaction into state.
-	    await appService.loadScheduledXact(id);
+		// load Scheduled Transaction into state.
+		await appService.loadScheduledXact(id);
 		// show details page
 		await goto(resolve(`/scx-actions/${id}`));
 	}
@@ -92,7 +92,7 @@
 
 	<Fab onclick={onFabClicked} Icon={PlusIcon} />
 
-	<section class="flex-1 overflow-y-auto touch-pan-y p-1">
+	<section class="flex-1 overflow-y-auto touch-pan-y p-1 mx-auto max-w-2xl w-full">
 		{#if filteredList.length === 0}
 			<p>No scheduled transactions found</p>
 		{:else}
@@ -118,7 +118,8 @@
 							</div>
 						</div>
 						<data class={`${getMoneyColour(scx.amount as Money)}`}>
-							{#if scx.repayment}<span class="opacity-50" title="Auto-calculated">~</span>{/if}{scx.amount?.quantity}
+							{#if scx.repayment}<span class="opacity-50" title="Auto-calculated">~</span>{/if}{scx
+								.amount?.quantity}
 							{scx.amount?.currency}
 						</data>
 					</div>
