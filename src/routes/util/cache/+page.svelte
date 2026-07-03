@@ -157,7 +157,7 @@
 		<HelpButton topic="cache" />
 	{/snippet}
 </Toolbar>
-<article class="mx-auto max-w-xl space-y-6 p-4">
+<main class="mx-auto max-w-xl space-y-6 p-4">
 
 	<!-- Section 1: Ledger Instance -->
 	<section>
@@ -251,4 +251,4 @@
 			{status}
 		</div>
 	{/if}
-</article>
+</main>

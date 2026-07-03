@@ -148,7 +148,7 @@
     }
 </script>
 
-<article class="flex h-screen flex-col">
+<main class="flex h-screen flex-col">
     <Toolbar title="Speech Entry" />
 
     <section class="flex flex-1 flex-col gap-4 overflow-y-auto p-4 touch-pan-y">
@@ -295,4 +295,4 @@
             <button class="btn btn-ghost btn-sm self-center" onclick={clearAll}>Clear</button>
         {/if}
     </section>
-</article>
+</main>

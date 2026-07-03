@@ -97,7 +97,7 @@
 	}
 </script>
 
-<article class="flex h-screen flex-col">
+<main class="flex h-screen flex-col">
 	<Toolbar title="Calendar">
 		{#snippet actions()}
 			<HelpButton topic="scheduled-calendar" />
@@ -183,4 +183,4 @@
 			{/if}
 		</div>
 	{/if}
-</article>
+</main>

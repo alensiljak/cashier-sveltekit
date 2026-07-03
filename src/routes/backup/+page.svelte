@@ -79,7 +79,7 @@
 	}
 </script>
 
-<article>
+<main>
 	<Toolbar title="Backup">
 		{#snippet actions()}
 			<HelpButton topic="backup" />
@@ -143,7 +143,7 @@
 			</div>
 		</section>
 	</div>
-</article>
+</main>
 
 <!-- "Restore" dialog -->
 <input

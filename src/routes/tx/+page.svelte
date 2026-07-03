@@ -154,7 +154,7 @@
 	}
 </script>
 
-<article class="flex h-screen flex-col">
+<main class="flex h-screen flex-col">
 	<Toolbar title="Journal Entry">
 		{#snippet actions()}
 			<HelpButton topic="transaction-editor" />
@@ -200,4 +200,4 @@
 			</form>
 		</dialog>
 	</section>
-</article>
+</main>

@@ -113,7 +113,7 @@
 	}
 </script>
 
-<article class="flex h-screen flex-col">
+<main class="flex h-screen flex-col">
 	<Toolbar title="WebDAV Sync Demo" />
 	<section class="flex-1 space-y-4 overflow-y-auto touch-pan-y p-4">
 		<div class="mx-auto max-w-2xl space-y-4">
@@ -350,7 +350,7 @@
 			</div>
 		</div>
 	</section>
-</article>
+</main>
 
 <style>
 	details > summary {

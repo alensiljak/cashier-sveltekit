@@ -277,7 +277,7 @@
 	}
 </script>
 
-<div class="h-screen flex flex-col overflow-hidden">
+<main class="h-screen flex flex-col overflow-hidden">
 	<Toolbar title="Sync OPFS ↔ Filesystem">
 		{#snippet actions()}
 			<HelpButton topic="opfs-sync" />
@@ -474,4 +474,4 @@
 		{/if}
 
 	</div>
-</div>
+</main>

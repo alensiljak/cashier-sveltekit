@@ -77,7 +77,7 @@
     });
 </script>
 
-<div class="h-screen flex flex-col overflow-hidden">
+<main class="h-screen flex flex-col overflow-hidden">
     <Toolbar title="Preview — {source === 'local' ? 'Local' : 'Remote'}" />
 
     <div class="flex-1 overflow-y-auto p-4 flex flex-col gap-6">
@@ -116,4 +116,4 @@
             {/if}
         {/if}
     </div>
-</div>
+</main>

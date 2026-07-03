@@ -174,7 +174,7 @@
 	}
 </script>
 
-<article>
+<main>
 	<Toolbar title="Scheduled Transaction Actions">
 		{#snippet actions()}
 			<HelpButton topic="scx-actions" />
@@ -232,7 +232,7 @@
 			</SquareButton>
 		</div>
 	</section>
-</article>
+</main>
 
 <!-- "Enter" dialog -->
 <input type="checkbox" id="enter-confirmation-modal" class="modal-toggle" bind:checked={isEnterConfirmationOpen} />

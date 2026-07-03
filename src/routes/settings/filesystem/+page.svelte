@@ -303,7 +303,7 @@
 	}
 </script>
 
-<article>
+<main>
 	<Toolbar title="File System Synchronization">
 		{#snippet menuItems()}
 			<ToolbarMenuItem text="Open Directory" Icon={FolderOpenIcon} onclick={pickDirectory} />
@@ -503,7 +503,7 @@
 	</section>
 
 	<Fab onclick={onFab} />
-</article>
+</main>
 
 <style>
 	.book-root-row {

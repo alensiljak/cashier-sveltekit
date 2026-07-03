@@ -783,7 +783,7 @@
 	</div>
 {/snippet}
 
-<article class="flex h-full flex-col">
+<main class="flex h-full flex-col">
 	<Toolbar title="Beancount Sync" {menuItems}>
 		{#snippet actions()}
 			<HelpButton topic="beancount-sync" />
@@ -1159,7 +1159,7 @@
 			{/if}
 		</div>
 	{/if}
-</article>
+</main>
 
 <!-- ─── Per-file diff/preview modal ───────────────────────────────────────── -->
 {#if diffModalPath}

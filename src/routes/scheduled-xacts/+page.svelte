@@ -76,7 +76,7 @@
 	}
 </script>
 
-<article class="flex h-screen flex-col">
+<main class="flex h-screen flex-col">
 	<Toolbar title="Scheduled Transactions">
 		{#snippet menuItems()}
 			<ToolbarMenuItem Icon={PackageIcon} text="Backup" targetNav="/export/scheduled" />
@@ -127,4 +127,4 @@
 			</div>
 		{/if}
 	</section>
-</article>
+</main>

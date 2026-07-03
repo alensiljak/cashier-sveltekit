@@ -220,7 +220,7 @@
 	}
 </script>
 
-<article class="flex h-screen flex-col">
+<main class="flex h-screen flex-col">
 	<Toolbar title="Asset Class Detail"></Toolbar>
 	<section class={`h-full p-1 ${cursor} overflow-y-auto touch-pan-y`}>
 		<p>{name}</p>
@@ -492,4 +492,4 @@
 			{/if}
 		</div>
 	</section>
-</article>
+</main>

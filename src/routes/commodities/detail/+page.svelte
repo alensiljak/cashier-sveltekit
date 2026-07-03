@@ -87,7 +87,7 @@
 	}
 </script>
 
-<article class="flex h-screen flex-col">
+<main class="flex h-screen flex-col">
 	<Toolbar title="Commodity">
 		{#snippet actions()}
 			<HelpButton topic="commodity-detail" />
@@ -164,4 +164,4 @@
 			{/if}
 		{/if}
 	</section>
-</article>
+</main>

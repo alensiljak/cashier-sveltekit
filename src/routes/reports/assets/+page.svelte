@@ -245,7 +245,7 @@
 	{/if}
 {/snippet}
 
-<article class="flex h-screen flex-col" class:cursor-wait={isLoading}>
+<main class="flex h-screen flex-col" class:cursor-wait={isLoading}>
 	<Toolbar title="Assets">
 		{#snippet menuItems()}
 			<label class="btn btn-primary flex w-full flex-row border-0 cursor-pointer">
@@ -296,4 +296,4 @@
 			<span class="font-mono tabular-nums">{formatAmount(totalValue)}&nbsp;{baseCurrency}</span>
 		</div>
 	{/if}
-</article>
+</main>

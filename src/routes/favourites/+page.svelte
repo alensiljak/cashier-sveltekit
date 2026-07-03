@@ -205,7 +205,7 @@
 	}
 </script>
 
-<article class="flex h-screen flex-col">
+<main class="flex h-screen flex-col">
 	<Toolbar title="Favourites">
 		{#snippet actions()}
 			<HelpButton topic="favourites" />
@@ -237,7 +237,7 @@
 			</div>
 		{/if}
 	</section>
-</article>
+</main>
 
 <!-- "Delete All" dialog -->
 <input type="checkbox" id="delete-all-fav-confirmation-modal" class="modal-toggle"

@@ -140,7 +140,7 @@
 	}
 </script>
 
-<article class="flex h-screen flex-col">
+<main class="flex h-screen flex-col">
 	<Toolbar title={groupTitle}>
 		{#snippet menuItems()}
 			<ToolbarMenuItem text="Rename" Icon={PencilIcon} onclick={openRenameModal} />
@@ -186,7 +186,7 @@
 			</button>
 		{/snippet}
 	</DragReorderList>
-</article>
+</main>
 
 <!-- Rename group dialog -->
 <input

@@ -97,7 +97,7 @@
 	<Fab Icon={CheckIcon} onclick={onFabClick} />
 {/if}
 
-<section class="flex flex-col h-full">
+<main class="flex flex-col h-full">
 	<Toolbar title="Payees">
 		{#snippet actions()}
 			<HelpButton topic="payees" />
@@ -125,4 +125,4 @@
 		{/each}
 	{/if}
 	</div>
-</section>
+</main>

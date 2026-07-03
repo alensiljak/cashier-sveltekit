@@ -18,7 +18,7 @@
 	}
 </script>
 
-<article class="flex h-screen flex-col">
+<main class="flex h-screen flex-col">
 	<Toolbar title="Reorder Favourites" />
 	<Fab Icon={CheckIcon} onclick={onFabClicked} />
 
@@ -27,4 +27,4 @@
 		getLabel={(f) => f}
 		class="grow overflow-y-auto pb-24 p-1"
 	/>
-</article>
+</main>

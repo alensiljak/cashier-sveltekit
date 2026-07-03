@@ -96,7 +96,7 @@
 	}
 </script>
 
-<article class="flex h-screen flex-col">
+<main class="flex h-screen flex-col">
 	<Toolbar title="Asset Allocation">
 		{#snippet actions()}
 			<HelpButton topic="asset-allocation" />
@@ -180,7 +180,7 @@
 			<RefreshCwIcon size={14} />
 		</button>
 	</footer>
-</article>
+</main>
 
 <style>
 	.view-toggle {

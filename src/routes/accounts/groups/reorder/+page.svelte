@@ -13,7 +13,7 @@
 	});
 </script>
 
-<article class="flex h-screen flex-col">
+<main class="flex h-screen flex-col">
 	<Toolbar title="Reorder Groups" />
 
 	<Fab Icon={CheckIcon} onclick={() => history.back()} />
@@ -31,4 +31,4 @@
 			{/if}
 		{/snippet}
 	</DragReorderList>
-</article>
+</main>

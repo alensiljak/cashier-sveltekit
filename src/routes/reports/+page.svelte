@@ -3,7 +3,7 @@
 	import HelpButton from '$lib/help/HelpButton.svelte';
 </script>
 
-<article>
+<main>
 	<Toolbar title="Reports">
 		{#snippet actions()}
 			<HelpButton topic="reports" />
@@ -29,4 +29,4 @@
 			</a>
 		</div>
 	</div>
-</article>
+</main>

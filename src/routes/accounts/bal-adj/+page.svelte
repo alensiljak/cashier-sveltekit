@@ -101,7 +101,7 @@
 	}
 </script>
 
-<article class="flex h-screen flex-col">
+<main class="flex h-screen flex-col">
 	<Toolbar title="Balance Adjustment" />
 
 	<section class="container mx-auto flex-1 overflow-y-auto p-4 space-y-4 lg:max-w-screen-sm">
@@ -205,4 +205,4 @@
 			</div>
 		{/if}
 	</section>
-</article>
+</main>

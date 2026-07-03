@@ -197,7 +197,7 @@
 	}
 </script>
 
-<article class="h-screen flex flex-col overflow-hidden">
+<main class="h-screen flex flex-col overflow-hidden">
 	<Toolbar title="OPFS Files">
 		{#snippet actions()}
 			<HelpButton topic="opfs-file-storage" />
@@ -330,4 +330,4 @@
 			</div>
 		</div>
 	{/if}
-</article>
+</main>

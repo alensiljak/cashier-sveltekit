@@ -98,7 +98,7 @@
 
 <Fab Icon={CheckIcon} onclick={onFabClicked} />
 
-<section class="p-1">
+<main class="p-1">
 	<h3 class="h3">Show Cards:</h3>
 
 	<div class="flex flex-col space-y-4 p-4">
@@ -127,4 +127,4 @@
 			<p>Synchronization</p>
 		</label> -->
 	</div>
-</section>
+</main>

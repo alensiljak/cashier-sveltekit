@@ -225,7 +225,7 @@
 	}
 </script>
 
-<article class="flex h-screen flex-col">
+<main class="flex h-screen flex-col">
 	<Toolbar title="Quick Entry">
 		{#snippet actions()}
 			<HelpButton topic="quick-entry" />
@@ -363,4 +363,4 @@
 			<button>close</button>
 		</form>
 	</dialog>
-</article>
+</main>

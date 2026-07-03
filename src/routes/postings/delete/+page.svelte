@@ -50,7 +50,7 @@
 
 <Fab Icon={CheckIcon} onclick={onFabClicked} />
 
-<article class="p-1">
+<main class="p-1">
 	<!-- list -->
 	<div class="space-y-3 py-3">
 		{#if $xact}
@@ -70,7 +70,7 @@
 			{/each}
 		{/if}
 	</div>
-</article>
+</main>
 
 <!-- "Delete All" dialog -->
 <input type="checkbox" id="delete-posting-confirmation-modal" class="modal-toggle" bind:checked={isDeleteConfirmationOpen} />

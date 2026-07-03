@@ -114,7 +114,7 @@
 	}
 </script>
 
-<article class="flex h-screen flex-col">
+<main class="flex h-screen flex-col">
 	<Toolbar>
 		{#snippet actions()}
 			{#if isChecking}
@@ -182,4 +182,4 @@
 			</div>
 		</div>
 	{/if}
-</article>
+</main>

@@ -39,7 +39,7 @@
 	}
 </script>
 
-<article class="flex h-screen flex-col">
+<main class="flex h-screen flex-col">
 	<Toolbar title="Import Ledger item"></Toolbar>
 
 	<section class="flex h-full flex-col space-y-3 p-1">
@@ -54,4 +54,4 @@
 			</button>
 		</center>
 	</section>
-</article>
+</main>

@@ -118,7 +118,7 @@
 	}
 </script>
 
-<article class="flex h-screen flex-col" class:cursor-wait={isLoading}>
+<main class="flex h-screen flex-col" class:cursor-wait={isLoading}>
 	<Toolbar title="Expenses">
 		{#snippet actions()}
 			<!-- Filter toggle: always visible; icon shows what clicking will do -->
@@ -198,4 +198,4 @@
 			<span>{expenseTotal.toFixed(2)}</span>
 		</div>
 	{/if}
-</article>
+</main>

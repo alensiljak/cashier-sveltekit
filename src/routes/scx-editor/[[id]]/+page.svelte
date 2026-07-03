@@ -46,7 +46,7 @@
 	}
 </script>
 
-<article>
+<main>
 	<Toolbar title="Scheduled Transaction Edit">
 		{#snippet actions()}
 			<HelpButton topic="scx-edit" />
@@ -61,4 +61,4 @@
 
 		<Fab onclick={onFabClicked} />
 	</section>
-</article>
+</main>

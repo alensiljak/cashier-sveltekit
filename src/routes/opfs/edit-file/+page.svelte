@@ -76,7 +76,7 @@
 	}
 </script>
 
-<article class="h-screen flex flex-col overflow-hidden">
+<main class="h-screen flex flex-col overflow-hidden">
 	<Toolbar title={filePath || 'Edit File'} />
 
 	<div class="flex items-center gap-2 px-4 py-2 border-b border-base-300">
@@ -113,4 +113,4 @@
 			oninput={onContentChange}
 		>{fileContent}</textarea>
 	{/if}
-</article>
+</main>

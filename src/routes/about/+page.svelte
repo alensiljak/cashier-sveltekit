@@ -37,7 +37,7 @@
 	}
 </script>
 
-<article class="flex h-screen flex-col">
+<main class="flex h-screen flex-col">
 	<Toolbar title="About"></Toolbar>
 
 	<section class="space-y-4 p-1">
@@ -113,4 +113,4 @@
 			</li>
 		</ul>
 	</section>
-</article>
+</main>

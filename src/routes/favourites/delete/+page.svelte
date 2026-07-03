@@ -45,7 +45,7 @@
 	}
 </script>
 
-<article class="flex h-screen flex-col">
+<main class="flex h-screen flex-col">
 	<Toolbar title="Delete Favourites"></Toolbar>
 	<Fab Icon={CheckIcon} onclick={onFabClicked} />
 
@@ -67,7 +67,7 @@
 			</div>
 		{/each}
 	</section>
-</article>
+</main>
 
 <!-- "Delete" dialog -->
 <input type="checkbox" id="delete-fav-confirmation-modal" class="modal-toggle" bind:checked={isDeleteConfirmationOpen} />

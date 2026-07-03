@@ -150,7 +150,7 @@
 	}
 </script>
 
-<article class="flex h-screen flex-col">
+<main class="flex h-screen flex-col">
 	<Toolbar title="Export {dataType}">
 		{#snippet actions()}
 			<HelpButton topic="export" />
@@ -196,4 +196,4 @@
 			</button>
 		</div>
 	</main>
-</article>
+</main>

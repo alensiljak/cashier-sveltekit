@@ -23,7 +23,7 @@
 	}
 </script>
 
-<article class="flex h-screen flex-col">
+<main class="flex h-screen flex-col">
 	<Toolbar title="Reorder Postings" />
 	<Fab Icon={CheckIcon} onclick={onFabClicked} />
 
@@ -32,4 +32,4 @@
 		getLabel={(p) => p.account}
 		class="grow overflow-y-auto pb-24 p-1"
 	/>
-</article>
+</main>

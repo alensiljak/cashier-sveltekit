@@ -205,7 +205,7 @@
 	onMount(() => loadData());
 </script>
 
-<article class="flex h-screen flex-col" class:cursor-wait={isLoading}>
+<main class="flex h-screen flex-col" class:cursor-wait={isLoading}>
 	<Toolbar title="Income vs Expenses" />
 
 	<div class="flex items-center gap-3 border-b border-base-300 px-4 py-2">
@@ -358,4 +358,4 @@
 			{/if}
 		{/if}
 	</section>
-</article>
+</main>

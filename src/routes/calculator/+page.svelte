@@ -252,7 +252,7 @@
 	}
 </script>
 
-<article class="bg-base-300 flex h-screen flex-col">
+<main class="bg-base-300 flex h-screen flex-col">
 	<Toolbar title="Calculator">
 		{#snippet actions()}
 			<HelpButton topic="calculator" />
@@ -425,4 +425,4 @@
 	</div>
 	</div>
 	<Fab Icon={Check} onclick={onFabClicked} />
-</article>
+</main>

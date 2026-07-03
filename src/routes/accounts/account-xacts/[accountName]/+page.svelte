@@ -91,7 +91,7 @@
 	});
 </script>
 
-<article class="flex h-screen flex-col">
+<main class="flex h-screen flex-col">
 	<Toolbar title="Account Transactions">
 		{#snippet actions()}
 			<HelpButton topic="account-transactions" />
@@ -174,4 +174,4 @@
 			<div bind:this={sentinel}></div>
 		</div>
 	</section>
-</article>
+</main>

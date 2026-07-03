@@ -364,7 +364,7 @@
 	{/each}
 {/snippet}
 
-<article class="flex h-full flex-col">
+<main class="flex h-full flex-col">
 	<Toolbar title="Peer Sync" {menuItems}>
 		{#snippet actions()}
 			<HelpButton topic="peer-sync" />
@@ -629,7 +629,7 @@
 			</div>
 		</div>
 	</section>
-</article>
+</main>
 
 <!-- ─── Preview Modal ──────────────────────────────────────────────────────── -->
 {#if showPreview}

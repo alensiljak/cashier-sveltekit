@@ -46,7 +46,7 @@
 	}
 </script>
 
-<article class="flex h-screen flex-col">
+<main class="flex h-screen flex-col">
 	<Toolbar title="Account Groups">
 		{#snippet actions()}
 			<HelpButton topic="my-accounts" />
@@ -69,7 +69,7 @@
 			/>
 		{/each}
 	</section>
-</article>
+</main>
 
 <!-- Add Group dialog -->
 <input

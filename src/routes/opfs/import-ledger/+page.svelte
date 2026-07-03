@@ -312,7 +312,7 @@
 	}
 </script>
 
-<div class="h-screen flex flex-col overflow-hidden">
+<main class="h-screen flex flex-col overflow-hidden">
 	<Toolbar title="Import Ledger to OPFS">
 		{#snippet actions()}
 			<HelpButton topic="ledger-import" />
@@ -530,4 +530,4 @@
 		{/if}
 
 	</div>
-</div>
+</main>

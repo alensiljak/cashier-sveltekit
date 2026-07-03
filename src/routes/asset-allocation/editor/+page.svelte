@@ -104,7 +104,7 @@
 	}
 </script>
 
-<article class="flex h-screen flex-col">
+<main class="flex h-screen flex-col">
 	<Toolbar title="AA Editor">
 		{#snippet menuItems()}
 			<ToolbarMenuItem text="Save" Icon={SaveIcon} onclick={onSave} />
@@ -137,4 +137,4 @@
 			</div>
 		</section>
 	{/if}
-</article>
+</main>

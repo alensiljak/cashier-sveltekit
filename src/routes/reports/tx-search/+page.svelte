@@ -146,7 +146,7 @@ ${where} ORDER BY date DESC`;
 	});
 </script>
 
-<article class="flex h-screen flex-col" class:cursor-wait={isLoading}>
+<main class="flex h-screen flex-col" class:cursor-wait={isLoading}>
 	<Toolbar title="Transaction Search" />
 
 	<!-- Filter Panel -->
@@ -287,4 +287,4 @@ ${where} ORDER BY date DESC`;
 			</div>
 		{/if}
 	</section>
-</article>
+</main>

@@ -65,7 +65,7 @@
 	}
 </script>
 
-<article class="flex h-screen flex-col">
+<main class="flex h-screen flex-col">
 	<Toolbar title="Journal">
 		{#snippet actions()}
 			<HelpButton topic="journal" />
@@ -94,7 +94,7 @@
 	</section>
 
 	<Fab onclick={onFab} Icon={PlusIcon} />
-</article>
+</main>
 
 <!-- "Delete All" dialog -->
 <input

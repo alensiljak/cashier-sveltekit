@@ -9,7 +9,7 @@
 	const html = $derived(getHelpHtml(topic));
 </script>
 
-<article class="flex h-screen flex-col">
+<main class="flex h-screen flex-col">
 	<Toolbar title="Help">
 		{#snippet actions()}
 			<button
@@ -33,4 +33,4 @@
 			<p>No help topic found for "{topic}".</p>
 		{/if}
 	</section>
-</article>
+</main>

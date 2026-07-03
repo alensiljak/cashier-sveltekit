@@ -68,7 +68,7 @@
 	}
 </script>
 
-<article class="flex h-screen flex-col">
+<main class="flex h-screen flex-col">
 	<Toolbar title="Expense Filter">
 		{#snippet menuItems()}
 			<ToolbarMenuItem text="Clear all" Icon={Trash2} onclick={clearAll} />
@@ -108,6 +108,6 @@
 			{/each}
 		{/if}
 	</div>
-</article>
+</main>
 
 <Fab onclick={saveAndGoBack} />

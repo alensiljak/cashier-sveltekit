@@ -7,7 +7,7 @@
 	const topics = $derived(listHelpTopics(query));
 </script>
 
-<article>
+<main>
 	<Toolbar title="Help"></Toolbar>
 
 	<section class="p-3 pb-0">
@@ -39,4 +39,4 @@
 		{/if}
 	</section>
 
-</article>
+</main>

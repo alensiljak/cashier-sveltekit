@@ -166,7 +166,7 @@
 	}
 </script>
 
-<div class="h-screen flex flex-col overflow-hidden">
+<main class="h-screen flex flex-col overflow-hidden">
 	<Toolbar title="Export Ledger from OPFS">
 		{#snippet actions()}
 			<HelpButton topic="ledger-export" />
@@ -305,4 +305,4 @@
 			</div>
 		{/if}
 	</div>
-</div>
+</main>

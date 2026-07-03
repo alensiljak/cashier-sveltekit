@@ -54,7 +54,7 @@
 	});
 </script>
 
-<article class="flex h-screen flex-col">
+<main class="flex h-screen flex-col">
 	<Toolbar title="Posting Editor" />
 	<Fab Icon={CheckIcon} onclick={onFab} />
 
@@ -181,4 +181,4 @@
 			</div>
 		</section>
 	{/if}
-</article>
+</main>
