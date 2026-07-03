@@ -23,8 +23,7 @@ None at the moment. Regular ongoing maintenance.
 
 ## Onboarding
 
-- [ ] add setting for `onboarded`
-- [ ] if not onboarded, start the setup wizard
+- [x] Setup wizard at `/onboarding` — triggered by clean-slate detection (no `cashier.bean`, no other `.bean` files, no linked book) rather than a stored `onboarded` flag, so it can't get stuck skipped/shown by a stale setting. Offers Try demo data / Import my ledger / Start empty.
 - [ ] Go through the initial settings (data storage, server)
 - [ ] Add defaults to the wizard.
 - [ ] default to filesystem if using a chromium-based browser

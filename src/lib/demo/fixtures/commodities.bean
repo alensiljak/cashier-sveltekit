@@ -1,0 +1,13 @@
+; Demo commodities — referenced by accounts.bean and asset-allocation.toml.
+
+2020-01-01 commodity EUR
+  name: "Euro"
+
+2020-01-01 commodity VTI
+  name: "Vanguard Total Stock Market ETF"
+
+2020-01-01 commodity BND
+  name: "Vanguard Total Bond Market ETF"
+
+2020-01-01 commodity USD
+  name: "US Dollar"

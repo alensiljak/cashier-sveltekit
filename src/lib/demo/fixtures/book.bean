@@ -1,0 +1,232 @@
+; Demo book — a small, internally-consistent three-month history (Jan-Mar 2024)
+; covering everyday spending, savings, credit card, and brokerage investing.
+; Static content: edit freely to add more feature demos, no generation step.
+
+option "title" "Demo Book"
+option "operating_currency" "EUR"
+
+include "commodities.bean"
+include "accounts.bean"
+include "prices.bean"
+
+;; ── January 2024 ────────────────────────────────────────────────────────
+
+2024-01-01 * "Opening Balances"
+  Assets:Bank:Checking                2500.00 EUR
+  Assets:Bank:Savings                 8000.00 EUR
+  Assets:Investments:Brokerage:Cash    500.00 EUR
+  Equity:Opening-Balances
+
+2024-01-02 * "Acme Corp" "Monthly salary"
+  Assets:Bank:Checking    3200.00 EUR
+  Income:Salary
+
+2024-01-03 * "Landlord" "Rent"
+  Expenses:Rent    1200.00 EUR
+  Assets:Bank:Checking
+
+2024-01-04 * "Investment contribution"
+  Assets:Investments:Brokerage:Cash    300.00 EUR
+  Assets:Bank:Checking
+
+2024-01-05 * "Vanguard" "Buy VTI shares"
+  Assets:Investments:Brokerage:VTI    3 VTI {200.00 EUR}
+  Assets:Investments:Brokerage:Cash
+
+2024-01-06 * "City Utilities" "Electricity & water"
+  Expenses:Utilities    90.00 EUR
+  Assets:Bank:Checking
+
+2024-01-08 * "Supermarket" "Groceries"
+  Expenses:Groceries    55.30 EUR
+  Liabilities:CreditCard
+
+2024-01-10 * "Transit Authority" "Monthly pass"
+  Expenses:Transport    60.00 EUR
+  Assets:Bank:Checking
+
+2024-01-12 * "Bistro Nine" "Dinner"
+  Expenses:Dining    28.50 EUR
+  Liabilities:CreditCard
+
+2024-01-14 * "ATM Withdrawal"
+  Assets:Cash:Wallet    100.00 EUR
+  Assets:Bank:Checking
+
+2024-01-15 * "Corner Store" "Groceries"
+  Expenses:Groceries    42.75 EUR
+  Assets:Cash:Wallet
+
+2024-01-16 * "Transfer to Savings"
+  Assets:Bank:Savings    300.00 EUR
+  Assets:Bank:Checking
+
+2024-01-18 * "Cinema City" "Movie tickets"
+  Expenses:Entertainment    25.00 EUR
+  Liabilities:CreditCard
+
+2024-01-20 * "Supermarket" "Groceries"
+  Expenses:Groceries    63.10 EUR
+  Liabilities:CreditCard
+
+2024-01-25 * "Bistro Nine" "Dinner"
+  Expenses:Dining    34.20 EUR
+  Liabilities:CreditCard
+
+2024-01-28 * "Credit Card" "Payment"
+  Liabilities:CreditCard    206.10 EUR
+  Assets:Bank:Checking
+
+2024-01-31 * "Savings Bank" "Interest"
+  Assets:Bank:Savings    6.50 EUR
+  Income:Interest
+
+;; ── February 2024 ───────────────────────────────────────────────────────
+
+2024-02-01 * "Acme Corp" "Monthly salary"
+  Assets:Bank:Checking    3200.00 EUR
+  Income:Salary
+
+2024-02-02 * "Landlord" "Rent"
+  Expenses:Rent    1200.00 EUR
+  Assets:Bank:Checking
+
+2024-02-03 * "Investment contribution"
+  Assets:Investments:Brokerage:Cash    300.00 EUR
+  Assets:Bank:Checking
+
+2024-02-04 * "Vanguard" "Buy BND shares"
+  Assets:Investments:Brokerage:BND    4 BND {70.50 EUR}
+  Assets:Investments:Brokerage:Cash
+
+2024-02-06 * "City Utilities" "Electricity & water"
+  Expenses:Utilities    88.40 EUR
+  Assets:Bank:Checking
+
+2024-02-09 * "Supermarket" "Groceries"
+  Expenses:Groceries    58.90 EUR
+  Liabilities:CreditCard
+
+2024-02-11 * "Transit Authority" "Monthly pass"
+  Expenses:Transport    60.00 EUR
+  Assets:Bank:Checking
+
+2024-02-13 * "Bistro Nine" "Dinner"
+  Expenses:Dining    31.00 EUR
+  Liabilities:CreditCard
+
+2024-02-15 * "ATM Withdrawal"
+  Assets:Cash:Wallet    80.00 EUR
+  Assets:Bank:Checking
+
+2024-02-16 * "Corner Store" "Groceries"
+  Expenses:Groceries    38.20 EUR
+  Assets:Cash:Wallet
+
+2024-02-17 * "Transfer to Savings"
+  Assets:Bank:Savings    300.00 EUR
+  Assets:Bank:Checking
+
+2024-02-19 * "Cinema City" "Movie tickets"
+  Expenses:Entertainment    22.00 EUR
+  Liabilities:CreditCard
+
+2024-02-21 * "Supermarket" "Groceries"
+  Expenses:Groceries    61.75 EUR
+  Liabilities:CreditCard
+
+2024-02-24 * "Bistro Nine" "Dinner"
+  Expenses:Dining    29.60 EUR
+  Liabilities:CreditCard
+
+2024-02-27 * "Credit Card" "Payment"
+  Liabilities:CreditCard    203.25 EUR
+  Assets:Bank:Checking
+
+2024-02-29 * "Savings Bank" "Interest"
+  Assets:Bank:Savings    6.80 EUR
+  Income:Interest
+
+;; ── March 2024 ──────────────────────────────────────────────────────────
+
+2024-03-01 * "Acme Corp" "Monthly salary"
+  Assets:Bank:Checking    3200.00 EUR
+  Income:Salary
+
+2024-03-02 * "Landlord" "Rent"
+  Expenses:Rent    1200.00 EUR
+  Assets:Bank:Checking
+
+2024-03-03 * "Investment contribution"
+  Assets:Investments:Brokerage:Cash    300.00 EUR
+  Assets:Bank:Checking
+
+2024-03-04 * "Vanguard" "Buy VTI shares"
+  Assets:Investments:Brokerage:VTI    2 VTI {208.50 EUR}
+  Assets:Investments:Brokerage:Cash
+
+2024-03-06 * "City Utilities" "Electricity & water"
+  Expenses:Utilities    91.20 EUR
+  Assets:Bank:Checking
+
+2024-03-09 * "Supermarket" "Groceries"
+  Expenses:Groceries    60.40 EUR
+  Liabilities:CreditCard
+
+2024-03-11 * "Transit Authority" "Monthly pass"
+  Expenses:Transport    60.00 EUR
+  Assets:Bank:Checking
+
+2024-03-13 * "Bistro Nine" "Dinner"
+  Expenses:Dining    33.75 EUR
+  Liabilities:CreditCard
+
+2024-03-15 * "ATM Withdrawal"
+  Assets:Cash:Wallet    100.00 EUR
+  Assets:Bank:Checking
+
+2024-03-16 * "Corner Store" "Groceries"
+  Expenses:Groceries    45.60 EUR
+  Assets:Cash:Wallet
+
+2024-03-17 * "Transfer to Savings"
+  Assets:Bank:Savings    300.00 EUR
+  Assets:Bank:Checking
+
+2024-03-19 * "Cinema City" "Movie tickets"
+  Expenses:Entertainment    27.50 EUR
+  Liabilities:CreditCard
+
+2024-03-21 * "Supermarket" "Groceries"
+  Expenses:Groceries    59.85 EUR
+  Liabilities:CreditCard
+
+2024-03-25 * "Bistro Nine" "Dinner"
+  Expenses:Dining    30.90 EUR
+  Liabilities:CreditCard
+
+2024-03-28 * "Credit Card" "Payment"
+  Liabilities:CreditCard    212.40 EUR
+  Assets:Bank:Checking
+
+2024-03-31 * "Savings Bank" "Interest"
+  Assets:Bank:Savings    7.10 EUR
+  Income:Interest
+
+;; ── April 2024 — US trip ────────────────────────────────────────────────
+
+2024-04-05 * "Bank" "Currency exchange for US trip"
+  Assets:Cash:Travel    500.00 USD @ 0.92 EUR
+  Assets:Bank:Checking
+
+2024-04-06 * "Downtown Grill" "Dinner"
+  Expenses:Dining    45.00 USD
+  Assets:Cash:Travel
+
+2024-04-09 * "Skyline Bistro" "Dinner"
+  Expenses:Dining    62.50 USD
+  Assets:Cash:Travel
+
+2024-04-12 * "Bank" "Exchange leftover USD back to EUR"
+  Assets:Cash:Travel    -80.00 USD @@ 72.00 EUR
+  Assets:Bank:Checking

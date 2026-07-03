@@ -55,6 +55,12 @@ It is implemented as a PWA using Svelte and DaisyUI frameworks.
 
 - Assume the local dev server is running at `http://localhost:5173/`. It is started and managed by the user.
 
+## Demo Data
+
+- A fresh install/cleared OPFS lands on `/onboarding`. When testing in a browser (e.g. via `agent-browser` against `http://localhost:5173/`), pick **"Try demo data"** there, or go to **Settings → Demo Data → Load demo data** if `cashier.bean` already exists — otherwise every page renders blank and you're not exercising real behavior.
+- Demo content (`src/lib/demo/fixtures/*`) is read-only reference data written into `cashier-demo/` in OPFS by `demoDataService.ts`; it is never a substitute for `cashier.bean`, which stays the only file the app writes new transactions to.
+- If the demo book is missing an account, commodity, price, or scenario needed to exercise the feature you're testing, do not hand-edit OPFS to patch around it — report the specific gap back so the fixtures in `src/lib/demo/fixtures/` can be extended for future dev and end-user use.
+
 ## Tools
 
 - `npm` is the package manager.

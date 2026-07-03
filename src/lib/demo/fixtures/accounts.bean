@@ -1,0 +1,20 @@
+; Demo account tree — everyday accounts plus a small brokerage sub-tree that
+; matches DEMO_ROOT_INVESTMENT_ACCOUNT and the symbols in asset-allocation.toml.
+
+2020-01-01 open Assets:Cash:Wallet                    EUR
+2020-01-01 open Assets:Cash:Travel                    USD
+2020-01-01 open Assets:Bank:Checking                  EUR
+2020-01-01 open Assets:Bank:Savings                   EUR
+2020-01-01 open Assets:Investments:Brokerage:Cash     EUR
+2020-01-01 open Assets:Investments:Brokerage:VTI      VTI
+2020-01-01 open Assets:Investments:Brokerage:BND      BND
+2020-01-01 open Liabilities:CreditCard                EUR
+2020-01-01 open Income:Salary                         EUR
+2020-01-01 open Income:Interest                       EUR
+2020-01-01 open Expenses:Groceries                    EUR
+2020-01-01 open Expenses:Rent                         EUR
+2020-01-01 open Expenses:Utilities                    EUR
+2020-01-01 open Expenses:Dining                       EUR,USD
+2020-01-01 open Expenses:Transport                    EUR
+2020-01-01 open Expenses:Entertainment                EUR
+2020-01-01 open Equity:Opening-Balances                EUR

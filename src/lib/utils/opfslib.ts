@@ -219,6 +219,31 @@ export async function deleteFile(filename: string): Promise<boolean> {
 	}
 }
 
+/**
+ * Recursively deletes a directory and everything under it. Used to remove
+ * self-contained managed folders (e.g. demo data) in one step.
+ */
+export async function deleteDirectory(path: string): Promise<boolean> {
+	try {
+		const root = await navigator.storage.getDirectory();
+		const parts = path.split('/').filter(Boolean);
+		const name = parts.pop();
+		if (!name) return false;
+
+		let dir: FileSystemDirectoryHandle = root;
+		for (const part of parts) {
+			dir = await dir.getDirectoryHandle(part);
+		}
+
+		await dir.removeEntry(name, { recursive: true });
+		return true;
+	} catch (error) {
+		if (error instanceof DOMException && error.name === 'NotFoundError') return false;
+		console.error('Error deleting directory:', path, error);
+		return false;
+	}
+}
+
 export async function deleteFiles(
 	filenames: string[]
 ): Promise<{ deleted: number; failed: number }> {

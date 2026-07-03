@@ -8,15 +8,34 @@
 	import Notifier from '$lib/utils/notifier';
 	import appService from '$lib/services/appService';
 	import { goto, replaceState } from '$app/navigation';
-	import { DefaultCurrencyStore, PendingSettingsStore, ShortDateFormatStore } from '$lib/data/mainStore.js';
+	import {
+		DefaultCurrencyStore,
+		PendingSettingsStore,
+		ShortDateFormatStore
+	} from '$lib/data/mainStore.js';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
-	import { BoxIcon, Check, FileBraces, NetworkIcon, RotateCcw, TrendingUpIcon } from '@lucide/svelte';
+	import {
+		BoxIcon,
+		Check,
+		FileBraces,
+		NetworkIcon,
+		RotateCcw,
+		TrendingUpIcon
+	} from '@lucide/svelte';
 	import Fab from '$lib/components/FAB.svelte';
 	import { page } from '$app/state';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
-	import { AA_DEFINITION_FILE, USER_BOOK_FILENAME } from '$lib/constants';
+	import {
+		AA_DEFINITION_FILE,
+		DEMO_AA_FILE,
+		DEMO_BOOK_FILE,
+		DEMO_DIR,
+		DEMO_ROOT_INVESTMENT_ACCOUNT,
+		USER_BOOK_FILENAME
+	} from '$lib/constants';
 	import { saveFile, fileExists } from '$lib/utils/opfslib';
 	import HelpButton from '$lib/help/HelpButton.svelte';
+	import demoDataService from '$lib/services/demoDataService';
 
 	Notifier.init();
 
@@ -48,6 +67,10 @@
 	let dateFormat = $state<string>(DATE_FORMAT_DEFAULT);
 	let shortDateFormat = $state<string>(SHORT_DATE_FORMAT_DEFAULT);
 	let loaded = $state(false);
+	let demoActive = $state(false);
+	let showDemoLoadConfirm = $state(false);
+	let showDemoRemoveConfirm = $state(false);
+	let demoBusy = $state(false);
 
 	// Saved (DB) values for revert comparison
 	let savedCurrency = $state<string | undefined>(undefined);
@@ -127,13 +150,12 @@
 		savedCurrency = (await appService.getDefaultCurrency()) ?? undefined;
 		savedBookFilename = (await appService.readBookFilename()) ?? null;
 		savedRootInvestmentAccount = (await settings.get<string>(SettingKeys.rootInvestmentAccount)) as
-			| string
-			| undefined;
-		ledgerCacheEnabled = (await deviceSettings.get<boolean>(DeviceSettingKeys.ledgerCacheEnabled)) ?? true;
+			string | undefined;
+		ledgerCacheEnabled =
+			(await deviceSettings.get<boolean>(DeviceSettingKeys.ledgerCacheEnabled)) ?? true;
 		savedAssetAllocationDefinition =
 			(await settings.get<string>(SettingKeys.assetAllocationDefinition)) ?? null;
-		savedDateFormat =
-			(await settings.get<string>(SettingKeys.dateFormat)) ?? DATE_FORMAT_DEFAULT;
+		savedDateFormat = (await settings.get<string>(SettingKeys.dateFormat)) ?? DATE_FORMAT_DEFAULT;
 		savedShortDateFormat =
 			(await settings.get<string>(SettingKeys.shortDateFormat)) ?? SHORT_DATE_FORMAT_DEFAULT;
 
@@ -153,6 +175,8 @@
 		rootInvestmentAccount = pending?.rootInvestmentAccount ?? savedRootInvestmentAccount;
 		dateFormat = pending?.dateFormat ?? savedDateFormat;
 		shortDateFormat = pending?.shortDateFormat ?? savedShortDateFormat;
+
+		demoActive = await demoDataService.isDemoActive();
 	}
 
 	async function onOpfsClick() {
@@ -167,6 +191,64 @@
 			assetAllocationDefinition = AA_DEFINITION_FILE;
 		}
 		await goto('/asset-allocation/editor');
+	}
+
+	function onLoadDemoClick() {
+		if (savedBookFilename && savedBookFilename !== DEMO_BOOK_FILE) {
+			showDemoLoadConfirm = true;
+			return;
+		}
+		loadDemoData();
+	}
+
+	async function loadDemoData() {
+		demoBusy = true;
+		try {
+			await demoDataService.activateDemoData();
+			demoActive = true;
+			savedBookFilename = DEMO_BOOK_FILE;
+			bookFilename = DEMO_BOOK_FILE;
+			savedAssetAllocationDefinition = DEMO_AA_FILE;
+			assetAllocationDefinition = DEMO_AA_FILE;
+			savedRootInvestmentAccount = DEMO_ROOT_INVESTMENT_ACCOUNT;
+			rootInvestmentAccount = DEMO_ROOT_INVESTMENT_ACCOUNT;
+			Notifier.success('Demo data loaded');
+		} catch (err) {
+			Notifier.error('Failed to load demo data: ' + err);
+		} finally {
+			demoBusy = false;
+			showDemoLoadConfirm = false;
+		}
+	}
+
+	function onRemoveDemoClick() {
+		showDemoRemoveConfirm = true;
+	}
+
+	async function removeDemoData() {
+		demoBusy = true;
+		try {
+			await demoDataService.removeDemoData();
+			demoActive = false;
+			if (savedBookFilename === DEMO_BOOK_FILE) {
+				savedBookFilename = null;
+				bookFilename = null;
+			}
+			if (savedAssetAllocationDefinition === DEMO_AA_FILE) {
+				savedAssetAllocationDefinition = null;
+				assetAllocationDefinition = null;
+			}
+			if (savedRootInvestmentAccount === DEMO_ROOT_INVESTMENT_ACCOUNT) {
+				savedRootInvestmentAccount = undefined;
+				rootInvestmentAccount = undefined;
+			}
+			Notifier.success('Demo data removed');
+		} catch (err) {
+			Notifier.error('Failed to remove demo data: ' + err);
+		} finally {
+			demoBusy = false;
+			showDemoRemoveConfirm = false;
+		}
 	}
 
 	async function saveSettings() {
@@ -208,7 +290,6 @@
 </Toolbar>
 
 <main class="mx-auto max-w-2xl space-y-3 p-3 pb-20">
-
 	<!-- ── General ─────────────────────────────────────────── -->
 	<div class="divider text-sm font-semibold uppercase tracking-widest">General</div>
 
@@ -265,7 +346,11 @@
 	<div class="flex items-center gap-3">
 		<label for="short-date-format" class="flex-1 text-sm font-medium">Short Date Format</label>
 		<div class="flex shrink-0 items-center gap-1">
-			<select id="short-date-format" class="select select-sm w-40 rounded" bind:value={shortDateFormat}>
+			<select
+				id="short-date-format"
+				class="select select-sm w-40 rounded"
+				bind:value={shortDateFormat}
+			>
 				{#each shortDateFormatOptions as opt}
 					<option value={opt.value}>{opt.label}</option>
 				{/each}
@@ -287,8 +372,8 @@
 	<div class="divider text-sm font-semibold uppercase tracking-widest">Ledger Configuration</div>
 
 	<p class="text-xs opacity-60">
-		<a href="/opfs/import-ledger" class="link">Import Ledger files</a> first, then choose the book
-		file below.
+		<a href="/opfs/import-ledger" class="link">Import Ledger files</a> first, then choose the book file
+		below.
 	</p>
 
 	<!-- Book file -->
@@ -340,11 +425,7 @@
 					<RotateCcw size={14} />
 				</button>
 			{/if}
-			<button
-				class="btn btn-secondary btn-xs rounded"
-				type="button"
-				onclick={onCreateOrEditAA}
-			>
+			<button class="btn btn-secondary btn-xs rounded" type="button" onclick={onCreateOrEditAA}>
 				{assetAllocationDefinition ? 'Edit' : 'Create'}
 			</button>
 			<button
@@ -412,5 +493,82 @@
 		/>
 	</div>
 
+	<!-- ── Demo Data ───────────────────────────────────────── -->
+	<div class="divider text-sm font-semibold uppercase tracking-widest">Demo Data</div>
+
+	<p class="text-xs opacity-60">
+		A sample book (transactions, accounts, asset allocation target) to explore Cashier without your
+		own data. Demo files live under <code>{DEMO_DIR}/</code> and are read-only — your own entries
+		always go to <code>cashier.bean</code>.
+	</p>
+
+	<div class="flex items-center gap-3">
+		<div class="min-w-0 flex-1">
+			<p class="text-sm font-medium">Demo data</p>
+			<p class="text-xs opacity-60">{demoActive ? 'Active' : 'Not loaded'}</p>
+		</div>
+		<div class="flex shrink-0 items-center gap-1">
+			{#if demoActive}
+				<button
+					class="btn btn-error btn-xs rounded"
+					type="button"
+					onclick={onRemoveDemoClick}
+					disabled={demoBusy}
+				>
+					Remove
+				</button>
+			{:else}
+				<button
+					class="btn btn-primary btn-xs rounded"
+					type="button"
+					onclick={onLoadDemoClick}
+					disabled={demoBusy}
+				>
+					Load demo data
+				</button>
+			{/if}
+		</div>
+	</div>
+
 	<Fab Icon={Check} onclick={saveSettings} />
+
+	<!-- Load Demo Data Confirmation Modal -->
+	{#if showDemoLoadConfirm}
+		<div class="modal modal-open">
+			<div class="modal-box">
+				<h3 class="font-bold text-lg">Replace book with demo data?</h3>
+				<p>
+					This links your book file to the bundled demo book (<code>{DEMO_BOOK_FILE}</code>),
+					instead of <code>{savedBookFilename}</code>. Your existing files are not deleted and can
+					be re-selected afterwards.
+				</p>
+				<div class="modal-action">
+					<button class="btn" onclick={() => (showDemoLoadConfirm = false)} disabled={demoBusy}>
+						Cancel
+					</button>
+					<button class="btn btn-primary" onclick={loadDemoData} disabled={demoBusy}>
+						{demoBusy ? 'Loading...' : 'Load Demo Data'}
+					</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+
+	<!-- Remove Demo Data Confirmation Modal -->
+	{#if showDemoRemoveConfirm}
+		<div class="modal modal-open">
+			<div class="modal-box">
+				<h3 class="font-bold text-lg">Remove demo data?</h3>
+				<p>Deletes <code>{DEMO_DIR}/</code> and unlinks it from your book settings.</p>
+				<div class="modal-action">
+					<button class="btn" onclick={() => (showDemoRemoveConfirm = false)} disabled={demoBusy}>
+						Cancel
+					</button>
+					<button class="btn btn-error" onclick={removeDemoData} disabled={demoBusy}>
+						{demoBusy ? 'Removing...' : 'Remove'}
+					</button>
+				</div>
+			</div>
+		</div>
+	{/if}
 </main>

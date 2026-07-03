@@ -22,3 +22,17 @@ export const AA_DEFINITION_FILE = 'asset-allocation.toml';
 
 // settings key
 export const USER_BOOK_FILENAME = 'userBookFilename';
+
+// Demo data — bundled sample book so first-time users (and agents testing in a
+// browser) get a populated, working app instead of a blank one. Files live in a
+// dedicated root-level folder (never `.cashier/`, which the ledger's `.bean`
+// scanner skips entirely) so `include` resolution still finds them. Only
+// `cashier.bean` is ever written to directly — everything under `DEMO_DIR` is
+// read-only reference data managed by demoDataService.
+export const DEMO_DIR = 'cashier-demo';
+export const DEMO_BOOK_FILE = `${DEMO_DIR}/book.bean`;
+export const DEMO_ACCOUNTS_FILE = `${DEMO_DIR}/accounts.bean`;
+export const DEMO_COMMODITIES_FILE = `${DEMO_DIR}/commodities.bean`;
+export const DEMO_PRICES_FILE = `${DEMO_DIR}/prices.bean`;
+export const DEMO_AA_FILE = `${DEMO_DIR}/asset-allocation.toml`;
+export const DEMO_ROOT_INVESTMENT_ACCOUNT = 'Assets:Investments:Brokerage';

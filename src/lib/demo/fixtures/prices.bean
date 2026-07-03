@@ -1,0 +1,10 @@
+; Demo price history for the two brokerage holdings — one point per month,
+; matching the purchase dates in book.bean.
+
+2024-01-02 price VTI 200.00 EUR
+2024-02-01 price VTI 204.00 EUR
+2024-03-01 price VTI 208.50 EUR
+
+2024-01-02 price BND 70.00 EUR
+2024-02-01 price BND 70.50 EUR
+2024-03-01 price BND 69.80 EUR

@@ -1,0 +1,17 @@
+# Demo asset allocation target — Equity/Bonds/Cash split matching the
+# brokerage holdings and cash balance opened in accounts.bean.
+
+[Allocation]
+allocation = 100
+
+[Allocation.Equity]
+allocation = 67
+symbols = ["VTI"]
+
+[Allocation.Bonds]
+allocation = 30
+symbols = ["BND"]
+
+[Allocation.Cash]
+allocation = 3
+symbols = ["EUR"]
