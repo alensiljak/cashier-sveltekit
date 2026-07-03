@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import type { UnifiedXact } from '$lib/utils/unifiedXacts';
 	import * as Formatter from '$lib/utils/formatter';
 
@@ -12,7 +13,7 @@
 
 	let { rows, onRowClick, showAccount = false, pageSize = 30 }: Props = $props();
 
-	let visibleCount = $state(pageSize);
+	let visibleCount = $state(untrack(() => pageSize));
 	let sentinel = $state<HTMLElement | null>(null);
 
 	// Reset progressive loading whenever the row set changes (e.g. a different payee/account).
