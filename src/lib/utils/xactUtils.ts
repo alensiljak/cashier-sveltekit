@@ -20,6 +20,7 @@ export function xactToBeancountText(tx: Xact): string {
 		narration: tx.note ?? '',
 		tags: [],
 		links: [],
+		meta: tx.meta ?? {},
 		postings: tx.postings.map((p) => {
 			let units: { number: string; currency: string } | undefined;
 			if (p.amount != null) {

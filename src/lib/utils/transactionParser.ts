@@ -35,6 +35,7 @@ export function directiveToXact(directive: any, rawSource?: string): Xact {
 	tx.payee = directive.payee ?? '';
 	tx.note = directive.narration ?? '';
 	tx.flag = directive.flag ?? '*';
+	tx.meta = normalizeMeta(directive.meta);
 	tx.postings = (directive.postings ?? []).map((p: any) => {
 		const posting = new Posting();
 		posting.account = p.account ?? '';
@@ -65,6 +66,28 @@ function isTotalPrice(source: string | undefined, account: string): boolean {
 		const trimmed = line.trimStart();
 		return trimmed.split(/\s+/)[0] === account && /@@/.test(line);
 	});
+}
+
+/**
+ * Convert a raw WASM `meta` object (string | boolean | {number,currency} | null values)
+ * down to a plain string map for editing. Non-string values are coerced for display;
+ * boolean/amount-shaped meta round-trips as a quoted string on save (acceptable for the
+ * xact-level metadata editor, which only targets simple string tags like `isin`).
+ */
+function normalizeMeta(meta: unknown): Record<string, string> {
+	if (!meta || typeof meta !== 'object') return {};
+	const result: Record<string, string> = {};
+	for (const [key, value] of Object.entries(meta as Record<string, unknown>)) {
+		result[key] = metaValueToString(value);
+	}
+	return result;
+}
+
+function metaValueToString(value: unknown): string {
+	if (typeof value === 'string') return value;
+	if (value == null) return '';
+	if (typeof value === 'object') return JSON.stringify(value);
+	return String(value);
 }
 
 export function parseXact(input: string): Xact {

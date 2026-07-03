@@ -46,4 +46,16 @@
 			{/each}
 		</div>
 	{/if}
+
+	<!-- metadata -->
+	{#if xact.meta && Object.keys(xact.meta).length > 0}
+		<div class="pl-6 leading-4 opacity-70">
+			{#each Object.entries(xact.meta) as [key, value] (key)}
+				<div class="flex flex-row gap-1 text-xs">
+					<data class="font-mono">{key}:</data>
+					<data class="truncate">{value}</data>
+				</div>
+			{/each}
+		</div>
+	{/if}
 </article>

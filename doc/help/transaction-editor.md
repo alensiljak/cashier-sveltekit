@@ -35,6 +35,10 @@ Each posting row has:
 - **Amount** — tapping it selects the whole value so typing a new number replaces it outright; a calculator button next to it opens a calculator to compute the value instead.
 - **Currency** — automatically uppercased as you type.
 
+## Metadata
+
+**Metadata >** (next to the status flags) toggles a panel listing the transaction's Beancount `key: value` metadata, such as an `isin` tag used for yield calculations; it shows the entry count once any are set. In the panel, edit an existing key or value directly, remove one with the trash button, or add a new pair with **Add entry**. Values are always saved as text (quoted strings); entries with an empty key are dropped on save.
+
 ## Saving
 
 Tap the checkmark button (bottom-right) to save the transaction and return to the previous screen. The transaction does **not** need to balance to zero to save — the unbalanced notice is informational only.

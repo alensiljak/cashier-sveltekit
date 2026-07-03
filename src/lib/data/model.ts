@@ -122,6 +122,8 @@ export class Xact {
 	note?: string;
 	flag?: string;
 	postings: Posting[];
+	/** Transaction-level Beancount metadata (`key: value` lines). String values only. */
+	meta: Record<string, string>;
 	//
 	//amount: any
 	//currency: any
@@ -132,6 +134,7 @@ export class Xact {
 		this.payee = '';
 		this.flag = '*';
 		this.postings = [];
+		this.meta = {};
 	}
 
 	static create() {

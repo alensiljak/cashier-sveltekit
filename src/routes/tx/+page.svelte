@@ -3,7 +3,6 @@
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { Check, ShieldCheck } from '@lucide/svelte';
 	import { xact, xactSpan } from '$lib/data/mainStore';
-	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import { afterNavigate, goto } from '$app/navigation';
@@ -13,10 +12,17 @@
 	import { xactToBeancountText } from '$lib/utils/xactUtils';
 	import { base } from '$app/paths';
 	import TransactionEditor from '$lib/components/XactEditor.svelte';
-	import type { Xact } from '$lib/data/model';
+	import { Xact } from '$lib/data/model';
 	import HelpButton from '$lib/help/HelpButton.svelte';
 
 	Notifier.init();
+
+	// Arrived here directly (e.g. a nav link) without a transaction staged —
+	// start a new one instead of leaving the editor with an undefined $xact.
+	if (!get(xact)) {
+		xact.set(Xact.create());
+		xactSpan.set(undefined);
+	}
 
 	let previousPage: string = base;
 
@@ -28,15 +34,8 @@
 	// oxlint-disable-next-line no-unassigned-vars
 	let validationDialog: HTMLDialogElement | undefined;
 
-	onMount(async () => {
-		if (!get(xact)) {
-			await goto('/');
-			return;
-		}
-	});
-
 	afterNavigate(({ from }) => {
-		previousPage = from?.url.pathname || previousPage;
+		previousPage = from?.url?.pathname || previousPage;
 	});
 
 	async function onFab() {
