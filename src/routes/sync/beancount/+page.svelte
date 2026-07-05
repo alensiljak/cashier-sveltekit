@@ -81,6 +81,7 @@
 	function resetSyncState() {
 		overrides = new Map();
 		verifying = new Set();
+		backgroundVerifyQueue = [];
 		expandedRows = new Set();
 		baseline = new Map();
 		localEntries = [];
@@ -279,11 +280,64 @@
 		}
 	}
 
-	/** Hash-verifies every row in the given set in one batch (conflict or local-newer rows). */
+	/**
+	 * Paths queued for background hash-verification, in processing order.
+	 * Populated by `verifyRows` for target rows hidden behind a collapsed
+	 * folder — those are cheap to schedule but shouldn't block the caller
+	 * the way verifying the currently-visible rows does.
+	 */
+	let backgroundVerifyQueue = $state<string[]>([]);
+	let backgroundVerifyRunning = $state(false);
+
+	function enqueueBackgroundVerify(paths: string[]) {
+		const queued = new Set(backgroundVerifyQueue);
+		const toAdd = paths.filter((p) => !queued.has(p) && !verifying.has(p));
+		if (toAdd.length === 0) return;
+		backgroundVerifyQueue = [...backgroundVerifyQueue, ...toAdd];
+		void runBackgroundVerify();
+	}
+
+	async function runBackgroundVerify() {
+		if (backgroundVerifyRunning) return;
+		backgroundVerifyRunning = true;
+		try {
+			while (backgroundVerifyQueue.length > 0 && activePeer) {
+				const path = backgroundVerifyQueue[0];
+				backgroundVerifyQueue = backgroundVerifyQueue.slice(1);
+				await verifyRow(path);
+			}
+			if (activePeer) baseline = await getBaseline(activePeer.id);
+		} finally {
+			backgroundVerifyRunning = false;
+		}
+	}
+
+	/** Bumps already-queued paths to the front — used when expanding a folder so its
+	 *  newly-visible, not-yet-scanned files verify before the rest of the backlog. */
+	function prioritizeInQueue(paths: string[]) {
+		const front = new Set(paths);
+		if (!backgroundVerifyQueue.some((p) => front.has(p))) return;
+		backgroundVerifyQueue = [
+			...backgroundVerifyQueue.filter((p) => front.has(p)),
+			...backgroundVerifyQueue.filter((p) => !front.has(p))
+		];
+		void runBackgroundVerify();
+	}
+
+	/** Hash-verifies every row in the given set (conflict or newer rows). Rows currently
+	 *  visible in the tree are verified immediately; rows hidden behind a collapsed folder
+	 *  are handed to the background queue so a large "Verify all" doesn't stall on files
+	 *  the user can't even see yet — see `prioritizeInQueue` for how expanding catches up. */
 	async function verifyRows(rows: { path: string }[]) {
 		if (!activePeer || rows.length === 0) return;
-		await Promise.all(rows.map((r) => verifyRow(r.path)));
-		baseline = await getBaseline(activePeer.id);
+		const visiblePaths = new Set(treeRows.filter((r) => r.kind === 'file').map((r) => r.path));
+		const visible = rows.filter((r) => visiblePaths.has(r.path));
+		const hidden = rows.filter((r) => !visiblePaths.has(r.path));
+		if (visible.length) {
+			await Promise.all(visible.map((r) => verifyRow(r.path)));
+			baseline = await getBaseline(activePeer.id);
+		}
+		if (hidden.length) enqueueBackgroundVerify(hidden.map((r) => r.path));
 	}
 
 	// ─── Apply (pull) ────────────────────────────────────────────────────────────
@@ -293,7 +347,7 @@
 
 	async function applyChanges() {
 		if (!activePeer || !peerSource) return;
-		const toPull = treeRows.filter((r) => r.kind === 'file' && r.effectiveAction === 'pull');
+		const toPull = allFileRows.filter((r) => r.effectiveAction === 'pull');
 		if (toPull.length === 0) return;
 
 		applying = true;
@@ -369,6 +423,8 @@
 		effectiveAction?: SyncAction;
 		/** Directories only: count of conflicted files anywhere in this subtree, shown even while collapsed. */
 		conflictCount?: number;
+		/** Directories only: count of files anywhere in this subtree with any diff status (conflict/remote-newer/local-newer), shown even while collapsed. */
+		diffCount?: number;
 	}
 
 	/** Paths the user has explicitly expanded — folders default to collapsed. */
@@ -380,7 +436,7 @@
 		expandedPaths: Set<string>,
 		diffs: Map<string, DiffEntry>,
 		userOverrides: Map<string, SyncAction>
-	): TreeRow[] {
+	): { rows: TreeRow[]; allFileRows: TreeRow[] } {
 		const byPath = new Map<string, { local?: SyncEntry; remote?: SyncEntry }>();
 		for (const e of localList) byPath.set(e.path, { ...byPath.get(e.path), local: e });
 		for (const e of remoteList) byPath.set(e.path, { ...byPath.get(e.path), remote: e });
@@ -406,15 +462,19 @@
 				kind: 'directory',
 				depth: parent ? parent.split('/').length : 0,
 				expanded: expandedPaths.has(dirPath),
-				conflictCount: 0
+				conflictCount: 0,
+				diffCount: 0
 			};
 			dirRowByPath.set(dirPath, dirRow);
 			addChild(parent, dirRow);
 		}
+		// Unconditional flat list of file rows — independent of expand state, so
+		// verification/apply logic always sees every file, even inside collapsed folders.
+		const allFileRows: TreeRow[] = [];
 		for (const [path, { local, remote }] of byPath) {
 			const parent = path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '';
 			const diff = diffs.get(path);
-			addChild(parent, {
+			const fileRow: TreeRow = {
 				path,
 				name: path.split('/').pop()!,
 				kind: 'file',
@@ -424,16 +484,23 @@
 				remote,
 				status: diff?.status,
 				effectiveAction: diff ? (userOverrides.get(path) ?? diff.action) : undefined
-			});
-			if (diff?.status === 'conflict') {
+			};
+			addChild(parent, fileRow);
+			allFileRows.push(fileRow);
+			if (diff && diff.status !== 'unchanged') {
 				const parts = path.split('/');
 				for (let i = 1; i < parts.length; i++) {
 					const dirRow = dirRowByPath.get(parts.slice(0, i).join('/'));
-					if (dirRow) dirRow.conflictCount!++;
+					if (dirRow) {
+						dirRow.diffCount!++;
+						if (diff.status === 'conflict') dirRow.conflictCount!++;
+					}
 				}
 			}
 		}
 
+		// Visible rows only — walk stops descending into collapsed directories,
+		// so this is for rendering the tree, never for bulk operations.
 		const rows: TreeRow[] = [];
 		const walk = (parent: string) => {
 			const list = (childrenOf.get(parent) ?? []).sort((a, b) =>
@@ -445,12 +512,16 @@
 			}
 		};
 		walk('');
-		return rows;
+		return { rows, allFileRows };
 	}
 
-	let treeRows = $derived(
+	let treeBuild = $derived(
 		buildTree(localEntries, remoteEntries ?? [], expandedDirs, diffByPath, overrides)
 	);
+	/** Visible rows, respecting collapsed folders — for rendering the tree only. */
+	let treeRows = $derived(treeBuild.rows);
+	/** Every file row, regardless of folder collapse state — for verification/apply logic. */
+	let allFileRows = $derived(treeBuild.allFileRows);
 
 	// ─── Per-file diff/preview ───────────────────────────────────────────────
 	// Shows what applying the row's current pull/skip selection will actually do,
@@ -593,7 +664,7 @@
 		}
 	}
 
-	let fileRows = $derived(treeRows.filter((r) => r.kind === 'file'));
+	let fileRows = $derived(allFileRows);
 	let conflictRows = $derived(fileRows.filter((r) => r.status === 'conflict'));
 	let remoteNewerRows = $derived(fileRows.filter((r) => r.status === 'remote-newer'));
 	let localNewerRows = $derived(fileRows.filter((r) => r.status === 'local-newer'));
@@ -627,9 +698,16 @@
 
 	function toggleDir(path: string) {
 		const next = new Set(expandedDirs);
-		if (next.has(path)) next.delete(path);
-		else next.add(path);
+		const expanding = !next.has(path);
+		if (expanding) next.add(path);
+		else next.delete(path);
 		expandedDirs = next;
+		if (expanding && backgroundVerifyQueue.length) {
+			// Newly-visible files under this folder jump the background queue —
+			// no point leaving them scanning last now that the user can see them.
+			const prefix = `${path}/`;
+			prioritizeInQueue(backgroundVerifyQueue.filter((p) => p.startsWith(prefix)));
+		}
 	}
 
 	// ─── Row-expand state, used by the "Compact" view mode ─────────────────────
@@ -722,13 +800,27 @@
 		onclick={() => toggleDir(row.path)}
 	>
 		{#if row.expanded}
-			<FolderOpenIcon class="h-4 w-4 shrink-0 {row.conflictCount ? 'text-error' : 'opacity-60'}" />
+			<FolderOpenIcon
+				class="h-4 w-4 shrink-0 {row.conflictCount
+					? 'text-error'
+					: row.diffCount
+						? 'text-warning'
+						: 'opacity-60'}"
+			/>
 		{:else}
-			<FolderIcon class="h-4 w-4 shrink-0 {row.conflictCount ? 'text-error' : 'opacity-60'}" />
+			<FolderIcon
+				class="h-4 w-4 shrink-0 {row.conflictCount
+					? 'text-error'
+					: row.diffCount
+						? 'text-warning'
+						: 'opacity-60'}"
+			/>
 		{/if}
 		<span class="truncate">{row.name}</span>
 		{#if row.conflictCount}
 			<span class="badge badge-error badge-sm ml-auto">{row.conflictCount}</span>
+		{:else if row.diffCount}
+			<span class="badge badge-warning badge-sm ml-auto">{row.diffCount}</span>
 		{/if}
 	</button>
 {/snippet}
@@ -878,6 +970,12 @@
 						{/if}
 						Verify {verifyTargetRows.length}
 					</button>
+					{#if backgroundVerifyQueue.length > 0 || backgroundVerifyRunning}
+						<span class="text-base-content/60 flex items-center gap-1.5 text-xs">
+							<span class="loading loading-spinner loading-xs"></span>
+							Scanning {backgroundVerifyQueue.length} more in background…
+						</span>
+					{/if}
 				</div>
 			{/if}
 
