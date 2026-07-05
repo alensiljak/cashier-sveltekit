@@ -14,9 +14,17 @@
 import { expect, test } from '@playwright/test';
 
 test.describe('app shell', () => {
-	test('home page loads with toolbar and quick-entry FAB', async ({ page }) => {
-		await page.goto('/');
+	test.beforeEach(async ({ page }) => {
+		// Fresh OPFS/IndexedDB per test lands on /onboarding; the root layout's
+		// async ensureInitialized() check redirects there even from other routes,
+		// which yanks the DOM out from under any in-flight interaction. Seed an
+		// empty book first so subsequent navigations don't get redirected mid-test.
+		await page.goto('/onboarding');
+		await page.getByRole('button', { name: 'Start empty' }).click();
+		await expect(page).toHaveURL('/');
+	});
 
+	test('home page loads with toolbar and quick-entry FAB', async ({ page }) => {
 		await expect(page.getByText('Cashier', { exact: true }).first()).toBeVisible();
 		await expect(page.locator('button.btn-circle.btn-xl')).toBeVisible();
 	});
@@ -31,6 +39,14 @@ test.describe('app shell', () => {
 });
 
 test.describe('critical pages render', () => {
+	test.beforeEach(async ({ page }) => {
+		// See 'app shell' above: fresh storage redirects any route to /onboarding
+		// once the async init check resolves, so seed an empty book first.
+		await page.goto('/onboarding');
+		await page.getByRole('button', { name: 'Start empty' }).click();
+		await expect(page).toHaveURL('/');
+	});
+
 	for (const [path, title] of [
 		['/journal', 'Journal'],
 		['/reports', 'Reports'],
