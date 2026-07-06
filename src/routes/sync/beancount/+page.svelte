@@ -9,12 +9,12 @@
 		TriangleAlertIcon,
 		Check,
 		DownloadIcon,
-		ShieldCheckIcon,
+		RefreshCwIcon,
 		GitCompareArrowsIcon,
 		ChevronDownIcon,
 		ChevronRightIcon
 	} from '@lucide/svelte';
-	import { PeerSource } from '$lib/sync/PeerSource';
+	import { PeerProtocol, PeerSource } from '$lib/sync/PeerSource';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import HelpButton from '$lib/help/HelpButton.svelte';
@@ -78,16 +78,12 @@
 		}
 	}
 
+	/** Only UI-local state tied to "which peer's tree am I looking at" — the
+	 *  scan/baseline/override data below is cached per peer and deliberately
+	 *  survives switching, so re-selecting a peer never re-triggers a scan. */
 	function resetSyncState() {
-		overrides = new Map();
-		verifying = new Set();
-		backgroundVerifyQueue = [];
 		expandedRows = new Set();
-		baseline = new Map();
-		localEntries = [];
-		localLoaded = false;
-		remoteEntries = null;
-		fetchedTrysteroId = null;
+		diffModalPath = null;
 	}
 
 	function selectPeer(id: string) {
@@ -106,11 +102,12 @@
 		goto(page.url.pathname, { replaceState: true, keepFocus: true, noScroll: true });
 	}
 
-	function makePeerSource(): PeerSource {
-		return new PeerSource(presence, opfsSource, () => activePeerId);
-	}
-
 	onMount(async () => {
+		// Kick off the local scan immediately, independent of peer selection —
+		// hashing every ledger file can take a moment on a large book, so
+		// starting it now means it's likely already done by the time a peer
+		// is chosen/connects, instead of waiting until then to begin.
+		void loadLocalTree();
 		await presence.init();
 		if (urlPeerId) activePeerId = urlPeerId;
 		presenceReady = true;
@@ -119,7 +116,7 @@
 		// device. Gating this on `trustedPeers.length > 0` broke discovery whenever
 		// trust wasn't yet fully mutual.
 		await presence.join(presence.roomCode);
-		peerSource = makePeerSource();
+		protocol = new PeerProtocol(presence, opfsSource);
 	});
 
 	/** Switches the signaling network. Reconnects a live room so the new strategy takes effect immediately. */
@@ -128,13 +125,20 @@
 		const wasInRoom = presence.isInRoom;
 		if (wasInRoom) await presence.leave();
 		await presence.setStrategy(value);
+		protocol = null;
+		peerSources.clear();
 		if (wasInRoom) {
 			await presence.join(presence.roomCode);
-			peerSource = makePeerSource();
+			protocol = new PeerProtocol(presence, opfsSource);
 		}
-		// Peer set differs on the new network — force a refetch.
-		fetchedTrysteroId = null;
-		remoteEntries = null;
+		// Peer set differs on the new network — force a refetch for everyone,
+		// but keep each peer's baseline/overrides (unaffected by the network).
+		peerStates = new Map(
+			Array.from(peerStates, ([id, s]) => [
+				id,
+				{ ...s, remoteEntries: null, remoteLoading: false, remoteError: null, fetchedTrysteroId: null }
+			])
+		);
 	}
 
 	$effect(() => {
@@ -154,16 +158,9 @@
 
 	// ─── File listing (local + remote) ──────────────────────────────────────────
 
-	let peerSource: PeerSource | null = null;
-
 	let localEntries = $state<SyncEntry[]>([]);
 	let localLoaded = $state(false);
 	let localError = $state<string | null>(null);
-
-	let remoteEntries = $state<SyncEntry[] | null>(null);
-	let remoteLoading = $state(false);
-	let remoteError = $state<string | null>(null);
-	let fetchedTrysteroId: string | null = null;
 
 	async function loadLocalTree() {
 		try {
@@ -175,61 +172,146 @@
 		}
 	}
 
-	async function loadRemoteTree(trysteroId: string) {
-		fetchedTrysteroId = trysteroId;
-		remoteLoading = true;
-		remoteError = null;
+	// ─── Per-peer sync state ─────────────────────────────────────────────────────
+	// Every trusted, online peer is scanned in the background (below) — not just
+	// the active one — so the peer-picker dashboard can show live pull/conflict
+	// counts, and so switching which peer is active never waits on a fresh fetch.
+	// Hash-based diff classification — see doc/projects/2026-07-02_beancount-peer-sync.md.
+
+	interface PeerSyncState {
+		remoteEntries: SyncEntry[] | null;
+		remoteLoading: boolean;
+		remoteError: string | null;
+		fetchedTrysteroId: string | null;
+		baseline: Map<string, PeerSyncBaseline>;
+		overrides: Map<string, SyncAction>;
+	}
+
+	const EMPTY_PEER_STATE: PeerSyncState = {
+		remoteEntries: null,
+		remoteLoading: false,
+		remoteError: null,
+		fetchedTrysteroId: null,
+		baseline: new Map(),
+		overrides: new Map()
+	};
+
+	let peerStates = $state(new Map<string, PeerSyncState>());
+
+	/** Immutable-style patch: clones the map and the one entry being touched, then
+	 *  reassigns — Svelte tracks the `peerStates =` reassignment, not deep mutation. */
+	function patchPeerState(peerId: string, patch: Partial<PeerSyncState>) {
+		const next = new Map(peerStates);
+		next.set(peerId, { ...(next.get(peerId) ?? EMPTY_PEER_STATE), ...patch });
+		peerStates = next;
+	}
+
+	/** Not `$state` — a plain instance cache keyed by peer id. Cheap: each PeerSource
+	 *  just delegates to the shared `protocol`, so this never re-registers trystero actions. */
+	const peerSources = new Map<string, PeerSource>();
+	let protocol = $state<PeerProtocol | null>(null);
+
+	function sourceFor(peerId: string): PeerSource | null {
+		if (!protocol) return null;
+		let source = peerSources.get(peerId);
+		if (!source) {
+			source = new PeerSource(presence, protocol, peerId);
+			peerSources.set(peerId, source);
+		}
+		return source;
+	}
+
+	/** Fetches one peer's remote tree + baseline together and caches both — "on
+	 *  contact" is exactly when a fresh peer-sent hash list can be compared
+	 *  against the locally-stored baseline hashes from the last sync with it. */
+	async function refreshPeer(peerId: string, trysteroId: string) {
+		const source = sourceFor(peerId);
+		if (!source) return;
+		patchPeerState(peerId, { fetchedTrysteroId: trysteroId, remoteLoading: true, remoteError: null });
 		try {
-			remoteEntries = await peerSource!.listTree();
+			const [remoteEntries, baseline] = await Promise.all([source.listTree(), getBaseline(peerId)]);
+			patchPeerState(peerId, { remoteEntries, baseline, remoteLoading: false });
 		} catch (e) {
-			remoteError = (e as Error).message;
-			remoteEntries = null;
-		} finally {
-			remoteLoading = false;
+			patchPeerState(peerId, { remoteError: (e as Error).message, remoteEntries: null, remoteLoading: false });
 		}
 	}
 
 	$effect(() => {
-		if (activePeer && !localLoaded) loadLocalTree();
-	});
-
-	$effect(() => {
-		if (!activePeer || !peerSource) return;
-		const trysteroId = presence.onlineTrysteroId(activePeer.id);
-		if (!trysteroId) {
-			fetchedTrysteroId = null;
-			remoteEntries = null;
-			return;
+		if (!protocol) return;
+		for (const tp of onlineTrustedPeers) {
+			const trysteroId = presence.onlineTrysteroId(tp.id);
+			if (!trysteroId) continue;
+			const state = peerStates.get(tp.id);
+			if (state?.fetchedTrysteroId === trysteroId || state?.remoteLoading) continue;
+			void refreshPeer(tp.id, trysteroId);
 		}
-		if (trysteroId !== fetchedTrysteroId) loadRemoteTree(trysteroId);
 	});
 
-	// ─── Diff classification against the last-synced baseline ─────────────────
-	// Metadata-only (never hashes automatically) — see doc/projects/2026-07-02_beancount-peer-sync.md.
-
-	let baseline = $state(new Map<string, PeerSyncBaseline>());
-
-	$effect(() => {
-		if (!activePeer) {
-			baseline = new Map();
-			return;
+	/** Live pull/conflict counts for the peer-picker's status badges — reuses
+	 *  whatever `refreshPeer` above already cached, without forcing a fetch. */
+	function diffCountsFor(peerId: string): { pull: number; conflict: number } | null {
+		if (!localLoaded) return null;
+		const state = peerStates.get(peerId);
+		if (!state || state.remoteEntries === null) return null;
+		const diffs = diffAgainstBaseline(localEntries, state.remoteEntries, state.baseline);
+		let pull = 0;
+		let conflict = 0;
+		for (const d of diffs) {
+			const action = state.overrides.get(d.path) ?? d.action;
+			if (action === 'pull') pull++;
+			else if (action === 'conflict') conflict++;
 		}
-		getBaseline(activePeer.id).then((b) => (baseline = b));
-	});
+		return { pull, conflict };
+	}
 
-	/** Per-path action chosen by the user, overriding the diff's default. Reset whenever the peer or file set changes. */
-	let overrides = $state(new Map<string, SyncAction>());
+	let refreshing = $state(false);
 
+	/**
+	 * Manually re-triggers both scans for the active peer. Content hashes are
+	 * already recomputed on every load, but a stale in-memory scan (e.g. the
+	 * peer only just finished writing, or this device's own file changed
+	 * since the page opened) needs an explicit re-scan to pick up — there's
+	 * no live watcher.
+	 */
+	async function refreshAll() {
+		if (!activePeer) return;
+		refreshing = true;
+		try {
+			await loadLocalTree();
+			const trysteroId = presence.onlineTrysteroId(activePeer.id);
+			if (trysteroId) {
+				await refreshPeer(activePeer.id, trysteroId);
+			} else {
+				patchPeerState(activePeer.id, { fetchedTrysteroId: null, remoteEntries: null });
+			}
+		} finally {
+			refreshing = false;
+		}
+	}
+
+	/** Active peer's cached scan/baseline/overrides — read-only aliases matching
+	 *  the field names the rest of the page (and its template) already uses. */
+	let activeState = $derived(activePeerId ? (peerStates.get(activePeerId) ?? EMPTY_PEER_STATE) : EMPTY_PEER_STATE);
+	let remoteEntries = $derived(activeState.remoteEntries);
+	let remoteLoading = $derived(activeState.remoteLoading);
+	let remoteError = $derived(activeState.remoteError);
+	let baseline = $derived(activeState.baseline);
+	let overrides = $derived(activeState.overrides);
+	let peerSource = $derived(activePeerId ? sourceFor(activePeerId) : null);
+
+	/** Per-path action chosen by the user, overriding the diff's default. */
 	function setAction(path: string, action: SyncAction) {
+		if (!activePeerId) return;
 		const next = new Map(overrides);
 		next.set(path, action);
-		overrides = next;
+		patchPeerState(activePeerId, { overrides: next });
 	}
 
 	function pullAll(rows: { path: string }[]) {
+		if (!activePeerId) return;
 		const next = new Map(overrides);
 		for (const r of rows) next.set(r.path, 'pull');
-		overrides = next;
+		patchPeerState(activePeerId, { overrides: next });
 	}
 
 	// Only classify once we actually have a remote scan — an offline/not-yet-loaded
@@ -240,104 +322,24 @@
 		return new Map(entries.map((e) => [e.path, e]));
 	});
 
-	// ─── Verify (hash-confirm) a conflict row without pulling content ──────────
-
-	let verifying = $state(new Set<string>());
-
-	/** Records local↔remote agreement for `path`: clears any pending override and updates the baseline so it drops out of future diffs. Shared by the hash-based Verify action and the preview modal's identical-content shortcut (which already has both sides' text in memory and has no need to re-hash). */
+	/**
+	 * Records local↔remote agreement for `path`: clears any pending override
+	 * and updates the baseline so it drops out of future diffs. Used by the
+	 * diff-preview modal's identical-content shortcut, for the rare case
+	 * where a live re-read at preview time finds the two sides already match
+	 * (diffAgainstBaseline already treats equal hashes as unchanged on the
+	 * *next* scan; this fast-forwards the baseline without waiting for one).
+	 */
 	async function markSynced(path: string) {
 		if (!activePeer) return;
 		const localEntry = localEntries.find((e) => e.path === path);
 		const remoteEntry = remoteEntries?.find((e) => e.path === path);
 		if (!localEntry || !remoteEntry) return;
 		await updateBaseline(activePeer.id, [{ path, local: localEntry, remote: remoteEntry }]);
-		baseline = await getBaseline(activePeer.id);
-		const next = new Map(overrides);
-		next.delete(path);
-		overrides = next;
-	}
-
-	async function verifyRow(path: string) {
-		if (!activePeer || !peerSource) return;
-		verifying = new Set(verifying).add(path);
-		try {
-			const [localHash, remoteHash] = await Promise.all([
-				opfsSource.hashFile(path),
-				peerSource.hashFile(path)
-			]);
-			if (localHash !== undefined && localHash === remoteHash) {
-				await markSynced(path);
-				Notifier.success(`${path}: contents match — marked as synced.`);
-			} else {
-				Notifier.warning(`${path}: contents differ — no changes made.`);
-			}
-		} catch (e) {
-			Notifier.error(`Verify failed: ${(e as Error).message}`);
-		} finally {
-			const next = new Set(verifying);
-			next.delete(path);
-			verifying = next;
-		}
-	}
-
-	/**
-	 * Paths queued for background hash-verification, in processing order.
-	 * Populated by `verifyRows` for target rows hidden behind a collapsed
-	 * folder — those are cheap to schedule but shouldn't block the caller
-	 * the way verifying the currently-visible rows does.
-	 */
-	let backgroundVerifyQueue = $state<string[]>([]);
-	let backgroundVerifyRunning = $state(false);
-
-	function enqueueBackgroundVerify(paths: string[]) {
-		const queued = new Set(backgroundVerifyQueue);
-		const toAdd = paths.filter((p) => !queued.has(p) && !verifying.has(p));
-		if (toAdd.length === 0) return;
-		backgroundVerifyQueue = [...backgroundVerifyQueue, ...toAdd];
-		void runBackgroundVerify();
-	}
-
-	async function runBackgroundVerify() {
-		if (backgroundVerifyRunning) return;
-		backgroundVerifyRunning = true;
-		try {
-			while (backgroundVerifyQueue.length > 0 && activePeer) {
-				const path = backgroundVerifyQueue[0];
-				backgroundVerifyQueue = backgroundVerifyQueue.slice(1);
-				await verifyRow(path);
-			}
-			if (activePeer) baseline = await getBaseline(activePeer.id);
-		} finally {
-			backgroundVerifyRunning = false;
-		}
-	}
-
-	/** Bumps already-queued paths to the front — used when expanding a folder so its
-	 *  newly-visible, not-yet-scanned files verify before the rest of the backlog. */
-	function prioritizeInQueue(paths: string[]) {
-		const front = new Set(paths);
-		if (!backgroundVerifyQueue.some((p) => front.has(p))) return;
-		backgroundVerifyQueue = [
-			...backgroundVerifyQueue.filter((p) => front.has(p)),
-			...backgroundVerifyQueue.filter((p) => !front.has(p))
-		];
-		void runBackgroundVerify();
-	}
-
-	/** Hash-verifies every row in the given set (conflict or newer rows). Rows currently
-	 *  visible in the tree are verified immediately; rows hidden behind a collapsed folder
-	 *  are handed to the background queue so a large "Verify all" doesn't stall on files
-	 *  the user can't even see yet — see `prioritizeInQueue` for how expanding catches up. */
-	async function verifyRows(rows: { path: string }[]) {
-		if (!activePeer || rows.length === 0) return;
-		const visiblePaths = new Set(treeRows.filter((r) => r.kind === 'file').map((r) => r.path));
-		const visible = rows.filter((r) => visiblePaths.has(r.path));
-		const hidden = rows.filter((r) => !visiblePaths.has(r.path));
-		if (visible.length) {
-			await Promise.all(visible.map((r) => verifyRow(r.path)));
-			baseline = await getBaseline(activePeer.id);
-		}
-		if (hidden.length) enqueueBackgroundVerify(hidden.map((r) => r.path));
+		const freshBaseline = await getBaseline(activePeer.id);
+		const nextOverrides = new Map(overrides);
+		nextOverrides.delete(path);
+		patchPeerState(activePeer.id, { baseline: freshBaseline, overrides: nextOverrides });
 	}
 
 	// ─── Apply (pull) ────────────────────────────────────────────────────────────
@@ -378,11 +380,11 @@
 			}
 		}
 
-		// Re-scan local so the baseline records each written file's *actual*
-		// post-write metadata — OPFS always assigns a fresh "now" mtime on
-		// write, never the remote's original one, so pairing that with the
-		// remote entry from this pull is what lets both sides read back as
-		// unchanged next time (see syncDiff.ts / PeerSyncBaseline).
+		// Re-scan local so the baseline records each pulled file's actual
+		// post-write hash (writeFile doesn't hand it back) — pairing that with
+		// the remote entry from this pull is what lets both sides read back
+		// as unchanged next time (see syncDiff.ts / PeerSyncBaseline). Remote
+		// itself is untouched by a pull (v1 has no push), so no need to re-fetch it.
 		const freshLocal = await opfsSource.listTree();
 		const baselineUpserts: BaselineEntry[] = [];
 		for (const [path, remote] of pulledRemote) {
@@ -393,11 +395,10 @@
 		if (baselineUpserts.length) await updateBaseline(activePeer.id, baselineUpserts);
 		if (baselineRemovals.length) await removeBaselineEntries(activePeer.id, baselineRemovals);
 
-		overrides = new Map();
 		localEntries = freshLocal;
 		localLoaded = true;
-		fetchedTrysteroId = null; // re-triggers the remote-scan effect
-		baseline = await getBaseline(activePeer.id);
+		const freshBaseline = await getBaseline(activePeer.id);
+		patchPeerState(activePeer.id, { overrides: new Map(), baseline: freshBaseline });
 		applying = false;
 
 		if (failures.length) {
@@ -469,7 +470,7 @@
 			addChild(parent, dirRow);
 		}
 		// Unconditional flat list of file rows — independent of expand state, so
-		// verification/apply logic always sees every file, even inside collapsed folders.
+		// apply logic always sees every file, even inside collapsed folders.
 		const allFileRows: TreeRow[] = [];
 		for (const [path, { local, remote }] of byPath) {
 			const parent = path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '';
@@ -520,7 +521,7 @@
 	);
 	/** Visible rows, respecting collapsed folders — for rendering the tree only. */
 	let treeRows = $derived(treeBuild.rows);
-	/** Every file row, regardless of folder collapse state — for verification/apply logic. */
+	/** Every file row, regardless of folder collapse state — for apply logic. */
 	let allFileRows = $derived(treeBuild.allFileRows);
 
 	// ─── Per-file diff/preview ───────────────────────────────────────────────
@@ -648,13 +649,15 @@
 			localEntries = freshLocal;
 			const local = freshLocal.find((e) => e.path === path);
 			const remoteEntry = remoteEntries?.find((e) => e.path === path);
+			const patch: Partial<PeerSyncState> = {};
 			if (local && remoteEntry) {
 				await updateBaseline(activePeer.id, [{ path, local, remote: remoteEntry }]);
-				baseline = await getBaseline(activePeer.id);
+				patch.baseline = await getBaseline(activePeer.id);
 			}
-			const next = new Map(overrides);
-			next.delete(path);
-			overrides = next;
+			const nextOverrides = new Map(overrides);
+			nextOverrides.delete(path);
+			patch.overrides = nextOverrides;
+			patchPeerState(activePeer.id, patch);
 			Notifier.success(`${path}: merge applied.`);
 			closeDiffModal();
 		} catch (e) {
@@ -669,45 +672,15 @@
 	let remoteNewerRows = $derived(fileRows.filter((r) => r.status === 'remote-newer'));
 	let localNewerRows = $derived(fileRows.filter((r) => r.status === 'local-newer'));
 	let unchangedRows = $derived(fileRows.filter((r) => !r.status || r.status === 'unchanged'));
-	/** Rows with a remote counterpart to hash-compare against (pure local-only or pure remote-only files have nothing to verify). */
-	let verifiableLocalNewerRows = $derived(localNewerRows.filter((r) => r.remote));
-	let verifiableRemoteNewerRows = $derived(remoteNewerRows.filter((r) => r.remote));
-	/** Non-conflict rows whose differing metadata might still hide identical content — the "Newer" verify scope. */
-	let diffRows = $derived([...verifiableRemoteNewerRows, ...verifiableLocalNewerRows]);
-	/** Every row a bulk verify could act on, across all three scopes. */
-	let allVerifiableRows = $derived([...conflictRows, ...diffRows]);
 
 	let pullCount = $derived(fileRows.filter((r) => r.effectiveAction === 'pull').length);
 	let conflictCount = $derived(fileRows.filter((r) => r.effectiveAction === 'conflict').length);
 
-	/**
-	 * Scope for the top-level bulk "Verify" bar. Conflicts default because
-	 * they're usually few and each blocks a pull/skip decision — verifying
-	 * can resolve the decision outright. "Newer"/"All" scale with total
-	 * changed files: cheap to hash on a LAN, wasteful to hash over the
-	 * internet on a large book, so they're opt-in rather than default.
-	 */
-	let verifyScope = $state<'conflicts' | 'diffs' | 'all'>('conflicts');
-	let verifyTargetRows = $derived(
-		verifyScope === 'conflicts'
-			? conflictRows
-			: verifyScope === 'diffs'
-				? diffRows
-				: allVerifiableRows
-	);
-
 	function toggleDir(path: string) {
 		const next = new Set(expandedDirs);
-		const expanding = !next.has(path);
-		if (expanding) next.add(path);
-		else next.delete(path);
+		if (next.has(path)) next.delete(path);
+		else next.add(path);
 		expandedDirs = next;
-		if (expanding && backgroundVerifyQueue.length) {
-			// Newly-visible files under this folder jump the background queue —
-			// no point leaving them scanning last now that the user can see them.
-			const prefix = `${path}/`;
-			prioritizeInQueue(backgroundVerifyQueue.filter((p) => p.startsWith(prefix)));
-		}
 	}
 
 	// ─── Row-expand state, used by the "Compact" view mode ─────────────────────
@@ -851,21 +824,6 @@
 		{:else if row.status === 'local-newer'}
 			<span class="badge badge-ghost badge-sm">Skipped — local is ahead</span>
 		{/if}
-		{#if row.status === 'conflict' || row.status === 'remote-newer' || (row.status === 'local-newer' && row.remote)}
-			<button
-				type="button"
-				class="btn btn-xs btn-outline"
-				disabled={verifying.has(row.path)}
-				onclick={() => verifyRow(row.path)}
-			>
-				{#if verifying.has(row.path)}
-					<span class="loading loading-spinner loading-xs"></span>
-				{:else}
-					<ShieldCheckIcon class="h-3.5 w-3.5" />
-				{/if}
-				Verify
-			</button>
-		{/if}
 		{#if row.status && row.status !== 'unchanged'}
 			<button type="button" class="btn btn-xs btn-ghost" onclick={() => openDiffFor(row.path)}>
 				<GitCompareArrowsIcon class="h-3.5 w-3.5" />
@@ -885,6 +843,11 @@
 	<section class="flex-1 space-y-3 overflow-y-auto touch-pan-y p-4">
 		{#if !activePeer}
 			<!-- Peer selection -->
+			<p class="text-base-content/50 text-center text-xs">
+				{localLoaded
+					? `${localEntries.length} local file${localEntries.length === 1 ? '' : 's'} scanned`
+					: 'Scanning local files…'}
+			</p>
 			{#if !presenceReady}
 				<div class="flex justify-center p-8">
 					<span class="loading loading-spinner"></span>
@@ -904,6 +867,7 @@
 					<p class="mb-2 text-sm font-semibold opacity-70">Select a peer to sync with</p>
 					<ul class="space-y-2">
 						{#each onlineTrustedPeers as tp (tp.id)}
+							{@const counts = diffCountsFor(tp.id)}
 							<li>
 								<button
 									type="button"
@@ -912,6 +876,20 @@
 								>
 									<span class="status {statusClass(peerState(tp.id))} status-sm"></span>
 									<span class="flex-1 text-left">{tp.name}</span>
+									{#if counts === null}
+										<span class="loading loading-spinner loading-xs opacity-50"></span>
+									{:else if counts.conflict > 0 || counts.pull > 0}
+										{#if counts.conflict > 0}
+											<span class="badge badge-error badge-sm"
+												>{counts.conflict} conflict{counts.conflict === 1 ? '' : 's'}</span
+											>
+										{/if}
+										{#if counts.pull > 0}
+											<span class="badge badge-success badge-sm">{counts.pull} to pull</span>
+										{/if}
+									{:else}
+										<span class="badge badge-ghost badge-sm">synced</span>
+									{/if}
 								</button>
 							</li>
 						{/each}
@@ -924,60 +902,21 @@
 				<span class="status {statusClass(peerState(activePeer.id))} status-sm"></span>
 				<span class="opacity-60">Syncing with:</span>
 				<span class="flex-1 font-semibold">{activePeer.name}</span>
+				<button
+					class="btn btn-ghost btn-xs"
+					disabled={refreshing}
+					onclick={refreshAll}
+					title="Re-scan local files and re-check the peer"
+				>
+					{#if refreshing}
+						<span class="loading loading-spinner loading-xs"></span>
+					{:else}
+						<RefreshCwIcon class="h-3.5 w-3.5" />
+					{/if}
+					Refresh
+				</button>
 				<button class="btn btn-ghost btn-xs" onclick={changePeer}>Change</button>
 			</div>
-
-			<!-- Bulk verify — always visible; pick a scope, then hash-confirm every row in it in one go. -->
-			{#if remoteEntries && allVerifiableRows.length > 0}
-				<div class="rounded-box bg-base-200 flex flex-wrap items-center gap-2 p-2.5 text-sm">
-					<ShieldCheckIcon class="h-4 w-4 shrink-0 opacity-60" />
-					<div class="join">
-						<button
-							type="button"
-							class="btn btn-xs join-item {verifyScope === 'conflicts' ? 'btn-active' : ''}"
-							disabled={conflictRows.length === 0}
-							onclick={() => (verifyScope = 'conflicts')}
-						>
-							Conflicts ({conflictRows.length})
-						</button>
-						<button
-							type="button"
-							class="btn btn-xs join-item {verifyScope === 'diffs' ? 'btn-active' : ''}"
-							disabled={diffRows.length === 0}
-							onclick={() => (verifyScope = 'diffs')}
-						>
-							Newer ({diffRows.length})
-						</button>
-						<button
-							type="button"
-							class="btn btn-xs join-item {verifyScope === 'all' ? 'btn-active' : ''}"
-							onclick={() => (verifyScope = 'all')}
-						>
-							All ({allVerifiableRows.length})
-						</button>
-					</div>
-					<button
-						type="button"
-						class="btn btn-xs btn-outline ml-auto"
-						disabled={verifyTargetRows.length === 0 ||
-							verifyTargetRows.some((r) => verifying.has(r.path))}
-						onclick={() => verifyRows(verifyTargetRows)}
-					>
-						{#if verifyTargetRows.some((r) => verifying.has(r.path))}
-							<span class="loading loading-spinner loading-xs"></span>
-						{:else}
-							<ShieldCheckIcon class="h-3.5 w-3.5" />
-						{/if}
-						Verify {verifyTargetRows.length}
-					</button>
-					{#if backgroundVerifyQueue.length > 0 || backgroundVerifyRunning}
-						<span class="text-base-content/60 flex items-center gap-1.5 text-xs">
-							<span class="loading loading-spinner loading-xs"></span>
-							Scanning {backgroundVerifyQueue.length} more in background…
-						</span>
-					{/if}
-				</div>
-			{/if}
 
 			<!-- View-mode switcher — TEMPORARY, for side-by-side evaluation only. -->
 			<div class="join w-full">

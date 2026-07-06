@@ -1,8 +1,13 @@
 /*
 	Diff classification for the generic beancount peer-sync engine: compares a
 	local and remote SyncEntry scan against the last-synced baseline
-	(syncBaseline.ts) to classify each path. v1 is download-only, so the
-	'push' outcome from the project doc's Future section doesn't exist yet.
+	(syncBaseline.ts) to classify each path. Classification is content-hash
+	based, not filesystem-mtime based — a device's mtime is not a reliable
+	change signal across peers (clock skew, a resync rewriting
+	byte-identical content, editors touching a file without changing it), so
+	every scan hashes both sides and only a real content difference can ever
+	produce anything but 'unchanged'. v1 is download-only, so the 'push'
+	outcome from the project doc's Future section doesn't exist yet.
 	See doc/projects/2026-07-02_beancount-peer-sync.md.
 */
 import type { PeerSyncBaseline } from '$lib/data/model';
@@ -23,27 +28,38 @@ export interface DiffEntry {
 }
 
 /**
- * A side "changed" when its current metadata doesn't match *that side's*
- * half of the baseline recorded at the last sync — local and remote are
- * compared against separate baseline fields, never against each other's,
- * because two devices' filesystems assign independent mtimes to
- * byte-identical content (see PeerSyncBaseline's doc comment). A missing
- * baseline half (this path/side was never synced with this endpoint before)
- * counts as changed too — there's nothing to confirm it matches, so it
- * can't be reported unchanged. A side that no longer has the file, but did
- * at the last sync, also counts as changed (deletion).
+ * A side "changed" when its current hash doesn't match *that side's* half
+ * of the baseline recorded at the last sync — local and remote are compared
+ * against separate baseline halves (see PeerSyncBaseline's doc comment), not
+ * against each other's, because a manual merge can leave the two sides
+ * holding deliberately different, reconciled content. A missing baseline
+ * half (this path/side was never synced with this endpoint before) counts
+ * as changed too — there's nothing to confirm it matches, so it can't be
+ * reported unchanged. A side that no longer has the file, but did at the
+ * last sync, also counts as changed (deletion).
  */
-function changedSinceBaseline(
-	entry: SyncEntry | undefined,
-	baselineSize: number | undefined,
-	baselineModified: number | undefined
-): boolean {
-	if (!entry) return baselineSize !== undefined;
-	if (baselineSize === undefined) return true;
-	return entry.size !== baselineSize || entry.lastModified !== baselineModified;
+function changedSinceBaseline(entry: SyncEntry | undefined, baselineHash: string | undefined): boolean {
+	if (!entry) return baselineHash !== undefined;
+	if (baselineHash === undefined) return true;
+	return entry.hash !== baselineHash;
 }
 
-function classify(localChanged: boolean, remoteChanged: boolean): SyncStatus {
+/**
+ * Local and remote holding byte-identical content is always 'unchanged',
+ * regardless of baseline state — this is what used to require a manual
+ * "Verify" round trip; now every scan re-derives it for free from the hash
+ * already computed during listTree(). Only once the hashes actually differ
+ * does baseline history decide which side(s) diverged.
+ */
+function classify(
+	local: SyncEntry | undefined,
+	remote: SyncEntry | undefined,
+	baseline: PeerSyncBaseline | undefined
+): SyncStatus {
+	if (local && remote && local.hash === remote.hash) return 'unchanged';
+
+	const localChanged = changedSinceBaseline(local, baseline?.localHash);
+	const remoteChanged = changedSinceBaseline(remote, baseline?.remoteHash);
 	if (localChanged && remoteChanged) return 'conflict';
 	if (remoteChanged) return 'remote-newer';
 	if (localChanged) return 'local-newer';
@@ -58,8 +74,9 @@ function defaultActionFor(status: SyncStatus): SyncAction {
 
 /**
  * Classifies every path present locally and/or remotely against the given
- * endpoint's baseline. Metadata-only — never hashes; a 'conflict' row's
- * "Verify" action (hashFile on both sides) is a separate, explicit step.
+ * endpoint's baseline. Hash-based: identical content on both sides is
+ * always 'unchanged' outright; otherwise each side's hash is checked
+ * against its own baseline half to tell which side(s) actually diverged.
  */
 export function diffAgainstBaseline(
 	local: SyncEntry[],
@@ -72,11 +89,7 @@ export function diffAgainstBaseline(
 
 	const result: DiffEntry[] = [];
 	for (const [path, { local: localEntry, remote: remoteEntry }] of byPath) {
-		const base = baseline.get(path);
-		const status = classify(
-			changedSinceBaseline(localEntry, base?.localSize, base?.localModified),
-			changedSinceBaseline(remoteEntry, base?.remoteSize, base?.remoteModified)
-		);
+		const status = classify(localEntry, remoteEntry, baseline.get(path));
 		result.push({
 			path,
 			status,

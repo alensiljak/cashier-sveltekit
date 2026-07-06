@@ -72,6 +72,7 @@ It is implemented as a PWA using Svelte and DaisyUI frameworks.
 - **Unit tests**: Vitest — `npm run test:unit`
 - **E2E tests**: Playwright — `npm run test:e2e`
 - Run `npm run format` to format, `npm run lint` to lint, `npm run check` to type-check (svelte-check + TypeScript).
+- The user runs verification (`npm run verify` — lint, check, unit tests, e2e tests) themselves. Do not run full test suites, lint, or type-check after every edit; only run a narrowly-targeted check (e.g. one test file, `lsp diagnostics` on the file you touched) when you need to verify a specific change, and let the user run `npm run verify` for overall confidence. Remind the user to run the tests if the code change would require the verification.
 
 ### Code Intelligence (LSP)
 

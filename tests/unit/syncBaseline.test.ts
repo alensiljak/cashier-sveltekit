@@ -20,13 +20,13 @@ test('updateBaseline upserts rows readable back via getBaseline', async () => {
 	await updateBaseline(endpointId, [
 		{
 			path: 'a.beancount',
-			local: { path: 'a.beancount', size: 100, lastModified: 1000 },
-			remote: { path: 'a.beancount', size: 100, lastModified: 9000 }
+			local: { path: 'a.beancount', size: 100, lastModified: 1000, hash: 'hash-a-local' },
+			remote: { path: 'a.beancount', size: 100, lastModified: 9000, hash: 'hash-a-remote' }
 		},
 		{
 			path: 'b.beancount',
-			local: { path: 'b.beancount', size: 200, lastModified: 2000 },
-			remote: { path: 'b.beancount', size: 200, lastModified: 8000 }
+			local: { path: 'b.beancount', size: 200, lastModified: 2000, hash: 'hash-b-local' },
+			remote: { path: 'b.beancount', size: 200, lastModified: 8000, hash: 'hash-b-remote' }
 		}
 	]);
 
@@ -37,12 +37,11 @@ test('updateBaseline upserts rows readable back via getBaseline', async () => {
 	assert.ok(a, 'expected a.beancount to be present');
 	assert.equal(a!.endpointId, endpointId);
 	assert.equal(a!.path, 'a.beancount');
-	assert.equal(a!.localSize, 100);
-	assert.equal(a!.localModified, 1000);
-	// Recorded independently from the local side — a device's mtime for the
-	// synced content is never expected to equal the peer's mtime for it.
-	assert.equal(a!.remoteSize, 100);
-	assert.equal(a!.remoteModified, 9000);
+	assert.equal(a!.localHash, 'hash-a-local');
+	// Recorded independently from the local side — a device's content hash for
+	// the synced file is never expected to equal the peer's hash for it (that
+	// only happens once both sides truly hold identical bytes).
+	assert.equal(a!.remoteHash, 'hash-a-remote');
 	assert.isString(a!.syncedAt);
 	assert.isNotEmpty(a!.syncedAt);
 	assert.isFalse(Number.isNaN(new Date(a!.syncedAt).getTime()), 'syncedAt must parse as a Date');
@@ -55,15 +54,20 @@ test('getBaseline scopes strictly to the given endpointId', async () => {
 	await updateBaseline(endpointA, [
 		{
 			path: 'shared-name.beancount',
-			local: { path: 'shared-name.beancount', size: 1, lastModified: 1 },
-			remote: { path: 'shared-name.beancount', size: 1, lastModified: 2 }
+			local: { path: 'shared-name.beancount', size: 1, lastModified: 1, hash: 'hash-shared-local' },
+			remote: {
+				path: 'shared-name.beancount',
+				size: 1,
+				lastModified: 2,
+				hash: 'hash-shared-remote'
+			}
 		}
 	]);
 	await updateBaseline(endpointB, [
 		{
 			path: 'other.beancount',
-			local: { path: 'other.beancount', size: 2, lastModified: 2 },
-			remote: { path: 'other.beancount', size: 2, lastModified: 3 }
+			local: { path: 'other.beancount', size: 2, lastModified: 2, hash: 'hash-other-local' },
+			remote: { path: 'other.beancount', size: 2, lastModified: 3, hash: 'hash-other-remote' }
 		}
 	]);
 
@@ -88,15 +92,15 @@ test('updateBaseline overwrites an existing row for the same endpointId+path (up
 	await updateBaseline(endpointId, [
 		{
 			path: 'a.beancount',
-			local: { path: 'a.beancount', size: 100, lastModified: 1000 },
-			remote: { path: 'a.beancount', size: 100, lastModified: 1100 }
+			local: { path: 'a.beancount', size: 100, lastModified: 1000, hash: 'hash-v1-local' },
+			remote: { path: 'a.beancount', size: 100, lastModified: 1100, hash: 'hash-v1-remote' }
 		}
 	]);
 	await updateBaseline(endpointId, [
 		{
 			path: 'a.beancount',
-			local: { path: 'a.beancount', size: 999, lastModified: 5000 },
-			remote: { path: 'a.beancount', size: 999, lastModified: 5200 }
+			local: { path: 'a.beancount', size: 999, lastModified: 5000, hash: 'hash-v2-local' },
+			remote: { path: 'a.beancount', size: 999, lastModified: 5200, hash: 'hash-v2-remote' }
 		}
 	]);
 
@@ -105,10 +109,8 @@ test('updateBaseline overwrites an existing row for the same endpointId+path (up
 	assert.equal(baseline.size, 1, 'second update must overwrite, not duplicate, the row');
 	const row = baseline.get('a.beancount');
 	assert.ok(row);
-	assert.equal(row!.localSize, 999);
-	assert.equal(row!.localModified, 5000);
-	assert.equal(row!.remoteSize, 999);
-	assert.equal(row!.remoteModified, 5200);
+	assert.equal(row!.localHash, 'hash-v2-local');
+	assert.equal(row!.remoteHash, 'hash-v2-remote');
 });
 
 test('removeBaselineEntries deletes only the specified paths for that endpoint', async () => {
@@ -117,13 +119,13 @@ test('removeBaselineEntries deletes only the specified paths for that endpoint',
 	await updateBaseline(endpointId, [
 		{
 			path: 'keep.beancount',
-			local: { path: 'keep.beancount', size: 1, lastModified: 1 },
-			remote: { path: 'keep.beancount', size: 1, lastModified: 1 }
+			local: { path: 'keep.beancount', size: 1, lastModified: 1, hash: 'hash-keep-local' },
+			remote: { path: 'keep.beancount', size: 1, lastModified: 1, hash: 'hash-keep-remote' }
 		},
 		{
 			path: 'drop.beancount',
-			local: { path: 'drop.beancount', size: 2, lastModified: 2 },
-			remote: { path: 'drop.beancount', size: 2, lastModified: 2 }
+			local: { path: 'drop.beancount', size: 2, lastModified: 2, hash: 'hash-drop-local' },
+			remote: { path: 'drop.beancount', size: 2, lastModified: 2, hash: 'hash-drop-remote' }
 		}
 	]);
 
@@ -143,15 +145,15 @@ test('clearBaseline wipes every row for one endpoint, leaving another endpoint i
 	await updateBaseline(endpointA, [
 		{
 			path: 'x.beancount',
-			local: { path: 'x.beancount', size: 1, lastModified: 1 },
-			remote: { path: 'x.beancount', size: 1, lastModified: 1 }
+			local: { path: 'x.beancount', size: 1, lastModified: 1, hash: 'hash-x-local' },
+			remote: { path: 'x.beancount', size: 1, lastModified: 1, hash: 'hash-x-remote' }
 		}
 	]);
 	await updateBaseline(endpointB, [
 		{
 			path: 'y.beancount',
-			local: { path: 'y.beancount', size: 2, lastModified: 2 },
-			remote: { path: 'y.beancount', size: 2, lastModified: 2 }
+			local: { path: 'y.beancount', size: 2, lastModified: 2, hash: 'hash-y-local' },
+			remote: { path: 'y.beancount', size: 2, lastModified: 2, hash: 'hash-y-remote' }
 		}
 	]);
 

@@ -168,24 +168,22 @@ export class TrustedPeer {
 }
 
 /**
- * Last-synced file metadata for one path against one peer endpoint. Compared
+ * Last-synced content hash for one path against one peer endpoint. Compared
  * against a fresh SyncEntry scan (see src/lib/sync/syncDiff.ts) to classify
  * each path as unchanged / local-newer / remote-newer / conflict.
  * Keyed `[endpointId+path]` — one baseline per (peer, file), since a device
- * may sync with multiple peers. See doc/projects/2026-07-02_beancount-peer-sync.md.
+ * may sync with multiple peers.
  *
- * Local and remote metadata are recorded separately (not one shared
- * size/lastModified) because the two devices' filesystems assign
- * independent mtimes to byte-identical content — an OPFS write always gets
- * a fresh "now" timestamp, and a hash-verified match never touches either
- * file — so a single shared value could never equal both sides at once.
+ * Local and remote hashes are recorded independently (not one shared value)
+ * because a manual merge (DiffViewer's per-hunk pick) can leave the two
+ * sides holding deliberately different, reconciled content — the baseline
+ * then records what each side actually holds post-merge, not a single
+ * "they agree" hash. See doc/projects/2026-07-02_beancount-peer-sync.md.
  */
 export class PeerSyncBaseline {
 	endpointId: string = '';
 	path: string = '';
-	localSize: number = 0;
-	localModified: number = 0;
-	remoteSize: number = 0;
-	remoteModified: number = 0;
+	localHash: string = '';
+	remoteHash: string = '';
 	syncedAt: string = '';
 }

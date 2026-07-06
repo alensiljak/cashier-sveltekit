@@ -1,10 +1,10 @@
 /*
-	Dexie-backed baseline for peer sync: the file metadata (size/lastModified)
-	recorded as of the last successful sync with a given endpoint (peer). Diff
-	classification (syncDiff.ts) compares a fresh SyncEntry scan against this
-	baseline to detect what changed on each side since then. Keyed per
-	endpoint (not a singleton) since a device may sync with multiple peers.
-	See doc/projects/2026-07-02_beancount-peer-sync.md.
+	Dexie-backed baseline for peer sync: the content hash recorded as of the
+	last successful sync (or hash-confirmed match) with a given endpoint
+	(peer). Diff classification (syncDiff.ts) compares a fresh SyncEntry scan
+	against this baseline to detect what changed on each side since then.
+	Keyed per endpoint (not a singleton) since a device may sync with
+	multiple peers. See doc/projects/2026-07-02_beancount-peer-sync.md.
 */
 import db from '$lib/data/db';
 import { PeerSyncBaseline } from '$lib/data/model';
@@ -16,7 +16,7 @@ export async function getBaseline(endpointId: string): Promise<Map<string, PeerS
 	return new Map(rows.map((row: PeerSyncBaseline) => [row.path, row]));
 }
 
-/** A path's local + remote metadata snapshot as of the last confirmed sync (pull or hash-verify). */
+/** A path's local + remote content snapshot as of the last confirmed sync (pull, merge, or hash match). */
 export interface BaselineEntry {
 	path: string;
 	local: SyncEntry;
@@ -31,10 +31,8 @@ export async function updateBaseline(endpointId: string, entries: BaselineEntry[
 		Object.assign(new PeerSyncBaseline(), {
 			endpointId,
 			path: e.path,
-			localSize: e.local.size,
-			localModified: e.local.lastModified,
-			remoteSize: e.remote.size,
-			remoteModified: e.remote.lastModified,
+			localHash: e.local.hash,
+			remoteHash: e.remote.hash,
 			syncedAt
 		})
 	);
