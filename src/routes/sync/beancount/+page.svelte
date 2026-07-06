@@ -136,7 +136,13 @@
 		peerStates = new Map(
 			Array.from(peerStates, ([id, s]) => [
 				id,
-				{ ...s, remoteEntries: null, remoteLoading: false, remoteError: null, fetchedTrysteroId: null }
+				{
+					...s,
+					remoteEntries: null,
+					remoteLoading: false,
+					remoteError: null,
+					fetchedTrysteroId: null
+				}
 			])
 		);
 	}
@@ -227,12 +233,20 @@
 	async function refreshPeer(peerId: string, trysteroId: string) {
 		const source = sourceFor(peerId);
 		if (!source) return;
-		patchPeerState(peerId, { fetchedTrysteroId: trysteroId, remoteLoading: true, remoteError: null });
+		patchPeerState(peerId, {
+			fetchedTrysteroId: trysteroId,
+			remoteLoading: true,
+			remoteError: null
+		});
 		try {
 			const [remoteEntries, baseline] = await Promise.all([source.listTree(), getBaseline(peerId)]);
 			patchPeerState(peerId, { remoteEntries, baseline, remoteLoading: false });
 		} catch (e) {
-			patchPeerState(peerId, { remoteError: (e as Error).message, remoteEntries: null, remoteLoading: false });
+			patchPeerState(peerId, {
+				remoteError: (e as Error).message,
+				remoteEntries: null,
+				remoteLoading: false
+			});
 		}
 	}
 
@@ -291,7 +305,9 @@
 
 	/** Active peer's cached scan/baseline/overrides — read-only aliases matching
 	 *  the field names the rest of the page (and its template) already uses. */
-	let activeState = $derived(activePeerId ? (peerStates.get(activePeerId) ?? EMPTY_PEER_STATE) : EMPTY_PEER_STATE);
+	let activeState = $derived(
+		activePeerId ? (peerStates.get(activePeerId) ?? EMPTY_PEER_STATE) : EMPTY_PEER_STATE
+	);
 	let remoteEntries = $derived(activeState.remoteEntries);
 	let remoteLoading = $derived(activeState.remoteLoading);
 	let remoteError = $derived(activeState.remoteError);
@@ -800,7 +816,7 @@
 
 {#snippet rowActions(row: TreeRow)}
 	<div class="flex flex-wrap items-center gap-2">
-		{#if row.status === 'remote-newer' || row.status === 'conflict'}
+		{#if row.status === 'remote-newer' || row.status === 'conflict' || row.status === 'local-newer'}
 			<div class="join">
 				<button
 					type="button"
@@ -821,8 +837,6 @@
 					Skip
 				</button>
 			</div>
-		{:else if row.status === 'local-newer'}
-			<span class="badge badge-ghost badge-sm">Skipped — local is ahead</span>
 		{/if}
 		{#if row.status && row.status !== 'unchanged'}
 			<button type="button" class="btn btn-xs btn-ghost" onclick={() => openDiffFor(row.path)}>
@@ -1132,8 +1146,8 @@
 						<div class="collapse-arrow bg-info/10 rounded-box collapse">
 							<input type="checkbox" />
 							<div class="collapse-title min-h-0 py-2 text-sm font-semibold">
-								Local newer <span class="badge badge-info badge-sm">{localNewerRows.length}</span> — no
-								push in v1, always skipped
+								Local newer <span class="badge badge-info badge-sm">{localNewerRows.length}</span> — skipped
+								by default; no push in v1, but you can Pull to overwrite with the remote copy
 							</div>
 							<div class="collapse-content">
 								<ul class="flex flex-col gap-2 pt-1">

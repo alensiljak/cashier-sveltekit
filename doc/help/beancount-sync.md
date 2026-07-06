@@ -12,16 +12,14 @@ Select a trusted, online peer from the list. The page then scans your local file
 
 ## Reading the file list
 
-Each file shows its status compared to the last time you synced with this peer:
+Each file shows its status compared to the last time you synced with this peer. Every comparison — including whether the two sides are already byte-identical — is based on content hashes, never file timestamps, so clock skew or a resync that rewrites the same content can never produce a false status:
 
-- **Local newer** — you changed this file since the last sync; nothing to pull, never pushed in this version. If the peer still has a copy, you can **Verify** it in case the content actually matches.
-- **Remote newer** — the peer changed (or added) this file; default action is **Pull**. **Verify** first if you suspect the two sides only differ by timestamp.
-- **Conflict** — both sides changed since the last sync. Choose **Pull** to overwrite your copy, **Skip** to leave it, or tap **Verify** first.
-- No badge — unchanged since the last sync.
+- **Local newer** — you changed this file since the last sync; skipped by default, but you can still choose **Pull** to overwrite it with the peer's copy.
+- **Remote newer** — the peer changed (or added) this file; default action is **Pull**.
+- **Conflict** — both sides changed since the last sync. Choose **Pull** to overwrite your copy, or **Skip** to leave it.
+- No badge — unchanged since the last sync, including when both sides already hold identical content.
 
-**Verify** asks both devices to compute a checksum of the file's actual content without transferring it. If the checksums match, the file is marked synced without needing a pull or push; the badge disappears. If they differ, the status is unchanged. A bulk **Verify** bar near the top of the page lets you run this over every **Conflict**, every non-conflict **Newer** row, or **All** of them at once — pick whichever scope you need; per-file **Verify** buttons remain for one-off checks. Checksumming is cheap on a LAN but adds up over the internet on a large book, so start with the smallest scope that covers your case.
-
-**Preview** shows a line-by-line comparison between your copy and the peer's, when both sides have the file. If it turns out the two are already identical, a **Mark as identical** button appears there too — same effect as **Verify**, without a second round trip to hash what the preview already loaded.
+**Preview** shows a line-by-line comparison between your copy and the peer's, when both sides have the file. If it turns out the two are already identical, a **Mark as identical** button appears there too, fast-forwarding this file's synced baseline without waiting for the next scan.
 
 ## Applying changes
 
