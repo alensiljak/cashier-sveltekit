@@ -41,6 +41,9 @@
 	}
 
 	const months = buildMonths();
+	// initialKey is only meant to seed the initial selection (e.g. restored
+	// from a session store) — reading it here just once is intentional.
+	// svelte-ignore state_referenced_locally
 	let selectedKey = $state(months.some((m) => m.key === initialKey) ? initialKey! : months[0].key);
 
 	// months[0] is the current (newest) month; higher index = further back.

@@ -312,6 +312,17 @@
 		patchPeerState(activePeerId, { overrides: next });
 	}
 
+	/** Sets the DOM `indeterminate` property (not reflectable as a plain attribute) on a
+	 *  checkbox — used to show an unresolved conflict as neither checked nor unchecked. */
+	function indeterminateAction(node: HTMLInputElement, value: boolean) {
+		node.indeterminate = value;
+		return {
+			update(next: boolean) {
+				node.indeterminate = next;
+			}
+		};
+	}
+
 	// Only classify once we actually have a remote scan — an offline/not-yet-loaded
 	// peer must never be treated as "remote deleted everything".
 	let diffByPath = $derived.by(() => {
@@ -861,6 +872,26 @@
 	</div>
 {/snippet}
 
+{#snippet pullCheckbox(row: TreeRow)}
+	<input
+		type="checkbox"
+		class="checkbox checkbox-primary checkbox-sm shrink-0"
+		checked={row.effectiveAction === 'pull'}
+		use:indeterminateAction={row.effectiveAction === 'conflict'}
+		aria-label={`Pull ${row.name}`}
+		onchange={(e) => setAction(row.path, e.currentTarget.checked ? 'pull' : 'skip')}
+	/>
+{/snippet}
+
+{#snippet previewButton(row: TreeRow)}
+	{#if row.status && row.status !== 'unchanged'}
+		<button type="button" class="btn btn-xs btn-ghost" onclick={() => openDiffFor(row.path)}>
+			<GitCompareArrowsIcon class="h-3.5 w-3.5" />
+			Preview
+		</button>
+	{/if}
+{/snippet}
+
 <main class="flex h-full flex-col">
 	<Toolbar title="Beancount Sync" {menuItems}>
 		{#snippet actions()}
@@ -1026,6 +1057,9 @@
 											>{statusLabel(row.status)}</span
 										>
 									{/if}
+									{#if row.status === 'remote-newer' || row.status === 'conflict' || row.status === 'local-newer'}
+										{@render pullCheckbox(row)}
+									{/if}
 								</div>
 								<div class="mt-1 flex flex-col gap-0.5 pl-6 text-xs opacity-60">
 									<span>{metaLine(row.local, 'Local', '— missing')}</span>
@@ -1038,7 +1072,7 @@
 									>
 								</div>
 								{#if row.status && row.status !== 'unchanged'}
-									<div class="mt-2 pl-6">{@render rowActions(row)}</div>
+									<div class="mt-2 pl-6">{@render previewButton(row)}</div>
 								{/if}
 							</li>
 						{/if}
@@ -1053,25 +1087,27 @@
 						{:else}
 							{@const isOpen = expandedRows.has(row.path)}
 							<li>
-								<button
-									type="button"
-									class="flex w-full items-center gap-2 py-2 text-left"
-									style="padding-left: {row.depth * 1.25}rem"
-									onclick={() => toggleRowExpand(row.path)}
-								>
-									{#if isOpen}
-										<ChevronDownIcon class="h-3.5 w-3.5 shrink-0 opacity-40" />
-									{:else}
-										<ChevronRightIcon class="h-3.5 w-3.5 shrink-0 opacity-40" />
+								<div class="flex w-full items-center gap-2 py-2">
+									<button
+										type="button"
+										class="flex min-w-0 flex-1 items-center gap-2 text-left"
+										style="padding-left: {row.depth * 1.25}rem"
+										onclick={() => toggleRowExpand(row.path)}
+									>
+										{#if isOpen}
+											<ChevronDownIcon class="h-3.5 w-3.5 shrink-0 opacity-40" />
+										{:else}
+											<ChevronRightIcon class="h-3.5 w-3.5 shrink-0 opacity-40" />
+										{/if}
+										{#if row.status}
+											<span class="status {statusDotClass(row.status)} status-sm shrink-0"></span>
+										{/if}
+										<span class="font-mono text-sm truncate flex-1">{row.name}</span>
+									</button>
+									{#if row.status === 'remote-newer' || row.status === 'conflict' || row.status === 'local-newer'}
+										{@render pullCheckbox(row)}
 									{/if}
-									{#if row.status}
-										<span class="status {statusDotClass(row.status)} status-sm shrink-0"></span>
-									{/if}
-									<span class="font-mono text-sm truncate flex-1">{row.name}</span>
-									{#if row.effectiveAction === 'pull'}
-										<DownloadIcon class="h-3.5 w-3.5 shrink-0 opacity-50" />
-									{/if}
-								</button>
+								</div>
 								{#if isOpen}
 									<div
 										class="flex flex-col gap-2 pb-3 text-xs"
@@ -1091,7 +1127,7 @@
 											)}</span
 										>
 										{#if row.status && row.status !== 'unchanged'}
-											{@render rowActions(row)}
+											{@render previewButton(row)}
 										{/if}
 									</div>
 								{/if}
