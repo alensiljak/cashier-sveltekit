@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { desktopNavVisible, drawerState } from '$lib/data/mainStore';
 	import { page } from '$app/state';
+	import { peerConnection } from '$lib/sync/peerConnection.svelte';
 	// Icons
 	import {
 		CalendarClockIcon,
@@ -56,6 +57,18 @@
 
 <div class="bg-base-200 flex h-screen flex-col">
 	<div class="bg-primary relative w-full p-4">
+		{#if peerConnection.presence.isInRoom}
+			<a
+				href="/peer-sync"
+				class="btn btn-circle btn-ghost btn-xs absolute top-2 left-2 border border-white/20 bg-white/10 backdrop-blur-sm"
+				title="Connected to peer sync room"
+				aria-label="Connected to peer sync room"
+			>
+				<span
+					class="block h-2 w-2 rounded-full bg-green-400 shadow-[0_0_5px_1px_rgba(74,222,128,0.85)]"
+				></span>
+			</a>
+		{/if}
 		<button
 			class="btn btn-square btn-ghost absolute top-2 right-2 hidden rounded border-0 lg:inline-flex"
 			onclick={togglePin}

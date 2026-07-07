@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 	import {
 		FolderIcon,
 		FolderOpenIcon,
@@ -15,16 +15,13 @@
 		ChevronRightIcon,
 		FilterIcon
 	} from '@lucide/svelte';
-	import { PeerProtocol, PeerSource } from '$lib/sync/PeerSource';
+	import { PeerSource } from '$lib/sync/PeerSource';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import HelpButton from '$lib/help/HelpButton.svelte';
 	import Notifier from '$lib/utils/notifier';
-	import {
-		PeerPresence,
-		RELAY_STRATEGIES,
-		type RelayStrategy
-	} from '$lib/sync/peerPresence.svelte';
+	import { RELAY_STRATEGIES, type RelayStrategy } from '$lib/sync/peerPresence.svelte';
+	import { peerConnection } from '$lib/sync/peerConnection.svelte';
 	import { OpfsSource } from '$lib/sync/OpfsSource';
 	import { normalizeEol, type SyncEntry } from '$lib/sync/SyncSource';
 	import {
@@ -44,7 +41,7 @@
 
 	// ─── Peer selection & connection state ──────────────────────────────────────
 
-	const presence = new PeerPresence();
+	const presence = peerConnection.presence;
 	const opfsSource = new OpfsSource();
 	let presenceReady = $state(false);
 	// Grace window after joining the room during which an absent trusted peer
@@ -109,29 +106,16 @@
 		// starting it now means it's likely already done by the time a peer
 		// is chosen/connects, instead of waiting until then to begin.
 		void loadLocalTree();
-		await presence.init();
+		await peerConnection.ensureInit();
 		if (urlPeerId) activePeerId = urlPeerId;
 		presenceReady = true;
-		// Join unconditionally (mirrors peer-sync) — even with zero trusted peers
-		// recorded locally, joining lets a peer who *does* trust us discover this
-		// device. Gating this on `trustedPeers.length > 0` broke discovery whenever
-		// trust wasn't yet fully mutual.
-		await presence.join(presence.roomCode);
-		protocol = new PeerProtocol(presence, opfsSource);
 	});
 
-	/** Switches the signaling network. Reconnects a live room so the new strategy takes effect immediately. */
+	/** Switches the signaling network — delegates to the shared connection. */
 	async function selectStrategy(value: RelayStrategy) {
 		if (presence.strategy === value) return;
-		const wasInRoom = presence.isInRoom;
-		if (wasInRoom) await presence.leave();
-		await presence.setStrategy(value);
-		protocol = null;
+		await peerConnection.setStrategy(value);
 		peerSources.clear();
-		if (wasInRoom) {
-			await presence.join(presence.roomCode);
-			protocol = new PeerProtocol(presence, opfsSource);
-		}
 		// Peer set differs on the new network — force a refetch for everyone,
 		// but keep each peer's baseline/overrides (unaffected by the network).
 		peerStates = new Map(
@@ -160,8 +144,6 @@
 		const timer = setTimeout(() => (discoveryDone = true), 15_000);
 		return () => clearTimeout(timer);
 	});
-
-	onDestroy(() => presence.leave());
 
 	// ─── File listing (local + remote) ──────────────────────────────────────────
 
@@ -216,13 +198,12 @@
 	/** Not `$state` — a plain instance cache keyed by peer id. Cheap: each PeerSource
 	 *  just delegates to the shared `protocol`, so this never re-registers trystero actions. */
 	const peerSources = new Map<string, PeerSource>();
-	let protocol = $state<PeerProtocol | null>(null);
 
 	function sourceFor(peerId: string): PeerSource | null {
-		if (!protocol) return null;
+		if (!peerConnection.protocol) return null;
 		let source = peerSources.get(peerId);
 		if (!source) {
-			source = new PeerSource(presence, protocol, peerId);
+			source = new PeerSource(presence, peerConnection.protocol, peerId);
 			peerSources.set(peerId, source);
 		}
 		return source;
@@ -252,7 +233,7 @@
 	}
 
 	$effect(() => {
-		if (!protocol) return;
+		if (!peerConnection.protocol) return;
 		for (const tp of onlineTrustedPeers) {
 			const trysteroId = presence.onlineTrysteroId(tp.id);
 			if (!trysteroId) continue;
@@ -903,6 +884,11 @@
 				<div class="rounded-box bg-base-200 space-y-3 p-4 text-center text-sm">
 					<p class="opacity-70">No peers configured yet.</p>
 					<a href="/peer-sync" class="btn btn-primary btn-sm">Set Up Peer Sync</a>
+				</div>
+			{:else if !presence.isInRoom}
+				<div class="rounded-box bg-base-200 space-y-3 p-4 text-center text-sm">
+					<p class="opacity-70">Not connected to the peer sync room.</p>
+					<a href="/peer-sync" class="btn btn-primary btn-sm">Connect via Peer Sync</a>
 				</div>
 			{:else if onlineTrustedPeers.length === 0}
 				<div class="rounded-box bg-base-200 space-y-2 p-4 text-center text-sm">

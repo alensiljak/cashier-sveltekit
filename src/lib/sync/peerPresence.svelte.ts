@@ -3,13 +3,14 @@
 
 	Handles device identity, room join/leave, the `hello` handshake (peer
 	discovery + pairing-code computation), and trust bookkeeping. This is the
-	"pure identity/pairing" surface that `peer-sync/+page.svelte` owns and that
-	`sync/beancount/+page.svelte` also needs (to know which trusted peer, if
-	any, is currently reachable) — kept in one place so both stay in sync
-	instead of drifting apart.
+	"pure identity/pairing" surface consumed through the singleton in
+	peerConnection.svelte.ts — both `peer-sync/+page.svelte` and
+	`sync/beancount/+page.svelte` share ONE instance so the room (and its
+	discovered peers) stays joined across navigation between the two pages
+	instead of each page joining/leaving its own copy.
 
-	Each consumer creates its own instance (one trystero room per mounted
-	page) and calls `leave()` on unmount.
+	Call `leave()` only to actually disconnect (e.g. the Connect toggle) —
+	never on unmount, since the room is meant to outlive any single page.
 */
 import type {
 	Room,

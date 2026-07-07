@@ -1,10 +1,8 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
-	import type { MessageAction } from '@trystero-p2p/core';
+	import { onMount } from 'svelte';
 	import DiffViewer from '$lib/components/DiffViewer.svelte';
-	import { settings } from '$lib/settings';
 	import db from '$lib/data/db';
-	import { readFile, saveFile } from '$lib/utils/opfslib';
+	import { saveFile } from '$lib/utils/opfslib';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import HelpButton from '$lib/help/HelpButton.svelte';
@@ -12,19 +10,13 @@
 	import Notifier from '$lib/utils/notifier';
 	import { GitCompareArrowsIcon, EyeIcon, DownloadIcon, Check } from '@lucide/svelte';
 	import {
-		PeerPresence,
 		RELAY_STRATEGIES,
 		type ActivePeer,
 		type RelayStrategy
 	} from '$lib/sync/peerPresence.svelte';
+	import { peerConnection, getLocalData, type RemoteData } from '$lib/sync/peerConnection.svelte';
 
 	// ─── Types ───────────────────────────────────────────────────────────────────
-	interface RemoteData {
-		bean: string | null;
-		settings: string | null;
-		scheduled: string | null;
-	}
-
 	type PreviewSection = { filename: string; content: string };
 
 	/**
@@ -35,32 +27,17 @@
 	 */
 	type RawDiffSection = { filename: string; local: string; remote: string; mergeable: boolean };
 
-	// Message types for sync protocol
-	type SyncRequestMsg = { requestId: string; files: string[] };
-	// Index signature required so the type satisfies DataPayload's { [key: string]: JsonValue } branch
-	type SyncResponseMsg = {
-		requestId: string;
-		bean: string | null;
-		settings: string | null;
-		scheduled: string | null;
-		[key: string]: string | null;
-	};
-
 	// ─── Presence (identity, room, peers, trust) ───────────────────────────────
-
-	const presence = new PeerPresence();
+	// Shared singleton (see peerConnection.svelte.ts) — the room stays joined
+	// across navigation; only the Connect toggle below or leaving the app
+	// disconnects it.
+	const presence = peerConnection.presence;
 	let editingName = $state(false);
 	let nameInput = $state('');
 	let editingRoom = $state(false);
 	let roomInput = $state('cashier');
 	let configExpanded = $state(true);
-
-	let syncRequestAction: MessageAction<SyncRequestMsg> | null = null;
-	let syncResponseAction: MessageAction<SyncResponseMsg> | null = null;
-	const pendingRequests = new Map<
-		string,
-		{ resolve: (d: RemoteData) => void; reject: (e: Error) => void }
-	>();
+	let connecting = $state(false);
 
 	// ─── Sync UI ─────────────────────────────────────────────────────────────────
 
@@ -108,20 +85,6 @@
 	let diffSections = $state<RawDiffSection[]>([]);
 	let previewSections = $state<PreviewSection[]>([]);
 
-	// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-	async function getLocalData(files: string[]): Promise<RemoteData> {
-		return {
-			bean: files.includes('bean') ? ((await readFile('cashier.bean')) ?? '') : null,
-			settings: files.includes('settings')
-				? JSON.stringify(await settings.getAll(), null, 2)
-				: null,
-			scheduled: files.includes('scheduled')
-				? JSON.stringify(await db.scheduled.toArray(), null, 2)
-				: null
-		};
-	}
-
 	function formatDate(iso: string | undefined = undefined): string {
 		if (!iso) return '—';
 		return new Date(iso).toLocaleString();
@@ -130,15 +93,12 @@
 	// ─── Mount ───────────────────────────────────────────────────────────────────
 
 	onMount(async () => {
-		await presence.init();
+		await peerConnection.ensureInit();
 		nameInput = presence.myName;
 		roomInput = presence.roomCode;
 
 		// Auto-collapse config if already configured
 		if (presence.myName !== 'My Device' && presence.roomCode) configExpanded = false;
-
-		// Auto-join saved (or default) room
-		await joinPeerRoom(presence.roomCode);
 	});
 
 	// ─── Identity ────────────────────────────────────────────────────────────────
@@ -166,51 +126,43 @@
 
 	async function joinPeerRoom(code: string) {
 		if (!code.trim() || presence.isInRoom) return;
+		connecting = true;
 		try {
-			await presence.join(code);
-			syncRequestAction = presence.makeAction<SyncRequestMsg>('sync-request');
-			syncResponseAction = presence.makeAction<SyncResponseMsg>('sync-response');
-
-			// Respond to sync requests from trusted peers
-			syncRequestAction.onMessage = async ({ requestId, files }, { peerId: fromId }) => {
-				if (!presence.peersMap[fromId]?.isTrusted) return;
-				const data = await getLocalData(files);
-				syncResponseAction!.send({ requestId, ...data }, { target: fromId });
-			};
-
-			// Resolve pending request promises
-			syncResponseAction.onMessage = ({ requestId, bean, settings: s, scheduled }) => {
-				const pending = pendingRequests.get(requestId);
-				if (pending) {
-					pending.resolve({ bean, settings: s, scheduled });
-					pendingRequests.delete(requestId);
-				}
-			};
-
+			await peerConnection.connect(code);
 			configExpanded = false;
-			Notifier.success('Joined room');
+			Notifier.success('Connected');
 		} catch (e) {
-			Notifier.error('Failed to join room: ' + (e as Error).message);
+			Notifier.error('Failed to connect: ' + (e as Error).message);
+		} finally {
+			connecting = false;
 		}
 	}
 
 	async function leaveRoom() {
-		await presence.leave();
-		syncRequestAction = null;
-		syncResponseAction = null;
-		syncTargetId = null;
-		Notifier.info('Left room');
+		connecting = true;
+		try {
+			await peerConnection.disconnect();
+			syncTargetId = null;
+			Notifier.info('Disconnected');
+		} finally {
+			connecting = false;
+		}
+	}
+
+	/** Slider at the top of the page — the only way to connect/disconnect from this page. */
+	async function toggleConnection() {
+		if (presence.isInRoom) {
+			await leaveRoom();
+		} else {
+			await joinPeerRoom(presence.roomCode);
+		}
 	}
 
 	// ─── Relay strategy ──────────────────────────────────────────────────────────
 
 	/** Switches the signaling network. Reconnects a live room so the new strategy takes effect immediately. */
 	async function selectStrategy(value: RelayStrategy) {
-		if (presence.strategy === value) return;
-		const wasInRoom = presence.isInRoom;
-		if (wasInRoom) await leaveRoom();
-		await presence.setStrategy(value);
-		if (wasInRoom) await joinPeerRoom(presence.roomCode);
+		await peerConnection.setStrategy(value);
 	}
 
 	// ─── Trust ───────────────────────────────────────────────────────────────────
@@ -228,19 +180,9 @@
 
 	// ─── Sync actions ─────────────────────────────────────────────────────────────
 
-	async function fetchRemoteData(files: string[]): Promise<RemoteData> {
-		if (!syncTargetId || !syncRequestAction) throw new Error('No peer selected');
-		return new Promise((resolve, reject) => {
-			const requestId = crypto.randomUUID();
-			pendingRequests.set(requestId, { resolve, reject });
-			syncRequestAction!.send({ requestId, files }, { target: syncTargetId! });
-			setTimeout(() => {
-				if (pendingRequests.has(requestId)) {
-					pendingRequests.delete(requestId);
-					reject(new Error('Request timed out after 30s'));
-				}
-			}, 30_000);
-		});
+	function fetchRemoteData(files: string[]): Promise<RemoteData> {
+		if (!syncTargetId) return Promise.reject(new Error('No peer selected'));
+		return peerConnection.fetchRemoteData(syncTargetId, files);
 	}
 
 	async function openPreview() {
@@ -348,10 +290,6 @@
 			applyingCashierMerge = false;
 		}
 	}
-
-	onDestroy(() => {
-		presence.leave();
-	});
 </script>
 
 {#snippet menuItems()}
@@ -371,6 +309,37 @@
 		{/snippet}
 	</Toolbar>
 	<section class="flex-1 space-y-3 overflow-y-auto touch-pan-y p-4">
+		<!-- Connect toggle — the only way to join/leave the room from this page.
+		     Stays connected across navigation to other pages; only this toggle
+		     or leaving the app disconnects. -->
+		<div class="card bg-base-200 shadow-sm">
+			<div class="card-body flex-row items-center justify-between gap-3 p-4">
+				<div>
+					<p class="font-semibold">Connect</p>
+					<p class="text-xs opacity-60">
+						{#if connecting}
+							{presence.isInRoom ? 'Disconnecting…' : 'Connecting…'}
+						{:else if presence.isInRoom}
+							Connected — stays active while you browse other pages
+						{:else}
+							Not connected
+						{/if}
+					</p>
+				</div>
+				{#if connecting}
+					<span class="loading loading-spinner loading-sm"></span>
+				{:else}
+					<input
+						type="checkbox"
+						class="toggle toggle-success"
+						checked={presence.isInRoom}
+						aria-label={presence.isInRoom ? 'Disconnect' : 'Connect'}
+						onchange={toggleConnection}
+					/>
+				{/if}
+			</div>
+		</div>
+
 		<!-- Config collapse -->
 		<div class="collapse collapse-arrow bg-base-200 rounded-box">
 			<input type="checkbox" bind:checked={configExpanded} />

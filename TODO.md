@@ -9,7 +9,7 @@ None at the moment. Regular ongoing maintenance.
 - [ ] research storing the configuration in OPFS, as a TOML file
 - [ ] setting for the cut-off date for the payees. Only include payees in transctions made since that date.
 - [ ] savings goals
-- [ ] currency calculator
+- [x] currency calculator
 - [ ] transaction import
 - [ ] price download
 
@@ -18,8 +18,8 @@ None at the moment. Regular ongoing maintenance.
 - [x] voice entry, Web Speech API + NLP rule engine.
 - [ ] add a home screen shortcut to /quick-add page
 - [ ] Drafts. User speaks / types a narrative. Creates a transaction later.
-- [ ] read the last transaction from the ledger, not special table
-- [ ] list multiple last transactions, to choose from
+- [x] read the last transaction from the ledger, not special table
+- [x] list multiple last transactions, to choose from
 
 ## Onboarding
 
