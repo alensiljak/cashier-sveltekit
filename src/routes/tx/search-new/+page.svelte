@@ -208,11 +208,17 @@
 			clone.payee = origPayee;
 			clone.note = origNarration;
 			clone.flag = template.flag ?? '*';
-			clone.postings = postings.map((p) => {
+			// Leave the last posting's amount elided (auto-balance) instead of
+			// carrying over its historical number. Otherwise, changing the amount
+			// on any other posting leaves this one stale and unbalanced, forcing
+			// the user to also clear it manually.
+			clone.postings = postings.map((p, idx) => {
 				const posting = new Posting();
 				posting.account = p.account;
-				posting.amount = p.amount;
 				posting.currency = p.currency;
+				if (idx < postings.length - 1) {
+					posting.amount = p.amount;
+				}
 				return posting;
 			});
 
