@@ -38,7 +38,10 @@ export interface DiffEntry {
  * reported unchanged. A side that no longer has the file, but did at the
  * last sync, also counts as changed (deletion).
  */
-function changedSinceBaseline(entry: SyncEntry | undefined, baselineHash: string | undefined): boolean {
+function changedSinceBaseline(
+	entry: SyncEntry | undefined,
+	baselineHash: string | undefined
+): boolean {
 	if (!entry) return baselineHash !== undefined;
 	if (baselineHash === undefined) return true;
 	return entry.hash !== baselineHash;
