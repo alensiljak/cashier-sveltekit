@@ -12,7 +12,8 @@
 		RefreshCwIcon,
 		GitCompareArrowsIcon,
 		ChevronDownIcon,
-		ChevronRightIcon
+		ChevronRightIcon,
+		FilterIcon
 	} from '@lucide/svelte';
 	import { PeerProtocol, PeerSource } from '$lib/sync/PeerSource';
 	import Toolbar from '$lib/components/Toolbar.svelte';
@@ -447,12 +448,22 @@
 	/** Paths the user has explicitly expanded — folders default to collapsed. */
 	let expandedDirs = $state(new Set<string>());
 
+	/** Toolbar-menu switch: hide unchanged files (and any directory left with
+	 *  no differing descendant), so only the files that need a sync decision
+	 *  remain — still nested under their real folder path. */
+	let showDiffsOnly = $state(false);
+
+	function toggleShowDiffsOnly() {
+		showDiffsOnly = !showDiffsOnly;
+	}
+
 	function buildTree(
 		localList: SyncEntry[],
 		remoteList: SyncEntry[],
 		expandedPaths: Set<string>,
 		diffs: Map<string, DiffEntry>,
-		userOverrides: Map<string, SyncAction>
+		userOverrides: Map<string, SyncAction>,
+		diffsOnly: boolean
 	): { rows: TreeRow[]; allFileRows: TreeRow[] } {
 		const byPath = new Map<string, { local?: SyncEntry; remote?: SyncEntry }>();
 		for (const e of localList) byPath.set(e.path, { ...byPath.get(e.path), local: e });
@@ -515,14 +526,30 @@
 				}
 			}
 		}
-
 		// Visible rows only — walk stops descending into collapsed directories,
-		// so this is for rendering the tree, never for bulk operations.
+		// so this is for rendering the tree, never for bulk operations. When
+		// `diffsOnly` is set, unchanged files and diff-free directories are
+		// dropped, and any directory that does have a differing descendant is
+		// forced open — otherwise its diffs would stay hidden behind a
+		// collapsed folder the user never had a reason to expand.
+		if (diffsOnly) {
+			for (const dirRow of dirRowByPath.values()) {
+				if (dirRow.diffCount) dirRow.expanded = true;
+			}
+		}
 		const rows: TreeRow[] = [];
 		const walk = (parent: string) => {
-			const list = (childrenOf.get(parent) ?? []).sort((a, b) =>
-				a.kind !== b.kind ? (a.kind === 'directory' ? -1 : 1) : a.name.localeCompare(b.name)
-			);
+			const list = (childrenOf.get(parent) ?? [])
+				.filter((row) =>
+					!diffsOnly
+						? true
+						: row.kind === 'directory'
+							? !!row.diffCount
+							: !!row.status && row.status !== 'unchanged'
+				)
+				.sort((a, b) =>
+					a.kind !== b.kind ? (a.kind === 'directory' ? -1 : 1) : a.name.localeCompare(b.name)
+				);
 			for (const row of list) {
 				rows.push(row);
 				if (row.kind === 'directory' && row.expanded) walk(row.path);
@@ -533,7 +560,7 @@
 	}
 
 	let treeBuild = $derived(
-		buildTree(localEntries, remoteEntries ?? [], expandedDirs, diffByPath, overrides)
+		buildTree(localEntries, remoteEntries ?? [], expandedDirs, diffByPath, overrides, showDiffsOnly)
 	);
 	/** Visible rows, respecting collapsed folders — for rendering the tree only. */
 	let treeRows = $derived(treeBuild.rows);
@@ -772,6 +799,12 @@
 </script>
 
 {#snippet menuItems()}
+	<ToolbarMenuItem
+		text={showDiffsOnly ? 'Show all files' : 'Show differences only'}
+		Icon={FilterIcon}
+		iconClass={showDiffsOnly ? 'text-primary' : ''}
+		onclick={toggleShowDiffsOnly}
+	/>
 	{#each RELAY_STRATEGIES as s (s.value)}
 		<ToolbarMenuItem
 			text={s.label}
