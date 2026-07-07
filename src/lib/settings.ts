@@ -23,6 +23,10 @@ export class SelectionModeMetadata {
 
 	// Initial value to populate the calculator with
 	initialValue?: number;
+
+	// Restrict the account picker (/accounts) to names starting with this
+	// prefix, e.g. 'Expenses:' for the Budget category picker.
+	accountFilterPrefix?: string;
 }
 
 export const Constants = {
@@ -43,6 +47,12 @@ export const defaultAccountGroups: AccountGroup[] = [
 	{ title: 'Credit Cards', accounts: [] },
 	{ title: 'Loans', accounts: [] }
 ];
+
+/** A single budgeted category: an account (and its descendants) plus a monthly target amount, in the default currency. */
+export interface BudgetCategory {
+	account: string;
+	amount: number;
+}
 
 /** Settings shared across all devices (exported/importable). */
 export const SettingKeys = {
@@ -79,7 +89,9 @@ export const SettingKeys = {
 	// import book file spec (same across all devices)
 	importBookFileSpec: 'importBookFileSpec',
 	// Expenses report filter
-	expensesHiddenAccounts: 'expenses.hiddenAccounts'
+	expensesHiddenAccounts: 'expenses.hiddenAccounts',
+	// Budget category definitions (monthly targets)
+	budgetDefinition: 'budget.definition'
 };
 
 /** Settings specific to this device (not exported). */

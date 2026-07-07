@@ -28,6 +28,7 @@
 		MicIcon,
 		CoinsIcon,
 		ListTreeIcon,
+		PiggyBankIcon,
 		ShieldCheckIcon,
 		CloudUploadIcon,
 		WifiIcon,
@@ -178,14 +179,14 @@
 						</li>
 						<li>
 							<a
-								href="/search"
-								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/search'
+								href="/budget"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/budget'
 									? 'active bg-secondary text-secondary-content'
 									: ''}"
 								onclick={closeDrawer}
 							>
-								<SearchIcon />
-								<span>Search</span>
+								<PiggyBankIcon />
+								<span>Budget</span>
 							</a>
 						</li>
 						<li>
@@ -426,6 +427,18 @@
 							>
 								<CoinsIcon />
 								<span>Currency Converter</span>
+							</a>
+						</li>
+						<li>
+							<a
+								href="/search"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/search'
+									? 'active bg-secondary text-secondary-content'
+									: ''}"
+								onclick={closeDrawer}
+							>
+								<SearchIcon />
+								<span>Search</span>
 							</a>
 						</li>
 						<li>

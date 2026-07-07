@@ -57,6 +57,10 @@ export const desktopNavVisible: Writable<boolean> = createDesktopNavVisibleStore
 // Full-text search box value on /search — kept for the session only (module
 // state, not persisted) so navigating to a result and back leaves it intact.
 export const SearchTermStore: Writable<string> = writable('');
+// Selected month key on /budget (e.g. '2026-07') — kept for the session only
+// (module state, not persisted) so navigating to a transaction search result
+// and back leaves the previously selected month intact.
+export const BudgetSelectedMonthStore: Writable<string | undefined> = writable(undefined);
 
 export interface PendingSettings {
 	currency?: string;

@@ -31,11 +31,14 @@
 	}
 
 	const filteredAccounts: Account[] = $derived.by(() => {
-		if (!searchTerm) return allAccounts;
+		const prefix = $selectionMetadata?.accountFilterPrefix;
+		const base = prefix ? allAccounts.filter((item) => item.name?.startsWith(prefix)) : allAccounts;
+
+		if (!searchTerm) return base;
 
 		const search = new ListSearch();
 		const regex = search.getRegex(searchTerm);
-		return allAccounts.filter((item) => regex.test(item.name ?? ''));
+		return base.filter((item) => regex.test(item.name ?? ''));
 	});
 
 	/**
@@ -77,7 +80,7 @@
 </script>
 
 <main class="flex flex-col h-full">
-	<Toolbar title="Accounts">
+	<Toolbar title={$selectionMetadata?.accountFilterPrefix ? 'Select Category' : 'Accounts'}>
 		{#snippet actions()}
 			<HelpButton topic="accounts" />
 		{/snippet}
