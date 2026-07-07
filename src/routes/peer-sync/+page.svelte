@@ -9,13 +9,18 @@
 	import HelpButton from '$lib/help/HelpButton.svelte';
 	import { Setting, ScheduledTransaction } from '$lib/data/model';
 	import Notifier from '$lib/utils/notifier';
-	import { GitCompareArrowsIcon, EyeIcon, DownloadIcon, Check } from '@lucide/svelte';
+	import { GitCompareArrowsIcon, EyeIcon, DownloadIcon, Check, RefreshCwIcon } from '@lucide/svelte';
 	import {
 		RELAY_STRATEGIES,
 		type ActivePeer,
 		type RelayStrategy
 	} from '$lib/sync/peerPresence.svelte';
-	import { peerConnection, getLocalData, type RemoteData } from '$lib/sync/peerConnection.svelte';
+	import {
+		peerConnection,
+		getLocalData,
+		getLocalHashes,
+		type RemoteData
+	} from '$lib/sync/peerConnection.svelte';
 
 	// ─── Types ───────────────────────────────────────────────────────────────────
 	type PreviewSection = { filename: string; content: string };
@@ -84,6 +89,58 @@
 	$effect(() => {
 		if (syncTargetId && !presence.peersMap[syncTargetId]) syncTargetId = null;
 	});
+
+	// ─── Item hash status (same/different vs peer) ────────────────────────────
+	// Exchanged eagerly as soon as a peer is selected — cheap SHA-256 digests
+	// only (peerConnection.ts's `sync-hash` protocol), never full content — so
+	// the panel shows which items actually differ before Preview/Diff/Pull
+	// pulls anything across the wire. Mirrors how /sync/beancount hashes its
+	// tree scan immediately rather than waiting for an explicit action.
+	type HashStatus = 'checking' | 'same' | 'different' | 'error';
+	const ALL_ITEMS = ['bean', 'settings', 'scheduled'];
+	let hashStatus = $state<Record<'bean' | 'settings' | 'scheduled', HashStatus | null>>({
+		bean: null,
+		settings: null,
+		scheduled: null
+	});
+
+	$effect(() => {
+		const targetId = syncTargetId;
+		if (!targetId) {
+			hashStatus = { bean: null, settings: null, scheduled: null };
+			return;
+		}
+		checkHashes(targetId);
+	});
+
+	function itemHashStatus(local: string | null, remote: string | null): HashStatus {
+		if (local === null || remote === null) return 'error';
+		return local === remote ? 'same' : 'different';
+	}
+
+	async function checkHashes(targetId: string) {
+		hashStatus = { bean: 'checking', settings: 'checking', scheduled: 'checking' };
+		try {
+			const [local, remote] = await Promise.all([
+				getLocalHashes(ALL_ITEMS),
+				peerConnection.fetchRemoteHashes(targetId, ALL_ITEMS)
+			]);
+			if (targetId !== syncTargetId) return; // stale — user switched peers meanwhile
+			hashStatus = {
+				bean: itemHashStatus(local.bean, remote.bean),
+				settings: itemHashStatus(local.settings, remote.settings),
+				scheduled: itemHashStatus(local.scheduled, remote.scheduled)
+			};
+		} catch {
+			if (targetId !== syncTargetId) return;
+			hashStatus = { bean: 'error', settings: 'error', scheduled: 'error' };
+		}
+	}
+
+	/** Re-checks item status after a local write (pull/merge) that may have changed what's local. */
+	function refreshHashesIfSelected() {
+		if (syncTargetId) checkHashes(syncTargetId);
+	}
 
 	let includeCashierBean = $state(false);
 	let includeSettings = $state(false);
@@ -304,6 +361,7 @@
 				await db.scheduled.bulkPut(entries);
 				Notifier.success('Scheduled transactions updated');
 			}
+			refreshHashesIfSelected();
 		} catch (e) {
 			Notifier.error('Pull failed: ' + (e as Error).message);
 		} finally {
@@ -320,6 +378,7 @@
 			await saveFile('cashier.bean', mergedContent);
 			Notifier.success('cashier.bean: merge applied.');
 			showDiff = false;
+			refreshHashesIfSelected();
 		} catch (e) {
 			Notifier.error(`Merge failed: ${(e as Error).message}`);
 		} finally {
@@ -337,6 +396,7 @@
 			await db.settings.bulkPut(merged.map((s) => new Setting(s.key, s.value)));
 			Notifier.success('Settings: merge applied.');
 			showDiff = false;
+			refreshHashesIfSelected();
 		} catch (e) {
 			Notifier.error(`Merge failed: ${(e as Error).message}`);
 		} finally {
@@ -366,6 +426,7 @@
 			await db.scheduled.bulkPut(rows);
 			Notifier.success('Scheduled transactions: merge applied.');
 			showDiff = false;
+			refreshHashesIfSelected();
 		} catch (e) {
 			Notifier.error(`Merge failed: ${(e as Error).message}`);
 		} finally {
@@ -382,6 +443,20 @@
 			onclick={() => selectStrategy(s.value)}
 		/>
 	{/each}
+{/snippet}
+
+{#snippet hashBadge(status: HashStatus | null)}
+	{#if status === 'checking'}
+		<span class="loading loading-spinner loading-xs opacity-60" aria-label="Checking…"></span>
+	{:else if status === 'same'}
+		<span class="badge badge-success badge-xs">Same</span>
+	{:else if status === 'different'}
+		<span class="badge badge-warning badge-xs">Different</span>
+	{:else if status === 'error'}
+		<span class="badge badge-ghost badge-xs" title="Could not compare (peer offline or unreachable)"
+			>?</span
+		>
+	{/if}
 {/snippet}
 
 <main class="flex h-full flex-col">
@@ -566,7 +641,18 @@
 		{#if syncTarget}
 			<div class="card bg-base-200 shadow-sm">
 				<div class="card-body p-4">
-					<h2 class="card-title text-sm">Sync from "{syncTarget.name}"</h2>
+					<div class="flex items-center justify-between gap-2">
+						<h2 class="card-title text-sm">Sync from "{syncTarget.name}"</h2>
+						<button
+							class="btn btn-ghost btn-xs"
+							aria-label="Refresh comparison"
+							title="Refresh comparison"
+							disabled={hashStatus.bean === 'checking'}
+							onclick={refreshHashesIfSelected}
+						>
+							<RefreshCwIcon size={14} class={hashStatus.bean === 'checking' ? 'animate-spin' : ''} />
+						</button>
+					</div>
 
 					<div class="flex flex-col gap-2 py-1">
 						<label class="flex items-center gap-3 cursor-pointer">
@@ -587,6 +673,7 @@
 								bind:checked={includeCashierBean}
 							/>
 							<span class="flex-1 text-sm">cashier.bean</span>
+							{@render hashBadge(hashStatus.bean)}
 						</label>
 						<label class="flex items-center gap-3 cursor-pointer">
 							<input
@@ -595,6 +682,7 @@
 								bind:checked={includeSettings}
 							/>
 							<span class="flex-1 text-sm">Settings</span>
+							{@render hashBadge(hashStatus.settings)}
 						</label>
 						<label class="flex items-center gap-3 cursor-pointer">
 							<input
@@ -603,6 +691,7 @@
 								bind:checked={includeScheduled}
 							/>
 							<span class="flex-1 text-sm">Scheduled Transactions</span>
+							{@render hashBadge(hashStatus.scheduled)}
 						</label>
 					</div>
 

@@ -15,8 +15,9 @@ Trusted devices are remembered and listed under **Trusted Devices**, where you c
 ## Syncing from a trusted peer
 
 1. Tap **Sync from** on a trusted peer to open the sync panel.
-2. Check which items to pull: **cashier.bean**, **Settings**, and/or **Scheduled Transactions**.
-3. Use **Preview** to see the raw remote content, or **Diff** to compare it against your local copy, before committing to anything.
-4. Tap **Pull** and confirm — this overwrites your local data with the peer's version and cannot be undone.
+2. As soon as the peer is selected, the page exchanges content hashes for **cashier.bean**, **Settings**, and **Scheduled Transactions** and marks each one **Same** or **Different** — a quick way to see what's actually changed before pulling anything. A spinner shows while a check is in progress; a **?** means the comparison couldn't complete (peer offline or the request timed out). Tap the refresh icon in the panel header to re-check at any time; it also re-checks automatically after a **Pull** or merge.
+3. Check which items to pull: **cashier.bean**, **Settings**, and/or **Scheduled Transactions**.
+4. Use **Preview** to see the raw remote content, or **Diff** to compare it against your local copy, before committing to anything.
+5. Tap **Pull** and confirm — this overwrites your local data with the peer's version and cannot be undone.
 
 Need to sync the rest of your Beancount book (all files, not just `cashier.bean`)? Use the **Open Beancount Sync** link below the sync options instead — it compares your full local ledger against the peer's and lets you pull individual files.
