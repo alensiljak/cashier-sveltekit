@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import DiffViewer from '$lib/components/DiffViewer.svelte';
+	import JsonMergeViewer from '$lib/components/JsonMergeViewer.svelte';
 	import db from '$lib/data/db';
 	import { saveFile } from '$lib/utils/opfslib';
 	import Toolbar from '$lib/components/Toolbar.svelte';
@@ -20,12 +21,47 @@
 	type PreviewSection = { filename: string; content: string };
 
 	/**
-	 * One file's raw local/remote text for the Diff modal — DiffViewer computes
-	 * the line diff itself. `mergeable` enables its per-hunk Theirs/Mine picker;
-	 * only cashier.bean (line-oriented, append-only) makes sense to merge —
-	 * settings/scheduled are single JSON blobs, so they stay read-only diffs.
+	 * One file's raw local/remote content for the Diff modal. `cashier.bean` is
+	 * line-oriented (append-only transaction blocks) so DiffViewer's per-hunk
+	 * text merge is safe there. Settings/scheduled are JSON — a raw text-hunk
+	 * splice on JSON risks producing invalid output wherever a hunk boundary
+	 * falls inside the structure (trailing commas, unbalanced braces), so
+	 * those go through JsonMergeViewer's keyed (per-entry) merge instead. See
+	 * keyedMerge.ts.
 	 */
-	type RawDiffSection = { filename: string; local: string; remote: string; mergeable: boolean };
+	type RawDiffSection =
+		| { filename: 'cashier.bean'; kind: 'text'; local: string; remote: string }
+		| { filename: 'settings.json'; kind: 'settings'; local: Setting[]; remote: Setting[] }
+		| {
+				filename: 'scheduled.json';
+				kind: 'scheduled';
+				local: ScheduledTransaction[];
+				remote: ScheduledTransaction[];
+		  };
+
+	// ─── ScheduledTransaction identity (for JsonMergeViewer's keyed diff) ──────
+	// `id` is a device-local auto-increment (not portable across peers) and
+	// `amount` is display-only (derived from `transaction`) — both excluded
+	// from identity. Two entries are "the same" scheduled transaction iff
+	// everything else matches, so a genuine edit surfaces as a remove+add pair
+	// rather than a single "changed" entry (`scheduledEqual` is true whenever
+	// `scheduledKeyOf` already matched, so `changed` never fires here). Picking
+	// "Mine" on the old pair member and "Theirs" on the new one keeps both as
+	// separate rows — visible and easy to clean up manually, never a corrupt
+	// merge.
+	function scheduledIdentity(t: ScheduledTransaction) {
+		const { nextDate, transaction, period, count, endDate, remarks, repayment } = t;
+		return { nextDate, transaction, period, count, endDate, remarks, repayment };
+	}
+	function scheduledKeyOf(t: ScheduledTransaction): string {
+		return JSON.stringify(scheduledIdentity(t));
+	}
+	function scheduledEqual(a: ScheduledTransaction, b: ScheduledTransaction): boolean {
+		return scheduledKeyOf(a) === scheduledKeyOf(b);
+	}
+	function scheduledLabel(t: ScheduledTransaction): string {
+		return `${t.nextDate} · ${t.transaction?.payee || t.remarks || '(unnamed)'}`;
+	}
 
 	// ─── Presence (identity, room, peers, trust) ───────────────────────────────
 	// Shared singleton (see peerConnection.svelte.ts) — the room stays joined
@@ -49,7 +85,7 @@
 		if (syncTargetId && !presence.peersMap[syncTargetId]) syncTargetId = null;
 	});
 
-	let includeCashierBean = $state(true);
+	let includeCashierBean = $state(false);
 	let includeSettings = $state(false);
 	let includeScheduled = $state(false);
 	let noneSelected = $derived(!includeCashierBean && !includeSettings && !includeScheduled);
@@ -216,25 +252,25 @@
 			if (remote.bean !== null && local.bean !== null) {
 				sections.push({
 					filename: 'cashier.bean',
+					kind: 'text',
 					local: local.bean,
-					remote: remote.bean,
-					mergeable: true
+					remote: remote.bean
 				});
 			}
 			if (remote.settings !== null && local.settings !== null) {
 				sections.push({
 					filename: 'settings.json',
-					local: local.settings,
-					remote: remote.settings,
-					mergeable: false
+					kind: 'settings',
+					local: JSON.parse(local.settings) as Setting[],
+					remote: JSON.parse(remote.settings) as Setting[]
 				});
 			}
 			if (remote.scheduled !== null && local.scheduled !== null) {
 				sections.push({
 					filename: 'scheduled.json',
-					local: local.scheduled,
-					remote: remote.scheduled,
-					mergeable: false
+					kind: 'scheduled',
+					local: JSON.parse(local.scheduled) as ScheduledTransaction[],
+					remote: JSON.parse(remote.scheduled) as ScheduledTransaction[]
 				});
 			}
 			diffSections = sections;
@@ -288,6 +324,52 @@
 			Notifier.error(`Merge failed: ${(e as Error).message}`);
 		} finally {
 			applyingCashierMerge = false;
+		}
+	}
+
+	let applyingSettingsMerge = $state(false);
+
+	/** Writes a keyed Theirs/Mine merge of Settings — see JsonMergeViewer/keyedMerge.ts. */
+	async function applySettingsMerge(merged: Setting[]) {
+		applyingSettingsMerge = true;
+		try {
+			await db.settings.clear();
+			await db.settings.bulkPut(merged.map((s) => new Setting(s.key, s.value)));
+			Notifier.success('Settings: merge applied.');
+			showDiff = false;
+		} catch (e) {
+			Notifier.error(`Merge failed: ${(e as Error).message}`);
+		} finally {
+			applyingSettingsMerge = false;
+		}
+	}
+
+	let applyingScheduledMerge = $state(false);
+
+	/**
+	 * Writes a keyed Theirs/Mine merge of ScheduledTransactions. `local` is the
+	 * exact array diffed against (same object references `merged` was built
+	 * from) — kept-local items pass through by reference and already carry a
+	 * valid local `id`; anything else (a remote-origin item) gets its `id`
+	 * stripped so Dexie assigns a fresh one instead of colliding with an
+	 * unrelated local row that happens to reuse the same device-local number.
+	 */
+	async function applyScheduledMerge(
+		local: ScheduledTransaction[],
+		merged: ScheduledTransaction[]
+	) {
+		applyingScheduledMerge = true;
+		try {
+			const localSet = new Set(local);
+			const rows = merged.map((t) => (localSet.has(t) ? t : { ...t, id: undefined }));
+			await db.scheduled.clear();
+			await db.scheduled.bulkPut(rows);
+			Notifier.success('Scheduled transactions: merge applied.');
+			showDiff = false;
+		} catch (e) {
+			Notifier.error(`Merge failed: ${(e as Error).message}`);
+		} finally {
+			applyingScheduledMerge = false;
 		}
 	}
 </script>
@@ -633,13 +715,36 @@
 			</div>
 			<div class="flex-1 overflow-y-auto touch-pan-y p-4 flex flex-col gap-6">
 				{#each diffSections as section (section.filename)}
-					<DiffViewer
-						title={section.filename}
-						oldText={section.local}
-						newText={section.remote}
-						onApplyMerge={section.mergeable ? applyCashierMerge : undefined}
-						applyingMerge={applyingCashierMerge}
-					/>
+					{#if section.kind === 'text'}
+						<DiffViewer
+							title={section.filename}
+							oldText={section.local}
+							newText={section.remote}
+							onApplyMerge={applyCashierMerge}
+							applyingMerge={applyingCashierMerge}
+						/>
+					{:else if section.kind === 'settings'}
+						<JsonMergeViewer
+							title={section.filename}
+							local={section.local}
+							remote={section.remote}
+							keyOf={(s) => s.key}
+							renderEntry={(s) => s.value}
+							onApplyMerge={applySettingsMerge}
+							applyingMerge={applyingSettingsMerge}
+						/>
+					{:else}
+						<JsonMergeViewer
+							title={section.filename}
+							local={section.local}
+							remote={section.remote}
+							keyOf={scheduledKeyOf}
+							equal={scheduledEqual}
+							labelOf={scheduledLabel}
+							onApplyMerge={(merged) => applyScheduledMerge(section.local, merged)}
+							applyingMerge={applyingScheduledMerge}
+						/>
+					{/if}
 				{/each}
 			</div>
 		</div>
