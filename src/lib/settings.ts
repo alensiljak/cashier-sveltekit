@@ -91,7 +91,11 @@ export const SettingKeys = {
 	// Expenses report filter
 	expensesHiddenAccounts: 'expenses.hiddenAccounts',
 	// Budget category definitions (monthly targets)
-	budgetDefinition: 'budget.definition'
+	budgetDefinition: 'budget.definition',
+	// Expenses home card: 'calendar-month' or 'rolling-days'
+	expensesCardPeriodType: 'expensesCard.periodType',
+	// Expenses home card: window size when periodType is 'rolling-days'
+	expensesCardRollingDays: 'expensesCard.rollingDays'
 };
 
 /** Settings specific to this device (not exported). */
@@ -107,14 +111,6 @@ export const DeviceSettingKeys = {
 	ledgerCacheEnabled: 'ledgerCacheEnabled',
 	// OPFS file metadata snapshot for staleness detection (path -> "size|lastModified")
 	ledgerMetaSnapshot: 'ledger.metaSnapshot'
-};
-
-export const CardNames = {
-	FavouritesCard: 'FavouritesCard',
-	ForecastCard: 'ForecastCard',
-	JournalCard: 'JournalCard',
-	ScheduledXactCard: 'ScheduledXactCard'
-	// SyncCard: 'SyncCard'
 };
 
 class UserSettings {

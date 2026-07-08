@@ -8,6 +8,7 @@ The Home screen is your dashboard — a stack of cards summarizing the state of 
 - **Journal** — the most recent transactions across all your books.
 - **Scheduled Transactions** — upcoming recurring transactions due soon.
 - **Financial Forecast** — a projected balance trend for the accounts you choose to track.
+- **Expenses** — top spending categories and a period-over-period total for the current period.
 
 Cards can be shown, hidden, and reordered from the toolbar menu (⋮) — see **Home Settings** and **Reorder Cards**.
 
@@ -32,6 +33,10 @@ Dates use your Short Date display preference; the amount and payee share one lin
 ### Financial Forecast card
 
 Projects the balance trend for a chosen set of accounts over a chosen period, using upcoming Scheduled Transactions. Configure the forecast period (days) and which accounts to include from the cog icon on the card, or via **Home Settings**.
+
+### Expenses card
+
+Shows the top 5 Expense categories for the current period as bars sized by amount, with the overall total shown alongside a trend arrow (red for a rise, green for a drop) and the prior period's total for comparison. Amounts are converted to your base currency. Accounts hidden in the Expenses report filter are excluded here too. Configure the period — current calendar month or a rolling number of days — from the cog icon on the card. Tap the card to open the full Expenses report.
 
 ## Quick entry
 

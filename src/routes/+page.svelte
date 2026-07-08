@@ -9,10 +9,11 @@
 	// import SyncCard from '$lib/components/SyncCard.svelte';
 	import ForecastCard from '$lib/components/ForecastCard.svelte';
 	import ScheduledXactsCard from '$lib/components/ScheduledXactsCard.svelte';
+	import ExpensesCard from '$lib/components/ExpensesCard.svelte';
 	import { onMount, type Component } from 'svelte';
 	import Fab from '$lib/components/FAB.svelte';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
-	import { CardNames } from '$lib/settings';
+	import { HomeCardNames } from '$lib/enums';
 	import appService from '$lib/services/appService';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import { checkOpfsStale, recheckOpfsStale } from '$lib/services/opfsMetaCheck';
@@ -48,19 +49,22 @@
 		cardsOrder.forEach((name: string) => {
 			let card;
 			switch (name) {
-				case CardNames.FavouritesCard:
+				case HomeCardNames.FAVOURITES:
 					card = FavouritesCard;
 					break;
-				case CardNames.ForecastCard:
+				case HomeCardNames.FORECAST:
 					card = ForecastCard;
 					break;
-				case CardNames.JournalCard:
+				case HomeCardNames.JOURNAL:
 					card = JournalCard;
 					break;
-				case CardNames.ScheduledXactCard:
+				case HomeCardNames.SCHEDULED:
 					card = ScheduledXactsCard;
 					break;
-				// case CardNames.SyncCard:
+				case HomeCardNames.EXPENSES:
+					card = ExpensesCard;
+					break;
+				// case HomeCardNames.SYNC:
 				// 	card = SyncCard;
 				// 	break;
 			}

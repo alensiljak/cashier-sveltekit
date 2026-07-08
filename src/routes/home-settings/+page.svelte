@@ -12,7 +12,7 @@
 	let _showForecast = $state(false);
 	let _showJournal = $state(false);
 	let _showScheduled = $state(false);
-	let _showSync = $state(false);
+	let _showExpenses = $state(false);
 
 	onMount(async () => {
 		await loadData();
@@ -46,6 +46,9 @@
 		}
 		if (visibleCards.includes(HomeCardNames.SCHEDULED)) {
 			_showScheduled = true;
+		}
+		if (visibleCards.includes(HomeCardNames.EXPENSES)) {
+			_showExpenses = true;
 		}
 	}
 
@@ -82,11 +85,11 @@
 		} else {
 			removeItem(HomeCardNames.SCHEDULED);
 		}
-		// if (_showSync) {
-		// 	includeItem(HomeCardNames.SYNC);
-		// } else {
-		// 	removeItem(HomeCardNames.SYNC);
-		// }
+		if (_showExpenses) {
+			includeItem(HomeCardNames.EXPENSES);
+		} else {
+			removeItem(HomeCardNames.EXPENSES);
+		}
 
 		await settings.set(SettingKeys.visibleCards, visibleCards);
 
@@ -120,6 +123,11 @@
 		<label class="flex items-center space-x-2">
 			<input class="checkbox checkbox-primary" type="checkbox" bind:checked={_showScheduled} />
 			<p>Scheduled Transactions</p>
+		</label>
+
+		<label class="flex items-center space-x-2">
+			<input class="checkbox checkbox-primary" type="checkbox" bind:checked={_showExpenses} />
+			<p>Expenses</p>
 		</label>
 
 		<!-- <label class="flex items-center space-x-2">

@@ -7,7 +7,8 @@ export const HomeCardNames = {
 	FAVOURITES: 'FavouritesCard',
 	FORECAST: 'ForecastCard',
 	JOURNAL: 'JournalCard',
-	SCHEDULED: 'ScheduledXactCard'
+	SCHEDULED: 'ScheduledXactCard',
+	EXPENSES: 'ExpensesCard'
 	// SYNC: 'SyncCard'
 } as const;
 

@@ -3,6 +3,7 @@
  */
 
 export const DEFAULT_FORECAST_DAYS = 7 as const;
+export const DEFAULT_EXPENSES_CARD_ROLLING_DAYS = 30 as const;
 
 /** The default Cashier filename. Hard-coded for now. */
 export const CASHIER_XACT_FILE = 'cashier.bean' as const;
