@@ -5,6 +5,7 @@
 <script lang="ts">
 	import moment from 'moment';
 	import { ISODATEFORMAT } from '$lib/constants';
+	import { ChevronLeftIcon, ChevronRightIcon } from '@lucide/svelte';
 
 	export interface Period {
 		label: string;
@@ -52,8 +53,21 @@
 	const periods = buildPeriods();
 	let selectedKey = $state(periods[0].key);
 
+	// periods[0] is the newest/shortest period; higher index = further back.
+	const selectedIndex = $derived(periods.findIndex((p) => p.key === selectedKey));
+	const canGoNewer = $derived(selectedIndex > 0);
+	const canGoOlder = $derived(selectedIndex < periods.length - 1);
+
 	function currentPeriod(): Period {
-		return periods.find((p) => p.key === selectedKey) ?? periods[0];
+		return periods[selectedIndex] ?? periods[0];
+	}
+
+	function goNewer() {
+		if (canGoNewer) selectedKey = periods[selectedIndex - 1].key;
+	}
+
+	function goOlder() {
+		if (canGoOlder) selectedKey = periods[selectedIndex + 1].key;
 	}
 
 	$effect(() => {
@@ -63,8 +77,28 @@
 	});
 </script>
 
-<select class="select select-bordered select-sm" bind:value={selectedKey}>
-	{#each periods as period}
-		<option value={period.key}>{period.label}</option>
-	{/each}
-</select>
+<div class="join">
+	<button
+		type="button"
+		class="join-item btn btn-ghost btn-sm border border-base-content/20 px-2"
+		disabled={!canGoOlder}
+		aria-label="Previous period"
+		onclick={goOlder}
+	>
+		<ChevronLeftIcon size={18} />
+	</button>
+	<select class="join-item select select-bordered select-sm" bind:value={selectedKey}>
+		{#each periods as period}
+			<option value={period.key}>{period.label}</option>
+		{/each}
+	</select>
+	<button
+		type="button"
+		class="join-item btn btn-ghost btn-sm border border-base-content/20 px-2"
+		disabled={!canGoNewer}
+		aria-label="Next period"
+		onclick={goNewer}
+	>
+		<ChevronRightIcon size={18} />
+	</button>
+</div>
