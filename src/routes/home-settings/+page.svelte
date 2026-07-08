@@ -1,4 +1,5 @@
 <script lang="ts">
+	import DragReorderList from '$lib/components/DragReorderList.svelte';
 	import Fab from '$lib/components/FAB.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { HomeCardNames } from '$lib/enums';
@@ -7,92 +8,39 @@
 	import { CheckIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 
-	let visibleCards: string[] = $state([]);
-	let _showFavourites = $state(false);
-	let _showForecast = $state(false);
-	let _showJournal = $state(false);
-	let _showScheduled = $state(false);
-	let _showExpenses = $state(false);
+	const cardLabels: Record<string, string> = {
+		[HomeCardNames.FAVOURITES]: 'Favourites',
+		[HomeCardNames.FORECAST]: 'Financial Forecast',
+		[HomeCardNames.JOURNAL]: 'Journal',
+		[HomeCardNames.SCHEDULED]: 'Scheduled Transactions',
+		[HomeCardNames.EXPENSES]: 'Expenses'
+	};
+
+	interface Item {
+		name: string;
+		visible: boolean;
+	}
+	let items = $state<Item[]>([]);
 
 	onMount(async () => {
 		await loadData();
 	});
 
-	/**
-	 * Show the selected item.
-	 * @param item The name of the card to have displayed.
-	 */
-	function includeItem(item: string) {
-		if (!visibleCards.includes(item)) {
-			visibleCards.push(item);
-		}
-	}
-
 	async function loadData() {
-		visibleCards = await appService.getVisibleCards();
+		const visibleCards = await appService.getVisibleCards();
 
-		// check the items that are selected on the list.
-		if (visibleCards.includes(HomeCardNames.FAVOURITES)) {
-			_showFavourites = true;
-		}
-		if (visibleCards.includes(HomeCardNames.FORECAST)) {
-			_showForecast = true;
-		}
-		// if (visibleCards.includes(HomeCardNames.SYNC)) {
-		// 	_showSync = true;
-		// }
-		if (visibleCards.includes(HomeCardNames.JOURNAL)) {
-			_showJournal = true;
-		}
-		if (visibleCards.includes(HomeCardNames.SCHEDULED)) {
-			_showScheduled = true;
-		}
-		if (visibleCards.includes(HomeCardNames.EXPENSES)) {
-			_showExpenses = true;
-		}
+		// visible cards first, in their saved order, then any remaining (hidden) cards
+		const hiddenCards = Object.values(HomeCardNames).filter((name) => !visibleCards.includes(name));
+
+		items = [...visibleCards, ...hiddenCards].map((name) => ({
+			name,
+			visible: visibleCards.includes(name)
+		}));
 	}
 
 	async function onFabClicked() {
-		await saveSettings();
-	}
-
-	function removeItem(item: string): void {
-		const index = visibleCards.indexOf(item);
-		if (index > -1) {
-			visibleCards.splice(index, 1);
-		}
-	}
-
-	async function saveSettings() {
-		if (_showFavourites) {
-			// add if missing
-			includeItem(HomeCardNames.FAVOURITES);
-		} else {
-			removeItem(HomeCardNames.FAVOURITES);
-		}
-		if (_showForecast) {
-			includeItem(HomeCardNames.FORECAST);
-		} else {
-			removeItem(HomeCardNames.FORECAST);
-		}
-		if (_showJournal) {
-			includeItem(HomeCardNames.JOURNAL);
-		} else {
-			removeItem(HomeCardNames.JOURNAL);
-		}
-		if (_showScheduled) {
-			includeItem(HomeCardNames.SCHEDULED);
-		} else {
-			removeItem(HomeCardNames.SCHEDULED);
-		}
-		if (_showExpenses) {
-			includeItem(HomeCardNames.EXPENSES);
-		} else {
-			removeItem(HomeCardNames.EXPENSES);
-		}
-
+		const visibleCards = items.filter((item) => item.visible).map((item) => item.name);
 		await settings.set(SettingKeys.visibleCards, visibleCards);
-
 		history.back();
 	}
 </script>
@@ -102,37 +50,10 @@
 <Fab Icon={CheckIcon} onclick={onFabClicked} />
 
 <main class="p-1">
-	<h3 class="h3">Show Cards:</h3>
-
-	<div class="flex flex-col space-y-4 p-4">
-		<label class="flex items-center space-x-2">
-			<input class="checkbox checkbox-primary" type="checkbox" bind:checked={_showFavourites} />
-			<p>Favourites</p>
-		</label>
-
-		<label class="flex items-center space-x-2">
-			<input class="checkbox checkbox-primary" type="checkbox" bind:checked={_showForecast} />
-			<p>Financial Forecast</p>
-		</label>
-
-		<label class="flex items-center space-x-2">
-			<input class="checkbox checkbox-primary" type="checkbox" bind:checked={_showJournal} />
-			<p>Journal</p>
-		</label>
-
-		<label class="flex items-center space-x-2">
-			<input class="checkbox checkbox-primary" type="checkbox" bind:checked={_showScheduled} />
-			<p>Scheduled Transactions</p>
-		</label>
-
-		<label class="flex items-center space-x-2">
-			<input class="checkbox checkbox-primary" type="checkbox" bind:checked={_showExpenses} />
-			<p>Expenses</p>
-		</label>
-
-		<!-- <label class="flex items-center space-x-2">
-			<input class="checkbox checkbox-primary" type="checkbox" bind:checked={_showSync} />
-			<p>Synchronization</p>
-		</label> -->
-	</div>
+	<DragReorderList bind:items getLabel={(item) => cardLabels[item.name] ?? item.name} class="space-y-2 p-1 max-w-6xl mx-auto overflow-y-auto">
+		{#snippet row(item)}
+			<span class="grow">{cardLabels[item.name] ?? item.name}</span>
+			<input class="checkbox checkbox-primary" type="checkbox" bind:checked={item.visible} aria-label="Show {cardLabels[item.name] ?? item.name}" />
+		{/snippet}
+	</DragReorderList>
 </main>
