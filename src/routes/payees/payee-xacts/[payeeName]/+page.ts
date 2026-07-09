@@ -4,10 +4,15 @@
 
 import ledgerService from '$lib/services/ledgerService.js';
 import fullLedgerService from '$lib/services/ledgerWorkerClient';
-import { mergeUnifiedRows, type UnifiedXact } from '$lib/utils/unifiedXacts';
+import { Xact, Posting } from '$lib/data/model';
+import type { DirectiveSpan } from '$lib/rledger/sourceEditor';
 import type { PageLoad } from './$types';
 
-export type { UnifiedXact };
+export type PayeeXactRow = {
+	xact: Xact;
+	span?: DirectiveSpan;
+	isDevice: boolean;
+};
 
 export const load: PageLoad = async ({ params }) => {
 	if (!params.payeeName) {
@@ -23,55 +28,76 @@ export const load: PageLoad = async ({ params }) => {
 		({ xact }) => (xact.payee || xact.note || '') === payeeName
 	);
 
-	// Full ledger transactions. COALESCE(payee, narration) filtering is done in JS below —
-	// BQL WHERE clause support for COALESCE against a full-book query is not guaranteed,
-	// and this matches the semantics of the Payees list's own COALESCE(payee, narration) query.
-	const bql = `SELECT date, payee, narration, account, number, currency`;
+	// Full ledger transactions — include id so we can group postings back into Xact objects.
+	// COALESCE(payee, narration) filtering is done in JS below to match the Payees list.
+	const bql = `SELECT id, date, flag, payee, narration, account, number, currency`;
 	const { columns, rows, errors } = await fullLedgerService.query(bql);
 	if (errors?.length) console.warn('Ledger xact query errors:', errors);
 
-	// Normalize device xacts: one row per posting, since a payee's transactions
-	// can touch multiple accounts.
-	const deviceRows: UnifiedXact[] = deviceXacts.flatMap(({ xact, span }) =>
-		(xact.postings ?? []).map((posting) => ({
-			date: xact.date ?? '',
-			payee: xact.payee ?? '',
-			narration: xact.note ?? '',
-			amount: posting.amount ?? 0,
-			currency: posting.currency ?? '',
-			account: posting.account,
-			isDevice: true,
-			xact,
-			span
-		}))
-	);
-
-	// Normalize ledger rows
 	const safeColumns: string[] = columns ?? [];
 	const safeRows = (rows ?? []) as unknown[][];
+
+	const idIdx = safeColumns.indexOf('id');
 	const dateIdx = safeColumns.indexOf('date');
+	const flagIdx = safeColumns.indexOf('flag');
 	const payeeIdx = safeColumns.indexOf('payee');
 	const narrationIdx = safeColumns.indexOf('narration');
 	const accountIdx = safeColumns.indexOf('account');
 	const numberIdx = safeColumns.indexOf('number');
 	const currencyIdx = safeColumns.indexOf('currency');
 
-	const ledgerNormalized: UnifiedXact[] = safeRows
-		.map((row) => ({
-			date: row[dateIdx] as string,
-			payee: row[payeeIdx] as string,
-			narration: row[narrationIdx] as string,
-			amount: parseFloat(row[numberIdx] as string),
-			currency: row[currencyIdx] as string,
-			account: row[accountIdx] as string,
-			isDevice: false
-		}))
-		.filter((row) => (row.payee || row.narration || '') === payeeName);
+	// Filter rows to this payee, then group by transaction id to assemble Xact objects.
+	const filtered = safeRows.filter(
+		(row) => ((row[payeeIdx] as string) || (row[narrationIdx] as string) || '') === payeeName
+	);
 
-	// Merge and sort descending by date
-	const unifiedRows = mergeUnifiedRows(deviceRows, ledgerNormalized);
+	// Use a Map to preserve insertion order (= BQL order, typically date-sorted).
+	const byId = new Map<string, Xact>();
+	for (const row of filtered) {
+		const id = String(row[idIdx]);
+		let x = byId.get(id);
+		if (!x) {
+			x = new Xact();
+			x.date = row[dateIdx] as string;
+			x.flag = (row[flagIdx] as string) ?? '*';
+			x.payee = (row[payeeIdx] as string) ?? '';
+			x.note = (row[narrationIdx] as string) ?? '';
+			byId.set(id, x);
+		}
+		const p = new Posting();
+		p.account = row[accountIdx] as string;
+		p.amount = parseFloat(row[numberIdx] as string);
+		p.currency = row[currencyIdx] as string;
+		x.postings.push(p);
+	}
+
+	const ledgerRows: PayeeXactRow[] = Array.from(byId.values()).map((xact) => ({
+		xact,
+		isDevice: false
+	}));
+
+	const deviceRows: PayeeXactRow[] = deviceXacts.map(({ xact, span }) => ({
+		xact,
+		span,
+		isDevice: true
+	}));
+
+	// Merge: device rows shadow matching ledger rows (same date/payee/narration).
+	const unmatchedLedgerRows = ledgerRows.filter(
+		(lr) =>
+			!deviceRows.some(
+				(dr) =>
+					dr.xact.date === lr.xact.date &&
+					(dr.xact.payee ?? '') === (lr.xact.payee ?? '') &&
+					(dr.xact.note ?? '') === (lr.xact.note ?? '')
+			)
+	);
+
+	const allRows = [...deviceRows, ...unmatchedLedgerRows].sort((a, b) =>
+		(b.xact.date ?? '').localeCompare(a.xact.date ?? '')
+	);
 
 	const hasDeviceXacts = deviceRows.length > 0;
 
-	return { payeeName, unifiedRows, hasDeviceXacts };
+	return { payeeName, xacts: allRows, hasDeviceXacts };
 };

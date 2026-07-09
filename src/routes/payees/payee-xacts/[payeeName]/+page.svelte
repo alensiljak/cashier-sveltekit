@@ -1,9 +1,18 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import HelpButton from '$lib/help/HelpButton.svelte';
-	import TransactionList from '$lib/components/TransactionList.svelte';
-	import { openXactDetails } from '$lib/utils/unifiedXacts';
+	import JournalXactRow from '$lib/components/JournalXactRow.svelte';
+	import { xact as xactStore, xactSpan } from '$lib/data/mainStore';
+	import type { Xact } from '$lib/data/model';
+	import type { PayeeXactRow } from './+page.ts';
+
+	async function onRowClick(row: PayeeXactRow) {
+		xactStore.set(row.xact);
+		xactSpan.set(row.span);
+		await goto('/xact-actions');
+	}
 </script>
 
 <main class="flex h-screen flex-col">
@@ -33,6 +42,10 @@
 			<hr class="border-gray-400" />
 		</div>
 
-		<TransactionList rows={page.data.unifiedRows} onRowClick={openXactDetails} showAccount />
+		{#each page.data.xacts as row (row.xact)}
+			<div class="border-base-content/10 border-b py-1">
+				<JournalXactRow xact={row.xact} onclick={() => onRowClick(row)} />
+			</div>
+		{/each}
 	</section>
 </main>
