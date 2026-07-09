@@ -13,6 +13,7 @@
 	import Notifier from '$lib/utils/notifier';
 	import { formatAmount } from '$lib/utils/formatter';
 	import { ArrowUpDownIcon, PlusCircleIcon, TrashIcon } from '@lucide/svelte';
+	import HelpButton from '$lib/help/HelpButton.svelte';
 
 	Notifier.init();
 
@@ -188,6 +189,9 @@
 
 <main class="flex h-screen flex-col" class:cursor-wait={isLoading}>
 	<Toolbar title="Budget">
+		{#snippet actions()}
+			<HelpButton topic="budget" />
+		{/snippet}
 		{#snippet menuItems()}
 			<ToolbarMenuItem text="Add Category" Icon={PlusCircleIcon} onclick={onAddCategoryClicked} />
 			<ToolbarMenuItem text="Delete Categories" Icon={TrashIcon} onclick={onDeleteCategoriesClicked} />
