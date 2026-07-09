@@ -3,6 +3,7 @@
 	import { page } from '$app/state';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import AccordionSection from '$lib/components/AccordionSection.svelte';
+	import { openXactDetails } from '$lib/utils/unifiedXacts';
 	import JournalXactRow from '$lib/components/JournalXactRow.svelte';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import { Xact, Posting } from '$lib/data/model';
@@ -58,10 +59,9 @@
 			if (!isNaN(val)) conditions.push(`number ${amountOp} ${val}`);
 		}
 
-		const where = conditions.length > 0
-            ? ` WHERE ${conditions.join(' AND ')}` : '';
-		return `SELECT date, payee, narration, account, number, currency \
-${where} ORDER BY date DESC`;
+		const where = conditions.length > 0 ? ` WHERE ${conditions.join(' AND ')}` : '';
+		// Step-1 query: resolve matching transaction IDs only.
+		return `SELECT id${where} ORDER BY date DESC`;
 	}
 
 	let generatedQuery = $derived(buildQuery());
@@ -86,7 +86,32 @@ ${where} ORDER BY date DESC`;
 		await tick(); // yield to browser so loading state renders before synchronous query
 		try {
 			await fullLedgerService.ensureLoaded();
-			const result = await fullLedgerService.query(generatedQuery);
+
+			// Step 1: resolve matching transaction IDs via the filter query.
+			const idResult = await fullLedgerService.query(generatedQuery);
+			queryErrors = (idResult?.errors ?? []) as typeof queryErrors;
+			if (queryErrors.length > 0) {
+				columns = [];
+				rows = [];
+				hasSearched = true;
+				return;
+			}
+
+			const idRows = (idResult?.rows ?? []) as any[][];
+			if (idRows.length === 0) {
+				columns = [];
+				rows = [];
+				hasSearched = true;
+				return;
+			}
+
+			// Deduplicate: multiple matching postings can share the same transaction id.
+			const uniqueIds = [...new Set(idRows.map((r) => r[0] as number))];
+
+			// Step 2: fetch all postings for those transactions (preserves full detail).
+			const idClause = uniqueIds.map((id) => `id = ${id}`).join(' OR ');
+			const fullQuery = `SELECT id, date, flag, payee, narration, account, number, currency WHERE ${idClause} ORDER BY date DESC`;
+			const result = await fullLedgerService.query(fullQuery);
 			queryErrors = (result?.errors ?? []) as typeof queryErrors;
 			if (queryErrors.length === 0) {
 				columns = result?.columns ?? [];
@@ -106,7 +131,9 @@ ${where} ORDER BY date DESC`;
 	let xacts = $derived.by(() => {
 		if (rows.length === 0 || columns.length === 0) return [] as Xact[];
 
+		const idIdx = columns.indexOf('id');
 		const dateIdx = columns.indexOf('date');
+		const flagIdx = columns.indexOf('flag');
 		const payeeIdx = columns.indexOf('payee');
 		const narrationIdx = columns.indexOf('narration');
 		const accountIdx = columns.indexOf('account');
@@ -117,17 +144,22 @@ ${where} ORDER BY date DESC`;
 		const groupMap = new Map<string, Xact>();
 
 		for (const row of rows as any[][]) {
+			const txId = row[idIdx];
 			const date = String(row[dateIdx] ?? '');
+			const flag = String(row[flagIdx] ?? '*');
 			const payee = String(row[payeeIdx] ?? '');
 			const narration = String(row[narrationIdx] ?? '');
 			const account = String(row[accountIdx] ?? '');
 			const numVal = row[numberIdx];
 			const currency = String(row[currencyIdx] ?? '');
 
-			const key = `${date}\0${payee}\0${narration}`;
+			// Group by transaction id when available; fall back to date/payee/narration.
+			const key = txId != null ? String(txId) : `${date}\0${payee}\0${narration}`;
 			if (!groupMap.has(key)) {
 				const tx = new Xact();
+				tx.id = typeof txId === 'number' ? txId : undefined;
 				tx.date = date;
+				tx.flag = flag;
 				tx.payee = payee || narration;
 				tx.note = payee ? narration : '';
 				tx.postings = [];
@@ -144,6 +176,18 @@ ${where} ORDER BY date DESC`;
 
 		return keyOrder.map((k) => groupMap.get(k)!);
 	});
+
+	async function onXactClick(xact: Xact) {
+		await openXactDetails({
+			date: xact.date ?? '',
+			payee: xact.payee ?? '',
+			narration: xact.note ?? '',
+			amount: 0,
+			currency: '',
+			id: xact.id,
+			isDevice: false,
+		});
+	}
 </script>
 
 <main class="flex h-screen flex-col" class:cursor-wait={isLoading}>
@@ -279,9 +323,9 @@ ${where} ORDER BY date DESC`;
 			<div class="py-8 text-center text-base-content/50 text-sm">No results.</div>
 		{:else}
 			<div class="flex flex-col divide-y divide-base-200">
-				{#each xacts as xact}
-					<div class="py-2">
-						<JournalXactRow {xact} />
+				{#each xacts as xact (xact.id ?? xact.date + xact.payee)}
+					<div class="py-2 cursor-pointer">
+						<JournalXactRow {xact} onclick={onXactClick} />
 					</div>
 				{/each}
 			</div>
