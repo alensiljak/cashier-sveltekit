@@ -9,7 +9,7 @@
 	import { Xact, Posting } from '$lib/data/model';
 	import { xact as xactStore, xactSpan } from '$lib/data/mainStore';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
-	import { CodeIcon, PlusIcon } from '@lucide/svelte';
+	import { CodeIcon, FilePlusIcon } from '@lucide/svelte';
 	import HelpButton from '$lib/help/HelpButton.svelte';
 
 	function focusOnMount(el: HTMLElement) {
@@ -343,7 +343,7 @@
 		{/if}
 	</section>
 
-	<Fab Icon={PlusIcon} onclick={() => goto('/tx')} />
+	<Fab Icon={FilePlusIcon} onclick={() => goto('/tx')} />
 
 	<!-- BQL query debug dialog -->
 	<dialog bind:this={queryDialog} class="modal">
