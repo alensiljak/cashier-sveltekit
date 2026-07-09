@@ -21,6 +21,8 @@ export type UnifiedXact = {
 	currency: string;
 	/** Posting account for this row. Omitted when the list is already scoped to one account. */
 	account?: string;
+	/** Transaction id from the full ledger. Present on ledger rows; absent on device rows. */
+	id?: number;
 	isDevice: boolean;
 	xact?: Xact;
 	span?: DirectiveSpan;
@@ -61,7 +63,7 @@ export function mergeUnifiedRows(
 /**
  * Open a row's transaction in the Xact editor/details view. Device rows already
  * carry their Xact + source span; read-only (full-ledger) rows are re-fetched by
- * date/payee/narration to gather every posting of that transaction.
+ * transaction id (preferred) or date/payee/narration to gather every posting.
  */
 export async function openXactDetails(row: UnifiedXact): Promise<void> {
 	if (row.isDevice && row.xact && row.span) {
@@ -71,12 +73,17 @@ export async function openXactDetails(row: UnifiedXact): Promise<void> {
 		return;
 	}
 
-	// Read-only transaction: fetch postings from the full ledger
-	const payeeClause = row.payee
-		? `AND payee = "${row.payee.replace(/"/g, '\\"')}"`
-		: `AND payee = ""`;
-	const narrationClause = `AND narration = "${(row.narration ?? '').replace(/"/g, '\\"')}"`;
-	const bql = `SELECT flag, account, number, currency WHERE date = ${row.date} ${payeeClause} ${narrationClause}`;
+	// Read-only transaction: fetch postings from the full ledger.
+	// Prefer id-based lookup (exact) over date/payee/narration (fragile).
+	const bql = row.id
+		? `SELECT flag, account, number, currency WHERE id = ${row.id}`
+		: (() => {
+				const payeeClause = row.payee
+					? `AND payee = "${row.payee.replace(/"/g, '\\"')}"`
+					: `AND payee = ""`;
+				const narrationClause = `AND narration = "${(row.narration ?? '').replace(/"/g, '\\"')}"`;
+				return `SELECT flag, account, number, currency WHERE date = ${row.date} ${payeeClause} ${narrationClause}`;
+			})();
 
 	const { columns, rows: postingRows, errors } = await fullLedgerService.query(bql);
 	if (errors?.length) console.warn('Posting query errors:', errors);

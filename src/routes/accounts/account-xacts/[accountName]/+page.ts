@@ -36,7 +36,7 @@ export const load: PageLoad = async ({ params }) => {
 	);
 
 	// Full ledger transactions for this account
-	const bql = `SELECT date, payee, narration, number, currency \
+	const bql = `SELECT id, date, payee, narration, number, currency \
 WHERE account = '${params.accountName}'`;
 	const { columns, rows, errors } = await fullLedgerService.query(bql);
 	if (errors?.length) console.warn('Ledger xact query errors:', errors);
@@ -59,6 +59,7 @@ WHERE account = '${params.accountName}'`;
 	// Normalize ledger rows
 	const safeColumns: string[] = columns ?? [];
 	const safeRows = (rows ?? []) as unknown[][];
+	const idIdx = safeColumns.indexOf('id');
 	const dateIdx = safeColumns.indexOf('date');
 	const payeeIdx = safeColumns.indexOf('payee');
 	const narrationIdx = safeColumns.indexOf('narration');
@@ -66,6 +67,7 @@ WHERE account = '${params.accountName}'`;
 	const currencyIdx = safeColumns.indexOf('currency');
 
 	const ledgerNormalized: UnifiedXact[] = safeRows.map((row) => ({
+		id: row[idIdx] as number,
 		date: row[dateIdx] as string,
 		payee: row[payeeIdx] as string,
 		narration: row[narrationIdx] as string,
