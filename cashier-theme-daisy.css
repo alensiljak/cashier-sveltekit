@@ -26,7 +26,7 @@
 	--color-error-content: var(--color-accent-300);
 
 	/* border radius */
-	--radius-selector: 0.25rem;
+	--radius-selector: 9999px;
 	--radius-field: 0.5rem;
 	--radius-box: 0.5rem;
 

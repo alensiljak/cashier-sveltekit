@@ -442,38 +442,43 @@
 		<div class="card bg-base-200 shadow-sm">
 			<div class="card-body flex-row items-center gap-2 p-3">
 				{#if editingConfig}
-					<input
-						type="text"
-						bind:value={nameInput}
-						class="input input-bordered input-sm min-w-0 flex-1"
-						placeholder="My Phone"
-						aria-label="Device name"
-						onkeydown={(e) => e.key === 'Enter' && saveConfig()}
-					/>
-					<input
-						type="text"
-						bind:value={roomInput}
-						class="input input-bordered input-sm min-w-0 flex-1 font-mono"
-						placeholder="cashier"
-						aria-label="Room"
-						onkeydown={(e) => e.key === 'Enter' && saveConfig()}
-					/>
-					<button
-						class="btn btn-success btn-xs"
-						aria-label="Save"
-						title="Save"
-						onclick={saveConfig}
-					>
-						<Check size={14} />
-					</button>
-					<button
-						class="btn btn-ghost btn-xs"
-						aria-label="Cancel"
-						title="Cancel"
-						onclick={cancelEditConfig}
-					>
-						<XIcon size={14} />
-					</button>
+					<div class="flex min-w-0 flex-1 flex-col gap-2">
+						<div class="flex items-center gap-2">
+							<input
+								type="text"
+								bind:value={nameInput}
+								class="input input-bordered input-sm min-w-0 flex-1"
+								placeholder="My Phone"
+								aria-label="Device name"
+								onkeydown={(e) => e.key === 'Enter' && saveConfig()}
+							/>
+							<input
+								type="text"
+								bind:value={roomInput}
+								class="input input-bordered input-sm min-w-0 flex-1 font-mono"
+								placeholder="cashier"
+								aria-label="Room"
+								onkeydown={(e) => e.key === 'Enter' && saveConfig()}
+							/>
+							<button
+								class="btn btn-success btn-xs"
+								aria-label="Save"
+								title="Save"
+								onclick={saveConfig}
+							>
+								<Check size={14} />
+							</button>
+							<button
+								class="btn btn-ghost btn-xs"
+								aria-label="Cancel"
+								title="Cancel"
+								onclick={cancelEditConfig}
+							>
+								<XIcon size={14} />
+							</button>
+						</div>
+						<div class="font-mono text-xs break-all opacity-60">ID: {presence.myId}</div>
+					</div>
 				{:else}
 					<div class="min-w-0 flex-1 truncate text-sm">
 						{#if presence.isInRoom}
@@ -521,7 +526,7 @@
 				{:else}
 					<input
 						type="checkbox"
-						class="toggle toggle-success"
+						class="toggle toggle-success bg-transparent bg-none"
 						checked={presence.isInRoom}
 						aria-label={presence.isInRoom ? 'Disconnect' : 'Connect'}
 						onchange={toggleConnection}

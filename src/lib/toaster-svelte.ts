@@ -15,8 +15,7 @@ class DaisyUIToaster {
 		if (!this.toastContainer) {
 			this.toastContainer = document.createElement('div');
 			this.toastContainer.id = 'toast-container';
-			this.toastContainer.className =
-				'fixed top-20 left-1/2 -translate-x-1/2 z-[1000] pointer-events-none w-[90%] max-w-md flex flex-col items-center gap-2';
+			this.toastContainer.className = 'toast toast-bottom toast-end z-[1000]';
 			document.body.appendChild(this.toastContainer);
 		}
 	}
@@ -29,7 +28,7 @@ class DaisyUIToaster {
 
 		// Create a toast element and add it to the container
 		const toast = document.createElement('div');
-		toast.className = 'alert w-full'; // Full width within container
+		toast.className = 'alert';
 
 		switch (options.type) {
 			case 'success':
