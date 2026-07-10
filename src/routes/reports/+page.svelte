@@ -21,6 +21,9 @@
 			<a href="/reports/assets" class="btn btn-primary">
 				Assets
 			</a>
+			<a href="/reports/net-worth" class="btn btn-primary">
+				Net Worth
+			</a>
 			<a href="/reports/expenses" class="btn btn-primary">
 				Expenses
 			</a>

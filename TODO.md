@@ -31,16 +31,9 @@ None at the moment. Regular ongoing maintenance.
 - [ ] standardize time period selection: day, week, month, quarter, year; this, last.
 - [ ] charts: bar/line for trends, pie/donut for categories
 
-## Budgeting
-
-- [ ] budget, [docs](https://rustledger.github.io/guides/budgeting.html).
-- [x] track actual spending againtst the budget
-- [ ] a budget is amount in time period
-- [ ] monthly budget as default?
-
 ## Reports
 
-- [ ] net worth (assets - liabilities)
+- [x] net worth (assets - liabilities)
 - [ ] spending trends over time
 - [ ] balance history: running balance over time
 - [ ] balance sheet - monthly, yearly. Income vs expenses summary.
