@@ -68,7 +68,9 @@ function guessAccount(text: string, prefix?: string): string | undefined {
 	const lower = text.toLowerCase();
 	for (const { words, account } of ACCOUNT_KEYWORDS) {
 		if (prefix && !account.startsWith(prefix)) continue;
-		if (words.some((w) => new RegExp(`\\b${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).test(lower))) {
+		if (
+			words.some((w) => new RegExp(`\\b${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).test(lower))
+		) {
 			return account;
 		}
 	}
@@ -107,7 +109,9 @@ function parseCurrency(text: string): { amount?: number; currency: string } {
 		return { amount, currency };
 	}
 
-	const numMatch = text.match(/(\d+(?:[.,]\d+)?)/);
+	// Only a standalone numeric token counts as a bare amount — skip digits embedded in an
+	// alphanumeric word like "n26" (an account name fragment), which isn't an amount.
+	const numMatch = text.match(/(?:^|\s)(\d+(?:[.,]\d+)?)(?=\s|$)/);
 	if (numMatch) {
 		return { amount: parseFloat(numMatch[1].replace(',', '.')), currency: 'EUR' };
 	}
@@ -251,6 +255,73 @@ export function parseTranscript(text: string): ParseResult {
 		fromAccountResolved,
 		toAccountResolved
 	};
+}
+
+/**
+ * Picks the single best transaction to model a synthetic suggestion after, out of a set of
+ * loose-search matches (already ordered most-recent-first). Groups candidates by their
+ * (payee, account-set) shape and returns a representative of the most frequent group — ties
+ * broken by recency, which falls out for free since `candidates` is date-descending and the
+ * first-seen representative of each group is kept.
+ */
+export function pickBestMatch(candidates: Xact[]): Xact | undefined {
+	const groups = new Map<string, { count: number; representative: Xact }>();
+	for (const xact of candidates) {
+		const accounts = xact.postings
+			.map((p) => p.account)
+			.sort()
+			.join('\u0000');
+		const key = `${xact.payee ?? ''}\u0000${accounts}`;
+		const group = groups.get(key);
+		if (group) {
+			group.count += 1;
+		} else {
+			groups.set(key, { count: 1, representative: xact });
+		}
+	}
+
+	let best: { count: number; representative: Xact } | undefined;
+	for (const group of groups.values()) {
+		if (!best || group.count > best.count) best = group;
+	}
+	return best?.representative;
+}
+
+/**
+ * Fills in payee/account fields still unresolved (or only generically guessed) from the
+ * most frequent matching transaction found by search, so terse fragments like "vang vti"
+ * resolve to the real payee ("Vanguard") and accounts instead of a capitalized-words guess
+ * and generic Assets/Expenses fallback. Amount/currency stay from the live parse — the
+ * historical amount isn't what the user is entering now.
+ */
+export function refineFromMatches(result: ParseResult, matches: Xact[]): void {
+	if (result.isTransfer) return;
+	if (result.fromAccountResolved && result.toAccountResolved) return;
+
+	const best = pickBestMatch(matches);
+	if (!best) return;
+
+	const assetAccount = best.postings
+		.map((p) => p.account)
+		.find((a) => a.startsWith('Assets:') || a.startsWith('Liabilities:'));
+	const otherAccount = best.postings.map((p) => p.account).find((a) => a !== assetAccount);
+	if (!assetAccount || !otherAccount) return;
+
+	if (best.payee) result.payee = best.payee;
+
+	if (result.isIncome) {
+		result.fromAccount = otherAccount;
+		result.fromAccountResolved = true;
+		result.toAccount = assetAccount;
+		result.toAccountResolved = true;
+	} else {
+		result.toAccount = otherAccount;
+		result.toAccountResolved = true;
+		result.fromAccount = assetAccount;
+		result.fromAccountResolved = true;
+	}
+	result.matched.push(`from ${matches.length} match(es): ${otherAccount}, ${assetAccount}`);
+	result.needsReview = !result.payee || result.amount === undefined;
 }
 
 export function buildTransaction(result: ParseResult): Xact {

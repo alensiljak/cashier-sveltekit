@@ -37,6 +37,44 @@ export function buildConditions(
 	});
 }
 
+/** Term looks like a bare amount ("10", "9.99") — no letters, no explicit category prefix. */
+const AMOUNT_TERM = /^\d+(\.\d+)?$/;
+
+/**
+ * Builds AND'd BQL WHERE conditions for `terms`, for transaction search only. An
+ * explicit-category term (@/#/~/$ prefix) still pins to its own field, same as
+ * `buildConditions`. But an unprefixed term ORs across payee/narration/account,
+ * so terse fragments like "deca hik" can match "Decathlon" as payee and
+ * "Expenses:Sport:Hiking" as account without needing prefixes — unlike the
+ * single-field-per-section AND that `buildConditions` gives every other entity
+ * category (payees/accounts/commodities).
+ *
+ * A bare-number term ("10", "9.99") is dropped entirely rather than turned into a
+ * filter: a remembered amount is rarely exact (users round, misremember, or the
+ * amount includes fees/tips not on the matched historical transaction), so ANDing
+ * it in would hide otherwise-correct payee/account matches. The amount is still
+ * parsed for the *new* suggested transaction elsewhere (`parseTranscript`) — it
+ * just never excludes an existing transaction from the search results.
+ */
+export function buildLooseTransactionConditions(
+	terms: EntitySearchTerm[],
+	categories: EntityCategory[]
+): string[] {
+	const clauses: string[] = [];
+	terms.forEach((term, i) => {
+		const category = categories[i];
+		if (category === 'any' && AMOUNT_TERM.test(term.value)) return;
+		const escaped = term.value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+		if (category !== 'any') {
+			clauses.push(`${FIELD_FOR_CATEGORY[category]} ~ "(?i)${escaped}"`);
+			return;
+		}
+		const fields = ['payee', 'narration', 'account'];
+		clauses.push('(' + fields.map((f) => `${f} ~ "(?i)${escaped}"`).join(' OR ') + ')');
+	});
+	return clauses;
+}
+
 async function searchDistinct(field: string, conditions: string[]): Promise<string[]> {
 	if (conditions.length === 0) return [];
 	const bql = `SELECT DISTINCT ${field} WHERE ${conditions.join(' AND ')} ORDER BY ${field}`;

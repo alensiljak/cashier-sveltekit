@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Xact } from '$lib/data/model';
 	import { formatPostingCost, formatPostingPrice, getAmountColour } from '$lib/utils/formatter';
-	import { TriangleAlertIcon } from '@lucide/svelte';
+	import WarningTriangleIcon from './WarningTriangleIcon.svelte';
 
 	interface Props {
 		xact: Xact;
@@ -27,7 +27,7 @@
 		</time>
 		<div class="flex items-center gap-1">
 			{#if xact.flag === '!'}
-				<TriangleAlertIcon class="text-warning size-4 shrink-0" />
+				<WarningTriangleIcon class="size-4 shrink-0" />
 			{/if}
 			{xact.payee}{#if xact.payee && xact.note}<span class="opacity-50"> · {xact.note}</span>{:else if xact.note}{xact.note}{/if}
 		</div>
