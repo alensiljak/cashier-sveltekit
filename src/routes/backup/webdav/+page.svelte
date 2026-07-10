@@ -13,7 +13,8 @@
 		RefreshCwIcon,
 		GitCompareArrowsIcon,
 		EyeIcon,
-		CloudUploadIcon
+		CloudUploadIcon,
+		CloudIcon
 	} from '@lucide/svelte';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import { goto } from '$app/navigation';
@@ -265,23 +266,39 @@
 					</span>
 				{/if}
 				{#if cashierBeanLastModified}
-					<span class="text-xs text-base-content/50"
-						>{cashierBeanLastModified.toLocaleString()}</span
+					<span
+						class="flex items-center gap-1 text-xs text-base-content/50"
+						title="Remote timestamp"
 					>
+						<CloudIcon size={12} class="text-base-content/40" />
+						{cashierBeanLastModified.toLocaleString()}
+					</span>
 				{/if}
 			</label>
 			<label class="flex items-center gap-3 cursor-pointer">
 				<input type="checkbox" class="checkbox checkbox-primary" bind:checked={includeSettings} />
 				<span class="flex-1">Settings</span>
 				{#if settingsLastModified}
-					<span class="text-xs text-base-content/50">{settingsLastModified.toLocaleString()}</span>
+					<span
+						class="flex items-center gap-1 text-xs text-base-content/50"
+						title="Remote timestamp"
+					>
+						<CloudIcon size={12} class="text-base-content/40" />
+						{settingsLastModified.toLocaleString()}
+					</span>
 				{/if}
 			</label>
 			<label class="flex items-center gap-3 cursor-pointer">
 				<input type="checkbox" class="checkbox checkbox-primary" bind:checked={includeScheduled} />
 				<span class="flex-1">Scheduled Transactions</span>
 				{#if scheduledLastModified}
-					<span class="text-xs text-base-content/50">{scheduledLastModified.toLocaleString()}</span>
+					<span
+						class="flex items-center gap-1 text-xs text-base-content/50"
+						title="Remote timestamp"
+					>
+						<CloudIcon size={12} class="text-base-content/40" />
+						{scheduledLastModified.toLocaleString()}
+					</span>
 				{/if}
 			</label>
 		</div>
