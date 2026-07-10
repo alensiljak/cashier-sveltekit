@@ -3,6 +3,7 @@
 	import { tick } from 'svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import NetWorthChart from '$lib/components/NetWorthChart.svelte';
+	import YearPeriodSelector from '$lib/components/YearPeriodSelector.svelte';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import { SettingKeys, settings } from '$lib/settings';
 	import { formatAmount } from '$lib/utils/formatter';
@@ -13,6 +14,7 @@
 		netWorth: number;
 	}
 
+	let selectedPeriod = $state('last12');
 	let isLoading = $state(false);
 	let error = $state<string | null>(null);
 	let baseCurrency = $state('');
@@ -43,6 +45,25 @@
 		return result;
 	}
 
+	function getYearMonthEnds(year: number) {
+		const result: { key: string; label: string; endDate: string }[] = [];
+		for (let m = 0; m < 12; m++) {
+			const monthStart = new Date(year, m, 1);
+			const nextMonthStart = new Date(year, m + 1, 1);
+			const endDate = new Date(nextMonthStart.getTime() - 1);
+			const key = `${year}-${String(m + 1).padStart(2, '0')}`;
+			const label = monthStart.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+			const endDateStr = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`;
+			result.push({ key, label, endDate: endDateStr });
+		}
+		return result;
+	}
+
+	function getMonthList() {
+		if (selectedPeriod === 'last12') return getLast12MonthEnds();
+		return getYearMonthEnds(parseInt(selectedPeriod));
+	}
+
 	function parseValue(raw: unknown): number {
 		if (raw == null) return 0;
 		if (typeof raw === 'object' && (raw as any).number != null) {
@@ -63,7 +84,7 @@
 			baseCurrency = currency ?? 'EUR';
 			await fullLedgerService.ensureLoaded();
 
-			const months = getLast12MonthEnds();
+			const months = getMonthList();
 			const entries: MonthEntry[] = [];
 
 			for (const { key, label, endDate } of months) {
@@ -96,6 +117,12 @@
 
 <main class="flex h-screen flex-col" class:cursor-wait={isLoading}>
 	<Toolbar title="Net Worth" />
+
+	<YearPeriodSelector
+		bind:selectedPeriod
+		onChange={() => loadData()}
+		disabled={isLoading}
+	/>
 
 	<section class="grow overflow-y-auto touch-pan-y px-4 py-4">
 		{#if isLoading}
