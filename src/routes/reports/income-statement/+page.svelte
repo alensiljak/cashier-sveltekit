@@ -206,7 +206,7 @@
 </script>
 
 <main class="flex h-screen flex-col" class:cursor-wait={isLoading}>
-	<Toolbar title="Income vs Expenses" />
+	<Toolbar title="Income Statement" />
 
 	<div class="flex items-center gap-3 border-b border-base-300 px-4 py-2">
 		<span class="text-sm font-medium text-base-content/60">Period:</span>

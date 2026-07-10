@@ -29,17 +29,17 @@
 			<SquareButton Icon={SearchIcon} classes="bg-accent text-secondary" onclick={() => goto('/reports/tx-search')}>
 				Search
 			</SquareButton>
-			<SquareButton Icon={ScaleIcon} classes="bg-primary text-accent" onclick={() => goto('/reports/balance-sheet')}>
-				Balance Sheet
-			</SquareButton>
-			<SquareButton Icon={TrendingUpIcon} classes="bg-primary text-accent" onclick={() => goto('/reports/net-worth')}>
-				Net Worth
-			</SquareButton>
 			<SquareButton Icon={ReceiptIcon} classes="bg-secondary text-accent" onclick={() => goto('/reports/expenses')}>
 				Expenses
 			</SquareButton>
-			<SquareButton Icon={ArrowLeftRightIcon} classes="bg-primary text-accent" onclick={() => goto('/reports/income-expense')}>
-				Income / Expenses
+			<SquareButton Icon={ScaleIcon} classes="bg-primary text-accent" onclick={() => goto('/reports/balance-sheet')}>
+				Balance Sheet
+			</SquareButton>
+			<SquareButton Icon={ArrowLeftRightIcon} classes="bg-primary text-accent" onclick={() => goto('/reports/income-statement')}>
+				Income Statement
+			</SquareButton>
+			<SquareButton Icon={TrendingUpIcon} classes="bg-primary text-accent" onclick={() => goto('/reports/net-worth')}>
+				Net Worth
 			</SquareButton>
 		</div>
 	</div>
