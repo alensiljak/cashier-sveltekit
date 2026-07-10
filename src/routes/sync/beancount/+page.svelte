@@ -82,6 +82,8 @@
 	function resetSyncState() {
 		expandedRows = new Set();
 		diffModalPath = null;
+		showDiffsOnly = false;
+		diffsOnlyUserSet = false;
 	}
 
 	function selectPeer(id: string) {
@@ -444,9 +446,13 @@
 	 *  no differing descendant), so only the files that need a sync decision
 	 *  remain — still nested under their real folder path. */
 	let showDiffsOnly = $state(false);
+	/** True once the user has explicitly toggled the filter for the active peer —
+	 *  suppresses the diff-count auto-default below so a manual "show all" sticks. */
+	let diffsOnlyUserSet = $state(false);
 
 	function toggleShowDiffsOnly() {
 		showDiffsOnly = !showDiffsOnly;
+		diffsOnlyUserSet = true;
 	}
 
 	function buildTree(
@@ -711,6 +717,14 @@
 	let pullCount = $derived(fileRows.filter((r) => r.effectiveAction === 'pull').length);
 	let conflictCount = $derived(fileRows.filter((r) => r.effectiveAction === 'conflict').length);
 
+	/** Defaults the filter to "diffs only" the first time this peer's diff
+	 *  counts become known — a manual toggle (see toggleShowDiffsOnly) sticks
+	 *  afterward, so the user's choice is never overridden mid-session. */
+	$effect(() => {
+		if (diffsOnlyUserSet || !activePeer || remoteEntries === null) return;
+		showDiffsOnly = pullCount + conflictCount > 0;
+	});
+
 	function toggleDir(path: string) {
 		const next = new Set(expandedDirs);
 		if (next.has(path)) next.delete(path);
@@ -729,9 +743,9 @@
 		expandedRows = next;
 	}
 
-	// ─── View mode — three row-layout candidates (cards / compact / grouped) ──
+	// ─── View mode ──
 
-	type ViewMode = 'cards' | 'compact' | 'grouped';
+	type ViewMode = 'compact' | 'grouped';
 	let viewMode = $state<ViewMode>('compact');
 
 	function formatFileSize(bytes: number): string {
@@ -791,12 +805,6 @@
 </script>
 
 {#snippet menuItems()}
-	<ToolbarMenuItem
-		text={showDiffsOnly ? 'Show all files' : 'Show differences only'}
-		Icon={FunnelIcon}
-		iconClass={showDiffsOnly ? 'text-primary' : ''}
-		onclick={toggleShowDiffsOnly}
-	/>
 	{#each RELAY_STRATEGIES as s (s.value)}
 		<ToolbarMenuItem
 			text={s.label}
@@ -980,17 +988,19 @@
 					Refresh
 				</button>
 				<button class="btn btn-ghost btn-xs" onclick={changePeer}>Change</button>
+				<button
+					class="btn btn-xs {showDiffsOnly ? 'btn-primary' : 'btn-ghost'}"
+					onclick={toggleShowDiffsOnly}
+					title={showDiffsOnly
+						? 'Showing differences only — click to show all files'
+						: 'Show differences only'}
+				>
+					<FunnelIcon class="h-3.5 w-3.5" />
+				</button>
 			</div>
 
-			<!-- View-mode switcher — TEMPORARY, for side-by-side evaluation only. -->
+			<!-- View-mode switcher -->
 			<div class="join w-full">
-				<button
-					type="button"
-					class="btn btn-xs join-item flex-1 {viewMode === 'cards'
-						? 'btn-outline btn-primary'
-						: ''}"
-					onclick={() => (viewMode = 'cards')}>Cards</button
-				>
 				<button
 					type="button"
 					class="btn btn-xs join-item flex-1 {viewMode === 'compact'
@@ -1039,47 +1049,10 @@
 
 			{#if treeRows.length === 0}
 				<p class="text-base-content/50 py-6 text-center text-sm">
-					{localLoaded ? 'No matching files found.' : 'Scanning local files…'}
+					{localLoaded ? 'No modified files found.' : 'Scanning local files…'}
 				</p>
-			{:else if viewMode === 'cards'}
-				<!-- Variant 1: "Cards" — one roomy card per file, everything visible at once. -->
-				<ul class="flex flex-col gap-1.5">
-					{#each treeRows as row (row.path)}
-						{#if row.kind === 'directory'}
-							<li>{@render directoryRow(row)}</li>
-						{:else}
-							<li class="rounded-box bg-base-200 p-3" style="margin-left: {row.depth * 1.25}rem">
-								<div class="flex items-center gap-2">
-									<FileIcon class="h-4 w-4 shrink-0 opacity-50" />
-									<span class="font-mono text-sm truncate flex-1">{row.name}</span>
-									{#if row.status && row.status !== 'unchanged'}
-										<span class="badge badge-sm {statusBadgeClass(row.status)}"
-											>{statusLabel(row.status)}</span
-										>
-									{/if}
-									{#if row.status === 'remote-newer' || row.status === 'conflict' || row.status === 'local-newer'}
-										{@render pullCheckbox(row)}
-									{/if}
-								</div>
-								<div class="mt-1 flex flex-col gap-0.5 pl-6 text-xs opacity-60">
-									<span>{metaLine(row.local, 'Local', '— missing')}</span>
-									<span
-										>{metaLine(
-											row.remote,
-											'Remote',
-											remoteEntries ? '— missing' : '— unknown (peer offline)'
-										)}</span
-									>
-								</div>
-								{#if row.status && row.status !== 'unchanged'}
-									<div class="mt-2 pl-6">{@render previewButton(row)}</div>
-								{/if}
-							</li>
-						{/if}
-					{/each}
-				</ul>
 			{:else if viewMode === 'compact'}
-				<!-- Variant 2: "Compact" — one line per file; tap to expand metadata/actions. Best for long books. -->
+				<!-- Compact — one line per file; tap to expand metadata/actions. -->
 				<ul class="flex flex-col divide-y divide-base-300">
 					{#each treeRows as row (row.path)}
 						{#if row.kind === 'directory'}
@@ -1136,7 +1109,7 @@
 					{/each}
 				</ul>
 			{:else}
-				<!-- Variant 3: "Grouped" — sections by status, with bulk actions. Ignores folder nesting. -->
+				<!-- Grouped — sections by status, with bulk actions. Ignores folder nesting. -->
 				<div class="flex flex-col gap-3">
 					{#if conflictRows.length > 0}
 						<div class="rounded-box bg-error/10 p-3">

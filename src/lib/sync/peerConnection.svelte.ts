@@ -3,7 +3,7 @@
 
 	Wraps one `PeerPresence` (room join/leave, identity, trust) plus the three
 	protocols built on top of it:
-	  - the quick key/value sync (cashier.bean/settings/scheduled) used by
+	  - the quick key/value sync (settings/scheduled) used by
 	    peer-sync/+page.svelte's Preview/Diff/Pull actions
 	  - the cheap hash-only variant of the above (`sync-hash`), used by
 	    peer-sync/+page.svelte to show a same/different pill per item as soon
@@ -20,7 +20,6 @@
 */
 import { settings } from '$lib/settings';
 import db from '$lib/data/db';
-import { readFile } from '$lib/utils/opfslib';
 import { PeerPresence, type RelayStrategy } from './peerPresence.svelte';
 import { PeerProtocol } from './PeerSource';
 import { OpfsSource } from './OpfsSource';
@@ -31,7 +30,6 @@ const REQUEST_TIMEOUT_MS = 30_000;
 const HASH_TIMEOUT_MS = 10_000;
 
 export interface RemoteData {
-	bean: string | null;
 	settings: string | null;
 	scheduled: string | null;
 }
@@ -43,7 +41,6 @@ export interface RemoteData {
  * or (on the responder side) the requester isn't trusted.
  */
 export interface RemoteHashes {
-	bean: string | null;
 	settings: string | null;
 	scheduled: string | null;
 	[key: string]: string | null;
@@ -53,7 +50,6 @@ type SyncRequestMsg = { requestId: string; files: string[] };
 // Index signature required so the type satisfies DataPayload's { [key: string]: JsonValue } branch
 type SyncResponseMsg = {
 	requestId: string;
-	bean: string | null;
 	settings: string | null;
 	scheduled: string | null;
 	[key: string]: string | null;
@@ -71,7 +67,6 @@ async function hashText(content: string): Promise<string> {
 
 export async function getLocalData(files: string[]): Promise<RemoteData> {
 	return {
-		bean: files.includes('bean') ? ((await readFile('cashier.bean')) ?? '') : null,
 		settings: files.includes('settings') ? JSON.stringify(await settings.getAll(), null, 2) : null,
 		scheduled: files.includes('scheduled')
 			? JSON.stringify(await db.scheduled.toArray(), null, 2)
@@ -83,7 +78,6 @@ export async function getLocalData(files: string[]): Promise<RemoteData> {
 export async function getLocalHashes(files: string[]): Promise<RemoteHashes> {
 	const data = await getLocalData(files);
 	return {
-		bean: data.bean !== null ? await hashText(data.bean) : null,
 		settings: data.settings !== null ? await hashText(data.settings) : null,
 		scheduled: data.scheduled !== null ? await hashText(data.scheduled) : null
 	};
@@ -132,17 +126,17 @@ class PeerConnection {
 			'sync-hash',
 			async (files, { peerId: fromId }) => {
 				if (!this.presence.peersMap[fromId]?.isTrusted) {
-					return { bean: null, settings: null, scheduled: null };
+					return { settings: null, scheduled: null };
 				}
 				return await getLocalHashes(files);
 			}
 		);
 
 		// Resolve pending fetchRemoteData() promises.
-		this.syncResponseAction.onMessage = ({ requestId, bean, settings: s, scheduled }) => {
+		this.syncResponseAction.onMessage = ({ requestId, settings: s, scheduled }) => {
 			const pending = this.pendingRequests.get(requestId);
 			if (pending) {
-				pending.resolve({ bean, settings: s, scheduled });
+				pending.resolve({ settings: s, scheduled });
 				this.pendingRequests.delete(requestId);
 			}
 		};

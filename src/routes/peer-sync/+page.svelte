@@ -1,15 +1,23 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import DiffViewer from '$lib/components/DiffViewer.svelte';
 	import JsonMergeViewer from '$lib/components/JsonMergeViewer.svelte';
 	import db from '$lib/data/db';
-	import { saveFile } from '$lib/utils/opfslib';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import HelpButton from '$lib/help/HelpButton.svelte';
 	import { Setting, ScheduledTransaction } from '$lib/data/model';
 	import Notifier from '$lib/utils/notifier';
-	import { GitCompareArrowsIcon, EyeIcon, DownloadIcon, Check, RefreshCwIcon } from '@lucide/svelte';
+	import {
+		GitCompareArrowsIcon,
+		EyeIcon,
+		DownloadIcon,
+		Check,
+		RefreshCwIcon,
+		PencilIcon,
+		XIcon,
+		Circle,
+		CircleCheck
+	} from '@lucide/svelte';
 	import {
 		RELAY_STRATEGIES,
 		type ActivePeer,
@@ -26,16 +34,12 @@
 	type PreviewSection = { filename: string; content: string };
 
 	/**
-	 * One file's raw local/remote content for the Diff modal. `cashier.bean` is
-	 * line-oriented (append-only transaction blocks) so DiffViewer's per-hunk
-	 * text merge is safe there. Settings/scheduled are JSON — a raw text-hunk
-	 * splice on JSON risks producing invalid output wherever a hunk boundary
-	 * falls inside the structure (trailing commas, unbalanced braces), so
-	 * those go through JsonMergeViewer's keyed (per-entry) merge instead. See
-	 * keyedMerge.ts.
+	 * Settings/scheduled are JSON — a raw text-hunk splice on JSON risks
+	 * producing invalid output wherever a hunk boundary falls inside the
+	 * structure (trailing commas, unbalanced braces), so those go through
+	 * JsonMergeViewer's keyed (per-entry) merge instead. See keyedMerge.ts.
 	 */
 	type RawDiffSection =
-		| { filename: 'cashier.bean'; kind: 'text'; local: string; remote: string }
 		| { filename: 'settings.json'; kind: 'settings'; local: Setting[]; remote: Setting[] }
 		| {
 				filename: 'scheduled.json';
@@ -73,11 +77,9 @@
 	// across navigation; only the Connect toggle below or leaving the app
 	// disconnects it.
 	const presence = peerConnection.presence;
-	let editingName = $state(false);
+	let editingConfig = $state(false);
 	let nameInput = $state('');
-	let editingRoom = $state(false);
 	let roomInput = $state('cashier');
-	let configExpanded = $state(true);
 	let connecting = $state(false);
 
 	// ─── Sync UI ─────────────────────────────────────────────────────────────────
@@ -90,6 +92,14 @@
 		if (syncTargetId && !presence.peersMap[syncTargetId]) syncTargetId = null;
 	});
 
+	// Sole trusted peer in the room and nothing chosen yet — pick it automatically.
+	let trustedActivePeers = $derived(presence.activePeerList.filter((p) => p.isTrusted));
+	$effect(() => {
+		if (!syncTargetId && trustedActivePeers.length === 1) {
+			syncTargetId = trustedActivePeers[0].trysteroId;
+		}
+	});
+
 	// ─── Item hash status (same/different vs peer) ────────────────────────────
 	// Exchanged eagerly as soon as a peer is selected — cheap SHA-256 digests
 	// only (peerConnection.ts's `sync-hash` protocol), never full content — so
@@ -97,9 +107,8 @@
 	// pulls anything across the wire. Mirrors how /sync/beancount hashes its
 	// tree scan immediately rather than waiting for an explicit action.
 	type HashStatus = 'checking' | 'same' | 'different' | 'error';
-	const ALL_ITEMS = ['bean', 'settings', 'scheduled'];
-	let hashStatus = $state<Record<'bean' | 'settings' | 'scheduled', HashStatus | null>>({
-		bean: null,
+	const ALL_ITEMS = ['settings', 'scheduled'];
+	let hashStatus = $state<Record<'settings' | 'scheduled', HashStatus | null>>({
 		settings: null,
 		scheduled: null
 	});
@@ -107,7 +116,7 @@
 	$effect(() => {
 		const targetId = syncTargetId;
 		if (!targetId) {
-			hashStatus = { bean: null, settings: null, scheduled: null };
+			hashStatus = { settings: null, scheduled: null };
 			return;
 		}
 		checkHashes(targetId);
@@ -119,7 +128,7 @@
 	}
 
 	async function checkHashes(targetId: string) {
-		hashStatus = { bean: 'checking', settings: 'checking', scheduled: 'checking' };
+		hashStatus = { settings: 'checking', scheduled: 'checking' };
 		try {
 			const [local, remote] = await Promise.all([
 				getLocalHashes(ALL_ITEMS),
@@ -127,13 +136,12 @@
 			]);
 			if (targetId !== syncTargetId) return; // stale — user switched peers meanwhile
 			hashStatus = {
-				bean: itemHashStatus(local.bean, remote.bean),
 				settings: itemHashStatus(local.settings, remote.settings),
 				scheduled: itemHashStatus(local.scheduled, remote.scheduled)
 			};
 		} catch {
 			if (targetId !== syncTargetId) return;
-			hashStatus = { bean: 'error', settings: 'error', scheduled: 'error' };
+			hashStatus = { settings: 'error', scheduled: 'error' };
 		}
 	}
 
@@ -142,26 +150,23 @@
 		if (syncTargetId) checkHashes(syncTargetId);
 	}
 
-	let includeCashierBean = $state(false);
 	let includeSettings = $state(false);
 	let includeScheduled = $state(false);
-	let noneSelected = $derived(!includeCashierBean && !includeSettings && !includeScheduled);
-	let allSelected = $derived(includeCashierBean && includeSettings && includeScheduled);
+	let noneSelected = $derived(!includeSettings && !includeScheduled);
+	let allSelected = $derived(includeSettings && includeScheduled);
 	let indeterminate = $state(false);
 	$effect(() => {
-		indeterminate = (includeCashierBean || includeSettings || includeScheduled) && !allSelected;
+		indeterminate = (includeSettings || includeScheduled) && !allSelected;
 	});
 
 	function toggleSelectAll() {
 		const next = !allSelected;
-		includeCashierBean = next;
 		includeSettings = next;
 		includeScheduled = next;
 	}
 
 	function selectedFiles(): string[] {
 		const f: string[] = [];
-		if (includeCashierBean) f.push('bean');
 		if (includeSettings) f.push('settings');
 		if (includeScheduled) f.push('scheduled');
 		return f;
@@ -187,34 +192,32 @@
 
 	onMount(async () => {
 		await peerConnection.ensureInit();
-		nameInput = presence.myName;
-		roomInput = presence.roomCode;
-
-		// Auto-collapse config if already configured
-		if (presence.myName !== 'My Device' && presence.roomCode) configExpanded = false;
 	});
 
-	// ─── Identity ────────────────────────────────────────────────────────────────
+	// ─── Identity & Room ────────────────────────────────────────────────────────
 
-	async function saveName() {
-		const trimmed = nameInput.trim();
-		if (!trimmed) return;
-		await presence.setName(trimmed);
-		editingName = false;
-		Notifier.success('Name saved');
+	function startEditConfig() {
+		nameInput = presence.myName;
+		roomInput = presence.roomCode;
+		editingConfig = true;
 	}
 
-	// ─── Room ────────────────────────────────────────────────────────────────────
+	function cancelEditConfig() {
+		editingConfig = false;
+	}
 
-	async function changeRoom() {
-		const trimmed = roomInput.trim();
-		if (!trimmed || trimmed === presence.roomCode) {
-			editingRoom = false;
-			return;
+	async function saveConfig() {
+		const trimmedName = nameInput.trim();
+		if (trimmedName && trimmedName !== presence.myName) {
+			await presence.setName(trimmedName);
 		}
-		if (presence.isInRoom) await leaveRoom();
-		editingRoom = false;
-		await joinPeerRoom(trimmed);
+		const trimmedRoom = roomInput.trim();
+		if (trimmedRoom && trimmedRoom !== presence.roomCode) {
+			if (presence.isInRoom) await leaveRoom();
+			await joinPeerRoom(trimmedRoom);
+		}
+		editingConfig = false;
+		Notifier.success('Saved');
 	}
 
 	async function joinPeerRoom(code: string) {
@@ -222,7 +225,6 @@
 		connecting = true;
 		try {
 			await peerConnection.connect(code);
-			configExpanded = false;
 			Notifier.success('Connected');
 		} catch (e) {
 			Notifier.error('Failed to connect: ' + (e as Error).message);
@@ -285,7 +287,6 @@
 			const files = selectedFiles();
 			const remote = await fetchRemoteData(files);
 			const sections: PreviewSection[] = [];
-			if (remote.bean !== null) sections.push({ filename: 'cashier.bean', content: remote.bean });
 			if (remote.settings !== null)
 				sections.push({ filename: 'settings.json', content: remote.settings });
 			if (remote.scheduled !== null)
@@ -306,14 +307,6 @@
 			const files = selectedFiles();
 			const [remote, local] = await Promise.all([fetchRemoteData(files), getLocalData(files)]);
 			const sections: RawDiffSection[] = [];
-			if (remote.bean !== null && local.bean !== null) {
-				sections.push({
-					filename: 'cashier.bean',
-					kind: 'text',
-					local: local.bean,
-					remote: remote.bean
-				});
-			}
 			if (remote.settings !== null && local.settings !== null) {
 				sections.push({
 					filename: 'settings.json',
@@ -345,10 +338,6 @@
 		showPullConfirm = false;
 		try {
 			const remote = await fetchRemoteData(selectedFiles());
-			if (remote.bean !== null) {
-				await saveFile('cashier.bean', remote.bean);
-				Notifier.success('cashier.bean updated');
-			}
 			if (remote.settings !== null) {
 				const entries: Setting[] = JSON.parse(remote.settings);
 				await db.settings.clear();
@@ -366,23 +355,6 @@
 			Notifier.error('Pull failed: ' + (e as Error).message);
 		} finally {
 			isPulling = false;
-		}
-	}
-
-	let applyingCashierMerge = $state(false);
-
-	/** Writes a hunk-level Theirs/Mine merge of cashier.bean straight to OPFS — see DiffViewer. */
-	async function applyCashierMerge(mergedContent: string) {
-		applyingCashierMerge = true;
-		try {
-			await saveFile('cashier.bean', mergedContent);
-			Notifier.success('cashier.bean: merge applied.');
-			showDiff = false;
-			refreshHashesIfSelected();
-		} catch (e) {
-			Notifier.error(`Merge failed: ${(e as Error).message}`);
-		} finally {
-			applyingCashierMerge = false;
 		}
 	}
 
@@ -466,6 +438,67 @@
 		{/snippet}
 	</Toolbar>
 	<section class="flex-1 space-y-3 overflow-y-auto touch-pan-y p-4">
+		<!-- Identity/room — one-liner, edit icon toggles both fields into an editable row. -->
+		<div class="card bg-base-200 shadow-sm">
+			<div class="card-body flex-row items-center gap-2 p-3">
+				{#if editingConfig}
+					<input
+						type="text"
+						bind:value={nameInput}
+						class="input input-bordered input-sm min-w-0 flex-1"
+						placeholder="My Phone"
+						aria-label="Device name"
+						onkeydown={(e) => e.key === 'Enter' && saveConfig()}
+					/>
+					<input
+						type="text"
+						bind:value={roomInput}
+						class="input input-bordered input-sm min-w-0 flex-1 font-mono"
+						placeholder="cashier"
+						aria-label="Room"
+						onkeydown={(e) => e.key === 'Enter' && saveConfig()}
+					/>
+					<button
+						class="btn btn-success btn-xs"
+						aria-label="Save"
+						title="Save"
+						onclick={saveConfig}
+					>
+						<Check size={14} />
+					</button>
+					<button
+						class="btn btn-ghost btn-xs"
+						aria-label="Cancel"
+						title="Cancel"
+						onclick={cancelEditConfig}
+					>
+						<XIcon size={14} />
+					</button>
+				{:else}
+					<div class="min-w-0 flex-1 truncate text-sm">
+						{#if presence.isInRoom}
+							<span class="status status-success status-xs mr-1"></span>
+						{:else}
+							<span class="status status-warning status-xs mr-1"></span>
+						{/if}
+						<span class="font-semibold">{presence.myName || '…'}</span>
+						<span class="opacity-40">· Room:</span>
+						<span class="font-mono">{presence.roomCode || '—'}</span>
+						<span class="opacity-40">·</span>
+						<span class="font-mono text-xs opacity-40">ID: {presence.myId}</span>
+					</div>
+					<button
+						class="btn btn-warning btn-outline btn-xs"
+						aria-label="Edit device name and room"
+						title="Edit device name and room"
+						onclick={startEditConfig}
+					>
+						<PencilIcon size={14} />
+					</button>
+				{/if}
+			</div>
+		</div>
+
 		<!-- Connect toggle — the only way to join/leave the room from this page.
 		     Stays connected across navigation to other pages; only this toggle
 		     or leaving the app disconnects. -->
@@ -497,92 +530,6 @@
 			</div>
 		</div>
 
-		<!-- Config collapse -->
-		<div class="collapse collapse-arrow bg-base-200 rounded-box">
-			<input type="checkbox" bind:checked={configExpanded} />
-			<div class="collapse-title flex items-center gap-2 py-2 pr-10 font-medium">
-				<span class="font-semibold">{presence.myName || '…'}</span>
-				<span class="text-base-content/40">·</span>
-				<span class="font-mono text-sm">{presence.roomCode || '—'}</span>
-				{#if presence.isInRoom}
-					<span class="status status-success status-sm ml-1"></span>
-				{:else}
-					<span class="status status-warning status-sm ml-1"></span>
-				{/if}
-			</div>
-			<div class="collapse-content space-y-4 pt-0">
-				<!-- Device name -->
-				<div>
-					<p class="label-text mb-1 text-xs opacity-60">Device Name</p>
-					{#if editingName}
-						<div class="flex gap-2">
-							<input
-								type="text"
-								bind:value={nameInput}
-								class="input input-bordered input-sm flex-1"
-								placeholder="My Phone"
-								onkeydown={(e) => e.key === 'Enter' && saveName()}
-							/>
-							<button class="btn btn-primary btn-sm" onclick={saveName}>Save</button>
-							<button class="btn btn-ghost btn-sm" onclick={() => (editingName = false)}>✕</button>
-						</div>
-					{:else}
-						<div class="flex items-center gap-2">
-							<span class="font-semibold">{presence.myName}</span>
-							<button
-								class="btn btn-ghost btn-xs"
-								onclick={() => {
-									nameInput = presence.myName;
-									editingName = true;
-								}}>Edit</button
-							>
-						</div>
-					{/if}
-				</div>
-
-				<!-- Room -->
-				<div>
-					<p class="label-text mb-1 text-xs opacity-60">Room</p>
-					{#if editingRoom}
-						<div class="flex gap-2">
-							<input
-								type="text"
-								bind:value={roomInput}
-								class="input input-bordered input-sm flex-1"
-								placeholder="cashier"
-								onkeydown={(e) => e.key === 'Enter' && changeRoom()}
-							/>
-							<button class="btn btn-primary btn-sm" onclick={changeRoom}>Save</button>
-							<button
-								class="btn btn-ghost btn-sm"
-								onclick={() => {
-									roomInput = presence.roomCode;
-									editingRoom = false;
-								}}>✕</button
-							>
-						</div>
-					{:else}
-						<div class="flex items-center gap-2">
-							<span class="font-mono font-semibold">{presence.roomCode}</span>
-							{#if presence.isInRoom}
-								<span class="status status-success status-xs"></span>
-							{/if}
-							<button
-								class="btn btn-ghost btn-xs"
-								onclick={() => {
-									roomInput = presence.roomCode;
-									editingRoom = true;
-								}}>Edit</button
-							>
-						</div>
-					{/if}
-				</div>
-
-				<!-- Device ID -->
-				<p class="font-mono text-xs break-all opacity-40">{presence.myId}</p>
-			</div>
-		</div>
-
 		<!-- Active Peers in Room -->
 		{#if presence.isInRoom}
 			<div class="card bg-base-200 shadow-sm">
@@ -595,39 +542,53 @@
 					{#if presence.activePeerList.length === 0}
 						<p class="text-sm opacity-50">Waiting for other devices…</p>
 					{:else}
-						<ul class="space-y-2">
+						<ul class="space-y-2" role="radiogroup" aria-label="Sync source">
 							{#each presence.activePeerList as peer (peer.trysteroId)}
-								<li class="bg-base-300 rounded-box p-3">
-									<div class="flex items-center gap-2">
-										<span class="font-semibold flex-1">{peer.name}</span>
-										{#if peer.isTrusted}
-											<span class="badge badge-success badge-sm">Trusted</span>
-											<button
-												class="btn btn-primary btn-xs"
-												class:btn-outline={syncTargetId !== peer.trysteroId}
-												onclick={() =>
-													(syncTargetId =
-														syncTargetId === peer.trysteroId ? null : peer.trysteroId)}
-											>
-												{syncTargetId === peer.trysteroId ? 'Selected ✓' : 'Sync from'}
-											</button>
-										{/if}
-									</div>
-									{#if !peer.isTrusted}
-										<div class="mt-2 rounded bg-warning/15 p-2 text-sm">
-											<p class="text-xs font-medium opacity-70">
-												Confirm pairing code on both devices:
-											</p>
-											<p class="font-mono text-2xl font-bold tracking-[0.25em]">
-												{peer.pairingCode}
-											</p>
-										</div>
+								{@const selected = peer.isTrusted && syncTargetId === peer.trysteroId}
+								<li>
+									{#if peer.isTrusted}
 										<button
-											class="btn btn-success btn-sm mt-2 w-full"
-											onclick={() => trustPeer(peer)}
+											type="button"
+											role="radio"
+											aria-checked={selected}
+											class="rounded-box flex w-full items-center gap-2 p-3 text-left transition-colors"
+											class:bg-primary={selected}
+											class:text-primary-content={selected}
+											class:bg-base-300={!selected}
+											onclick={() => (syncTargetId = peer.trysteroId)}
 										>
-											Trust This Device
+											{#if selected}
+												<CircleCheck size={16} class="shrink-0" />
+											{:else}
+												<Circle size={16} class="shrink-0 opacity-40" />
+											{/if}
+											<span class="font-semibold flex-1">{peer.name}</span>
+											<span
+												class="badge badge-sm"
+												class:badge-success={!selected}
+												class:badge-outline={selected}>Trusted</span
+											>
 										</button>
+									{:else}
+										<div class="bg-base-300 rounded-box p-3">
+											<div class="flex items-center gap-2">
+												<span class="font-semibold flex-1">{peer.name}</span>
+											</div>
+											<div class="mt-2 rounded bg-warning/15 p-2 text-sm">
+												<p class="text-xs font-medium opacity-70">
+													Confirm pairing code on both devices:
+												</p>
+												<p class="font-mono text-2xl font-bold tracking-[0.25em]">
+													{peer.pairingCode}
+												</p>
+											</div>
+											<button
+												class="btn btn-success btn-sm mt-2 w-full"
+												onclick={() => trustPeer(peer)}
+											>
+												Trust This Device
+											</button>
+										</div>
 									{/if}
 								</li>
 							{/each}
@@ -647,10 +608,10 @@
 							class="btn btn-ghost btn-xs"
 							aria-label="Refresh comparison"
 							title="Refresh comparison"
-							disabled={hashStatus.bean === 'checking'}
+							disabled={hashStatus.settings === 'checking'}
 							onclick={refreshHashesIfSelected}
 						>
-							<RefreshCwIcon size={14} class={hashStatus.bean === 'checking' ? 'animate-spin' : ''} />
+							<RefreshCwIcon size={14} class={hashStatus.settings === 'checking' ? 'animate-spin' : ''} />
 						</button>
 					</div>
 
@@ -666,15 +627,6 @@
 							<span class="text-xs opacity-60">Select all</span>
 						</label>
 						<div class="divider my-0"></div>
-						<label class="flex items-center gap-3 cursor-pointer">
-							<input
-								type="checkbox"
-								class="checkbox checkbox-primary checkbox-sm"
-								bind:checked={includeCashierBean}
-							/>
-							<span class="flex-1 text-sm">cashier.bean</span>
-							{@render hashBadge(hashStatus.bean)}
-						</label>
 						<label class="flex items-center gap-3 cursor-pointer">
 							<input
 								type="checkbox"
@@ -697,9 +649,9 @@
 
 					<a
 						href="/sync/beancount?peer={syncTarget.persistentId}"
-						class="link link-primary text-xs"
+						class="link link-primary text-xs block py-2 text-center"
 					>
-						Need to sync full ledger files instead? Open Beancount Sync →
+						Sync journal files →
 					</a>
 
 					<div class="flex gap-2 flex-wrap pt-1">
@@ -713,7 +665,7 @@
 							Preview
 						</button>
 						<button
-							class="btn btn-sm btn-secondary flex-1"
+							class="btn btn-sm btn-accent text-secondary flex-1"
 							disabled={noneSelected || isFetching}
 							onclick={openDiff}
 						>
@@ -804,15 +756,7 @@
 			</div>
 			<div class="flex-1 overflow-y-auto touch-pan-y p-4 flex flex-col gap-6">
 				{#each diffSections as section (section.filename)}
-					{#if section.kind === 'text'}
-						<DiffViewer
-							title={section.filename}
-							oldText={section.local}
-							newText={section.remote}
-							onApplyMerge={applyCashierMerge}
-							applyingMerge={applyingCashierMerge}
-						/>
-					{:else if section.kind === 'settings'}
+					{#if section.kind === 'settings'}
 						<JsonMergeViewer
 							title={section.filename}
 							local={section.local}
