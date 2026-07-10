@@ -15,7 +15,8 @@ test('expense category keyword sets toAccount, not fromAccount', () => {
 	expect(result.payee).toBe('Billa');
 	expect(result.amount).toBe(15);
 	expect(result.toAccount).toBe('Expenses:Groceries');
-	expect(result.fromAccount).toMatch(/^Assets:/);
+	expect(result.fromAccount).toBe('Assets');
+	expect(result.fromAccountResolved).toBe(false);
 	expect(result.toAccount).not.toBe(result.fromAccount);
 });
 
@@ -44,4 +45,29 @@ test('"from <alphanumeric-name>" captures account name with digits', () => {
 	expect(result.currency).toBe('EUR');
 	expect(result.toAccount).toBe('Expenses:Groceries');
 	expect(result.fromAccount).toBe('n26');
+});
+
+test('unresolved payee/amount/accounts marks needsReview for follow-up', () => {
+	const result = parseTranscript('xylophone');
+
+	expect(result.amount).toBeUndefined();
+	expect(result.toAccount).toBe('Expenses');
+	expect(result.fromAccount).toBe('Assets');
+	expect(result.needsReview).toBe(true);
+});
+
+test('fully resolved transaction does not need review', () => {
+	const result = parseTranscript('15 euro groceries at billa from n26');
+
+	expect(result.needsReview).toBe(false);
+	expect(result.fromAccount).toBe('n26');
+	expect(result.toAccount).toBe('Expenses:Groceries');
+});
+
+test('explicit from-account keyword does not leak into the toAccount category guess', () => {
+	const result = parseTranscript('20 euros at Bistro Nine from savings');
+
+	expect(result.fromAccount).toBe('Assets:Savings');
+	expect(result.toAccount).toBe('Expenses');
+	expect(result.toAccount).not.toBe(result.fromAccount);
 });

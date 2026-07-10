@@ -10,15 +10,12 @@
 	import { xact as xactStore, xactSpan } from '$lib/data/mainStore';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import { type ParseResult, parseTranscript, buildTransaction } from '$lib/utils/nlpEntry';
-	import { CodeIcon, FilePlusIcon, SearchIcon, WandSparklesIcon, TriangleAlertIcon } from '@lucide/svelte';
+	import { CodeIcon, FilePlusIcon, TriangleAlertIcon } from '@lucide/svelte';
 	import HelpButton from '$lib/help/HelpButton.svelte';
 
 	function focusOnMount(el: HTMLElement) {
 		el.focus();
 	}
-
-	type Mode = 'search' | 'nlp';
-	let mode = $state<Mode>('nlp');
 
 	const NLP_EXAMPLES = [
 		'10 euros for Decathlon, t-shirt',
@@ -27,23 +24,105 @@
 		'Transferred 100 euros from checking to savings'
 	];
 
+	const ACCOUNT_TYPES = ['Assets', 'Liabilities', 'Income', 'Expenses', 'Equity'] as const;
+	const MAX_RESULTS = 10;
+	const MIN_QUERY_LENGTH = 2;
+
+	let searchText = $state('');
+	let isLoading = $state(false);
+	let isSelecting = $state(false);
+	let filtersExpanded = $state(false);
+	let templates = $state<Xact[]>([]);
+	let hasSearched = $state(false);
+	let error = $state<string | null>(null);
+
 	let parseResult = $state<ParseResult | null>(null);
 	let nlpXact = $state<Xact | null>(null);
 
-	function runParse() {
+	// Filters (all off by default)
+	let filterDateFrom = $state('');
+	let filterDateTo = $state('');
+	let filterAccountType = $state('');
+
+	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+	let lastQuery = $state('');
+	let queryDialog: HTMLDialogElement | undefined;
+	let copySuccess = $state(false);
+
+	let parseRequestId = 0;
+
+	// Fill in generic fallback accounts (Assets/Expenses/Income) from the most recent
+	// transaction for the same payee, when the parser couldn't resolve them from the text.
+	async function refineFromPayeeHistory(result: ParseResult) {
+		if (!result.payee || result.isTransfer) return;
+		if (result.fromAccountResolved && result.toAccountResolved) return;
+
+		const esc = result.payee.replace(/"/g, '\\"');
+		const bql = `SELECT date, account WHERE payee ~ "(?i)${esc}" ORDER BY date DESC`;
+		const res = await fullLedgerService.query(bql);
+		if (res.errors?.length) return;
+
+		const rows = (res.rows ?? []) as unknown[][];
+		if (!rows.length) return;
+		const cols = res.columns ?? [];
+		const dateIdx = cols.indexOf('date');
+		const accountIdx = cols.indexOf('account');
+
+		const latestDate = String(rows[0][dateIdx]);
+		const accounts = rows
+			.filter((row) => String(row[dateIdx]) === latestDate)
+			.map((row) => String(row[accountIdx]));
+
+		const assetAccount = accounts.find((a) => a.startsWith('Assets:') || a.startsWith('Liabilities:'));
+		const otherAccount = accounts.find((a) => a !== assetAccount);
+		if (!assetAccount || !otherAccount) return;
+
+		if (result.isIncome) {
+			if (!result.fromAccountResolved) {
+				result.fromAccount = otherAccount;
+				result.fromAccountResolved = true;
+			}
+			if (!result.toAccountResolved) {
+				result.toAccount = assetAccount;
+				result.toAccountResolved = true;
+			}
+		} else {
+			if (!result.toAccountResolved) {
+				result.toAccount = otherAccount;
+				result.toAccountResolved = true;
+			}
+			if (!result.fromAccountResolved) {
+				result.fromAccount = assetAccount;
+				result.fromAccountResolved = true;
+			}
+		}
+		result.matched.push(`from history: ${otherAccount}, ${assetAccount}`);
+		result.needsReview = !result.payee || result.amount === undefined;
+	}
+
+	async function runParse() {
 		const text = searchText.trim();
-		if (!text) {
+		if (text.length < MIN_QUERY_LENGTH) {
 			parseResult = null;
 			nlpXact = null;
 			return;
 		}
-		parseResult = parseTranscript(text);
-		nlpXact = buildTransaction(parseResult);
+		const requestId = ++parseRequestId;
+		const result = parseTranscript(text);
+		try {
+			await refineFromPayeeHistory(result);
+		} catch {
+			// Ledger query failed — keep the generic fallback, still flagged for review.
+		}
+		if (requestId !== parseRequestId) return;
+		parseResult = result;
+		nlpXact = buildTransaction(result);
 	}
 
-	function useNlpExample(phrase: string) {
+	function useExample(phrase: string) {
 		searchText = phrase;
 		runParse();
+		runSearch();
 	}
 
 	function selectNlpXact(template: Xact) {
@@ -70,40 +149,12 @@
 		}
 	}
 
-	function setMode(next: Mode) {
-		if (mode === next) return;
-		mode = next;
-		if (next === 'nlp') runParse();
-	}
-
-	const ACCOUNT_TYPES = ['Assets', 'Liabilities', 'Income', 'Expenses', 'Equity'] as const;
-	const MAX_RESULTS = 15;
-
-	let searchText = $state('');
-	let isLoading = $state(false);
-	let isSelecting = $state(false);
-	let filtersExpanded = $state(false);
-	let templates = $state<Xact[]>([]);
-	let hasSearched = $state(false);
-	let error = $state<string | null>(null);
-
-	// Filters (all off by default)
-	let filterDateFrom = $state('');
-	let filterDateTo = $state('');
-	let filterAccountType = $state('');
-
-	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-	let lastQuery = $state('');
-	let queryDialog: HTMLDialogElement | undefined;
-	let copySuccess = $state(false);
-
 	function onInput() {
 		if (debounceTimer) clearTimeout(debounceTimer);
-		if (mode === 'nlp') {
-			debounceTimer = setTimeout(runParse, 400);
-		} else {
-			debounceTimer = setTimeout(runSearch, 400);
-		}
+		debounceTimer = setTimeout(() => {
+			runParse();
+			runSearch();
+		}, 400);
 	}
 
 	// Re-run search when filters change while there is active search text
@@ -112,7 +163,7 @@
 		void filterDateFrom;
 		void filterDateTo;
 		void filterAccountType;
-		if (mode === 'search' && searchText.trim().length >= 2) {
+		if (searchText.trim().length >= MIN_QUERY_LENGTH) {
 			if (debounceTimer) clearTimeout(debounceTimer);
 			debounceTimer = setTimeout(runSearch, 400);
 		}
@@ -306,116 +357,135 @@
 	</Toolbar>
 
 	<section class="flex flex-1 flex-col gap-3 overflow-y-auto touch-pan-y p-3">
-		<!-- Mode switch -->
-		<div class="flex items-center justify-center gap-3" role="radiogroup" aria-label="Entry mode">
-			<button
-				type="button"
-				role="radio"
-				aria-checked={mode === 'nlp'}
-				title="Natural language"
-				class="btn btn-circle {mode === 'nlp' ? 'btn-primary' : 'btn-outline'}"
-				onclick={() => setMode('nlp')}
-			>
-				<WandSparklesIcon class="size-5" />
-			</button>
-			<button
-				type="button"
-				role="radio"
-				aria-checked={mode === 'search'}
-				title="Search"
-				class="btn btn-circle {mode === 'search' ? 'btn-primary' : 'btn-outline'}"
-				onclick={() => setMode('search')}
-			>
-				<SearchIcon class="size-5" />
-			</button>
-		</div>
-
-		<!-- Search / entry input -->
+		<!-- Entry input -->
 		<input
-			class="input input-bordered w-full"
+			class="input mx-auto w-11/12 max-w-2xl rounded-full border-2 border-primary bg-primary/5 shadow-none focus:outline-none"
 			type="search"
-			placeholder={mode === 'nlp'
-				? 'e.g. 10 euros for Decathlon, t-shirt'
-				: 'Search payee, narration, account…'}
+			placeholder="e.g. 10 euros for Decathlon, t-shirt"
 			use:focusOnMount
 			bind:value={searchText}
 			oninput={onInput}
 		/>
 
-		{#if mode === 'search'}
-			<!-- Optional filters -->
-			<AccordionSection
-				title="Filters"
-				expanded={filtersExpanded}
-				onToggle={() => (filtersExpanded = !filtersExpanded)}
-			>
-				<div class="flex flex-col gap-3">
-					<!-- Date range -->
-					<div class="flex gap-2">
-						<div class="flex flex-1 flex-col gap-1">
-							<label class="label py-0 text-xs font-semibold text-base-content/60" for="date-from">
-								From
-							</label>
-							<input
-								id="date-from"
-								type="date"
-								class="input input-bordered input-sm w-full"
-								bind:value={filterDateFrom}
-							/>
-						</div>
-						<div class="flex flex-1 flex-col gap-1">
-							<label class="label py-0 text-xs font-semibold text-base-content/60" for="date-to">
-								To
-							</label>
-							<input
-								id="date-to"
-								type="date"
-								class="input input-bordered input-sm w-full"
-								bind:value={filterDateTo}
-							/>
-						</div>
+		<!-- Optional filters -->
+		<AccordionSection
+			title="Filters"
+			expanded={filtersExpanded}
+			onToggle={() => (filtersExpanded = !filtersExpanded)}
+		>
+			<div class="flex flex-col gap-3">
+				<!-- Date range -->
+				<div class="flex gap-2">
+					<div class="flex flex-1 flex-col gap-1">
+						<label class="label py-0 text-xs font-semibold text-base-content/60" for="date-from">
+							From
+						</label>
+						<input
+							id="date-from"
+							type="date"
+							class="input input-bordered input-sm w-full"
+							bind:value={filterDateFrom}
+						/>
 					</div>
+					<div class="flex flex-1 flex-col gap-1">
+						<label class="label py-0 text-xs font-semibold text-base-content/60" for="date-to">
+							To
+						</label>
+						<input
+							id="date-to"
+							type="date"
+							class="input input-bordered input-sm w-full"
+							bind:value={filterDateTo}
+						/>
+					</div>
+				</div>
 
-					<!-- Account type -->
-					<div class="flex flex-col gap-1">
-						<span class="label py-0 text-xs font-semibold text-base-content/60">Account type</span>
-						<div class="flex flex-wrap gap-2">
+				<!-- Account type -->
+				<div class="flex flex-col gap-1">
+					<span class="label py-0 text-xs font-semibold text-base-content/60">Account type</span>
+					<div class="flex flex-wrap gap-2">
+						<label class="flex items-center gap-1 cursor-pointer">
+							<input
+								type="radio"
+								class="radio radio-sm"
+								name="acct-type"
+								value=""
+								bind:group={filterAccountType}
+							/>
+							<span class="text-sm">All</span>
+						</label>
+						{#each ACCOUNT_TYPES as type}
 							<label class="flex items-center gap-1 cursor-pointer">
 								<input
 									type="radio"
 									class="radio radio-sm"
 									name="acct-type"
-									value=""
+									value={type}
 									bind:group={filterAccountType}
 								/>
-								<span class="text-sm">All</span>
+								<span class="text-sm">{type}</span>
 							</label>
-							{#each ACCOUNT_TYPES as type}
-								<label class="flex items-center gap-1 cursor-pointer">
-									<input
-										type="radio"
-										class="radio radio-sm"
-										name="acct-type"
-										value={type}
-										bind:group={filterAccountType}
-									/>
-									<span class="text-sm">{type}</span>
-								</label>
-							{/each}
-						</div>
+						{/each}
 					</div>
 				</div>
-			</AccordionSection>
+			</div>
+		</AccordionSection>
 
-			<!-- Results -->
+		{#if searchText.trim().length < MIN_QUERY_LENGTH}
+			<!-- Instructions -->
+			<div class="card bg-base-200 shadow">
+				<div class="card-body gap-2 p-4">
+					<p class="text-sm">
+						Describe a transaction in plain text — the top suggestion turns it into a new
+						transaction (with generic accounts flagged <code>!</code> for anything it had to guess).
+						The same text also searches your existing transactions below, so you can reuse one
+						as a template instead.
+					</p>
+					<h3 class="card-title text-sm">Try saying…</h3>
+					<ul class="text-sm space-y-1">
+						{#each NLP_EXAMPLES as phrase}
+							<li>
+								<button
+									type="button"
+									class="text-left opacity-70 hover:opacity-100 hover:underline"
+									onclick={() => useExample(phrase)}
+								>"{phrase}"</button>
+							</li>
+						{/each}
+					</ul>
+				</div>
+			</div>
+		{:else}
+			<!-- Suggested new transaction -->
+			{#if parseResult && nlpXact}
+				<div class="flex flex-col gap-1">
+					<div class="flex items-center justify-between">
+						<span class="text-xs font-semibold uppercase tracking-wide text-base-content/60">
+							Suggested new transaction
+						</span>
+						{#if parseResult.needsReview}
+							<div class="badge badge-warning badge-sm gap-1">
+								<TriangleAlertIcon class="size-3" /> needs review
+							</div>
+						{:else}
+							<div class="badge badge-success badge-sm">looks good</div>
+						{/if}
+					</div>
+					<div class:pointer-events-none={isSelecting} class:opacity-50={isSelecting}>
+						<JournalXactRow xact={nlpXact} onclick={selectNlpXact} />
+					</div>
+				</div>
+
+				<div class="divider my-0 text-xs text-base-content/50">existing transactions</div>
+			{/if}
+
+			<!-- Search results -->
 			{#if isLoading}
 				<div class="flex justify-center py-8">
 					<span class="loading loading-spinner loading-md"></span>
 				</div>
 			{:else if error}
 				<div class="alert alert-error text-sm">{error}</div>
-			{:else if searchText.trim().length < 2}
-				<p class="py-8 text-center text-sm text-base-content/50">Type at least 2 characters to search.</p>
 			{:else if hasSearched && templates.length === 0}
 				<p class="py-8 text-center text-sm text-base-content/50">No matching transactions found.</p>
 			{:else if templates.length > 0}
@@ -436,43 +506,6 @@
 					{/each}
 				</div>
 			{/if}
-		{:else if searchText.trim().length === 0}
-			<div class="card bg-base-200 shadow">
-				<div class="card-body gap-2 p-4">
-					<h3 class="card-title text-sm">Try saying…</h3>
-					<ul class="text-sm space-y-1">
-						{#each NLP_EXAMPLES as phrase}
-							<li>
-								<button
-									type="button"
-									class="text-left opacity-70 hover:opacity-100 hover:underline"
-									onclick={() => useNlpExample(phrase)}
-								>"{phrase}"</button>
-							</li>
-						{/each}
-					</ul>
-				</div>
-			</div>
-		{:else if parseResult && nlpXact}
-			<div class="flex items-center justify-between">
-				{#if parseResult.needsReview}
-					<div class="badge badge-warning gap-1">
-						<TriangleAlertIcon class="size-3" /> needs review — tap to open and fix
-					</div>
-				{:else}
-					<div class="badge badge-success">looks good — tap to open</div>
-				{/if}
-			</div>
-			{#if isSelecting}
-				<div class="flex justify-center py-4">
-					<span class="loading loading-spinner loading-md"></span>
-				</div>
-			{/if}
-			<div class="flex flex-col divide-y divide-base-200" class:pointer-events-none={isSelecting} class:opacity-50={isSelecting}>
-				<div class="py-2">
-					<JournalXactRow xact={nlpXact} onclick={selectNlpXact} />
-				</div>
-			</div>
 		{/if}
 	</section>
 

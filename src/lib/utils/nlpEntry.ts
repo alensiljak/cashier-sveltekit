@@ -11,6 +11,11 @@ export interface ParseResult {
 	matched: string[];
 	/** True when a field was missing and a generic/fallback account or value was substituted. */
 	needsReview: boolean;
+	isTransfer: boolean;
+	isIncome: boolean;
+	/** False when fromAccount/toAccount is a bare top-level fallback (Assets/Expenses/Income), not a specific guess. */
+	fromAccountResolved: boolean;
+	toAccountResolved: boolean;
 }
 
 const CURRENCY_MAP: Record<string, string> = {
@@ -59,10 +64,13 @@ const ACCOUNT_KEYWORDS: Array<{ words: string[]; account: string }> = [
 	{ words: ['salary', 'income', 'paycheck', 'wage', 'wages', 'payroll'], account: 'Income:Salary' }
 ];
 
-function guessAccount(text: string): string | undefined {
+function guessAccount(text: string, prefix?: string): string | undefined {
 	const lower = text.toLowerCase();
 	for (const { words, account } of ACCOUNT_KEYWORDS) {
-		if (words.some((w) => lower.includes(w))) return account;
+		if (prefix && !account.startsWith(prefix)) continue;
+		if (words.some((w) => new RegExp(`\\b${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).test(lower))) {
+			return account;
+		}
 	}
 	return undefined;
 }
@@ -206,20 +214,24 @@ export function parseTranscript(text: string): ParseResult {
 
 	if (!fromAccount) {
 		if (isIncome) {
-			const guess = guessAccount(text);
-			fromAccount = guess ?? 'Income:Other';
+			const guess = guessAccount(text, 'Income:');
+			fromAccount = guess ?? 'Income';
 			fromAccountResolved = !!guess;
-			toAccount = toAccount ?? 'Assets:Checking';
+			if (!toAccount) {
+				// Top-level fallback — no specific account known, flag for review.
+				toAccount = 'Assets';
+				toAccountResolved = false;
+			}
 		} else {
-			// Plain default from-account for expenses; not a "guess" worth flagging on its own.
-			fromAccount = 'Assets:Checking';
-			fromAccountResolved = true;
+			// Top-level fallback — no specific account known, flag for review.
+			fromAccount = 'Assets';
+			fromAccountResolved = false;
 		}
 	}
 
 	if (!toAccount && !isTransfer && !isIncome) {
-		const guess = guessAccount(text);
-		toAccount = guess ?? 'Expenses:General';
+		const guess = guessAccount(text, 'Expenses:');
+		toAccount = guess ?? 'Expenses';
 		toAccountResolved = !!guess;
 	}
 
@@ -233,7 +245,11 @@ export function parseTranscript(text: string): ParseResult {
 		toAccount,
 		confidence: Math.min(confidence, 100),
 		matched,
-		needsReview
+		needsReview,
+		isTransfer,
+		isIncome,
+		fromAccountResolved,
+		toAccountResolved
 	};
 }
 
@@ -244,12 +260,12 @@ export function buildTransaction(result: ParseResult): Xact {
 	xact.flag = result.needsReview ? '!' : '*';
 
 	const posting1 = new Posting();
-	posting1.account = result.toAccount ?? 'Expenses:General';
+	posting1.account = result.toAccount ?? 'Expenses';
 	posting1.amount = result.amount;
 	posting1.currency = result.currency ?? 'EUR';
 
 	const posting2 = new Posting();
-	posting2.account = result.fromAccount ?? 'Assets:Checking';
+	posting2.account = result.fromAccount ?? 'Assets';
 
 	xact.postings = [posting1, posting2];
 	return xact;
