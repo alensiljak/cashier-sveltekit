@@ -1,7 +1,8 @@
 <script lang="ts">
-	import { FileUpIcon, ScrollIcon, TriangleAlertIcon } from '@lucide/svelte';
+	import { FileUpIcon, PlusIcon, ScrollIcon, TriangleAlertIcon } from '@lucide/svelte';
 	import HomeCardTemplate from './HomeCardTemplate.svelte';
 	import { goto } from '$app/navigation';
+	import { xact } from '$lib/data/mainStore';
 	import { Money, Posting, Xact } from '$lib/data/model';
 	import { XactAugmenter } from '$lib/utils/xactAugmenter';
 	import Notifier from '$lib/utils/notifier';
@@ -153,6 +154,12 @@
 		e.stopPropagation();
 		await goto('/export/journal');
 	}
+
+	async function onNewXactClick(e: Event) {
+		e.stopPropagation();
+		xact.set(Xact.create());
+		await goto('/tx');
+	}
 </script>
 
 <HomeCardTemplate onclick={onClick}>
@@ -189,7 +196,15 @@
 		{/if}
 	{/snippet}
 	{#snippet footer()}
-		<center>
+		<center class="flex justify-center gap-2">
+			<button
+				type="button"
+				class="btn btn-outline btn-primary uppercase rounded"
+				onclick={onNewXactClick}
+			>
+				<PlusIcon />
+				<span>New</span>
+			</button>
 			<button
 				type="button"
 				class="btn btn-outline btn-warning uppercase rounded"

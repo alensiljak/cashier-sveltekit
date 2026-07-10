@@ -7,7 +7,6 @@ None at the moment. Regular ongoing maintenance.
 ## General
 
 - [ ] research storing the configuration in OPFS, as a TOML file
-- [ ] setting for the cut-off date for the payees. Only include payees in transctions made since that date.
 - [ ] savings goals
 - [x] currency calculator
 - [ ] transaction import
@@ -35,7 +34,7 @@ None at the moment. Regular ongoing maintenance.
 ## Budgeting
 
 - [ ] budget, [docs](https://rustledger.github.io/guides/budgeting.html).
-- [ ] track actual spending againtst the budget
+- [x] track actual spending againtst the budget
 - [ ] a budget is amount in time period
 - [ ] monthly budget as default?
 
