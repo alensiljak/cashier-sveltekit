@@ -25,6 +25,7 @@
 
 	let files: SearchFile[] = $state([]);
 	let filesLoaded = $state(false);
+	let indexProgress: { count: number; path: string } | undefined = $state(undefined);
 
 	// Longest-first so a substring match prefers the more specific account,
 	// e.g. "Assets:Bank:Checking" over its parent "Assets:Bank".
@@ -40,8 +41,9 @@
 	});
 
 	async function loadFiles() {
-		files = await loadSearchableFiles();
+		files = await loadSearchableFiles((info) => (indexProgress = info));
 		filesLoaded = true;
+		indexProgress = undefined;
 		void loadXactLocations(files);
 	}
 
@@ -175,8 +177,15 @@
 
 	<div class="flex-1 overflow-y-auto touch-pan-y px-1">
 		{#if !filesLoaded}
-			<div class="flex h-full items-center justify-center">
+			<div class="flex h-full flex-col items-center justify-center gap-2">
 				<span class="loading loading-spinner loading-lg"></span>
+				<p class="text-xs opacity-60">
+					{#if indexProgress}
+						Indexing files… ({indexProgress.count}) {indexProgress.path}
+					{:else}
+						Indexing files…
+					{/if}
+				</p>
 			</div>
 		{:else if searchTerms.length === 0}
 			<div class="flex h-32 items-center justify-center opacity-50">

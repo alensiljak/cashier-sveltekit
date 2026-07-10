@@ -57,6 +57,12 @@ export const desktopNavVisible: Writable<boolean> = createDesktopNavVisibleStore
 // Full-text search box value on /search/full-text — kept for the session only (module
 // state, not persisted) so navigating to a result and back leaves it intact.
 export const SearchTermStore: Writable<string> = writable('');
+// Entity search box value/scope on /search (BQL-backed payee/account/narration/
+// commodity search) — kept for the session only (module state, not persisted)
+// so navigating to a result and back leaves the previous query intact.
+export type EntitySearchScope = 'all' | 'payees' | 'accounts' | 'narration' | 'commodities';
+export const EntitySearchTermStore: Writable<string> = writable('');
+export const EntitySearchScopeStore: Writable<EntitySearchScope> = writable('all');
 // Selected month key on /budget (e.g. '2026-07') — kept for the session only
 // (module state, not persisted) so navigating to a transaction search result
 // and back leaves the previously selected month intact.

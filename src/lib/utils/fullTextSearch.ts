@@ -45,8 +45,12 @@ function isSearchableName(name: string): boolean {
  * Recursively reads every searchable file out of OPFS. Directories whose
  * name starts with "." (e.g. `.cashier`, the internal cache folder) are
  * skipped, matching the convention used by the ledger worker's file walk.
+ * `onProgress`, if given, fires after each file is read with the running
+ * count and its path — lets a caller show indexing progress for large books.
  */
-export async function loadSearchableFiles(): Promise<SearchFile[]> {
+export async function loadSearchableFiles(
+	onProgress?: (info: { count: number; path: string }) => void
+): Promise<SearchFile[]> {
 	const root = await navigator.storage.getDirectory();
 	const files: SearchFile[] = [];
 
@@ -62,6 +66,7 @@ export async function loadSearchableFiles(): Promise<SearchFile[]> {
 					const file = await (handle as FileSystemFileHandle).getFile();
 					const content = await file.text();
 					files.push({ path, lines: content.split(/\r\n|\r|\n/) });
+					onProgress?.({ count: files.length, path });
 				} catch {
 					// Skip files that can't be read (e.g. mid-write elsewhere).
 				}

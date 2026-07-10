@@ -323,7 +323,7 @@
 			<div class="py-8 text-center text-base-content/50 text-sm">No results.</div>
 		{:else}
 			<div class="flex flex-col divide-y divide-base-200">
-				{#each xacts as xact (xact.id ?? xact.date + xact.payee)}
+				{#each xacts as xact (xact.id ?? (xact.date ?? '') + (xact.payee ?? ''))}
 					<div class="py-2 cursor-pointer">
 						<JournalXactRow {xact} onclick={onXactClick} />
 					</div>

@@ -125,31 +125,19 @@
 					onclick={closeDrawer}
 				>
 					<ScrollIcon />
-					<span>Journal</span>
+					<span>Device Journal</span>
 				</a>
 			</li>
 			<li>
 				<a
-					href="/scheduled-xacts"
-					class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/scheduled-xacts'
+					href="/search"
+					class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/search'
 						? 'active bg-secondary text-secondary-content'
 						: ''}"
 					onclick={closeDrawer}
 				>
-					<CalendarClockIcon />
-					<span>Scheduled Transactions</span>
-				</a>
-			</li>
-			<li>
-				<a
-					href="/tx"
-					class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/tx'
-						? 'active bg-secondary text-secondary-content'
-						: ''}"
-					onclick={closeDrawer}
-				>
-					<FilePlusIcon />
-					<span>New Transaction</span>
+					<SearchIcon />
+					<span>Search</span>
 				</a>
 			</li>
 		</ul>
@@ -235,6 +223,30 @@
 						<span class="flex-1"></span>
 					</summary>
 					<ul>
+						<li>
+							<a
+								href="/tx"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/tx'
+									? 'active bg-secondary text-secondary-content'
+									: ''}"
+								onclick={closeDrawer}
+							>
+								<FilePlusIcon />
+								<span>New Transaction</span>
+							</a>
+						</li>
+						<li>
+							<a
+								href="/scheduled-xacts"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/scheduled-xacts'
+									? 'active bg-secondary text-secondary-content'
+									: ''}"
+								onclick={closeDrawer}
+							>
+								<CalendarClockIcon />
+								<span>Scheduled Transactions</span>
+							</a>
+						</li>
 						<li>
 							<a
 								href="/accounts"
@@ -394,8 +406,7 @@
 						<li>
 							<a
 								href="/util/cache"
-								class="flex w-full items-center gap-2 py-2 {page.url.pathname ===
-								'/util/cache'
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/util/cache'
 									? 'active bg-secondary text-secondary-content'
 									: ''}"
 								onclick={closeDrawer}
@@ -427,18 +438,6 @@
 							>
 								<CoinsIcon />
 								<span>Currency Converter</span>
-							</a>
-						</li>
-						<li>
-							<a
-								href="/search/full-text"
-								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/search/full-text'
-									? 'active bg-secondary text-secondary-content'
-									: ''}"
-								onclick={closeDrawer}
-							>
-								<SearchIcon />
-								<span>Search</span>
 							</a>
 						</li>
 						<li>
