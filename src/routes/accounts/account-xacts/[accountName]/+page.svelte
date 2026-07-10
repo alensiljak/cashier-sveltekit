@@ -15,7 +15,7 @@
 		return `${value.number} ${value.currency}`;
 	}
 	import * as Formatter from '$lib/utils/formatter';
-	import { ScaleIcon, CopyIcon } from '@lucide/svelte';
+	import { ScaleIcon, CopyIcon, ActivityIcon } from '@lucide/svelte';
 
 	function copyToClipboard(text: string) {
 		navigator.clipboard.writeText(text);
@@ -35,6 +35,11 @@
 				Icon={ScaleIcon}
 				text="Balance Adjustment"
 				onclick={() => goto(`/accounts/bal-adj?account=${encodeURIComponent(page.data.account.name)}`)}
+			/>
+			<ToolbarMenuItem
+				Icon={ActivityIcon}
+				text="Running Balance"
+				onclick={() => goto(`/reports/running-balance?account=${encodeURIComponent(page.data.account.name)}`)}
 			/>
 		{/snippet}
 	</Toolbar>

@@ -10,7 +10,8 @@
 		TrendingUpIcon,
 		ReceiptIcon,
 		ArrowLeftRightIcon,
-		ScaleIcon
+		ScaleIcon,
+		ActivityIcon
 	} from '@lucide/svelte';
 </script>
 
@@ -43,6 +44,9 @@
 			</SquareButton>
 			<SquareButton Icon={LandmarkIcon} classes="bg-primary text-accent" onclick={() => goto('/reports/trial-balance')}>
 				Trial Balance
+			</SquareButton>
+			<SquareButton Icon={ActivityIcon} classes="bg-primary text-accent" onclick={() => goto('/reports/running-balance')}>
+				Running Balance
 			</SquareButton>
 		</div>
 	</div>
