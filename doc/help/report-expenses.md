@@ -1,6 +1,6 @@
 # Expenses Report
 
-The Expenses report charts all Expense-account activity for a selected time period, as either a bar chart or a donut chart. Tap a bar or slice to jump to [Transaction Search](/help/reports) filtered to that account and period. Use the toggle above the chart to switch between bar and donut.
+The Expenses report charts all Expense-account activity for a selected time period, as either a bar chart or a donut chart. Tap a bar or slice to jump to [Transaction Search](/help/tx-search) filtered to that account and period. Use the toggle above the chart to switch between bar and donut.
 
 ## Time period
 

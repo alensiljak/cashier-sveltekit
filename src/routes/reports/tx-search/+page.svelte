@@ -1,11 +1,12 @@
 <script lang="ts">
-	import { tick, onMount } from 'svelte';
+	import { tick, onMount, untrack } from 'svelte';
 	import { page } from '$app/state';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import AccordionSection from '$lib/components/AccordionSection.svelte';
 	import { openXactDetails } from '$lib/utils/unifiedXacts';
 	import JournalXactRow from '$lib/components/JournalXactRow.svelte';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
+	import HelpButton from '$lib/help/HelpButton.svelte';
 	import { Xact, Posting } from '$lib/data/model';
 
 	// State
@@ -26,10 +27,14 @@
 	onMount(() => {
 		const params = page.url.searchParams;
 		const paramAccount = params.get('account');
+		const paramQuery = params.get('q');
+		const paramCommodity = params.get('commodity');
 		const paramDateFrom = params.get('dateFrom');
 		const paramDateTo = params.get('dateTo');
-		if (paramAccount || paramDateFrom || paramDateTo) {
+		if (paramAccount || paramQuery || paramCommodity || paramDateFrom || paramDateTo) {
 			if (paramAccount) account = paramAccount;
+			if (paramQuery) payeeNarration = paramQuery;
+			if (paramCommodity) commodity = paramCommodity;
 			if (paramDateFrom) dateFrom = paramDateFrom;
 			if (paramDateTo) dateTo = paramDateTo;
 			filtersExpanded = false;
@@ -38,6 +43,7 @@
 	});
 	let payeeNarration = $state('');
 	let account = $state('');
+	let commodity = $state('');
 	let amountOp = $state<'>' | '<' | '='>('=');
 	let amountValue = $state('');
 
@@ -53,6 +59,10 @@
 		if (account) {
 			const esc = account.replace(/"/g, '\\"');
 			conditions.push(`account ~ "${esc}"`);
+		}
+		if (commodity) {
+			const esc = commodity.replace(/"/g, '\\"');
+			conditions.push(`currency ~ "${esc}"`);
 		}
 		if (amountValue !== '') {
 			const val = parseFloat(amountValue);
@@ -71,6 +81,7 @@
 		dateTo = '';
 		payeeNarration = '';
 		account = '';
+		commodity = '';
 		amountOp = '=';
 		amountValue = '';
 		hasSearched = false;
@@ -177,6 +188,29 @@
 		return keyOrder.map((k) => groupMap.get(k)!);
 	});
 
+	/** Progressive loading: render results in pages, growing as the sentinel scrolls into view. */
+	const PAGE_SIZE = 30;
+	let visibleCount = $state(untrack(() => PAGE_SIZE));
+	let sentinel = $state<HTMLElement | null>(null);
+
+	$effect(() => {
+		void xacts;
+		visibleCount = PAGE_SIZE;
+	});
+
+	const visibleXacts = $derived(xacts.slice(0, visibleCount));
+
+	$effect(() => {
+		if (!sentinel) return;
+		const observer = new IntersectionObserver((entries) => {
+			if (entries[0].isIntersecting && visibleCount < xacts.length) {
+				visibleCount = Math.min(visibleCount + PAGE_SIZE, xacts.length);
+			}
+		});
+		observer.observe(sentinel);
+		return () => observer.disconnect();
+	});
+
 	async function onXactClick(xact: Xact) {
 		await openXactDetails({
 			date: xact.date ?? '',
@@ -191,7 +225,11 @@
 </script>
 
 <main class="flex h-screen flex-col" class:cursor-wait={isLoading}>
-	<Toolbar title="Transaction Search" />
+	<Toolbar title="Transaction Search">
+		{#snippet actions()}
+			<HelpButton topic="tx-search" />
+		{/snippet}
+	</Toolbar>
 
 	<!-- Filter Panel -->
 	<div class="px-2 pt-2">
@@ -252,6 +290,20 @@
 						class="input input-bordered input-sm w-full"
 						placeholder="e.g. Expenses:Food"
 						bind:value={account}
+					/>
+				</div>
+
+				<!-- Commodity -->
+				<div class="flex flex-col gap-1 sm:col-span-2">
+					<label for="commodity" class="label py-0 text-xs font-semibold text-base-content/60"
+						>Commodity</label
+					>
+					<input
+						id="commodity"
+						type="text"
+						class="input input-bordered input-sm w-full"
+						placeholder="e.g. VTI"
+						bind:value={commodity}
 					/>
 				</div>
 
@@ -323,12 +375,13 @@
 			<div class="py-8 text-center text-base-content/50 text-sm">No results.</div>
 		{:else}
 			<div class="flex flex-col divide-y divide-base-200">
-				{#each xacts as xact (xact.id ?? (xact.date ?? '') + (xact.payee ?? ''))}
+				{#each visibleXacts as xact (xact.id ?? (xact.date ?? '') + (xact.payee ?? ''))}
 					<div class="py-2 cursor-pointer">
 						<JournalXactRow {xact} onclick={onXactClick} />
 					</div>
 				{/each}
 			</div>
+			<div bind:this={sentinel}></div>
 		{/if}
 	</section>
 </main>

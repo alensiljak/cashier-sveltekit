@@ -14,7 +14,12 @@
 		xactSpan,
 		type EntitySearchScope
 	} from '$lib/data/mainStore';
-	import { parseEntitySearchTerms, resolveTermCategories, type EntityCategory } from '$lib/utils/entitySearch';
+	import {
+		parseEntitySearchTerms,
+		resolveTermCategories,
+		type EntityCategory,
+		type EntitySearchTerm
+	} from '$lib/utils/entitySearch';
 	import {
 		buildConditions,
 		searchPayees,
@@ -50,6 +55,12 @@
 	let accountResults: string[] = $state([]);
 	let commodityResults: string[] = $state([]);
 	let transactionResults: TransactionResult[] = $state([]);
+	/** Terms/categories behind the current transactionResults, kept to build the Transaction Search link. */
+	let transactionTerms: { term: EntitySearchTerm; category: EntityCategory }[] = $state([]);
+
+	/** Transactions section is capped in-page; "Show All" links to Transaction Search for the rest. */
+	const TX_DISPLAY_CAP = 30;
+	const visibleTransactionResults = $derived(transactionResults.slice(0, TX_DISPLAY_CAP));
 
 	const hasResults = $derived(
 		payeeResults.length > 0 ||
@@ -84,12 +95,14 @@
 			accountResults = [];
 			commodityResults = [];
 			transactionResults = [];
+			transactionTerms = [];
 			highlightTerms = [];
 			return;
 		}
 
 		const categories = resolveTermCategories(terms, $EntitySearchScopeStore);
 		highlightTerms = terms.map((term) => term.value);
+		transactionTerms = terms.map((term, i) => ({ term, category: categories[i] }));
 
 		const scope = $EntitySearchScopeStore;
 		const activeEntities: Exclude<EntityCategory, 'any'>[] =
@@ -146,6 +159,28 @@
 		goto('/commodities/detail?symbol=' + encodeURIComponent(symbol));
 	}
 
+	/**
+	 * Builds the /reports/tx-search URL for the current transaction query, splitting terms into
+	 * that page's account/payee-narration/commodity fields (an 'any' term maps to narration,
+	 * same as the BQL field this page uses for it).
+	 */
+	function txSearchUrl(): string {
+		const params = new URLSearchParams();
+		const textTerms: string[] = [];
+		const accountTerms: string[] = [];
+		const commodityTerms: string[] = [];
+		for (const { term, category } of transactionTerms) {
+			const resolved = category === 'any' ? 'narration' : category;
+			if (resolved === 'account') accountTerms.push(term.value);
+			else if (resolved === 'commodity') commodityTerms.push(term.value);
+			else if (resolved === 'payee' || resolved === 'narration') textTerms.push(term.value);
+		}
+		if (textTerms.length > 0) params.set('q', textTerms.join(' '));
+		if (accountTerms.length > 0) params.set('account', accountTerms.join(' '));
+		if (commodityTerms.length > 0) params.set('commodity', commodityTerms.join(' '));
+		return `/reports/tx-search?${params}`;
+	}
+
 	// Same destination as tapping a transaction on the Payee Transactions page.
 	async function onTransactionClick(result: TransactionResult) {
 		xactStore.set(result.xact);
@@ -177,6 +212,7 @@
 		{/snippet}
 		{#snippet menuItems()}
 			<ToolbarMenuItem text="Full-Text Search" targetNav="/search/full-text" Icon={FileSearchIcon} />
+			<ToolbarMenuItem text="Transaction Search" targetNav="/reports/tx-search" Icon={ReceiptIcon} />
 		{/snippet}
 	</Toolbar>
 	<SearchToolbar focus {onSearch} delay={200} value={$EntitySearchTermStore} />
@@ -207,7 +243,7 @@
 			</div>
 		{:else}
 			{#if payeeResults.length > 0}
-				<h2 class="pt-2 pb-1 text-xs font-semibold uppercase opacity-50">Payees</h2>
+				<h2 class="pt-2 pb-1 text-xs font-semibold uppercase opacity-50">Payees ({payeeResults.length})</h2>
 				{#each payeeResults as payee (payee)}
 					<!-- svelte-ignore a11y_click_events_have_key_events -->
 					<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
@@ -228,7 +264,7 @@
 			{/if}
 
 			{#if accountResults.length > 0}
-				<h2 class="pt-2 pb-1 text-xs font-semibold uppercase opacity-50">Accounts</h2>
+				<h2 class="pt-2 pb-1 text-xs font-semibold uppercase opacity-50">Accounts ({accountResults.length})</h2>
 				{#each accountResults as account (account)}
 					<!-- svelte-ignore a11y_click_events_have_key_events -->
 					<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
@@ -249,7 +285,7 @@
 			{/if}
 
 			{#if commodityResults.length > 0}
-				<h2 class="pt-2 pb-1 text-xs font-semibold uppercase opacity-50">Commodities</h2>
+				<h2 class="pt-2 pb-1 text-xs font-semibold uppercase opacity-50">Commodities ({commodityResults.length})</h2>
 				{#each commodityResults as commodity (commodity)}
 					<!-- svelte-ignore a11y_click_events_have_key_events -->
 					<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
@@ -270,14 +306,22 @@
 			{/if}
 
 			{#if transactionResults.length > 0}
-				<h2 class="pt-2 pb-1 text-xs font-semibold uppercase opacity-50">
-					<ReceiptIcon class="inline size-3 -translate-y-px" /> Transactions
+				<h2 class="pt-2 pb-1 flex items-center gap-2 text-xs font-semibold uppercase opacity-50">
+					<span><ReceiptIcon class="inline size-3 -translate-y-px" /> Transactions ({transactionResults.length})</span>
+					{#if transactionResults.length > TX_DISPLAY_CAP}
+						<a href={txSearchUrl()} class="link link-primary text-xs font-normal normal-case">Show All</a>
+					{/if}
 				</h2>
-				{#each transactionResults as result, i (result.xact.date + '\0' + (result.xact.payee ?? '') + '\0' + (result.xact.note ?? '') + '\0' + i)}
+				{#each visibleTransactionResults as result, i (result.xact.date + '\0' + (result.xact.payee ?? '') + '\0' + (result.xact.note ?? '') + '\0' + i)}
 					<div class="border-base-content/15 border-b py-2 px-1">
 						<JournalXactRow xact={result.xact} onclick={() => onTransactionClick(result)} />
 					</div>
 				{/each}
+				{#if transactionResults.length > TX_DISPLAY_CAP}
+					<div class="py-3 text-center">
+						<a href={txSearchUrl()} class="link link-primary text-sm">Show All</a>
+					</div>
+				{/if}
 			{/if}
 		{/if}
 	</div>
