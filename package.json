@@ -23,7 +23,7 @@
 		"@trystero-p2p/mqtt": "^0.25.2",
 		"@trystero-p2p/nostr": "^0.25.2",
 		"@trystero-p2p/torrent": "^0.25.2",
-		"typescript": "^7.0.0"
+		"typescript": "^6.0.0"
 	},
 	"devDependencies": {
 		"@floating-ui/dom": "^1.6.13",
