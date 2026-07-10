@@ -29,7 +29,7 @@ export interface ParseResult {
 }
 
 /** Connector/filler words that never belong in the leftover narration, whether or not they end up consumed elsewhere. */
-const STOP_WORDS = new Set([
+export const STOP_WORDS = new Set([
 	'paid',
 	'spent',
 	'bought',

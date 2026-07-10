@@ -6,6 +6,7 @@
 	consistent with the rest of the app.
 */
 import fullLedgerService from '$lib/services/ledgerWorkerClient';
+import { STOP_WORDS } from '$lib/utils/nlpEntry';
 import ledgerService from '$lib/services/ledgerService';
 import { Xact, Posting } from '$lib/data/model';
 import type { DirectiveSpan } from '$lib/rledger/sourceEditor';
@@ -49,12 +50,14 @@ const AMOUNT_TERM = /^\d+(\.\d+)?$/;
  * single-field-per-section AND that `buildConditions` gives every other entity
  * category (payees/accounts/commodities).
  *
- * A bare-number term ("10", "9.99") is dropped entirely rather than turned into a
- * filter: a remembered amount is rarely exact (users round, misremember, or the
- * amount includes fees/tips not on the matched historical transaction), so ANDing
- * it in would hide otherwise-correct payee/account matches. The amount is still
- * parsed for the *new* suggested transaction elsewhere (`parseTranscript`) — it
- * just never excludes an existing transaction from the search results.
+ * A bare-number term ("10", "9.99") or a currency/connector filler word (from
+ * `STOP_WORDS` — "euros", "for", "at", …) is dropped entirely rather than turned into a
+ * filter: a remembered amount is rarely exact (users round, misremember, or the amount
+ * includes fees/tips not on the matched historical transaction), and filler words never
+ * appear literally in a transaction's payee/narration/account text (STT output like
+ * "decathlon 10 euros." would otherwise AND in an unmatchable "euros" clause and hide the
+ * correct payee match). Both are still parsed for the *new* suggested transaction elsewhere
+ * (`parseTranscript`) — they just never exclude an existing transaction from the results.
  */
 export function buildLooseTransactionConditions(
 	terms: EntitySearchTerm[],
@@ -63,7 +66,10 @@ export function buildLooseTransactionConditions(
 	const clauses: string[] = [];
 	terms.forEach((term, i) => {
 		const category = categories[i];
-		if (category === 'any' && AMOUNT_TERM.test(term.value)) return;
+		if (category === 'any') {
+			const normalized = term.value.replace(/^[^a-z0-9]+|[^a-z0-9]+$/gi, '');
+			if (AMOUNT_TERM.test(normalized) || STOP_WORDS.has(normalized)) return;
+		}
 		const escaped = term.value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 		if (category !== 'any') {
 			clauses.push(`${FIELD_FOR_CATEGORY[category]} ~ "(?i)${escaped}"`);
