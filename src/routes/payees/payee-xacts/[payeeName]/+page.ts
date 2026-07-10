@@ -28,9 +28,10 @@ export const load: PageLoad = async ({ params }) => {
 		({ xact }) => (xact.payee || xact.note || '') === payeeName
 	);
 
-	// Full ledger transactions — include id so we can group postings back into Xact objects.
-	// COALESCE(payee, narration) filtering is done in JS below to match the Payees list.
-	const bql = `SELECT id, date, flag, payee, narration, account, number, currency`;
+	// Full ledger transactions. cost_number/cost_currency give us the per-unit
+	// cost annotation ({} syntax) directly from BQL without loading all directives.
+	const bql = `SELECT id, date, flag, payee, narration, account, number, currency,
+		cost_number, cost_currency, cost_date, price`;
 	const { columns, rows, errors } = await fullLedgerService.query(bql);
 	if (errors?.length) console.warn('Ledger xact query errors:', errors);
 
@@ -45,13 +46,16 @@ export const load: PageLoad = async ({ params }) => {
 	const accountIdx = safeColumns.indexOf('account');
 	const numberIdx = safeColumns.indexOf('number');
 	const currencyIdx = safeColumns.indexOf('currency');
+	const costNumberIdx = safeColumns.indexOf('cost_number');
+	const costCurrencyIdx = safeColumns.indexOf('cost_currency');
+	const costDateIdx = safeColumns.indexOf('cost_date');
+	const priceIdx = safeColumns.indexOf('price');
 
 	// Filter rows to this payee, then group by transaction id to assemble Xact objects.
 	const filtered = safeRows.filter(
 		(row) => ((row[payeeIdx] as string) || (row[narrationIdx] as string) || '') === payeeName
 	);
 
-	// Use a Map to preserve insertion order (= BQL order, typically date-sorted).
 	const byId = new Map<string, Xact>();
 	for (const row of filtered) {
 		const id = String(row[idIdx]);
@@ -68,6 +72,19 @@ export const load: PageLoad = async ({ params }) => {
 		p.account = row[accountIdx] as string;
 		p.amount = parseFloat(row[numberIdx] as string);
 		p.currency = row[currencyIdx] as string;
+		const costNum = costNumberIdx >= 0 ? row[costNumberIdx] : null;
+		if (costNum != null) p.costAmount = parseFloat(String(costNum));
+		const costCur = costCurrencyIdx >= 0 ? (row[costCurrencyIdx] as string) : null;
+		if (costCur) p.costCurrency = costCur;
+		const costDate = costDateIdx >= 0 ? (row[costDateIdx] as string) : null;
+		if (costDate) p.costDate = costDate;
+		// price is an AmountValue { number: string; currency: string } or null
+		const priceVal = priceIdx >= 0 ? (row[priceIdx] as { number: string; currency: string } | null) : null;
+		if (priceVal?.number != null) p.priceAmount = parseFloat(priceVal.number);
+		if (priceVal?.currency) p.priceCurrency = priceVal.currency;
+		// BQL price column doesn't distinguish @ vs @@ — isTotalPrice needs raw source.
+		// Default to false (per-unit @); device xacts get correct @@ via directiveToXact.
+		if (priceVal) p.totalPrice = false;
 		x.postings.push(p);
 	}
 

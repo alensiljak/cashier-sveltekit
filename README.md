@@ -33,6 +33,10 @@ To use a yet-unpublished version of rustledger, compile the WASM and reference w
 d:/src/rustledger/crates/rustledger-wasm/pkg
 ```
 
+## References
+
+- [BQL](https://rustledger.github.io/reference/bql.html)
+
 ## Related Projects
 
 - Ledger-CLI

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Xact } from '$lib/data/model';
-	import { getAmountColour } from '$lib/utils/formatter';
+	import { formatPostingCost, formatPostingPrice, getAmountColour } from '$lib/utils/formatter';
 	import { TriangleAlertIcon } from '@lucide/svelte';
 
 	interface Props {
@@ -37,11 +37,21 @@
 	{#if xact.postings}
 		<div class="pl-6 leading-4">
 			{#each xact.postings as posting (posting)}
-				<div class="flex flex-row opacity-85">
-					<data class="grow text-sm">{posting.account}</data>
-					<data class={`${getAmountColour(posting.amount as number)}`}>
-						{posting.amount} {posting.currency}</data
-					>
+				{@const cost = formatPostingCost(posting)}
+				{@const price = formatPostingPrice(posting)}
+				<div class="flex flex-wrap opacity-85">
+					<data class="w-full text-sm sm:flex-1 sm:w-auto">{posting.account}</data>
+					<div class="flex flex-row items-baseline gap-4 ml-auto shrink-0">
+						{#if cost}
+							<data class="text-xs opacity-45 font-mono">{cost}</data>
+						{/if}
+						{#if price}
+							<data class="text-xs opacity-45 font-mono">{price}</data>
+						{/if}
+						<data class={getAmountColour(posting.amount as number)}>
+							{posting.amount} {posting.currency}
+						</data>
+					</div>
 				</div>
 			{/each}
 		</div>

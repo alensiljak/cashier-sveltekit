@@ -123,13 +123,13 @@ test('does not set totalPrice for @ when rawSource has no @@', () => {
 	expect(result.postings[0].totalPrice).toBe(false);
 });
 
-test('maps cost annotation', () => {
+test('maps cost annotation (per_unit CostNumberJson from WASM)', () => {
 	const directive = makeDirective({
 		postings: [
 			{
 				account: 'Assets:Portfolio',
 				units: { number: '10', currency: 'AAPL' },
-				cost: { number: '140', currency: 'USD', date: '2024-01-01' }
+				cost: { number: { kind: 'per_unit', value: '140' }, currency: 'USD', date: '2024-01-01' }
 			}
 		]
 	});
@@ -141,3 +141,19 @@ test('maps cost annotation', () => {
 	expect(p.costCurrency).toBe('USD');
 	expect(p.costDate).toBe('2024-01-01');
 });
+
+test('maps cost annotation (plain string number, backwards compat)', () => {
+	const directive = makeDirective({
+		postings: [
+			{
+				account: 'Assets:Portfolio',
+				units: { number: '10', currency: 'AAPL' },
+				cost: { number: '140', currency: 'USD' }
+			}
+		]
+	});
+
+	const result = directiveToXact(directive);
+	expect(result.postings[0].costAmount).toBe(140);
+});
+

@@ -48,12 +48,28 @@ export function directiveToXact(directive: any, rawSource?: string): Xact {
 			// undefined at runtime. Fall back to scanning the raw source text.
 			posting.totalPrice = !!p.price.total || isTotalPrice(rawSource, p.account);
 		}
-		if (p.cost?.number != null) posting.costAmount = parseFloat(p.cost.number);
+		if (p.cost?.number != null) posting.costAmount = extractCostNumber(p.cost.number);
 		if (p.cost?.currency) posting.costCurrency = p.cost.currency;
 		if (p.cost?.date) posting.costDate = p.cost.date;
 		return posting;
 	});
 	return tx;
+}
+
+/**
+ * Extract a numeric value from a CostNumberJson tagged union.
+ * The WASM type is { kind: "per_unit"|"total", value: string }
+ * or { kind: "compound"|"per_unit_from_total", per_unit: string, total: string }.
+ * Falls back to treating the argument as a plain string for forward-compat.
+ */
+function extractCostNumber(num: any): number | undefined {
+	if (num == null) return undefined;
+	if (typeof num === 'string') return parseFloat(num);
+	if (typeof num === 'object') {
+		const raw: string | undefined = num.value ?? num.per_unit;
+		return raw != null ? parseFloat(raw) : undefined;
+	}
+	return undefined;
 }
 
 /**

@@ -1,0 +1,16 @@
+[[mcp_servers]]
+name = "serena"
+transport = "stdio"
+command = "uvx"
+args = [
+	"--from",
+	"git+https://github.com/oraios/serena",
+	"serena",
+	"start-mcp-server",
+	"--context",
+	"ide-assistant",
+	"--open-web-dashboard",
+	"false",
+	"--project-from-cwd"
+]
+#env = { "API_TOKEN" = "your-project-specific-token", "PRO_MODE" = "true" }

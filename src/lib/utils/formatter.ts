@@ -1,4 +1,4 @@
-import type { Money, Xact } from '$lib/data/model';
+import type { Money, Posting, Xact } from '$lib/data/model';
 import moment from 'moment';
 
 const RED = 'text-red-400';
@@ -104,6 +104,30 @@ export function formatAmount(amount: number): string {
 	};
 
 	return amount.toLocaleString('en-UK', numberOptions);
+}
+
+/**
+ * Format the cost annotation of a posting for display, e.g. `{13.20 EUR}`.
+ * Returns an empty string when the posting has no cost.
+ */
+export function formatPostingCost(posting: Posting): string {
+	if (posting.costAmount == null || !posting.costCurrency) {
+		return '';
+	}
+	return `{${posting.costAmount} ${posting.costCurrency}}`;
+}
+
+/**
+ * Format the price annotation of a posting for display,
+ * e.g. `@ 1.95 EUR` (unit price) or `@@ 17.9 EUR` (total price).
+ * Returns an empty string when the posting has no price.
+ */
+export function formatPostingPrice(posting: Posting): string {
+	if (posting.priceAmount == null || !posting.priceCurrency) {
+		return '';
+	}
+	const op = posting.totalPrice ? '@@' : '@';
+	return `${op} ${posting.priceAmount} ${posting.priceCurrency}`;
 }
 
 export function getColourForYield(amount: string): string {
