@@ -61,29 +61,43 @@
 					class="input input-bordered input-sm w-full"
 					placeholder="Filter..."
 					bind:value={filter}
-					onkeydown={(e) => {
-						if (e.key === 'Escape') {
-							isOpen = false;
-							filter = '';
-						} else if (e.key === 'Enter' && filtered.length > 0) {
-							select(filtered[0]);
-						}
-					}}
+       onkeydown={(e) => {
+               if (e.key === 'Escape') {
+                       isOpen = false;
+                       filter = '';
+               } else if (e.key === 'Enter' && filtered.length > 0) {
+                       select(filtered[0]);
+               } else if (e.key === 'ArrowDown') {
+                       e.preventDefault();
+                       if (filtered.length > 0) {
+                               const currentIndex = filtered.findIndex(opt => opt === value);
+                               const nextIndex = currentIndex === -1 ? 0 : Math.min(currentIndex + 1, filtered.length - 1);
+                               value = filtered[nextIndex];
+                       }
+               } else if (e.key === 'ArrowUp') {
+                       e.preventDefault();
+                       if (filtered.length > 0) {
+                               const currentIndex = filtered.findIndex(opt => opt === value);
+                               const prevIndex = currentIndex === -1 ? filtered.length - 1 : Math.max(currentIndex - 1, 0);
+                               value = filtered[prevIndex];
+                       }
+               }
+       }}
 				/>
 			</div>
 			<ul class="max-h-56 overflow-y-auto py-1">
 				{#each filtered as option}
-					<li>
-						<button
-							type="button"
-							class="w-full px-4 py-2 text-left text-sm hover:bg-base-200 {option === value
-								? 'font-semibold text-primary'
-								: ''}"
-							onclick={() => select(option)}
-						>
-							{option}
-						</button>
-					</li>
+                   <li>
+                       <button
+                           type="button"
+                           class="w-full px-4 py-2 text-left text-sm hover:bg-base-200 {option === value
+                                   ? 'font-semibold text-primary bg-base-200'
+                                   : ''}"
+                           onclick={() => select(option)}
+                       >
+                           {option}
+                       </button>
+                   </li>
 				{/each}
 				{#if filtered.length === 0}
 					<li class="px-4 py-2 text-base-content/50 text-sm text-center">No results</li>
