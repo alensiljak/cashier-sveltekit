@@ -1,5 +1,10 @@
 import { expect, test } from 'vitest';
-import { parseTranscript, pickBestMatch, refineFromMatches } from '$lib/utils/nlpEntry';
+import {
+	buildTransaction,
+	parseTranscript,
+	pickBestMatch,
+	refineFromMatches
+} from '$lib/utils/nlpEntry';
 import { Xact, Posting } from '$lib/data/model';
 
 function makeXact(payee: string, accounts: string[]): Xact {
@@ -154,4 +159,39 @@ test('digits inside an account-like token are not picked as the bare amount', ()
 
 	expect(result.amount).toBe(22);
 	expect(result.payee).toBe('Lidl N26');
+});
+
+test('unrecognized trailing words are kept as a note instead of silently dropped', () => {
+	const result = parseTranscript('10 euros for Decathlon, t-shirt');
+
+	expect(result.payee).toBe('Decathlon');
+	expect(result.note).toBe('t-shirt');
+});
+
+test('fully recognized input has no leftover note', () => {
+	const result = parseTranscript('50 euro at billa');
+
+	expect(result.note).toBeUndefined();
+});
+
+test('refineFromMatches recovers input words dropped when the payee is replaced by a search match', () => {
+	const result = parseTranscript('deca t-shirt');
+	expect(result.payee).toBe('Deca T-shirt');
+	expect(result.note).toBeUndefined();
+
+	const match = makeXact('Decathlon', ['Expenses:Clothing', 'Assets:Checking']);
+	refineFromMatches(result, [match]);
+
+	expect(result.payee).toBe('Decathlon');
+	expect(result.note).toBe('t-shirt');
+});
+
+test('a query with no search matches still builds a follow-up transaction carrying the note', () => {
+	const result = parseTranscript('10 euros for Decathlon, t-shirt');
+	refineFromMatches(result, []);
+	const xact = buildTransaction(result);
+
+	expect(xact.payee).toBe('Decathlon');
+	expect(xact.note).toBe('t-shirt');
+	expect(xact.flag).toBe('!');
 });
