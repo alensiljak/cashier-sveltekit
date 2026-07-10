@@ -14,6 +14,7 @@
 		value: number;
 		children: BalanceNode[];
 		expanded: boolean;
+		closed: boolean;
 	}
 
 	interface Section {
@@ -27,6 +28,7 @@
 	let error = $state<string | null>(null);
 	let baseCurrency = $state('');
 	let asOfDate = $state(new Date().toISOString().slice(0, 10));
+	let showClosed = $state(false);
 
 	let assetsSection = $state<Section>({ title: 'Assets', prefix: 'Assets', roots: [], total: 0 });
 	let liabilitiesSection = $state<Section>({
@@ -36,6 +38,12 @@
 		total: 0
 	});
 	let equitySection = $state<Section>({ title: 'Equity', prefix: 'Equity', roots: [], total: 0 });
+
+	function isVisible(node: BalanceNode): boolean {
+		if (node.closed && !showClosed) return false;
+		if (node.children.length > 0) return node.children.some((c) => isVisible(c));
+		return true;
+	}
 
 	// Assets − Liabilities − Equity: undistributed current-period earnings,
 	// since Income/Expenses aren't closed into Equity until the book is closed.
@@ -53,7 +61,7 @@
 		return match ? parseFloat(match[1].replace(/,/g, '').replace('−', '-')) || 0 : 0;
 	}
 
-	function buildTree(rows: { account: string; value: number }[]): BalanceNode[] {
+	function buildTree(rows: { account: string; value: number }[], closedAccounts: Set<string>): BalanceNode[] {
 		const nodeMap = new Map<string, BalanceNode>();
 
 		for (const { account: fullName, value } of rows) {
@@ -65,7 +73,8 @@
 				depth: parts.length - 1,
 				value,
 				children: [],
-				expanded: true
+				expanded: true,
+				closed: closedAccounts.has(fullName)
 			});
 
 			for (let k = 1; k < parts.length; k++) {
@@ -77,7 +86,8 @@
 						depth: k - 1,
 						value: 0,
 						children: [],
-						expanded: true
+						expanded: true,
+						closed: closedAccounts.has(ancFull)
 					});
 				}
 			}
@@ -121,6 +131,20 @@
 			baseCurrency = currency ?? 'EUR';
 			await fullLedgerService.ensureLoaded();
 
+			// Query for closed accounts
+			const closedResult = await fullLedgerService.query(
+				`SELECT account FROM #accounts WHERE account ~ "^(Assets|Liabilities|Equity)" AND close IS NOT NULL`
+			);
+			const closedAccounts = new Set<string>();
+			if (!closedResult?.errors?.length) {
+				const ci = (closedResult?.columns ?? []).indexOf('account');
+				if (ci !== -1) {
+					for (const row of (closedResult?.rows ?? []) as any[]) {
+						closedAccounts.add(String(row[ci] ?? ''));
+					}
+				}
+			}
+
 			const bql = `SELECT account, value(sum(position), '${baseCurrency}') as value WHERE account ~ "^(Assets|Liabilities|Equity)" AND date <= ${asOfDate} GROUP BY account ORDER BY account`;
 			const result = await fullLedgerService.query(bql);
 
@@ -155,19 +179,19 @@
 			assetsSection = {
 				title: 'Assets',
 				prefix: 'Assets',
-				roots: buildTree(byPrefix.Assets),
+				roots: buildTree(byPrefix.Assets, closedAccounts),
 				total: byPrefix.Assets.reduce((s, r) => s + r.value, 0)
 			};
 			liabilitiesSection = {
 				title: 'Liabilities',
 				prefix: 'Liabilities',
-				roots: buildTree(byPrefix.Liabilities),
+				roots: buildTree(byPrefix.Liabilities, closedAccounts),
 				total: byPrefix.Liabilities.reduce((s, r) => s + r.value, 0)
 			};
 			equitySection = {
 				title: 'Equity',
 				prefix: 'Equity',
-				roots: buildTree(byPrefix.Equity),
+				roots: buildTree(byPrefix.Equity, closedAccounts),
 				total: byPrefix.Equity.reduce((s, r) => s + r.value, 0)
 			};
 		} catch (e) {
@@ -181,38 +205,43 @@
 </script>
 
 {#snippet renderNode(node: BalanceNode)}
-	{#if node.children.length > 0}
-		<div>
+	{@const visChildren = node.children.filter((c) => isVisible(c))}
+	{#if isVisible(node)}
+		{#if node.children.length > 0}
+			<div>
+				<button
+					class="flex w-full cursor-pointer items-center gap-2 rounded py-1.5 pr-2 hover:bg-base-200"
+					class:opacity-50={node.closed}
+					style="padding-left: {0.5 + node.depth}rem"
+					onclick={() => (node.expanded = !node.expanded)}
+				>
+					<span
+						class="w-3 shrink-0 text-xs text-base-content/40 transition-transform"
+						class:rotate-90={node.expanded}
+					>▶</span>
+					<span class="flex-1 text-left text-sm font-medium">{node.name}</span>
+					<span class="font-mono text-sm tabular-nums">{formatAmount(node.value)}&nbsp;{baseCurrency}</span>
+				</button>
+				{#if node.expanded}
+					<div>
+						{#each visChildren as child}
+							{@render renderNode(child)}
+						{/each}
+					</div>
+				{/if}
+			</div>
+		{:else}
 			<button
 				class="flex w-full cursor-pointer items-center gap-2 rounded py-1.5 pr-2 hover:bg-base-200"
+				class:opacity-50={node.closed}
 				style="padding-left: {0.5 + node.depth}rem"
-				onclick={() => (node.expanded = !node.expanded)}
+				onclick={() => goto(`/accounts/account-xacts/${encodeURIComponent(node.fullName)}`)}
 			>
-				<span
-					class="w-3 shrink-0 text-xs text-base-content/40 transition-transform"
-					class:rotate-90={node.expanded}
-				>▶</span>
-				<span class="flex-1 text-left text-sm font-medium">{node.name}</span>
+				<span class="w-3 shrink-0"></span>
+				<span class="flex-1 text-left text-sm">{node.name}</span>
 				<span class="font-mono text-sm tabular-nums">{formatAmount(node.value)}&nbsp;{baseCurrency}</span>
 			</button>
-			{#if node.expanded}
-				<div>
-					{#each node.children as child}
-						{@render renderNode(child)}
-					{/each}
-				</div>
-			{/if}
-		</div>
-	{:else}
-		<button
-			class="flex w-full cursor-pointer items-center gap-2 rounded py-1.5 pr-2 hover:bg-base-200"
-			style="padding-left: {0.5 + node.depth}rem"
-			onclick={() => goto(`/accounts/account-xacts/${encodeURIComponent(node.fullName)}`)}
-		>
-			<span class="w-3 shrink-0"></span>
-			<span class="flex-1 text-left text-sm">{node.name}</span>
-			<span class="font-mono text-sm tabular-nums">{formatAmount(node.value)}&nbsp;{baseCurrency}</span>
-		</button>
+		{/if}
 	{/if}
 {/snippet}
 
@@ -238,7 +267,14 @@
 {/snippet}
 
 <main class="flex h-screen flex-col" class:cursor-wait={isLoading}>
-	<Toolbar title="Balance Sheet" />
+	<Toolbar title="Balance Sheet">
+		{#snippet menuItems()}
+			<label class="btn btn-primary flex w-full flex-row border-0 cursor-pointer">
+				<span class="grow text-start font-normal">Show closed</span>
+				<input type="checkbox" class="toggle toggle-sm" bind:checked={showClosed} onchange={loadData} />
+			</label>
+		{/snippet}
+	</Toolbar>
 
 	<div class="flex items-center gap-2 border-b border-base-300 px-4 py-2">
 		<label for="as-of-date" class="text-sm text-base-content/60">As of</label>
