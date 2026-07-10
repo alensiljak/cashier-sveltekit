@@ -13,7 +13,7 @@
 		GitCompareArrowsIcon,
 		ChevronDownIcon,
 		ChevronRightIcon,
-		FilterIcon
+		FunnelIcon
 	} from '@lucide/svelte';
 	import { PeerSource } from '$lib/sync/PeerSource';
 	import Toolbar from '$lib/components/Toolbar.svelte';
@@ -732,7 +732,7 @@
 	// ─── View mode — three row-layout candidates (cards / compact / grouped) ──
 
 	type ViewMode = 'cards' | 'compact' | 'grouped';
-	let viewMode = $state<ViewMode>('cards');
+	let viewMode = $state<ViewMode>('compact');
 
 	function formatFileSize(bytes: number): string {
 		if (bytes === 0) return '0 B';
@@ -793,7 +793,7 @@
 {#snippet menuItems()}
 	<ToolbarMenuItem
 		text={showDiffsOnly ? 'Show all files' : 'Show differences only'}
-		Icon={FilterIcon}
+		Icon={FunnelIcon}
 		iconClass={showDiffsOnly ? 'text-primary' : ''}
 		onclick={toggleShowDiffsOnly}
 	/>
