@@ -1,6 +1,8 @@
-; Demo book — a small, internally-consistent three-month history (Jan-Mar 2024)
-; covering everyday spending, savings, credit card, and brokerage investing.
+; Demo book — a rolling twelve-month history covering everyday spending,
+; savings, credit card, and brokerage investing, plus a one-off winter trip.
 ; Static content: edit freely to add more feature demos, no generation step.
+; Dates run through the month of writing — refresh periodically so "last 12
+; months" reports (Net Worth, Income vs Expenses, ...) stay populated.
 
 option "title" "Demo Book"
 option "operating_currency" "EUR"
@@ -9,233 +11,826 @@ include "commodities.bean"
 include "accounts.bean"
 include "prices.bean"
 
-;; ── January 2024 ────────────────────────────────────────────────────────
+;; ── August 2025 ──────────────────────────────────────────────────────────
 
-2024-01-01 * "Opening Balances"
+2025-08-01 * "Opening Balances"
   Assets:Bank:Checking                2500.00 EUR
-  Assets:Bank:Savings                 8000.00 EUR
-  Assets:Investments:Brokerage:Cash    500.00 EUR
+  Assets:Bank:Savings                  8000.00 EUR
+  Assets:Investments:Brokerage:Cash     500.00 EUR
   Equity:Opening-Balances
 
-2024-01-02 * "Acme Corp" "Monthly salary"
+2025-08-02 * "Acme Corp" "Monthly salary"
   Assets:Bank:Checking    3200.00 EUR
   Income:Salary
 
-2024-01-03 * "Landlord" "Rent"
+2025-08-03 * "Landlord" "Rent"
   Expenses:Rent    1200.00 EUR
   Assets:Bank:Checking
 
-2024-01-04 * "Investment contribution"
+2025-08-04 * "Investment contribution"
   Assets:Investments:Brokerage:Cash    300.00 EUR
   Assets:Bank:Checking
 
-2024-01-05 * "Vanguard" "Buy VTI shares"
-  Assets:Investments:Brokerage:VTI    3 VTI {200.00 EUR}
+2025-08-05 * "Vanguard" "Buy VTI shares"
+  Assets:Investments:Brokerage:VTI    2 VTI {200.00 EUR}
   Assets:Investments:Brokerage:Cash
 
-2024-01-06 * "City Utilities" "Electricity & water"
-  Expenses:Utilities    90.00 EUR
+2025-08-07 * "City Utilities" "Electricity & water"
+  Expenses:Utilities    88.00 EUR
   Assets:Bank:Checking
 
-2024-01-08 * "Supermarket" "Groceries"
+2025-08-10 * "Supermarket" "Groceries"
   Expenses:Groceries    55.30 EUR
   Liabilities:CreditCard
 
-2024-01-10 * "Transit Authority" "Monthly pass"
+2025-08-12 * "Transit Authority" "Monthly pass"
   Expenses:Transport    60.00 EUR
   Assets:Bank:Checking
 
-2024-01-12 * "Bistro Nine" "Dinner"
+2025-08-14 * "Bistro Nine" "Dinner"
   Expenses:Dining    28.50 EUR
   Liabilities:CreditCard
 
-2024-01-14 * "ATM Withdrawal"
-  Assets:Cash:Wallet    100.00 EUR
+2025-08-16 * "ATM Withdrawal"
+  Assets:Cash:Wallet    80.00 EUR
   Assets:Bank:Checking
 
-2024-01-15 * "Corner Store" "Groceries"
-  Expenses:Groceries    42.75 EUR
+2025-08-17 * "Corner Store" "Groceries"
+  Expenses:Groceries    38.20 EUR
   Assets:Cash:Wallet
 
-2024-01-16 * "Transfer to Savings"
+2025-08-18 * "Transfer to Savings"
   Assets:Bank:Savings    300.00 EUR
   Assets:Bank:Checking
 
-2024-01-18 * "Cinema City" "Movie tickets"
-  Expenses:Entertainment    25.00 EUR
+2025-08-20 * "Cinema City" "Movie tickets"
+  Expenses:Entertainment    22.00 EUR
   Liabilities:CreditCard
 
-2024-01-20 * "Supermarket" "Groceries"
-  Expenses:Groceries    63.10 EUR
+2025-08-22 * "Supermarket" "Groceries"
+  Expenses:Groceries    59.85 EUR
   Liabilities:CreditCard
 
-2024-01-25 * "Bistro Nine" "Dinner"
-  Expenses:Dining    34.20 EUR
+2025-08-26 * "Bistro Nine" "Dinner"
+  Expenses:Dining    29.60 EUR
   Liabilities:CreditCard
 
-2024-01-28 * "Credit Card" "Payment"
-  Liabilities:CreditCard    206.10 EUR
+2025-08-28 * "Credit Card" "Payment"
+  Liabilities:CreditCard    195.25 EUR
   Assets:Bank:Checking
 
-2024-01-31 * "Savings Bank" "Interest"
+2025-08-31 * "Savings Bank" "Interest"
   Assets:Bank:Savings    6.50 EUR
   Income:Interest
 
-2024-01-31 * "Vanguard" "VTI dividend"
+2025-08-31 * "Vanguard" "VTI dividend"
   isin: "US9229087690"
   Income:Dividends                     -4.50 EUR
   Assets:Investments:Brokerage:Cash     4.50 EUR
 
-;; ── February 2024 ───────────────────────────────────────────────────────
+;; ── September 2025 ───────────────────────────────────────────────────────
 
-2024-02-01 * "Acme Corp" "Monthly salary"
+2025-09-02 * "Acme Corp" "Monthly salary"
   Assets:Bank:Checking    3200.00 EUR
   Income:Salary
 
-2024-02-02 * "Landlord" "Rent"
+2025-09-03 * "Landlord" "Rent"
   Expenses:Rent    1200.00 EUR
   Assets:Bank:Checking
 
-2024-02-03 * "Investment contribution"
+2025-09-04 * "Investment contribution"
   Assets:Investments:Brokerage:Cash    300.00 EUR
   Assets:Bank:Checking
 
-2024-02-04 * "Vanguard" "Buy BND shares"
-  Assets:Investments:Brokerage:BND    4 BND {70.50 EUR}
+2025-09-05 * "Vanguard" "Buy BND shares"
+  Assets:Investments:Brokerage:BND    4 BND {70.20 EUR}
   Assets:Investments:Brokerage:Cash
 
-2024-02-06 * "City Utilities" "Electricity & water"
-  Expenses:Utilities    88.40 EUR
+2025-09-07 * "City Utilities" "Electricity & water"
+  Expenses:Utilities    89.40 EUR
   Assets:Bank:Checking
 
-2024-02-09 * "Supermarket" "Groceries"
-  Expenses:Groceries    58.90 EUR
+2025-09-10 * "Supermarket" "Groceries"
+  Expenses:Groceries    57.90 EUR
   Liabilities:CreditCard
 
-2024-02-11 * "Transit Authority" "Monthly pass"
+2025-09-12 * "Transit Authority" "Monthly pass"
   Expenses:Transport    60.00 EUR
   Assets:Bank:Checking
 
-2024-02-13 * "Bistro Nine" "Dinner"
-  Expenses:Dining    31.00 EUR
+2025-09-14 * "Bistro Nine" "Dinner"
+  Expenses:Dining    30.60 EUR
   Liabilities:CreditCard
 
-2024-02-15 * "ATM Withdrawal"
-  Assets:Cash:Wallet    80.00 EUR
+2025-09-16 * "ATM Withdrawal"
+  Assets:Cash:Wallet    90.00 EUR
   Assets:Bank:Checking
 
-2024-02-16 * "Corner Store" "Groceries"
-  Expenses:Groceries    38.20 EUR
+2025-09-17 * "Corner Store" "Groceries"
+  Expenses:Groceries    40.10 EUR
   Assets:Cash:Wallet
 
-2024-02-17 * "Transfer to Savings"
+2025-09-18 * "Transfer to Savings"
   Assets:Bank:Savings    300.00 EUR
   Assets:Bank:Checking
 
-2024-02-19 * "Cinema City" "Movie tickets"
-  Expenses:Entertainment    22.00 EUR
+2025-09-20 * "Cinema City" "Movie tickets"
+  Expenses:Entertainment    23.60 EUR
   Liabilities:CreditCard
 
-2024-02-21 * "Supermarket" "Groceries"
-  Expenses:Groceries    61.75 EUR
+2025-09-22 * "Supermarket" "Groceries"
+  Expenses:Groceries    61.35 EUR
   Liabilities:CreditCard
 
-2024-02-24 * "Bistro Nine" "Dinner"
-  Expenses:Dining    29.60 EUR
-  Liabilities:CreditCard
-
-2024-02-27 * "Credit Card" "Payment"
-  Liabilities:CreditCard    203.25 EUR
-  Assets:Bank:Checking
-
-2024-02-29 * "Savings Bank" "Interest"
-  Assets:Bank:Savings    6.80 EUR
-  Income:Interest
-
-2024-02-29 * "Vanguard" "BND distribution (legacy account-name convention, no isin tag)"
-  Income:Dividends:BND                  -2.10 EUR
-  Assets:Investments:Brokerage:Cash      2.10 EUR
-
-;; ── March 2024 ──────────────────────────────────────────────────────────
-
-2024-03-01 * "Acme Corp" "Monthly salary"
-  Assets:Bank:Checking    3200.00 EUR
-  Income:Salary
-
-2024-03-02 * "Landlord" "Rent"
-  Expenses:Rent    1200.00 EUR
-  Assets:Bank:Checking
-
-2024-03-03 * "Investment contribution"
-  Assets:Investments:Brokerage:Cash    300.00 EUR
-  Assets:Bank:Checking
-
-2024-03-04 * "Vanguard" "Buy VTI shares"
-  Assets:Investments:Brokerage:VTI    2 VTI {208.50 EUR}
-  Assets:Investments:Brokerage:Cash
-
-2024-03-06 * "City Utilities" "Electricity & water"
-  Expenses:Utilities    91.20 EUR
-  Assets:Bank:Checking
-
-2024-03-09 * "Supermarket" "Groceries"
-  Expenses:Groceries    60.40 EUR
-  Liabilities:CreditCard
-
-2024-03-11 * "Transit Authority" "Monthly pass"
-  Expenses:Transport    60.00 EUR
-  Assets:Bank:Checking
-
-2024-03-13 * "Bistro Nine" "Dinner"
-  Expenses:Dining    33.75 EUR
-  Liabilities:CreditCard
-
-2024-03-15 * "ATM Withdrawal"
-  Assets:Cash:Wallet    100.00 EUR
-  Assets:Bank:Checking
-
-2024-03-16 * "Corner Store" "Groceries"
-  Expenses:Groceries    45.60 EUR
-  Assets:Cash:Wallet
-
-2024-03-17 * "Transfer to Savings"
-  Assets:Bank:Savings    300.00 EUR
-  Assets:Bank:Checking
-
-2024-03-19 * "Cinema City" "Movie tickets"
-  Expenses:Entertainment    27.50 EUR
-  Liabilities:CreditCard
-
-2024-03-21 * "Supermarket" "Groceries"
-  Expenses:Groceries    59.85 EUR
-  Liabilities:CreditCard
-
-2024-03-25 * "Bistro Nine" "Dinner"
+2025-09-26 * "Bistro Nine" "Dinner"
   Expenses:Dining    30.90 EUR
   Liabilities:CreditCard
 
-2024-03-28 * "Credit Card" "Payment"
-  Liabilities:CreditCard    212.40 EUR
+2025-09-28 * "Credit Card" "Payment"
+  Liabilities:CreditCard    204.35 EUR
   Assets:Bank:Checking
 
-2024-03-31 * "Savings Bank" "Interest"
-  Assets:Bank:Savings    7.10 EUR
+2025-09-30 * "Savings Bank" "Interest"
+  Assets:Bank:Savings    6.82 EUR
   Income:Interest
 
-;; ── April 2024 — US trip ────────────────────────────────────────────────
+2025-09-30 * "Vanguard" "BND distribution (legacy account-name convention, no isin tag)"
+  Income:Dividends:BND                  -2.25 EUR
+  Assets:Investments:Brokerage:Cash      2.25 EUR
 
-2024-04-05 * "Bank" "Currency exchange for US trip"
+;; ── October 2025 ─────────────────────────────────────────────────────────
+
+2025-10-02 * "Acme Corp" "Monthly salary"
+  Assets:Bank:Checking    3200.00 EUR
+  Income:Salary
+
+2025-10-03 * "Landlord" "Rent"
+  Expenses:Rent    1200.00 EUR
+  Assets:Bank:Checking
+
+2025-10-04 * "Investment contribution"
+  Assets:Investments:Brokerage:Cash    300.00 EUR
+  Assets:Bank:Checking
+
+2025-10-05 * "Vanguard" "Buy VTI shares"
+  Assets:Investments:Brokerage:VTI    1 VTI {204.00 EUR}
+  Assets:Investments:Brokerage:Cash
+
+2025-10-07 * "City Utilities" "Electricity & water"
+  Expenses:Utilities    90.80 EUR
+  Assets:Bank:Checking
+
+2025-10-10 * "Supermarket" "Groceries"
+  Expenses:Groceries    60.50 EUR
+  Liabilities:CreditCard
+
+2025-10-12 * "Transit Authority" "Monthly pass"
+  Expenses:Transport    60.00 EUR
+  Assets:Bank:Checking
+
+2025-10-14 * "Bistro Nine" "Dinner"
+  Expenses:Dining    32.70 EUR
+  Liabilities:CreditCard
+
+2025-10-16 * "ATM Withdrawal"
+  Assets:Cash:Wallet    100.00 EUR
+  Assets:Bank:Checking
+
+2025-10-17 * "Corner Store" "Groceries"
+  Expenses:Groceries    42.00 EUR
+  Assets:Cash:Wallet
+
+2025-10-18 * "Transfer to Savings"
+  Assets:Bank:Savings    300.00 EUR
+  Assets:Bank:Checking
+
+2025-10-20 * "Cinema City" "Movie tickets"
+  Expenses:Entertainment    25.20 EUR
+  Liabilities:CreditCard
+
+2025-10-22 * "Supermarket" "Groceries"
+  Expenses:Groceries    62.85 EUR
+  Liabilities:CreditCard
+
+2025-10-26 * "Bistro Nine" "Dinner"
+  Expenses:Dining    32.20 EUR
+  Liabilities:CreditCard
+
+2025-10-28 * "Credit Card" "Payment"
+  Liabilities:CreditCard    213.45 EUR
+  Assets:Bank:Checking
+
+2025-10-31 * "Savings Bank" "Interest"
+  Assets:Bank:Savings    7.14 EUR
+  Income:Interest
+
+2025-10-31 * "Vanguard" "VTI dividend"
+  isin: "US9229087690"
+  Income:Dividends                     -4.94 EUR
+  Assets:Investments:Brokerage:Cash     4.94 EUR
+
+;; ── November 2025 ────────────────────────────────────────────────────────
+
+2025-11-02 * "Acme Corp" "Monthly salary"
+  Assets:Bank:Checking    3200.00 EUR
+  Income:Salary
+
+2025-11-03 * "Landlord" "Rent"
+  Expenses:Rent    1200.00 EUR
+  Assets:Bank:Checking
+
+2025-11-04 * "Investment contribution"
+  Assets:Investments:Brokerage:Cash    300.00 EUR
+  Assets:Bank:Checking
+
+2025-11-05 * "Vanguard" "Buy BND shares"
+  Assets:Investments:Brokerage:BND    4 BND {70.35 EUR}
+  Assets:Investments:Brokerage:Cash
+
+2025-11-07 * "City Utilities" "Electricity & water"
+  Expenses:Utilities    92.20 EUR
+  Assets:Bank:Checking
+
+2025-11-10 * "Supermarket" "Groceries"
+  Expenses:Groceries    63.10 EUR
+  Liabilities:CreditCard
+
+2025-11-12 * "Transit Authority" "Monthly pass"
+  Expenses:Transport    60.00 EUR
+  Assets:Bank:Checking
+
+2025-11-14 * "Bistro Nine" "Dinner"
+  Expenses:Dining    28.50 EUR
+  Liabilities:CreditCard
+
+2025-11-16 * "ATM Withdrawal"
+  Assets:Cash:Wallet    80.00 EUR
+  Assets:Bank:Checking
+
+2025-11-17 * "Corner Store" "Groceries"
+  Expenses:Groceries    43.90 EUR
+  Assets:Cash:Wallet
+
+2025-11-18 * "Transfer to Savings"
+  Assets:Bank:Savings    300.00 EUR
+  Assets:Bank:Checking
+
+2025-11-20 * "Cinema City" "Movie tickets"
+  Expenses:Entertainment    26.80 EUR
+  Liabilities:CreditCard
+
+2025-11-22 * "Supermarket" "Groceries"
+  Expenses:Groceries    59.85 EUR
+  Liabilities:CreditCard
+
+2025-11-26 * "Bistro Nine" "Dinner"
+  Expenses:Dining    33.50 EUR
+  Liabilities:CreditCard
+
+2025-11-28 * "Credit Card" "Payment"
+  Liabilities:CreditCard    211.75 EUR
+  Assets:Bank:Checking
+
+2025-11-30 * "Savings Bank" "Interest"
+  Assets:Bank:Savings    7.46 EUR
+  Income:Interest
+
+2025-11-30 * "Vanguard" "BND distribution (legacy account-name convention, no isin tag)"
+  Income:Dividends:BND                  -2.55 EUR
+  Assets:Investments:Brokerage:Cash      2.55 EUR
+
+;; ── December 2025 ────────────────────────────────────────────────────────
+
+2025-12-02 * "Acme Corp" "Monthly salary"
+  Assets:Bank:Checking    3200.00 EUR
+  Income:Salary
+
+2025-12-03 * "Landlord" "Rent"
+  Expenses:Rent    1200.00 EUR
+  Assets:Bank:Checking
+
+2025-12-04 * "Investment contribution"
+  Assets:Investments:Brokerage:Cash    300.00 EUR
+  Assets:Bank:Checking
+
+2025-12-05 * "Vanguard" "Buy VTI shares"
+  Assets:Investments:Brokerage:VTI    1 VTI {209.20 EUR}
+  Assets:Investments:Brokerage:Cash
+
+2025-12-06 * "Bank" "Currency exchange for winter trip"
   Assets:Cash:Travel    500.00 USD @ 0.92 EUR
   Assets:Bank:Checking
 
-2024-04-06 * "Downtown Grill" "Dinner"
+2025-12-07 * "City Utilities" "Electricity & water"
+  Expenses:Utilities    93.60 EUR
+  Assets:Bank:Checking
+
+2025-12-08 * "Downtown Grill" "Dinner"
   Expenses:Dining    45.00 USD
   Assets:Cash:Travel
 
-2024-04-09 * "Skyline Bistro" "Dinner"
+2025-12-09 * "Skyline Bistro" "Dinner"
   Expenses:Dining    62.50 USD
   Assets:Cash:Travel
 
-2024-04-12 * "Bank" "Exchange leftover USD back to EUR"
+2025-12-10 * "Supermarket" "Groceries"
+  Expenses:Groceries    55.30 EUR
+  Liabilities:CreditCard
+
+2025-12-11 * "Bank" "Exchange leftover USD back to EUR"
   Assets:Cash:Travel    -80.00 USD @@ 72.00 EUR
   Assets:Bank:Checking
+
+2025-12-12 * "Transit Authority" "Monthly pass"
+  Expenses:Transport    60.00 EUR
+  Assets:Bank:Checking
+
+2025-12-14 * "Bistro Nine" "Dinner"
+  Expenses:Dining    30.60 EUR
+  Liabilities:CreditCard
+
+2025-12-16 * "ATM Withdrawal"
+  Assets:Cash:Wallet    90.00 EUR
+  Assets:Bank:Checking
+
+2025-12-17 * "Corner Store" "Groceries"
+  Expenses:Groceries    38.20 EUR
+  Assets:Cash:Wallet
+
+2025-12-18 * "Transfer to Savings"
+  Assets:Bank:Savings    300.00 EUR
+  Assets:Bank:Checking
+
+2025-12-20 * "Cinema City" "Movie tickets"
+  Expenses:Entertainment    22.00 EUR
+  Liabilities:CreditCard
+
+2025-12-22 * "Supermarket" "Groceries"
+  Expenses:Groceries    61.35 EUR
+  Liabilities:CreditCard
+
+2025-12-26 * "Bistro Nine" "Dinner"
+  Expenses:Dining    29.60 EUR
+  Liabilities:CreditCard
+
+2025-12-28 * "Credit Card" "Payment"
+  Liabilities:CreditCard    198.85 EUR
+  Assets:Bank:Checking
+
+2025-12-31 * "Savings Bank" "Interest"
+  Assets:Bank:Savings    7.78 EUR
+  Income:Interest
+
+2025-12-31 * "Vanguard" "VTI dividend"
+  isin: "US9229087690"
+  Income:Dividends                     -5.38 EUR
+  Assets:Investments:Brokerage:Cash     5.38 EUR
+
+;; ── January 2026 ─────────────────────────────────────────────────────────
+
+2026-01-02 * "Acme Corp" "Monthly salary"
+  Assets:Bank:Checking    3200.00 EUR
+  Income:Salary
+
+2026-01-03 * "Landlord" "Rent"
+  Expenses:Rent    1200.00 EUR
+  Assets:Bank:Checking
+
+2026-01-04 * "Investment contribution"
+  Assets:Investments:Brokerage:Cash    300.00 EUR
+  Assets:Bank:Checking
+
+2026-01-05 * "Vanguard" "Buy BND shares"
+  Assets:Investments:Brokerage:BND    4 BND {70.85 EUR}
+  Assets:Investments:Brokerage:Cash
+
+2026-01-07 * "City Utilities" "Electricity & water"
+  Expenses:Utilities    88.00 EUR
+  Assets:Bank:Checking
+
+2026-01-10 * "Supermarket" "Groceries"
+  Expenses:Groceries    57.90 EUR
+  Liabilities:CreditCard
+
+2026-01-12 * "Transit Authority" "Monthly pass"
+  Expenses:Transport    60.00 EUR
+  Assets:Bank:Checking
+
+2026-01-14 * "Bistro Nine" "Dinner"
+  Expenses:Dining    32.70 EUR
+  Liabilities:CreditCard
+
+2026-01-16 * "ATM Withdrawal"
+  Assets:Cash:Wallet    100.00 EUR
+  Assets:Bank:Checking
+
+2026-01-17 * "Corner Store" "Groceries"
+  Expenses:Groceries    40.10 EUR
+  Assets:Cash:Wallet
+
+2026-01-18 * "Transfer to Savings"
+  Assets:Bank:Savings    300.00 EUR
+  Assets:Bank:Checking
+
+2026-01-20 * "Cinema City" "Movie tickets"
+  Expenses:Entertainment    23.60 EUR
+  Liabilities:CreditCard
+
+2026-01-22 * "Supermarket" "Groceries"
+  Expenses:Groceries    62.85 EUR
+  Liabilities:CreditCard
+
+2026-01-26 * "Bistro Nine" "Dinner"
+  Expenses:Dining    30.90 EUR
+  Liabilities:CreditCard
+
+2026-01-28 * "Credit Card" "Payment"
+  Liabilities:CreditCard    207.95 EUR
+  Assets:Bank:Checking
+
+2026-01-31 * "Savings Bank" "Interest"
+  Assets:Bank:Savings    8.10 EUR
+  Income:Interest
+
+2026-01-31 * "Vanguard" "BND distribution (legacy account-name convention, no isin tag)"
+  Income:Dividends:BND                  -2.85 EUR
+  Assets:Investments:Brokerage:Cash      2.85 EUR
+
+;; ── February 2026 ────────────────────────────────────────────────────────
+
+2026-02-02 * "Acme Corp" "Monthly salary"
+  Assets:Bank:Checking    3200.00 EUR
+  Income:Salary
+
+2026-02-03 * "Landlord" "Rent"
+  Expenses:Rent    1200.00 EUR
+  Assets:Bank:Checking
+
+2026-02-04 * "Investment contribution"
+  Assets:Investments:Brokerage:Cash    300.00 EUR
+  Assets:Bank:Checking
+
+2026-02-05 * "Vanguard" "Buy VTI shares"
+  Assets:Investments:Brokerage:VTI    1 VTI {211.00 EUR}
+  Assets:Investments:Brokerage:Cash
+
+2026-02-07 * "City Utilities" "Electricity & water"
+  Expenses:Utilities    89.40 EUR
+  Assets:Bank:Checking
+
+2026-02-10 * "Supermarket" "Groceries"
+  Expenses:Groceries    60.50 EUR
+  Liabilities:CreditCard
+
+2026-02-12 * "Transit Authority" "Monthly pass"
+  Expenses:Transport    60.00 EUR
+  Assets:Bank:Checking
+
+2026-02-14 * "Bistro Nine" "Dinner"
+  Expenses:Dining    28.50 EUR
+  Liabilities:CreditCard
+
+2026-02-16 * "ATM Withdrawal"
+  Assets:Cash:Wallet    80.00 EUR
+  Assets:Bank:Checking
+
+2026-02-17 * "Corner Store" "Groceries"
+  Expenses:Groceries    42.00 EUR
+  Assets:Cash:Wallet
+
+2026-02-18 * "Transfer to Savings"
+  Assets:Bank:Savings    300.00 EUR
+  Assets:Bank:Checking
+
+2026-02-20 * "Cinema City" "Movie tickets"
+  Expenses:Entertainment    25.20 EUR
+  Liabilities:CreditCard
+
+2026-02-22 * "Supermarket" "Groceries"
+  Expenses:Groceries    59.85 EUR
+  Liabilities:CreditCard
+
+2026-02-26 * "Bistro Nine" "Dinner"
+  Expenses:Dining    32.20 EUR
+  Liabilities:CreditCard
+
+2026-02-28 * "Credit Card" "Payment"
+  Liabilities:CreditCard    206.25 EUR
+  Assets:Bank:Checking
+
+2026-02-28 * "Savings Bank" "Interest"
+  Assets:Bank:Savings    8.42 EUR
+  Income:Interest
+
+2026-02-28 * "Vanguard" "VTI dividend"
+  isin: "US9229087690"
+  Income:Dividends                     -5.82 EUR
+  Assets:Investments:Brokerage:Cash     5.82 EUR
+
+;; ── March 2026 ───────────────────────────────────────────────────────────
+
+2026-03-02 * "Acme Corp" "Monthly salary"
+  Assets:Bank:Checking    3200.00 EUR
+  Income:Salary
+
+2026-03-03 * "Landlord" "Rent"
+  Expenses:Rent    1200.00 EUR
+  Assets:Bank:Checking
+
+2026-03-04 * "Investment contribution"
+  Assets:Investments:Brokerage:Cash    300.00 EUR
+  Assets:Bank:Checking
+
+2026-03-05 * "Vanguard" "Buy BND shares"
+  Assets:Investments:Brokerage:BND    4 BND {70.75 EUR}
+  Assets:Investments:Brokerage:Cash
+
+2026-03-07 * "City Utilities" "Electricity & water"
+  Expenses:Utilities    90.80 EUR
+  Assets:Bank:Checking
+
+2026-03-10 * "Supermarket" "Groceries"
+  Expenses:Groceries    63.10 EUR
+  Liabilities:CreditCard
+
+2026-03-12 * "Transit Authority" "Monthly pass"
+  Expenses:Transport    60.00 EUR
+  Assets:Bank:Checking
+
+2026-03-14 * "Bistro Nine" "Dinner"
+  Expenses:Dining    30.60 EUR
+  Liabilities:CreditCard
+
+2026-03-16 * "ATM Withdrawal"
+  Assets:Cash:Wallet    90.00 EUR
+  Assets:Bank:Checking
+
+2026-03-17 * "Corner Store" "Groceries"
+  Expenses:Groceries    43.90 EUR
+  Assets:Cash:Wallet
+
+2026-03-18 * "Transfer to Savings"
+  Assets:Bank:Savings    300.00 EUR
+  Assets:Bank:Checking
+
+2026-03-20 * "Cinema City" "Movie tickets"
+  Expenses:Entertainment    26.80 EUR
+  Liabilities:CreditCard
+
+2026-03-22 * "Supermarket" "Groceries"
+  Expenses:Groceries    61.35 EUR
+  Liabilities:CreditCard
+
+2026-03-26 * "Bistro Nine" "Dinner"
+  Expenses:Dining    33.50 EUR
+  Liabilities:CreditCard
+
+2026-03-28 * "Credit Card" "Payment"
+  Liabilities:CreditCard    215.35 EUR
+  Assets:Bank:Checking
+
+2026-03-31 * "Savings Bank" "Interest"
+  Assets:Bank:Savings    8.74 EUR
+  Income:Interest
+
+2026-03-31 * "Vanguard" "BND distribution (legacy account-name convention, no isin tag)"
+  Income:Dividends:BND                  -3.15 EUR
+  Assets:Investments:Brokerage:Cash      3.15 EUR
+
+;; ── April 2026 ───────────────────────────────────────────────────────────
+
+2026-04-02 * "Acme Corp" "Monthly salary"
+  Assets:Bank:Checking    3200.00 EUR
+  Income:Salary
+
+2026-04-03 * "Landlord" "Rent"
+  Expenses:Rent    1200.00 EUR
+  Assets:Bank:Checking
+
+2026-04-04 * "Investment contribution"
+  Assets:Investments:Brokerage:Cash    300.00 EUR
+  Assets:Bank:Checking
+
+2026-04-05 * "Vanguard" "Buy VTI shares"
+  Assets:Investments:Brokerage:VTI    1 VTI {210.90 EUR}
+  Assets:Investments:Brokerage:Cash
+
+2026-04-07 * "City Utilities" "Electricity & water"
+  Expenses:Utilities    92.20 EUR
+  Assets:Bank:Checking
+
+2026-04-10 * "Supermarket" "Groceries"
+  Expenses:Groceries    55.30 EUR
+  Liabilities:CreditCard
+
+2026-04-12 * "Transit Authority" "Monthly pass"
+  Expenses:Transport    60.00 EUR
+  Assets:Bank:Checking
+
+2026-04-14 * "Bistro Nine" "Dinner"
+  Expenses:Dining    32.70 EUR
+  Liabilities:CreditCard
+
+2026-04-16 * "ATM Withdrawal"
+  Assets:Cash:Wallet    100.00 EUR
+  Assets:Bank:Checking
+
+2026-04-17 * "Corner Store" "Groceries"
+  Expenses:Groceries    38.20 EUR
+  Assets:Cash:Wallet
+
+2026-04-18 * "Transfer to Savings"
+  Assets:Bank:Savings    300.00 EUR
+  Assets:Bank:Checking
+
+2026-04-20 * "Cinema City" "Movie tickets"
+  Expenses:Entertainment    22.00 EUR
+  Liabilities:CreditCard
+
+2026-04-22 * "Supermarket" "Groceries"
+  Expenses:Groceries    62.85 EUR
+  Liabilities:CreditCard
+
+2026-04-26 * "Bistro Nine" "Dinner"
+  Expenses:Dining    29.60 EUR
+  Liabilities:CreditCard
+
+2026-04-28 * "Credit Card" "Payment"
+  Liabilities:CreditCard    202.45 EUR
+  Assets:Bank:Checking
+
+2026-04-30 * "Savings Bank" "Interest"
+  Assets:Bank:Savings    9.06 EUR
+  Income:Interest
+
+2026-04-30 * "Vanguard" "VTI dividend"
+  isin: "US9229087690"
+  Income:Dividends                     -6.26 EUR
+  Assets:Investments:Brokerage:Cash     6.26 EUR
+
+;; ── May 2026 ─────────────────────────────────────────────────────────────
+
+2026-05-02 * "Acme Corp" "Monthly salary"
+  Assets:Bank:Checking    3200.00 EUR
+  Income:Salary
+
+2026-05-03 * "Landlord" "Rent"
+  Expenses:Rent    1200.00 EUR
+  Assets:Bank:Checking
+
+2026-05-04 * "Investment contribution"
+  Assets:Investments:Brokerage:Cash    300.00 EUR
+  Assets:Bank:Checking
+
+2026-05-05 * "Vanguard" "Buy BND shares"
+  Assets:Investments:Brokerage:BND    4 BND {71.35 EUR}
+  Assets:Investments:Brokerage:Cash
+
+2026-05-07 * "City Utilities" "Electricity & water"
+  Expenses:Utilities    93.60 EUR
+  Assets:Bank:Checking
+
+2026-05-10 * "Supermarket" "Groceries"
+  Expenses:Groceries    57.90 EUR
+  Liabilities:CreditCard
+
+2026-05-12 * "Transit Authority" "Monthly pass"
+  Expenses:Transport    60.00 EUR
+  Assets:Bank:Checking
+
+2026-05-14 * "Bistro Nine" "Dinner"
+  Expenses:Dining    28.50 EUR
+  Liabilities:CreditCard
+
+2026-05-16 * "ATM Withdrawal"
+  Assets:Cash:Wallet    80.00 EUR
+  Assets:Bank:Checking
+
+2026-05-17 * "Corner Store" "Groceries"
+  Expenses:Groceries    40.10 EUR
+  Assets:Cash:Wallet
+
+2026-05-18 * "Transfer to Savings"
+  Assets:Bank:Savings    300.00 EUR
+  Assets:Bank:Checking
+
+2026-05-20 * "Cinema City" "Movie tickets"
+  Expenses:Entertainment    23.60 EUR
+  Liabilities:CreditCard
+
+2026-05-22 * "Supermarket" "Groceries"
+  Expenses:Groceries    59.85 EUR
+  Liabilities:CreditCard
+
+2026-05-26 * "Bistro Nine" "Dinner"
+  Expenses:Dining    30.90 EUR
+  Liabilities:CreditCard
+
+2026-05-28 * "Credit Card" "Payment"
+  Liabilities:CreditCard    200.75 EUR
+  Assets:Bank:Checking
+
+2026-05-31 * "Savings Bank" "Interest"
+  Assets:Bank:Savings    9.38 EUR
+  Income:Interest
+
+2026-05-31 * "Vanguard" "BND distribution (legacy account-name convention, no isin tag)"
+  Income:Dividends:BND                  -3.45 EUR
+  Assets:Investments:Brokerage:Cash      3.45 EUR
+
+;; ── June 2026 ────────────────────────────────────────────────────────────
+
+2026-06-02 * "Acme Corp" "Monthly salary"
+  Assets:Bank:Checking    3200.00 EUR
+  Income:Salary
+
+2026-06-03 * "Landlord" "Rent"
+  Expenses:Rent    1200.00 EUR
+  Assets:Bank:Checking
+
+2026-06-04 * "Investment contribution"
+  Assets:Investments:Brokerage:Cash    300.00 EUR
+  Assets:Bank:Checking
+
+2026-06-05 * "Vanguard" "Buy VTI shares"
+  Assets:Investments:Brokerage:VTI    1 VTI {218.60 EUR}
+  Assets:Investments:Brokerage:Cash
+
+2026-06-07 * "City Utilities" "Electricity & water"
+  Expenses:Utilities    88.00 EUR
+  Assets:Bank:Checking
+
+2026-06-10 * "Supermarket" "Groceries"
+  Expenses:Groceries    60.50 EUR
+  Liabilities:CreditCard
+
+2026-06-12 * "Transit Authority" "Monthly pass"
+  Expenses:Transport    60.00 EUR
+  Assets:Bank:Checking
+
+2026-06-14 * "Bistro Nine" "Dinner"
+  Expenses:Dining    30.60 EUR
+  Liabilities:CreditCard
+
+2026-06-16 * "ATM Withdrawal"
+  Assets:Cash:Wallet    90.00 EUR
+  Assets:Bank:Checking
+
+2026-06-17 * "Corner Store" "Groceries"
+  Expenses:Groceries    42.00 EUR
+  Assets:Cash:Wallet
+
+2026-06-18 * "Transfer to Savings"
+  Assets:Bank:Savings    300.00 EUR
+  Assets:Bank:Checking
+
+2026-06-20 * "Cinema City" "Movie tickets"
+  Expenses:Entertainment    25.20 EUR
+  Liabilities:CreditCard
+
+2026-06-22 * "Supermarket" "Groceries"
+  Expenses:Groceries    61.35 EUR
+  Liabilities:CreditCard
+
+2026-06-26 * "Bistro Nine" "Dinner"
+  Expenses:Dining    32.20 EUR
+  Liabilities:CreditCard
+
+2026-06-28 * "Credit Card" "Payment"
+  Liabilities:CreditCard    209.85 EUR
+  Assets:Bank:Checking
+
+2026-06-30 * "Savings Bank" "Interest"
+  Assets:Bank:Savings    9.70 EUR
+  Income:Interest
+
+2026-06-30 * "Vanguard" "VTI dividend"
+  isin: "US9229087690"
+  Income:Dividends                     -6.70 EUR
+  Assets:Investments:Brokerage:Cash     6.70 EUR
+
+;; ── July 2026 (partial, through today) ───────────────────────────────────
+
+2026-07-02 * "Acme Corp" "Monthly salary"
+  Assets:Bank:Checking    3200.00 EUR
+  Income:Salary
+
+2026-07-03 * "Landlord" "Rent"
+  Expenses:Rent    1200.00 EUR
+  Assets:Bank:Checking
+
+2026-07-04 * "Investment contribution"
+  Assets:Investments:Brokerage:Cash    300.00 EUR
+  Assets:Bank:Checking
+
+2026-07-05 * "Vanguard" "Buy BND shares"
+  Assets:Investments:Brokerage:BND    4 BND {71.45 EUR}
+  Assets:Investments:Brokerage:Cash
+
+2026-07-07 * "City Utilities" "Electricity & water"
+  Expenses:Utilities    89.40 EUR
+  Assets:Bank:Checking
+
+2026-07-10 * "Supermarket" "Groceries"
+  Expenses:Groceries    63.10 EUR
+  Liabilities:CreditCard
