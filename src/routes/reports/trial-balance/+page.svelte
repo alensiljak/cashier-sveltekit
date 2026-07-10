@@ -332,7 +332,7 @@
 				<span class="grow text-start font-normal">Show empty</span>
 				<input
 					type="checkbox"
-					class="toggle toggle-sm"
+					class="toggle toggle-sm bg-transparent bg-none"
 					bind:checked={showEmpty}
 					onchange={loadData}
 				/>
@@ -341,7 +341,7 @@
 				<span class="grow text-start font-normal">Show closed</span>
 				<input
 					type="checkbox"
-					class="toggle toggle-sm"
+					class="toggle toggle-sm bg-transparent bg-none"
 					bind:checked={showClosed}
 					onchange={loadData}
 				/>

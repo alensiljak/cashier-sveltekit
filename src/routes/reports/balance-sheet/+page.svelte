@@ -313,11 +313,11 @@
 		{#snippet menuItems()}
 			<label class="btn btn-primary flex w-full flex-row border-0 cursor-pointer">
 				<span class="grow text-start font-normal">Show empty</span>
-				<input type="checkbox" class="toggle toggle-sm" bind:checked={showEmpty} onchange={loadData} />
+				<input type="checkbox" class="toggle toggle-sm bg-transparent bg-none" bind:checked={showEmpty} onchange={loadData} />
 			</label>
 			<label class="btn btn-primary flex w-full flex-row border-0 cursor-pointer">
 				<span class="grow text-start font-normal">Show closed</span>
-				<input type="checkbox" class="toggle toggle-sm" bind:checked={showClosed} onchange={loadData} />
+				<input type="checkbox" class="toggle toggle-sm bg-transparent bg-none" bind:checked={showClosed} onchange={loadData} />
 			</label>
 		{/snippet}
 	</Toolbar>
