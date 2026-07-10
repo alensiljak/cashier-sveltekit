@@ -97,7 +97,9 @@
 			if (!result?.errors?.length) {
 				const accountIdx = (result?.columns ?? []).indexOf('account');
 				if (accountIdx !== -1) {
-					allAccounts = (result?.rows ?? []).map((row: any[]) => String(row[accountIdx] ?? ''));
+					allAccounts = (result?.rows ?? []).map((row) =>
+						String((row as any[])[accountIdx] ?? '')
+					);
 				}
 			}
 			// If an account is selected but not in the list (maybe it's closed), still try to use it
