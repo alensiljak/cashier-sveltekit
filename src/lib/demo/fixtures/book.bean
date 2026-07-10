@@ -7,6 +7,12 @@
 option "title" "Demo Book"
 option "operating_currency" "EUR"
 
+; Auto-executed by Ledger.fromFiles() — generates Equity:Currency:* clearing postings
+; for @/@@ currency conversions. Doesn't fix mark-to-market drift on un-costed currency
+; holdings in reports (e.g. Trial Balance) — those clearing entries net to zero.
+plugin "beancount.plugins.currency_accounts" "Equity:Currency"
+plugin "beancount.plugins.implicit_prices"
+
 include "commodities.bean"
 include "accounts.bean"
 include "prices.bean"

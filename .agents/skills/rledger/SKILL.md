@@ -59,6 +59,10 @@ const name = (rows[0] as any[])[accountIdx];
 
 Returns `{ columns: [], rows: [], errors: [] }` (empty, no throw) if not loaded.
 
+### BQL Reference
+
+- [BQL](https://rustledger.github.io/reference/bql.html)
+
 ## Other fullLedgerService methods
 
 ```ts

@@ -41,6 +41,9 @@
 			<SquareButton Icon={TrendingUpIcon} classes="bg-primary text-accent" onclick={() => goto('/reports/net-worth')}>
 				Net Worth
 			</SquareButton>
+			<SquareButton Icon={LandmarkIcon} classes="bg-primary text-accent" onclick={() => goto('/reports/trial-balance')}>
+				Trial Balance
+			</SquareButton>
 		</div>
 	</div>
 </main>
