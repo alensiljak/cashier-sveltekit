@@ -156,4 +156,3 @@ test('maps cost annotation (plain string number, backwards compat)', () => {
 	const result = directiveToXact(directive);
 	expect(result.postings[0].costAmount).toBe(140);
 });
-

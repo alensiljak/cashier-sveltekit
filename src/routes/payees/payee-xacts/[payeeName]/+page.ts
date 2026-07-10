@@ -79,7 +79,8 @@ export const load: PageLoad = async ({ params }) => {
 		const costDate = costDateIdx >= 0 ? (row[costDateIdx] as string) : null;
 		if (costDate) p.costDate = costDate;
 		// price is an AmountValue { number: string; currency: string } or null
-		const priceVal = priceIdx >= 0 ? (row[priceIdx] as { number: string; currency: string } | null) : null;
+		const priceVal =
+			priceIdx >= 0 ? (row[priceIdx] as { number: string; currency: string } | null) : null;
 		if (priceVal?.number != null) p.priceAmount = parseFloat(priceVal.number);
 		if (priceVal?.currency) p.priceCurrency = priceVal.currency;
 		// BQL price column doesn't distinguish @ vs @@ — isTotalPrice needs raw source.
