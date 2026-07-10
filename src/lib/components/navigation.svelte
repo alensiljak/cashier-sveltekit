@@ -125,7 +125,7 @@
 					onclick={closeDrawer}
 				>
 					<ScrollIcon />
-					<span>Device Journal</span>
+					<span>Journal</span>
 				</a>
 			</li>
 			<li>
