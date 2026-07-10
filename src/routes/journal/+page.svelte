@@ -66,7 +66,7 @@
 </script>
 
 <main class="flex h-screen flex-col">
-	<Toolbar title="Journal">
+	<Toolbar title="Device Journal">
 		{#snippet actions()}
 			<HelpButton topic="journal" />
 		{/snippet}
