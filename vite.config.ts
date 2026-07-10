@@ -55,7 +55,7 @@ const config: UserConfig = defineConfig({
 				id: '/',
 				name: 'Cashier',
 				short_name: 'cashier',
-				description: 'Mobile app for Ledger-cli',
+				description: 'A mobile personal finance app using plain-text accounting',
 				categories: ['personal finance'],
 				start_url: '/',
 				orientation: 'portrait',
