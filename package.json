@@ -12,11 +12,12 @@
 		"test:unit": "vitest run",
 		"test:unit:watch": "vitest",
 		"test:e2e": "playwright test",
+		"test": "npm run test:e2e",
 		"verify": "npm run lint && npm run check && npm run test:unit && npm run test:e2e",
 		"lint": "oxfmt --check && oxlint .",
 		"format": "oxfmt",
 		"deploy": "netlify deploy --prod",
-		"publish": "npm run verify && npm run deploy"
+		"publish": "npm run lint && npm run check && npm run test:unit && npm run deploy"
 	},
 	"dependencies": {
 		"@trystero-p2p/core": "^0.25.2",

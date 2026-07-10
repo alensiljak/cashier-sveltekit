@@ -14,13 +14,13 @@ Leave a filter blank to skip it. The **generated query** box below the filters s
 
 ## Regex matching
 
-Payee/Narration, Account, and Commodity are matched as **regular expressions**, not plain substrings — a filter matches if the pattern is found *anywhere* in the field, not just at the start.
+Payee/Narration, Account, and Commodity are matched as **regular expressions**, not plain substrings — a filter matches if the pattern is found _anywhere_ in the field, not just at the start.
 
 Anchors let you narrow that down:
 
 - `^` pins the match to the start of the field.
 - `$` pins it to the end.
 
-So `VTI` matches any commodity containing "VTI" (including `VTI`, `VTIAX`, or a hypothetical `AVTIX`), while **`VTI$`** matches only commodities that *end with* "VTI" — excluding `VTIAX` but still matching `VTI`. Likewise `^VTI` would only match commodities that *start with* "VTI".
+So `VTI` matches any commodity containing "VTI" (including `VTI`, `VTIAX`, or a hypothetical `AVTIX`), while **`VTI$`** matches only commodities that _end with_ "VTI" — excluding `VTIAX` but still matching `VTI`. Likewise `^VTI` would only match commodities that _start with_ "VTI".
 
 The same anchors work in the Payee/Narration and Account filters, e.g. `^Amazon` to match payees starting with "Amazon", or `Checking$` to match accounts ending in "Checking".
