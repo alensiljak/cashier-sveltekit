@@ -1,4 +1,4 @@
-# Search
+# Full-Text Search
 
 Full-text search across every text file stored in OPFS: `.bean`, `.beancount`, `.toml`, `.yaml`/`.yml`, `.txt`, `.md`, `.cfg`, `.ini`, and `.json`. This covers your Beancount sources, the asset-allocation definition, and any other notes or config files you've synced in.
 

@@ -431,8 +431,8 @@
 						</li>
 						<li>
 							<a
-								href="/search"
-								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/search'
+								href="/search/full-text"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/search/full-text'
 									? 'active bg-secondary text-secondary-content'
 									: ''}"
 								onclick={closeDrawer}

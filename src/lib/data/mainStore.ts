@@ -54,7 +54,7 @@ function createDesktopNavVisibleStore(): Writable<boolean> {
 	return store;
 }
 export const desktopNavVisible: Writable<boolean> = createDesktopNavVisibleStore();
-// Full-text search box value on /search — kept for the session only (module
+// Full-text search box value on /search/full-text — kept for the session only (module
 // state, not persisted) so navigating to a result and back leaves it intact.
 export const SearchTermStore: Writable<string> = writable('');
 // Selected month key on /budget (e.g. '2026-07') — kept for the session only

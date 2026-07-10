@@ -1,6 +1,6 @@
 # Transaction
 
-A read-only view of a single transaction, resolved by file and line — mainly reached by tapping a transaction result on the [Search](/help/search) page.
+A read-only view of a single transaction, resolved by file and line — mainly reached by tapping a transaction result on the [Full-Text Search](/help/full-text-search) page.
 
 Works for a transaction in **any** `.bean` file, including ones pulled in via `include` that the app doesn't otherwise expose an editor for.
 

@@ -1,7 +1,7 @@
 /*
 	Full-text search across the plain-text files kept in OPFS: Beancount
 	sources, the asset-allocation TOML, and any other config/notes files a
-	user has synced in. Used by the /search page.
+	user has synced in. Used by the /search/full-text page.
 */
 
 /** File extensions considered searchable, lower-cased, including the leading dot. */
