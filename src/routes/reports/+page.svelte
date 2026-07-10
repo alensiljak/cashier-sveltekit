@@ -29,9 +29,6 @@
 			<SquareButton Icon={SearchIcon} classes="bg-accent text-secondary" onclick={() => goto('/reports/tx-search')}>
 				Search
 			</SquareButton>
-			<SquareButton Icon={LandmarkIcon} classes="bg-primary text-accent" onclick={() => goto('/reports/assets')}>
-				Assets
-			</SquareButton>
 			<SquareButton Icon={ScaleIcon} classes="bg-primary text-accent" onclick={() => goto('/reports/balance-sheet')}>
 				Balance Sheet
 			</SquareButton>

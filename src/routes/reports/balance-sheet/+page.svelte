@@ -6,12 +6,15 @@
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import { SettingKeys, settings } from '$lib/settings';
 	import { formatAmount } from '$lib/utils/formatter';
+	import PillToggle from '$lib/components/PillToggle.svelte';
+	import MultiCurrencyBalance from '$lib/components/MultiCurrencyBalance.svelte';
 
 	interface BalanceNode {
 		name: string;
 		fullName: string;
 		depth: number;
 		value: number;
+		position: Record<string, number>;
 		children: BalanceNode[];
 		expanded: boolean;
 		closed: boolean;
@@ -29,6 +32,9 @@
 	let baseCurrency = $state('');
 	let asOfDate = $state(new Date().toISOString().slice(0, 10));
 	let showClosed = $state(false);
+	let currencyMode = $state<'original' | 'base'>('base');
+	let showBase = $derived(currencyMode === 'base');
+	let showEmpty = $state(true);
 
 	let assetsSection = $state<Section>({ title: 'Assets', prefix: 'Assets', roots: [], total: 0 });
 	let liabilitiesSection = $state<Section>({
@@ -41,6 +47,7 @@
 
 	function isVisible(node: BalanceNode): boolean {
 		if (node.closed && !showClosed) return false;
+		if (!showEmpty && node.value === 0) return false;
 		if (node.children.length > 0) return node.children.some((c) => isVisible(c));
 		return true;
 	}
@@ -50,6 +57,17 @@
 	let currentEarnings = $derived(
 		assetsSection.total - liabilitiesSection.total - equitySection.total
 	);
+
+	function parsePosition(raw: any): Record<string, number> {
+		const pos: Record<string, number> = {};
+		if (!raw?.positions) return pos;
+		for (const p of raw.positions) {
+			const cur = p.units?.currency ?? '';
+			const num = parseFloat(p.units?.number ?? '0') || 0;
+			if (cur) pos[cur] = (pos[cur] ?? 0) + num;
+		}
+		return pos;
+	}
 
 	function parseValue(raw: unknown): number {
 		if (raw == null) return 0;
@@ -61,17 +79,19 @@
 		return match ? parseFloat(match[1].replace(/,/g, '').replace('−', '-')) || 0 : 0;
 	}
 
-	function buildTree(rows: { account: string; value: number }[], closedAccounts: Set<string>): BalanceNode[] {
+	function buildTree(rows: any[], closedAccounts: Set<string>): BalanceNode[] {
 		const nodeMap = new Map<string, BalanceNode>();
 
-		for (const { account: fullName, value } of rows) {
+		for (const row of rows) {
+			const fullName = String(row[0] ?? '');
 			const parts = fullName.split(':');
 
 			nodeMap.set(fullName, {
 				name: parts[parts.length - 1],
 				fullName,
 				depth: parts.length - 1,
-				value,
+				position: parsePosition(row[1]),
+				value: parseValue(row[2]),
 				children: [],
 				expanded: true,
 				closed: closedAccounts.has(fullName)
@@ -84,6 +104,7 @@
 						name: parts[k - 1],
 						fullName: ancFull,
 						depth: k - 1,
+						position: {},
 						value: 0,
 						children: [],
 						expanded: true,
@@ -114,6 +135,9 @@
 			for (const child of node.children) {
 				addTotals(child);
 				node.value += child.value;
+				for (const [cur, amt] of Object.entries(child.position)) {
+					node.position[cur] = (node.position[cur] ?? 0) + amt;
+				}
 			}
 		}
 		for (const root of rootNodes) addTotals(root);
@@ -145,7 +169,7 @@
 				}
 			}
 
-			const bql = `SELECT account, value(sum(position), '${baseCurrency}') as value WHERE account ~ "^(Assets|Liabilities|Equity)" AND date <= ${asOfDate} GROUP BY account ORDER BY account`;
+			const bql = `SELECT account, sum(position) as position, value(sum(position), '${baseCurrency}') as value WHERE account ~ "^(Assets|Liabilities|Equity)" AND date <= ${asOfDate} GROUP BY account ORDER BY account`;
 			const result = await fullLedgerService.query(bql);
 
 			if (result?.errors?.length) {
@@ -156,14 +180,15 @@
 			const cols = result?.columns ?? [];
 			const rows = (result?.rows ?? []) as any[];
 			const accountIdx = cols.indexOf('account');
+			const posIdx = cols.indexOf('position');
 			const valIdx = cols.indexOf('value');
 
-			if (accountIdx === -1 || valIdx === -1) {
+			if (accountIdx === -1 || posIdx === -1 || valIdx === -1) {
 				error = 'Unexpected query result columns.';
 				return;
 			}
 
-			const byPrefix: Record<string, { account: string; value: number }[]> = {
+			const byPrefix: Record<string, any[]> = {
 				Assets: [],
 				Liabilities: [],
 				Equity: []
@@ -171,28 +196,27 @@
 
 			for (const row of rows) {
 				const account = String(row[accountIdx] ?? '');
-				const value = parseValue(row[valIdx]);
 				const prefix = account.split(':')[0];
-				if (byPrefix[prefix]) byPrefix[prefix].push({ account, value });
+				if (byPrefix[prefix]) byPrefix[prefix].push(row);
 			}
 
 			assetsSection = {
 				title: 'Assets',
 				prefix: 'Assets',
 				roots: buildTree(byPrefix.Assets, closedAccounts),
-				total: byPrefix.Assets.reduce((s, r) => s + r.value, 0)
+				total: byPrefix.Assets.reduce((s, r) => s + parseValue(r[2]), 0)
 			};
 			liabilitiesSection = {
 				title: 'Liabilities',
 				prefix: 'Liabilities',
 				roots: buildTree(byPrefix.Liabilities, closedAccounts),
-				total: byPrefix.Liabilities.reduce((s, r) => s + r.value, 0)
+				total: byPrefix.Liabilities.reduce((s, r) => s + parseValue(r[2]), 0)
 			};
 			equitySection = {
 				title: 'Equity',
 				prefix: 'Equity',
 				roots: buildTree(byPrefix.Equity, closedAccounts),
-				total: byPrefix.Equity.reduce((s, r) => s + r.value, 0)
+				total: byPrefix.Equity.reduce((s, r) => s + parseValue(r[2]), 0)
 			};
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
@@ -220,7 +244,16 @@
 						class:rotate-90={node.expanded}
 					>▶</span>
 					<span class="flex-1 text-left text-sm font-medium">{node.name}</span>
-					<span class="font-mono text-sm tabular-nums">{formatAmount(node.value)}&nbsp;{baseCurrency}</span>
+					{#if showBase}
+						<span class="font-mono text-sm tabular-nums">{formatAmount(node.value)}&nbsp;{baseCurrency}</span>
+					{:else}
+						<MultiCurrencyBalance
+							balances={node.position}
+							defaultCurrency={baseCurrency}
+							loaded={true}
+							class="text-sm"
+						/>
+					{/if}
 				</button>
 				{#if node.expanded}
 					<div>
@@ -239,7 +272,16 @@
 			>
 				<span class="w-3 shrink-0"></span>
 				<span class="flex-1 text-left text-sm">{node.name}</span>
-				<span class="font-mono text-sm tabular-nums">{formatAmount(node.value)}&nbsp;{baseCurrency}</span>
+				{#if showBase}
+					<span class="font-mono text-sm tabular-nums">{formatAmount(node.value)}&nbsp;{baseCurrency}</span>
+				{:else}
+					<MultiCurrencyBalance
+						balances={node.position}
+						defaultCurrency={baseCurrency}
+						loaded={true}
+						class="text-sm"
+					/>
+				{/if}
 			</button>
 		{/if}
 	{/if}
@@ -270,6 +312,10 @@
 	<Toolbar title="Balance Sheet">
 		{#snippet menuItems()}
 			<label class="btn btn-primary flex w-full flex-row border-0 cursor-pointer">
+				<span class="grow text-start font-normal">Show empty</span>
+				<input type="checkbox" class="toggle toggle-sm" bind:checked={showEmpty} onchange={loadData} />
+			</label>
+			<label class="btn btn-primary flex w-full flex-row border-0 cursor-pointer">
 				<span class="grow text-start font-normal">Show closed</span>
 				<input type="checkbox" class="toggle toggle-sm" bind:checked={showClosed} onchange={loadData} />
 			</label>
@@ -284,6 +330,17 @@
 			class="input input-bordered input-sm"
 			bind:value={asOfDate}
 			onchange={loadData}
+		/>
+	</div>
+
+	<div class="flex items-center border-b border-base-300 px-4 py-2">
+		<PillToggle
+			bind:value={currencyMode}
+			options={[
+				{ value: 'original', label: 'Original' },
+				{ value: 'base', label: baseCurrency || 'Base' }
+			]}
+			class="ml-auto"
 		/>
 	</div>
 

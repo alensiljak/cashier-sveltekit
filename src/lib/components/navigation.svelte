@@ -155,18 +155,6 @@
 					<ul>
 						<li>
 							<a
-								href="/reports"
-								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/reports'
-									? 'active bg-secondary text-secondary-content'
-									: ''}"
-								onclick={closeDrawer}
-							>
-								<ChartLineIcon />
-								<span>Reports</span>
-							</a>
-						</li>
-						<li>
-							<a
 								href="/budget"
 								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/budget'
 									? 'active bg-secondary text-secondary-content'
@@ -214,6 +202,18 @@
 						</li>
 					</ul>
 				</details>
+			</li>
+			<li>
+				<a
+					href="/reports"
+					class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/reports'
+						? 'active bg-secondary text-secondary-content'
+						: ''}"
+					onclick={closeDrawer}
+				>
+					<ChartLineIcon />
+					<span>Reports</span>
+				</a>
 			</li>
 			<li>
 				<details>
