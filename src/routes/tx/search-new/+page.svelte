@@ -9,11 +9,71 @@
 	import { Xact, Posting } from '$lib/data/model';
 	import { xact as xactStore, xactSpan } from '$lib/data/mainStore';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
-	import { CodeIcon, FilePlusIcon } from '@lucide/svelte';
+	import { type ParseResult, parseTranscript, buildTransaction } from '$lib/utils/nlpEntry';
+	import { CodeIcon, FilePlusIcon, SearchIcon, WandSparklesIcon, TriangleAlertIcon } from '@lucide/svelte';
 	import HelpButton from '$lib/help/HelpButton.svelte';
 
 	function focusOnMount(el: HTMLElement) {
 		el.focus();
+	}
+
+	type Mode = 'search' | 'nlp';
+	let mode = $state<Mode>('nlp');
+
+	const NLP_EXAMPLES = [
+		'10 euros for Decathlon, t-shirt',
+		'Paid 25 euros at Starbucks',
+		'Received 500 euros salary',
+		'Transferred 100 euros from checking to savings'
+	];
+
+	let parseResult = $state<ParseResult | null>(null);
+	let nlpXact = $state<Xact | null>(null);
+
+	function runParse() {
+		const text = searchText.trim();
+		if (!text) {
+			parseResult = null;
+			nlpXact = null;
+			return;
+		}
+		parseResult = parseTranscript(text);
+		nlpXact = buildTransaction(parseResult);
+	}
+
+	function useNlpExample(phrase: string) {
+		searchText = phrase;
+		runParse();
+	}
+
+	function selectNlpXact(template: Xact) {
+		isSelecting = true;
+		try {
+			const clone = new Xact();
+			clone.date = template.date ?? new Date().toISOString().substring(0, 10);
+			clone.payee = template.payee ?? '';
+			clone.note = template.note ?? '';
+			clone.flag = template.flag ?? '*';
+			clone.postings = template.postings.map((p) => {
+				const posting = new Posting();
+				posting.account = p.account;
+				posting.currency = p.currency;
+				posting.amount = p.amount;
+				return posting;
+			});
+
+			xactStore.set(clone);
+			xactSpan.set(undefined);
+			goto('/tx');
+		} finally {
+			isSelecting = false;
+		}
+	}
+
+	function setMode(next: Mode) {
+		if (mode === next) return;
+		mode = next;
+		if (next === 'nlp') runParse();
 	}
 
 	const ACCOUNT_TYPES = ['Assets', 'Liabilities', 'Income', 'Expenses', 'Equity'] as const;
@@ -39,7 +99,11 @@
 
 	function onInput() {
 		if (debounceTimer) clearTimeout(debounceTimer);
-		debounceTimer = setTimeout(runSearch, 400);
+		if (mode === 'nlp') {
+			debounceTimer = setTimeout(runParse, 400);
+		} else {
+			debounceTimer = setTimeout(runSearch, 400);
+		}
 	}
 
 	// Re-run search when filters change while there is active search text
@@ -48,7 +112,7 @@
 		void filterDateFrom;
 		void filterDateTo;
 		void filterAccountType;
-		if (searchText.trim().length >= 2) {
+		if (mode === 'search' && searchText.trim().length >= 2) {
 			if (debounceTimer) clearTimeout(debounceTimer);
 			debounceTimer = setTimeout(runSearch, 400);
 		}
@@ -242,103 +306,172 @@
 	</Toolbar>
 
 	<section class="flex flex-1 flex-col gap-3 overflow-y-auto touch-pan-y p-3">
-		<!-- Search input -->
+		<!-- Mode switch -->
+		<div class="flex items-center justify-center gap-3" role="radiogroup" aria-label="Entry mode">
+			<button
+				type="button"
+				role="radio"
+				aria-checked={mode === 'nlp'}
+				title="Natural language"
+				class="btn btn-circle {mode === 'nlp' ? 'btn-primary' : 'btn-outline'}"
+				onclick={() => setMode('nlp')}
+			>
+				<WandSparklesIcon class="size-5" />
+			</button>
+			<button
+				type="button"
+				role="radio"
+				aria-checked={mode === 'search'}
+				title="Search"
+				class="btn btn-circle {mode === 'search' ? 'btn-primary' : 'btn-outline'}"
+				onclick={() => setMode('search')}
+			>
+				<SearchIcon class="size-5" />
+			</button>
+		</div>
+
+		<!-- Search / entry input -->
 		<input
 			class="input input-bordered w-full"
 			type="search"
-			placeholder="Search payee, narration, account…"
+			placeholder={mode === 'nlp'
+				? 'e.g. 10 euros for Decathlon, t-shirt'
+				: 'Search payee, narration, account…'}
 			use:focusOnMount
 			bind:value={searchText}
 			oninput={onInput}
 		/>
 
-		<!-- Optional filters -->
-		<AccordionSection
-			title="Filters"
-			expanded={filtersExpanded}
-			onToggle={() => (filtersExpanded = !filtersExpanded)}
-		>
-			<div class="flex flex-col gap-3">
-				<!-- Date range -->
-				<div class="flex gap-2">
-					<div class="flex flex-1 flex-col gap-1">
-						<label class="label py-0 text-xs font-semibold text-base-content/60" for="date-from">
-							From
-						</label>
-						<input
-							id="date-from"
-							type="date"
-							class="input input-bordered input-sm w-full"
-							bind:value={filterDateFrom}
-						/>
-					</div>
-					<div class="flex flex-1 flex-col gap-1">
-						<label class="label py-0 text-xs font-semibold text-base-content/60" for="date-to">
-							To
-						</label>
-						<input
-							id="date-to"
-							type="date"
-							class="input input-bordered input-sm w-full"
-							bind:value={filterDateTo}
-						/>
-					</div>
-				</div>
-
-				<!-- Account type -->
-				<div class="flex flex-col gap-1">
-					<span class="label py-0 text-xs font-semibold text-base-content/60">Account type</span>
-					<div class="flex flex-wrap gap-2">
-						<label class="flex items-center gap-1 cursor-pointer">
+		{#if mode === 'search'}
+			<!-- Optional filters -->
+			<AccordionSection
+				title="Filters"
+				expanded={filtersExpanded}
+				onToggle={() => (filtersExpanded = !filtersExpanded)}
+			>
+				<div class="flex flex-col gap-3">
+					<!-- Date range -->
+					<div class="flex gap-2">
+						<div class="flex flex-1 flex-col gap-1">
+							<label class="label py-0 text-xs font-semibold text-base-content/60" for="date-from">
+								From
+							</label>
 							<input
-								type="radio"
-								class="radio radio-sm"
-								name="acct-type"
-								value=""
-								bind:group={filterAccountType}
+								id="date-from"
+								type="date"
+								class="input input-bordered input-sm w-full"
+								bind:value={filterDateFrom}
 							/>
-							<span class="text-sm">All</span>
-						</label>
-						{#each ACCOUNT_TYPES as type}
+						</div>
+						<div class="flex flex-1 flex-col gap-1">
+							<label class="label py-0 text-xs font-semibold text-base-content/60" for="date-to">
+								To
+							</label>
+							<input
+								id="date-to"
+								type="date"
+								class="input input-bordered input-sm w-full"
+								bind:value={filterDateTo}
+							/>
+						</div>
+					</div>
+
+					<!-- Account type -->
+					<div class="flex flex-col gap-1">
+						<span class="label py-0 text-xs font-semibold text-base-content/60">Account type</span>
+						<div class="flex flex-wrap gap-2">
 							<label class="flex items-center gap-1 cursor-pointer">
 								<input
 									type="radio"
 									class="radio radio-sm"
 									name="acct-type"
-									value={type}
+									value=""
 									bind:group={filterAccountType}
 								/>
-								<span class="text-sm">{type}</span>
+								<span class="text-sm">All</span>
 							</label>
-						{/each}
+							{#each ACCOUNT_TYPES as type}
+								<label class="flex items-center gap-1 cursor-pointer">
+									<input
+										type="radio"
+										class="radio radio-sm"
+										name="acct-type"
+										value={type}
+										bind:group={filterAccountType}
+									/>
+									<span class="text-sm">{type}</span>
+								</label>
+							{/each}
+						</div>
 					</div>
 				</div>
-			</div>
-		</AccordionSection>
+			</AccordionSection>
 
-		<!-- Results -->
-		{#if isLoading}
-			<div class="flex justify-center py-8">
-				<span class="loading loading-spinner loading-md"></span>
+			<!-- Results -->
+			{#if isLoading}
+				<div class="flex justify-center py-8">
+					<span class="loading loading-spinner loading-md"></span>
+				</div>
+			{:else if error}
+				<div class="alert alert-error text-sm">{error}</div>
+			{:else if searchText.trim().length < 2}
+				<p class="py-8 text-center text-sm text-base-content/50">Type at least 2 characters to search.</p>
+			{:else if hasSearched && templates.length === 0}
+				<p class="py-8 text-center text-sm text-base-content/50">No matching transactions found.</p>
+			{:else if templates.length > 0}
+				{#if isSelecting}
+					<div class="flex justify-center py-4">
+						<span class="loading loading-spinner loading-md"></span>
+					</div>
+				{/if}
+				<div
+					class="flex flex-col divide-y divide-base-200"
+					class:pointer-events-none={isSelecting}
+					class:opacity-50={isSelecting}
+				>
+					{#each templates as template (template)}
+						<div class="py-2">
+							<JournalXactRow xact={template} onclick={selectTemplate} />
+						</div>
+					{/each}
+				</div>
+			{/if}
+		{:else if searchText.trim().length === 0}
+			<div class="card bg-base-200 shadow">
+				<div class="card-body gap-2 p-4">
+					<h3 class="card-title text-sm">Try saying…</h3>
+					<ul class="text-sm space-y-1">
+						{#each NLP_EXAMPLES as phrase}
+							<li>
+								<button
+									type="button"
+									class="text-left opacity-70 hover:opacity-100 hover:underline"
+									onclick={() => useNlpExample(phrase)}
+								>"{phrase}"</button>
+							</li>
+						{/each}
+					</ul>
+				</div>
 			</div>
-		{:else if error}
-			<div class="alert alert-error text-sm">{error}</div>
-		{:else if searchText.trim().length < 2}
-			<p class="py-8 text-center text-sm text-base-content/50">Type at least 2 characters to search.</p>
-		{:else if hasSearched && templates.length === 0}
-			<p class="py-8 text-center text-sm text-base-content/50">No matching transactions found.</p>
-		{:else if templates.length > 0}
+		{:else if parseResult && nlpXact}
+			<div class="flex items-center justify-between">
+				{#if parseResult.needsReview}
+					<div class="badge badge-warning gap-1">
+						<TriangleAlertIcon class="size-3" /> needs review — tap to open and fix
+					</div>
+				{:else}
+					<div class="badge badge-success">looks good — tap to open</div>
+				{/if}
+			</div>
 			{#if isSelecting}
 				<div class="flex justify-center py-4">
 					<span class="loading loading-spinner loading-md"></span>
 				</div>
 			{/if}
 			<div class="flex flex-col divide-y divide-base-200" class:pointer-events-none={isSelecting} class:opacity-50={isSelecting}>
-				{#each templates as template (template)}
-					<div class="py-2">
-						<JournalXactRow xact={template} onclick={selectTemplate} />
-					</div>
-				{/each}
+				<div class="py-2">
+					<JournalXactRow xact={nlpXact} onclick={selectNlpXact} />
+				</div>
 			</div>
 		{/if}
 	</section>

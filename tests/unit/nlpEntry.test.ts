@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { parseTranscript } from '$lib/utils/voiceNlp';
+import { parseTranscript } from '$lib/utils/nlpEntry';
 
 test('currency word is not picked as payee', () => {
 	const result = parseTranscript('50 euro at billa');

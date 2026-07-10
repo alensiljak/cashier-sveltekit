@@ -9,6 +9,8 @@ export interface ParseResult {
 	note?: string;
 	confidence: number;
 	matched: string[];
+	/** True when a field was missing and a generic/fallback account or value was substituted. */
+	needsReview: boolean;
 }
 
 const CURRENCY_MAP: Record<string, string> = {
@@ -183,33 +185,45 @@ export function parseTranscript(text: string): ParseResult {
 	const isIncome = /receive|received|income|salary|paycheck|wage/i.test(lower);
 
 	let fromAccount: string | undefined;
+	let fromAccountResolved = false;
 	const fromMatch = text.match(/from\s+(?:my\s+)?([a-zA-Z0-9\s]+?)(?:\s+to|\s+account|$)/i);
 	if (fromMatch) {
 		fromAccount = guessAccount(fromMatch[1]) ?? fromMatch[1].trim();
+		fromAccountResolved = true;
 		matched.push(`from: ${fromAccount}`);
 		confidence += 20;
 	}
 
 	let toAccount: string | undefined;
+	let toAccountResolved = false;
 	const toMatch = text.match(/to\s+(?:my\s+)?([a-zA-Z0-9\s]+?)(?:\s+from|\s+account|$)/i);
 	if (toMatch && isTransfer) {
 		toAccount = guessAccount(toMatch[1]) ?? toMatch[1].trim();
+		toAccountResolved = true;
 		matched.push(`to: ${toAccount}`);
 		confidence += 20;
 	}
 
 	if (!fromAccount) {
 		if (isIncome) {
-			fromAccount = guessAccount(text) ?? 'Income:Other';
+			const guess = guessAccount(text);
+			fromAccount = guess ?? 'Income:Other';
+			fromAccountResolved = !!guess;
 			toAccount = toAccount ?? 'Assets:Checking';
 		} else {
+			// Plain default from-account for expenses; not a "guess" worth flagging on its own.
 			fromAccount = 'Assets:Checking';
+			fromAccountResolved = true;
 		}
 	}
 
 	if (!toAccount && !isTransfer && !isIncome) {
-		toAccount = guessAccount(text) ?? 'Expenses:General';
+		const guess = guessAccount(text);
+		toAccount = guess ?? 'Expenses:General';
+		toAccountResolved = !!guess;
 	}
+
+	const needsReview = !payee || amount === undefined || !fromAccountResolved || !toAccountResolved;
 
 	return {
 		payee,
@@ -218,7 +232,8 @@ export function parseTranscript(text: string): ParseResult {
 		fromAccount,
 		toAccount,
 		confidence: Math.min(confidence, 100),
-		matched
+		matched,
+		needsReview
 	};
 }
 
@@ -226,7 +241,7 @@ export function buildTransaction(result: ParseResult): Xact {
 	const xact = new Xact();
 	xact.date = new Date().toISOString().substring(0, 10);
 	xact.payee = result.payee ?? 'Unknown';
-	xact.flag = '*';
+	xact.flag = result.needsReview ? '!' : '*';
 
 	const posting1 = new Posting();
 	posting1.account = result.toAccount ?? 'Expenses:General';
