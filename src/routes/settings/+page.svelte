@@ -14,6 +14,7 @@
 		ShortDateFormatStore
 	} from '$lib/data/mainStore.js';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
+	import SectionTitle from '$lib/components/SectionTitle.svelte';
 	import {
 		BoxIcon,
 		Check,
@@ -291,7 +292,7 @@
 
 <main class="mx-auto max-w-2xl space-y-3 p-3 pb-20">
 	<!-- ── General ─────────────────────────────────────────── -->
-	<div class="divider text-sm font-semibold uppercase tracking-widest">General</div>
+	<div class="divider text-sm"><SectionTitle>General</SectionTitle></div>
 
 	<!-- Currency -->
 	<div class="flex items-center gap-3">
@@ -369,7 +370,7 @@
 	</div>
 
 	<!-- ── Ledger Configuration ────────────────────────────── -->
-	<div class="divider text-sm font-semibold uppercase tracking-widest">Ledger Configuration</div>
+	<div class="divider text-sm"><SectionTitle>Ledger Configuration</SectionTitle></div>
 
 	<p class="text-xs opacity-60">
 		<a href="/opfs/import-ledger" class="link">Import Ledger files</a> first, then choose the book file
@@ -404,7 +405,7 @@
 	</div>
 
 	<!-- ── Asset Allocation ────────────────────────────────── -->
-	<div class="divider text-sm font-semibold uppercase tracking-widest">Asset Allocation</div>
+	<div class="divider text-sm"><SectionTitle>Asset Allocation</SectionTitle></div>
 
 	<!-- AA definition file -->
 	<div class="flex items-center gap-3">
@@ -466,7 +467,7 @@
 	</div>
 
 	<!-- ── Forecast ────────────────────────────────────────── -->
-	<div class="divider text-sm font-semibold uppercase tracking-widest">Forecast</div>
+	<div class="divider text-sm"><SectionTitle>Forecast</SectionTitle></div>
 
 	<div class="flex flex-col gap-2">
 		<a href="/forecast-settings" class="btn btn-outline btn-sm w-full gap-2">
@@ -476,7 +477,7 @@
 	</div>
 
 	<!-- ── Device Settings ────────────────────────────────── -->
-	<div class="divider text-sm font-semibold uppercase tracking-widest">Device Settings</div>
+	<div class="divider text-sm"><SectionTitle>Device Settings</SectionTitle></div>
 
 	<p class="text-xs opacity-60">These settings apply only to this device and are not exported.</p>
 
@@ -494,7 +495,7 @@
 	</div>
 
 	<!-- ── Demo Data ───────────────────────────────────────── -->
-	<div class="divider text-sm font-semibold uppercase tracking-widest">Demo Data</div>
+	<div class="divider text-sm"><SectionTitle>Demo Data</SectionTitle></div>
 
 	<p class="text-xs opacity-60">
 		A sample book (transactions, accounts, asset allocation target) to explore Cashier without your

@@ -23,6 +23,14 @@ body {
 	pointer-events: auto;
 }
 
+/* Standardize card/section titles app-wide with the same elegant serif —
+   no forced uppercase here since card-title text is often dynamic (filenames,
+   interpolated names) where all-caps would look wrong. */
+.card-title {
+	font-family: ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
+	letter-spacing: 0.02em;
+}
+
 /* Force a wait cursor everywhere during client-side navigation, overriding
    any element (e.g. clickable rows with cursor-pointer) the mouse happens to
    be resting on right after the click that triggered the navigation. */

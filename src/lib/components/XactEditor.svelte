@@ -3,6 +3,7 @@
 	import { onMount } from 'svelte';
 	import PostingEditor from './PostingEditor.svelte';
 	import MetadataEditor from './MetadataEditor.svelte';
+	import SectionTitle from './SectionTitle.svelte';
 	import { goto } from '$app/navigation';
 	import Notifier from '$lib/utils/notifier';
 	import appService from '$lib/services/appService';
@@ -19,7 +20,8 @@
 		TriangleAlertIcon,
 		CircleCheckIcon,
 		ChevronLeftIcon,
-		ChevronRightIcon
+		ChevronRightIcon,
+		TagsIcon
 	} from '@lucide/svelte';
 	import { Big } from 'big.js';
 	import moment from 'moment';
@@ -59,6 +61,13 @@
 		// Auto-balance only resolves within a single currency; cross-currency needs a price annotation.
 		if (hasAutoBalance && Object.keys(byCurrency).length <= 1) return true;
 		return Object.values(byCurrency).every((s) => Math.abs(s) <= 0.005);
+	});
+
+	let statusMessages = $derived.by(() => {
+		const messages: string[] = [];
+		if (!isBalanced) messages.push("Unbalanced — postings don't sum to zero");
+		if (hasPlaceholder) messages.push('Has uncategorized postings');
+		return messages;
 	});
 
 	$effect(() => {
@@ -194,6 +203,16 @@
 </script>
 
 <div class="flex h-full flex-col space-y-3 py-2">
+	{#if statusMessages.length > 0}
+		<div class="alert alert-warning items-start py-2">
+			<TriangleAlertIcon class="h-5 w-5 shrink-0" />
+			<div class="flex flex-col gap-1 text-sm">
+				{#each statusMessages as message}
+					<span>{message}</span>
+				{/each}
+			</div>
+		</div>
+	{/if}
 	<div class="flex items-center">
 		<CalendarIcon class="h-5 w-5 mr-2 opacity-70" />
 		<button type="button" class="btn btn-ghost h-11 w-11 p-0" onclick={() => shiftDate(-1)}><ChevronLeftIcon class="h-4 w-4" /></button>
@@ -214,6 +233,46 @@
 			/>
 		</div>
 		<button type="button" class="btn btn-ghost h-11 w-11 p-0" onclick={() => shiftDate(1)}><ChevronRightIcon class="h-4 w-4" /></button>
+	</div>
+	<div class="flex items-center justify-between gap-2">
+		<div class="join">
+			<button
+				type="button"
+				title="Mark as incomplete / needs review"
+				class="join-item btn btn-sm"
+				class:btn-warning={$xact.flag === '!'}
+				class:btn-outline={$xact.flag !== '!'}
+				onclick={() => ($xact.flag = '!')}
+			>
+				<TriangleAlertIcon class="h-4 w-4" />
+				<span>!</span>
+			</button>
+			<button
+				type="button"
+				title="Mark as complete"
+				class="join-item btn btn-sm"
+				class:btn-success={$xact.flag === '*'}
+				class:btn-outline={$xact.flag !== '*'}
+				disabled={hasPlaceholder}
+				onclick={() => ($xact.flag = '*')}
+			>
+				<CircleCheckIcon class="h-4 w-4" />
+				<span>*</span>
+			</button>
+		</div>
+		<button
+			type="button"
+			class="btn btn-sm btn-outline"
+			class:btn-active={metadataExpanded}
+			onclick={() => (metadataExpanded = !metadataExpanded)}
+		>
+			<TagsIcon class="h-4 w-4" />
+			<span
+				>Meta{$xact?.meta && Object.keys($xact.meta).length > 0
+					? ` (${Object.keys($xact.meta).length})`
+					: ''}</span
+			>
+		</button>
 	</div>
 	<div class="flex items-center">
 		<UserIcon class="h-5 w-5 mr-2 opacity-70" />
@@ -238,63 +297,13 @@
 		/>
 	</div>
 
-	<!-- Transaction flag -->
-	<div class="flex flex-col items-center gap-1">
-		<div class="flex w-full items-center justify-between gap-2">
-			<div class="flex items-center gap-2">
-				<div class="join">
-					<button
-						type="button"
-						title="Mark as incomplete / needs review"
-						class="join-item btn btn-sm"
-						class:btn-warning={$xact.flag === '!'}
-						class:btn-outline={$xact.flag !== '!'}
-						onclick={() => ($xact.flag = '!')}
-					>
-						<TriangleAlertIcon class="h-4 w-4" />
-						<span>!</span>
-					</button>
-					<button
-						type="button"
-						title="Mark as complete"
-						class="join-item btn btn-sm"
-						class:btn-success={$xact.flag === '*'}
-						class:btn-outline={$xact.flag !== '*'}
-						disabled={hasPlaceholder}
-						onclick={() => ($xact.flag = '*')}
-					>
-						<CircleCheckIcon class="h-4 w-4" />
-						<span>*</span>
-					</button>
-				</div>
-				{#if !isBalanced}
-					<span class="text-error text-xs flex items-center gap-1" title="Amounts don't balance — run Validate for details">
-						<TriangleAlertIcon class="h-3 w-3" />
-						unbalanced
-					</span>
-				{/if}
-			</div>
-			<button
-				type="button"
-				class="link text-sm whitespace-nowrap"
-				onclick={() => (metadataExpanded = !metadataExpanded)}
-			>
-				Metadata{$xact?.meta && Object.keys($xact.meta).length > 0
-					? ` (${Object.keys($xact.meta).length})`
-					: ''} &gt;
-			</button>
-		</div>
-		{#if hasPlaceholder}
-			<span class="text-warning text-xs">Has uncategorized postings</span>
-		{/if}
-	</div>
-
-	<!-- Postings -->
-	<!-- sum -->
-	<div class="bg-primary/25 flex flex-row items-center rounded-lg p-3">
-		<span class="grow text-center">Postings</span>
-		<div><SigmaIcon /></div>
-		<data class="pl-2">{sum}</data>
+	<!-- postings sum -->
+	<div class="flex items-center justify-between px-1">
+		<SectionTitle class="text-xs opacity-70">Postings:</SectionTitle>
+		<span class="flex items-center gap-1 text-sm opacity-70">
+			<SigmaIcon class="h-3.5 w-3.5" />
+			<data>{sum}</data>
+		</span>
 	</div>
 	<!-- posting list -->
 	<div class="flex-1 overflow-y-auto">
