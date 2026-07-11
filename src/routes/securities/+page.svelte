@@ -1,5 +1,7 @@
 <script lang="ts">
 	import SearchToolbar from '$lib/components/SearchToolbar.svelte';
+	import { SearchIcon } from '@lucide/svelte';
+	import { slide } from 'svelte/transition';
 	import ExpensesDonutChart from '$lib/components/ExpensesDonutChart.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { ListSearch } from '$lib/utils/ListSearch';
@@ -16,6 +18,7 @@
 	import { getSecuritiesList, type SecurityListItem } from '$lib/assetAllocation/securityReturns';
 
 	let searchTerm = $state('');
+	let searchOpen = $state(false);
 	let rows: SecurityListItem[] = $state([]);
 	let dataLoaded = $state(false);
 	let reportCurrency = $state('');
@@ -78,11 +81,24 @@
 	function onSearch(value: string) {
 		searchTerm = value;
 	}
+
+	function toggleSearch() {
+		searchOpen = !searchOpen;
+		if (!searchOpen) searchTerm = '';
+	}
 </script>
 
 <main class="flex flex-col h-full">
 	<Toolbar title="Securities">
 		{#snippet actions()}
+			<button
+				type="button"
+				class="btn btn-ghost btn-circle hover-transparent"
+				title="Search"
+				onclick={toggleSearch}
+			>
+				<SearchIcon size={20} />
+			</button>
 			<HelpButton topic="securities" />
 		{/snippet}
 		{#snippet menuItems()}
@@ -97,7 +113,11 @@
 			</label>
 		{/snippet}
 	</Toolbar>
-	<SearchToolbar focus {onSearch} />
+	{#if searchOpen}
+		<div transition:slide={{ duration: 200 }}>
+			<SearchToolbar focus {onSearch} />
+		</div>
+	{/if}
 
 	<!-- Column header -->
 	<div

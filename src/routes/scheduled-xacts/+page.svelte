@@ -12,7 +12,8 @@
 	import { ListSearch } from '$lib/utils/ListSearch';
 	import Notifier from '$lib/utils/notifier';
 	import { XactAugmenter } from '$lib/utils/xactAugmenter';
-	import { CalendarIcon, PackageIcon, PackageOpenIcon, PlusIcon } from '@lucide/svelte';
+	import { CalendarIcon, PackageIcon, PackageOpenIcon, PlusIcon, SearchIcon } from '@lucide/svelte';
+	import { slide } from 'svelte/transition';
 	import HelpButton from '$lib/help/HelpButton.svelte';
 	import { onMount } from 'svelte';
 	import type { PageData } from './$types';
@@ -24,6 +25,7 @@
 
 	let allItems: ScheduledTransaction[] = $state([]);
 	let filteredList: ScheduledTransaction[] = $state([]);
+	let searchOpen = $state(false);
 
 	onMount(async () => {
 		allItems = data.sorted;
@@ -74,6 +76,11 @@
 			filteredList = allItems;
 		}
 	}
+
+	function toggleSearch() {
+		searchOpen = !searchOpen;
+		if (!searchOpen) onSearch('');
+	}
 </script>
 
 <main class="flex h-screen flex-col">
@@ -84,11 +91,22 @@
 			<ToolbarMenuItem Icon={CalendarIcon} text="Calendar" targetNav="/scheduled-xacts/calendar" />
 		{/snippet}
 		{#snippet actions()}
+			<button
+				type="button"
+				class="btn btn-ghost btn-circle hover-transparent"
+				title="Search"
+				onclick={toggleSearch}
+			>
+				<SearchIcon size={20} />
+			</button>
 			<HelpButton topic="scheduled-transactions" />
 		{/snippet}
 	</Toolbar>
-	<!-- search toolbar -->
-	<SearchToolbar {onSearch} />
+	{#if searchOpen}
+		<div transition:slide={{ duration: 200 }}>
+			<SearchToolbar focus {onSearch} />
+		</div>
+	{/if}
 
 	<Fab onclick={onFabClicked} Icon={PlusIcon} />
 
