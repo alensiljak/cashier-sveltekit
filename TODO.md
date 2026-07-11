@@ -10,14 +10,6 @@ None at the moment. Regular ongoing maintenance.
 - [x] currency calculator
 - [ ] transaction import
 
-## Quick Xact Entry
-
-- [x] voice entry, Web Speech API + NLP rule engine.
-- [x] add a home screen shortcut to /quick-add page
-- [x] Drafts. User speaks / types a narrative. Creates a transaction later.
-- [x] read the last transaction from the ledger, not special table
-- [x] list multiple last transactions, to choose from
-
 ## Onboarding
 
 - [x] Setup wizard at `/onboarding` — triggered by clean-slate detection (no `cashier.bean`, no other `.bean` files, no linked book) rather than a stored `onboarded` flag, so it can't get stuck skipped/shown by a stale setting. Offers Try demo data / Import my ledger / Start empty.
