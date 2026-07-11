@@ -2,6 +2,7 @@
 	import { desktopNavVisible, drawerState } from '$lib/data/mainStore';
 	import { page } from '$app/state';
 	import { peerConnection } from '$lib/sync/peerConnection.svelte';
+	import SectionTitle from '$lib/components/SectionTitle.svelte';
 	// Icons
 	import {
 		CalendarClockIcon,
@@ -87,7 +88,7 @@
 			<img src="/icons/icon-192.png" class="w-1/3 lg:w-1/2" alt="logo" />
 		</div>
 		<div class="pt-2 text-center">
-			<p class="text-2xl font-semibold">Cashier</p>
+			<p><SectionTitle class="text-xl">Cashier</SectionTitle></p>
 		</div>
 	</div>
 
