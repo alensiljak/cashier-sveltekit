@@ -11,9 +11,7 @@
 	import { getEmptyPostingIndex } from '$lib/utils/xactUtils';
 	import { Posting } from '$lib/data/model';
 	import {
-		ArrowUpDownIcon,
 		SigmaIcon,
-		TrashIcon,
 		UserIcon,
 		CalendarIcon,
 		FileTextIcon,
@@ -292,28 +290,11 @@
 	</div>
 
 	<!-- Postings -->
-	<!-- actions and sum -->
-	<div class="bg-primary/25 space-y-2 rounded-lg p-3">
-		<div class="flex flex-row">
-			<span class="grow text-center">Postings</span>
-			<div><SigmaIcon /></div>
-			<data class="pl-2">{sum}</data>
-		</div>
-		<div class="flex flex-row justify-center space-x-10">
-			<button
-				type="button"
-				class="btn btn-outline btn-accent btn-icon rounded"
-				onclick={onAddPostingClicked}
-			>
-				<CirclePlusIcon />
-			</button>
-			<a class="btn btn-outline btn-accent btn-icon rounded" href="/postings/reorder">
-				<ArrowUpDownIcon />
-			</a>
-			<a class="btn btn-outline btn-accent btn-icon rounded" href="/postings/delete">
-				<TrashIcon />
-			</a>
-		</div>
+	<!-- sum -->
+	<div class="bg-primary/25 flex flex-row items-center rounded-lg p-3">
+		<span class="grow text-center">Postings</span>
+		<div><SigmaIcon /></div>
+		<data class="pl-2">{sum}</data>
 	</div>
 	<!-- posting list -->
 	<div class="flex-1 overflow-y-auto">
@@ -323,6 +304,16 @@
 				onAccountClicked={(event) => onPostingAccountClicked(index)}
 			/>
 		{/each}
+		<div class="flex justify-center pt-1">
+			<button
+				type="button"
+				class="btn btn-outline btn-accent btn-square rounded"
+				onclick={onAddPostingClicked}
+				title="Add posting"
+			>
+				<CirclePlusIcon />
+			</button>
+		</div>
 	</div>
 	{#if metadataExpanded}
 		<div class="bg-base-200 space-y-2 rounded-lg p-3">

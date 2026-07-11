@@ -26,7 +26,7 @@ None at the moment. Regular ongoing maintenance.
 
 ## Budgets
 
-- [ ] rollover
+- [x] rollover
 - [x] monthly or yearly budget amounts
 - [ ] add savings to the budget? Accounts other than expenses.
 - [ ] savings goals

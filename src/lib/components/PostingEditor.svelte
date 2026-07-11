@@ -1,6 +1,14 @@
 <script lang="ts">
 	import { xact, selectionMetadata, postingEditorIndex } from '$lib/data/mainStore';
-	import { CalculatorIcon, DiffIcon, PencilLineIcon } from '@lucide/svelte';
+	import {
+		ArrowDownIcon,
+		ArrowUpIcon,
+		CalculatorIcon,
+		ChevronDownIcon,
+		DiffIcon,
+		PencilLineIcon,
+		TrashIcon
+	} from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import type { EventHandler } from 'svelte/elements';
 	import { goto } from '$app/navigation';
@@ -24,7 +32,8 @@
 		($xact?.postings[index].amount as number) < 0 ? 'bg-secondary/20' : 'bg-primary/20'
 	);
 	let currencyInput: HTMLInputElement;
-
+	let expanded = $state(false);
+	let isDeleteConfirmationOpen = $state(false);
 	onMount(() => {});
 
 	/**
@@ -64,6 +73,42 @@
 			onAmountChanged();
 		}
 	}
+
+	/**
+	 * Move this posting one place earlier in the list.
+	 */
+	function moveUp() {
+		if (index === 0) return;
+		xact.update((current) => {
+			const postings = [...current.postings];
+			[postings[index - 1], postings[index]] = [postings[index], postings[index - 1]];
+			return { ...current, postings };
+		});
+	}
+
+	/**
+	 * Move this posting one place later in the list.
+	 */
+	function moveDown() {
+		if (index === $xact.postings.length - 1) return;
+		xact.update((current) => {
+			const postings = [...current.postings];
+			[postings[index], postings[index + 1]] = [postings[index + 1], postings[index]];
+			return { ...current, postings };
+		});
+	}
+
+	function onDeleteClicked() {
+		isDeleteConfirmationOpen = true;
+	}
+
+	function onDeleteConfirmed() {
+		isDeleteConfirmationOpen = false;
+		xact.update((current) => ({
+			...current,
+			postings: current.postings.filter((_, i) => i !== index)
+		}));
+	}
 </script>
 
 <section class="w-full">
@@ -77,25 +122,16 @@
 		onclick={onAccountClicked}
 	/>
 
-	<div class="mb-2 flex flex-row items-center">
-		<!-- amount sign + advanced editor -->
-		<div class="flex gap-1">
-			<button
-				type="button"
-				class="btn btn-outline btn-primary-content w-10 grow-0 rounded px-1"
-				onclick={openAdvancedEditor}
-				title="Advanced posting editor"
-			>
-				<PencilLineIcon class="h-4 w-4" />
-			</button>
-			<button
-				type="button"
-				class="btn btn-outline btn-primary-content w-12 grow-0 rounded px-1"
-				onclick={changeSign}
-			>
-				<DiffIcon />
-			</button>
-		</div>
+	<div class="mb-2 flex flex-row items-center gap-1">
+		<button
+			type="button"
+			class="btn btn-outline btn-primary-content w-10 grow-0 rounded px-1"
+			onclick={() => (expanded = !expanded)}
+			title={expanded ? 'Hide posting actions' : 'Show posting actions'}
+			aria-expanded={expanded}
+		>
+			<ChevronDownIcon class={`h-4 w-4 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+		</button>
 		<input
 			title="Amount"
 			placeholder="Amount"
@@ -106,15 +142,6 @@
 			onfocus={() => amountInput.select()}
 			oninput={onAmountChanged}
 		/>
-		<!-- calculator button -->
-		<button
-			type="button"
-			class="btn btn-outline btn-primary-content w-12 grow-0 rounded px-1 mx-1"
-			onclick={openCalculator}
-			title="Open calculator"
-		>
-			<CalculatorIcon />
-		</button>
 		<input
 			title="Currency"
 			placeholder="Currency"
@@ -127,4 +154,81 @@
 				($xact.postings[index].currency = $xact.postings[index].currency?.toUpperCase())}
 		/>
 	</div>
+
+	{#if expanded}
+		<div class="mb-2 flex flex-row items-center justify-center gap-3">
+			<button
+				type="button"
+				class="btn btn-outline btn-primary-content btn-square"
+				onclick={openAdvancedEditor}
+				title="Advanced posting editor"
+			>
+				<PencilLineIcon class="h-4 w-4" />
+			</button>
+			<button
+				type="button"
+				class="btn btn-outline btn-primary-content btn-square"
+				onclick={changeSign}
+				title="Flip amount sign"
+			>
+				<DiffIcon class="h-4 w-4" />
+			</button>
+			<button
+				type="button"
+				class="btn btn-outline btn-primary-content btn-square"
+				onclick={openCalculator}
+				title="Open calculator"
+			>
+				<CalculatorIcon class="h-4 w-4" />
+			</button>
+			<button
+				type="button"
+				class="btn btn-outline btn-primary-content btn-square"
+				onclick={moveUp}
+				disabled={index === 0}
+				title="Move posting up"
+			>
+				<ArrowUpIcon class="h-4 w-4" />
+			</button>
+			<button
+				type="button"
+				class="btn btn-outline btn-primary-content btn-square"
+				onclick={moveDown}
+				disabled={index === $xact.postings.length - 1}
+				title="Move posting down"
+			>
+				<ArrowDownIcon class="h-4 w-4" />
+			</button>
+			<button
+				type="button"
+				class="btn btn-outline btn-secondary btn-square"
+				onclick={onDeleteClicked}
+				title="Delete posting"
+			>
+				<TrashIcon class="h-4 w-4" />
+			</button>
+		</div>
+	{/if}
 </section>
+
+<input type="checkbox" class="modal-toggle" bind:checked={isDeleteConfirmationOpen} />
+<dialog class="modal">
+	<div class="modal-box">
+		<header class="flex justify-between">
+			<h2 class="text-lg font-bold">Confirm Delete</h2>
+		</header>
+		<article>
+			<p class="py-4 opacity-60">Do you want to delete this posting?</p>
+		</article>
+		<footer class="flex justify-end gap-4">
+			<button
+				type="button"
+				class="btn btn-ghost rounded"
+				onclick={() => (isDeleteConfirmationOpen = false)}>Cancel</button
+			>
+			<button type="button" class="btn btn-primary text-primary-content rounded" onclick={onDeleteConfirmed}
+				>OK</button
+			>
+		</footer>
+	</div>
+</dialog>

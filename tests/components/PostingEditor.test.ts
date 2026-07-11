@@ -43,14 +43,12 @@ describe('PostingEditor', () => {
 
 	it('flips the amount sign and notifies onAmountChanged', async () => {
 		const onAmountChanged = vi.fn();
-		render(PostingEditor, {
+		const { getByTitle } = render(PostingEditor, {
 			props: { index: 0, onAmountChanged }
 		});
 
-		// The sign-flip button has no accessible name of its own (icon-only);
-		// it's the second of the two leading buttons.
-		const signButton = document.querySelectorAll('button')[1] as HTMLButtonElement;
-		await fireEvent.click(signButton);
+		await fireEvent.click(getByTitle('Show posting actions'));
+		await fireEvent.click(getByTitle('Flip amount sign'));
 
 		expect(get(xact).postings[0].amount).toBe(-20);
 		expect(onAmountChanged).toHaveBeenCalledOnce();
@@ -79,6 +77,7 @@ describe('PostingEditor', () => {
 	it('navigates to the calculator with amount selection metadata', async () => {
 		const { getByTitle } = render(PostingEditor, { props: { index: 0 } });
 
+		await fireEvent.click(getByTitle('Show posting actions'));
 		await fireEvent.click(getByTitle('Open calculator'));
 
 		expect(gotoMock).toHaveBeenCalledWith('/calculator');
@@ -97,6 +96,7 @@ describe('PostingEditor', () => {
 		);
 		const { getByTitle } = render(PostingEditor, { props: { index: 1 } });
 
+		await fireEvent.click(getByTitle('Show posting actions'));
 		await fireEvent.click(getByTitle('Advanced posting editor'));
 
 		expect(gotoMock).toHaveBeenCalledWith('/postings/editor');
@@ -120,5 +120,46 @@ describe('PostingEditor', () => {
 		expect((positive.getByTitle('Amount') as HTMLInputElement).className).toContain(
 			'bg-primary/20'
 		);
+	});
+
+	it('moves a posting down and disables the boundary buttons', async () => {
+		xact.set(
+			makeXact([
+				{ account: 'Assets:Cash', amount: 20, currency: 'EUR' },
+				{ account: 'Expenses:Food', amount: -20, currency: 'EUR' }
+			])
+		);
+		const { getByTitle } = render(PostingEditor, { props: { index: 0 } });
+
+		await fireEvent.click(getByTitle('Show posting actions'));
+
+		expect((getByTitle('Move posting up') as HTMLButtonElement).disabled).toBe(true);
+		expect((getByTitle('Move posting down') as HTMLButtonElement).disabled).toBe(false);
+
+		await fireEvent.click(getByTitle('Move posting down'));
+
+		expect(get(xact).postings[0].account).toBe('Expenses:Food');
+		expect(get(xact).postings[1].account).toBe('Assets:Cash');
+	});
+
+	it('deletes the posting only after confirming', async () => {
+		xact.set(
+			makeXact([
+				{ account: 'Assets:Cash', amount: 20, currency: 'EUR' },
+				{ account: 'Expenses:Food', amount: -20, currency: 'EUR' }
+			])
+		);
+		const { getByTitle, getByText } = render(PostingEditor, { props: { index: 0 } });
+
+		await fireEvent.click(getByTitle('Show posting actions'));
+		await fireEvent.click(getByTitle('Delete posting'));
+
+		// Not deleted until the confirmation dialog is accepted.
+		expect(get(xact).postings).toHaveLength(2);
+
+		await fireEvent.click(getByText('OK'));
+
+		expect(get(xact).postings).toHaveLength(1);
+		expect(get(xact).postings[0].account).toBe('Expenses:Food');
 	});
 });
