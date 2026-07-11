@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
+	import moment from 'moment';
+	import { ISODATEFORMAT } from '$lib/constants';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import MonthSelector, { type MonthOption } from '$lib/components/MonthSelector.svelte';
@@ -43,6 +45,7 @@
 
 	let categories = $state<BudgetCategory[]>([]);
 	let actuals = $state<Map<string, number>>(new Map());
+	let rollovers = $state<Map<string, number>>(new Map());
 	let viewMode = $state<BudgetViewMode>('month');
 	let currentMonth = $state<MonthOption | null>(null);
 	let currentYear = $state<YearOption | null>(null);
@@ -59,7 +62,7 @@
 	const budgetMultiplier = $derived(viewMode === 'month' ? 1 : MONTHS_PER_YEAR);
 
 	const totalBudgeted = $derived(
-		categories.reduce((sum, c) => sum + (c.amount || 0) * budgetMultiplier, 0)
+		categories.reduce((sum, c) => sum + (c.amount || 0) * budgetMultiplier + (rollovers.get(c.account) ?? 0), 0)
 	);
 	const totalActual = $derived(categories.reduce((sum, c) => sum + (actuals.get(c.account) ?? 0), 0));
 
@@ -80,6 +83,20 @@
 		if (!dataLoaded || !activeRange) return;
 		void categories;
 		loadActuals(activeRange);
+	});
+
+	// Recompute rollover carry-forward whenever the selected month or the
+	// category list (including rollover flags) changes. Only meaningful in
+	// Month view — the Year view already totals the whole year, so there is
+	// nothing to carry forward.
+	$effect(() => {
+		if (!dataLoaded) return;
+		if (viewMode !== 'month' || !currentMonth) {
+			rollovers = new Map();
+			return;
+		}
+		void categories;
+		loadRollovers(currentMonth);
 	});
 
 	async function handleCategorySelection() {
@@ -186,6 +203,85 @@
 		}
 	}
 
+	/**
+	 * Rollover: unspent budget from earlier months in the same calendar year
+	 * carries forward into later ones (opt-in per category, floored at zero
+	 * per month so overspending never creates a debt that reduces a future
+	 * month's budget). Fetches one BQL round trip bucketed by
+	 * (account, year, month) covering January through the month before the
+	 * selected one, then for each rollover-enabled category sums
+	 * max(0, budgeted - actual) per month from whichever is later of the
+	 * category's `since` or the start of the year.
+	 */
+	async function loadRollovers(month: MonthOption) {
+		const enabled = categories.filter((c) => c.rollover && c.since);
+		const monthStart = moment(month.key, 'YYYY-MM');
+		const yearStart = monthStart.clone().startOf('year');
+
+		if (enabled.length === 0 || !monthStart.isAfter(yearStart, 'month')) {
+			rollovers = new Map();
+			return;
+		}
+
+		try {
+			await fullLedgerService.ensureLoaded();
+
+			const dateFrom = yearStart.format(ISODATEFORMAT);
+			const dateTo = monthStart.format(ISODATEFORMAT); // exclusive: first day of the selected month
+			const bql = `SELECT account, year(date) AS y, month(date) AS mo, number(value(sum(position), "${currency}")) AS number WHERE account ~ "^${CATEGORY_PREFIX}" AND date >= ${dateFrom} AND date < ${dateTo} GROUP BY account, year(date), month(date)`;
+			const result = await fullLedgerService.query(bql);
+
+			// Rollover is a soft enhancement layered on top of the actuals
+			// already shown; a query failure here shouldn't block the page.
+			if (result?.errors?.length) return;
+
+			const columns = result?.columns ?? [];
+			const rows = result?.rows ?? [];
+			const accountIdx = columns.indexOf('account');
+			const yearIdx = columns.indexOf('y');
+			const monthIdx = columns.indexOf('mo');
+			const numberIdx = columns.indexOf('number');
+			if (accountIdx === -1 || yearIdx === -1 || monthIdx === -1 || numberIdx === -1) return;
+
+			// Bucket into (category account) -> (month key 'YYYY-MM') -> actual,
+			// using the same longest-prefix-match rollup as loadActuals.
+			const monthly = new Map<string, Map<string, number>>();
+			for (const row of rows as any[]) {
+				const acct = String(row[accountIdx] ?? '');
+				const y = parseInt(String(row[yearIdx] ?? ''), 10);
+				const mo = parseInt(String(row[monthIdx] ?? ''), 10);
+				const amt = parseFloat(String(row[numberIdx] ?? '0')) || 0;
+				if (!y || !mo) continue;
+
+				let best: BudgetCategory | null = null;
+				for (const cat of categories) {
+					if (acct === cat.account || acct.startsWith(cat.account + ':')) {
+						if (!best || cat.account.length > best.account.length) best = cat;
+					}
+				}
+				if (!best) continue;
+
+				const key = `${y}-${String(mo).padStart(2, '0')}`;
+				if (!monthly.has(best.account)) monthly.set(best.account, new Map());
+				const map = monthly.get(best.account)!;
+				map.set(key, (map.get(key) ?? 0) + amt);
+			}
+
+			const carried = new Map<string, number>();
+			for (const cat of enabled) {
+				const start = moment.max(moment(cat.since, 'YYYY-MM'), yearStart);
+				for (const cursor = start.clone(); cursor.isBefore(monthStart, 'month'); cursor.add(1, 'month')) {
+					const actualForMonth = monthly.get(cat.account)?.get(cursor.format('YYYY-MM')) ?? 0;
+					carried.set(cat.account, (carried.get(cat.account) ?? 0) + Math.max(0, cat.amount - actualForMonth));
+				}
+			}
+
+			rollovers = carried;
+		} catch {
+			// rollover is a soft enhancement; ignore failures rather than blocking the page
+		}
+	}
+
 	async function onAmountChange(account: string, amount: number) {
 		const index = categories.findIndex((c) => c.account === account);
 		if (index === -1) return;
@@ -194,6 +290,25 @@
 		// annualized in Year view); store back the underlying monthly figure
 		// so the two views stay consistent with each other.
 		categories[index].amount = amount / budgetMultiplier;
+		await settings.set(SettingKeys.budgetDefinition, categories);
+	}
+
+	/**
+	 * Toggle rollover for a category. Turning it on for the first time stamps
+	 * `since` to the currently selected month so accumulation only starts
+	 * from here forward, never retroactively from ledger history the
+	 * category was never tracked against. Turning it off keeps `since` in
+	 * place so re-enabling later resumes from where it left off, not from
+	 * scratch.
+	 */
+	async function onRolloverToggle(account: string, enabled: boolean) {
+		const index = categories.findIndex((c) => c.account === account);
+		if (index === -1) return;
+
+		categories[index].rollover = enabled;
+		if (enabled && !categories[index].since && currentMonth) {
+			categories[index].since = currentMonth.key;
+		}
 		await settings.set(SettingKeys.budgetDefinition, categories);
 	}
 
@@ -283,13 +398,16 @@
 			</div>
 		{:else}
 			{#each categories as category (category.account)}
-				<BudgetCategoryRow
+			<BudgetCategoryRow
 					account={category.account}
 					amount={category.amount * budgetMultiplier}
 					actual={actuals.get(category.account) ?? 0}
 					{currency}
 					onAmountChange={(amount) => onAmountChange(category.account, amount)}
 					onclick={onCategoryClick}
+					rolloverAmount={viewMode === 'month' ? (rollovers.get(category.account) ?? 0) : 0}
+					rolloverEnabled={!!category.rollover}
+					onRolloverToggle={viewMode === 'month' ? (enabled) => onRolloverToggle(category.account, enabled) : undefined}
 				/>
 			{/each}
 		{/if}

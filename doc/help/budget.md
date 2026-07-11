@@ -14,6 +14,10 @@ Use the **Month/Year** toggle at the top to switch between the monthly view and 
 
 Tap the budgeted amount on any row to edit it in place. The new value is saved immediately. In the annual view the field shows the annualized (×12) amount, but editing it always updates the underlying monthly target.
 
+## Rollover
+
+Tap the repeat icon (↻) next to a row's actuals to turn on rollover for that category — the icon fills solid when on. When enabled, any budget left unspent in a month carries forward and is added to the following months' targets within the same calendar year (shown as a "+N carried" note under the row), so a light month gives you extra room in the next one. Overspending never creates a debt — a month you go over never reduces a later month's budget. Rollover accumulation starts from the month you turn it on and resets every January; it only applies in the monthly view.
+
 ## Toolbar menu
 
 Use the toolbar menu (⋮) for:

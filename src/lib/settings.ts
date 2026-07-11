@@ -52,6 +52,10 @@ export const defaultAccountGroups: AccountGroup[] = [
 export interface BudgetCategory {
 	account: string;
 	amount: number;
+	/** Opt-in: unspent budget carries forward within the same calendar year. */
+	rollover?: boolean;
+	/** Month ('YYYY-MM') rollover accumulation starts from; set when rollover is first turned on. */
+	since?: string;
 }
 
 /** Settings shared across all devices (exported/importable). */
