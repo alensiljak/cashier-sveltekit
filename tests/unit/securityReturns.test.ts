@@ -50,7 +50,18 @@ function mockQueryFn(includeClosed: boolean): QueryFn {
 			// Closed lots only.
 			return {
 				columns,
-				rows: [['2026-07-11', 'Assets:Investments:Brokerage:GLD', 'GLD', -5, 180, '900.00 EUR', '0.00 EUR', '0.00 EUR']],
+				rows: [
+					[
+						'2026-07-11',
+						'Assets:Investments:Brokerage:GLD',
+						'GLD',
+						-5,
+						180,
+						'900.00 EUR',
+						'0.00 EUR',
+						'0.00 EUR'
+					]
+				],
 				errors: []
 			};
 		}
@@ -58,8 +69,26 @@ function mockQueryFn(includeClosed: boolean): QueryFn {
 		return {
 			columns,
 			rows: [
-				['2025-08-05', 'Assets:Investments:Brokerage:VTI', 'VTI', 7, 200, '1400.00 EUR', '1500.00 EUR', '1500.00 EUR'],
-				['2025-09-05', 'Assets:Investments:Brokerage:BND', 'BND', 16, 70.2, '1128.00 EUR', '1140.00 EUR', '1140.00 EUR']
+				[
+					'2025-08-05',
+					'Assets:Investments:Brokerage:VTI',
+					'VTI',
+					7,
+					200,
+					'1400.00 EUR',
+					'1500.00 EUR',
+					'1500.00 EUR'
+				],
+				[
+					'2025-09-05',
+					'Assets:Investments:Brokerage:BND',
+					'BND',
+					16,
+					70.2,
+					'1128.00 EUR',
+					'1140.00 EUR',
+					'1140.00 EUR'
+				]
 			],
 			errors: []
 		};

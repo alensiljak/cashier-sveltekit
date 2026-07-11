@@ -47,10 +47,10 @@ interface PricePoint {
 }
 
 /** Parses a money tuple string ("123.45 EUR") or an {number,currency} cell. */
-	function moneyQuantity(cell: unknown): number {
-		if (cell == null) return 0;
-		if (typeof cell === 'number') return cell;
-		if (typeof cell === 'string') {
+function moneyQuantity(cell: unknown): number {
+	if (cell == null) return 0;
+	if (typeof cell === 'number') return cell;
+	if (typeof cell === 'string') {
 		const v = BeancountParser.getMoneyFromTupleString(cell);
 		return v?.quantity ?? 0;
 	}
@@ -198,10 +198,7 @@ export async function getSecuritiesList(
 				closed: true
 			})
 		);
-		const closedMap = aggregateLots(
-			closedRes.columns as string[],
-			closedRes.rows as unknown[][]
-		);
+		const closedMap = aggregateLots(closedRes.columns as string[], closedRes.rows as unknown[][]);
 		closedSymbols = [...closedMap.keys()].filter((s) => !activeMap.has(s));
 	}
 
@@ -232,10 +229,7 @@ export async function getSecuritiesList(
 		const regRes = await queryFn(
 			`SELECT date, currency(units(position)) as symbol, number(units(position)) as units, cost_number, value(position) as value WHERE currency IN (${currencyList}) ORDER BY date`
 		);
-		const realizedBySym = computeRealized(
-			regRes.columns as string[],
-			regRes.rows as unknown[][]
-		);
+		const realizedBySym = computeRealized(regRes.columns as string[], regRes.rows as unknown[][]);
 		for (const symbol of closedSymbols) {
 			const r = realizedBySym.get(symbol) ?? { invested: 0, realized: 0 };
 			const price = priceMap.get(symbol);

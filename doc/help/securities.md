@@ -10,10 +10,10 @@ Each row shows:
 - **Last** quoted price
 - **Value** — current market value of all open lots
 - **Gain/Loss** — unrealized gain/loss (and percentage) versus cost basis
+
 ## Portfolio summary
 
 At the top of the page, a summary panel shows your total **Investments** value (the combined market value of all open lots), the total **Cost** basis, and the overall **Gain/Loss** with percentage. The ring chart breaks down each security's share of the total holdings by current market value — tap a slice to open that security's detail page. A **Total** row is pinned to the bottom of the list, mirroring the visible rows and updating with your search filter.
-
 
 Use the search bar to filter by symbol or name.
 

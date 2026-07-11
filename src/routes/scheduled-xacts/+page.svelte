@@ -128,7 +128,10 @@
 					{/if}
 					<!-- svelte-ignore a11y_click_events_have_key_events -->
 					<!-- svelte-ignore a11y_no_static_element_interactions -->
-					<div class="flex flex-row" onclick={() => onItemClicked(scx.id as number)}>
+					<div
+						class="border-base-content/10 flex flex-row border-b py-2 px-1"
+						onclick={() => onItemClicked(scx.id as number)}
+					>
 						<div class="grow">
 							<data>{scx.transaction?.payee}</data>
 							<div class="opacity-60">
