@@ -40,7 +40,7 @@
 				{@const cost = formatPostingCost(posting)}
 				{@const price = formatPostingPrice(posting)}
 				<div class="flex flex-wrap opacity-85">
-					<data class="w-full text-sm sm:flex-1 sm:w-auto">{posting.account}</data>
+					<data class="flex-auto text-sm">{posting.account}</data>
 					<div class="flex flex-row items-baseline gap-4 ml-auto shrink-0">
 						{#if cost}
 							<data class="text-xs opacity-45 font-mono">{cost}</data>
