@@ -3,13 +3,13 @@ import { getSecuritiesList, type SecurityListItem } from '$lib/assetAllocation/s
 import type { CommodityDirective, QueryFn } from '$lib/assetAllocation/commodityYield';
 
 const directives: CommodityDirective[] = [
-	{ currency: 'VTI', date: '2020-01-01', meta: { name: 'Vanguard Total Stock Market ETF' } },
-	{ currency: 'BND', date: '2020-01-01', meta: { name: 'Vanguard Total Bond Market ETF' } },
-	{ currency: 'GLD', date: '2020-01-01', meta: { name: 'SPDR Gold Shares' } }
+	{ currency: 'VTI', meta: { name: 'Vanguard Total Stock Market ETF' } },
+	{ currency: 'BND', meta: { name: 'Vanguard Total Bond Market ETF' } },
+	{ currency: 'GLD', meta: { name: 'SPDR Gold Shares' } }
 ];
 
 // Builds a mock ledger query function returning canned rows based on the BQL.
-function mockQueryFn(includeClosed: boolean): QueryFn {
+function mockQueryFn(): QueryFn {
 	return async (bql: string) => {
 		if (bql.includes('FROM prices')) {
 			return {
@@ -101,7 +101,7 @@ function find(items: SecurityListItem[], symbol: string) {
 
 describe('getSecuritiesList', () => {
 	it('lists only active securities by default', async () => {
-		const items = await getSecuritiesList(mockQueryFn(false), directives, 'EUR', false);
+		const items = await getSecuritiesList(mockQueryFn(), directives, 'EUR', false);
 		expect(items.map((i) => i.symbol)).toEqual(['BND', 'VTI']);
 
 		const vti = find(items, 'VTI')!;
@@ -115,7 +115,7 @@ describe('getSecuritiesList', () => {
 	});
 
 	it('appends fully-closed securities with realized gain when includeClosed is true', async () => {
-		const items = await getSecuritiesList(mockQueryFn(true), directives, 'EUR', true);
+		const items = await getSecuritiesList(mockQueryFn(), directives, 'EUR', true);
 		expect(items.map((i) => i.symbol)).toContain('GLD');
 
 		const gld = find(items, 'GLD')!;
@@ -127,7 +127,7 @@ describe('getSecuritiesList', () => {
 	});
 
 	it('excludes GLD when includeClosed is false', async () => {
-		const items = await getSecuritiesList(mockQueryFn(true), directives, 'EUR', false);
+		const items = await getSecuritiesList(mockQueryFn(), directives, 'EUR', false);
 		expect(items.find((i) => i.symbol === 'GLD')).toBeUndefined();
 	});
 });
