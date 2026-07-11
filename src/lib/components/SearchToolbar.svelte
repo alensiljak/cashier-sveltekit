@@ -4,7 +4,7 @@
 	import { onMount } from 'svelte';
 
 	interface Props {
-		focus: boolean;
+		focus?: boolean;
 		onSearch?: (arg0: string) => void;
 		/** Debounce delay in ms before a keystroke triggers onSearch. */
 		delay?: number;

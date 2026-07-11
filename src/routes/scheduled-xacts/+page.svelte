@@ -88,7 +88,7 @@
 		{/snippet}
 	</Toolbar>
 	<!-- search toolbar -->
-	<SearchToolbar focus {onSearch} />
+	<SearchToolbar {onSearch} />
 
 	<Fab onclick={onFabClicked} Icon={PlusIcon} />
 
