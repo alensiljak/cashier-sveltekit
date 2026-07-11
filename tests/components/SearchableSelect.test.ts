@@ -1,5 +1,5 @@
-import { render, fireEvent, cleanup } from '@testing-library/svelte';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { render, fireEvent } from '@testing-library/svelte';
+import { describe, expect, it } from 'vitest';
 import SearchableSelect from '../../src/lib/components/SearchableSelect.svelte';
 
 describe('SearchableSelect', () => {

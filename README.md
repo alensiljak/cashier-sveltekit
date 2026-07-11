@@ -10,6 +10,7 @@ Cashier is a personal finance app. It includes a full Beancount engine running o
 
 ## Palette
 
+```scss
 Primary: #076461, Blue Stone
 Secondary: #92140c, Sangria
 Tertiary: #ffd700, Gold
@@ -20,10 +21,21 @@ $colour2: #d0cd94; // tan
 $colour3: #ffd700; // gold
 $colour4: #92140c; // sangria, alt: 09814a spanish viridian
 $colour5: #076461; // tropical rain forest
+```
 
 ## Publish
 
-Run `npm run publish` to build and deploy the app to production.
+To build and deploy the app to production, run:
+
+```sh
+npm run publish
+```
+
+The end-to-end (E2E) tests are excluded and need to be run manually, separately.
+
+```sh
+npm run test
+```
 
 ## Development
 
@@ -35,6 +47,6 @@ d:/src/rustledger/crates/rustledger-wasm/pkg
 
 ## Related Projects
 
-- Ledger-CLI
+- RustLedger, [repo](https://github.com/rustledger/rustledger/)
 - Beancount
-- RustLedger
+- Ledger-CLI
