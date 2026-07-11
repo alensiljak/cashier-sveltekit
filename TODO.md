@@ -22,11 +22,13 @@ None at the moment. Regular ongoing maintenance.
 
 - [x] Setup wizard at `/onboarding` — triggered by clean-slate detection (no `cashier.bean`, no other `.bean` files, no linked book) rather than a stored `onboarded` flag, so it can't get stuck skipped/shown by a stale setting. Offers Try demo data / Import my ledger / Start empty.
 - [ ] Go through the initial settings (data storage, server)
-- [ ] Add defaults to the wizard.
+- [ ] Add default settings to the wizard.
 
 ## Budgets
 
 - [ ] rollover
+- [x] monthly or yearly budget amounts
+- [ ] add savings to the budget? Accounts other than expenses.
 - [ ] savings goals
 - [ ] what-if, net worth projection
 

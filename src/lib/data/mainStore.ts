@@ -67,6 +67,13 @@ export const EntitySearchScopeStore: Writable<EntitySearchScope> = writable('all
 // (module state, not persisted) so navigating to a transaction search result
 // and back leaves the previously selected month intact.
 export const BudgetSelectedMonthStore: Writable<string | undefined> = writable(undefined);
+// Selected year key on /budget (e.g. '2026') when the Year view is active —
+// same session-only rationale as BudgetSelectedMonthStore.
+export const BudgetSelectedYearStore: Writable<string | undefined> = writable(undefined);
+// Month/Year toggle state on /budget — kept for the session only so
+// navigating away and back preserves the chosen view.
+export type BudgetViewMode = 'month' | 'year';
+export const BudgetViewModeStore: Writable<BudgetViewMode> = writable('month');
 
 export interface PendingSettings {
 	currency?: string;

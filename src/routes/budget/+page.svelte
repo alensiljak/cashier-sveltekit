@@ -4,8 +4,15 @@
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import MonthSelector, { type MonthOption } from '$lib/components/MonthSelector.svelte';
+	import YearSelector, { type YearOption } from '$lib/components/YearSelector.svelte';
 	import BudgetCategoryRow from '$lib/components/BudgetCategoryRow.svelte';
-	import { selectionMetadata, BudgetSelectedMonthStore } from '$lib/data/mainStore';
+	import {
+		selectionMetadata,
+		BudgetSelectedMonthStore,
+		BudgetSelectedYearStore,
+		BudgetViewModeStore,
+		type BudgetViewMode
+	} from '$lib/data/mainStore';
 	import { type BudgetCategory, SelectionModeMetadata, SettingKeys, settings } from '$lib/settings';
 	import { SelectionType } from '$lib/enums';
 	import appService from '$lib/services/appService';
@@ -26,15 +33,34 @@
 	// this line plus the BQL WHERE clause below.
 	const CATEGORY_PREFIX = 'Expenses:';
 
+	// Months in a year — the multiplier applied to the flat monthly target
+	// when showing the Year view.
+	const MONTHS_PER_YEAR = 12;
+
+	// MonthOption and YearOption share this shape; the actuals query only
+	// ever needs a date range, so it works unchanged for either view.
+	type DateRange = { dateFrom: string; dateTo: string };
+
 	let categories = $state<BudgetCategory[]>([]);
 	let actuals = $state<Map<string, number>>(new Map());
+	let viewMode = $state<BudgetViewMode>('month');
 	let currentMonth = $state<MonthOption | null>(null);
+	let currentYear = $state<YearOption | null>(null);
 	let currency = $state('');
 	let dataLoaded = $state(false);
 	let isLoading = $state(false);
 	let error = $state<string | null>(null);
 
-	const totalBudgeted = $derived(categories.reduce((sum, c) => sum + (c.amount || 0), 0));
+	// The date range actuals are currently loaded for, whichever view is active.
+	const activeRange = $derived<DateRange | null>(viewMode === 'month' ? currentMonth : currentYear);
+	// Multiplier applied to each category's flat monthly amount for display —
+	// annual totals don't need per-month bucketing (see loadActuals doc
+	// comment), just this multiplier on the budgeted side.
+	const budgetMultiplier = $derived(viewMode === 'month' ? 1 : MONTHS_PER_YEAR);
+
+	const totalBudgeted = $derived(
+		categories.reduce((sum, c) => sum + (c.amount || 0) * budgetMultiplier, 0)
+	);
 	const totalActual = $derived(categories.reduce((sum, c) => sum + (actuals.get(c.account) ?? 0), 0));
 
 	onMount(async () => {
@@ -42,16 +68,18 @@
 
 		currency = await appService.getDefaultCurrency();
 		categories = (await settings.get<BudgetCategory[]>(SettingKeys.budgetDefinition)) ?? [];
+		viewMode = $BudgetViewModeStore;
 		dataLoaded = true;
 	});
 
-	// Reload actuals whenever the selected month changes, or the category list
-	// itself changes (add/remove); editing a budgeted amount does not need a
-	// ledger round trip, so it isn't tracked here.
+	// Reload actuals whenever the active date range changes (month/year
+	// selection or the Month/Year toggle), or the category list itself
+	// changes (add/remove); editing a budgeted amount does not need a ledger
+	// round trip, so it isn't tracked here.
 	$effect(() => {
-		if (!dataLoaded || !currentMonth) return;
+		if (!dataLoaded || !activeRange) return;
 		void categories;
-		loadActuals(currentMonth);
+		loadActuals(activeRange);
 	});
 
 	async function handleCategorySelection() {
@@ -78,20 +106,34 @@
 		Notifier.success('Category added');
 	}
 
+	function onViewModeSelect(mode: BudgetViewMode) {
+		viewMode = mode;
+		$BudgetViewModeStore = mode;
+	}
+
 	function onMonthSelect(month: MonthOption) {
 		currentMonth = month;
 		$BudgetSelectedMonthStore = month.key;
 	}
 
+	function onYearSelect(year: YearOption) {
+		currentYear = year;
+		$BudgetSelectedYearStore = year.key;
+	}
+
 	/**
-	 * Fetch actuals for every category in a single BQL round trip: pull all
-	 * Expenses postings for the month, then bucket each posting into the most
-	 * specific (longest account name) matching category. This makes a parent
-	 * category (e.g. Expenses:Food) roll up postings to its sub-accounts (e.g.
-	 * Expenses:Food:Restaurants) while avoiding double-counting when both a
-	 * category and one of its own descendants are budgeted separately.
+	 * Fetch actuals for every category in a single BQL round trip over the
+	 * given date range (a calendar month or a whole calendar year — both
+	 * MonthOption and YearOption expose the same {dateFrom, dateTo} shape, so
+	 * the query and bucketing logic are identical either way; annual totals
+	 * are just a wider range, no per-month grouping needed). Postings are
+	 * bucketed into the most specific (longest account name) matching
+	 * category. This makes a parent category (e.g. Expenses:Food) roll up
+	 * postings to its sub-accounts (e.g. Expenses:Food:Restaurants) while
+	 * avoiding double-counting when both a category and one of its own
+	 * descendants are budgeted separately.
 	 */
-	async function loadActuals(month: MonthOption) {
+	async function loadActuals(range: DateRange) {
 		if (categories.length === 0) {
 			actuals = new Map();
 			return;
@@ -103,7 +145,7 @@
 		try {
 			await fullLedgerService.ensureLoaded();
 
-			const bql = `SELECT account, NUMBER(CONVERT(units(position), "${currency}")) AS number WHERE account ~ "^${CATEGORY_PREFIX}" AND date >= ${month.dateFrom} AND date <= ${month.dateTo}`;
+			const bql = `SELECT account, NUMBER(CONVERT(units(position), "${currency}")) AS number WHERE account ~ "^${CATEGORY_PREFIX}" AND date >= ${range.dateFrom} AND date <= ${range.dateTo}`;
 			const result = await fullLedgerService.query(bql);
 
 			if (result?.errors?.length) {
@@ -148,22 +190,25 @@
 		const index = categories.findIndex((c) => c.account === account);
 		if (index === -1) return;
 
-		categories[index].amount = amount;
+		// The row displays amount * budgetMultiplier (flat in Month view,
+		// annualized in Year view); store back the underlying monthly figure
+		// so the two views stay consistent with each other.
+		categories[index].amount = amount / budgetMultiplier;
 		await settings.set(SettingKeys.budgetDefinition, categories);
 	}
 
 	/**
 	 * Open the transaction search report scoped to this category (including its
 	 * sub-accounts, same rollup as the actuals query) and the currently
-	 * selected month.
+	 * selected date range (month or year, whichever view is active).
 	 */
 	function onCategoryClick(account: string) {
-		if (!currentMonth) return;
+		if (!activeRange) return;
 
 		const params = new URLSearchParams({
 			account: `^${account}(:|$)`,
-			dateFrom: currentMonth.dateFrom,
-			dateTo: currentMonth.dateTo
+			dateFrom: activeRange.dateFrom,
+			dateTo: activeRange.dateTo
 		});
 		goto(`/reports/tx-search?${params}`);
 	}
@@ -199,9 +244,28 @@
 		{/snippet}
 	</Toolbar>
 
-	<div class="flex items-center gap-3 px-4 pt-3 pb-2">
-		<span class="text-sm font-medium text-base-content/60">Month:</span>
-		<MonthSelector onselect={onMonthSelect} initialKey={$BudgetSelectedMonthStore} />
+	<div class="flex flex-wrap items-center gap-3 px-4 pt-3 pb-2">
+		<div class="join">
+			<button
+				type="button"
+				class="join-item btn btn-sm {viewMode === 'month' ? 'btn-active' : 'btn-ghost border border-base-content/20'}"
+				onclick={() => onViewModeSelect('month')}
+			>
+				Month
+			</button>
+			<button
+				type="button"
+				class="join-item btn btn-sm {viewMode === 'year' ? 'btn-active' : 'btn-ghost border border-base-content/20'}"
+				onclick={() => onViewModeSelect('year')}
+			>
+				Year
+			</button>
+		</div>
+		{#if viewMode === 'month'}
+			<MonthSelector onselect={onMonthSelect} initialKey={$BudgetSelectedMonthStore} />
+		{:else}
+			<YearSelector onselect={onYearSelect} initialKey={$BudgetSelectedYearStore} />
+		{/if}
 	</div>
 
 	<section class="grow overflow-y-auto touch-pan-y px-2 py-1">
@@ -221,7 +285,7 @@
 			{#each categories as category (category.account)}
 				<BudgetCategoryRow
 					account={category.account}
-					amount={category.amount}
+					amount={category.amount * budgetMultiplier}
 					actual={actuals.get(category.account) ?? 0}
 					{currency}
 					onAmountChange={(amount) => onAmountChange(category.account, amount)}

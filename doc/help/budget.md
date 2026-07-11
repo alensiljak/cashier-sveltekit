@@ -6,13 +6,13 @@ Each row shows a budget category (an Expenses account), the amount you budgeted 
 
 Tap a category row to open a transaction search scoped to that account (including all sub-accounts) for the selected month.
 
-## Changing the month
+## Changing the month or year
 
-Use the **Month** selector at the top to switch between months. Actuals reload automatically.
+Use the **Month/Year** toggle at the top to switch between the monthly view and an annual view: annual view scales each row's budgeted amount by 12 and totals actual spending across the whole selected calendar year. Use the selector next to the toggle to switch between months or years. Actuals reload automatically.
 
 ## Editing a budgeted amount
 
-Tap the budgeted amount on any row to edit it in place. The new value is saved immediately.
+Tap the budgeted amount on any row to edit it in place. The new value is saved immediately. In the annual view the field shows the annualized (×12) amount, but editing it always updates the underlying monthly target.
 
 ## Toolbar menu
 
