@@ -304,7 +304,7 @@
 				onAccountClicked={(event) => onPostingAccountClicked(index)}
 			/>
 		{/each}
-		<div class="flex justify-center pt-1">
+		<div class="flex justify-center pt-3 pb-6">
 			<button
 				type="button"
 				class="btn btn-outline btn-accent btn-square rounded"
