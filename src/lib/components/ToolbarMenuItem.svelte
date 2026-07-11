@@ -32,18 +32,17 @@ Example usage:
 <ToolbarMenuItem text="Restore Settings" targetNav="/settings" Icon={ArrowBigUpIcon} />
 -->
 
-<div>
+<li>
 	<button
 		type="button"
-		class="btn btn-primary flex w-full flex-row border-0 {extraClass}"
+		role="menuitem"
+		class="flex w-full items-center gap-2 py-2 disabled:pointer-events-none disabled:opacity-40 {extraClass}"
 		{disabled}
 		onclick={onMenuClicked}
 	>
-		<span class="grow text-start">{text}</span>
 		{#if Icon}
-			<span class="badge bg-primary/80 border-0">
-				<Icon class={iconClass} />
-			</span>
+			<Icon size={18} class={iconClass} />
 		{/if}
+		<span class="grow text-start">{text}</span>
 	</button>
-</div>
+</li>
