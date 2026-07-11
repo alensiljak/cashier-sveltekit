@@ -27,6 +27,7 @@
 		CalendarIcon,
 		MicIcon,
 		CoinsIcon,
+	TrendingUpIcon,
 		ListTreeIcon,
 		PiggyBankIcon,
 		ShieldCheckIcon,
@@ -198,6 +199,19 @@
 							>
 								<ChartPieIcon />
 								<span>Asset Allocation</span>
+							</a>
+						</li>
+						<li>
+							<a
+								href="/securities"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname ===
+								'/securities'
+									? 'active bg-secondary text-secondary-content'
+									: ''}"
+								onclick={closeDrawer}
+							>
+								<TrendingUpIcon />
+								<span>Securities</span>
 							</a>
 						</li>
 					</ul>

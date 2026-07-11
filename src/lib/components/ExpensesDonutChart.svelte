@@ -8,10 +8,11 @@
 	interface Props {
 		labels: string[];
 		values: number[];
+		height?: string;
 		onclick?: (account: string) => void;
 	}
 
-	let { labels, values, onclick }: Props = $props();
+	let { labels, values, height = '24rem', onclick }: Props = $props();
 
 	Chart.register(DoughnutController, ArcElement, Tooltip);
 
@@ -86,6 +87,6 @@
 	});
 </script>
 
-<div class="relative" class:cursor-pointer={!!onclick} style="height: 24rem">
+	<div class="relative" class:cursor-pointer={!!onclick} style="height: {height}">
 	<canvas bind:this={canvas}></canvas>
 </div>

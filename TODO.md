@@ -7,16 +7,14 @@ None at the moment. Regular ongoing maintenance.
 ## General
 
 - [ ] research storing the configuration in OPFS, as a TOML file
-- [ ] savings goals
 - [x] currency calculator
 - [ ] transaction import
-- [ ] price download
 
 ## Quick Xact Entry
 
 - [x] voice entry, Web Speech API + NLP rule engine.
-- [ ] add a home screen shortcut to /quick-add page
-- [ ] Drafts. User speaks / types a narrative. Creates a transaction later.
+- [x] add a home screen shortcut to /quick-add page
+- [x] Drafts. User speaks / types a narrative. Creates a transaction later.
 - [x] read the last transaction from the ledger, not special table
 - [x] list multiple last transactions, to choose from
 
@@ -26,15 +24,39 @@ None at the moment. Regular ongoing maintenance.
 - [ ] Go through the initial settings (data storage, server)
 - [ ] Add defaults to the wizard.
 
+## Budgets
+
+- [ ] rollover
+- [ ] savings goals
+- [ ] what-if, net worth projection
+
 ## Controls
 
 - [ ] standardize time period selection: day, week, month, quarter, year; this, last.
 - [ ] charts: bar/line for trends, pie/donut for categories
 
+## Investments
+
+- [x] investment balances, Securities page. Commodities with cost (lots).
+- [ ] ROI calculation per security
+- [ ] price download
+- [ ] improve/simplify asset allocation definition
+- [ ] fee analyzer via metadata (ter?)
+- [ ] time-weighted return (TWR)
+- [ ] realized vs unrealized gains, tax lots
+- [ ] distribution calendar
+
+## Notifications
+
+- [ ] bill payment notification. Time setting, like in Orgzly.
+- [ ] low balance notifications (?)
+
 ## Reports
 
+- [ ] tax report, capital gains
 - [x] net worth (assets - liabilities)
+- [ ] net worth projection
 - [ ] spending trends over time
-- [ ] balance history: running balance over time
-- [ ] balance sheet - monthly, yearly. Income vs expenses summary.
+- [x] balance history: running balance over time
+- [x] balance sheet - monthly, yearly. Income vs expenses summary.
 - [ ] saving customized reports. Choose parameters and save under a name. Show on home screen.

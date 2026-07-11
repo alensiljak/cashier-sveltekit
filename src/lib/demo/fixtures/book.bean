@@ -840,3 +840,11 @@ include "prices.bean"
 2026-07-10 * "Supermarket" "Groceries"
   Expenses:Groceries    63.10 EUR
   Liabilities:CreditCard
+
+2026-07-11 * "Vanguard" "Buy GLD shares"
+  Assets:Investments:Brokerage:GLD    5 GLD {180.00 EUR}
+  Assets:Investments:Brokerage:Cash
+
+2026-07-12 * "Vanguard" "Sell GLD shares"
+  Assets:Investments:Brokerage:GLD    -5 GLD {180.00 EUR} @ 195.00 EUR
+  Assets:Investments:Brokerage:Cash    975.00 EUR

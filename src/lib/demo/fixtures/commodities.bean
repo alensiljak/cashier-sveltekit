@@ -15,3 +15,8 @@
 
 2020-01-01 commodity USD
   name: "US Dollar"
+
+2020-01-01 commodity GLD
+  name: "SPDR Gold Shares"
+  isin: "US78463V1070"
+  ticker: "GLD"
