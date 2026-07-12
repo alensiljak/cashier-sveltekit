@@ -39,7 +39,13 @@
 		if (!searchTerm) return allCommodities;
 		const search = new ListSearch();
 		const regex = search.getRegex(searchTerm);
-		return allCommodities.filter((c) => regex.test(c.currency));
+		return allCommodities.filter((c) => {
+			if (regex.test(c.currency)) return true;
+			for (const value of Object.values(c.meta)) {
+				if (typeof value === 'string' && regex.test(value)) return true;
+			}
+			return false;
+		});
 	});
 
 	function onCommoditySelected(currency: string) {
