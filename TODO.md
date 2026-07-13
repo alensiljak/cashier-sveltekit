@@ -32,6 +32,7 @@ None at the moment. Regular ongoing maintenance.
 ## Investments
 
 - [x] investment balances, Securities page. Commodities with cost (lots).
+- [ ] portfolio returns, [repo](https://github.com/andreasgerstmayr/fava-portfolio-returns)
 - [ ] ROI calculation per security
 - [ ] price download
 - [ ] improve/simplify asset allocation definition
