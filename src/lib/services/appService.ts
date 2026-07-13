@@ -76,7 +76,8 @@ class AppService {
 				HomeCardNames.SCHEDULED,
 				// HomeCardNames.SYNC,
 				HomeCardNames.FORECAST,
-				HomeCardNames.EXPENSES
+				HomeCardNames.EXPENSES,
+				HomeCardNames.BUDGET
 			];
 		}
 		return visibleCardNames;

@@ -8,7 +8,8 @@ export const HomeCardNames = {
 	FORECAST: 'ForecastCard',
 	JOURNAL: 'JournalCard',
 	SCHEDULED: 'ScheduledXactCard',
-	EXPENSES: 'ExpensesCard'
+	EXPENSES: 'ExpensesCard',
+	BUDGET: 'BudgetCard'
 	// SYNC: 'SyncCard'
 } as const;
 

@@ -13,7 +13,8 @@
 		[HomeCardNames.FORECAST]: 'Financial Forecast',
 		[HomeCardNames.JOURNAL]: 'Journal',
 		[HomeCardNames.SCHEDULED]: 'Scheduled Transactions',
-		[HomeCardNames.EXPENSES]: 'Expenses'
+		[HomeCardNames.EXPENSES]: 'Expenses',
+		[HomeCardNames.BUDGET]: 'Budget'
 	};
 
 	interface Item {
