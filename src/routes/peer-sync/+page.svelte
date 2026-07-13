@@ -244,6 +244,24 @@
 		}
 	}
 
+	let rescanning = $state(false);
+
+	/** Leaves and rejoins the room to force fresh peer discovery — WiFi-local
+	 *  peers sometimes both connect to the relay without ever seeing each
+	 *  other's announce (relay race/drop); this gives the same recovery a
+	 *  full page refresh does, without the reload. */
+	async function rescanRoom() {
+		if (!presence.isInRoom || rescanning) return;
+		rescanning = true;
+		try {
+			await peerConnection.rescan();
+		} catch (e) {
+			Notifier.error('Rescan failed: ' + (e as Error).message);
+		} finally {
+			rescanning = false;
+		}
+	}
+
 	/** Slider at the top of the page — the only way to connect/disconnect from this page. */
 	async function toggleConnection() {
 		if (presence.isInRoom) {
@@ -539,9 +557,21 @@
 		{#if presence.isInRoom}
 			<div class="card bg-base-200 shadow-sm">
 				<div class="card-body p-4">
-					<h2 class="card-title text-sm">
-						Peers in Room
-						<span class="badge badge-neutral badge-sm">{presence.activePeerList.length}</span>
+					<h2 class="card-title flex items-center justify-between text-sm">
+						<span
+							>Peers in Room
+							<span class="badge badge-neutral badge-sm">{presence.activePeerList.length}</span
+							></span
+						>
+						<button
+							class="btn btn-ghost btn-xs"
+							aria-label="Rescan for peers"
+							title="Rescan for peers"
+							disabled={rescanning}
+							onclick={rescanRoom}
+						>
+							<RefreshCwIcon size={14} class={rescanning ? 'animate-spin' : ''} />
+						</button>
 					</h2>
 
 					{#if presence.activePeerList.length === 0}

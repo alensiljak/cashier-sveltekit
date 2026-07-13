@@ -156,6 +156,18 @@ class PeerConnection {
 		this.pendingRequests.clear();
 	}
 
+	/** Forces rediscovery by leaving and rejoining the same room. Trystero's
+	 *  peer announce only fires once per relay subscription, so a peer whose
+	 *  join was missed (relay race/drop) stays invisible until one side
+	 *  resubscribes — this is the same recovery a page refresh gives, without
+	 *  the reload. No-op if not currently connected. */
+	async rescan(): Promise<void> {
+		if (!this.presence.isInRoom) return;
+		const code = this.presence.roomCode;
+		await this.disconnect();
+		await this.connect(code);
+	}
+
 	/** Reconnects with a different relay strategy (see PeerPresence.setStrategy). */
 	async setStrategy(value: RelayStrategy): Promise<void> {
 		if (this.presence.strategy === value) return;
