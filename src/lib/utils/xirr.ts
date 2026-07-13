@@ -34,6 +34,24 @@ function yearsBetween(from: Date, to: Date): number {
 	return (to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24 * DAYS_PER_YEAR);
 }
 
+/** Span, in days, from the earliest flow to the latest — i.e. how long money was actually at
+ *  risk. XIRR *annualizes* whatever return happened over that span, so a short span (a
+ *  position opened days before the report window's end) can produce a triple-digit percentage
+ *  that is mathematically correct but easy to misread as a bug. Callers should flag/caveat the
+ *  displayed rate rather than hide it — the number is real, just not meaningfully "annual".
+ *  Returns 0 for fewer than two flows. */
+export function holdingPeriodDays(flows: CashFlow[]): number {
+	if (flows.length < 2) return 0;
+	let min = flows[0].date.getTime();
+	let max = flows[0].date.getTime();
+	for (const flow of flows) {
+		const t = flow.date.getTime();
+		if (t < min) min = t;
+		if (t > max) max = t;
+	}
+	return (max - min) / (1000 * 60 * 60 * 24);
+}
+
 /** NPV(rate) and its derivative w.r.t. rate, evaluated against `flows[0].date` as day zero. */
 function npvAndDerivative(flows: CashFlow[], rate: number): { npv: number; dNpv: number } {
 	const t0 = flows[0].date;

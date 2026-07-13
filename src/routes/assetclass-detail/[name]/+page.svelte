@@ -9,13 +9,21 @@
 	} from '$lib/assetAllocation/securityAnalysis.js';
 	import type { RawQueryResult, WasmQueryFn } from './+page.js';
 	import Toolbar from '$lib/components/Toolbar.svelte';
-	import { AaStocksStore } from '$lib/data/mainStore';
+	import { AaStocksStore, SecurityIrrCacheStore } from '$lib/data/mainStore';
 	import * as Formatter from '$lib/utils/formatter.js';
 	import { processWithConcurrencyLimit } from '$lib/utils/concurrency.js';
 	import { getQueries } from '$lib/sync/sync-queries.js';
 	import { PtaSystems } from '$lib/enums.js';
-	import { Loader, X, Bug, ChevronDown, ChevronRight } from '@lucide/svelte';
+	import { Loader, X, Bug, ChevronDown, ChevronRight, RefreshCwIcon } from '@lucide/svelte';
+	import YearPeriodSelector from '$lib/components/YearPeriodSelector.svelte';
+	import {
+		extractAllGroupFlows,
+		type QueryFn as CashFlowQueryFn
+	} from '$lib/portfolioReturns/cashFlows';
+	import type { InvestmentGroup } from '$lib/portfolioReturns/investmentGroups';
+	import { xirr, XirrNoSolutionError, holdingPeriodDays } from '$lib/utils/xirr';
 	import { onMount } from 'svelte';
+	import { get } from 'svelte/store';
 	import moment from 'moment';
 
 	const name = page.params.name;
@@ -50,6 +58,130 @@
 	}
 	let symbolDebug: Record<string, SymbolDebugData> = $state({});
 
+	// Per-security IRR (main view)
+	interface IrrData {
+		irrPct: number | null;
+		irrError: string | null;
+		irrHoldingDays: number | null;
+		loading: boolean;
+	}
+	let irrBySymbol: Record<string, IrrData> = $state({});
+	/** Same threshold/rationale as reports/portfolio-returns: a short holding span makes XIRR's
+	 *  annualized rate real but easily-misread. */
+	const SHORT_HOLDING_DAYS_THRESHOLD = 45;
+	let selectedPeriod = $state('last12');
+
+	/** Mirrors YearPeriodSelector's 'last12' / '<year>' values into a [start, end] date range.
+	 *  Duplicated from reports/portfolio-returns — same convention as the other windowed
+	 *  reports (Net Worth, Cost vs Market), each of which keeps its own copy. */
+	function getPeriodRange(period: string): { startDate: string; endDate: string } {
+		const toIso = (d: Date) => d.toISOString().slice(0, 10);
+		const today = new Date();
+		if (period === 'all') {
+			return { startDate: '1900-01-01', endDate: toIso(today) };
+		}
+		if (period === 'last12') {
+			const start = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
+			return { startDate: toIso(start), endDate: toIso(today) };
+		}
+		const year = parseInt(period);
+		const endDate = year === today.getFullYear() ? toIso(today) : `${year}-12-31`;
+		return { startDate: `${year}-01-01`, endDate };
+	}
+
+	/** Computes XIRR for every listed security in one batched call (not one BQL round-trip per
+	 *  security — see doc/completed-projects/portfolio-returns.md on why per-group querying
+	 *  doesn't scale). */
+	async function loadIrr() {
+		const stocks = (data.stocks as StockSymbol[]) ?? [];
+		if (stocks.length === 0) return;
+
+		const queryFn = data.wasmQuery as CashFlowQueryFn;
+		const currency = data.currency as string;
+		const { startDate, endDate } = getPeriodRange(selectedPeriod);
+		const periodCache = get(SecurityIrrCacheStore)?.[selectedPeriod] ?? {};
+
+		const next: Record<string, IrrData> = {};
+		for (const stock of stocks) {
+			const cached = periodCache[stock.name];
+			next[stock.name] = cached
+				? { ...cached, loading: false }
+				: { irrPct: null, irrError: null, irrHoldingDays: null, loading: true };
+		}
+		irrBySymbol = next;
+
+		const uncachedStocks = stocks.filter((stock) => !periodCache[stock.name]);
+		if (uncachedStocks.length === 0) return;
+
+		const groups: InvestmentGroup[] = uncachedStocks.map((stock) => ({
+			name: stock.name,
+			symbols: [stock.name],
+			accounts: stock.accounts
+		}));
+
+		try {
+			const results = await extractAllGroupFlows(queryFn, groups, currency, startDate, endDate);
+			const updated: Record<string, IrrData> = { ...irrBySymbol };
+			const newCacheEntries: Record<string, Omit<IrrData, 'loading'>> = {};
+			for (const stock of uncachedStocks) {
+				const result = results.get(stock.name);
+				if (!result) {
+					updated[stock.name] = {
+						irrPct: null,
+						irrError: 'No data',
+						irrHoldingDays: null,
+						loading: false
+					};
+					newCacheEntries[stock.name] = { irrPct: null, irrError: 'No data', irrHoldingDays: null };
+					continue;
+				}
+				if (result.conversionWarnings.length > 0) {
+					// Same contract as reports/portfolio-returns: a price-conversion gap means some
+					// flow(s)/value(s) were excluded rather than mixed into the NPV in the wrong
+					// currency (see cashFlows.ts) — IRR would be computed on an incomplete series.
+					const irrError = 'Unavailable: currency conversion gap';
+					updated[stock.name] = { irrPct: null, irrError, irrHoldingDays: null, loading: false };
+					newCacheEntries[stock.name] = { irrPct: null, irrError, irrHoldingDays: null };
+					continue;
+				}
+				try {
+					const irrPct = xirr(result.flows) * 100;
+					const irrHoldingDays = holdingPeriodDays(result.flows);
+					updated[stock.name] = { irrPct, irrError: null, irrHoldingDays, loading: false };
+					newCacheEntries[stock.name] = { irrPct, irrError: null, irrHoldingDays };
+				} catch (e) {
+					const irrError = e instanceof XirrNoSolutionError ? 'Not enough activity' : String(e);
+					updated[stock.name] = { irrPct: null, irrError, irrHoldingDays: null, loading: false };
+					newCacheEntries[stock.name] = { irrPct: null, irrError, irrHoldingDays: null };
+				}
+			}
+			irrBySymbol = updated;
+
+			SecurityIrrCacheStore.update((c) => {
+				const nextStore = { ...(c ?? {}) };
+				nextStore[selectedPeriod] = { ...(nextStore[selectedPeriod] ?? {}), ...newCacheEntries };
+				return nextStore;
+			});
+		} catch (e) {
+			const message = e instanceof Error ? e.message : String(e);
+			const updated: Record<string, IrrData> = { ...irrBySymbol };
+			for (const stock of uncachedStocks) {
+				updated[stock.name] = { irrPct: null, irrError: message, irrHoldingDays: null, loading: false };
+			}
+			irrBySymbol = updated;
+		}
+	}
+
+	function onIrrRefreshClick() {
+		SecurityIrrCacheStore.update((c) => {
+			if (!c) return c;
+			const next = { ...c };
+			delete next[selectedPeriod];
+			return next;
+		});
+		loadIrr();
+	}
+
 	onMount(async () => {
 		cursor = 'cursor-wait';
 		data.stocks = await loadSecurityAnalysis(
@@ -58,6 +190,7 @@
 			(data.commodities as CommodityDirective[]) ?? []
 		);
 		cursor = '';
+		loadIrr();
 	});
 
 	async function fetchAnalysisFor(
@@ -238,6 +371,17 @@
 
 <main class="flex h-screen flex-col">
 	<Toolbar title="Asset Class Detail"></Toolbar>
+	<div class="flex items-center gap-2 px-4">
+		<YearPeriodSelector bind:selectedPeriod onChange={loadIrr} includeAll />
+		<button
+			type="button"
+			class="btn btn-square btn-ghost btn-sm"
+			title="Refresh IRR (recompute this period, bypassing cache)"
+			onclick={onIrrRefreshClick}
+		>
+			<RefreshCwIcon size={16} />
+		</button>
+	</div>
 	<section class={`h-full p-1 ${cursor} overflow-y-auto touch-pan-y`}>
 		<p>{name}</p>
 		<p>Allocation: {data.assetClass?.allocation}</p>
@@ -264,15 +408,40 @@
 								<X class="h-4 w-4" />
 								<span class="text-sm">Error loading analysis: {stock.error}</span>
 							</div>
-						{:else if stock.analysis}
+		{:else if stock.analysis}
 							<div class="ms-3">
-								Yield: <span class={Formatter.getColourForYield(stock.analysis.yield)}
+								Yield <span class="text-base-content/40 text-xs">(all-time)</span>:
+								<span class={Formatter.getColourForYield(stock.analysis.yield)}
 									>{stock.analysis.yield}</span
 								>
-								Gain/Loss:
+								Gain/Loss <span class="text-base-content/40 text-xs">(all-time)</span>:
 								<span class={Formatter.getColourForGainLoss(stock.analysis.gainloss)}
 									>{stock.analysis.gainloss}</span
 								>
+								IRR <span class="text-base-content/40 text-xs">(period)</span>:
+								{#if irrBySymbol[stock.name]?.loading}
+									<span class="loading loading-spinner loading-xs"></span>
+								{:else if irrBySymbol[stock.name]?.irrPct !== null && irrBySymbol[stock.name]?.irrPct !== undefined}
+									{@const irrData = irrBySymbol[stock.name]}
+									{@const irrPct = irrData.irrPct as number}
+									<span
+										class="font-mono tabular-nums"
+										class:text-success={irrPct >= 0}
+										class:text-error={irrPct < 0}
+									>
+										{irrPct.toFixed(1)}%
+									</span>
+									{#if irrData.irrHoldingDays !== null && irrData.irrHoldingDays < SHORT_HOLDING_DAYS_THRESHOLD}
+										<span class="text-base-content/40 text-xs">
+											(annualized from {Math.round(irrData.irrHoldingDays)}d — short holding
+											period, interpret with caution)
+										</span>
+									{/if}
+								{:else if irrBySymbol[stock.name]?.irrError}
+									<span class="text-base-content/40 text-sm"
+										>{irrBySymbol[stock.name].irrError}</span
+									>
+								{/if}
 							</div>
 						{/if}
 

@@ -7,6 +7,7 @@ import type { SelectionModeMetadata } from '$lib/settings';
 import type { AssetClass, StockCache } from '$lib/assetAllocation/AssetClass';
 import type { DirectiveSpan } from '$lib/rledger/sourceEditor';
 import { SHORT_DATE_FORMAT_DEFAULT } from '$lib/constants';
+import type { GroupRow, SecurityIrrEntry } from '$lib/portfolioReturns/types';
 
 interface MainStore {
 	name: string;
@@ -34,6 +35,17 @@ export const ScheduledXact: Writable<ScheduledTransaction> = writable();
 export const AssetAllocationStore: Writable<AssetClass[] | undefined> = writable();
 export const AaStocksStore: Writable<StockCache | undefined> = writable();
 export const AssetAllocationLoadedAtStore: Writable<Date | undefined> = writable();
+// Portfolio Returns / per-security IRR caches. Keyed by the selected period ('last12',
+// '<year>', or 'all') since XIRR results depend on the report window, not just on ledger
+// content. Cleared by Asset Allocation's "Refresh" action, same invalidation convention as
+// AssetAllocationStore/AaStocksStore — there is no automatic staleness detection on ledger
+// sync, matching the existing AA cache's behavior.
+export const PortfolioReturnsCacheStore: Writable<
+	Record<string, Record<string, GroupRow>> | undefined
+> = writable();
+export const SecurityIrrCacheStore: Writable<
+	Record<string, Record<string, SecurityIrrEntry>> | undefined
+> = writable();
 // Drawer/sidebar store.
 export const drawerState: Writable<boolean> = writable(false);
 // Whether the sidebar nav is pinned open on desktop (lg+). Persisted so the

@@ -3,6 +3,12 @@
 ; Static content: edit freely to add more feature demos, no generation step.
 ; Dates run through the month of writing — refresh periodically so "last 12
 ; months" reports (Net Worth, Income vs Expenses, ...) stay populated.
+;
+; Real:Gold (asset-allocation.toml) holds two securities across two brokers:
+; RING (IB Australia, AUD, no AUD→EUR price feed — exercises the currency
+; "conversion gap" path in Portfolio Returns / Asset Class Detail) and
+; UBUD.DE (Trade Republic, EUR, bought only ~3 weeks before the book's end
+; date — exercises a short-holding-period XIRR annualizing to a large %).
 
 option "title" "Demo Book"
 option "operating_currency" "EUR"
@@ -23,6 +29,7 @@ include "prices.bean"
   Assets:Bank:Checking                2500.00 EUR
   Assets:Bank:Savings                  8000.00 EUR
   Assets:Investments:Brokerage:Cash     500.00 EUR
+  Assets:Investments:Brokerage:IBAus:Cash  1000.00 AUD
   Equity:Opening-Balances
 
 2025-08-02 * "Acme Corp" "Monthly salary"
@@ -40,6 +47,10 @@ include "prices.bean"
 2025-08-05 * "Vanguard" "Buy VTI shares"
   Assets:Investments:Brokerage:VTI    2 VTI {200.00 EUR}
   Assets:Investments:Brokerage:Cash
+
+2025-08-06 * "IB Australia" "Buy RING shares"
+  Assets:Investments:Brokerage:IBAus:RING    15 RING {32.00 AUD}
+  Assets:Investments:Brokerage:IBAus:Cash
 
 2025-08-07 * "City Utilities" "Electricity & water"
   Expenses:Utilities    88.00 EUR
@@ -252,6 +263,10 @@ include "prices.bean"
 2025-11-05 * "Vanguard" "Buy BND shares"
   Assets:Investments:Brokerage:BND    4 BND {70.35 EUR}
   Assets:Investments:Brokerage:Cash
+
+2025-11-06 * "IB Australia" "Buy RING shares"
+  Assets:Investments:Brokerage:IBAus:RING    10 RING {35.00 AUD}
+  Assets:Investments:Brokerage:IBAus:Cash
 
 2025-11-07 * "City Utilities" "Electricity & water"
   Expenses:Utilities    92.20 EUR
@@ -479,6 +494,10 @@ include "prices.bean"
 2026-02-05 * "Vanguard" "Buy VTI shares"
   Assets:Investments:Brokerage:VTI    1 VTI {211.00 EUR}
   Assets:Investments:Brokerage:Cash
+
+2026-02-06 * "IB Australia" "Buy RING shares"
+  Assets:Investments:Brokerage:IBAus:RING    4 RING {38.00 AUD}
+  Assets:Investments:Brokerage:IBAus:Cash
 
 2026-02-07 * "City Utilities" "Electricity & water"
   Expenses:Utilities    89.40 EUR
@@ -794,6 +813,14 @@ include "prices.bean"
   Expenses:Entertainment    25.20 EUR
   Liabilities:CreditCard
 
+2026-06-22 * "Investment contribution (Gold)"
+  Assets:Investments:Brokerage:Cash    600.00 EUR
+  Assets:Bank:Checking
+
+2026-06-25 * "Trade Republic" "Buy UBUD.DE shares"
+  Assets:Investments:Brokerage:TradeRepublic:UBUD-DE    3 UBUD.DE {170.00 EUR}
+  Assets:Investments:Brokerage:Cash
+
 2026-06-22 * "Supermarket" "Groceries"
   Expenses:Groceries    61.35 EUR
   Liabilities:CreditCard
@@ -840,11 +867,3 @@ include "prices.bean"
 2026-07-10 * "Supermarket" "Groceries"
   Expenses:Groceries    63.10 EUR
   Liabilities:CreditCard
-
-2026-07-11 * "Vanguard" "Buy GLD shares"
-  Assets:Investments:Brokerage:GLD    5 GLD {180.00 EUR}
-  Assets:Investments:Brokerage:Cash
-
-2026-07-12 * "Vanguard" "Sell GLD shares"
-  Assets:Investments:Brokerage:GLD    -5 GLD {180.00 EUR} @ 195.00 EUR
-  Assets:Investments:Brokerage:Cash    975.00 EUR

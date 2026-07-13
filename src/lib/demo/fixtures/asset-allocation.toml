@@ -1,17 +1,27 @@
-# Demo asset allocation target — Equity/Bonds/Cash split matching the
-# brokerage holdings and cash balance opened in accounts.bean.
+# Demo asset allocation target — Equity/Bonds/Cash/Gold split matching the
+# brokerage holdings and cash balance opened in accounts.bean. Real.Gold has
+# two securities (RING, UBUD.DE) across two different brokers/currencies, to
+# demonstrate the Asset Class Detail drill-down with more than one security
+# per asset class.
 
 [Allocation]
 allocation = 100
 
 [Allocation.Equity]
-allocation = 67
+allocation = 60
 symbols = ["VTI"]
 
 [Allocation.Bonds]
-allocation = 30
+allocation = 27
 symbols = ["BND"]
 
 [Allocation.Cash]
 allocation = 3
 symbols = ["EUR"]
+
+[Allocation.Real]
+allocation = 10
+
+[Allocation.Real.Gold]
+allocation = 10
+symbols = ["RING", "UBUD.DE"]

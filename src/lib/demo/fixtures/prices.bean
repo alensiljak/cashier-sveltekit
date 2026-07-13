@@ -1,5 +1,7 @@
-; Demo price history for the two brokerage holdings — one point per month,
-; matching the purchase dates in book.bean.
+; Demo price history for the brokerage holdings — one point per month,
+; matching the purchase dates in book.bean. RING is deliberately AUD-only
+; (no AUD→EUR price series) to exercise the Portfolio Returns / Asset Class
+; Detail "conversion gap" path.
 
 2025-08-01 price VTI 200.00 EUR
 2025-09-01 price VTI 202.50 EUR
@@ -27,4 +29,18 @@
 2026-06-01 price BND 71.20 EUR
 2026-07-01 price BND 71.45 EUR
 
-2026-07-01 price GLD 195.00 EUR
+2025-08-01 price RING 32.00 AUD
+2025-09-01 price RING 33.00 AUD
+2025-10-01 price RING 34.00 AUD
+2025-11-01 price RING 35.00 AUD
+2025-12-01 price RING 36.50 AUD
+2026-01-01 price RING 37.50 AUD
+2026-02-01 price RING 38.00 AUD
+2026-03-01 price RING 39.00 AUD
+2026-04-01 price RING 40.00 AUD
+2026-05-01 price RING 41.00 AUD
+2026-06-01 price RING 42.00 AUD
+2026-07-01 price RING 43.50 AUD
+
+2026-06-01 price UBUD.DE 170.00 EUR
+2026-07-01 price UBUD.DE 191.00 EUR

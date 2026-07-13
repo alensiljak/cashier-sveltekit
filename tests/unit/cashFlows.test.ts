@@ -222,7 +222,7 @@ describe('extractAllGroupFlows', () => {
 		expect(results.get(BND.name)!.flows).toEqual([{ date: new Date(2025, 3, 1), amount: -500 }]);
 	});
 
-	it('records a conversion warning when the engine returns an amount unconverted', async () => {
+	it('excludes an unconverted amount from the flow instead of mixing currencies, but still warns', async () => {
 		const queryFn = mockQueryFn([
 			{
 				match: isOpeningValueQuery,
@@ -237,11 +237,14 @@ describe('extractAllGroupFlows', () => {
 		]);
 
 		const results = await extractAllGroupFlows(queryFn, [VTI], 'EUR', '2025-01-01', '2025-12-31');
-		const { flows, conversionWarnings } = results.get(VTI.name)!;
+		const { flows, openingValue, conversionWarnings } = results.get(VTI.name)!;
 
 		expect(conversionWarnings).toEqual(['VTI: no price to EUR (got USD)']);
-		// The unconverted amount is still included — callers must check the warning.
-		expect(flows).toEqual([{ date: new Date(2025, 0, 1), amount: -1000 }]);
+		// The unconverted USD amount must NOT be summed as if it were EUR — that silently
+		// corrupts the NPV (this is what previously produced wildly wrong IRRs). Callers check
+		// conversionWarnings and treat the group's IRR as unavailable instead.
+		expect(openingValue).toBe(0);
+		expect(flows).toEqual([]);
 	});
 
 	it('propagates BQL errors', async () => {

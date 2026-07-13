@@ -16,7 +16,17 @@
 2020-01-01 commodity USD
   name: "US Dollar"
 
-2020-01-01 commodity GLD
-  name: "SPDR Gold Shares"
-  isin: "US78463V1070"
-  ticker: "GLD"
+2020-01-01 commodity AUD
+  name: "Australian Dollar"
+
+2020-01-01 commodity RING
+  name: "VanEck Gold Miners ETF"
+  ticker: "RING"
+  ; Deliberately no AUD→EUR price series in prices.bean — demonstrates the
+  ; Portfolio Returns / per-security IRR "conversion gap" path: convert()
+  ; returns the raw AUD amount, and the report must show IRR as unavailable
+  ; instead of silently summing a foreign-currency number as EUR.
+
+2020-01-01 commodity UBUD.DE
+  name: "UBS ETF (LU) Gold (EUR)"
+  ticker: "UBUD.DE"

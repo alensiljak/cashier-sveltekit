@@ -6,7 +6,11 @@
 	import YearPeriodSelector from '$lib/components/YearPeriodSelector.svelte';
 	import { AssetAllocationEngine } from '$lib/assetAllocation/AssetAllocation';
 	import type { AssetClass } from '$lib/assetAllocation/AssetClass';
-	import { AssetAllocationStore, AssetAllocationLoadedAtStore } from '$lib/data/mainStore';
+	import {
+		AssetAllocationStore,
+		AssetAllocationLoadedAtStore,
+		PortfolioReturnsCacheStore
+	} from '$lib/data/mainStore';
 	import * as AccountService from '$lib/services/accountsService';
 	import appService from '$lib/services/appService';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
@@ -22,21 +26,10 @@
 		buildFullFlowSeries,
 		type QueryFn
 	} from '$lib/portfolioReturns/cashFlows';
-	import { xirr, XirrNoSolutionError, type CashFlow } from '$lib/utils/xirr';
+	import { xirr, XirrNoSolutionError, holdingPeriodDays, type CashFlow } from '$lib/utils/xirr';
 	import { formatAmount } from '$lib/utils/formatter';
-	import { CircleAlertIcon } from '@lucide/svelte';
-
-	interface GroupRow {
-		name: string;
-		/** null while the market-value phase hasn't resolved yet. */
-		marketValue: number | null;
-		irrPct: number | null;
-		/** Set when xirr() couldn't solve for this group (e.g. too little history). */
-		irrError: string | null;
-		conversionWarnings: string[];
-		loadingMarketValue: boolean;
-		loadingFlows: boolean;
-	}
+	import { CircleAlertIcon, RefreshCwIcon } from '@lucide/svelte';
+	import type { GroupRow } from '$lib/portfolioReturns/types';
 
 	interface TreeNode {
 		/** This node's own segment, e.g. "Aus" for "Allocation:Equity:Aus". */
@@ -81,6 +74,10 @@
 	let selectedPeriod = $state('last12');
 	let isLoading = $state(false);
 	let error = $state<string | null>(null);
+
+	/** Below this, XIRR's annualization of a short-lived position produces a technically
+	 *  correct but easily-misread triple-digit percentage — flag it instead of hiding it. */
+	const SHORT_HOLDING_DAYS_THRESHOLD = 45;
 	let baseCurrency = $state('');
 	let rows = $state<GroupRow[]>([]);
 	let tree = $derived(buildTree(rows));
@@ -144,24 +141,33 @@
 
 			const groups: InvestmentGroup[] = deriveInvestmentGroups(assetClasses, investmentAccounts);
 			const { startDate, endDate } = getPeriodRange(selectedPeriod);
+			const periodCache = get(PortfolioReturnsCacheStore)?.[selectedPeriod] ?? {};
 
-			// Render the tree immediately with per-row loading placeholders. Market value and
-			// IRR stream in independently as each BQL phase resolves, instead of blocking the
-			// whole page behind one spinner until every group is fully computed.
-			rows = groups.map((group) => ({
-				name: group.name,
-				marketValue: null,
-				irrPct: null,
-				irrError: null,
-				conversionWarnings: [],
-				loadingMarketValue: true,
-				loadingFlows: true
-			}));
+			// Render the tree immediately: cached groups (this period, already computed this
+			// session) render their final values right away; uncached ones get loading
+			// placeholders and stream in below.
+			rows = groups.map((group) => {
+				const cached = periodCache[group.name];
+				if (cached) return { ...cached };
+				return {
+					name: group.name,
+					marketValue: null,
+					irrPct: null,
+					irrError: null,
+					irrHoldingDays: null,
+					conversionWarnings: [],
+					loadingMarketValue: true,
+					loadingFlows: true
+				};
+			});
 			isLoading = false;
+
+			const uncachedGroups = groups.filter((g) => !periodCache[g.name]);
+			if (uncachedGroups.length === 0) return;
 
 			const rowByName = new Map(rows.map((r) => [r.name, r]));
 			const pendingByName = new Map(
-				groups.map((g) => [
+				uncachedGroups.map((g) => [
 					g.name,
 					{ openingValue: 0, closingValue: 0, transactionFlows: [] as CashFlow[] }
 				])
@@ -171,6 +177,15 @@
 				const row = rowByName.get(name);
 				const pending = pendingByName.get(name);
 				if (!row || !pending || row.loadingMarketValue || row.loadingFlows) return;
+				if (row.conversionWarnings.length > 0) {
+					// A price-conversion gap means some flow(s)/value(s) were excluded rather than
+					// mixed into the NPV in the wrong currency (see cashFlows.ts) — the resulting
+					// IRR would be computed on an incomplete series, so it's unavailable rather
+					// than silently wrong.
+					row.irrPct = null;
+					row.irrError = 'Unavailable: currency conversion gap';
+					return;
+				}
 				const flows = buildFullFlowSeries(
 					pending.transactionFlows,
 					pending.openingValue,
@@ -181,20 +196,22 @@
 				try {
 					row.irrPct = xirr(flows) * 100;
 					row.irrError = null;
+					row.irrHoldingDays = holdingPeriodDays(flows);
 				} catch (e) {
 					row.irrPct = null;
+					row.irrHoldingDays = null;
 					row.irrError = e instanceof XirrNoSolutionError ? 'Not enough activity' : String(e);
 				}
 			}
 
 			const marketValuesDone = marketValuesForGroups(
 				queryFn,
-				groups,
+				uncachedGroups,
 				baseCurrency,
 				startDate,
 				endDate
 			).then((marketValues) => {
-				for (const group of groups) {
+				for (const group of uncachedGroups) {
 					const row = rowByName.get(group.name);
 					const pending = pendingByName.get(group.name);
 					const mv = marketValues.get(group.name);
@@ -213,12 +230,12 @@
 
 			const transactionFlowsDone = transactionFlowsForGroups(
 				queryFn,
-				groups,
+				uncachedGroups,
 				baseCurrency,
 				startDate,
 				endDate
 			).then((transactionFlows) => {
-				for (const group of groups) {
+				for (const group of uncachedGroups) {
 					const row = rowByName.get(group.name);
 					const pending = pendingByName.get(group.name);
 					const tf = transactionFlows.get(group.name);
@@ -234,6 +251,17 @@
 			});
 
 			await Promise.all([marketValuesDone, transactionFlowsDone]);
+
+			PortfolioReturnsCacheStore.update((c) => {
+				const next = { ...(c ?? {}) };
+				const nextPeriodCache = { ...(next[selectedPeriod] ?? {}) };
+				for (const group of uncachedGroups) {
+					const row = rowByName.get(group.name);
+					if (row) nextPeriodCache[group.name] = { ...row };
+				}
+				next[selectedPeriod] = nextPeriodCache;
+				return next;
+			});
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
 			rows = [];
@@ -242,18 +270,39 @@
 		}
 	}
 
+	function onRefreshClick() {
+		PortfolioReturnsCacheStore.update((c) => {
+			if (!c) return c;
+			const next = { ...c };
+			delete next[selectedPeriod];
+			return next;
+		});
+		loadData();
+	}
+
 	onMount(() => loadData());
 </script>
 
 <main class="flex h-screen flex-col" class:cursor-wait={isLoading}>
 	<Toolbar title="Portfolio Returns" />
 
-	<YearPeriodSelector
-		bind:selectedPeriod
-		onChange={() => loadData()}
-		disabled={isLoading}
-		includeAll
-	/>
+	<div class="flex items-center gap-2 px-4">
+		<YearPeriodSelector
+			bind:selectedPeriod
+			onChange={() => loadData()}
+			disabled={isLoading}
+			includeAll
+		/>
+		<button
+			type="button"
+			class="btn btn-square btn-ghost btn-sm"
+			title="Refresh (recompute this period, bypassing cache)"
+			disabled={isLoading}
+			onclick={onRefreshClick}
+		>
+			<RefreshCwIcon size={16} />
+		</button>
+	</div>
 
 	<section class="grow overflow-y-auto touch-pan-y px-4 py-4">
 		{#if isLoading}
@@ -295,7 +344,12 @@
 	{#snippet treeNode(node: TreeNode)}
 		{#if node.row}
 			{@const row = node.row}
-			<div class="flex items-center justify-between gap-2 py-3 {indentClass(node.depth)}">
+			<a
+				href={`/assetclass-detail/${encodeURIComponent(row.name)}`}
+				class="flex items-center justify-between gap-2 py-3 {indentClass(
+					node.depth
+				)} hover:bg-base-200/60 rounded-lg"
+			>
 				<div class="min-w-0">
 					<div class="truncate font-medium text-sm">{node.segment}</div>
 					<div class="text-xs text-base-content/60">
@@ -322,13 +376,18 @@
 						>
 							{row.irrPct.toFixed(1)}%
 						</span>
+						{#if row.irrHoldingDays !== null && row.irrHoldingDays < SHORT_HOLDING_DAYS_THRESHOLD}
+							<div class="text-xs text-base-content/40">
+								annualized from {Math.round(row.irrHoldingDays)}d
+							</div>
+						{/if}
 					{:else if row.irrError !== null}
 						<span class="text-sm text-base-content/40">{row.irrError}</span>
 					{:else}
 						<span class="loading loading-spinner loading-sm"></span>
 					{/if}
 				</div>
-			</div>
+			</a>
 		{:else}
 			<div
 				class="py-2 text-xs font-semibold tracking-wide text-base-content/50 uppercase {indentClass(

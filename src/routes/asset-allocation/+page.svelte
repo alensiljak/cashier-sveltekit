@@ -8,7 +8,13 @@
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import AssetClassRow from '$lib/components/AssetClassRow.svelte';
 	import HelpButton from '$lib/help/HelpButton.svelte';
-	import { AaStocksStore, AssetAllocationStore, AssetAllocationLoadedAtStore } from '$lib/data/mainStore.js';
+	import {
+		AaStocksStore,
+		AssetAllocationStore,
+		AssetAllocationLoadedAtStore,
+		PortfolioReturnsCacheStore,
+		SecurityIrrCacheStore
+	} from '$lib/data/mainStore.js';
 	import Notifier from '$lib/utils/notifier.js';
 	import { RefreshCwIcon, FileDownIcon, ScaleIcon, PencilIcon } from '@lucide/svelte';
 
@@ -70,6 +76,8 @@
 		AssetAllocationStore.set(undefined);
 		AaStocksStore.set(undefined);
 		AssetAllocationLoadedAtStore.set(undefined);
+		PortfolioReturnsCacheStore.set(undefined);
+		SecurityIrrCacheStore.set(undefined);
 		invalidateAll();
 	}
 

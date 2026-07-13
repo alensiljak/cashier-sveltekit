@@ -63,6 +63,14 @@ Returns `{ columns: [], rows: [], errors: [] }` (empty, no throw) if not loaded.
 
 - [BQL](https://rustledger.github.io/reference/bql.html)
 
+### Dates
+
+The dates in BQL queries are written without quotes. I.e.
+
+```sql
+... WHERE date > 2026-01-01
+```
+
 ## Other fullLedgerService methods
 
 ```ts

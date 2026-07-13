@@ -182,20 +182,27 @@ export async function marketValuesForGroups(
 		for (const account of group.accounts) {
 			const opening = openingByAccount.get(account.name);
 			if (opening) {
-				result.openingValue += opening.quantity;
 				if (opening.quantity !== 0 && opening.currency !== reportCurrency) {
+					// No price path to reportCurrency: `convert()` returned the raw amount in its
+					// original currency, which is NOT a reportCurrency figure. Adding it to the
+					// total would silently mix currencies into one number (e.g. an AUD balance
+					// summed as if it were EUR) — worse than omitting it. Surface the gap via
+					// conversionWarnings instead and leave this account's contribution out.
 					warnings.add(
 						`${group.symbols.join('/')}: no price to ${reportCurrency} (got ${opening.currency})`
 					);
+				} else {
+					result.openingValue += opening.quantity;
 				}
 			}
 			const closing = closingByAccount.get(account.name);
 			if (closing) {
-				result.closingValue += closing.quantity;
 				if (closing.quantity !== 0 && closing.currency !== reportCurrency) {
 					warnings.add(
 						`${group.symbols.join('/')}: no price to ${reportCurrency} (got ${closing.currency})`
 					);
+				} else {
+					result.closingValue += closing.quantity;
 				}
 			}
 		}
@@ -288,11 +295,15 @@ export async function transactionFlowsForGroups(
 			let date = '';
 			for (const leg of legsById.get(id) ?? []) {
 				if (!isExternal(leg.account, accountNames)) continue;
-				date = leg.date;
 				const money = BeancountParser.getMoneyFromTupleString(leg.converted);
 				if (money.currency !== reportCurrency) {
+					// Same reasoning as marketValuesForGroups: an unconverted amount is in the
+					// wrong currency, not a reportCurrency figure — summing it would silently mix
+					// currencies into the NPV. Warn and drop this leg's contribution instead.
 					warnings.add(`${leg.currency}: no price to ${reportCurrency}`);
+					continue;
 				}
+				date = leg.date;
 				total += money.quantity;
 			}
 			if (Math.abs(total) > EPSILON) {
