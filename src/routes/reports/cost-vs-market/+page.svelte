@@ -1,0 +1,195 @@
+<script lang="ts">
+	import { onMount, tick } from 'svelte';
+	import { goto } from '$app/navigation';
+	import Toolbar from '$lib/components/Toolbar.svelte';
+	import CostVsMarketChart from '$lib/components/CostVsMarketChart.svelte';
+	import YearPeriodSelector from '$lib/components/YearPeriodSelector.svelte';
+	import fullLedgerService from '$lib/services/ledgerWorkerClient';
+	import { SettingKeys, settings } from '$lib/settings';
+	import * as BeancountParser from '$lib/utils/beancountParser';
+	import { formatAmount } from '$lib/utils/formatter';
+
+	interface MonthEntry {
+		key: string;
+		label: string;
+		costBasis: number;
+		marketValue: number;
+	}
+
+	let selectedPeriod = $state('last12');
+	let isLoading = $state(false);
+	let error = $state<string | null>(null);
+	let baseCurrency = $state('');
+	let monthEntries = $state<MonthEntry[]>([]);
+
+	let months = $derived(monthEntries.map((m) => m.label));
+	let costBasisData = $derived(monthEntries.map((m) => m.costBasis));
+	let marketValueData = $derived(monthEntries.map((m) => m.marketValue));
+	let latest = $derived(
+		monthEntries.length > 0 ? monthEntries[monthEntries.length - 1] : undefined
+	);
+	let latestGainLoss = $derived(latest ? latest.marketValue - latest.costBasis : 0);
+	let latestGainLossPct = $derived(
+		latest && latest.costBasis !== 0 ? (latestGainLoss / latest.costBasis) * 100 : 0
+	);
+
+	function getLast12MonthEnds() {
+		const now = new Date();
+		const result: { key: string; label: string; endDate: string }[] = [];
+		for (let i = 11; i >= 0; i--) {
+			// First of the target month, then the day before the *following* month = last day of target month.
+			const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
+			const nextMonthStart = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+			const endDate = new Date(nextMonthStart.getTime() - 1);
+			const key = `${monthStart.getFullYear()}-${String(monthStart.getMonth() + 1).padStart(2, '0')}`;
+			const label = monthStart.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+			const endDateStr =
+				i === 0
+					? now.toISOString().slice(0, 10) // current, partial month: use today
+					: `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`;
+			result.push({ key, label, endDate: endDateStr });
+		}
+		return result;
+	}
+
+	function getYearMonthEnds(year: number) {
+		const result: { key: string; label: string; endDate: string }[] = [];
+		for (let m = 0; m < 12; m++) {
+			const monthStart = new Date(year, m, 1);
+			const nextMonthStart = new Date(year, m + 1, 1);
+			const endDate = new Date(nextMonthStart.getTime() - 1);
+			const key = `${year}-${String(m + 1).padStart(2, '0')}`;
+			const label = monthStart.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+			const endDateStr = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`;
+			result.push({ key, label, endDate: endDateStr });
+		}
+		return result;
+	}
+
+	function getMonthList() {
+		if (selectedPeriod === 'last12') return getLast12MonthEnds();
+		return getYearMonthEnds(parseInt(selectedPeriod));
+	}
+
+	async function loadData() {
+		isLoading = true;
+		error = null;
+		await tick();
+
+		try {
+			const currency = await settings.get<string>(SettingKeys.currency);
+			baseCurrency = currency ?? 'EUR';
+
+			const rootAccount = await settings.get<string>(SettingKeys.rootInvestmentAccount);
+			if (!rootAccount) {
+				error = 'Root investment account not set. Configure it in Settings → Asset Allocation first.';
+				monthEntries = [];
+				return;
+			}
+
+			await fullLedgerService.ensureLoaded();
+
+			const months = getMonthList();
+			const entries: MonthEntry[] = [];
+
+			for (const { key, label, endDate } of months) {
+				const bql = `SELECT
+					str(convert(cost(sum(position)), '${baseCurrency}')) AS cost_basis,
+					str(convert(value(sum(position)), '${baseCurrency}')) AS market_value
+					WHERE account ~ '^${rootAccount}' AND date <= ${endDate}`;
+				const result = await fullLedgerService.query(bql);
+
+				if (result?.errors?.length) {
+					error = (result.errors as any[]).map((e: any) => e.message).join('; ');
+					return;
+				}
+
+				const cols = result?.columns ?? [];
+				const rows = result?.rows ?? [];
+				const costIdx = cols.indexOf('cost_basis');
+				const marketIdx = cols.indexOf('market_value');
+				const row = rows.length > 0 ? (rows[0] as any[]) : undefined;
+				const costBasis =
+					row && costIdx !== -1 && row[costIdx] != null
+						? BeancountParser.getMoneyFromTupleString(String(row[costIdx])).quantity
+						: 0;
+				const marketValue =
+					row && marketIdx !== -1 && row[marketIdx] != null
+						? BeancountParser.getMoneyFromTupleString(String(row[marketIdx])).quantity
+						: 0;
+
+				entries.push({ key, label, costBasis, marketValue });
+			}
+
+			monthEntries = entries;
+		} catch (e) {
+			error = e instanceof Error ? e.message : String(e);
+		} finally {
+			isLoading = false;
+		}
+	}
+
+	onMount(() => loadData());
+</script>
+
+<main class="flex h-screen flex-col" class:cursor-wait={isLoading}>
+	<Toolbar title="Cost vs. Market Value" />
+
+	<YearPeriodSelector bind:selectedPeriod onChange={() => loadData()} disabled={isLoading} />
+
+	<section class="grow overflow-y-auto touch-pan-y px-4 py-4">
+		{#if isLoading}
+			<div class="flex justify-center py-12">
+				<span class="loading loading-spinner loading-md"></span>
+			</div>
+		{:else if error}
+			<div class="rounded-lg border border-error bg-error/10 p-3 text-error text-sm">
+				{error}
+				{#if error.includes('Root investment account')}
+					<button
+						type="button"
+						class="btn btn-sm btn-outline mt-2"
+						onclick={() => goto('/asset-allocation')}
+					>
+						Go to Asset Allocation settings
+					</button>
+				{/if}
+			</div>
+		{:else if monthEntries.length > 0}
+			<div class="mb-4 flex items-baseline justify-between">
+				<span class="text-sm font-medium text-base-content/60">Unrealized gain/loss</span>
+				<span
+					class="font-mono text-lg tabular-nums"
+					class:text-success={latestGainLoss >= 0}
+					class:text-error={latestGainLoss < 0}
+				>
+					{formatAmount(latestGainLoss)}
+					{baseCurrency} ({latestGainLossPct.toFixed(1)}%)
+				</span>
+			</div>
+
+			<CostVsMarketChart {months} costBasis={costBasisData} marketValue={marketValueData} />
+
+			<div class="mt-4 flex flex-col divide-y divide-base-200">
+				<div class="flex items-center justify-between py-2 text-xs font-medium text-base-content/50">
+					<span>Month</span>
+					<div class="flex gap-6">
+						<span>Cost</span>
+						<span>Market</span>
+					</div>
+				</div>
+				{#each [...monthEntries].reverse() as month}
+					<div class="flex items-center justify-between py-2">
+						<span class="text-sm">{month.label}</span>
+						<div class="flex gap-6 font-mono text-sm tabular-nums">
+							<span class="text-base-content/60">{formatAmount(month.costBasis)}</span>
+							<span>{formatAmount(month.marketValue)}</span>
+						</div>
+					</div>
+				{/each}
+			</div>
+		{:else}
+			<div class="py-12 text-center text-base-content/50 text-sm">No data available.</div>
+		{/if}
+	</section>
+</main>

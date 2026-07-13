@@ -11,7 +11,8 @@
 		ReceiptIcon,
 		ArrowLeftRightIcon,
 		ScaleIcon,
-		ActivityIcon
+		ActivityIcon,
+		LineChartIcon
 	} from '@lucide/svelte';
 </script>
 
@@ -41,6 +42,9 @@
 			</SquareButton>
 			<SquareButton Icon={TrendingUpIcon} classes="bg-primary text-accent" onclick={() => goto('/reports/net-worth')}>
 				Net Worth
+			</SquareButton>
+			<SquareButton Icon={LineChartIcon} classes="bg-primary text-accent" onclick={() => goto('/reports/cost-vs-market')}>
+				Cost v. Market
 			</SquareButton>
 			<SquareButton Icon={LandmarkIcon} classes="bg-primary text-accent" onclick={() => goto('/reports/trial-balance')}>
 				Trial Balance
