@@ -9,14 +9,25 @@
 		selectedPeriod: string;
 		onChange: () => void;
 		disabled?: boolean;
+		/** Adds an "All" option (broadest, oldest end of the range) for since-inception reports. */
+		includeAll?: boolean;
 	}
 
-	let { selectedPeriod = $bindable(), onChange, disabled = false }: Props = $props();
+	let {
+		selectedPeriod = $bindable(),
+		onChange,
+		disabled = false,
+		includeAll = false
+	}: Props = $props();
 
 	const currentYear = new Date().getFullYear();
 	const availableYears = Array.from({ length: 10 }, (_, i) => currentYear - i);
-	// periods[0] is "last12" (newest), followed by years newest-to-oldest.
-	const periods = ['last12', ...availableYears.map(String)];
+	// periods[0] is "last12" (newest); "all" (oldest/broadest), when enabled, goes last.
+	const periods = $derived([
+		'last12',
+		...availableYears.map(String),
+		...(includeAll ? ['all'] : [])
+	]);
 
 	const selectedIndex = $derived.by(() => {
 		const idx = periods.indexOf(selectedPeriod);
@@ -57,12 +68,15 @@
 				class="join-item select select-bordered select-sm"
 				bind:value={selectedPeriod}
 				onchange={onChange}
-				disabled={disabled}
+				{disabled}
 			>
 				<option value="last12">Last 12 months</option>
 				{#each availableYears as year}
 					<option value={String(year)}>{year}</option>
 				{/each}
+				{#if includeAll}
+					<option value="all">All</option>
+				{/if}
 			</select>
 			<button
 				type="button"

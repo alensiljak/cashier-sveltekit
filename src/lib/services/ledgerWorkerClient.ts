@@ -203,7 +203,7 @@ class LedgerWorkerClient {
 	}
 
 	/** Run a BQL query against the cached ledger. Returns empty results if not loaded. */
-	async query(bql: string): Promise<{ columns: string[]; rows: unknown[]; errors: unknown[] }> {
+	async query(bql: string): Promise<{ columns: string[]; rows: unknown[][]; errors: unknown[] }> {
 		if (!this._isLoaded) return { columns: [], rows: [], errors: [] };
 		const resp = await this.send<'query-done'>({ type: 'query', bql });
 		return { columns: resp.columns, rows: resp.rows, errors: resp.errors };

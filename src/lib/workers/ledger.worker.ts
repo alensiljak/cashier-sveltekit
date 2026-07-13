@@ -225,7 +225,7 @@ export type WorkerRequest = { id: number } & WorkerRequestPayload;
 export type WorkerResponsePayload =
 	| { type: 'warmup-done' }
 	| { type: 'load-done'; directiveCount: number; errorCount: number; ms: number }
-	| { type: 'query-done'; columns: string[]; rows: unknown[]; errors: unknown[] }
+	| { type: 'query-done'; columns: string[]; rows: unknown[][]; errors: unknown[] }
 	| { type: 'directives-done'; directives: unknown[] }
 	| { type: 'errors-done'; errors: unknown[] }
 	| { type: 'state-done'; isLoaded: boolean }

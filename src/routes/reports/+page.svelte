@@ -12,7 +12,8 @@
 		ArrowLeftRightIcon,
 		ScaleIcon,
 		ActivityIcon,
-		LineChartIcon
+		LineChartIcon,
+		PercentIcon
 	} from '@lucide/svelte';
 </script>
 
@@ -25,32 +26,68 @@
 
 	<div class="flex-1 overflow-y-auto touch-pan-y px-1">
 		<div class="mx-auto grid w-350 max-w-[350px] grid-cols-3 pt-3">
-			<SquareButton Icon={TerminalIcon} classes="bg-accent text-secondary" onclick={() => goto('/reports/query')}>
+			<SquareButton
+				Icon={TerminalIcon}
+				classes="bg-accent text-secondary"
+				onclick={() => goto('/reports/query')}
+			>
 				Queries
 			</SquareButton>
-			<SquareButton Icon={SearchIcon} classes="bg-accent text-secondary" onclick={() => goto('/reports/tx-search')}>
-				Search
-			</SquareButton>
-			<SquareButton Icon={ReceiptIcon} classes="bg-secondary text-accent" onclick={() => goto('/reports/expenses')}>
+			<SquareButton
+				Icon={ReceiptIcon}
+				classes="bg-secondary text-accent"
+				onclick={() => goto('/reports/expenses')}
+			>
 				Expenses
 			</SquareButton>
-			<SquareButton Icon={ScaleIcon} classes="bg-primary text-accent" onclick={() => goto('/reports/balance-sheet')}>
+			<SquareButton
+				Icon={ScaleIcon}
+				classes="bg-primary text-accent"
+				onclick={() => goto('/reports/balance-sheet')}
+			>
 				Balance Sheet
 			</SquareButton>
-			<SquareButton Icon={ArrowLeftRightIcon} classes="bg-primary text-accent" onclick={() => goto('/reports/income-statement')}>
+			<SquareButton
+				Icon={ArrowLeftRightIcon}
+				classes="bg-primary text-accent"
+				onclick={() => goto('/reports/income-statement')}
+			>
 				Income Statement
 			</SquareButton>
-			<SquareButton Icon={TrendingUpIcon} classes="bg-primary text-accent" onclick={() => goto('/reports/net-worth')}>
+			<SquareButton
+				Icon={TrendingUpIcon}
+				classes="bg-primary text-accent"
+				onclick={() => goto('/reports/net-worth')}
+			>
 				Net Worth
 			</SquareButton>
-			<SquareButton Icon={LineChartIcon} classes="bg-primary text-accent" onclick={() => goto('/reports/cost-vs-market')}>
+			<SquareButton
+				Icon={LineChartIcon}
+				classes="bg-primary text-accent"
+				onclick={() => goto('/reports/cost-vs-market')}
+			>
 				Cost v. Market
 			</SquareButton>
-			<SquareButton Icon={LandmarkIcon} classes="bg-primary text-accent" onclick={() => goto('/reports/trial-balance')}>
+			<SquareButton
+				Icon={LandmarkIcon}
+				classes="bg-primary text-accent"
+				onclick={() => goto('/reports/trial-balance')}
+			>
 				Trial Balance
 			</SquareButton>
-			<SquareButton Icon={ActivityIcon} classes="bg-primary text-accent" onclick={() => goto('/reports/running-balance')}>
+			<SquareButton
+				Icon={ActivityIcon}
+				classes="bg-primary text-accent"
+				onclick={() => goto('/reports/running-balance')}
+			>
 				Running Balance
+			</SquareButton>
+			<SquareButton
+				Icon={PercentIcon}
+				classes="bg-primary text-accent"
+				onclick={() => goto('/reports/portfolio-returns')}
+			>
+				Portfolio Returns
 			</SquareButton>
 		</div>
 	</div>
