@@ -7,12 +7,14 @@
 	import HelpButton from '$lib/help/HelpButton.svelte';
 	import { Setting, ScheduledTransaction } from '$lib/data/model';
 	import Notifier from '$lib/utils/notifier';
+	import { reloadLedgerFromOpfs } from '$lib/services/ledgerReload';
 	import {
 		GitCompareArrowsIcon,
 		EyeIcon,
 		DownloadIcon,
 		Check,
 		RefreshCwIcon,
+		RefreshCcwIcon,
 		PencilIcon,
 		XIcon,
 		Circle,
@@ -148,6 +150,28 @@
 	/** Re-checks item status after a local write (pull/merge) that may have changed what's local. */
 	function refreshHashesIfSelected() {
 		if (syncTargetId) checkHashes(syncTargetId);
+	}
+
+	// ─── Ledger reload suggestion ──────────────────────────────────────────────
+	// Pulled/merged Settings or Scheduled Transactions may affect ledger-derived
+	// views (e.g. account settings, projections), so — same as import-ledger and
+	// /opfs/sync — surface a manual "Reload Ledger" action once local data changed.
+	let pulledSinceReload = $state(false);
+	let reloadPhase = $state<'idle' | 'reloading' | 'done' | 'error'>('idle');
+	let reloadError = $state('');
+
+	async function reloadLedger() {
+		reloadPhase = 'reloading';
+		reloadError = '';
+		try {
+			await reloadLedgerFromOpfs();
+			reloadPhase = 'done';
+			pulledSinceReload = false;
+		} catch (e) {
+			const err = e as { message?: string };
+			reloadError = err?.message ?? String(e);
+			reloadPhase = 'error';
+		}
 	}
 
 	let includeSettings = $state(false);
@@ -368,6 +392,7 @@
 				await db.scheduled.bulkPut(entries);
 				Notifier.success('Scheduled transactions updated');
 			}
+			pulledSinceReload = true;
 			refreshHashesIfSelected();
 		} catch (e) {
 			Notifier.error('Pull failed: ' + (e as Error).message);
@@ -385,6 +410,7 @@
 			await db.settings.clear();
 			await db.settings.bulkPut(merged.map((s) => new Setting(s.key, s.value)));
 			Notifier.success('Settings: merge applied.');
+			pulledSinceReload = true;
 			showDiff = false;
 			refreshHashesIfSelected();
 		} catch (e) {
@@ -414,7 +440,7 @@
 			const rows = merged.map((t) => (localSet.has(t) ? t : { ...t, id: undefined }));
 			await db.scheduled.clear();
 			await db.scheduled.bulkPut(rows);
-			Notifier.success('Scheduled transactions: merge applied.');
+			pulledSinceReload = true;
 			showDiff = false;
 			refreshHashesIfSelected();
 		} catch (e) {
@@ -718,6 +744,31 @@
 							Pull
 						</button>
 					</div>
+
+					{#if pulledSinceReload}
+						<div class="alert alert-info text-sm mt-2 flex items-center justify-between gap-2">
+							<span>Local data changed — reload the ledger to pick it up.</span>
+							<button
+								class="btn btn-sm btn-outline"
+								disabled={reloadPhase === 'reloading'}
+								onclick={reloadLedger}
+							>
+								{#if reloadPhase === 'reloading'}
+									<span class="loading loading-spinner loading-xs"></span>
+									Reloading…
+								{:else}
+									<RefreshCcwIcon class="w-3.5 h-3.5" />
+									Reload Ledger
+								{/if}
+							</button>
+						</div>
+						{#if reloadPhase === 'done'}
+							<p class="text-xs text-success mt-1">Ledger reloaded.</p>
+						{/if}
+						{#if reloadError}
+							<p class="text-xs text-error mt-1">{reloadError}</p>
+						{/if}
+					{/if}
 				</div>
 			</div>
 		{/if}
