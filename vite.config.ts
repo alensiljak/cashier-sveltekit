@@ -137,6 +137,22 @@ const config: UserConfig = defineConfig({
 						type: 'image/png',
 						purpose: 'maskable'
 					}
+				],
+				shortcuts: [
+					{
+						name: 'New Transaction',
+						short_name: 'New Xact',
+						description: 'Open the transaction editor',
+						url: '/tx',
+						icons: [{ src: 'icons/favicon-96x96.png', sizes: '96x96', type: 'image/png' }]
+					},
+					{
+						name: 'Quick Entry',
+						short_name: 'Quick Entry',
+						description: 'Search or describe a transaction to enter it quickly',
+						url: '/tx/search-new',
+						icons: [{ src: 'icons/favicon-96x96.png', sizes: '96x96', type: 'image/png' }]
+					}
 				]
 			},
 			injectManifest: {
