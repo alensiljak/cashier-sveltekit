@@ -158,8 +158,8 @@
 			irrBySymbol = updated;
 
 			SecurityIrrCacheStore.update((c) => {
-				const nextStore = { ...(c ?? {}) };
-				nextStore[selectedPeriod] = { ...(nextStore[selectedPeriod] ?? {}), ...newCacheEntries };
+				const nextStore = { ...c };
+				nextStore[selectedPeriod] = { ...nextStore[selectedPeriod], ...newCacheEntries };
 				return nextStore;
 			});
 		} catch (e) {

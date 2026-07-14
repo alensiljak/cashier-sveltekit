@@ -253,8 +253,8 @@
 			await Promise.all([marketValuesDone, transactionFlowsDone]);
 
 			PortfolioReturnsCacheStore.update((c) => {
-				const next = { ...(c ?? {}) };
-				const nextPeriodCache = { ...(next[selectedPeriod] ?? {}) };
+				const next = { ...c };
+				const nextPeriodCache = { ...next[selectedPeriod] };
 				for (const group of uncachedGroups) {
 					const row = rowByName.get(group.name);
 					if (row) nextPeriodCache[group.name] = { ...row };
