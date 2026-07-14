@@ -199,7 +199,7 @@
 		<center class="flex justify-center gap-2">
 			<button
 				type="button"
-				class="btn btn-outline btn-primary uppercase rounded"
+				class="btn btn-outline btn-primary uppercase"
 				onclick={onNewXactClick}
 			>
 				<PlusIcon />
@@ -207,7 +207,7 @@
 			</button>
 			<button
 				type="button"
-				class="btn btn-outline btn-warning uppercase rounded"
+				class="btn btn-outline btn-warning uppercase"
 				onclick={onExportClick}
 			>
 				<FileUpIcon />
