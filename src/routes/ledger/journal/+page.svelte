@@ -21,7 +21,7 @@
 			);
 			const errs = result?.errors ?? [];
 			if (errs.length > 0) {
-				error = errs.map((e: { message: string }) => e.message).join('\n');
+				error = (errs as { message: string }[]).map((e) => e.message).join('\n');
 				return;
 			}
 
