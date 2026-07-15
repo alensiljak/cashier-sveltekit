@@ -107,6 +107,9 @@
 				<a class="link" href="/ledger/multi">Parsed Multi Ledger</a>
 			</li>
 			<li>
+				<a class="link" href="/ledger/journal">Full Journal</a>
+			</li>
+			<li>
 				<a class="link inline-flex items-center gap-1" href="/tools/voice-entry">
 					<MicIcon size={16} /> Voice Entry
 				</a>

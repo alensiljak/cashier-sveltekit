@@ -298,6 +298,18 @@
 								<span>Commodities</span>
 							</a>
 						</li>
+						<li>
+							<a
+								href="/ledger/journal"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/ledger/journal'
+									? 'active bg-secondary text-secondary-content'
+									: ''}"
+								onclick={closeDrawer}
+							>
+								<ListTreeIcon />
+								<span>Full Journal</span>
+							</a>
+						</li>
 					</ul>
 				</details>
 			</li>
