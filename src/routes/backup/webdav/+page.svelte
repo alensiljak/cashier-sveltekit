@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import HelpButton from '$lib/help/HelpButton.svelte';
-	import { settings, SettingKeys } from '$lib/settings';
+	import { settings, deviceSettings, SettingKeys, DeviceSettingKeys } from '$lib/settings';
 	import { ScheduledTransaction, Setting } from '$lib/data/model';
 	import db from '$lib/data/db';
 	import { readFile, saveFile, getFileMetadata } from '$lib/utils/opfslib';
@@ -18,6 +18,7 @@
 	} from '@lucide/svelte';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import { goto } from '$app/navigation';
+	import { lastBackupTime } from '$lib/services/webdavAutoBackupService';
 
 	let includeSettings = $state(false);
 	let includeCashierBean = $state(false);
@@ -33,6 +34,7 @@
 	let cashierBeanLastModified = $state<Date | null>(null);
 	let cashierBeanLocalLastModified = $state<Date | null>(null);
 	let scheduledLastModified = $state<Date | null>(null);
+	let autoBackupEnabled = $state(false);
 
 	const cashierBeanNeedsBackup = $derived(
 		cashierBeanLocalLastModified !== null &&
@@ -61,8 +63,15 @@
 		webdavUrl = saved?.url ?? '';
 		webdavUsername = saved?.username ?? '';
 		webdavPassword = saved?.password ?? '';
+		autoBackupEnabled =
+			(await deviceSettings.get<boolean>(DeviceSettingKeys.webdavAutoBackup)) ?? false;
 		fetchLastModified();
 	});
+
+	async function toggleAutoBackup() {
+		autoBackupEnabled = !autoBackupEnabled;
+		await deviceSettings.set(DeviceSettingKeys.webdavAutoBackup, autoBackupEnabled);
+	}
 
 	async function fetchLastModified() {
 		isCheckingRemote = true;
@@ -301,6 +310,33 @@
 					</span>
 				{/if}
 			</label>
+		</div>
+	</section>
+
+	<!-- Auto-backup -->
+	<section class="card bg-base-200">
+		<div class="card-body p-4 gap-3">
+			<label class="flex items-center gap-3 cursor-pointer">
+				<span class="flex-1">
+					<span class="font-medium">Auto-backup cashier.bean</span>
+					<span class="block text-xs text-base-content/50">
+						Upload to WebDAV automatically after each change
+					</span>
+				</span>
+				<input
+					type="checkbox"
+					class="toggle toggle-primary bg-transparent bg-none"
+					checked={autoBackupEnabled}
+					disabled={!webdavUrl}
+					onclick={toggleAutoBackup}
+				/>
+			</label>
+			{#if $lastBackupTime}
+				<p class="text-xs text-base-content/50 flex items-center gap-1">
+					<CloudIcon size={12} />
+					Last auto-backup: {$lastBackupTime.toLocaleString()}
+				</p>
+			{/if}
 		</div>
 	</section>
 

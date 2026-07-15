@@ -13,6 +13,7 @@ import { readFile, saveFile } from '$lib/utils/opfslib';
 import { CASHIER_XACT_FILE, USER_BOOK_FILENAME } from '$lib/constants';
 import { ensureInitialized, createParsedLedger } from './rustledger';
 import { mapDirectiveSpans } from '$lib/rledger/sourceEditor';
+import { scheduleBackup } from './webdavAutoBackupService';
 
 // interface AccountIndex {
 // 	[key: string]: Account;
@@ -487,6 +488,7 @@ class AppService {
 	/** Overwrite cashier.bean with the given content. */
 	async saveCashierFile(content: string): Promise<void> {
 		await saveFile(CASHIER_XACT_FILE, content);
+		scheduleBackup();
 	}
 
 	/**

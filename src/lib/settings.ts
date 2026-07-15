@@ -114,7 +114,9 @@ export const DeviceSettingKeys = {
 	// Whether to use the binary ledger cache on load (default: true)
 	ledgerCacheEnabled: 'ledgerCacheEnabled',
 	// OPFS file metadata snapshot for staleness detection (path -> "size|lastModified")
-	ledgerMetaSnapshot: 'ledger.metaSnapshot'
+	ledgerMetaSnapshot: 'ledger.metaSnapshot',
+	// Auto-upload cashier.bean to WebDAV after each write
+	webdavAutoBackup: 'webdav-auto-backup'
 };
 
 class UserSettings {

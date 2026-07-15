@@ -17,6 +17,7 @@ import {
 } from '$lib/rledger/sourceEditor';
 import { CASHIER_XACT_FILE } from '$lib/constants';
 import { locateXactsInSource } from '$lib/utils/xactLocator';
+import { scheduleBackup } from './webdavAutoBackupService';
 
 interface QueryError {
 	message: string;
@@ -138,6 +139,7 @@ class LedgerService {
 		content = await this._sortSource(content);
 		await opfslib.saveFile(CASHIER_XACT_FILE, content);
 		await this.invalidate();
+		scheduleBackup();
 	}
 
 	/**
@@ -165,6 +167,7 @@ class LedgerService {
 			tempLedger.free();
 		}
 		await this.invalidate();
+		scheduleBackup();
 	}
 
 	/**
@@ -191,6 +194,7 @@ class LedgerService {
 			tempLedger.free();
 		}
 		await this.invalidate();
+		scheduleBackup();
 	}
 
 	/** Parse a provided Beancount source string and set as the current ledger. */
