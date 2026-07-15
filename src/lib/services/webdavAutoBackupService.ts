@@ -12,6 +12,7 @@ import { readFile } from '$lib/utils/opfslib';
 import { WebDavClient } from '$lib/utils/webdav';
 import { settings, deviceSettings, SettingKeys, DeviceSettingKeys } from '$lib/settings';
 import { writable } from 'svelte/store';
+import { showBackupNotification } from '$lib/utils/webNotification';
 
 /** Shape of the webdavSettings user setting. */
 export interface WebDavSettings {
@@ -44,6 +45,7 @@ async function doBackup(): Promise<void> {
 		const res = await client.put('cashier.bean', content);
 		if (res.ok) {
 			lastBackupTime.set(new Date());
+			void showBackupNotification();
 		} else {
 			console.warn(`[webdav-auto-backup] PUT failed: ${res.status} ${res.statusText}`);
 		}

@@ -19,6 +19,7 @@
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import { goto } from '$app/navigation';
 	import { lastBackupTime } from '$lib/services/webdavAutoBackupService';
+	import { requestNotificationPermission } from '$lib/utils/webNotification';
 
 	let includeSettings = $state(false);
 	let includeCashierBean = $state(false);
@@ -71,6 +72,9 @@
 	async function toggleAutoBackup() {
 		autoBackupEnabled = !autoBackupEnabled;
 		await deviceSettings.set(DeviceSettingKeys.webdavAutoBackup, autoBackupEnabled);
+		if (autoBackupEnabled) {
+			await requestNotificationPermission();
+		}
 	}
 
 	async function fetchLastModified() {
