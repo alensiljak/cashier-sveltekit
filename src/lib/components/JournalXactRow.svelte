@@ -28,8 +28,16 @@
 			{#each xact.postings as posting (posting)}
 				{@const cost = formatPostingCost(posting)}
 				{@const price = formatPostingPrice(posting)}
-				<div class="flex flex-wrap opacity-85">
-					<data class="flex-auto text-sm">{posting.account}</data>
+				{@const sep = posting.account.indexOf(':')}
+				<div class="flex opacity-85">
+					<data class="flex min-w-0 flex-auto overflow-hidden text-sm">
+						{#if sep === -1}
+							<span class="overflow-hidden text-ellipsis whitespace-nowrap">{posting.account}</span>
+						{:else}
+							<span class="shrink-0">{posting.account.slice(0, sep + 1)}</span>
+							<span class="min-w-0 overflow-hidden whitespace-nowrap text-ellipsis [direction:rtl]">{posting.account.slice(sep + 1)}</span>
+						{/if}
+					</data>
 					<div class="flex flex-row items-baseline gap-4 ml-auto shrink-0">
 						{#if cost}
 							<data class="text-xs opacity-45 font-mono">{cost}</data>
