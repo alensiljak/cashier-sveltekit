@@ -19,19 +19,8 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <article onclick={onRowClicked}>
-	<!-- date/payee -->
-	<div class="flex flex-row space-x-2">
-		<time class="opacity-85">
-			{xact.date}
-			<!-- todo: ISO format -->
-		</time>
-		<div class="flex items-center gap-1">
-			{#if xact.flag === '!'}
-				<WarningTriangleIcon class="size-4 shrink-0" />
-			{/if}
-			{xact.payee}{#if xact.payee && xact.note}<span class="opacity-50"> · {xact.note}</span>{:else if xact.note}{xact.note}{/if}
-		</div>
-	</div>
+	<!-- date / payee / narration — inline flow; hanging indent aligns wrapped lines with postings -->
+	<div class="pl-6" style="text-indent: -1.5rem"><time class="opacity-85">{xact.date}</time>{#if xact.flag === '!'} <WarningTriangleIcon class="size-4 inline-block align-text-bottom" />{/if} {xact.payee || xact.note}{#if xact.payee && xact.note} <span class="opacity-50">· {xact.note}</span>{/if}</div>
 
 	<!-- postings -->
 	{#if xact.postings}
