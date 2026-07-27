@@ -32,7 +32,7 @@ test('expense category keyword sets toAccount, not fromAccount', () => {
 	expect(result.payee).toBe('Billa');
 	expect(result.amount).toBe(15);
 	expect(result.toAccount).toBe('Expenses:Groceries');
-	expect(result.fromAccount).toBe('Assets');
+	expect(result.fromAccount).toBe('Assets:Unknown');
 	expect(result.fromAccountResolved).toBe(false);
 	expect(result.toAccount).not.toBe(result.fromAccount);
 });
@@ -68,8 +68,8 @@ test('unresolved payee/amount/accounts marks needsReview for follow-up', () => {
 	const result = parseTranscript('xylophone');
 
 	expect(result.amount).toBeUndefined();
-	expect(result.toAccount).toBe('Expenses');
-	expect(result.fromAccount).toBe('Assets');
+	expect(result.toAccount).toBe('Expenses:Unknown');
+	expect(result.fromAccount).toBe('Assets:Unknown');
 	expect(result.needsReview).toBe(true);
 });
 
@@ -85,7 +85,7 @@ test('explicit from-account keyword does not leak into the toAccount category gu
 	const result = parseTranscript('20 euros at Bistro Nine from savings');
 
 	expect(result.fromAccount).toBe('Assets:Savings');
-	expect(result.toAccount).toBe('Expenses');
+	expect(result.toAccount).toBe('Expenses:Unknown');
 	expect(result.toAccount).not.toBe(result.fromAccount);
 });
 
@@ -149,8 +149,8 @@ test('refineFromMatches is a no-op with no candidates', () => {
 	const result = parseTranscript('xylophone');
 	refineFromMatches(result, []);
 
-	expect(result.toAccount).toBe('Expenses');
-	expect(result.fromAccount).toBe('Assets');
+	expect(result.toAccount).toBe('Expenses:Unknown');
+	expect(result.fromAccount).toBe('Assets:Unknown');
 	expect(result.needsReview).toBe(true);
 });
 

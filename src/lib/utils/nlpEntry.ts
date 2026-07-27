@@ -276,24 +276,24 @@ export function parseTranscript(text: string): ParseResult {
 	if (!fromAccount) {
 		if (isIncome) {
 			const guess = guessAccount(text, 'Income:');
-			fromAccount = guess?.account ?? 'Income';
+			fromAccount = guess?.account ?? 'Income:Unknown';
 			fromAccountResolved = !!guess;
 			guess?.matchedWords.forEach((w) => consumedWords.add(normalizeWord(w)));
 			if (!toAccount) {
 				// Top-level fallback — no specific account known, flag for review.
-				toAccount = 'Assets';
+				toAccount = 'Assets:Unknown';
 				toAccountResolved = false;
 			}
 		} else {
 			// Top-level fallback — no specific account known, flag for review.
-			fromAccount = 'Assets';
+			fromAccount = 'Assets:Unknown';
 			fromAccountResolved = false;
 		}
 	}
 
 	if (!toAccount && !isTransfer && !isIncome) {
 		const guess = guessAccount(text, 'Expenses:');
-		toAccount = guess?.account ?? 'Expenses';
+		toAccount = guess?.account ?? 'Expenses:Unknown';
 		toAccountResolved = !!guess;
 		guess?.matchedWords.forEach((w) => consumedWords.add(normalizeWord(w)));
 	}
@@ -412,12 +412,12 @@ export function buildTransaction(result: ParseResult): Xact {
 	xact.flag = result.needsReview ? '!' : '*';
 
 	const posting1 = new Posting();
-	posting1.account = result.toAccount ?? 'Expenses';
+	posting1.account = result.toAccount ?? 'Expenses:Unknown';
 	posting1.amount = result.amount;
 	posting1.currency = result.currency ?? 'EUR';
 
 	const posting2 = new Posting();
-	posting2.account = result.fromAccount ?? 'Assets';
+	posting2.account = result.fromAccount ?? 'Assets:Unknown';
 
 	xact.postings = [posting1, posting2];
 	return xact;

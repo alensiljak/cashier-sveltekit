@@ -53,7 +53,7 @@ It is implemented as a PWA using Svelte and DaisyUI frameworks.
 
 ## Dev Server
 
-- Assume the local dev server is running at `http://localhost:5173/`. It is started and managed by the user.
+- The local dev server is running at `http://localhost:5173/`. It is started and managed by the user.
 
 ## Demo Data
 
