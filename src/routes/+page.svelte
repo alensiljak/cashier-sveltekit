@@ -98,7 +98,7 @@
 		xact.set(tx);
 
 		// await goto('/tx');
-		await goto('/tx/search-new');
+		await goto('/tx/quick-entry');
 	}
 
 	async function handleManualCheck() {
