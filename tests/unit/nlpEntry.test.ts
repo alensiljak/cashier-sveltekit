@@ -1,6 +1,7 @@
 import { expect, test } from 'vitest';
 import {
 	buildTransaction,
+	formatBeancount,
 	parseTranscript,
 	pickBestMatch,
 	refineFromMatches
@@ -37,13 +38,57 @@ test('expense category keyword sets toAccount, not fromAccount', () => {
 	expect(result.toAccount).not.toBe(result.fromAccount);
 });
 
-test('"at <payee> for <category>" strips category from payee name', () => {
+test('"at <payee> for <category>" keeps the payee and records the category as narration', () => {
 	const result = parseTranscript('20 euros at lidl for groceries');
 
 	expect(result.payee).toBe('Lidl');
 	expect(result.amount).toBe(20);
 	expect(result.currency).toBe('EUR');
 	expect(result.toAccount).toBe('Expenses:Groceries');
+	expect(result.note).toBe('groceries');
+});
+
+test('"for <what> at <who>" assigns the vendor to the payee and the purchase to the narration', () => {
+	const result = parseTranscript("10 euros for tickets at brumby's");
+
+	expect(result.payee).toBe("Brumby's");
+	expect(result.note).toBe('tickets');
+	expect(result.amount).toBe(10);
+	expect(result.currency).toBe('EUR');
+
+	const xact = buildTransaction(result);
+	expect(formatBeancount(xact)).toContain('"Brumby\'s" "tickets"');
+});
+
+test('"for <what> to <who>" also keeps the counterparty as the payee', () => {
+	const result = parseTranscript('25 euros for repairs to Bob the Builder');
+
+	expect(result.payee).toBe('Bob the Builder');
+	expect(result.note).toBe('repairs');
+});
+
+test('a category-only "for" phrase names the expense account, not a payee', () => {
+	const result = parseTranscript('12 euros for groceries');
+
+	expect(result.payee).toBeUndefined();
+	expect(result.toAccount).toBe('Expenses:Groceries');
+	expect(result.note).toBe('groceries');
+	expect(result.needsReview).toBe(true);
+});
+
+test('a category "for" phrase survives the account guess as narration', () => {
+	const result = parseTranscript("10 euros for coffee at brumby's");
+
+	expect(result.payee).toBe("Brumby's");
+	expect(result.toAccount).toBe('Expenses:Hospitality:Drinks');
+	expect(result.note).toBe('coffee');
+});
+
+test('a "for" phrase naming a business is still the payee when no vendor preposition is present', () => {
+	const result = parseTranscript('10 euros for Decathlon');
+
+	expect(result.payee).toBe('Decathlon');
+	expect(result.note).toBeUndefined();
 });
 
 test('"car wash" two-word payee with no keyword is captured fully', () => {

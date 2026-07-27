@@ -95,7 +95,7 @@ const ACCOUNT_KEYWORDS: Array<{ words: string[]; account: string }> = [
 	{ words: ['grocery', 'groceries', 'supermarket', 'market'], account: 'Expenses:Groceries' },
 	{
 		words: ['restaurant', 'cafe', 'coffee', 'lunch', 'dinner', 'breakfast', 'food', 'eat'],
-		account: 'Expenses:Food'
+		account: 'Expenses:Hospitality:Drinks'
 	},
 	{
 		words: ['transport', 'bus', 'train', 'metro', 'taxi', 'uber', 'fuel', 'gas', 'petrol'],
@@ -182,34 +182,108 @@ function parseCurrency(text: string): {
 	return { currency: 'EUR', matchedWords: [] };
 }
 
-function extractPayee(text: string): { payee?: string; consumedWords: string[] } {
+/*
+	Beancount semantics: the payee is WHO we paid, the narration is WHAT we paid for.
+	"at/to/@" (and, weakly, "from") introduce the payee; "for" introduces the narration.
+	So "10 euros for tickets at brumby's" is Brumby's (payee) / tickets (narration), not
+	the reverse — the "for …" span is cut out of the text before the payee is looked for,
+	so neither the preposition patterns nor the bare-words fallback can claim it.
+
+	An explicit "for" phrase is kept as the narration verbatim even when its words also
+	drive the expense-account guess ("for coffee" -> Expenses:Food *and* narration
+	"coffee"): the user said what they bought, so it belongs in the transaction.
+
+	When no vendor preposition is present at all, the "for" phrase is the only name in the
+	input, so it becomes the payee instead ("10 euros for Decathlon") — unless every word
+	in it is a spending-category keyword ("for groceries"), which names the expense account
+	rather than a counterparty and so stays narration, leaving the payee for review.
+*/
+const PREPOSITIONS = String.raw`for|to|from|at|@`;
+/** One payee-name token: anything word-ish that contains at least one letter, so amounts don't join the name. */
+const NAME_TOKEN = String.raw`[a-zA-Z0-9'&.-]*[a-zA-Z][a-zA-Z0-9'&.-]*`;
+/** A run of name tokens, stopping before the next preposition. */
+const NAME_PHRASE = `(${NAME_TOKEN}(?:\\s+(?!(?:${PREPOSITIONS})\\b)${NAME_TOKEN})*)`;
+
+const NARRATION_RE = new RegExp(String.raw`\bfor\s+${NAME_PHRASE}`, 'i');
+
+/** Every single word appearing in ACCOUNT_KEYWORDS, for deciding whether a phrase names a category rather than a payee. */
+const CATEGORY_WORDS = new Set(
+	ACCOUNT_KEYWORDS.flatMap(({ words }) => words.flatMap((w) => w.split(/\s+/)))
+);
+
+/** True when the phrase is nothing but category/filler words ("groceries", "the bus") — a category, not a counterparty. */
+function isCategoryPhrase(phrase: string): boolean {
+	const content = phrase
+		.split(/\s+/)
+		.map(normalizeWord)
+		.filter((w) => w.length > 0 && !STOP_WORDS.has(w));
+	return content.length > 0 && content.every((w) => CATEGORY_WORDS.has(w));
+}
+
+/** Leading determiners that belong to the sentence, not to the business name ("at the pharmacy" -> "Pharmacy"). */
+const LEADING_ARTICLES = new Set(['the', 'a', 'an', 'my', 'our']);
+
+/** Trims sentence articles off the front of a captured name and capitalizes it, preserving any inner casing. */
+function toPayeeName(name: string): string {
+	const tokens = name.trim().split(/\s+/);
+	while (tokens.length > 1 && LEADING_ARTICLES.has(tokens[0].toLowerCase())) tokens.shift();
+	const cleaned = tokens.join(' ');
+	return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+}
+
+function extractPayee(text: string): {
+	payee?: string;
+	consumedWords: string[];
+	/** Original-case words of the "for <what>" phrase, when it wasn't used as the payee. */
+	narrationWords: string[];
+} {
+	// Cut out the "for <what>" span first — it describes the purchase, not the counterparty.
+	const narration = text.match(NARRATION_RE);
+	const narrationWords = narration ? narration[1].trim().split(/\s+/) : [];
+	const vendorText =
+		narration?.index === undefined
+			? text
+			: `${text.slice(0, narration.index)} ${text.slice(narration.index + narration[0].length)}`;
+
 	const patterns = [
-		/(?:at|to|for|from|@)\s+([a-zA-Z][a-zA-Z'&-]*(?:\s+(?!(?:for|to|from|at)\b)[a-zA-Z'&-]+)*)/i,
-		/(?:paid|spent|bought|purchased)\s+(?:\d[\d.,]*\s+\w+\s+)?(?:at|to|for)\s+([a-zA-Z][a-zA-Z'&-]*(?:\s+(?!(?:for|to|from|at)\b)[a-zA-Z'&-]+)*)/i,
+		new RegExp(
+			String.raw`(?:paid|spent|bought|purchased)\s+(?:\d[\d.,]*\s+\w+\s+)?(?:at|to|@)\s+${NAME_PHRASE}`,
+			'i'
+		),
+		new RegExp(String.raw`(?:\bat|\bto|@)\s+${NAME_PHRASE}`, 'i'),
+		// "from" names the counterparty only when nothing better did (e.g. "received 500 from acme").
+		new RegExp(String.raw`\bfrom\s+${NAME_PHRASE}`, 'i'),
 		/^([A-Z][a-zA-Z\s'&-]{1,20})\s+\d/
 	];
 
 	for (const re of patterns) {
-		const m = text.match(re);
+		const m = vendorText.match(re);
 		if (m) {
-			const name = m[1].trim();
-			return {
-				payee: name.charAt(0).toUpperCase() + name.slice(1),
-				consumedWords: m[0].split(/\s+/)
-			};
+			return { payee: toPayeeName(m[1]), consumedWords: m[0].split(/\s+/), narrationWords };
 		}
 	}
 
-	const words = text.split(/\s+/);
-	const payeeWords = words.filter((w) => !STOP_WORDS.has(normalizeWord(w)) && /^[a-zA-Z]/.test(w));
-	if (payeeWords.length > 0) {
+	// No vendor preposition anywhere — the "for" phrase is then the only name in the input, so
+	// it becomes the payee unless it just names a spending category ("for groceries").
+	if (narration && !isCategoryPhrase(narration[1])) {
 		return {
-			payee: payeeWords.map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' '),
-			consumedWords: payeeWords
+			payee: toPayeeName(narration[1]),
+			consumedWords: narration[0].split(/\s+/),
+			narrationWords: []
 		};
 	}
 
-	return { consumedWords: [] };
+	const words = vendorText.split(/\s+/);
+	const payeeWords = words.filter((w) => !STOP_WORDS.has(normalizeWord(w)) && /^[a-zA-Z]/.test(w));
+	if (payeeWords.length > 0) {
+		return {
+			payee: payeeWords.map((w) => toPayeeName(w.toLowerCase())).join(' '),
+			consumedWords: payeeWords,
+			narrationWords
+		};
+	}
+
+	return { consumedWords: [], narrationWords };
 }
 
 /** Words from the original input not accounted for by amount/payee/account recognition, in original order/casing. */
@@ -236,16 +310,20 @@ export function parseTranscript(text: string): ParseResult {
 		confidence += 40;
 	}
 
-	const { payee, consumedWords: payeeWordsRaw } = extractPayee(text);
+	const { payee: payeeGuess, consumedWords: payeeWordsRaw, narrationWords } = extractPayee(text);
+	let payee = payeeGuess;
 	const payeeWordPairs = payeeWordsRaw
 		.map((w) => ({ original: w, normalized: normalizeWord(w) }))
-		.filter((p) => p.normalized.length > 0);
+		.filter((p) => p.normalized.length > 0 && !STOP_WORDS.has(p.normalized));
 	const normalizedPayeeWords = payeeWordPairs.map((p) => p.normalized);
 	const originalPayeeWords = payeeWordPairs.map((p) => p.original);
 	normalizedPayeeWords.forEach((w) => consumedWords.add(w));
-	if (payee) {
-		matched.push(`payee: ${payee}`);
-		confidence += 20;
+	// The explicit "for <what>" phrase is the narration; mark it consumed so `computeLeftover`
+	// doesn't repeat it, and keep it ahead of any other unrecognized words in the note.
+	narrationWords.forEach((w) => consumedWords.add(normalizeWord(w)));
+	if (narrationWords.length > 0) {
+		matched.push(`narration: ${narrationWords.join(' ')}`);
+		confidence += 10;
 	}
 
 	const isTransfer = /transfer|move|send/i.test(lower);
@@ -297,9 +375,24 @@ export function parseTranscript(text: string): ParseResult {
 		toAccountResolved = !!guess;
 		guess?.matchedWords.forEach((w) => consumedWords.add(normalizeWord(w)));
 	}
+	// A transfer between own accounts has no counterparty: "…to savings" names the destination
+	// account, so don't also report it as the payee.
+	if (isTransfer && payee) {
+		const accountNames = [fromAccount, toAccount]
+			.filter((a): a is string => !!a)
+			.map((a) => a.slice(a.lastIndexOf(':') + 1).toLowerCase());
+		if (accountNames.includes(payee.toLowerCase())) payee = undefined;
+	}
 
-	const needsReview = !payee || amount === undefined || !fromAccountResolved || !toAccountResolved;
-	const leftoverWords = computeLeftover(text, consumedWords);
+	if (payee) {
+		matched.push(`payee: ${payee}`);
+		confidence += 20;
+	}
+
+	// A transfer legitimately has no payee, so its absence isn't something to review there.
+	const needsReview =
+		(!payee && !isTransfer) || amount === undefined || !fromAccountResolved || !toAccountResolved;
+	const leftoverWords = [...narrationWords, ...computeLeftover(text, consumedWords)];
 
 	return {
 		payee,
@@ -407,7 +500,8 @@ export function refineFromMatches(result: ParseResult, matches: Xact[]): void {
 export function buildTransaction(result: ParseResult): Xact {
 	const xact = new Xact();
 	xact.date = new Date().toISOString().substring(0, 10);
-	xact.payee = result.payee ?? 'Unknown';
+	// Transfers have no counterparty; everything else gets a visible placeholder to fix up.
+	xact.payee = result.payee ?? (result.isTransfer ? '' : 'Unknown');
 	xact.note = result.note ?? '';
 	xact.flag = result.needsReview ? '!' : '*';
 

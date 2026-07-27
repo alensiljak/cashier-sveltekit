@@ -2,8 +2,8 @@
 
 Type a description and Quick Entry does two things at once:
 
-1. **Parses it into a new transaction.** Amount, currency, payee, and a guessed
-   expense/income account are extracted and shown as a "Suggested new transaction"
+1. **Parses it into a new transaction.** Amount, currency, payee, narration, and a
+   guessed expense/income account are extracted and shown as a "Suggested new transaction"
    at the top. Anything it had to guess (e.g. the counter-account) is flagged with
    `!` and the suggestion is marked **needs review**; tap it to open the result in
    the editor with today's date, ready to adjust and save. Once a search below
@@ -11,7 +11,23 @@ Type a description and Quick Entry does two things at once:
    frequently matching past transactions.
 2. **Searches your existing transactions** for reuse as a template — see below.
 
-Try phrases like "10 euros for Decathlon, t-shirt" or "Received 500 euros salary".
+## Wording
+
+Beancount splits a transaction description in two: the **payee** is _who_ you paid, the
+**narration** is _what_ you paid for. Quick Entry follows the same split:
+
+- **at / to / @ <name>** names the payee — "10 euros for tickets **at Brumby's**" →
+  payee _Brumby's_, narration _tickets_.
+- **for <thing>** names the narration, never the payee, whenever a payee is given
+  elsewhere in the phrase.
+- With no "at/to", a "for" phrase becomes the payee instead ("10 euros for Decathlon"),
+  unless it only names a spending category ("12 euros for groceries") — then it stays
+  the narration and the payee is left for you to fill in.
+- Leading articles are dropped, so "at the pharmacy" gives the payee _Pharmacy_.
+- Transfers ("transferred 100 from checking to savings") get no payee at all — both
+  sides are your own accounts.
+
+Try phrases like "10 euros for tickets at Brumby's" or "Received 500 euros salary".
 
 ## Search
 

@@ -11,7 +11,12 @@
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import { parseEntitySearchTerms } from '$lib/utils/entitySearch';
 	import { buildLooseTransactionConditions } from '$lib/services/entitySearchService';
-	import { type ParseResult, parseTranscript, buildTransaction, refineFromMatches } from '$lib/utils/nlpEntry';
+	import {
+		type ParseResult,
+		parseTranscript,
+		buildTransaction,
+		refineFromMatches
+	} from '$lib/utils/nlpEntry';
 	import { CodeIcon, FilePlusIcon, TriangleAlertIcon } from '@lucide/svelte';
 	import HelpButton from '$lib/help/HelpButton.svelte';
 
@@ -20,7 +25,7 @@
 	}
 
 	const NLP_EXAMPLES = [
-		'10 euros for Decathlon, t-shirt',
+		"10 euros for tickets at Brumby's",
 		'Paid 25 euros at Starbucks',
 		'Received 500 euros salary',
 		'Transferred 100 euros from checking to savings'
@@ -130,7 +135,6 @@
 		}
 	});
 
-
 	/** Runs a single "any posting/payee/narration in this transaction satisfies `clause`" query,
 	 *  returning its matching transaction ids in date-descending row order (deduped). */
 	async function idsMatchingClause(clause: string): Promise<number[]> {
@@ -218,7 +222,10 @@
 					error = (detailResult.errors[0] as { message: string }).message;
 					templates = [];
 				} else {
-					templates = buildTemplates(detailResult.columns ?? [], (detailResult.rows ?? []) as unknown[][]);
+					templates = buildTemplates(
+						detailResult.columns ?? [],
+						(detailResult.rows ?? []) as unknown[][]
+					);
 				}
 			}
 			hasSearched = true;
@@ -310,8 +317,7 @@
 			const conditions = [`date = ${template.date}`, `narration = "${origNarration}"`];
 			if (origPayee) conditions.push(`payee = "${origPayee}"`);
 
-			const fetchQuery =
-				`SELECT account, number, currency WHERE ${conditions.join(' AND ')}`;
+			const fetchQuery = `SELECT account, number, currency WHERE ${conditions.join(' AND ')}`;
 			const result = await fullLedgerService.query(fetchQuery);
 
 			let postings: Posting[];
@@ -459,8 +465,8 @@
 								<button
 									type="button"
 									class="text-left opacity-70 hover:opacity-100 hover:underline"
-									onclick={() => useExample(phrase)}
-								>"{phrase}"</button>
+									onclick={() => useExample(phrase)}>"{phrase}"</button
+								>
 							</li>
 						{/each}
 					</ul>
@@ -534,7 +540,8 @@
 		<div class="modal-box flex flex-col gap-3">
 			<h3 class="font-bold text-lg">Last BQL Query</h3>
 			{#if lastQuery}
-				<pre class="bg-base-200 rounded p-3 text-xs overflow-x-auto whitespace-pre-wrap break-all">{lastQuery}</pre>
+				<pre
+					class="bg-base-200 rounded p-3 text-xs overflow-x-auto whitespace-pre-wrap break-all">{lastQuery}</pre>
 				<button
 					type="button"
 					class="btn btn-sm {copySuccess ? 'btn-success' : 'btn-outline'} self-start"
@@ -543,7 +550,9 @@
 					{copySuccess ? 'Copied!' : 'Copy'}
 				</button>
 			{:else}
-				<p class="text-sm text-base-content/60">No query run yet — type something to search first.</p>
+				<p class="text-sm text-base-content/60">
+					No query run yet — type something to search first.
+				</p>
 			{/if}
 			<div class="modal-action mt-0">
 				<button type="button" class="btn" onclick={() => queryDialog?.close()}>Close</button>
