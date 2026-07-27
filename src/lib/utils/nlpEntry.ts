@@ -413,7 +413,7 @@ export function buildTransaction(result: ParseResult): Xact {
 
 	const posting1 = new Posting();
 	posting1.account = result.toAccount ?? 'Expenses:Unknown';
-	posting1.amount = result.amount;
+	posting1.amount = result.amount ?? 0;
 	posting1.currency = result.currency ?? 'EUR';
 
 	const posting2 = new Posting();
