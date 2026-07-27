@@ -14,7 +14,8 @@
 		[HomeCardNames.JOURNAL]: 'Journal',
 		[HomeCardNames.SCHEDULED]: 'Scheduled Transactions',
 		[HomeCardNames.EXPENSES]: 'Expenses',
-		[HomeCardNames.BUDGET]: 'Budget'
+		[HomeCardNames.BUDGET]: 'Budget',
+		[HomeCardNames.NET_WORTH]: 'Net Worth'
 	};
 
 	interface Item {

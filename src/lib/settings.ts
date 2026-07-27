@@ -77,6 +77,8 @@ export const SettingKeys = {
 	syncOpeningBalances: 'syncOpeningBalances',
 	// Home cards
 	visibleCards: 'homeCardNames',
+	// Net worth card period
+	netWorthPeriod: 'netWorth.period',
 	// Peer sync
 	peerRoom: 'peerRoom',
 	// Relay network used for peer discovery signaling — must match between

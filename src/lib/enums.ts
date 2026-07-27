@@ -9,7 +9,8 @@ export const HomeCardNames = {
 	JOURNAL: 'JournalCard',
 	SCHEDULED: 'ScheduledXactCard',
 	EXPENSES: 'ExpensesCard',
-	BUDGET: 'BudgetCard'
+	BUDGET: 'BudgetCard',
+	NET_WORTH: 'NetWorthCard'
 	// SYNC: 'SyncCard'
 } as const;
 

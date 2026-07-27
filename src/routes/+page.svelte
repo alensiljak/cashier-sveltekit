@@ -11,6 +11,7 @@
 	import ScheduledXactsCard from '$lib/components/ScheduledXactsCard.svelte';
 	import ExpensesCard from '$lib/components/ExpensesCard.svelte';
 	import BudgetCard from '$lib/components/BudgetCard.svelte';
+	import NetWorthCard from '$lib/components/NetWorthCard.svelte';
 	import { onMount, type Component } from 'svelte';
 	import Fab from '$lib/components/FAB.svelte';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
@@ -65,12 +66,15 @@
 				case HomeCardNames.EXPENSES:
 					card = ExpensesCard;
 					break;
-				case HomeCardNames.BUDGET:
-					card = BudgetCard;
-					break;
-				// case HomeCardNames.SYNC:
-				// 	card = SyncCard;
-				// 	break;
+			case HomeCardNames.BUDGET:
+				card = BudgetCard;
+				break;
+			case HomeCardNames.NET_WORTH:
+				card = NetWorthCard;
+				break;
+			// case HomeCardNames.SYNC:
+			// 	card = SyncCard;
+			// 	break;
 			}
 			if (card) {
 				cards.push(card);
