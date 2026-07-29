@@ -147,11 +147,12 @@ class LedgerService {
 	 * Parses cashier.bean independently, locates the span by startLine,
 	 * splices in the new text, sorts by date, writes back, and invalidates.
 	 */
-	async editTransaction(span: DirectiveSpan, newBeancountText: string): Promise<void> {
+	async editTransaction(span: DirectiveSpan, newBeancountText: string): Promise<number> {
 		await ensureInitialized();
 		const source = (await opfslib.readFile(CASHIER_XACT_FILE)) ?? '';
 		const tempLedger = createParsedLedger(source);
 		if (!tempLedger) throw new Error('Failed to parse cashier.bean');
+		let newLine1Based = span.startLine + 1; // fallback: original position (1-based)
 		try {
 			const spans = mapDirectiveSpans(source, tempLedger);
 			const idx = spans.findIndex((s) => s.startLine === span.startLine);
@@ -163,11 +164,18 @@ class LedgerService {
 			let updated = replaceDirectiveBySpan(source, spans, idx, newBeancountText.trimEnd());
 			updated = await this._sortSource(updated);
 			await opfslib.saveFile(CASHIER_XACT_FILE, updated);
+			// Find the new position of the edited transaction in the sorted output.
+			// _sortSource preserves sourceText verbatim, so indexOf is exact.
+			const charIdx = updated.indexOf(newBeancountText.trimEnd());
+			if (charIdx >= 0) {
+				newLine1Based = updated.slice(0, charIdx).split('\n').length;
+			}
 		} finally {
 			tempLedger.free();
 		}
 		await this.invalidate();
 		scheduleBackup();
+		return newLine1Based;
 	}
 
 	/**

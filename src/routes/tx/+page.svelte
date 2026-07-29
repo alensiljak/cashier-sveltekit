@@ -24,7 +24,7 @@
 		xactSpan.set(undefined);
 	}
 
-	let previousPage: string = base;
+	let previousUrl: URL | null = null;
 
 	interface ValidationIssue {
 		kind: 'error' | 'warning';
@@ -35,7 +35,7 @@
 	let validationDialog: HTMLDialogElement | undefined;
 
 	afterNavigate(({ from }) => {
-		previousPage = from?.url?.pathname || previousPage;
+		if (from?.url) previousUrl = from.url;
 	});
 
 	async function onFab() {
@@ -52,16 +52,24 @@
 		const span = get(xactSpan);
 
 		if (span) {
-			await ledgerService.editTransaction(span, beancountText);
+			const newLine = await ledgerService.editTransaction(span, beancountText);
+			xactSpan.set(undefined);
+			fullLedgerService.invalidate();
+			// If we came from the detail page, navigate back with the refreshed line
+			// number — the file was re-sorted so the old line is stale.
+			if (previousUrl?.pathname.endsWith('/tx/detail')) {
+				const params = new URLSearchParams(previousUrl.search);
+				params.set('line', String(newLine));
+				await goto(`/tx/detail?${params}`);
+			} else {
+				history.back();
+			}
 		} else {
 			await ledgerService.appendTransaction(beancountText);
+			xactSpan.set(undefined);
+			fullLedgerService.invalidate();
+			history.back();
 		}
-		xactSpan.set(undefined);
-
-		// Re-parse the full book in the background — cards show a loading indicator.
-		fullLedgerService.invalidate();
-
-		history.back();
 	}
 
 	function checkBalance(tx: Xact): ValidationIssue[] {
