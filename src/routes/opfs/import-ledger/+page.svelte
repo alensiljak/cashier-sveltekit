@@ -319,7 +319,7 @@
 		{/snippet}
 	</Toolbar>
 
-	<div class="flex-1 overflow-y-auto touch-pan-y p-4 flex flex-col gap-4">
+	<div class="flex-1 overflow-y-auto touch-pan-y p-4 flex flex-col gap-4 mx-auto max-w-2xl w-full">
 
 		<!-- Directory picker -->
 		<section class="flex flex-col gap-2">
