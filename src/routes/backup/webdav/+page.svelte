@@ -6,7 +6,6 @@
 	import { ScheduledTransaction, Setting } from '$lib/data/model';
 	import db from '$lib/data/db';
 	import { readFile, saveFile, getFileMetadata } from '$lib/utils/opfslib';
-	import { normalizeEol } from '$lib/sync/SyncSource';
 	import Notifier from '$lib/utils/notifier';
 	import { WebDavClient } from '$lib/utils/webdav';
 	import {
@@ -21,11 +20,14 @@
 	} from '@lucide/svelte';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import { goto } from '$app/navigation';
-	import { lastBackupTime } from '$lib/services/webdavAutoBackupService';
+	import {
+		lastBackupTime,
+		contentHash,
+		type SyncRecord,
+		type WebDavLastSyncTs as LastSyncTs
+	} from '$lib/services/webdavAutoBackupService';
 	import { requestNotificationPermission } from '$lib/utils/webNotification';
 
-	type SyncRecord = string | { remoteTs: string; localHash: string };
-	type LastSyncTs = { settings: string | null; cashierBean: SyncRecord | null; scheduled: string | null };
 	type SyncDirection = 'up' | 'down' | 'conflict' | null;
 
 	let includeSettings = $state(false);
@@ -45,17 +47,6 @@
 	let scheduledLastModified = $state<Date | null>(null);
 	let autoBackupEnabled = $state(false);
 	let lastSyncTs = $state<LastSyncTs>({ settings: null, cashierBean: null, scheduled: null });
-
-	/** SHA-256 hex of EOL-normalised content — same normalization as peer-sync hashing. */
-	async function contentHash(content: string): Promise<string> {
-		const digest = await crypto.subtle.digest(
-			'SHA-256',
-			new TextEncoder().encode(normalizeEol(content))
-		);
-		return Array.from(new Uint8Array(digest))
-			.map((b) => b.toString(16).padStart(2, '0'))
-			.join('');
-	}
 
 	/** Remote timestamp from a baseline record (supports legacy plain-string or new object form). */
 	function baseRemoteTs(r: SyncRecord | null): Date | null {

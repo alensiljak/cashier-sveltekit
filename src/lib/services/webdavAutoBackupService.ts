@@ -9,6 +9,7 @@
  */
 
 import { readFile } from '$lib/utils/opfslib';
+import { normalizeEol } from '$lib/sync/SyncSource';
 import { WebDavClient } from '$lib/utils/webdav';
 import { settings, deviceSettings, SettingKeys, DeviceSettingKeys } from '$lib/settings';
 import { writable } from 'svelte/store';
@@ -19,6 +20,40 @@ export interface WebDavSettings {
 	url: string;
 	username: string;
 	password: string;
+}
+
+/**
+ * Baseline record persisted in DeviceSettingKeys.webdavLastSyncTs.
+ * Stored as `{ remoteTs, localHash }` after any sync; legacy plain ISO strings
+ * are accepted and treated as having no local hash (timestamp-only baseline).
+ */
+export type SyncRecord = string | { remoteTs: string; localHash: string };
+export interface WebDavLastSyncTs {
+	settings: string | null;
+	cashierBean: SyncRecord | null;
+	scheduled: string | null;
+}
+
+/** SHA-256 hex of EOL-normalised content — consistent with peer-sync hashing. */
+export async function contentHash(content: string): Promise<string> {
+	const digest = await crypto.subtle.digest(
+		'SHA-256',
+		new TextEncoder().encode(normalizeEol(content))
+	);
+	return Array.from(new Uint8Array(digest))
+		.map((b) => b.toString(16).padStart(2, '0'))
+		.join('');
+}
+
+/** Updates the cashierBean baseline after any successful upload (manual or auto). */
+export async function updateCashierBeanBaseline(
+	content: string,
+	remoteTs: Date
+): Promise<void> {
+	const stored = await deviceSettings.get<WebDavLastSyncTs>(DeviceSettingKeys.webdavLastSyncTs);
+	const baseline: WebDavLastSyncTs = stored ?? { settings: null, cashierBean: null, scheduled: null };
+	baseline.cashierBean = { remoteTs: remoteTs.toISOString(), localHash: await contentHash(content) };
+	await deviceSettings.set(DeviceSettingKeys.webdavLastSyncTs, baseline);
 }
 
 /** Reactive timestamp of the most recent successful auto-backup (null = never). */
@@ -46,6 +81,10 @@ async function doBackup(): Promise<void> {
 		if (res.ok) {
 			lastBackupTime.set(new Date());
 			void showBackupNotification();
+			// Update the sync baseline so the backup page doesn't show a stale conflict.
+			// HEAD the file to get the server-assigned Last-Modified timestamp.
+			const remoteTs = await client.lastModified('cashier.bean');
+			if (remoteTs) void updateCashierBeanBaseline(content, remoteTs);
 		} else {
 			console.warn(`[webdav-auto-backup] PUT failed: ${res.status} ${res.statusText}`);
 		}
