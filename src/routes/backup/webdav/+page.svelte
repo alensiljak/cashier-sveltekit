@@ -18,6 +18,10 @@
 		ArrowDownIcon,
 		XIcon
 	} from '@lucide/svelte';
+	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
+	import { goto } from '$app/navigation';
+	import { lastBackupTime } from '$lib/services/webdavAutoBackupService';
+	import { requestNotificationPermission } from '$lib/utils/webNotification';
 
 	type LastSyncTs = { settings: string | null; cashierBean: string | null; scheduled: string | null };
 	type SyncDirection = 'up' | 'down' | 'conflict' | null;
