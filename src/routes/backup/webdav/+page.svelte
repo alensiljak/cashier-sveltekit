@@ -6,6 +6,7 @@
 	import { ScheduledTransaction, Setting } from '$lib/data/model';
 	import db from '$lib/data/db';
 	import { readFile, saveFile, getFileMetadata } from '$lib/utils/opfslib';
+	import { normalizeEol } from '$lib/sync/SyncSource';
 	import Notifier from '$lib/utils/notifier';
 	import { WebDavClient } from '$lib/utils/webdav';
 	import {
@@ -23,7 +24,8 @@
 	import { lastBackupTime } from '$lib/services/webdavAutoBackupService';
 	import { requestNotificationPermission } from '$lib/utils/webNotification';
 
-	type LastSyncTs = { settings: string | null; cashierBean: string | null; scheduled: string | null };
+	type SyncRecord = string | { remoteTs: string; localHash: string };
+	type LastSyncTs = { settings: string | null; cashierBean: SyncRecord | null; scheduled: string | null };
 	type SyncDirection = 'up' | 'down' | 'conflict' | null;
 
 	let includeSettings = $state(false);
@@ -39,25 +41,58 @@
 	let settingsLastModified = $state<Date | null>(null);
 	let cashierBeanLastModified = $state<Date | null>(null);
 	let cashierBeanLocalLastModified = $state<Date | null>(null);
+	let cashierBeanLocalHash = $state<string | null>(null);
 	let scheduledLastModified = $state<Date | null>(null);
 	let autoBackupEnabled = $state(false);
 	let lastSyncTs = $state<LastSyncTs>({ settings: null, cashierBean: null, scheduled: null });
 
-	// cashier.bean: full conflict detection via lastSyncTs baseline; falls back to simple comparison
+	/** SHA-256 hex of EOL-normalised content — same normalization as peer-sync hashing. */
+	async function contentHash(content: string): Promise<string> {
+		const digest = await crypto.subtle.digest(
+			'SHA-256',
+			new TextEncoder().encode(normalizeEol(content))
+		);
+		return Array.from(new Uint8Array(digest))
+			.map((b) => b.toString(16).padStart(2, '0'))
+			.join('');
+	}
+
+	/** Remote timestamp from a baseline record (supports legacy plain-string or new object form). */
+	function baseRemoteTs(r: SyncRecord | null): Date | null {
+		if (!r) return null;
+		const ts = typeof r === 'string' ? r : r.remoteTs;
+		return new Date(ts);
+	}
+
+	/** Local hash stored at last sync, or null if the record pre-dates hash storage. */
+	function baseLocalHash(r: SyncRecord | null): string | null {
+		if (!r || typeof r === 'string') return null;
+		return r.localHash;
+	}
+
+	// cashier.bean: local change detected via content hash (not mtime) to avoid false conflicts
+	// when upload/download resets the remote timestamp but OPFS mtime diverges from it.
+	// Remote change still uses timestamp — fetching remote content just to hash it on every
+	// status check is too expensive.
 	const cashierBeanDirection = $derived.by<SyncDirection>(() => {
 		const remote = cashierBeanLastModified;
-		const local = cashierBeanLocalLastModified;
-		if (!remote && !local) return null;
-		const base = lastSyncTs.cashierBean ? new Date(lastSyncTs.cashierBean) : null;
-		if (base) {
-			const localChanged = local != null && local > base;
-			const remoteChanged = remote != null && remote > base;
+		const localHash = cashierBeanLocalHash;
+		if (!remote && !localHash) return null;
+		const baseRecord = lastSyncTs.cashierBean;
+		const baseTs = baseRemoteTs(baseRecord);
+		const baseHash = baseLocalHash(baseRecord);
+		if (baseTs) {
+			const localChanged = baseHash
+				? localHash != null && localHash !== baseHash
+				: cashierBeanLocalLastModified != null && cashierBeanLocalLastModified > baseTs;
+			const remoteChanged = remote != null && remote > baseTs;
 			if (localChanged && remoteChanged) return 'conflict';
 			if (localChanged) return 'up';
 			if (remoteChanged) return 'down';
 			return null;
 		}
-		// No baseline: simple comparison
+		// No baseline yet: fall back to simple timestamp comparison
+		const local = cashierBeanLocalLastModified;
 		if (!remote) return local ? 'up' : null;
 		if (!local) return 'down';
 		if (local > remote) return 'up';
@@ -123,6 +158,10 @@
 			const localMeta = await getFileMetadata('cashier.bean');
 			if (localMeta) cashierBeanLocalLastModified = new Date(localMeta.lastModified);
 
+			// Hash local content for accurate change detection (avoids false conflicts from mtime skew)
+			const localContent = await readFile('cashier.bean');
+			cashierBeanLocalHash = localContent !== undefined ? await contentHash(localContent) : null;
+
 			if (!webdavUrl) return;
 			const dav = client();
 			const [sm, cm, scm] = await Promise.allSettled([
@@ -158,6 +197,7 @@
 		isUploading = true;
 		const dav = client();
 		const uploaded = { settings: false, cashierBean: false, scheduled: false };
+		let uploadedBeanContent: string | undefined;
 		try {
 			if (includeSettings) {
 				const allSettings = await settings.getAll();
@@ -171,9 +211,12 @@
 				if (content === undefined) {
 					Notifier.error('cashier.bean not found in private filesystem');
 				} else {
-					const res = await dav.put('cashier.bean', content);
-					if (res.ok) { Notifier.success('cashier.bean uploaded'); uploaded.cashierBean = true; }
-					else Notifier.error(`Upload failed for cashier.bean: ${res.status} ${res.statusText}`);
+				const res = await dav.put('cashier.bean', content);
+				if (res.ok) {
+					Notifier.success('cashier.bean uploaded');
+					uploaded.cashierBean = true;
+					uploadedBeanContent = content;
+				} else Notifier.error(`Upload failed for cashier.bean: ${res.status} ${res.statusText}`);
 				}
 			}
 			if (includeScheduled) {
@@ -188,11 +231,15 @@
 		} finally {
 			isUploading = false;
 			await fetchLastModified();
-			// Record fresh remote timestamps as the new sync baseline for uploaded files
+			// Record fresh remote timestamps as the new sync baseline for uploaded files.
+			// cashier.bean uses a hash-based record to avoid false conflicts from mtime skew.
 			if (uploaded.settings && settingsLastModified)
 				lastSyncTs.settings = settingsLastModified.toISOString();
-			if (uploaded.cashierBean && cashierBeanLastModified)
-				lastSyncTs.cashierBean = cashierBeanLastModified.toISOString();
+			if (uploaded.cashierBean && cashierBeanLastModified && uploadedBeanContent !== undefined)
+				lastSyncTs.cashierBean = {
+					remoteTs: cashierBeanLastModified.toISOString(),
+					localHash: await contentHash(uploadedBeanContent)
+				};
 			if (uploaded.scheduled && scheduledLastModified)
 				lastSyncTs.scheduled = scheduledLastModified.toISOString();
 			if (uploaded.settings || uploaded.cashierBean || uploaded.scheduled)
@@ -213,6 +260,7 @@
 		isDownloading = true;
 		const dav = client();
 		const downloaded = { settings: false, cashierBean: false, scheduled: false };
+		let downloadedBeanContent: string | undefined;
 		try {
 			if (includeSettings) {
 				const res = await dav.get('settings.json');
@@ -229,7 +277,9 @@
 			if (includeCashierBean) {
 				const res = await dav.get('cashier.bean');
 				if (res.ok) {
-					await saveFile('cashier.bean', await res.text());
+					const text = await res.text();
+					await saveFile('cashier.bean', text);
+					downloadedBeanContent = text;
 					Notifier.success('cashier.bean restored');
 					downloaded.cashierBean = true;
 				} else {
@@ -252,11 +302,15 @@
 			Notifier.error('Download error: ' + (err as Error).message);
 		} finally {
 			isDownloading = false;
-			// Record the remote timestamps we just downloaded as the new sync baseline
+			// Record the remote timestamps we just downloaded as the new sync baseline.
+			// cashier.bean uses a hash-based record to avoid false conflicts from mtime skew.
 			if (downloaded.settings && settingsLastModified)
 				lastSyncTs.settings = settingsLastModified.toISOString();
-			if (downloaded.cashierBean && cashierBeanLastModified)
-				lastSyncTs.cashierBean = cashierBeanLastModified.toISOString();
+			if (downloaded.cashierBean && cashierBeanLastModified && downloadedBeanContent !== undefined)
+				lastSyncTs.cashierBean = {
+					remoteTs: cashierBeanLastModified.toISOString(),
+					localHash: await contentHash(downloadedBeanContent)
+				};
 			if (downloaded.scheduled && scheduledLastModified)
 				lastSyncTs.scheduled = scheduledLastModified.toISOString();
 			if (downloaded.settings || downloaded.cashierBean || downloaded.scheduled)
