@@ -118,7 +118,10 @@ export const DeviceSettingKeys = {
 	// OPFS file metadata snapshot for staleness detection (path -> "size|lastModified")
 	ledgerMetaSnapshot: 'ledger.metaSnapshot',
 	// Auto-upload cashier.bean to WebDAV after each write
-	webdavAutoBackup: 'webdav-auto-backup'
+	webdavAutoBackup: 'webdav-auto-backup',
+	// Per-file remote timestamps at last successful WebDAV upload or download
+	// Shape: { settings: ISO | null, cashierBean: ISO | null, scheduled: ISO | null }
+	webdavLastSyncTs: 'webdav-last-sync-ts'
 };
 
 class UserSettings {

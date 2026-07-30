@@ -13,13 +13,14 @@
 		RefreshCwIcon,
 		GitCompareArrowsIcon,
 		EyeIcon,
-		CloudUploadIcon,
-		CloudIcon
+		CloudIcon,
+		ArrowUpIcon,
+		ArrowDownIcon,
+		XIcon
 	} from '@lucide/svelte';
-	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
-	import { goto } from '$app/navigation';
-	import { lastBackupTime } from '$lib/services/webdavAutoBackupService';
-	import { requestNotificationPermission } from '$lib/utils/webNotification';
+
+	type LastSyncTs = { settings: string | null; cashierBean: string | null; scheduled: string | null };
+	type SyncDirection = 'up' | 'down' | 'conflict' | null;
 
 	let includeSettings = $state(false);
 	let includeCashierBean = $state(false);
@@ -36,11 +37,40 @@
 	let cashierBeanLocalLastModified = $state<Date | null>(null);
 	let scheduledLastModified = $state<Date | null>(null);
 	let autoBackupEnabled = $state(false);
+	let lastSyncTs = $state<LastSyncTs>({ settings: null, cashierBean: null, scheduled: null });
 
-	const cashierBeanNeedsBackup = $derived(
-		cashierBeanLocalLastModified !== null &&
-			(cashierBeanLastModified === null || cashierBeanLocalLastModified > cashierBeanLastModified)
-	);
+	// cashier.bean: full conflict detection via lastSyncTs baseline; falls back to simple comparison
+	const cashierBeanDirection = $derived<SyncDirection>(() => {
+		const remote = cashierBeanLastModified;
+		const local = cashierBeanLocalLastModified;
+		if (!remote && !local) return null;
+		const base = lastSyncTs.cashierBean ? new Date(lastSyncTs.cashierBean) : null;
+		if (base) {
+			const localChanged = local != null && local > base;
+			const remoteChanged = remote != null && remote > base;
+			if (localChanged && remoteChanged) return 'conflict';
+			if (localChanged) return 'up';
+			if (remoteChanged) return 'down';
+			return null;
+		}
+		// No baseline: simple comparison
+		if (!remote) return local ? 'up' : null;
+		if (!local) return 'down';
+		if (local > remote) return 'up';
+		if (remote > local) return 'down';
+		return null;
+	});
+
+	// settings/scheduled: no local timestamp — only detect remote changed since last sync
+	const settingsDirection = $derived<SyncDirection>(() => {
+		if (!settingsLastModified || !lastSyncTs.settings) return null;
+		return settingsLastModified > new Date(lastSyncTs.settings) ? 'down' : null;
+	});
+
+	const scheduledDirection = $derived<SyncDirection>(() => {
+		if (!scheduledLastModified || !lastSyncTs.scheduled) return null;
+		return scheduledLastModified > new Date(lastSyncTs.scheduled) ? 'down' : null;
+	});
 
 	const noneSelected = $derived(!includeSettings && !includeCashierBean && !includeScheduled);
 	const allSelected = $derived(includeSettings && includeCashierBean && includeScheduled);
@@ -66,8 +96,14 @@
 		webdavPassword = saved?.password ?? '';
 		autoBackupEnabled =
 			(await deviceSettings.get<boolean>(DeviceSettingKeys.webdavAutoBackup)) ?? false;
+		const storedSyncTs = await deviceSettings.get<LastSyncTs>(DeviceSettingKeys.webdavLastSyncTs);
+		if (storedSyncTs) lastSyncTs = storedSyncTs;
 		fetchLastModified();
 	});
+
+	async function saveLastSyncTs() {
+		await deviceSettings.set(DeviceSettingKeys.webdavLastSyncTs, { ...lastSyncTs });
+	}
 
 	async function toggleAutoBackup() {
 		autoBackupEnabled = !autoBackupEnabled;
@@ -117,12 +153,13 @@
 		}
 		isUploading = true;
 		const dav = client();
+		const uploaded = { settings: false, cashierBean: false, scheduled: false };
 		try {
 			if (includeSettings) {
 				const allSettings = await settings.getAll();
 				const json = JSON.stringify(allSettings, null, 2);
 				const res = await dav.put('settings.json', json, 'application/json; charset=utf-8');
-				if (res.ok) Notifier.success('Settings uploaded');
+				if (res.ok) { Notifier.success('Settings uploaded'); uploaded.settings = true; }
 				else Notifier.error(`Upload failed for settings.json: ${res.status} ${res.statusText}`);
 			}
 			if (includeCashierBean) {
@@ -131,7 +168,7 @@
 					Notifier.error('cashier.bean not found in private filesystem');
 				} else {
 					const res = await dav.put('cashier.bean', content);
-					if (res.ok) Notifier.success('cashier.bean uploaded');
+					if (res.ok) { Notifier.success('cashier.bean uploaded'); uploaded.cashierBean = true; }
 					else Notifier.error(`Upload failed for cashier.bean: ${res.status} ${res.statusText}`);
 				}
 			}
@@ -139,14 +176,23 @@
 				const all = await db.scheduled.toArray();
 				const json = JSON.stringify(all, null, 2);
 				const res = await dav.put('scheduled.json', json, 'application/json; charset=utf-8');
-				if (res.ok) Notifier.success('Scheduled transactions uploaded');
+				if (res.ok) { Notifier.success('Scheduled transactions uploaded'); uploaded.scheduled = true; }
 				else Notifier.error(`Upload failed for scheduled.json: ${res.status} ${res.statusText}`);
 			}
 		} catch (err) {
 			Notifier.error('Upload error: ' + (err as Error).message);
 		} finally {
 			isUploading = false;
-			fetchLastModified();
+			await fetchLastModified();
+			// Record fresh remote timestamps as the new sync baseline for uploaded files
+			if (uploaded.settings && settingsLastModified)
+				lastSyncTs.settings = settingsLastModified.toISOString();
+			if (uploaded.cashierBean && cashierBeanLastModified)
+				lastSyncTs.cashierBean = cashierBeanLastModified.toISOString();
+			if (uploaded.scheduled && scheduledLastModified)
+				lastSyncTs.scheduled = scheduledLastModified.toISOString();
+			if (uploaded.settings || uploaded.cashierBean || uploaded.scheduled)
+				await saveLastSyncTs();
 		}
 	}
 
@@ -162,6 +208,7 @@
 		}
 		isDownloading = true;
 		const dav = client();
+		const downloaded = { settings: false, cashierBean: false, scheduled: false };
 		try {
 			if (includeSettings) {
 				const res = await dav.get('settings.json');
@@ -170,6 +217,7 @@
 					await db.settings.clear();
 					await db.settings.bulkPut(entries.map((e) => new Setting(e.key, e.value)));
 					Notifier.success('Settings restored');
+					downloaded.settings = true;
 				} else {
 					Notifier.error(`Download failed for settings.json: ${res.status} ${res.statusText}`);
 				}
@@ -179,6 +227,7 @@
 				if (res.ok) {
 					await saveFile('cashier.bean', await res.text());
 					Notifier.success('cashier.bean restored');
+					downloaded.cashierBean = true;
 				} else {
 					Notifier.error(`Download failed for cashier.bean: ${res.status} ${res.statusText}`);
 				}
@@ -190,6 +239,7 @@
 					await db.scheduled.clear();
 					await db.scheduled.bulkPut(entries);
 					Notifier.success('Scheduled transactions restored');
+					downloaded.scheduled = true;
 				} else {
 					Notifier.error(`Download failed for scheduled.json: ${res.status} ${res.statusText}`);
 				}
@@ -198,6 +248,17 @@
 			Notifier.error('Download error: ' + (err as Error).message);
 		} finally {
 			isDownloading = false;
+			// Record the remote timestamps we just downloaded as the new sync baseline
+			if (downloaded.settings && settingsLastModified)
+				lastSyncTs.settings = settingsLastModified.toISOString();
+			if (downloaded.cashierBean && cashierBeanLastModified)
+				lastSyncTs.cashierBean = cashierBeanLastModified.toISOString();
+			if (downloaded.scheduled && scheduledLastModified)
+				lastSyncTs.scheduled = scheduledLastModified.toISOString();
+			if (downloaded.settings || downloaded.cashierBean || downloaded.scheduled)
+				await saveLastSyncTs();
+			// Refresh local metadata (cashier.bean was overwritten)
+			if (downloaded.cashierBean) fetchLastModified();
 		}
 	}
 
@@ -226,6 +287,41 @@
 
 {#snippet actions()}
 	<HelpButton topic="webdav-backup" />
+{/snippet}
+
+{#snippet syncBadge(remoteMod: Date | null, direction: SyncDirection)}
+	{#if remoteMod}
+		{@const isConflict = direction === 'conflict'}
+		{@const isUp = direction === 'up'}
+		{@const isDown = direction === 'down'}
+		<span
+			class="flex items-center gap-1 text-xs {isConflict
+				? 'text-error'
+				: isUp
+					? 'text-success'
+					: isDown
+						? 'text-error'
+						: 'text-base-content/50'}"
+			title={isConflict
+				? 'Conflict — both local and remote changed since last sync'
+				: isUp
+					? 'Local is newer — consider uploading'
+					: isDown
+						? 'Remote is newer — consider downloading'
+						: 'Remote timestamp'}
+		>
+			{#if isConflict}
+				<XIcon size={12} />
+			{:else if isUp}
+				<ArrowUpIcon size={12} />
+			{:else if isDown}
+				<ArrowDownIcon size={12} />
+			{:else}
+				<CloudIcon size={12} class="text-base-content/40" />
+			{/if}
+			{remoteMod.toLocaleString()}
+		</span>
+	{/if}
 {/snippet}
 
 <Toolbar title="WebDAV Backup" {menuItems} {actions} />
@@ -273,46 +369,17 @@
 					bind:checked={includeCashierBean}
 				/>
 				<span class="flex-1">cashier.bean</span>
-				{#if cashierBeanNeedsBackup}
-					<span title="Local file has changes not yet backed up">
-						<CloudUploadIcon size={14} class="text-warning" />
-					</span>
-				{/if}
-				{#if cashierBeanLastModified}
-					<span
-						class="flex items-center gap-1 text-xs text-base-content/50"
-						title="Remote timestamp"
-					>
-						<CloudIcon size={12} class="text-base-content/40" />
-						{cashierBeanLastModified.toLocaleString()}
-					</span>
-				{/if}
+				{@render syncBadge(cashierBeanLastModified, cashierBeanDirection)}
 			</label>
 			<label class="flex items-center gap-3 cursor-pointer">
 				<input type="checkbox" class="checkbox checkbox-primary" bind:checked={includeSettings} />
 				<span class="flex-1">Settings</span>
-				{#if settingsLastModified}
-					<span
-						class="flex items-center gap-1 text-xs text-base-content/50"
-						title="Remote timestamp"
-					>
-						<CloudIcon size={12} class="text-base-content/40" />
-						{settingsLastModified.toLocaleString()}
-					</span>
-				{/if}
+				{@render syncBadge(settingsLastModified, settingsDirection)}
 			</label>
 			<label class="flex items-center gap-3 cursor-pointer">
 				<input type="checkbox" class="checkbox checkbox-primary" bind:checked={includeScheduled} />
 				<span class="flex-1">Scheduled Transactions</span>
-				{#if scheduledLastModified}
-					<span
-						class="flex items-center gap-1 text-xs text-base-content/50"
-						title="Remote timestamp"
-					>
-						<CloudIcon size={12} class="text-base-content/40" />
-						{scheduledLastModified.toLocaleString()}
-					</span>
-				{/if}
+				{@render syncBadge(scheduledLastModified, scheduledDirection)}
 			</label>
 		</div>
 	</section>
