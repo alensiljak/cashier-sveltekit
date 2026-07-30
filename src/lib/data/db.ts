@@ -23,6 +23,7 @@ interface CashierDatabase extends Dexie {
 	deviceSettings: Table;
 	peers: Table;
 	peerSyncBaseline: Table;
+	fsHandles: Table;
 	// xacts: Table;
 }
 
@@ -104,6 +105,52 @@ db.version(6).stores({
 	peers: 'id',
 	peerSyncBaseline: '[endpointId+path]'
 });
+
+db.version(7)
+	.stores({
+		scheduled: '++id, nextDate',
+		settings: 'key',
+		deviceSettings: 'key',
+		peers: 'id',
+		peerSyncBaseline: '[endpointId+path]',
+		fsHandles: 'key'
+	})
+	.upgrade(async (tx) => {
+		// Migrate from the separate cashier-fs-handles IndexedDB database
+		const oldDbName = 'cashier-fs-handles';
+		const oldStoreName = 'handles';
+
+		const migrationPromise = new Promise<void>((resolve, reject) => {
+			const req = indexedDB.open(oldDbName);
+			req.onupgradeneeded = () => {};
+			req.onsuccess = () => {
+				const oldDb = req.result;
+				const txOld = oldDb.transaction(oldStoreName, 'readonly');
+				const store = txOld.objectStore(oldStoreName);
+				const getAllReq = store.getAll();
+
+				getAllReq.onsuccess = async () => {
+					const allHandles = getAllReq.result;
+					for (const handle of allHandles) {
+						const key = handle.key;
+						const value = handle.value;
+						if (key !== undefined && value !== undefined) {
+							await tx.table('fsHandles').put(value, key);
+						}
+					}
+					oldDb.close();
+					resolve();
+				};
+				getAllReq.onerror = () => {
+					oldDb.close();
+					reject(getAllReq.error);
+				};
+			};
+			req.onerror = () => reject(req.error);
+		});
+
+		return migrationPromise;
+	});
 
 // Mappings
 
