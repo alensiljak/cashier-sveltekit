@@ -153,11 +153,14 @@ db.version(7)
 	});
 
 // v7 created fsHandles with keyPath 'key', but FileSystemDirectoryHandle has no
-// .key property — IDB throws DataError on every put. Fix: out-of-line key ('').
-// Dexie recreates the object store automatically when the keyPath changes.
-// Existing handle data is lost, but handles are ephemeral per-session references
-// that require re-granting permission anyway.
+// .key property → DataError on every put. Dexie can't change primary key in one
+// step, so: v8 drops the table, v9 recreates it with out-of-line keys ('').
+// Handles are ephemeral (require re-granting permission anyway), so data loss is fine.
 db.version(8).stores({
+	fsHandles: null
+});
+
+db.version(9).stores({
 	fsHandles: ''
 });
 
