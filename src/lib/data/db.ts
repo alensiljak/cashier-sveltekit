@@ -152,6 +152,15 @@ db.version(7)
 		return migrationPromise;
 	});
 
+// v7 created fsHandles with keyPath 'key', but FileSystemDirectoryHandle has no
+// .key property — IDB throws DataError on every put. Fix: out-of-line key ('').
+// Dexie recreates the object store automatically when the keyPath changes.
+// Existing handle data is lost, but handles are ephemeral per-session references
+// that require re-granting permission anyway.
+db.version(8).stores({
+	fsHandles: ''
+});
+
 // Mappings
 
 db.settings.mapToClass(Setting);
