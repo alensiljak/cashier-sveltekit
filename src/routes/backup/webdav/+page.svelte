@@ -44,7 +44,7 @@
 	let lastSyncTs = $state<LastSyncTs>({ settings: null, cashierBean: null, scheduled: null });
 
 	// cashier.bean: full conflict detection via lastSyncTs baseline; falls back to simple comparison
-	const cashierBeanDirection = $derived<SyncDirection>(() => {
+	const cashierBeanDirection = $derived.by<SyncDirection>(() => {
 		const remote = cashierBeanLastModified;
 		const local = cashierBeanLocalLastModified;
 		if (!remote && !local) return null;
@@ -66,12 +66,12 @@
 	});
 
 	// settings/scheduled: no local timestamp — only detect remote changed since last sync
-	const settingsDirection = $derived<SyncDirection>(() => {
+	const settingsDirection = $derived.by<SyncDirection>(() => {
 		if (!settingsLastModified || !lastSyncTs.settings) return null;
 		return settingsLastModified > new Date(lastSyncTs.settings) ? 'down' : null;
 	});
 
-	const scheduledDirection = $derived<SyncDirection>(() => {
+	const scheduledDirection = $derived.by<SyncDirection>(() => {
 		if (!scheduledLastModified || !lastSyncTs.scheduled) return null;
 		return scheduledLastModified > new Date(lastSyncTs.scheduled) ? 'down' : null;
 	});
