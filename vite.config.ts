@@ -20,7 +20,7 @@ const config: UserConfig = defineConfig({
 		host: '0.0.0.0',
 		// Ensure WASM files are served correctly in dev mode
 		fs: {
-			allow: ['..', path.resolve(__dirname, '..', '..', '..', 'node_modules')]
+			allow: ['..', path.resolve(import.meta.dirname, '..', '..', '..', 'node_modules')]
 			//strict: false,
 		}
 		// Needed when running in a container and using source files on the host.
