@@ -46,13 +46,17 @@ export async function contentHash(content: string): Promise<string> {
 }
 
 /** Updates the cashierBean baseline after any successful upload (manual or auto). */
-export async function updateCashierBeanBaseline(
-	content: string,
-	remoteTs: Date
-): Promise<void> {
+export async function updateCashierBeanBaseline(content: string, remoteTs: Date): Promise<void> {
 	const stored = await deviceSettings.get<WebDavLastSyncTs>(DeviceSettingKeys.webdavLastSyncTs);
-	const baseline: WebDavLastSyncTs = stored ?? { settings: null, cashierBean: null, scheduled: null };
-	baseline.cashierBean = { remoteTs: remoteTs.toISOString(), localHash: await contentHash(content) };
+	const baseline: WebDavLastSyncTs = stored ?? {
+		settings: null,
+		cashierBean: null,
+		scheduled: null
+	};
+	baseline.cashierBean = {
+		remoteTs: remoteTs.toISOString(),
+		localHash: await contentHash(content)
+	};
 	await deviceSettings.set(DeviceSettingKeys.webdavLastSyncTs, baseline);
 }
 
