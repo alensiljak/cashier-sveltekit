@@ -176,19 +176,19 @@
 		{:else}
 			<div class="container space-y-1 text-base">
 				{#each xacts as xact, index (index)}
-					<div class="border-base-content/15 flex space-x-2 border-b">
-						<time class="opacity-60">
-							{getReadableDate(xact.date ?? '', $ShortDateFormatStore)}
-						</time>
-						<div class="flex grow items-center gap-1">
-							{#if xact.flag === '!'}
-								<TriangleAlertIcon class="text-warning size-4 shrink-0" />
-							{/if}
-							{xact.payee}{#if xact.payee && xact.note}<span class="opacity-50"> · {xact.note}</span>{:else if xact.note}{xact.note}{/if}
-						</div>
-						<div class={`${getXactColour(index)}`}>
+					<div class="border-base-content/15 flow-root border-b py-1">
+						<div class={`float-right ml-2 shrink-0 text-right ${getXactColour(index)}`}>
 							{formatAmount(xactBalances[index].quantity)}
 							{xactBalances[index].currency}
+						</div>
+						<div class="pl-6" style="text-indent: -1.5rem">
+							<time class="opacity-60">
+								{getReadableDate(xact.date ?? '', $ShortDateFormatStore)}
+							</time>
+							{#if xact.flag === '!'}
+								<TriangleAlertIcon class="text-warning size-4 inline-block align-text-bottom" />
+							{/if}
+							{xact.payee}{#if xact.payee && xact.note}<span class="opacity-50"> · {xact.note}</span>{:else if xact.note}{xact.note}{/if}
 						</div>
 					</div>
 				{/each}
