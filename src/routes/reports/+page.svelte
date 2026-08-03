@@ -13,7 +13,10 @@
 		ScaleIcon,
 		ActivityIcon,
 		LineChartIcon,
-		PercentIcon
+		PercentIcon,
+
+		ChartLineIcon
+
 	} from '@lucide/svelte';
 </script>
 
@@ -62,7 +65,7 @@
 				Net Worth
 			</SquareButton>
 			<SquareButton
-				Icon={LineChartIcon}
+				Icon={ChartLineIcon}
 				classes="bg-primary text-accent"
 				onclick={() => goto('/reports/cost-vs-market')}
 			>
