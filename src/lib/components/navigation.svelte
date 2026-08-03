@@ -38,7 +38,10 @@
 		TerminalSquareIcon,
 		SearchIcon,
 		PinIcon,
-		PinOffIcon
+		PinOffIcon,
+
+		FileChartColumnIcon
+
 	} from '@lucide/svelte';
 
 	function closeDrawer(): void {
@@ -226,7 +229,7 @@
 						: ''}"
 					onclick={closeDrawer}
 				>
-					<ChartLineIcon />
+					<FileChartColumnIcon />
 					<span>Reports</span>
 				</a>
 			</li>
