@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { tick } from 'svelte';
 	import { goto } from '$app/navigation';
+	import DateNavigator from '$lib/components/DateNavigator.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import { SettingKeys, settings } from '$lib/settings';
@@ -349,16 +350,7 @@
 		{/snippet}
 	</Toolbar>
 
-	<div class="flex items-center gap-2 border-b border-base-300 px-4 py-2">
-		<label for="as-of-date" class="text-sm text-base-content/60">As of</label>
-		<input
-			id="as-of-date"
-			type="date"
-			class="input input-bordered input-sm"
-			bind:value={asOfDate}
-			onchange={loadData}
-		/>
-	</div>
+	<DateNavigator bind:value={asOfDate} onChange={loadData} disabled={isLoading} />
 
 	<div
 		class="flex items-center justify-end gap-0 border-b border-base-300 px-4 py-1 text-xs font-medium text-base-content/60"
