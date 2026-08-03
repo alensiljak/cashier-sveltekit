@@ -174,7 +174,7 @@
 		{#if xacts.length == 0}
 			<p>The device journal is empty</p>
 		{:else}
-			<div class="container space-y-1 text-base">
+			<div class="container text-base">
 				{#each xacts as xact, index (index)}
 					<div class="border-base-content/15 flow-root border-b py-1">
 						<div class={`float-right ml-2 shrink-0 text-right ${getXactColour(index)}`}>

@@ -1,22 +1,25 @@
 {
-	"env": {
-		"ENABLE_LSP_TOOL": "1"
-	},
-	"permissions": {
-		"allow": [
-			"mcp__serena__search_for_pattern",
-			"mcp__serena__activate_project",
-			"mcp__serena__find_file",
-			"mcp__serena__get_symbols_overview",
-			"mcp__serena__find_symbol",
-			"Read(//d/src/cashier-sveltekit/node_modules/@rustledger/wasm/**)",
-			"Read(//d/src/rustledger/crates/rustledger-wasm/pkg/**)"
-		],
-		"additionalDirectories": ["d:\\src\\cashier-sveltekit\\src\\lib"]
-	},
-	"enabledPlugins": {
-		"vtsls@claude-code-lsps": true,
-		"typescript-lsp@claude-plugins-official": true,
-		"pyright-lsp@claude-plugins-official": true
-	}
+  "env": {
+    "ENABLE_LSP_TOOL": "1"
+  },
+  "permissions": {
+    "allow": [
+      "mcp__serena__search_for_pattern",
+      "mcp__serena__activate_project",
+      "mcp__serena__find_file",
+      "mcp__serena__get_symbols_overview",
+      "mcp__serena__find_symbol",
+      "Read(//d/src/cashier-sveltekit/node_modules/@rustledger/wasm/**)",
+      "Read(//d/src/rustledger/crates/rustledger-wasm/pkg/**)",
+      "Bash(git -C d:/src/cashier-sveltekit log -p -1 116b56d -- src/lib/components/JournalCard.svelte)"
+    ],
+    "additionalDirectories": [
+      "d:\\src\\cashier-sveltekit\\src\\lib"
+    ]
+  },
+  "enabledPlugins": {
+    "vtsls@claude-code-lsps": true,
+    "typescript-lsp@claude-plugins-official": true,
+    "pyright-lsp@claude-plugins-official": true
+  }
 }
