@@ -12,9 +12,16 @@
 	import { ListSearch } from '$lib/utils/ListSearch';
 	import Notifier from '$lib/utils/notifier';
 	import { XactAugmenter } from '$lib/utils/xactAugmenter';
-	import { CalendarIcon, PackageIcon, PackageOpenIcon, PlusIcon, SearchIcon } from '@lucide/svelte';
+	import {
+		CalendarIcon,
+		CircleQuestionMarkIcon,
+		PackageIcon,
+		PackageOpenIcon,
+		PlusIcon,
+		SearchIcon
+	} from '@lucide/svelte';
 	import { slide } from 'svelte/transition';
-	import HelpButton from '$lib/help/HelpButton.svelte';
+	import HelpDialog from '$lib/help/HelpDialog.svelte';
 	import { onMount } from 'svelte';
 	import type { PageData } from './$types';
 
@@ -26,6 +33,7 @@
 	let allItems: ScheduledTransaction[] = $state([]);
 	let filteredList: ScheduledTransaction[] = $state([]);
 	let searchOpen = $state(false);
+	let helpOpen = $state(false);
 
 	onMount(async () => {
 		allItems = data.sorted;
@@ -89,6 +97,11 @@
 			<ToolbarMenuItem Icon={PackageIcon} text="Backup" targetNav="/export/scheduled" />
 			<ToolbarMenuItem Icon={PackageOpenIcon} text="Restore" targetNav="/restore/scheduled" />
 			<ToolbarMenuItem Icon={CalendarIcon} text="Calendar" targetNav="/scheduled-xacts/calendar" />
+			<ToolbarMenuItem
+				Icon={CircleQuestionMarkIcon}
+				text="Help"
+				onclick={() => (helpOpen = true)}
+			/>
 		{/snippet}
 		{#snippet actions()}
 			<button
@@ -99,9 +112,10 @@
 			>
 				<SearchIcon size={20} />
 			</button>
-			<HelpButton topic="scheduled-transactions" />
 		{/snippet}
 	</Toolbar>
+
+	<HelpDialog topic="scheduled-transactions" bind:isOpen={helpOpen} />
 	{#if searchOpen}
 		<div transition:slide={{ duration: 200 }}>
 			<SearchToolbar focus {onSearch} />
