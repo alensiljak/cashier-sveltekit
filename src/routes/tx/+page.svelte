@@ -8,7 +8,7 @@
 	import { afterNavigate, goto } from '$app/navigation';
 	import Notifier from '$lib/utils/notifier';
 	import ledgerService from '$lib/services/ledgerService';
-	import fullLedgerService from '$lib/services/ledgerWorkerClient';
+	import { reloadLedgerFromOpfs } from '$lib/services/ledgerReload';
 	import { xactToBeancountText } from '$lib/utils/xactUtils';
 	import { base } from '$app/paths';
 	import TransactionEditor from '$lib/components/XactEditor.svelte';
@@ -54,7 +54,7 @@
 		if (span) {
 			const newLine = await ledgerService.editTransaction(span, beancountText);
 			xactSpan.set(undefined);
-			fullLedgerService.invalidate();
+			await reloadLedgerFromOpfs();
 			// If we came from the detail page, navigate back with the refreshed line
 			// number — the file was re-sorted so the old line is stale.
 			if (previousUrl?.pathname.endsWith('/tx/detail')) {
@@ -67,7 +67,7 @@
 		} else {
 			await ledgerService.appendTransaction(beancountText);
 			xactSpan.set(undefined);
-			fullLedgerService.invalidate();
+			await reloadLedgerFromOpfs();
 			history.back();
 		}
 	}

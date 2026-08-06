@@ -17,7 +17,7 @@ import {
 	DEMO_AA_FILE,
 	DEMO_ROOT_INVESTMENT_ACCOUNT
 } from '$lib/constants';
-import fullLedgerService from './ledgerWorkerClient';
+import { reloadLedgerFromOpfs } from './ledgerReload';
 
 // Vite glob-imports the fixtures as raw strings, resolved at build time —
 // works offline, no runtime fetch. Same pattern as $lib/help/helpContent.ts.
@@ -57,7 +57,7 @@ class DemoDataService {
 			await settings.set(SettingKeys.currency, 'EUR');
 		}
 
-		await fullLedgerService.invalidate();
+		await reloadLedgerFromOpfs();
 	}
 
 	/**
@@ -82,7 +82,7 @@ class DemoDataService {
 		}
 
 		await OpfsLib.deleteDirectory(DEMO_DIR);
-		await fullLedgerService.invalidate();
+		await reloadLedgerFromOpfs();
 	}
 
 	/** True if the demo book is the currently-linked user book. */

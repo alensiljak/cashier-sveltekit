@@ -7,7 +7,7 @@
 	import { ScheduledTransaction, Xact } from '$lib/data/model';
 	import appService from '$lib/services/appService';
 	import ledgerService from '$lib/services/ledgerService';
-	import fullLedgerService from '$lib/services/ledgerWorkerClient';
+	import { reloadLedgerFromOpfs } from '$lib/services/ledgerReload';
 	import { xactToBeancountText } from '$lib/utils/xactUtils';
 	import Notifier from '$lib/utils/notifier';
 	import {
@@ -68,7 +68,7 @@
 		xact.set(Xact.create());
 
 		// Re-parse the full book in the background — cards show a loading indicator.
-		fullLedgerService.invalidate();
+		await reloadLedgerFromOpfs();
 
 		Notifier.success('Transaction deleted');
 
@@ -86,7 +86,7 @@
 		await ledgerService.appendTransaction(beancountText);
 
 		// Re-parse the full book in the background.
-		fullLedgerService.invalidate();
+		await reloadLedgerFromOpfs();
 
 		Notifier.success('Transaction copied');
 
