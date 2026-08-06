@@ -110,7 +110,9 @@
 
 			xactStore.set(clone);
 			xactSpan.set(undefined);
-			goto('/tx');
+			// Replace quick-entry in history so a later history.back() from /tx
+			// (after save) skips it and lands on whatever came before.
+			goto('/tx', { replaceState: true });
 		} finally {
 			isSelecting = false;
 		}
@@ -359,7 +361,9 @@
 
 			xactStore.set(clone);
 			xactSpan.set(undefined);
-			goto('/tx');
+			// Replace quick-entry in history so a later history.back() from /tx
+			// (after save) skips it and lands on whatever came before.
+			goto('/tx', { replaceState: true });
 		} finally {
 			isSelecting = false;
 		}
