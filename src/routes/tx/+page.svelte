@@ -8,6 +8,7 @@
 	import { afterNavigate, goto } from '$app/navigation';
 	import Notifier from '$lib/utils/notifier';
 	import ledgerService from '$lib/services/ledgerService';
+	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import { reloadLedgerFromOpfs } from '$lib/services/ledgerReload';
 	import { xactToBeancountText } from '$lib/utils/xactUtils';
 	import { base } from '$app/paths';
