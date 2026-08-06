@@ -7,9 +7,11 @@
 	import { goto } from '$app/navigation';
 	import Notifier from '$lib/utils/notifier';
 	import appService from '$lib/services/appService';
+	import { ensureInitialized, validateSource } from '$lib/services/rustledger';
 	import { getAccountBalance, loadAccount } from '$lib/services/accountsService';
 	import { SelectionModeMetadata, SettingKeys, settings } from '$lib/settings';
-	import { getEmptyPostingIndex } from '$lib/utils/xactUtils';
+	import { getEmptyPostingIndex, xactToBeancountText } from '$lib/utils/xactUtils';
+	import { debounce } from '$lib/utils/debounce';
 	import { Posting } from '$lib/data/model';
 	import {
 		SigmaIcon,
@@ -50,24 +52,33 @@
 		$xact?.postings?.some((p) => !p.account) ?? false
 	);
 
-	let isBalanced = $derived.by(() => {
-		if (!$xact?.postings?.length) return true;
-		const hasAutoBalance = $xact.postings.some((p) => p.account && p.amount == null);
-		const byCurrency: Record<string, number> = {};
-		for (const p of $xact.postings) {
-			if (!p.account || p.amount == null || !p.currency) continue;
-			byCurrency[p.currency] = (byCurrency[p.currency] ?? 0) + p.amount;
-		}
-		// Auto-balance only resolves within a single currency; cross-currency needs a price annotation.
-		if (hasAutoBalance && Object.keys(byCurrency).length <= 1) return true;
-		return Object.values(byCurrency).every((s) => Math.abs(s) <= 0.005);
-	});
+	let statusMessages = $state<string[]>([]);
 
-	let statusMessages = $derived.by(() => {
-		const messages: string[] = [];
-		if (!isBalanced) messages.push("Unbalanced — postings don't sum to zero");
-		if (hasPlaceholder) messages.push('Has uncategorized postings');
-		return messages;
+	/**
+	 * Parse+validate the current transaction via the Ledger WASM module and surface
+	 * its native error messages, instead of re-implementing balance/placeholder checks in JS.
+	 */
+	async function validateXactSource(source: string) {
+		if (!source) {
+			statusMessages = [];
+			return;
+		}
+		try {
+			await ensureInitialized();
+			const result = validateSource(source);
+			statusMessages = result.errors.map((err) => err.message);
+		} catch {
+			statusMessages = [];
+		}
+	}
+
+	// Debounced so validation runs once a field settles (e.g. amount entry finished)
+	// rather than on every keystroke.
+	const debouncedValidate = debounce(validateXactSource, 500);
+
+	$effect(() => {
+		const source = $xact ? xactToBeancountText($xact) : '';
+		debouncedValidate(source);
 	});
 
 	$effect(() => {
