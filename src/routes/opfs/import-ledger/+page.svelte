@@ -177,7 +177,7 @@
 								path,
 								size: file.size,
 								lastModified: file.lastModified,
-								getFile: () => handle.getFile(),
+								getFile: () => Promise.resolve(file),
 								status
 							};
 							seen.add(path);
