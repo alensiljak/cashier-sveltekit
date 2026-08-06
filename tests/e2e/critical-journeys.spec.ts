@@ -34,7 +34,7 @@ test.describe('app shell', () => {
 
 		await page.locator('button.btn-circle.btn-xl').click();
 
-		await expect(page).toHaveURL(/\/tx\/search-new/);
+		await expect(page).toHaveURL(/\/tx\/quick-entry/);
 	});
 });
 
