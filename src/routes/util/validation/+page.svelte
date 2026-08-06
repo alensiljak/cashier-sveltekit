@@ -137,7 +137,7 @@
 								</thead>
 								<tbody>
 									{#each errors as err}
-										<tr class="text-error">
+										<tr>
 											<td class="font-mono">{err.line}</td>
 											<td class="font-mono">{err.column}</td>
 											<td>{err.message}</td>
@@ -169,7 +169,7 @@
 								</thead>
 								<tbody>
 									{#each warnings as warn}
-										<tr class="text-warning">
+										<tr>
 											<td class="font-mono">{warn.line}</td>
 											<td class="font-mono">{warn.column}</td>
 											<td>{warn.message}</td>
