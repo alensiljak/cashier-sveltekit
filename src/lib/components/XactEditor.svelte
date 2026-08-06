@@ -54,6 +54,29 @@
 
 	let statusMessages = $state<string[]>([]);
 
+	// Error codes that only make sense with full-ledger context (open/close directives,
+	// commodity declarations, prior lots, balance assertions). Validating a single
+	// transaction in isolation has none of that context, so these would always fire as
+	// false positives — see https://github.com/rustledger/rustledger/blob/main/docs/reference/errors.md
+	const LEDGER_CONTEXT_ERROR_CODES = new Set([
+		'E1001', // Account Not Opened
+		'E1002', // Account Already Open
+		'E1003', // Account Used After Close
+		'E1004', // Account Close With Non-Zero Balance
+		'E2001', // Balance Assertion Failed
+		'E2002', // Balance Exceeds Tolerance
+		'E2003', // Pad Without Balance Assertion
+		'E2004', // Multiple Pads for Same Balance
+		'E4001', // No Matching Lot
+		'E4002', // Insufficient Units
+		'E4003', // Ambiguous Lot Match
+		'E5001', // Currency Not Declared
+		'E5002', // Currency Not Allowed in Account
+		'E7003', // Duplicate Option
+		'E8001', // Document/Plugin Not Found
+		'E8002' // Plugin Execution Failed
+	]);
+
 	/**
 	 * Parse+validate the current transaction via the Ledger WASM module and surface
 	 * its native error messages, instead of re-implementing balance/placeholder checks in JS.
@@ -66,7 +89,9 @@
 		try {
 			await ensureInitialized();
 			const result = validateSource(source);
-			statusMessages = result.errors.map((err) => err.message);
+			statusMessages = result.errors
+				.filter((err) => !LEDGER_CONTEXT_ERROR_CODES.has(err.code ?? ''))
+				.map((err) => err.message);
 		} catch {
 			statusMessages = [];
 		}
