@@ -26,6 +26,7 @@
 	}
 
 	let previousUrl: URL | null = null;
+	let isSaving = $state(false);
 
 	interface ValidationIssue {
 		kind: 'error' | 'warning';
@@ -40,10 +41,13 @@
 	});
 
 	async function onFab() {
+		if (isSaving) return;
+		isSaving = true;
 		try {
 			await saveXact();
 		} catch (e: any) {
 			Notifier.error(e.message);
+			isSaving = false;
 		}
 	}
 
@@ -175,7 +179,7 @@
 	</Toolbar>
 
 	<section class="container mx-auto flex-1 overflow-y-auto touch-pan-y lg:max-w-screen-sm">
-		<Fab Icon={Check} onclick={onFab} />
+		<Fab Icon={Check} onclick={onFab} disabled={isSaving} />
 
 		<!-- tx editor -->
 		<TransactionEditor />
