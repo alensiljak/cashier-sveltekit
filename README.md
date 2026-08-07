@@ -25,7 +25,7 @@ $colour5: #076461; // tropical rain forest
 
 ## Publish
 
-To build and deploy the app to production, run:
+To build and deploy the app to production manually, run:
 
 ```sh
 npm run publish
@@ -36,6 +36,17 @@ The end-to-end (E2E) tests are excluded and need to be run manually, separately.
 ```sh
 npm run test
 ```
+
+### CI/CD
+
+`.github/workflows/ci-deploy.yml` runs lint, type-check and unit tests on every PR and push to `main`.
+Deployment to Netlify production does **not** happen automatically — trigger it manually from the
+Actions tab (`CI & Deploy` workflow → "Run workflow"), which re-runs the tests first, then deploys.
+It authenticates via the `NETLIFY_AUTH_TOKEN` and `NETLIFY_SITE_ID` repository secrets (Settings →
+Secrets and variables → Actions) rather than a local Netlify login — get a token from Netlify (User
+settings → Applications → Personal access tokens) and the site ID from Site settings → General. The
+manual `npm run deploy` / `npm run publish` scripts still work locally with a `netlify login` session
+or a local `NETLIFY_AUTH_TOKEN`.
 
 ## Development
 
