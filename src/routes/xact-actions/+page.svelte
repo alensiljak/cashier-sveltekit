@@ -63,16 +63,22 @@
 			Notifier.error('Cannot delete: transaction location unknown');
 			return;
 		}
-		await ledgerService.deleteTransaction(span);
+
+		try {
+			await ledgerService.deleteTransaction(span);
+		} catch (e) {
+			Notifier.error(e instanceof Error ? e.message : 'Failed to delete transaction');
+			return;
+		}
+
 		xactSpan.set(undefined);
 		xact.set(Xact.create());
 
-		// Re-parse the full book in the background — cards show a loading indicator.
-		await reloadLedgerFromOpfs();
-
 		Notifier.success('Transaction deleted');
-
 		history.back();
+
+		// Re-parse the full book in the background — cards show a loading indicator.
+		void reloadLedgerFromOpfs();
 	}
 
 	async function onDuplicateClick() {
@@ -86,7 +92,7 @@
 		await ledgerService.appendTransaction(beancountText);
 
 		// Re-parse the full book in the background.
-		await reloadLedgerFromOpfs();
+		void reloadLedgerFromOpfs();
 
 		Notifier.success('Transaction copied');
 
