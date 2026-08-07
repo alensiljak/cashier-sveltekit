@@ -92,7 +92,7 @@
 		await ledgerService.appendTransaction(beancountText);
 
 		// Re-parse the full book in the background.
-		await reloadLedgerFromOpfs();
+		void reloadLedgerFromOpfs();
 
 		Notifier.success('Transaction copied');
 

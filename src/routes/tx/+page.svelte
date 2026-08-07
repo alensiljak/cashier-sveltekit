@@ -55,7 +55,8 @@
 		if (span) {
 			const newLine = await ledgerService.editTransaction(span, beancountText);
 			xactSpan.set(undefined);
-			await reloadLedgerFromOpfs();
+			// Re-parse the full book in the background.
+			void reloadLedgerFromOpfs();
 			// If we came from the detail page, navigate back with the refreshed line
 			// number — the file was re-sorted so the old line is stale.
 			if (previousUrl?.pathname.endsWith('/tx/detail')) {
@@ -68,7 +69,8 @@
 		} else {
 			await ledgerService.appendTransaction(beancountText);
 			xactSpan.set(undefined);
-			await reloadLedgerFromOpfs();
+			// Re-parse the full book in the background.
+			void reloadLedgerFromOpfs();
 			history.back();
 		}
 	}
