@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Fab from '$lib/components/FAB.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
-	import { Check, ShieldCheck } from '@lucide/svelte';
+	import { Check, ShieldCheck, TriangleAlertIcon } from '@lucide/svelte';
 	import { xact, xactSpan } from '$lib/data/mainStore';
 	import { get } from 'svelte/store';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
@@ -15,6 +15,7 @@
 	import TransactionEditor from '$lib/components/XactEditor.svelte';
 	import { Xact } from '$lib/data/model';
 	import HelpButton from '$lib/help/HelpButton.svelte';
+	import type { ValidationIssue } from '$lib/data/validation';
 
 	Notifier.init();
 
@@ -28,13 +29,16 @@
 	let previousUrl: URL | null = null;
 	let isSaving = $state(false);
 
-	interface ValidationIssue {
-		kind: 'error' | 'warning';
-		message: string;
-	}
-	let validationIssues: ValidationIssue[] = [];
+	let validationIssues = $state<ValidationIssue[]>([]);
+	let hasValidationError = $derived(validationIssues.some((i) => i.kind === 'error'));
 	// oxlint-disable-next-line no-unassigned-vars
 	let validationDialog: HTMLDialogElement | undefined;
+
+	// Live validation runs continuously as the user edits (see XactEditor); this just
+	// keeps the toolbar indicator in sync without popping the dialog open.
+	function onLiveValidationChange(issues: ValidationIssue[]) {
+		validationIssues = issues;
+	}
 
 	afterNavigate(({ from }) => {
 		if (from?.url) previousUrl = from.url;
@@ -123,25 +127,31 @@
 		// 2. Balance check per currency
 		issues.push(...checkBalance(tx));
 
-		// 3. WASM parse check — syntax only, no open directives needed so no false positives
-		try {
-			await ledgerService.ensureInitialized();
-			const beancountText = xactToBeancountText(JSON.parse(JSON.stringify(tx)));
-			const tempLedger = ledgerService.createParsedLedger(beancountText);
-			if (tempLedger) {
-				try {
-					for (const err of tempLedger.getParseErrors()) {
-						issues.push({
-							kind: err.severity === 'error' ? 'error' : 'warning',
-							message: String(err.message ?? err)
-						});
+		// 3. WASM parse check — syntax only, no open directives needed so no false positives.
+		// Skip when no posting has an amount yet: with nothing to anchor on, booking can
+		// only fail interpolation (e.g. "cannot infer currency") — noise for a transaction
+		// the user hasn't finished filling in, not a real syntax problem.
+		const hasAnyAmount = tx.postings.some((p) => p.amount != null);
+		if (hasAnyAmount) {
+			try {
+				await ledgerService.ensureInitialized();
+				const beancountText = xactToBeancountText(JSON.parse(JSON.stringify(tx)));
+				const tempLedger = ledgerService.createParsedLedger(beancountText);
+				if (tempLedger) {
+					try {
+						for (const err of tempLedger.getParseErrors()) {
+							issues.push({
+								kind: err.severity === 'error' ? 'error' : 'warning',
+								message: String(err.message ?? err)
+							});
+						}
+					} finally {
+						tempLedger.free();
 					}
-				} finally {
-					tempLedger.free();
 				}
+			} catch (e: any) {
+				issues.push({ kind: 'warning', message: `WASM parse check unavailable: ${e.message}` });
 			}
-		} catch (e: any) {
-			issues.push({ kind: 'warning', message: `WASM parse check unavailable: ${e.message}` });
 		}
 
 		// 4. Account existence check against full ledger (best-effort, only if already loaded)
@@ -171,12 +181,22 @@
 <main class="flex h-screen flex-col">
 	<Toolbar title="Journal Entry">
 		{#snippet actions()}
-			<HelpButton topic="transaction-editor" />
+			{#if validationIssues.length > 0}
+				<button
+					type="button"
+					class="btn btn-ghost btn-circle hover-transparent"
+					title={hasValidationError ? 'Errors found — tap to view' : 'Warnings found — tap to view'}
+					onclick={() => validationDialog?.showModal()}
+				>
+					<TriangleAlertIcon size={20} class={hasValidationError ? 'text-error' : 'text-warning'} />
+				</button>
+			{/if}
 		{/snippet}
 		{#snippet menuItems()}
 			<ToolbarMenuItem text="Validate" Icon={ShieldCheck} onclick={validateXact} />
 			<ToolbarMenuItem text="Save" />
 			<ToolbarMenuItem text="Reset" />
+			<HelpButton topic="transaction-editor" variant="menu-item" />
 		{/snippet}
 	</Toolbar>
 
@@ -184,7 +204,7 @@
 		<Fab Icon={Check} onclick={onFab} disabled={isSaving} />
 
 		<!-- tx editor -->
-		<TransactionEditor />
+		<TransactionEditor onValidationChange={onLiveValidationChange} />
 
 		<!-- dialog for confirming reset -->
 

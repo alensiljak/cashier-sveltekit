@@ -13,6 +13,7 @@
 	import { getEmptyPostingIndex, xactToBeancountText } from '$lib/utils/xactUtils';
 	import { debounce } from '$lib/utils/debounce';
 	import { Posting } from '$lib/data/model';
+	import type { ValidationIssue } from '$lib/data/validation';
 	import {
 		SigmaIcon,
 		UserIcon,
@@ -29,6 +30,11 @@
 	import moment from 'moment';
 
 	Notifier.init();
+
+	type Props = {
+		onValidationChange?: (issues: ValidationIssue[]) => void;
+	};
+	let { onValidationChange }: Props = $props();
 
 	const DATE_FORMAT_DEFAULT = 'D MMM YYYY';
 	let dateFormatValue = $state(DATE_FORMAT_DEFAULT);
@@ -52,7 +58,7 @@
 		$xact?.postings?.some((p) => !p.account) ?? false
 	);
 
-	let statusMessages = $state<string[]>([]);
+	let liveIssues = $state<ValidationIssue[]>([]);
 
 	// Error codes that only make sense with full-ledger context (open/close directives,
 	// commodity declarations, prior lots, balance assertions). Validating a single
@@ -78,22 +84,53 @@
 	]);
 
 	/**
+	 * Apply a freshly computed live-issue set: fire a toast on the appear/resolve
+	 * transition (matching the timing of the old inline banner), then hand the
+	 * current set to the parent, which keeps a persistent toolbar indicator for
+	 * re-opening the details later.
+	 */
+	function applyLiveIssues(next: ValidationIssue[]) {
+		const hadIssues = liveIssues.length > 0;
+		liveIssues = next;
+		const hasIssues = liveIssues.length > 0;
+
+		if (!hadIssues && hasIssues) {
+			const hasError = liveIssues.some((i) => i.kind === 'error');
+			const summary =
+				liveIssues.length === 1
+					? liveIssues[0].message
+					: `${liveIssues[0].message} (+${liveIssues.length - 1} more)`;
+			if (hasError) Notifier.error(summary);
+			else Notifier.warning(summary);
+		} else if (hadIssues && !hasIssues) {
+			Notifier.success('Validation issues resolved');
+		}
+
+		onValidationChange?.(liveIssues);
+	}
+
+	/**
 	 * Parse+validate the current transaction via the Ledger WASM module and surface
 	 * its native error messages, instead of re-implementing balance/placeholder checks in JS.
 	 */
 	async function validateXactSource(source: string) {
 		if (!source) {
-			statusMessages = [];
+			applyLiveIssues([]);
 			return;
 		}
 		try {
 			await ensureInitialized();
 			const result = validateSource(source);
-			statusMessages = result.errors
-				.filter((err) => !LEDGER_CONTEXT_ERROR_CODES.has(err.code ?? ''))
-				.map((err) => err.message);
+			applyLiveIssues(
+				result.errors
+					.filter((err) => !LEDGER_CONTEXT_ERROR_CODES.has(err.code ?? ''))
+					.map((err) => ({
+						kind: err.severity === 'error' ? 'error' : ('warning' as const),
+						message: err.message
+					}))
+			);
 		} catch {
-			statusMessages = [];
+			applyLiveIssues([]);
 		}
 	}
 
@@ -102,7 +139,13 @@
 	const debouncedValidate = debounce(validateXactSource, 500);
 
 	$effect(() => {
-		const source = $xact ? xactToBeancountText($xact) : '';
+		// A posting with no amount anywhere yet (e.g. a brand-new transaction with two
+		// blank postings) has no currency to anchor on, so the WASM validator can only
+		// report a spurious "cannot infer currency" interpolation failure — noise for a
+		// transaction the user hasn't started filling in. Skip validation (empty source)
+		// until there's at least one amount to actually check.
+		const hasAnyAmount = $xact?.postings?.some((p) => p.amount != null) ?? false;
+		const source = hasAnyAmount && $xact ? xactToBeancountText($xact) : '';
 		debouncedValidate(source);
 	});
 
@@ -239,16 +282,6 @@
 </script>
 
 <div class="flex h-full flex-col space-y-3 py-2">
-	{#if statusMessages.length > 0}
-		<div class="alert alert-warning items-start py-2">
-			<TriangleAlertIcon class="h-5 w-5 shrink-0" />
-			<div class="flex flex-col gap-1 text-sm">
-				{#each statusMessages as message}
-					<span>{message}</span>
-				{/each}
-			</div>
-		</div>
-	{/if}
 	<div class="flex items-center">
 		<CalendarIcon class="h-5 w-5 mr-2 opacity-70" />
 		<button type="button" class="btn btn-ghost h-11 w-11 p-0" onclick={() => shiftDate(-1)}><ChevronLeftIcon class="h-4 w-4" /></button>
