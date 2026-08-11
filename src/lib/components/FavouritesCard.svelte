@@ -9,6 +9,7 @@
 	import Notifier from '$lib/utils/notifier';
 	import { SettingKeys, settings } from '$lib/settings';
 	import { homeCache } from '$lib/services/homeCache';
+	import { get } from 'svelte/store';
 
 	Notifier.init();
 
@@ -110,6 +111,8 @@
 	}
 
 	async function loadData() {
+		if (get(fullLedgerService.isReloading)) return;
+
 		isLoading = true;
 		try {
 			const favNames: string[] = (await settings.get<string[]>(SettingKeys.favouriteAccounts)) ?? [];
