@@ -58,6 +58,7 @@
 		deleted: number;
 	} | null>(null);
 	let importMode = $state<'all' | 'modified'>('modified');
+	let autoReload = $state(true);
 
 	let filesToImportCount = $derived(
 		importMode === 'modified'
@@ -87,6 +88,8 @@
 		hasDirectoryPicker = 'showDirectoryPicker' in window;
 		dirName = (await deviceSettings.get<string>(DeviceSettingKeys.importBookDirectory)) ?? '';
 		fileSpec = (await settings.get<string>(SettingKeys.importBookFileSpec)) ?? fileSpec;
+		autoReload =
+			(await deviceSettings.get<boolean>(DeviceSettingKeys.importAutoReload)) ?? true;
 		if (hasDirectoryPicker) {
 			const stored = await loadPersistedHandle(HANDLE_KEY);
 			if (stored && (await requestReadPermission(stored))) {
@@ -304,11 +307,20 @@
 			phase = 'done';
 			statusMsg = `Done — ${progress.done} of ${progress.total} file(s) synced.`;
 			logLines = [...logLines, statusMsg];
+
+			if (autoReload) {
+				await reloadLedger();
+			}
 		} catch (e) {
 			const err = e as { message?: string };
 			errorMsg = err?.message ?? String(e);
 			phase = 'error';
 		}
+	}
+
+	async function toggleAutoReload() {
+		autoReload = !autoReload;
+		await deviceSettings.set(DeviceSettingKeys.importAutoReload, autoReload);
 	}
 </script>
 
@@ -455,6 +467,19 @@
 
 		<hr class="my-6 mx-4" />
 
+		<!-- Auto-reload toggle -->
+		<div class="flex justify-end">
+			<label class="flex items-center gap-2 cursor-pointer text-sm">
+				Auto-reload
+				<input
+					type="checkbox"
+					class="toggle toggle-sm toggle-primary bg-transparent bg-none"
+					checked={autoReload}
+					onchange={toggleAutoReload}
+				/>
+			</label>
+		</div>
+
 		<!-- Import button -->
 		<center class="py-4">
 			<button
@@ -499,21 +524,26 @@
 			</div>
 		{/if}
 
-		{#if phase === 'done'}
+		{#if phase === 'done' && (reloadPhase !== 'idle' || !autoReload)}
 			<center class="py-4">
-				<button
-					class="btn btn-outline"
-					disabled={reloadPhase === 'reloading'}
-					onclick={reloadLedger}
-				>
-					{#if reloadPhase === 'reloading'}
-						<span class="loading loading-spinner loading-sm"></span>
-						Reloading…
-					{:else}
-						<RefreshCcwIcon class="w-4 h-4" />
-						Reload Ledger
-					{/if}
-				</button>
+				{#if !autoReload}
+					<button
+						class="btn btn-outline"
+						disabled={reloadPhase === 'reloading'}
+						onclick={reloadLedger}
+					>
+						{#if reloadPhase === 'reloading'}
+							<span class="loading loading-spinner loading-sm"></span>
+							Reloading…
+						{:else}
+							<RefreshCcwIcon class="w-4 h-4" />
+							Reload Ledger
+						{/if}
+					</button>
+				{:else if reloadPhase === 'reloading'}
+					<span class="loading loading-spinner loading-sm"></span>
+					Reloading ledger…
+				{/if}
 				{#if reloadPhase === 'done'}
 					<p class="text-xs text-success mt-2">Ledger reloaded.</p>
 				{/if}

@@ -111,6 +111,8 @@ export const DeviceSettingKeys = {
 	peerName: 'peerName',
 	// import book from filesystem via File System API
 	importBookDirectory: 'importBookDirectory',
+	// Whether to automatically reload the ledger after an OPFS import (default: true)
+	importAutoReload: 'importAutoReload',
 	// export book to filesystem via File System API
 	exportBookDirectory: 'exportBookDirectory',
 	// Whether to use the binary ledger cache on load (default: true)
