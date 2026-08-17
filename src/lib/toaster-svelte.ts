@@ -15,7 +15,7 @@ class DaisyUIToaster {
 		if (!this.toastContainer) {
 			this.toastContainer = document.createElement('div');
 			this.toastContainer.id = 'toast-container';
-			this.toastContainer.className = 'toast toast-bottom toast-end z-[1000]';
+			this.toastContainer.className = 'toast toast-bottom toast-start z-[1000]';
 			document.body.appendChild(this.toastContainer);
 		}
 	}
