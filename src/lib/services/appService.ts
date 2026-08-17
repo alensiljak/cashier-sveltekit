@@ -40,6 +40,9 @@ class AppService {
 			newXact.postings = [...existing.postings];
 		}
 
+		// metadata (e.g. ISIN)
+		newXact.meta = { ...existing.meta };
+
 		return newXact;
 	}
 
