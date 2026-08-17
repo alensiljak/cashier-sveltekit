@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { PlusIcon, TrashIcon } from '@lucide/svelte';
+	import { TrashIcon } from '@lucide/svelte';
 	import { untrack } from 'svelte';
 
 	type Props = {
@@ -16,8 +16,12 @@
 	// Committed to the parent explicitly on each input/removal, never via a
 	// reactive $effect — an effect that both reads local state and (indirectly,
 	// through onChange) writes the parent store creates a render feedback loop.
+	//
+	// A blank row is always kept at the end so a new entry can be typed without an
+	// explicit "add" click; once both its fields are filled, a fresh blank row is
+	// appended below it.
 	let rows = $state<Row[]>(
-		untrack(() => Object.entries(meta ?? {}).map(([key, value]) => ({ key, value })))
+		untrack(() => [...Object.entries(meta ?? {}).map(([key, value]) => ({ key, value })), { key: '', value: '' }])
 	);
 
 	function commit() {
@@ -30,12 +34,21 @@
 		onChange(result);
 	}
 
-	function addRow() {
-		rows = [...rows, { key: '', value: '' }];
+	function ensureTrailingEmptyRow() {
+		const last = rows[rows.length - 1];
+		if (last && (last.key.trim() !== '' || last.value.trim() !== '')) {
+			rows = [...rows, { key: '', value: '' }];
+		}
+	}
+
+	function onRowInput() {
+		ensureTrailingEmptyRow();
+		commit();
 	}
 
 	function removeRow(row: Row) {
 		rows = rows.filter((r) => r !== row);
+		ensureTrailingEmptyRow();
 		commit();
 	}
 </script>
@@ -50,7 +63,7 @@
 				value={row.key}
 				oninput={(e) => {
 					row.key = e.currentTarget.value;
-					commit();
+					onRowInput();
 				}}
 			/>
 			<input
@@ -60,24 +73,21 @@
 				value={row.value}
 				oninput={(e) => {
 					row.value = e.currentTarget.value;
-					commit();
+					onRowInput();
 				}}
 			/>
-			<button
-				type="button"
-				class="btn btn-ghost btn-sm px-2"
-				aria-label="Remove metadata entry"
-				onclick={() => removeRow(row)}
-			>
-				<TrashIcon class="h-4 w-4" />
-			</button>
+			{#if row.key.trim() !== '' || row.value.trim() !== ''}
+				<button
+					type="button"
+					class="btn btn-ghost btn-sm px-2"
+					aria-label="Remove metadata entry"
+					onclick={() => removeRow(row)}
+				>
+					<TrashIcon class="h-4 w-4" />
+				</button>
+			{:else}
+				<div class="w-8"></div>
+			{/if}
 		</div>
 	{/each}
-	{#if rows.length === 0}
-		<p class="text-xs opacity-50">No metadata. Tap "Add entry" to add a key/value pair.</p>
-	{/if}
-	<button type="button" class="btn btn-outline btn-sm" onclick={addRow}>
-		<PlusIcon class="h-4 w-4" />
-		Add entry
-	</button>
 </div>

@@ -343,6 +343,11 @@
 			>
 		</button>
 	</div>
+	{#if metadataExpanded}
+		<div class="bg-base-200 space-y-2 rounded-lg p-3">
+			<MetadataEditor meta={$xact?.meta} onChange={onMetaChange} />
+		</div>
+	{/if}
 	<div class="flex items-center">
 		<UserIcon class="h-5 w-5 mr-2 opacity-70" />
 		<input
@@ -393,9 +398,4 @@
 			</button>
 		</div>
 	</div>
-	{#if metadataExpanded}
-		<div class="bg-base-200 space-y-2 rounded-lg p-3">
-			<MetadataEditor meta={$xact?.meta} onChange={onMetaChange} />
-		</div>
-	{/if}
 </div>
