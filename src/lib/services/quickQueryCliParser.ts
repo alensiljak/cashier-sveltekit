@@ -157,7 +157,8 @@ function parseCommonArgs(tokens: string[]): { opts: CommonOptions; errors: strin
 				opts.closedAccounts = true;
 				break;
 			case '--ledger':
-				inlineVal ?? tokens[++i];
+				// ledger path is not applicable in the web UI; just consume its value
+				if (inlineVal === undefined) i++;
 				break;
 			default:
 				if (tokens[i].startsWith('-') && tokens[i] !== '-') {
@@ -247,7 +248,8 @@ function parseLotsArgs(tokens: string[]): { opts: LotsOptions; errors: string[] 
 				opts.showAll = false;
 				break;
 			case '--ledger':
-				inlineVal ?? tokens[++i];
+				// ledger path is not applicable in the web UI; just consume its value
+				if (inlineVal === undefined) i++;
 				break;
 			default:
 				if (tokens[i].startsWith('-') && tokens[i] !== '-') {
