@@ -484,9 +484,9 @@
 						</li>
 						<li>
 							<a
-								href="/util/quick-query"
+								href="/util/quick-query-cli"
 								class="flex w-full items-center gap-2 py-2 {page.url.pathname ===
-								'/util/quick-query'
+								'/util/quick-query-cli'
 									? 'active bg-secondary text-secondary-content'
 									: ''}"
 								onclick={closeDrawer}
