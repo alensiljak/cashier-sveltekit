@@ -5,16 +5,39 @@
 	import QuickQueryResults from '$lib/components/QuickQueryResults.svelte';
 	import { CopyIcon } from '@lucide/svelte';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
-	import { buildQuery } from '$lib/services/quickQueryBuilder';
+	import { buildQuery, type CommonOptions, type LotsOptions } from '$lib/services/quickQueryBuilder';
 	import { parseQqrlCommand } from '$lib/services/quickQueryCliParser';
 
 	const DEBOUNCE_MS = 400;
 
+	// Auto-run has no "are you sure" step, so an unfiltered command (e.g. just
+	// typing "r" before adding filters) must not be free to pull every
+	// transaction in the ledger. balance is grouped/aggregated so it's exempt.
+	const DEFAULT_AUTO_LIMIT = 100;
+
 	let commandLine = $state('balance Assets -l 10')
 
 	let parsed = $derived(parseQqrlCommand(commandLine))
+
+	let limitAutoApplied = $derived(
+		parsed.command != null &&
+			parsed.command !== 'balance' &&
+			(parsed.command === 'lots' ? parsed.lotsOpts.limit == null : parsed.commonOpts.limit == null)
+	)
+
+	let effectiveCommonOpts = $derived<CommonOptions>(
+		limitAutoApplied && parsed.command !== 'lots'
+			? { ...parsed.commonOpts, limit: DEFAULT_AUTO_LIMIT }
+			: parsed.commonOpts
+	)
+	let effectiveLotsOpts = $derived<LotsOptions>(
+		limitAutoApplied && parsed.command === 'lots'
+			? { ...parsed.lotsOpts, limit: DEFAULT_AUTO_LIMIT }
+			: parsed.lotsOpts
+	)
+
 	let bql = $derived(
-		parsed.command ? buildQuery(parsed.command, parsed.commonOpts, parsed.lotsOpts) : ''
+		parsed.command ? buildQuery(parsed.command, effectiveCommonOpts, effectiveLotsOpts) : ''
 	)
 	let showRunningTotal = $derived(
 		parsed.command === 'register' && parsed.commonOpts.total
@@ -271,6 +294,13 @@
 				</div>
 
 				<p class="opacity-60">
+					This UI runs the query automatically as you type, so if no
+					<code>-l/--limit</code> is given, non-<code>balance</code> commands are capped at
+					{DEFAULT_AUTO_LIMIT} rows to avoid loading the entire ledger on every keystroke.
+					Add <code>-l N</code> to raise or remove the cap.
+				</p>
+
+				<p class="opacity-60">
 					Not yet supported in this UI: <code>-a/--amount</code>, <code>query</code> command,
 					<code>--ledger</code>, <code>--no-pager</code>, <code>--empty</code>, <code>--list</code>.
 				</p>
@@ -296,6 +326,11 @@
 				readonly
 				value={bql}
 			></textarea>
+			{#if limitAutoApplied}
+				<span class="text-xs text-base-content/40 mt-1">
+					Auto-limited to {DEFAULT_AUTO_LIMIT} rows — add <code>-l N</code> to change.
+				</span>
+			{/if}
 		</div>
 
 		{#if isRunning}
