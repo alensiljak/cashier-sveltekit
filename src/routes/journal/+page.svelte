@@ -72,9 +72,6 @@
 
 <main class="flex h-screen flex-col">
 	<Toolbar title="Device Journal">
-		{#snippet actions()}
-			<HelpButton topic="journal" />
-		{/snippet}
 		{#snippet menuItems()}
 			<!-- Export -->
 			<ToolbarMenuItem text="Export" Icon={FileDownIcon} onclick={onExportClick} />
@@ -85,6 +82,7 @@
 				Icon={ImportIcon}
 				targetNav="/import-ledger-xact"
 			/>
+			<HelpButton topic="journal" variant="menu-item" />
 		{/snippet}
 	</Toolbar>
 
