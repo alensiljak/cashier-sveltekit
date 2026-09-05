@@ -355,16 +355,6 @@
 						/>
 					</label>
 				{/if}
-				{#if dirHandle || fallbackFiles}
-					<button
-						class="btn btn-secondary gap-2"
-						disabled={phase === 'scanning' || phase === 'copying'}
-						onclick={scanAndCompare}
-					>
-						<RefreshCcwIcon class="w-4 h-4 {phase === 'scanning' ? 'animate-spin' : ''}" />
-						Scan
-					</button>
-				{/if}
 			</div>
 		</section>
 
@@ -386,6 +376,19 @@
 				structure.
 			</p>
 		</section>
+
+		{#if dirHandle || fallbackFiles}
+			<center>
+				<button
+					class="btn btn-warning gap-2"
+					disabled={phase === 'scanning' || phase === 'copying'}
+					onclick={scanAndCompare}
+				>
+					<RefreshCcwIcon class="w-4 h-4 {phase === 'scanning' ? 'animate-spin' : ''}" />
+					Scan
+				</button>
+			</center>
+		{/if}
 
 		<!-- Scan progress -->
 		{#if phase === 'scanning'}
@@ -550,6 +553,12 @@
 				{#if reloadError}
 					<p class="text-xs text-error mt-2">{reloadError}</p>
 				{/if}
+			</center>
+		{/if}
+
+		{#if phase === 'done' && (autoReload ? reloadPhase === 'done' || reloadPhase === 'error' : true)}
+			<center class="py-4">
+				<button class="btn btn-outline" onclick={() => history.back()}>Close</button>
 			</center>
 		{/if}
 

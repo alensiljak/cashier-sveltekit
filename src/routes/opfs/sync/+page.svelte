@@ -299,16 +299,6 @@
 						{dirName ? 'Change' : 'Select Directory'}
 					</button>
 				{/if}
-				{#if dirHandle}
-					<button
-						class="btn btn-secondary gap-2"
-						disabled={phase === 'scanning' || phase === 'syncing'}
-						onclick={scan}
-					>
-						<RefreshCcwIcon class="w-4 h-4 {phase === 'scanning' ? 'animate-spin' : ''}" />
-						Scan
-					</button>
-				{/if}
 			</div>
 			{#if dirHandle && !hasWritePermission}
 				<p class="text-xs text-warning">
@@ -329,6 +319,19 @@
 				onblur={async () => settings.set(SettingKeys.importBookFileSpec, fileSpec)}
 			/>
 		</section>
+
+		{#if dirHandle}
+			<center>
+				<button
+					class="btn btn-warning gap-2"
+					disabled={phase === 'scanning' || phase === 'syncing'}
+					onclick={scan}
+				>
+					<RefreshCcwIcon class="w-4 h-4 {phase === 'scanning' ? 'animate-spin' : ''}" />
+					Scan
+				</button>
+			</center>
+		{/if}
 
 		<!-- Results table -->
 		{#if phase === 'scanning'}
