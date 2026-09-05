@@ -11,6 +11,9 @@
 	import { xactToBeancountText } from '$lib/utils/xactUtils';
 	import { buildHighlightParams } from '$lib/utils/unifiedXacts';
 	import Notifier from '$lib/utils/notifier';
+	import { readFile } from '$lib/utils/opfslib';
+	import { CASHIER_XACT_FILE } from '$lib/constants';
+	import { locateXactsInSource, findXactAtLine } from '$lib/utils/xactLocator';
 	import {
 		CalendarClockIcon,
 		CopyIcon,
@@ -93,16 +96,20 @@
 		const newXact = appService.createXactFrom($xact);
 		const defaultCurrency = await appService.getDefaultCurrency();
 		const beancountText = xactToBeancountText(newXact, defaultCurrency);
-		await ledgerService.appendTransaction(beancountText);
+		const newLine = await ledgerService.appendTransaction(beancountText);
 
 		// Re-parse the full book in the background.
 		void reloadLedgerFromOpfs();
 
 		Notifier.success('Transaction copied');
 
-		// load the new tx for editing (no span — it's a new transaction)
-		xact.set(newXact);
-		xactSpan.set(undefined);
+		// Load the new tx for editing, with its span so that saving on the /tx
+		// page edits this already-appended copy instead of appending another one.
+		const source = await readFile(CASHIER_XACT_FILE);
+		const locations = source ? await locateXactsInSource(source) : [];
+		const location = findXactAtLine(locations, newLine);
+		xact.set(location?.xact ?? newXact);
+		xactSpan.set(location?.span);
 
 		goto('/tx', { replaceState: true });
 	}

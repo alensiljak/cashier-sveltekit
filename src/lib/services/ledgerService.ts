@@ -125,8 +125,12 @@ class LedgerService {
 		}
 	}
 
-	/** Append a formatted transaction to cashier.bean → sort by date → invalidate. */
-	async appendTransaction(beancountText: string): Promise<void> {
+	/**
+	 * Append a formatted transaction to cashier.bean → sort by date → invalidate.
+	 * Returns the transaction's 1-based line number in the sorted file so callers
+	 * can locate it (e.g. to continue editing it in place instead of re-appending).
+	 */
+	async appendTransaction(beancountText: string): Promise<number> {
 		await ensureInitialized();
 		let content = (await opfslib.readFile(CASHIER_XACT_FILE)) ?? '';
 
@@ -134,12 +138,17 @@ class LedgerService {
 		if (content.length > 0 && !content.endsWith('\n\n')) {
 			content = content.trimEnd() + '\n\n';
 		}
-		content += beancountText.trimEnd() + '\n';
+		const trimmedNewText = beancountText.trimEnd();
+		content += trimmedNewText + '\n';
 
 		content = await this._sortSource(content);
 		await opfslib.saveFile(CASHIER_XACT_FILE, content);
 		await this.invalidate();
 		scheduleBackup();
+
+		// _sortSource preserves sourceText verbatim, so indexOf is exact.
+		const charIdx = content.indexOf(trimmedNewText);
+		return charIdx >= 0 ? content.slice(0, charIdx).split('\n').length : 1;
 	}
 
 	/**
