@@ -392,7 +392,10 @@
 	// OPFS page rather than through this import flow. Reconcile it against what
 	// is actually in OPFS right now: add/update entries for files that exist,
 	// drop entries for files that don't, and leave everything else untouched
-	// (importedAt is preserved for files still present).
+	// (importedAt is preserved for files still present). cashier.bean and
+	// .cashier/ are Cashier-internal and never part of the imported source
+	// book, so they're skipped here too — same as OpfsSource.listTree() does
+	// for peer sync.
 	async function rebuildManifestAndRescan() {
 		const [manifest, tree] = await Promise.all([getManifest(), listFileTree()]);
 		const patterns = parseSpecs(fileSpec);
