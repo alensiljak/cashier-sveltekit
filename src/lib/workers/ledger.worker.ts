@@ -257,17 +257,31 @@ async function loadFromFiles(mainFileName: string, userBookFilename?: string): P
 	for (const { path, content } of beanFiles) {
 		fileMap[path] = content;
 	}
-	// Inject the user's book include into cashier.bean on-the-fly, without
-	// persisting the directive to disk. Only when the book file is actually present.
+	// When the user has their own book, treat *it* as the top-level ledger —
+	// exactly as if it were opened directly on desktop (e.g. via `rledger check`) —
+	// and fold cashier.bean's device transactions into it via an in-memory
+	// `include`, never persisted to disk and never rewriting the book's own
+	// content. `option` directives only take effect in the top-level file
+	// (the same option in an included file is silently ignored, e.g. E7009),
+	// so this keeps the user's own options authoritative instead of requiring
+	// them to be duplicated into or stripped out of anything.
+	let entryPoint = mainFileName;
 	if (
 		userBookFilename &&
 		userBookFilename !== mainFileName &&
 		fileMap[mainFileName] !== undefined &&
 		fileMap[userBookFilename] !== undefined
 	) {
-		fileMap[mainFileName] = `include "${userBookFilename}"\n\n${fileMap[mainFileName]}`;
+		// `include` paths resolve relative to the including file's own directory,
+		// while cashier.bean always lives at the OPFS root — so climb back up to
+		// root when the book itself lives in a subdirectory (e.g. a demo scenario).
+		const bookDepth = userBookFilename.split('/').length - 1;
+		const relativeMainFilePath = '../'.repeat(bookDepth) + mainFileName;
+		fileMap[userBookFilename] =
+			`${fileMap[userBookFilename]}\n\ninclude "${relativeMainFilePath}"\n`;
+		entryPoint = userBookFilename;
 	}
-	ledger = wasm.Ledger.fromFiles(fileMap, mainFileName);
+	ledger = wasm.Ledger.fromFiles(fileMap, entryPoint);
 }
 
 // ---------------------------------------------------------------------------
