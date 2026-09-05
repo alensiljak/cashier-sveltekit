@@ -83,7 +83,10 @@
 		{/snippet}
 	</Toolbar>
 
-	<section class="grow space-y-2 p-1 pb-3 mx-auto max-w-2xl w-full" bind:this={listContainer}>
+	<section
+		class="grow overflow-y-auto touch-pan-y space-y-2 p-1 pb-3 mx-auto max-w-2xl w-full"
+		bind:this={listContainer}
+	>
 		{#if xactsWithSpans.length === 0}
 			<p>The device journal is empty</p>
 		{:else}
