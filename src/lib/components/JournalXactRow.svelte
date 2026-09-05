@@ -6,11 +6,13 @@
 	interface Props {
 		xact: Xact;
 		onclick?: (xact: Xact) => void;
+		/** Whether the row navigates on click. Defaults to true; set false for read-only views. */
+		linksEnabled?: boolean;
 	}
-	let { xact, onclick }: Props = $props();
+	let { xact, onclick, linksEnabled = true }: Props = $props();
 
 	function onRowClicked() {
-		if (onclick) {
+		if (linksEnabled && onclick) {
 			onclick(xact);
 		}
 	}
@@ -18,7 +20,7 @@
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-<article onclick={onRowClicked}>
+<article onclick={onRowClicked} class:cursor-pointer={linksEnabled}>
 	<!-- date / payee / narration — inline flow; hanging indent aligns wrapped lines with postings -->
 	<div class="pl-6" style="text-indent: -1.5rem"><time class="opacity-85">{xact.date}</time>{#if xact.flag === '!'} <WarningTriangleIcon class="size-4 inline-block align-text-bottom" />{/if} {xact.payee || xact.note}{#if xact.payee && xact.note} <span class="opacity-50">· {xact.note}</span>{/if}</div>
 

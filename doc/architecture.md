@@ -32,6 +32,37 @@ The decisions made in the architecture of the app.
 - `src/lib/workers/` — background web workers (e.g. ledger worker)
 - `src/routes/` — SvelteKit file-based routes (~60+ pages)
 
+## Transaction List Ordering
+
+Any UI that lists transactions (device journal, Full Journal, account registers,
+etc.) follows the same convention: **ascending by date, oldest first, newest
+last** — like a chat log, not a feed. On load the list scrolls to the bottom so
+the most recent transaction is immediately visible, and older history is
+revealed by scrolling *up*.
+
+Consequences for implementation:
+
+- Any BQL query backing such a list should sort `ORDER BY date DESC` (fetching
+  newest-first is what makes an initial page cheap), then the result is
+  reversed to ascending before being rendered.
+- If the list is paginated, page **forward in time from the newest end**
+  (`ledger/journal/+page.svelte` uses keyset/cursor pagination —
+  `WHERE (date < :d) OR (date = :d AND id < :id)` — rather than `OFFSET`,
+  since the BQL engine only guarantees `WHERE` + `ORDER BY` + `LIMIT`). Load
+  more when the user scrolls to the *top* of what's loaded, and prepend;
+  never load more at the bottom.
+- A query's `LIMIT` counts rows (one per posting), not transactions, so a
+  fetched batch's last transaction group may be cut off mid-posting. Treat it
+  as complete only when the batch came back shorter than the requested limit;
+  otherwise drop it and use it as the boundary for the next page.
+- When prepending older transactions above the current scroll position,
+  restore `scrollTop` by the height delta so the viewport doesn't jump.
+
+Don't reintroduce `ORDER BY date DESC` newest-first-at-top for a transaction
+list — it was tried for the Full Journal and reverted for being inconsistent
+with the device journal and awkward to reconcile with "always show me the
+latest transaction on open".
+
 ## Page Width
 
 Page content is constrained to `max-w-2xl mx-auto` (centered, ~42rem) so that
