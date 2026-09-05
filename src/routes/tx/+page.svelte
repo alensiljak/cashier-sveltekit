@@ -16,6 +16,9 @@
 	import { Xact } from '$lib/data/model';
 	import HelpButton from '$lib/help/HelpButton.svelte';
 	import type { ValidationIssue } from '$lib/data/validation';
+	import { readFile } from '$lib/utils/opfslib';
+	import { CASHIER_XACT_FILE } from '$lib/constants';
+	import { locateXactsInSource, findXactAtLine } from '$lib/utils/xactLocator';
 
 	Notifier.init();
 
@@ -55,6 +58,22 @@
 		}
 	}
 
+	/**
+	 * Re-locate an edited transaction by its new line number (the file was
+	 * re-sorted by date, so the old span may be stale) and refresh `xact`/
+	 * `xactSpan` with the current data — keeps pages like xact-actions, which
+	 * gate Edit/Delete on `$xactSpan`, working after returning from a save.
+	 */
+	async function refreshXactLocation(newLine: number) {
+		const source = await readFile(CASHIER_XACT_FILE);
+		if (!source) return;
+		const locations = await locateXactsInSource(source);
+		const location = findXactAtLine(locations, newLine);
+		if (!location) return;
+		xact.set(location.xact);
+		xactSpan.set(location.span);
+	}
+
 	async function saveXact() {
 		const clonedXact = JSON.parse(JSON.stringify($xact));
 		const beancountText = xactToBeancountText(clonedXact);
@@ -62,7 +81,7 @@
 
 		if (span) {
 			const newLine = await ledgerService.editTransaction(span, beancountText);
-			xactSpan.set(undefined);
+			await refreshXactLocation(newLine);
 			// Re-parse the full book in the background.
 			void reloadLedgerFromOpfs();
 			// If we came from the detail page, navigate back with the refreshed line
