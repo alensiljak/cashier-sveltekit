@@ -23,6 +23,64 @@ body {
 	pointer-events: auto;
 }
 
+/* Material-style text field: no box/border-all, just a bottom rule that
+   lights up in the primary color on focus. Used where DaisyUI's bordered
+   .input feels too heavy (e.g. the Xact/Posting editor fields).
+   Wrapped in @layer components so a utility class (e.g. the amount field's
+   sign-tint bg-primary/20) still wins over the transparent background here —
+   unlayered CSS would otherwise outrank utilities regardless of class order. */
+@layer components {
+	.field-material {
+		background: transparent;
+		border: none;
+		border-bottom: 1px solid color-mix(in oklch, var(--color-base-content) 25%, transparent);
+		border-radius: 0;
+		box-shadow: none;
+		transition: border-color 0.15s ease;
+	}
+	.field-material:focus,
+	.field-material:focus-within {
+		outline: none;
+		box-shadow: none;
+		border-bottom: 1.5px solid var(--color-primary);
+	}
+	.field-material::placeholder {
+		color: transparent;
+	}
+}
+
+/* Floating label to pair with .field-material: sits over the input at rest,
+   and lifts above the line once the field has focus or a value. Requires the
+   input to carry class="peer" and placeholder=" " (so :placeholder-shown
+   reflects emptiness rather than the label text). */
+.field-label {
+	position: absolute;
+	left: 0.25rem;
+	top: 1rem;
+	font-size: 0.875rem;
+	color: color-mix(in oklch, var(--color-base-content) 55%, transparent);
+	pointer-events: none;
+	transition:
+		top 0.15s ease,
+		font-size 0.15s ease,
+		color 0.15s ease;
+}
+.peer:focus ~ .field-label,
+.peer:not(:placeholder-shown) ~ .field-label {
+	top: 0;
+	font-size: 0.7rem;
+}
+.peer:focus ~ .field-label {
+	color: var(--color-primary);
+}
+
+/* Same floated state, driven by a Svelte class binding instead of
+   :placeholder-shown — for non-input triggers like the date button. */
+.field-label.field-label-floated {
+	top: 0;
+	font-size: 0.7rem;
+}
+
 /* Standardize card/section titles app-wide with the same elegant serif —
    no forced uppercase here since card-title text is often dynamic (filenames,
    interpolated names) where all-caps would look wrong. */

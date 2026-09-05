@@ -81,17 +81,20 @@
 			</button>
 		</div>
 	{:else}
-		<input
-			title="Account"
-			placeholder="Account"
-			type="text"
-			class="input w-full rounded"
-			readonly
-			bind:value={$xact.postings[index].account}
-			onclick={onAccountClicked}
-		/>
+		<div class="relative mb-2 w-full">
+			<input
+				title="Account"
+				placeholder=" "
+				type="text"
+				class="field-material peer w-full px-1 pt-4 pb-1 cursor-pointer"
+				readonly
+				bind:value={$xact.postings[index].account}
+				onclick={onAccountClicked}
+			/>
+			<span class="field-label">Account</span>
+		</div>
 
-		<div class="mb-2 flex flex-row items-center gap-1">
+		<div class="mb-2 flex flex-row items-end gap-1">
 			<button
 				type="button"
 				class="btn btn-outline btn-primary-content btn-square"
@@ -100,16 +103,19 @@
 			>
 				<PencilLineIcon class="h-4 w-4" />
 			</button>
-			<input
-				title="Amount"
-				placeholder="Amount"
-				type="number"
-				class={`input grow text-right text-lg ${amountFieldColor} rounded`}
-				bind:value={$xact.postings[index].amount}
-				bind:this={amountInput}
-				onfocus={() => amountInput.select()}
-				oninput={onAmountChanged}
-			/>
+			<div class="relative grow">
+				<input
+					title="Amount"
+					placeholder=" "
+					type="number"
+					class={`field-material peer w-full px-1 pt-4 pb-1 text-right text-lg ${amountFieldColor}`}
+					bind:value={$xact.postings[index].amount}
+					bind:this={amountInput}
+					onfocus={() => amountInput.select()}
+					oninput={onAmountChanged}
+				/>
+				<span class="field-label">Amount</span>
+			</div>
 			<button
 				type="button"
 				class="btn btn-outline btn-primary-content btn-square"
@@ -118,17 +124,20 @@
 			>
 				<DiffIcon class="h-4 w-4" />
 			</button>
-			<input
-				title="Currency"
-				placeholder="Currency"
-				type="text"
-				class="input rounded text-center uppercase w-22 p-1"
-				bind:value={$xact.postings[index].currency}
-				bind:this={currencyInput}
-				onfocus={() => currencyInput.select()}
-				oninput={() =>
-					($xact.postings[index].currency = $xact.postings[index].currency?.toUpperCase())}
-			/>
+			<div class="relative w-22">
+				<input
+					title="Currency"
+					placeholder=" "
+					type="text"
+					class="field-material peer w-full px-1 pt-4 pb-1 text-center uppercase"
+					bind:value={$xact.postings[index].currency}
+					bind:this={currencyInput}
+					onfocus={() => currencyInput.select()}
+					oninput={() =>
+						($xact.postings[index].currency = $xact.postings[index].currency?.toUpperCase())}
+				/>
+				<span class="field-label w-full text-center">Currency</span>
+			</div>
 		</div>
 	{/if}
 </section>

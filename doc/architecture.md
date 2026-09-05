@@ -69,6 +69,23 @@ Page content is constrained to `max-w-2xl mx-auto` (centered, ~42rem) so that
 layouts stay readable on wide/desktop viewports while remaining natural on
 mobile. Apply this to the top-level content wrapper of a page's markup.
 
+## Toggles
+
+DaisyUI's `.toggle` renders a white/light track background by default
+regardless of the app's dark theme. Always pair it with `bg-transparent
+bg-none` so the track matches the surrounding surface:
+
+```svelte
+<input
+	type="checkbox"
+	class="toggle toggle-success bg-transparent bg-none"
+	bind:checked={someValue}
+/>
+```
+
+See `src/routes/peer-sync/+page.svelte` (Connect toggle) and
+`src/lib/components/ScheduleEditor.svelte` (Repayment toggle).
+
 ## Toolbar Overflow Menu
 
 `Toolbar.svelte` (`src/lib/components/Toolbar.svelte`) takes an optional

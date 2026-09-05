@@ -319,11 +319,12 @@
 		<div class="relative flex-1">
 			<button
 				type="button"
-				class="input rounded flex items-center cursor-pointer px-3 w-full text-left"
+				class="field-material flex items-center cursor-pointer px-1 pt-4 pb-1 w-full text-left"
 				onclick={() => dateInputEl?.showPicker?.()}
 			>
 				{formattedDate}
 			</button>
+			<span class="field-label" class:field-label-floated={!!$xact?.date}>Date</span>
 			<input
 				bind:this={dateInputEl}
 				title="Date"
@@ -381,25 +382,31 @@
 	{/if}
 	<div class="flex items-center">
 		<UserIcon class="h-5 w-5 mr-2 opacity-70" />
-		<input
-			title="Payee"
-			placeholder="Payee"
-			type="text"
-			class="input w-full rounded"
-			readonly
-			bind:value={$xact.payee}
-			onclick={onPayeeClicked}
-		/>
+		<div class="relative w-full">
+			<input
+				title="Payee"
+				placeholder=" "
+				type="text"
+				class="field-material peer w-full px-1 pt-4 pb-1 cursor-pointer"
+				readonly
+				bind:value={$xact.payee}
+				onclick={onPayeeClicked}
+			/>
+			<span class="field-label">Payee</span>
+		</div>
 	</div>
 	<div class="flex items-center">
 		<FileTextIcon class="h-5 w-5 mr-2 opacity-70" />
-		<input
-			title="Note"
-			placeholder="Note"
-			type="text"
-			class="input w-full rounded"
-			bind:value={$xact.note}
-		/>
+		<div class="relative w-full">
+			<input
+				title="Note"
+				placeholder=" "
+				type="text"
+				class="field-material peer w-full px-1 pt-4 pb-1"
+				bind:value={$xact.note}
+			/>
+			<span class="field-label">Note</span>
+		</div>
 	</div>
 
 	<!-- postings sum -->

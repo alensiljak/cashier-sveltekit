@@ -54,7 +54,11 @@
 		<p>Repayment</p>
 		<p class="text-sm opacity-60">Amount is auto-calculated from the Liabilities account balance</p>
 	</div>
-	<input class="toggle" type="checkbox" bind:checked={$ScheduledXact.repayment} />
+	<input
+		class="toggle toggle-success bg-transparent bg-none"
+		type="checkbox"
+		bind:checked={$ScheduledXact.repayment}
+	/>
 </div>
 
 <!-- Recurrence -->
@@ -86,9 +90,13 @@
 		</label>
 	</div>
 	{#if hasRecurrence}
-		<div class="flex flex-row">
-			<input type="number" class="input text-center rounded" bind:value={$ScheduledXact.count} />
-			<select class="select rounded" bind:value={$ScheduledXact.period}>
+		<div class="flex flex-row gap-2">
+			<input
+				type="number"
+				class="field-material w-16 px-1 py-2 text-center"
+				bind:value={$ScheduledXact.count}
+			/>
+			<select class="field-material grow px-1 py-2" bind:value={$ScheduledXact.period}>
 				{#each _periods as period (period)}
 					<option value={period}>{period}</option>
 				{/each}
@@ -119,12 +127,17 @@
 		</label>
 	</div>
 	{#if hasEndDate}
-		<input type="date" class="input rounded" bind:value={$ScheduledXact.endDate} />
+		<input type="date" class="field-material px-1 py-2" bind:value={$ScheduledXact.endDate} />
 	{/if}
 </div>
 
 <!-- Remarks -->
-<div class="mb-10">
-	<p>Remarks</p>
-	<textarea class="textarea rounded w-full" bind:value={$ScheduledXact.remarks} rows="5"></textarea>
+<div class="relative mb-10">
+	<textarea
+		class="field-material peer w-full px-1 pt-5 pb-1"
+		placeholder=" "
+		bind:value={$ScheduledXact.remarks}
+		rows="5"
+	></textarea>
+	<span class="field-label">Remarks</span>
 </div>
