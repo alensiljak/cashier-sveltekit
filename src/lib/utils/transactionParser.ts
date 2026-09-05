@@ -41,12 +41,22 @@ export function directiveToXact(directive: any, rawSource?: string): Xact {
 		posting.account = p.account ?? '';
 		if (p.units?.number != null) posting.amount = parseFloat(p.units.number);
 		if (p.units?.currency) posting.currency = p.units.currency;
-		if (p.price?.number != null) posting.priceAmount = parseFloat(p.price.number);
-		if (p.price?.currency) posting.priceCurrency = p.price.currency;
 		if (p.price) {
-			// p.price.total is absent from the WASM Amount type and is always
-			// undefined at runtime. Fall back to scanning the raw source text.
-			posting.totalPrice = !!p.price.total || isTotalPrice(rawSource, p.account);
+			// getDirectives() from a booked ParsedLedger silently rewrites a `@@ total`
+			// annotation into its equivalent `@ per-unit` price (and never sets
+			// p.price.total), which would otherwise redisplay the user's total-price
+			// entry as an unrecognizable per-unit number. Recover the annotation the
+			// user actually typed by re-reading it from the raw source line instead.
+			const sourcePrice = extractPriceFromSource(rawSource, p.account);
+			if (sourcePrice) {
+				posting.priceAmount = sourcePrice.priceAmount;
+				posting.priceCurrency = sourcePrice.priceCurrency;
+				posting.totalPrice = sourcePrice.totalPrice;
+			} else {
+				if (p.price.number != null) posting.priceAmount = parseFloat(p.price.number);
+				if (p.price.currency) posting.priceCurrency = p.price.currency;
+				posting.totalPrice = !!p.price.total;
+			}
 		}
 		if (p.cost?.number != null) posting.costAmount = extractCostNumber(p.cost.number);
 		if (p.cost?.currency) posting.costCurrency = p.cost.currency;
@@ -73,15 +83,31 @@ function extractCostNumber(num: any): number | undefined {
 }
 
 /**
- * Returns true if the source line for `account` uses @@ (total price).
- * Matches by first token to avoid substring collisions between account names.
+ * Re-reads a posting's price annotation (`@ amount currency` or `@@ amount currency`)
+ * directly from the raw source line for `account`, so the original entry survives
+ * even when the parsed directive's price has been normalized (e.g. to per-unit by
+ * ledger booking). Matches the posting line by first token to avoid substring
+ * collisions between account names.
  */
-function isTotalPrice(source: string | undefined, account: string): boolean {
-	if (!source || !account) return false;
-	return source.split('\n').some((line) => {
+function extractPriceFromSource(
+	source: string | undefined,
+	account: string
+): { priceAmount: number; priceCurrency: string; totalPrice: boolean } | undefined {
+	if (!source || !account) return undefined;
+	for (const line of source.split('\n')) {
 		const trimmed = line.trimStart();
-		return trimmed.split(/\s+/)[0] === account && /@@/.test(line);
-	});
+		if (trimmed.split(/\s+/)[0] !== account) continue;
+		const match = trimmed.match(
+			/@(@)?\s*([-+]?[0-9][0-9,]*(?:\.[0-9]+)?)\s+([A-Za-z][A-Za-z0-9'._-]*)/
+		);
+		if (!match) continue;
+		return {
+			totalPrice: !!match[1],
+			priceAmount: parseFloat(match[2].replace(/,/g, '')),
+			priceCurrency: match[3]
+		};
+	}
+	return undefined;
 }
 
 /**

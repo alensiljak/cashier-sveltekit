@@ -5,9 +5,11 @@
 		ArrowUpIcon,
 		CalculatorIcon,
 		ChevronDownIcon,
+		CoinsIcon,
 		DiffIcon,
 		PencilLineIcon,
-		TrashIcon
+		TrashIcon,
+		XIcon
 	} from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import type { EventHandler } from 'svelte/elements';
@@ -34,6 +36,7 @@
 	let currencyInput: HTMLInputElement;
 	let expanded = $state(false);
 	let isDeleteConfirmationOpen = $state(false);
+	let showConversion = $state($xact.postings[index]?.priceAmount != null);
 	onMount(() => {});
 
 	/**
@@ -96,6 +99,22 @@
 			[postings[index], postings[index + 1]] = [postings[index + 1], postings[index]];
 			return { ...current, postings };
 		});
+	}
+
+	/**
+	 * Toggle the inline currency conversion (@/@@) fields.
+	 */
+	function toggleConversion() {
+		showConversion = !showConversion;
+		if (!showConversion) {
+			clearConversion();
+		}
+	}
+
+	function clearConversion() {
+		$xact.postings[index].priceAmount = undefined;
+		$xact.postings[index].priceCurrency = undefined;
+		$xact.postings[index].totalPrice = undefined;
 	}
 
 	function onDeleteClicked() {
@@ -184,6 +203,16 @@
 			<button
 				type="button"
 				class="btn btn-outline btn-primary-content btn-square"
+				class:btn-active={showConversion}
+				onclick={toggleConversion}
+				title="Currency conversion (@/@@)"
+				aria-pressed={showConversion}
+			>
+				<CoinsIcon class="h-4 w-4" />
+			</button>
+			<button
+				type="button"
+				class="btn btn-outline btn-primary-content btn-square"
 				onclick={moveUp}
 				disabled={index === 0}
 				title="Move posting up"
@@ -208,6 +237,58 @@
 				<TrashIcon class="h-4 w-4" />
 			</button>
 		</div>
+
+		{#if showConversion}
+			<div class="mb-2 flex flex-row items-center gap-1">
+				<div class="join">
+					<button
+						type="button"
+						class="join-item btn btn-sm"
+						class:btn-primary={!$xact.postings[index].totalPrice}
+						class:btn-outline={!!$xact.postings[index].totalPrice}
+						onclick={() => ($xact.postings[index].totalPrice = false)}
+						title="Price per unit (@)"
+					>
+						@
+					</button>
+					<button
+						type="button"
+						class="join-item btn btn-sm"
+						class:btn-primary={!!$xact.postings[index].totalPrice}
+						class:btn-outline={!$xact.postings[index].totalPrice}
+						onclick={() => ($xact.postings[index].totalPrice = true)}
+						title="Total price (@@)"
+					>
+						@@
+					</button>
+				</div>
+				<input
+					title="Conversion amount"
+					placeholder="Amount"
+					type="number"
+					class="input grow text-right rounded"
+					bind:value={$xact.postings[index].priceAmount}
+				/>
+				<input
+					title="Conversion currency"
+					placeholder="CCY"
+					type="text"
+					class="input rounded text-center uppercase w-22 p-1"
+					bind:value={$xact.postings[index].priceCurrency}
+					oninput={() =>
+						($xact.postings[index].priceCurrency =
+							$xact.postings[index].priceCurrency?.toUpperCase())}
+				/>
+				<button
+					type="button"
+					class="btn btn-outline btn-square"
+					onclick={toggleConversion}
+					title="Remove conversion"
+				>
+					<XIcon class="h-4 w-4" />
+				</button>
+			</div>
+		{/if}
 	{/if}
 </section>
 

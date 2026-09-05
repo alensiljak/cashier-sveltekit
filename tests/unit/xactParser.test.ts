@@ -156,3 +156,52 @@ test('maps cost annotation (plain string number, backwards compat)', () => {
 	const result = directiveToXact(directive);
 	expect(result.postings[0].costAmount).toBe(140);
 });
+
+test('recovers the original @@ total from rawSource when the directive price has been booked to a per-unit number', () => {
+	// A booked ParsedLedger (getDirectives() after interpolation) rewrites `@@ total`
+	// into an equivalent `@ per-unit` price and never sets price.total — so without
+	// rawSource fallback the UI would show e.g. "@@ 1.3636363636363636363636363636 USD"
+	// instead of the user's original "@@ 15 USD".
+	const directive = makeDirective({
+		postings: [
+			{
+				account: 'Assets:Accounts-Receivable:Sandi:EUR',
+				units: { number: '11', currency: 'EUR' },
+				price: { number: '1.3636363636363636363636363636', currency: 'USD' }
+			},
+			{ account: 'Expenses:Uncategorized', units: { number: '-15', currency: 'USD' } }
+		]
+	});
+	const rawSource = `2026-09-05 * "Sandi"
+  Assets:Accounts-Receivable:Sandi:EUR  11 EUR @@ 15 USD
+  Expenses:Uncategorized`;
+
+	const result = directiveToXact(directive, rawSource);
+	const p = result.postings[0];
+
+	expect(p.priceAmount).toBe(15);
+	expect(p.priceCurrency).toBe('USD');
+	expect(p.totalPrice).toBe(true);
+});
+
+test('recovers the original @ per-unit price from rawSource even when the directive omits price.total', () => {
+	const directive = makeDirective({
+		postings: [
+			{
+				account: 'Assets:Bank-Accounts:N26',
+				units: { number: '25', currency: 'EUR' },
+				price: { number: '1.25', currency: 'USD' }
+			}
+		]
+	});
+	const rawSource = `2026-09-05 * "FX"
+  Assets:Bank-Accounts:N26  25 EUR @ 1.25 USD
+  Assets:Cash`;
+
+	const result = directiveToXact(directive, rawSource);
+	const p = result.postings[0];
+
+	expect(p.priceAmount).toBe(1.25);
+	expect(p.priceCurrency).toBe('USD');
+	expect(p.totalPrice).toBe(false);
+});
