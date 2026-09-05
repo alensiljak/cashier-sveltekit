@@ -2,6 +2,7 @@
 	import type { Xact } from '$lib/data/model';
 	import { formatPostingCost, formatPostingPrice, getAmountColour } from '$lib/utils/formatter';
 	import { buildHighlightParams } from '$lib/utils/unifiedXacts';
+	import { goto } from '$app/navigation';
 	import WarningTriangleIcon from './WarningTriangleIcon.svelte';
 
 	interface Props {
@@ -40,7 +41,13 @@
 					<svelte:element
 						this={accountLinksEnabled ? 'a' : 'data'}
 						href={accountLinksEnabled ? accountHref : undefined}
-						onclick={accountLinksEnabled ? (e: MouseEvent) => e.stopPropagation() : undefined}
+						onclick={accountLinksEnabled
+							? (e: MouseEvent) => {
+									e.stopPropagation();
+									e.preventDefault();
+									goto(accountHref);
+								}
+							: undefined}
 						class="flex min-w-0 flex-auto overflow-hidden text-sm {accountLinksEnabled ? 'hover:underline' : ''}"
 					>
 						{#if sep === -1}

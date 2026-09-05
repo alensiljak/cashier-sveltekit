@@ -28,6 +28,8 @@ export const load: PageLoad = async ({ params }) => {
 		({ xact }) => (xact.payee || xact.note || '') === payeeName
 	);
 
+	await fullLedgerService.ensureLoaded();
+
 	// Full ledger transactions. cost_number/cost_currency give us the per-unit
 	// cost annotation ({} syntax) directly from BQL without loading all directives.
 	const bql = `SELECT id, date, flag, payee, narration, account, number, currency,

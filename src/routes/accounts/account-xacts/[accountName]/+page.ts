@@ -18,6 +18,8 @@ export const load: PageLoad = async ({ params }) => {
 		throw new Error('Account must be specified!');
 	}
 
+	await fullLedgerService.ensureLoaded();
+
 	const account =
 		(await fullLedgerService.getAccountWithBalances(params.accountName)) ??
 		new Account(params.accountName);
