@@ -46,12 +46,43 @@
 		return moment($xact.date).format(dateFormatValue);
 	});
 
+	// Beancount-style balance weight: a posting with a price (`@`/`@@`) or cost
+	// (`{}`) annotation is checked for balance in that currency, not its own —
+	// e.g. `7 EUR @@ 11 BAM` weighs 11 BAM, not 7 EUR. Without this, postings
+	// priced/costed into a different currency look unbalanced when they aren't.
+	function getPostingWeight(posting: Posting): { currency: string; amount: Big } | null {
+		if (posting.amount == null) return null;
+		const amount = new Big(posting.amount);
+		if (posting.costAmount != null && posting.costCurrency) {
+			return { currency: posting.costCurrency, amount: amount.times(posting.costAmount) };
+		}
+		if (posting.priceAmount != null && posting.priceCurrency) {
+			const priceAmount = new Big(posting.priceAmount);
+			const weight = posting.totalPrice
+				? amount.lt(0)
+					? priceAmount.times(-1)
+					: priceAmount
+				: amount.times(priceAmount);
+			return { currency: posting.priceCurrency, amount: weight };
+		}
+		return { currency: posting.currency, amount };
+	}
+
 	let sum = $derived.by(() => {
-		if (!$xact?.postings?.length) return new Big(0);
-		return $xact.postings.reduce(
-			(acc, posting) => (posting.amount ? acc.plus(new Big(posting.amount)) : acc),
-			new Big(0)
-		);
+		const totals = new Map<string, Big>();
+		for (const posting of $xact?.postings ?? []) {
+			const weight = getPostingWeight(posting);
+			if (!weight) continue;
+			const key = weight.currency || '';
+			totals.set(key, (totals.get(key) ?? new Big(0)).plus(weight.amount));
+		}
+		if (totals.size === 0) return '0';
+		// Show the currency each group balanced (or failed to balance) in, even
+		// at zero — that's the whole point of surfacing it: confirming *which*
+		// currency the transaction balances in, not just whether it's zero.
+		return [...totals.entries()]
+			.map(([currency, total]) => (currency ? `${total} ${currency}` : `${total}`))
+			.join(', ');
 	});
 
 	let hasPlaceholder = $derived(
