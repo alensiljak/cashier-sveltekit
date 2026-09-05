@@ -4,18 +4,20 @@
 	import SquareButton from '$lib/components/SquareButton.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { ScheduledXact, xact, xactSpan } from '$lib/data/mainStore';
-	import { ScheduledTransaction, Xact } from '$lib/data/model';
+	import { Posting, ScheduledTransaction, Xact } from '$lib/data/model';
 	import appService from '$lib/services/appService';
 	import ledgerService from '$lib/services/ledgerService';
 	import { reloadLedgerFromOpfs } from '$lib/services/ledgerReload';
 	import { xactToBeancountText } from '$lib/utils/xactUtils';
+	import { buildHighlightParams } from '$lib/utils/unifiedXacts';
 	import Notifier from '$lib/utils/notifier';
 	import {
 		CalendarClockIcon,
 		CopyIcon,
 		ClipboardIcon,
 		SquarePenIcon,
-		TrashIcon
+		TrashIcon,
+		ListIcon
 	} from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import HelpButton from '$lib/help/HelpButton.svelte';
@@ -117,6 +119,17 @@
 
 		goto('/scx-editor');
 	}
+
+	function onPayeeTransactionsClick() {
+		if (!$xact?.payee) return;
+		goto('/payees/payee-xacts/' + encodeURIComponent($xact.payee));
+	}
+
+	function onAccountTransactionsClick(posting: Posting) {
+		if (!$xact) return;
+		const params = buildHighlightParams($xact, posting);
+		goto(`/accounts/account-xacts/${encodeURIComponent(posting.account)}?${params}`);
+	}
 </script>
 
 <Toolbar title="Transaction Actions">
@@ -126,7 +139,7 @@
 </Toolbar>
 
 <main class="mx-auto max-w-2xl w-full p-1">
-	<JournalXactRow xact={$xact} accountLinksEnabled={true} />
+	<JournalXactRow xact={$xact} />
 
 	<!-- button grid -->
 	<div class="mx-auto mt-4 grid w-550 max-w-[550px] grid-cols-3">
@@ -154,6 +167,43 @@
 			</SquareButton>
 		{/if}
 	</div>
+
+	<!-- related transactions -->
+	{#if $xact}
+		<div class="mt-6 space-y-2">
+			{#if $xact.payee}
+				<div class="flex items-center justify-between gap-2 border-base-content/10 border-b py-1">
+					<span class="min-w-0 truncate">Payee: {$xact.payee}</span>
+					<button
+						type="button"
+						class="btn btn-sm btn-outline shrink-0 gap-1"
+						onclick={onPayeeTransactionsClick}
+					>
+						<ListIcon class="size-4" />
+						Transactions
+					</button>
+				</div>
+			{/if}
+			{#if $xact.postings && $xact.postings.length > 0}
+				<div class="py-1">Accounts:</div>
+				{#each $xact.postings as posting (posting)}
+					<div
+						class="flex items-center justify-between gap-2 border-base-content/10 border-b py-1 pl-4"
+					>
+						<span class="min-w-0 truncate">{posting.account}</span>
+						<button
+							type="button"
+							class="btn btn-sm btn-outline shrink-0 gap-1"
+							onclick={() => onAccountTransactionsClick(posting)}
+						>
+							<ListIcon class="size-4" />
+							Transactions
+						</button>
+					</div>
+				{/each}
+			{/if}
+		</div>
+	{/if}
 </main>
 <!-- "Delete" dialog -->
 <input

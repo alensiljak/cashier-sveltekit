@@ -1,8 +1,6 @@
 <script lang="ts">
 	import type { Xact } from '$lib/data/model';
 	import { formatPostingCost, formatPostingPrice, getAmountColour } from '$lib/utils/formatter';
-	import { buildHighlightParams } from '$lib/utils/unifiedXacts';
-	import { goto } from '$app/navigation';
 	import WarningTriangleIcon from './WarningTriangleIcon.svelte';
 
 	interface Props {
@@ -10,10 +8,8 @@
 		onclick?: (xact: Xact) => void;
 		/** Whether the row navigates on click. Defaults to true; set false for read-only views. */
 		linksEnabled?: boolean;
-		/** Whether each posting's account links to that account's transactions. Defaults to false; the transaction row itself is the clickable unit everywhere except the xact details view. */
-		accountLinksEnabled?: boolean;
 	}
-	let { xact, onclick, linksEnabled = true, accountLinksEnabled = false }: Props = $props();
+	let { xact, onclick, linksEnabled = true }: Props = $props();
 
 	function onRowClicked() {
 		if (linksEnabled && onclick) {
@@ -35,28 +31,15 @@
 				{@const cost = formatPostingCost(posting)}
 				{@const price = formatPostingPrice(posting)}
 				{@const sep = posting.account.indexOf(':')}
-				{@const accountHref = `/accounts/account-xacts/${encodeURIComponent(posting.account)}?${buildHighlightParams(xact, posting)}`}
 				<div class="flex opacity-85">
-					<!-- svelte-ignore a11y_no_static_element_interactions -->
-					<svelte:element
-						this={accountLinksEnabled ? 'a' : 'data'}
-						href={accountLinksEnabled ? accountHref : undefined}
-						onclick={accountLinksEnabled
-							? (e: MouseEvent) => {
-									e.stopPropagation();
-									e.preventDefault();
-									goto(accountHref);
-								}
-							: undefined}
-						class="flex min-w-0 flex-auto overflow-hidden text-sm {accountLinksEnabled ? 'hover:underline' : ''}"
-					>
+					<data class="flex min-w-0 flex-auto overflow-hidden text-sm">
 						{#if sep === -1}
 							<span class="overflow-hidden text-ellipsis whitespace-nowrap">{posting.account}</span>
 						{:else}
 							<span class="shrink-0">{posting.account.slice(0, sep + 1)}</span>
 							<span class="min-w-0 overflow-hidden whitespace-nowrap text-ellipsis [direction:rtl]">{posting.account.slice(sep + 1)}</span>
 						{/if}
-					</svelte:element>
+					</data>
 					<div class="flex flex-row items-baseline gap-4 ml-auto shrink-0">
 						{#if cost}
 							<data class="text-xs opacity-45 font-mono">{cost}</data>

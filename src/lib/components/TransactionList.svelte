@@ -27,11 +27,53 @@
 
 	const visibleRows = $derived(rows.slice(0, visibleCount));
 
+	function findScrollParent(node: HTMLElement): HTMLElement | null {
+		let el = node.parentElement;
+		while (el) {
+			if (/(auto|scroll)/.test(getComputedStyle(el).overflowY) && el.scrollHeight > el.clientHeight) {
+				return el;
+			}
+			el = el.parentElement;
+		}
+		return null;
+	}
+
+	// Native `scrollIntoView({behavior: 'smooth'})` takes longer the farther the
+	// target is, which looks like the list is scrolling through lots of
+	// transactions when the target is far down. Animate over a fixed short
+	// duration instead so it's always quick, however long the list is.
+	function scrollIntoViewFast(node: HTMLElement, duration = 300) {
+		const scrollParent = findScrollParent(node);
+		if (!scrollParent) {
+			node.scrollIntoView({ block: 'center', behavior: 'instant' });
+			return;
+		}
+
+		const parentRect = scrollParent.getBoundingClientRect();
+		const nodeRect = node.getBoundingClientRect();
+		const start = scrollParent.scrollTop;
+		const offset = nodeRect.top - parentRect.top;
+		const target = start + offset - (parentRect.height / 2 - nodeRect.height / 2);
+		const maxScroll = scrollParent.scrollHeight - scrollParent.clientHeight;
+		const end = Math.max(0, Math.min(target, maxScroll));
+		const change = end - start;
+		if (Math.abs(change) < 1) return;
+
+		const startTime = performance.now();
+		function step(now: number) {
+			const t = Math.min((now - startTime) / duration, 1);
+			const eased = 1 - Math.pow(1 - t, 3);
+			scrollParent!.scrollTop = start + change * eased;
+			if (t < 1) requestAnimationFrame(step);
+		}
+		requestAnimationFrame(step);
+	}
+
 	function scrollToHighlight(node: HTMLElement, isTarget: boolean) {
-		if (isTarget) node.scrollIntoView({ block: 'center', behavior: 'smooth' });
+		if (isTarget) scrollIntoViewFast(node);
 		return {
 			update(newIsTarget: boolean) {
-				if (newIsTarget) node.scrollIntoView({ block: 'center', behavior: 'smooth' });
+				if (newIsTarget) scrollIntoViewFast(node);
 			}
 		};
 	}
@@ -85,11 +127,11 @@
 			box-shadow: inset 0 0 0 2px rgba(250, 204, 21, 0.9);
 		}
 		100% {
-			box-shadow: inset 0 0 0 2px transparent;
+			box-shadow: inset 0 0 0 1px rgba(250, 204, 21, 0.35);
 		}
 	}
 
 	.highlight-target {
-		animation: highlight-fade 2.5s ease-out;
+		animation: highlight-fade 2.5s ease-out forwards;
 	}
 </style>
