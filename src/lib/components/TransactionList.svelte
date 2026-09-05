@@ -9,20 +9,32 @@
 		/** Show each row's account (useful when rows span multiple accounts, e.g. Payee Transactions). */
 		showAccount?: boolean;
 		pageSize?: number;
+		/** Row to scroll to and highlight on mount, e.g. arriving from a Xact Details account link. */
+		highlightRow?: UnifiedXact;
 	}
 
-	let { rows, onRowClick, showAccount = false, pageSize = 30 }: Props = $props();
+	let { rows, onRowClick, showAccount = false, pageSize = 30, highlightRow }: Props = $props();
 
 	let visibleCount = $state(untrack(() => pageSize));
 	let sentinel = $state<HTMLElement | null>(null);
 
 	// Reset progressive loading whenever the row set changes (e.g. a different payee/account).
+	// If a highlight target sits further down the list than the initial page, reveal up to it.
 	$effect(() => {
-		void rows;
-		visibleCount = pageSize;
+		const highlightIndex = highlightRow ? rows.indexOf(highlightRow) : -1;
+		visibleCount = highlightIndex >= 0 ? Math.max(pageSize, highlightIndex + 1) : pageSize;
 	});
 
 	const visibleRows = $derived(rows.slice(0, visibleCount));
+
+	function scrollToHighlight(node: HTMLElement, isTarget: boolean) {
+		if (isTarget) node.scrollIntoView({ block: 'center', behavior: 'smooth' });
+		return {
+			update(newIsTarget: boolean) {
+				if (newIsTarget) node.scrollIntoView({ block: 'center', behavior: 'smooth' });
+			}
+		};
+	}
 
 	$effect(() => {
 		if (!sentinel) return;
@@ -41,9 +53,10 @@
 		<div
 			class="flex flex-row px-2 cursor-pointer {row.isDevice
 				? 'border-l-2 border-amber-400 bg-amber-50/60 dark:bg-amber-950/25'
-				: ''}"
+				: ''} {row === highlightRow ? 'highlight-target' : ''}"
 			onclick={() => onRowClick(row)}
 			onkeypress={() => onRowClick(row)}
+			use:scrollToHighlight={row === highlightRow}
 			role="button"
 			tabindex="0"
 		>
@@ -64,3 +77,19 @@
 	{/if}
 	<div bind:this={sentinel}></div>
 </div>
+
+<style>
+	@keyframes highlight-fade {
+		0%,
+		20% {
+			box-shadow: inset 0 0 0 2px rgba(250, 204, 21, 0.9);
+		}
+		100% {
+			box-shadow: inset 0 0 0 2px transparent;
+		}
+	}
+
+	.highlight-target {
+		animation: highlight-fade 2.5s ease-out;
+	}
+</style>

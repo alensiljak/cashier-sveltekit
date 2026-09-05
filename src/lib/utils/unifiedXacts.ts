@@ -100,6 +100,7 @@ export async function openXactDetails(row: UnifiedXact): Promise<void> {
 	const currencyIdx = columns.indexOf('currency');
 
 	const xactObj = new Xact();
+	xactObj.id = row.id;
 	xactObj.date = row.date;
 	xactObj.payee = row.payee;
 	xactObj.note = row.narration;
@@ -115,4 +116,56 @@ export async function openXactDetails(row: UnifiedXact): Promise<void> {
 	xact.set(xactObj);
 	xactSpan.set(undefined);
 	await goto('/xact-actions');
+}
+
+/**
+ * Build query params that identify a transaction+posting for highlighting on the
+ * Account Transactions page. Ledger xacts are matched by id (stable, exact);
+ * on-device xacts have no id, so fall back to the same composite key
+ * `mergeUnifiedRows` uses to match device/ledger rows.
+ */
+export function buildHighlightParams(xact: Xact, posting: Posting): URLSearchParams {
+	const params = new URLSearchParams();
+	if (xact.id != null) {
+		params.set('highlightId', String(xact.id));
+		return params;
+	}
+
+	params.set('highlightDate', xact.date ?? '');
+	params.set('highlightPayee', xact.payee ?? '');
+	params.set('highlightNarration', xact.note ?? '');
+	params.set('highlightAmount', String(posting.amount ?? ''));
+	params.set('highlightCurrency', posting.currency ?? '');
+	return params;
+}
+
+/**
+ * Find the row a highlight link (see buildHighlightParams) refers to, if any.
+ */
+export function findHighlightedRow(
+	rows: UnifiedXact[],
+	searchParams: URLSearchParams
+): UnifiedXact | undefined {
+	const idParam = searchParams.get('highlightId');
+	if (idParam !== null) {
+		const id = Number(idParam);
+		return rows.find((r) => r.id === id);
+	}
+
+	const date = searchParams.get('highlightDate');
+	if (date === null) return undefined;
+
+	const payee = searchParams.get('highlightPayee') ?? '';
+	const narration = searchParams.get('highlightNarration') ?? '';
+	const amount = Number(searchParams.get('highlightAmount'));
+	const currency = searchParams.get('highlightCurrency') ?? '';
+
+	return rows.find(
+		(r) =>
+			r.date === date &&
+			r.payee === payee &&
+			r.narration === narration &&
+			r.amount === amount &&
+			r.currency === currency
+	);
 }

@@ -22,7 +22,11 @@
 		Notifier.success('Copied to clipboard');
 	}
 	import Notifier from '$lib/utils/notifier';
-	import { openXactDetails } from '$lib/utils/unifiedXacts';
+	import { findHighlightedRow, openXactDetails } from '$lib/utils/unifiedXacts';
+
+	const highlightRow = $derived(
+		findHighlightedRow(page.data.unifiedRows, page.url.searchParams)
+	);
 </script>
 
 <main class="flex h-screen flex-col">
@@ -88,6 +92,6 @@
 			<hr class="border-gray-400" />
 		</div>
 
-		<TransactionList rows={page.data.unifiedRows} onRowClick={openXactDetails} />
+		<TransactionList rows={page.data.unifiedRows} onRowClick={openXactDetails} {highlightRow} />
 	</section>
 </main>

@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import HelpButton from '$lib/help/HelpButton.svelte';
-	import { FolderOpenIcon, RefreshCcwIcon } from '@lucide/svelte';
+	import { FolderOpenIcon, RefreshCcwIcon, ChevronUpIcon, ChevronDownIcon } from '@lucide/svelte';
 	import { settings, SettingKeys, deviceSettings, DeviceSettingKeys } from '$lib/settings';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import {
@@ -18,8 +18,9 @@
 	} from '$lib/utils/importManifest';
 	import { processWithConcurrencyLimit } from '$lib/utils/concurrency';
 	import { parseSpecs, matchesAny, collectFsFileHandles } from '$lib/utils/fsScan';
-	import { writeFileObject, deleteFile as deleteOpfsFile } from '$lib/utils/opfslib';
+	import { readFile, writeFileObject, deleteFile as deleteOpfsFile } from '$lib/utils/opfslib';
 	import { reloadLedgerFromOpfs } from '$lib/services/ledgerReload';
+	import { buildDiffLines, type DiffLine } from '$lib/utils/diffText';
 
 	const HANDLE_KEY = 'importLedgerDirectoryHandle';
 	const CONCURRENCY = 4;
@@ -59,6 +60,29 @@
 	} | null>(null);
 	let importMode = $state<'all' | 'modified'>('modified');
 	let autoReload = $state(true);
+	let diffPath = $state<string | null>(null);
+	let diffLines = $state<DiffLine[]>([]);
+	let diffLoading = $state(false);
+	let diffError = $state('');
+	let diffContainerEl = $state<HTMLElement | null>(null);
+	let currentHunk = $state(0);
+
+	// Index of the first line of each contiguous run of added/removed lines.
+	let hunkStarts = $derived(
+		diffLines.reduce<number[]>((acc, line, i) => {
+			if (line.type !== 'context' && (i === 0 || diffLines[i - 1].type === 'context')) {
+				acc.push(i);
+			}
+			return acc;
+		}, [])
+	);
+
+	function scrollToHunk(index: number) {
+		if (hunkStarts.length === 0 || !diffContainerEl) return;
+		currentHunk = ((index % hunkStarts.length) + hunkStarts.length) % hunkStarts.length;
+		const target = diffContainerEl.querySelector(`[data-idx="${hunkStarts[currentHunk]}"]`);
+		target?.scrollIntoView({ block: 'center' });
+	}
 
 	let filesToImportCount = $derived(
 		importMode === 'modified'
@@ -81,6 +105,12 @@
 	$effect(() => {
 		if (logLines.length && consoleEl) {
 			consoleEl.scrollTop = consoleEl.scrollHeight;
+		}
+	});
+
+	$effect(() => {
+		if (diffContainerEl && hunkStarts.length > 0) {
+			scrollToHunk(0);
 		}
 	});
 
@@ -229,6 +259,31 @@
 			const err = e as { message?: string };
 			errorMsg = err?.message ?? String(e);
 			phase = 'error';
+		}
+	}
+
+	// ── Diff (local OPFS vs incoming source file) ─────────────────────────────────
+	async function toggleDiff(entry: ScannedFile) {
+		if (diffPath === entry.path) {
+			diffPath = null;
+			return;
+		}
+		diffPath = entry.path;
+		diffLoading = true;
+		diffError = '';
+		diffLines = [];
+		currentHunk = 0;
+		try {
+			const [localContent, sourceContent] = await Promise.all([
+				readFile(entry.path),
+				entry.getFile ? entry.getFile().then((f) => f.text()) : Promise.resolve('')
+			]);
+			diffLines = buildDiffLines(localContent ?? '', sourceContent ?? '');
+		} catch (e) {
+			const err = e as { message?: string };
+			diffError = err?.message ?? String(e);
+		} finally {
+			diffLoading = false;
 		}
 	}
 
@@ -447,7 +502,7 @@
 					{#if preview.length > 0}
 						<div
 							class="overflow-y-auto border border-base-300 rounded font-mono text-xs"
-							style="max-height: 5.5rem;"
+							style="max-height: 8rem;"
 						>
 							{#each preview as file}
 								<div class="flex items-center gap-2 px-2 py-0.5 hover:bg-base-200">
@@ -459,9 +514,59 @@
 												: file.status === 'deleted'
 													? 'badge-error'
 													: 'badge-ghost'}">{file.status}</span>
-									<span class="truncate">{file.path}</span>
+									<span class="truncate flex-1">{file.path}</span>
+									{#if file.status !== 'identical'}
+										<button
+											class="link link-hover text-primary shrink-0"
+											onclick={() => toggleDiff(file)}
+										>
+											{diffPath === file.path ? 'hide diff' : 'diff'}
+										</button>
+									{/if}
 								</div>
 							{/each}
+						</div>
+					{/if}
+
+					<!-- Diff panel -->
+					{#if diffPath}
+						<div class="border border-base-300 rounded">
+							<div class="flex items-center justify-between px-2 py-1 bg-base-200 text-xs font-mono gap-2">
+								<span class="truncate flex-1">{diffPath}</span>
+								{#if hunkStarts.length > 0}
+									<span class="text-base-content/50 shrink-0">{currentHunk + 1} / {hunkStarts.length}</span>
+									<button
+										class="btn btn-xs btn-ghost btn-square shrink-0"
+										aria-label="Previous change"
+										onclick={() => scrollToHunk(currentHunk - 1)}
+									>
+										<ChevronUpIcon class="w-4 h-4" />
+									</button>
+									<button
+										class="btn btn-xs btn-ghost btn-square shrink-0"
+										aria-label="Next change"
+										onclick={() => scrollToHunk(currentHunk + 1)}
+									>
+										<ChevronDownIcon class="w-4 h-4" />
+									</button>
+								{/if}
+								<button class="link link-hover shrink-0" onclick={() => (diffPath = null)}>close</button>
+							</div>
+							{#if diffLoading}
+								<div class="flex items-center gap-2 text-sm text-base-content/70 p-2">
+									<span class="loading loading-spinner loading-xs"></span>
+									Loading diff…
+								</div>
+							{:else if diffError}
+								<div class="alert alert-error text-xs m-2">{diffError}</div>
+							{:else if diffLines.every((l) => l.type === 'context')}
+								<p class="text-sm text-success p-2">Files are identical.</p>
+							{:else}
+								<pre
+									bind:this={diffContainerEl}
+									class="text-xs font-mono leading-5 overflow-x-auto max-h-64 overflow-y-auto bg-base-200 p-2 select-text"
+								>{#each diffLines as line, i}{#if line.type === 'removed'}<span data-idx={i} class="block bg-error/20 text-error-content whitespace-pre">- {line.content}</span>{:else if line.type === 'added'}<span data-idx={i} class="block bg-success/20 text-success-content whitespace-pre">+ {line.content}</span>{:else}<span data-idx={i} class="block text-base-content/50 whitespace-pre">  {line.content}</span>{/if}{/each}</pre>
+							{/if}
 						</div>
 					{/if}
 				{/if}
