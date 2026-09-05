@@ -26,8 +26,13 @@
 		const _v = $lsVersion;
 		ledgerService.getXactsWithSpans().then((result) => {
 			xactsWithSpans = result;
+			// A single tick() can fire before the browser has reflowed newly-mounted rows
+			// (e.g. wrapped account names), leaving scrollHeight stale and the last xact's
+			// postings cut off — wait an extra frame for layout to actually settle.
 			tick().then(() => {
-				if (listContainer) listContainer.scrollTop = listContainer.scrollHeight;
+				requestAnimationFrame(() => {
+					if (listContainer) listContainer.scrollTop = listContainer.scrollHeight;
+				});
 			});
 		});
 	});

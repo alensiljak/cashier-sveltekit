@@ -30,6 +30,16 @@
 	let listContainer = $state<HTMLElement | null>(null);
 	let topSentinel = $state<HTMLElement | null>(null);
 
+	/** Scrolls to the bottom once layout has actually settled — a single `tick()` can
+	 *  fire before the browser has reflowed newly-mounted rows (e.g. wrapped account
+	 *  names), leaving `scrollHeight` stale and the last xact's postings cut off. */
+	async function scrollToBottom() {
+		await tick();
+		requestAnimationFrame(() => {
+			if (listContainer) listContainer.scrollTop = listContainer.scrollHeight;
+		});
+	}
+
 	/** Groups posting rows into Xacts, preserving row order (newest-first per the query). */
 	function groupRows(
 		columns: string[],
@@ -140,8 +150,7 @@
 			if (!oldest) hasMore = false;
 
 			isLoading = false;
-			await tick();
-			if (listContainer) listContainer.scrollTop = listContainer.scrollHeight;
+			await scrollToBottom();
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
 			isLoading = false;
