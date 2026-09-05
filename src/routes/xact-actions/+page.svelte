@@ -125,11 +125,11 @@
 	{/snippet}
 </Toolbar>
 
-<main class="p-1">
+<main class="mx-auto max-w-2xl w-full p-1">
 	<JournalXactRow xact={$xact} />
 
 	<!-- button grid -->
-	<div class="mt-4 inline-grid w-full grid-cols-3 gap-4 justify-self-center">
+	<div class="mx-auto mt-4 grid w-550 max-w-[550px] grid-cols-3">
 		{#if $xactSpan}
 			<SquareButton Icon={SquarePenIcon} classes="bg-accent text-secondary" onclick={onEditClicked}>
 				Edit
