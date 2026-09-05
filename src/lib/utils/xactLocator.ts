@@ -45,7 +45,10 @@ export async function locateXactsInSource(source: string): Promise<XactLocation[
 			if (directive.type !== 'transaction') continue;
 			const spanIdx = findSpanForDirective(spans, i, source, directives);
 			if (spanIdx >= 0) {
-				result.push({ xact: directiveToXact(directive, source), span: spans[spanIdx] });
+				const span = spans[spanIdx];
+				const lines = source.split('\n');
+				const spanSource = lines.slice(span.startLine, span.endLine + 1).join('\n');
+				result.push({ xact: directiveToXact(directive, spanSource), span });
 			}
 		}
 		return result;
