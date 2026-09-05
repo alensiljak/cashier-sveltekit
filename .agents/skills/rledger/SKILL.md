@@ -83,8 +83,9 @@ await fullLedgerService.getErrors(); // parse/validation errors
 
 ## File loading architecture
 
-- Entry point is always `cashier.bean` (the WASM root).
-- The user's book filename (from settings key `USER_BOOK_FILENAME`) is injected as an `include` directive into `cashier.bean` **in memory** at load time — never written to disk.
+- Entry point is `cashier.bean` **only** when no user book is configured.
+- When the user's book filename is set (settings key `USER_BOOK_FILENAME`), *that file* becomes the WASM parse entry point instead — mirroring how it's opened directly on desktop (e.g. `rledger check`) — and `cashier.bean` is folded in via an `include` directive appended to an in-memory copy of the book, **never written to disk**.
+- This direction matters: Beancount/rledger only honors `option` directives (e.g. `title`, `inferred_tolerance_default`) declared in the top-level/entry-point file — the same option in an included file is silently ignored (`E7009`). Making the user's book the entry point keeps their own options authoritative instead of requiring them to be duplicated into `cashier.bean`.
 - All `.bean` files are read from OPFS; a binary cache is stored at `LEDGER_CACHE_FILE` in OPFS for fast re-loads.
 
 ## Low-level WASM (rustledger.ts)

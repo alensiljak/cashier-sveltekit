@@ -15,7 +15,7 @@ The decisions made in the architecture of the app.
 ### Rust Ledger WASM
 
 - `ledgerService` is the light version, loading only the Transactions. It provides the LSP features and is used for saving the Xact record to a correct place in the source file.
-- `ledgerWorkerClient` (imported as `fullLedgerService`) loads the complete book in a background Worker and is used to run financial reports and queries. It reads all `.bean` files from OPFS and injects the user's book include into `cashier.bean` in memory at load time.
+- `ledgerWorkerClient` (imported as `fullLedgerService`) loads the complete book in a background Worker and is used to run financial reports and queries. It reads all `.bean` files from OPFS; if the user has configured their own book file, that file (not `cashier.bean`) is used as the WASM parse entry point, with `cashier.bean`'s device transactions folded in via an `include` line injected in memory. This keeps `option` directives declared in the user's book authoritative — Beancount/rledger only honors options set in the top-level (entry point) file, ignoring the same option when it appears in an included file. With no user book configured, `cashier.bean` is the entry point on its own.
 - Individual pages send queries and use the returned data asynchronously.
 
 ### Key directories
