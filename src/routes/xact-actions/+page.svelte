@@ -126,7 +126,7 @@
 </Toolbar>
 
 <main class="mx-auto max-w-2xl w-full p-1">
-	<JournalXactRow xact={$xact} />
+	<JournalXactRow xact={$xact} accountLinksEnabled={true} />
 
 	<!-- button grid -->
 	<div class="mx-auto mt-4 grid w-550 max-w-[550px] grid-cols-3">

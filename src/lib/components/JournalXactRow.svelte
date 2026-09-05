@@ -9,10 +9,10 @@
 		onclick?: (xact: Xact) => void;
 		/** Whether the row navigates on click. Defaults to true; set false for read-only views. */
 		linksEnabled?: boolean;
-		/** Whether each posting's account links to that account's transactions. Defaults to true; set false when tapping the row must select it instead (e.g. quick-entry suggestions). */
+		/** Whether each posting's account links to that account's transactions. Defaults to false; the transaction row itself is the clickable unit everywhere except the xact details view. */
 		accountLinksEnabled?: boolean;
 	}
-	let { xact, onclick, linksEnabled = true, accountLinksEnabled = true }: Props = $props();
+	let { xact, onclick, linksEnabled = true, accountLinksEnabled = false }: Props = $props();
 
 	function onRowClicked() {
 		if (linksEnabled && onclick) {

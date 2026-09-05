@@ -493,7 +493,7 @@
 						{/if}
 					</div>
 					<div class:pointer-events-none={isSelecting} class:opacity-50={isSelecting}>
-						<JournalXactRow xact={nlpXact} onclick={selectNlpXact} accountLinksEnabled={false} />
+						<JournalXactRow xact={nlpXact} onclick={selectNlpXact} />
 					</div>
 				</div>
 
@@ -522,7 +522,7 @@
 				>
 					{#each visibleTemplates as template (template)}
 						<div class="py-2">
-							<JournalXactRow xact={template} onclick={selectTemplate} accountLinksEnabled={false} />
+							<JournalXactRow xact={template} onclick={selectTemplate} />
 						</div>
 					{/each}
 				</div>
