@@ -68,3 +68,35 @@ latest transaction on open".
 Page content is constrained to `max-w-2xl mx-auto` (centered, ~42rem) so that
 layouts stay readable on wide/desktop viewports while remaining natural on
 mobile. Apply this to the top-level content wrapper of a page's markup.
+
+## Toolbar Overflow Menu
+
+`Toolbar.svelte` (`src/lib/components/Toolbar.svelte`) takes an optional
+`menuItems` snippet prop. When provided, the toolbar renders a kebab
+(`⋮`) button that opens a dropdown containing the snippet's content —
+use this for page-specific actions that don't warrant a permanent icon in
+the toolbar's `actions` slot (e.g. "reset cache", "choose strategy").
+
+Define the snippet at the top level of the page markup (not nested inside
+`<main>`) and pass it to `Toolbar` by shorthand:
+
+```svelte
+{#snippet menuItems()}
+	<ToolbarMenuItem text="Re-read Files" Icon={EraserIcon} onclick={rebuildManifestAndRescan} />
+{/snippet}
+
+<main>
+	<Toolbar title="My Page" {menuItems}>
+		{#snippet actions()}
+			<HelpButton topic="my-page" />
+		{/snippet}
+	</Toolbar>
+	...
+</main>
+```
+
+`ToolbarMenuItem` (`src/lib/components/ToolbarMenuItem.svelte`) renders one
+menu row and supports `text`, `Icon`, `disabled`, `onclick`, and
+`targetNav` (navigates via `goto` before calling `onclick`). See
+`src/routes/sync/beancount/+page.svelte` and
+`src/routes/opfs/import-ledger/+page.svelte` for examples.

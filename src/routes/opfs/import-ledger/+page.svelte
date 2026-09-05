@@ -2,9 +2,10 @@
 	import { onMount } from 'svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import HelpButton from '$lib/help/HelpButton.svelte';
-	import { FolderOpenIcon, RefreshCcwIcon, ChevronUpIcon, ChevronDownIcon } from '@lucide/svelte';
+	import { FolderOpenIcon, RefreshCcwIcon, ChevronUpIcon, ChevronDownIcon, EraserIcon } from '@lucide/svelte';
 	import { settings, SettingKeys, deviceSettings, DeviceSettingKeys } from '$lib/settings';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
+	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import {
 		loadPersistedHandle,
 		persistHandle,
@@ -18,9 +19,17 @@
 	} from '$lib/utils/importManifest';
 	import { processWithConcurrencyLimit } from '$lib/utils/concurrency';
 	import { parseSpecs, matchesAny, collectFsFileHandles } from '$lib/utils/fsScan';
-	import { readFile, writeFileObject, deleteFile as deleteOpfsFile } from '$lib/utils/opfslib';
+	import {
+		readFile,
+		writeFileObject,
+		deleteFile as deleteOpfsFile,
+		listFileTree
+	} from '$lib/utils/opfslib';
 	import { reloadLedgerFromOpfs } from '$lib/services/ledgerReload';
 	import { buildDiffLines, type DiffLine } from '$lib/utils/diffText';
+	import { CASHIER_XACT_FILE, CASHIER_DATA_DIR } from '$lib/constants';
+
+	const CACHE_DIR_PREFIX = `${CASHIER_DATA_DIR}/`;
 
 	const HANDLE_KEY = 'importLedgerDirectoryHandle';
 	const CONCURRENCY = 4;
@@ -377,10 +386,65 @@
 		autoReload = !autoReload;
 		await deviceSettings.set(DeviceSettingKeys.importAutoReload, autoReload);
 	}
+
+	// ── Re-read files (rebuild manifest from actual OPFS contents) ───────────────
+	// The manifest can drift from reality — e.g. files removed directly on the
+	// OPFS page rather than through this import flow. Reconcile it against what
+	// is actually in OPFS right now: add/update entries for files that exist,
+	// drop entries for files that don't, and leave everything else untouched
+	// (importedAt is preserved for files still present).
+	async function rebuildManifestAndRescan() {
+		const [manifest, tree] = await Promise.all([getManifest(), listFileTree()]);
+		const patterns = parseSpecs(fileSpec);
+
+		const actualPaths = new Set<string>();
+		const upserts: ImportedFileMeta[] = [];
+
+		for (const entry of tree) {
+			if (entry.kind !== 'file') continue;
+			if (entry.path === CASHIER_XACT_FILE || entry.path.startsWith(CACHE_DIR_PREFIX)) continue;
+			if (patterns.length > 0 && !matchesAny(entry.name, patterns)) continue;
+			if (entry.size === undefined || entry.lastModified === undefined) continue;
+
+			actualPaths.add(entry.path);
+			const prev = manifest.get(entry.path);
+			if (prev && prev.size === entry.size && prev.lastModified === entry.lastModified) {
+				continue; // unchanged, no need to rewrite
+			}
+			upserts.push({
+				path: entry.path,
+				size: entry.size,
+				lastModified: entry.lastModified,
+				importedAt: prev?.importedAt ?? Date.now()
+			});
+		}
+
+		const stale = [...manifest.keys()].filter((path) => !actualPaths.has(path));
+
+		await putManifestEntries(upserts);
+		await deleteManifestEntries(stale);
+
+		diffPath = null;
+		diffLines = [];
+		scanStats = null;
+		scannedFiles = [];
+		if (dirHandle || fallbackFiles) {
+			await scanAndCompare();
+		}
+	}
 </script>
 
+{#snippet menuItems()}
+	<ToolbarMenuItem
+		text="Re-read Files"
+		Icon={EraserIcon}
+		disabled={phase === 'scanning' || phase === 'copying'}
+		onclick={rebuildManifestAndRescan}
+	/>
+{/snippet}
+
 <main class="h-screen flex flex-col overflow-hidden">
-	<Toolbar title="Import Ledger to OPFS">
+	<Toolbar title="Import Ledger to OPFS" {menuItems}>
 		{#snippet actions()}
 			<HelpButton topic="ledger-import" />
 		{/snippet}
