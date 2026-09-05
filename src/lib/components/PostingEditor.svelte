@@ -1,20 +1,9 @@
 <script lang="ts">
-	import { xact, selectionMetadata, postingEditorIndex } from '$lib/data/mainStore';
-	import {
-		ArrowDownIcon,
-		ArrowUpIcon,
-		CalculatorIcon,
-		ChevronDownIcon,
-		CoinsIcon,
-		DiffIcon,
-		PencilLineIcon,
-		TrashIcon,
-		XIcon
-	} from '@lucide/svelte';
+	import { xact, postingEditorIndex } from '$lib/data/mainStore';
+	import { DiffIcon, PencilLineIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import type { EventHandler } from 'svelte/elements';
 	import { goto } from '$app/navigation';
-	import { SelectionModeMetadata } from '$lib/settings';
 
 	type Props = {
 		index: number;
@@ -34,31 +23,30 @@
 		($xact?.postings[index].amount as number) < 0 ? 'bg-secondary/20' : 'bg-primary/20'
 	);
 	let currencyInput: HTMLInputElement;
-	let expanded = $state(false);
-	let isDeleteConfirmationOpen = $state(false);
-	let showConversion = $state($xact.postings[index]?.priceAmount != null);
-	onMount(() => {});
-
-	/**
-	 * Open calculator to enter amount
-	 */
-	async function openCalculator() {
-		// Set selection mode for amount calculation
-		const meta = new SelectionModeMetadata();
-		meta.postingIndex = index;
-		meta.selectionType = 'amount';
-
-		// Store the current amount value to initialize the calculator
-		const currentAmount = $xact.postings[index].amount;
-		if (currentAmount !== undefined && currentAmount !== null) {
-			meta.initialValue = currentAmount;
+	let isAdvanced = $derived(
+		$xact?.postings[index]?.costAmount != null || $xact?.postings[index]?.priceAmount != null
+	);
+	let summaryText = $derived.by(() => {
+		const p = $xact?.postings[index];
+		if (!p) return '';
+		const parts: string[] = [];
+		if (p.account) parts.push(p.account);
+		if (p.amount != null) {
+			parts.push(`${p.amount} ${p.currency ?? ''}`);
 		}
-
-		selectionMetadata.set(meta);
-
-		// Navigate to calculator
-		await goto('/calculator');
-	}
+		if (p.costAmount != null && p.costCurrency) {
+			let costStr = `{${p.costAmount} ${p.costCurrency}`;
+			if (p.costDate) costStr += `, ${p.costDate}`;
+			costStr += '}';
+			parts.push(costStr);
+		}
+		if (p.priceAmount != null && p.priceCurrency) {
+			const op = p.totalPrice ? '@@' : '@';
+			parts.push(`${op} ${p.priceAmount} ${p.priceCurrency}`);
+		}
+		return parts.join('    ');
+	});
+	onMount(() => {});
 
 	async function openAdvancedEditor() {
 		postingEditorIndex.set(index);
@@ -77,105 +65,33 @@
 		}
 	}
 
-	/**
-	 * Move this posting one place earlier in the list.
-	 */
-	function moveUp() {
-		if (index === 0) return;
-		xact.update((current) => {
-			const postings = [...current.postings];
-			[postings[index - 1], postings[index]] = [postings[index], postings[index - 1]];
-			return { ...current, postings };
-		});
-	}
-
-	/**
-	 * Move this posting one place later in the list.
-	 */
-	function moveDown() {
-		if (index === $xact.postings.length - 1) return;
-		xact.update((current) => {
-			const postings = [...current.postings];
-			[postings[index], postings[index + 1]] = [postings[index + 1], postings[index]];
-			return { ...current, postings };
-		});
-	}
-
-	/**
-	 * Toggle the inline currency conversion (@/@@) fields.
-	 */
-	function toggleConversion() {
-		showConversion = !showConversion;
-		if (!showConversion) {
-			clearConversion();
-		}
-	}
-
-	function clearConversion() {
-		$xact.postings[index].priceAmount = undefined;
-		$xact.postings[index].priceCurrency = undefined;
-		$xact.postings[index].totalPrice = undefined;
-	}
-
-	function onDeleteClicked() {
-		isDeleteConfirmationOpen = true;
-	}
-
-	function onDeleteConfirmed() {
-		isDeleteConfirmationOpen = false;
-		xact.update((current) => ({
-			...current,
-			postings: current.postings.filter((_, i) => i !== index)
-		}));
-	}
 </script>
 
 <section class="w-full">
-	<input
-		title="Account"
-		placeholder="Account"
-		type="text"
-		class="input w-full rounded"
-		readonly
-		bind:value={$xact.postings[index].account}
-		onclick={onAccountClicked}
-	/>
-
-	<div class="mb-2 flex flex-row items-center gap-1">
-		<button
-			type="button"
-			class="btn btn-outline btn-primary-content w-10 grow-0 rounded px-1"
-			onclick={() => (expanded = !expanded)}
-			title={expanded ? 'Hide posting actions' : 'Show posting actions'}
-			aria-expanded={expanded}
-		>
-			<ChevronDownIcon class={`h-4 w-4 transition-transform ${expanded ? 'rotate-180' : ''}`} />
-		</button>
+	{#if isAdvanced}
+		<div class="mb-2 flex flex-row items-center gap-2 rounded border border-base-300 p-2">
+			<div class="flex-1 font-mono text-sm break-all whitespace-pre-wrap">{summaryText}</div>
+			<button
+				type="button"
+				class="btn btn-primary btn-square shrink-0"
+				onclick={openAdvancedEditor}
+				title="Edit posting"
+			>
+				<PencilLineIcon class="h-4 w-4" />
+			</button>
+		</div>
+	{:else}
 		<input
-			title="Amount"
-			placeholder="Amount"
-			type="number"
-			class={`input grow text-right text-lg ${amountFieldColor} rounded`}
-			bind:value={$xact.postings[index].amount}
-			bind:this={amountInput}
-			onfocus={() => amountInput.select()}
-			oninput={onAmountChanged}
-		/>
-		<input
-			title="Currency"
-			placeholder="Currency"
+			title="Account"
+			placeholder="Account"
 			type="text"
-			class="input rounded text-center uppercase w-22 p-1"
-			bind:value={$xact.postings[index].currency}
-			bind:this={currencyInput}
-			onfocus={() => currencyInput.select()}
-			oninput={() =>
-				($xact.postings[index].currency = $xact.postings[index].currency?.toUpperCase())}
+			class="input w-full rounded"
+			readonly
+			bind:value={$xact.postings[index].account}
+			onclick={onAccountClicked}
 		/>
-	</div>
 
-	{#if expanded}
-		<div class="mb-2 flex flex-row items-center justify-center gap-3">
+		<div class="mb-2 flex flex-row items-center gap-1">
 			<button
 				type="button"
 				class="btn btn-outline btn-primary-content btn-square"
@@ -184,6 +100,16 @@
 			>
 				<PencilLineIcon class="h-4 w-4" />
 			</button>
+			<input
+				title="Amount"
+				placeholder="Amount"
+				type="number"
+				class={`input grow text-right text-lg ${amountFieldColor} rounded`}
+				bind:value={$xact.postings[index].amount}
+				bind:this={amountInput}
+				onfocus={() => amountInput.select()}
+				oninput={onAmountChanged}
+			/>
 			<button
 				type="button"
 				class="btn btn-outline btn-primary-content btn-square"
@@ -192,124 +118,17 @@
 			>
 				<DiffIcon class="h-4 w-4" />
 			</button>
-			<button
-				type="button"
-				class="btn btn-outline btn-primary-content btn-square"
-				onclick={openCalculator}
-				title="Open calculator"
-			>
-				<CalculatorIcon class="h-4 w-4" />
-			</button>
-			<button
-				type="button"
-				class="btn btn-outline btn-primary-content btn-square"
-				class:btn-active={showConversion}
-				onclick={toggleConversion}
-				title="Currency conversion (@/@@)"
-				aria-pressed={showConversion}
-			>
-				<CoinsIcon class="h-4 w-4" />
-			</button>
-			<button
-				type="button"
-				class="btn btn-outline btn-primary-content btn-square"
-				onclick={moveUp}
-				disabled={index === 0}
-				title="Move posting up"
-			>
-				<ArrowUpIcon class="h-4 w-4" />
-			</button>
-			<button
-				type="button"
-				class="btn btn-outline btn-primary-content btn-square"
-				onclick={moveDown}
-				disabled={index === $xact.postings.length - 1}
-				title="Move posting down"
-			>
-				<ArrowDownIcon class="h-4 w-4" />
-			</button>
-			<button
-				type="button"
-				class="btn btn-outline btn-secondary btn-square"
-				onclick={onDeleteClicked}
-				title="Delete posting"
-			>
-				<TrashIcon class="h-4 w-4" />
-			</button>
+			<input
+				title="Currency"
+				placeholder="Currency"
+				type="text"
+				class="input rounded text-center uppercase w-22 p-1"
+				bind:value={$xact.postings[index].currency}
+				bind:this={currencyInput}
+				onfocus={() => currencyInput.select()}
+				oninput={() =>
+					($xact.postings[index].currency = $xact.postings[index].currency?.toUpperCase())}
+			/>
 		</div>
-
-		{#if showConversion}
-			<div class="mb-2 flex flex-row items-center gap-1">
-				<div class="join">
-					<button
-						type="button"
-						class="join-item btn btn-sm"
-						class:btn-primary={!$xact.postings[index].totalPrice}
-						class:btn-outline={!!$xact.postings[index].totalPrice}
-						onclick={() => ($xact.postings[index].totalPrice = false)}
-						title="Price per unit (@)"
-					>
-						@
-					</button>
-					<button
-						type="button"
-						class="join-item btn btn-sm"
-						class:btn-primary={!!$xact.postings[index].totalPrice}
-						class:btn-outline={!$xact.postings[index].totalPrice}
-						onclick={() => ($xact.postings[index].totalPrice = true)}
-						title="Total price (@@)"
-					>
-						@@
-					</button>
-				</div>
-				<input
-					title="Conversion amount"
-					placeholder="Amount"
-					type="number"
-					class="input grow text-right rounded"
-					bind:value={$xact.postings[index].priceAmount}
-				/>
-				<input
-					title="Conversion currency"
-					placeholder="CCY"
-					type="text"
-					class="input rounded text-center uppercase w-22 p-1"
-					bind:value={$xact.postings[index].priceCurrency}
-					oninput={() =>
-						($xact.postings[index].priceCurrency =
-							$xact.postings[index].priceCurrency?.toUpperCase())}
-				/>
-				<button
-					type="button"
-					class="btn btn-outline btn-square"
-					onclick={toggleConversion}
-					title="Remove conversion"
-				>
-					<XIcon class="h-4 w-4" />
-				</button>
-			</div>
-		{/if}
 	{/if}
 </section>
-
-<input type="checkbox" class="modal-toggle" bind:checked={isDeleteConfirmationOpen} />
-<dialog class="modal">
-	<div class="modal-box">
-		<header class="flex justify-between">
-			<h2 class="text-lg font-bold">Confirm Delete</h2>
-		</header>
-		<article>
-			<p class="py-4 opacity-60">Do you want to delete this posting?</p>
-		</article>
-		<footer class="flex justify-end gap-4">
-			<button
-				type="button"
-				class="btn btn-ghost rounded"
-				onclick={() => (isDeleteConfirmationOpen = false)}>Cancel</button
-			>
-			<button type="button" class="btn btn-primary text-primary-content rounded" onclick={onDeleteConfirmed}
-				>OK</button
-			>
-		</footer>
-	</div>
-</dialog>

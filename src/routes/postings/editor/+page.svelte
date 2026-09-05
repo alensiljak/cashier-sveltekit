@@ -1,22 +1,98 @@
 <script lang="ts">
 	import Fab from '$lib/components/FAB.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
-	import { xact, postingEditorIndex } from '$lib/data/mainStore';
-	import { CheckIcon } from '@lucide/svelte';
+	import { xact, selectionMetadata, postingEditorIndex } from '$lib/data/mainStore';
+	import { CalculatorIcon, CheckIcon, DiffIcon, ListIcon, TrashIcon, XIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { SelectionModeMetadata } from '$lib/settings';
+	import { getAccountBalance, loadAccount } from '$lib/services/accountsService';
+	import appService from '$lib/services/appService';
 
-	onMount(() => {
+	onMount(async () => {
 		if (!$xact) {
 			goto('/');
+			return;
+		}
+
+		if (
+			$selectionMetadata?.selectionType === 'amount' &&
+			typeof $selectionMetadata.selectedId === 'number' &&
+			typeof $selectionMetadata.postingIndex === 'number'
+		) {
+			const amount = $selectionMetadata.selectedId;
+			const postingIndex = $selectionMetadata.postingIndex;
+			if ($xact.postings[postingIndex]) {
+				$xact.postings[postingIndex].amount = amount;
+			}
+			selectionMetadata.set(undefined);
+		}
+
+		if (
+			$selectionMetadata?.selectionType === 'account' &&
+			$selectionMetadata.selectedId &&
+			typeof $selectionMetadata.postingIndex === 'number'
+		) {
+			const accountName = $selectionMetadata.selectedId as string;
+			const postingIndex = $selectionMetadata.postingIndex;
+			selectionMetadata.set(undefined);
+
+			if ($xact.postings[postingIndex]) {
+				const defaultCurrency = await appService.getDefaultCurrency();
+				const account = await loadAccount(accountName);
+				const acctBalance = getAccountBalance(account, defaultCurrency);
+
+				$xact.postings[postingIndex].account = account.name;
+				$xact.postings[postingIndex].currency = acctBalance.currency;
+			}
 		}
 	});
 
 	let index = $derived($postingEditorIndex);
 	let posting = $derived($xact?.postings[index]);
+	let amountFieldColor = $derived(
+		($xact?.postings[index]?.amount as number) < 0 ? 'bg-secondary/20' : 'bg-primary/20'
+	);
+	let isDeleteConfirmationOpen = $state(false);
+	let isOverwriteConfirmationOpen = $state(false);
 
 	function onFab() {
 		history.back();
+	}
+
+	function onDeleteClicked() {
+		isDeleteConfirmationOpen = true;
+	}
+
+	function onDeleteConfirmed() {
+		isDeleteConfirmationOpen = false;
+		xact.update((current) => ({
+			...current,
+			postings: current.postings.filter((_, i) => i !== index)
+		}));
+		history.back();
+	}
+
+	function onSelectAccountClicked() {
+		if ($xact.postings[index]?.account) {
+			isOverwriteConfirmationOpen = true;
+		} else {
+			navigateToAccountSelection();
+		}
+	}
+
+	function onOverwriteConfirmed() {
+		isOverwriteConfirmationOpen = false;
+		navigateToAccountSelection();
+	}
+
+	async function navigateToAccountSelection() {
+		const meta = new SelectionModeMetadata();
+		meta.postingIndex = index;
+		meta.selectionType = 'account';
+		selectionMetadata.set(meta);
+
+		await goto('/accounts');
 	}
 
 	function clearPrice() {
@@ -24,6 +100,30 @@
 		$xact.postings[index].priceAmount = undefined;
 		$xact.postings[index].priceCurrency = undefined;
 		$xact.postings[index].totalPrice = undefined;
+	}
+
+	function changeSign() {
+		if (!posting) return;
+		const amount = $xact.postings[index].amount || 0;
+		$xact.postings[index].amount = amount * -1;
+	}
+
+	/**
+	 * Open calculator to enter amount
+	 */
+	async function openCalculator() {
+		const meta = new SelectionModeMetadata();
+		meta.postingIndex = index;
+		meta.selectionType = 'amount';
+
+		const currentAmount = $xact.postings[index].amount;
+		if (currentAmount !== undefined && currentAmount !== null) {
+			meta.initialValue = currentAmount;
+		}
+
+		selectionMetadata.set(meta);
+
+		await goto('/calculator');
 	}
 
 	function clearCost() {
@@ -34,23 +134,24 @@
 	}
 
 	let previewText = $derived.by(() => {
-		if (!posting) return '';
+		const p = $xact?.postings[index];
+		if (!p) return '';
 		const parts: string[] = [];
-		if (posting.account) parts.push(posting.account);
-		if (posting.amount != null) {
-			parts.push(`${posting.amount} ${posting.currency ?? ''}`);
+		if (p.account) parts.push(p.account);
+		if (p.amount != null) {
+			parts.push(`${p.amount} ${p.currency ?? ''}`);
 		}
-		if (posting.costAmount != null && posting.costCurrency) {
-			let costStr = `{${posting.costAmount} ${posting.costCurrency}`;
-			if (posting.costDate) costStr += `, ${posting.costDate}`;
+		if (p.costAmount != null && p.costCurrency) {
+			let costStr = `{${p.costAmount} ${p.costCurrency}`;
+			if (p.costDate) costStr += `, ${p.costDate}`;
 			costStr += '}';
 			parts.push(costStr);
 		}
-		if (posting.priceAmount != null && posting.priceCurrency) {
-			const op = posting.totalPrice ? '@@' : '@';
-			parts.push(`${op} ${posting.priceAmount} ${posting.priceCurrency}`);
+		if (p.priceAmount != null && p.priceCurrency) {
+			const op = p.totalPrice ? '@@' : '@';
+			parts.push(`${op} ${p.priceAmount} ${p.priceCurrency}`);
 		}
-		return parts.join('  ');
+		return parts.join('    ');
 	});
 </script>
 
@@ -62,7 +163,7 @@
 		<section class="container mx-auto flex-1 overflow-y-auto touch-pan-y px-4 py-4 space-y-5 lg:max-w-screen-sm">
 			<!-- Preview -->
 			{#if previewText}
-				<div class="bg-base-200 rounded px-3 py-2 font-mono text-sm break-all">
+				<div class="bg-base-200 rounded px-3 py-2 font-mono text-sm break-all whitespace-pre-wrap">
 					{previewText}
 				</div>
 			{/if}
@@ -72,13 +173,23 @@
 				<label class="label" for="account">
 					<span class="label-text font-semibold">Account</span>
 				</label>
-				<input
-					id="account"
-					type="text"
-					placeholder="Account"
-					class="input w-full rounded"
-					bind:value={$xact.postings[index].account}
-				/>
+				<div class="flex gap-2">
+					<input
+						id="account"
+						type="text"
+						placeholder="Account"
+						class="input flex-1 rounded"
+						bind:value={$xact.postings[index].account}
+					/>
+					<button
+						type="button"
+						class="btn btn-outline btn-primary-content btn-square"
+						onclick={onSelectAccountClicked}
+						title="Select account"
+					>
+						<ListIcon class="h-4 w-4" />
+					</button>
+				</div>
 			</div>
 
 			<!-- Amount + Currency -->
@@ -87,11 +198,19 @@
 					<span class="label-text font-semibold">Amount</span>
 				</label>
 				<div class="flex gap-2">
+					<button
+						type="button"
+						class="btn btn-outline btn-primary-content btn-square"
+						onclick={changeSign}
+						title="Flip amount sign"
+					>
+						<DiffIcon class="h-4 w-4" />
+					</button>
 					<input
 						id="amount"
 						type="number"
 						placeholder="Amount"
-						class="input flex-1 rounded text-right"
+						class={`input flex-1 rounded text-right ${amountFieldColor}`}
 						bind:value={$xact.postings[index].amount}
 					/>
 					<input
@@ -102,14 +221,28 @@
 						oninput={() => ($xact.postings[index].currency = $xact.postings[index].currency?.toUpperCase())}
 					/>
 				</div>
+				<div class="mt-2">
+					<button
+						type="button"
+						class="btn btn-outline btn-primary-content"
+						onclick={openCalculator}
+						title="Open calculator"
+					>
+						<CalculatorIcon class="h-4 w-4" />
+						Calculator
+					</button>
+				</div>
 			</div>
 
 			<!-- Cost annotation: {amount currency[, date]} -->
 			<div class="form-control">
-				<label class="label">
+				<label class="label flex w-full items-center justify-between">
 					<span class="label-text font-semibold">Cost <span class="font-mono text-xs opacity-60">{'{'}amount CCY[, date]{'}'}</span></span>
-					{#if posting.costAmount != null}
-						<button type="button" class="label-text-alt btn btn-xs btn-ghost" onclick={clearCost}>Clear</button>
+					{#if $xact.postings[index]?.costAmount != null}
+						<button type="button" class="label-text-alt btn btn-sm btn-error" onclick={clearCost}>
+							<XIcon class="h-4 w-4" />
+							Clear
+						</button>
 					{/if}
 				</label>
 				<div class="flex gap-2">
@@ -139,10 +272,13 @@
 
 			<!-- Price annotation: @ or @@ amount currency -->
 			<div class="form-control">
-				<label class="label">
+				<label class="label flex w-full items-center justify-between">
 					<span class="label-text font-semibold">Price <span class="font-mono text-xs opacity-60">@ / @@ amount CCY</span></span>
-					{#if posting.priceAmount != null}
-						<button type="button" class="label-text-alt btn btn-xs btn-ghost" onclick={clearPrice}>Clear</button>
+					{#if $xact.postings[index]?.priceAmount != null}
+						<button type="button" class="label-text-alt btn btn-sm btn-error" onclick={clearPrice}>
+							<XIcon class="h-4 w-4" />
+							Clear
+						</button>
 					{/if}
 				</label>
 				<div class="flex gap-2 mb-2">
@@ -179,6 +315,62 @@
 					/>
 				</div>
 			</div>
+
+			<div class="flex justify-center pt-2">
+				<button
+					type="button"
+					class="btn btn-outline btn-secondary"
+					onclick={onDeleteClicked}
+					title="Delete posting"
+				>
+					<TrashIcon class="h-4 w-4" />
+					Delete posting
+				</button>
+			</div>
 		</section>
 	{/if}
 </main>
+
+<input type="checkbox" class="modal-toggle" bind:checked={isDeleteConfirmationOpen} />
+<dialog class="modal">
+	<div class="modal-box">
+		<header class="flex justify-between">
+			<h2 class="text-lg font-bold">Confirm Delete</h2>
+		</header>
+		<article>
+			<p class="py-4 opacity-60">Do you want to delete this posting?</p>
+		</article>
+		<footer class="flex justify-end gap-4">
+			<button
+				type="button"
+				class="btn btn-ghost rounded"
+				onclick={() => (isDeleteConfirmationOpen = false)}>Cancel</button
+			>
+			<button type="button" class="btn btn-primary text-primary-content rounded" onclick={onDeleteConfirmed}
+				>OK</button
+			>
+		</footer>
+	</div>
+</dialog>
+
+<input type="checkbox" class="modal-toggle" bind:checked={isOverwriteConfirmationOpen} />
+<dialog class="modal">
+	<div class="modal-box">
+		<header class="flex justify-between">
+			<h2 class="text-lg font-bold">Replace Account</h2>
+		</header>
+		<article>
+			<p class="py-4 opacity-60">This posting already has an account set. Selecting a new one will overwrite it. Continue?</p>
+		</article>
+		<footer class="flex justify-end gap-4">
+			<button
+				type="button"
+				class="btn btn-ghost rounded"
+				onclick={() => (isOverwriteConfirmationOpen = false)}>Cancel</button
+			>
+			<button type="button" class="btn btn-primary text-primary-content rounded" onclick={onOverwriteConfirmed}
+				>OK</button
+			>
+		</footer>
+	</div>
+</dialog>

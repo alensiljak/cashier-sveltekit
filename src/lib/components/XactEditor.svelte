@@ -373,7 +373,12 @@
 
 	<!-- postings sum -->
 	<div class="flex items-center justify-between px-1">
-		<SectionTitle class="text-xs opacity-70">Postings:</SectionTitle>
+		<div class="flex items-center gap-2">
+			<SectionTitle class="text-xs opacity-70">Postings:</SectionTitle>
+			{#if ($xact?.postings?.length ?? 0) > 1}
+				<a href="/postings/reorder" class="link text-xs opacity-60">Reorder</a>
+			{/if}
+		</div>
 		<span class="flex items-center gap-1 text-sm opacity-70">
 			<SigmaIcon class="h-3.5 w-3.5" />
 			<data>{sum}</data>
