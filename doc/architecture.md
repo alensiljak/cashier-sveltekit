@@ -38,7 +38,7 @@ Any UI that lists transactions (device journal, Full Journal, account registers,
 etc.) follows the same convention: **ascending by date, oldest first, newest
 last** — like a chat log, not a feed. On load the list scrolls to the bottom so
 the most recent transaction is immediately visible, and older history is
-revealed by scrolling *up*.
+revealed by scrolling _up_.
 
 Consequences for implementation:
 
@@ -49,7 +49,7 @@ Consequences for implementation:
   (`ledger/journal/+page.svelte` uses keyset/cursor pagination —
   `WHERE (date < :d) OR (date = :d AND id < :id)` — rather than `OFFSET`,
   since the BQL engine only guarantees `WHERE` + `ORDER BY` + `LIMIT`). Load
-  more when the user scrolls to the *top* of what's loaded, and prepend;
+  more when the user scrolls to the _top_ of what's loaded, and prepend;
   never load more at the bottom.
 - A query's `LIMIT` counts rows (one per posting), not transactions, so a
   fetched batch's last transaction group may be cut off mid-posting. Treat it
