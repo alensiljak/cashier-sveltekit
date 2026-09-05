@@ -8,6 +8,8 @@ For previous versions of cashier, see [Cashier](https://github.com/alensiljak/ca
 
 Cashier is a personal finance app. It includes a full Beancount engine running offline on your device.
 
+Architectural decisions and guidelines are documented in [`doc/architecture.md`](doc/architecture.md).
+
 ## Palette
 
 ```scss
