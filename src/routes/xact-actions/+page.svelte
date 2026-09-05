@@ -144,7 +144,7 @@
 	<JournalXactRow xact={$xact} />
 
 	<!-- button grid -->
-	<div class="mx-auto mt-4 grid w-550 max-w-[550px] grid-cols-3">
+	<div class="mx-auto mt-8 grid grid-cols-3 max-w-[550px]">
 		{#if $xactSpan}
 			<SquareButton Icon={SquarePenIcon} classes="bg-accent text-secondary" onclick={onEditClicked}>
 				Edit
@@ -172,7 +172,7 @@
 
 	<!-- related transactions -->
 	{#if $xact}
-		<div class="mt-6 space-y-2">
+		<div class="mt-10 space-y-2">
 			{#if $xact.payee}
 				<div class="flex items-center justify-between gap-2 border-base-content/10 border-b py-1">
 					<span class="min-w-0 truncate">Payee: {$xact.payee}</span>

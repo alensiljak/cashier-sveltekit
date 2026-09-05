@@ -19,8 +19,8 @@
 </script>
 
 <!-- flex-col text-center -->
-<div class="bg-base-content/5 m-4 flex aspect-square items-center justify-center">
-	<button type="button" class={`btn aspect-square w-20 h-20 flex-col items-center justify-center gap-1.5 rounded-lg ${buttonColour} ${classes}`} {onclick}>
+<div class="bg-base-content/5 m-2 sm:m-4 flex aspect-square items-center justify-center">
+	<button type="button" class={`btn aspect-square w-full max-w-20 h-auto flex-col items-center justify-center gap-1.5 rounded-lg ${buttonColour} ${classes}`} {onclick}>
 		<span class="text-current">
 			<Icon class="w-6 h-6" />
 		</span>

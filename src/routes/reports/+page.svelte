@@ -28,7 +28,7 @@
 	</Toolbar>
 
 	<div class="flex-1 overflow-y-auto touch-pan-y px-1">
-		<div class="mx-auto grid w-350 max-w-[350px] grid-cols-3 pt-3">
+		<div class="mx-auto grid grid-cols-3 max-w-[350px] pt-3">
 			<SquareButton
 				Icon={TerminalIcon}
 				classes="bg-accent text-secondary"
