@@ -44,6 +44,14 @@
 	function openAddGroupModal() {
 		isAddGroupModalOpen = true;
 	}
+
+	async function toggleGroupCollapse(index: number) {
+		const updatedGroups = groups.map((g, i) =>
+			i === index ? { ...g, collapsed: !g.collapsed } : g
+		);
+		groups = updatedGroups;
+		await settings.set(SettingKeys.accountGroups, updatedGroups);
+	}
 </script>
 
 <main class="flex h-screen flex-col">
@@ -66,6 +74,7 @@
 				{group}
 				index={i}
 				onAccountClick={(name) => goto(`/accounts/account-xacts/${encodeURIComponent(name)}`)}
+				onToggleCollapse={toggleGroupCollapse}
 			/>
 		{/each}
 	</section>

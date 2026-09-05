@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Settings2Icon } from '@lucide/svelte';
+	import { ChevronDownIcon, ChevronRightIcon, Settings2Icon } from '@lucide/svelte';
 	import HomeCardTemplate from './HomeCardTemplate.svelte';
 	import AccountRow from './AccountRow.svelte';
 	import { goto } from '$app/navigation';
@@ -12,8 +12,11 @@
 		group: AccountGroup;
 		index: number;
 		onAccountClick?: (accountName: string) => void;
+		onToggleCollapse?: (index: number) => void;
 	};
-	let { group, index, onAccountClick }: Props = $props();
+	let { group, index, onAccountClick, onToggleCollapse }: Props = $props();
+
+	let collapsed = $derived(group.collapsed ?? false);
 
 	let accounts: Account[] = $state([]);
 	let maxBalance = $state(0);
@@ -134,6 +137,11 @@
 		e.stopPropagation();
 		goto('/accounts/groups/' + index);
 	}
+
+	function onToggleClick(e: Event) {
+		e.stopPropagation();
+		onToggleCollapse?.(index);
+	}
 </script>
 
 <HomeCardTemplate headerStyle={group.color ? `background-color: ${group.color}` : undefined}>
@@ -145,6 +153,18 @@
 		<button
 			type="button"
 			class="btn btn-ghost btn-circle btn-sm {group.color ? 'text-base-content/70' : 'text-primary-content'}"
+			onclick={onToggleClick}
+			aria-label={collapsed ? 'Expand group' : 'Collapse group'}
+		>
+			{#if collapsed}
+				<ChevronRightIcon size={16} />
+			{:else}
+				<ChevronDownIcon size={16} />
+			{/if}
+		</button>
+		<button
+			type="button"
+			class="btn btn-ghost btn-circle btn-sm {group.color ? 'text-base-content/70' : 'text-primary-content'}"
 			onclick={onSettingsClick}
 			aria-label="Group settings"
 		>
@@ -152,16 +172,18 @@
 		</button>
 	{/snippet}
 	{#snippet content()}
-		{#if accounts.length === 0}
-			<p class="px-2 py-1 text-sm opacity-60">No accounts added</p>
-		{:else}
-			{#each accounts as account (account.name)}
-				<AccountRow {account} {balancesLoaded} {maxBalance} onclick={onAccountClick} />
-			{/each}
+		{#if !collapsed}
+			{#if accounts.length === 0}
+				<p class="px-2 py-1 text-sm opacity-60">No accounts added</p>
+			{:else}
+				{#each accounts as account (account.name)}
+					<AccountRow {account} {balancesLoaded} {maxBalance} onclick={onAccountClick} />
+				{/each}
+			{/if}
 		{/if}
 	{/snippet}
 	{#snippet footer()}
-		{#if accounts.length > 0 && balancesLoaded}
+		{#if !collapsed && accounts.length > 0 && balancesLoaded}
 			<div class="flex w-full flex-wrap justify-end gap-x-4 gap-y-0.5 border-t-4 border-double border-base-200 px-3 py-1 text-sm font-semibold">
 				{#each Object.entries(currencyTotals) as [currency, total]}
 					<span>{total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currency}</span>

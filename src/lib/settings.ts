@@ -38,6 +38,7 @@ export interface AccountGroup {
 	title: string;
 	accounts: string[];
 	color?: string;
+	collapsed?: boolean;
 }
 
 export const defaultAccountGroups: AccountGroup[] = [
