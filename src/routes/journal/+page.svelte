@@ -13,6 +13,7 @@
 	import { FileDownIcon, ImportIcon, PlusIcon, TrashIcon } from '@lucide/svelte';
 	import appService from '$lib/services/appService';
 	import HelpButton from '$lib/help/HelpButton.svelte';
+	import { reloadLedgerFromOpfs } from '$lib/services/ledgerReload';
 
 	Notifier.init();
 
@@ -49,6 +50,10 @@
 		closeModal();
 		await appService.createDefaultCashierFile();
 		await ledgerService.invalidate();
+		// Re-parse the full book in the background — keeps the fullLedgerService
+		// cache and the "modified" change indicator in sync (same pattern as
+		// every other cashier.bean mutation; see doc/architecture.md).
+		void reloadLedgerFromOpfs();
 		Notifier.success('All local transactions deleted.');
 	}
 

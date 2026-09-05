@@ -86,6 +86,34 @@ bg-none` so the track matches the surrounding surface:
 See `src/routes/peer-sync/+page.svelte` (Connect toggle) and
 `src/lib/components/ScheduleEditor.svelte` (Repayment toggle).
 
+## Reloading After a cashier.bean Mutation
+
+Any code path that writes to `cashier.bean` (append/edit/delete a
+transaction, delete-all, import, sync) must refresh state in the same
+two-step pattern, or the light-service cache, the full-book cache, and the
+homepage "modified" change indicator drift out of sync with each other:
+
+1. **Light ledger (`ledgerService`)** — `appendTransaction` / `editTransaction`
+   / `deleteTransaction` already call `invalidate()` internally, which
+   re-reads `cashier.bean` and bumps the `version` store. Pages that list
+   transactions (e.g. `src/routes/journal/+page.svelte`) key an `$effect` off
+   `ledgerService.version` and re-fetch when it changes. If you mutate
+   `cashier.bean` directly instead of through one of those three methods
+   (e.g. `appService.createDefaultCashierFile()` for "Delete All"), call
+   `ledgerService.invalidate()` yourself afterwards.
+2. **Full ledger + change indicator (`reloadLedgerFromOpfs`,
+   `src/lib/services/ledgerReload.ts`)** — call `void reloadLedgerFromOpfs()`
+   (fire-and-forget, in the background) after step 1. It invalidates
+   `fullLedgerService` (used for reports/queries/asset-allocation) and
+   rebases the OPFS staleness snapshot so the homepage "modified" indicator
+   doesn't stay stuck out of date.
+
+See `src/routes/tx/+page.svelte` (`saveXact`) and
+`src/routes/xact-actions/+page.svelte` (`onDeleteConfirmed`,
+`onDuplicateClick`) for the reference pattern, and
+`src/routes/journal/+page.svelte` (`onDeleteAllConfirmed`) for the same
+pattern applied to a direct file write.
+
 ## Toolbar Overflow Menu
 
 `Toolbar.svelte` (`src/lib/components/Toolbar.svelte`) takes an optional
