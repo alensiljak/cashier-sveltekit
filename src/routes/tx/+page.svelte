@@ -8,6 +8,7 @@
 	import { afterNavigate, goto } from '$app/navigation';
 	import Notifier from '$lib/utils/notifier';
 	import ledgerService from '$lib/services/ledgerService';
+	import appService from '$lib/services/appService';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import { reloadLedgerFromOpfs } from '$lib/services/ledgerReload';
 	import { xactToBeancountText } from '$lib/utils/xactUtils';
@@ -76,7 +77,8 @@
 
 	async function saveXact() {
 		const clonedXact = JSON.parse(JSON.stringify($xact));
-		const beancountText = xactToBeancountText(clonedXact);
+		const defaultCurrency = await appService.getDefaultCurrency();
+		const beancountText = xactToBeancountText(clonedXact, defaultCurrency);
 		const span = get(xactSpan);
 
 		if (span) {
@@ -154,7 +156,8 @@
 		if (hasAnyAmount) {
 			try {
 				await ledgerService.ensureInitialized();
-				const beancountText = xactToBeancountText(JSON.parse(JSON.stringify(tx)));
+				const defaultCurrency = await appService.getDefaultCurrency();
+				const beancountText = xactToBeancountText(JSON.parse(JSON.stringify(tx)), defaultCurrency);
 				const tempLedger = ledgerService.createParsedLedger(beancountText);
 				if (tempLedger) {
 					try {

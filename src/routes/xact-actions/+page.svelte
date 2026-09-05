@@ -41,7 +41,8 @@
 	}
 
 	async function onCopyClicked() {
-		const text = xactToBeancountText($xact);
+		const defaultCurrency = await appService.getDefaultCurrency();
+		const text = xactToBeancountText($xact, defaultCurrency);
 		await navigator.clipboard.writeText(text);
 		Notifier.success('Transaction copied to clipboard');
 	}
@@ -90,7 +91,8 @@
 		}
 
 		const newXact = appService.createXactFrom($xact);
-		const beancountText = xactToBeancountText(newXact);
+		const defaultCurrency = await appService.getDefaultCurrency();
+		const beancountText = xactToBeancountText(newXact, defaultCurrency);
 		await ledgerService.appendTransaction(beancountText);
 
 		// Re-parse the full book in the background.
