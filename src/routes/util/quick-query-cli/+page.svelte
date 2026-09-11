@@ -144,7 +144,7 @@
 				</span>
 			</div>
 			<input
-				type="text"
+				type="search"
 				class="input input-bordered input-sm w-full font-mono"
 				placeholder="balance Assets -b 2025-01 -e 2025-12"
 				bind:value={commandLine}
