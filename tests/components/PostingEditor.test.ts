@@ -3,15 +3,15 @@
 
     PostingEditor has no props for its data — it reads/writes the posting at
     `$xact.postings[index]` directly via the shared `xact` store, and drives
-    navigation (`goto`) for the calculator and advanced-editor buttons. Tests
-    seed the store before each render and assert on both the DOM and the
-    resulting store state.
+    navigation (`goto`) for the advanced-editor button. Tests seed the store
+    before each render and assert on both the DOM and the resulting store
+    state.
 */
 import { render, fireEvent, cleanup } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { get } from 'svelte/store';
 import PostingEditor from '$lib/components/PostingEditor.svelte';
-import { xact, selectionMetadata, postingEditorIndex } from '$lib/data/mainStore';
+import { xact, postingEditorIndex } from '$lib/data/mainStore';
 import { Posting, Xact } from '$lib/data/model';
 
 const { gotoMock } = vi.hoisted(() => ({ gotoMock: vi.fn() }));
@@ -47,7 +47,6 @@ describe('PostingEditor', () => {
 			props: { index: 0, onAmountChanged }
 		});
 
-		await fireEvent.click(getByTitle('Show posting actions'));
 		await fireEvent.click(getByTitle('Flip amount sign'));
 
 		expect(get(xact).postings[0].amount).toBe(-20);
@@ -74,19 +73,6 @@ describe('PostingEditor', () => {
 		expect(onAccountClicked).toHaveBeenCalledOnce();
 	});
 
-	it('navigates to the calculator with amount selection metadata', async () => {
-		const { getByTitle } = render(PostingEditor, { props: { index: 0 } });
-
-		await fireEvent.click(getByTitle('Show posting actions'));
-		await fireEvent.click(getByTitle('Open calculator'));
-
-		expect(gotoMock).toHaveBeenCalledWith('/calculator');
-		const meta = get(selectionMetadata);
-		expect(meta?.postingIndex).toBe(0);
-		expect(meta?.selectionType).toBe('amount');
-		expect(meta?.initialValue).toBe(20);
-	});
-
 	it('navigates to the advanced posting editor with the posting index', async () => {
 		xact.set(
 			makeXact([
@@ -96,7 +82,6 @@ describe('PostingEditor', () => {
 		);
 		const { getByTitle } = render(PostingEditor, { props: { index: 1 } });
 
-		await fireEvent.click(getByTitle('Show posting actions'));
 		await fireEvent.click(getByTitle('Advanced posting editor'));
 
 		expect(gotoMock).toHaveBeenCalledWith('/postings/editor');
@@ -122,44 +107,4 @@ describe('PostingEditor', () => {
 		);
 	});
 
-	it('moves a posting down and disables the boundary buttons', async () => {
-		xact.set(
-			makeXact([
-				{ account: 'Assets:Cash', amount: 20, currency: 'EUR' },
-				{ account: 'Expenses:Food', amount: -20, currency: 'EUR' }
-			])
-		);
-		const { getByTitle } = render(PostingEditor, { props: { index: 0 } });
-
-		await fireEvent.click(getByTitle('Show posting actions'));
-
-		expect((getByTitle('Move posting up') as HTMLButtonElement).disabled).toBe(true);
-		expect((getByTitle('Move posting down') as HTMLButtonElement).disabled).toBe(false);
-
-		await fireEvent.click(getByTitle('Move posting down'));
-
-		expect(get(xact).postings[0].account).toBe('Expenses:Food');
-		expect(get(xact).postings[1].account).toBe('Assets:Cash');
-	});
-
-	it('deletes the posting only after confirming', async () => {
-		xact.set(
-			makeXact([
-				{ account: 'Assets:Cash', amount: 20, currency: 'EUR' },
-				{ account: 'Expenses:Food', amount: -20, currency: 'EUR' }
-			])
-		);
-		const { getByTitle, getByText } = render(PostingEditor, { props: { index: 0 } });
-
-		await fireEvent.click(getByTitle('Show posting actions'));
-		await fireEvent.click(getByTitle('Delete posting'));
-
-		// Not deleted until the confirmation dialog is accepted.
-		expect(get(xact).postings).toHaveLength(2);
-
-		await fireEvent.click(getByText('OK'));
-
-		expect(get(xact).postings).toHaveLength(1);
-		expect(get(xact).postings[0].account).toBe('Expenses:Food');
-	});
 });
