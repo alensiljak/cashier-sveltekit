@@ -37,8 +37,7 @@ export function xactToBeancountText(tx: Xact, defaultCurrency?: string): string 
 				? withoutAmount
 				: withoutAmount.slice(0, -1)
 	);
-	const fallbackCurrency =
-		defaultCurrency || tx.postings.find((p) => p.currency)?.currency || '';
+	const fallbackCurrency = defaultCurrency || tx.postings.find((p) => p.currency)?.currency || '';
 
 	const directive = {
 		type: 'transaction' as const,
