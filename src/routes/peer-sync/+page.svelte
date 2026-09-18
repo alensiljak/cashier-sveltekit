@@ -18,7 +18,8 @@
 		PencilIcon,
 		XIcon,
 		Circle,
-		CircleCheck
+		CircleCheck,
+		FolderSyncIcon
 	} from '@lucide/svelte';
 	import {
 		RELAY_STRATEGIES,
@@ -710,9 +711,10 @@
 
 					<a
 						href="/sync/beancount?peer={syncTarget.persistentId}"
-						class="link link-primary text-xs block py-2 text-center"
+						class="btn btn-outline btn-primary btn-sm w-full"
 					>
-						Sync journal files →
+						<FolderSyncIcon size={14} />
+						Sync journal files
 					</a>
 
 					<div class="flex gap-2 flex-wrap pt-1">
