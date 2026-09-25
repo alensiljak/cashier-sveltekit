@@ -106,5 +106,4 @@ describe('PostingEditor', () => {
 			'bg-primary/20'
 		);
 	});
-
 });
