@@ -7,7 +7,7 @@
 	import JournalXactRow from '$lib/components/JournalXactRow.svelte';
 	import Fab from '$lib/components/FAB.svelte';
 	import { Xact, Posting } from '$lib/data/model';
-	import { xact as xactStore, xactSpan } from '$lib/data/mainStore';
+	import { xact as xactStore, xactId } from '$lib/data/mainStore';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import { parseEntitySearchTerms } from '$lib/utils/entitySearch';
 	import { buildLooseTransactionConditions } from '$lib/services/entitySearchService';
@@ -109,7 +109,7 @@
 			});
 
 			xactStore.set(clone);
-			xactSpan.set(undefined);
+			xactId.set(undefined);
 			// Replace quick-entry in history so a later history.back() from /tx
 			// (after save) skips it and lands on whatever came before.
 			goto('/tx', { replaceState: true });
@@ -360,7 +360,7 @@
 			});
 
 			xactStore.set(clone);
-			xactSpan.set(undefined);
+			xactId.set(undefined);
 			// Replace quick-entry in history so a later history.back() from /tx
 			// (after save) skips it and lands on whatever came before.
 			goto('/tx', { replaceState: true });

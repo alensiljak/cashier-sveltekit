@@ -6,12 +6,11 @@
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import { Xact } from '$lib/data/model';
-	import { xact, xactSpan } from '$lib/data/mainStore';
+	import { xact, xactId } from '$lib/data/mainStore';
 	import ledgerService from '$lib/services/ledgerService';
-	import type { DirectiveSpan } from '$lib/rledger/sourceEditor';
+	import type { StoredXact, XactId } from '$lib/storage/xactStore';
 	import Notifier from '$lib/utils/notifier';
 	import { FileDownIcon, ImportIcon, PlusIcon, TrashIcon } from '@lucide/svelte';
-	import appService from '$lib/services/appService';
 	import HelpButton from '$lib/help/HelpButton.svelte';
 	import { reloadLedgerFromOpfs } from '$lib/services/ledgerReload';
 
@@ -21,12 +20,12 @@
 	let listContainer = $state<HTMLElement | null>(null);
 
 	const lsVersion = ledgerService.version;
-	let xactsWithSpans: Array<{ xact: Xact; span: DirectiveSpan }> = $state([]);
+	let storedXacts: StoredXact[] = $state([]);
 
 	$effect(() => {
 		const _v = $lsVersion;
-		ledgerService.getXactsWithSpans().then((result) => {
-			xactsWithSpans = result;
+		ledgerService.getStoredXacts().then((result) => {
+			storedXacts = result;
 			// A single tick() can fire before the browser has reflowed newly-mounted rows
 			// (e.g. wrapped account names), leaving scrollHeight stale and the last xact's
 			// postings cut off — wait an extra frame for layout to actually settle.
@@ -48,8 +47,7 @@
 
 	async function onDeleteAllConfirmed() {
 		closeModal();
-		await appService.createDefaultCashierFile();
-		await ledgerService.invalidate();
+		await ledgerService.clearTransactions();
 		// Re-parse the full book in the background — keeps the fullLedgerService
 		// cache and the "modified" change indicator in sync (same pattern as
 		// every other cashier.bean mutation; see doc/architecture.md).
@@ -64,13 +62,13 @@
 	async function onFab() {
 		const tx = Xact.create();
 		xact.set(tx);
-		xactSpan.set(undefined);
+		xactId.set(undefined);
 		await goto('/tx');
 	}
 
-	async function onRowClick(tx: Xact, span: DirectiveSpan) {
+	async function onRowClick(tx: Xact, id: XactId) {
 		xact.set(tx);
-		xactSpan.set(span);
+		xactId.set(id);
 		goto('/xact-actions');
 	}
 </script>
@@ -95,11 +93,11 @@
 		class="grow overflow-y-auto touch-pan-y space-y-2 p-1 pb-3 mx-auto max-w-2xl w-full"
 		bind:this={listContainer}
 	>
-		{#if xactsWithSpans.length === 0}
+		{#if storedXacts.length === 0}
 			<p>The device journal is empty</p>
 		{:else}
-			{#each xactsWithSpans as item (item.span.startLine)}
-				<JournalXactRow xact={item.xact} onclick={() => onRowClick(item.xact, item.span)} />
+			{#each storedXacts as item (item.id)}
+				<JournalXactRow xact={item.xact} onclick={() => onRowClick(item.xact, item.id)} />
 			{/each}
 		{/if}
 	</section>

@@ -3,7 +3,7 @@
 	import JournalXactRow from '$lib/components/JournalXactRow.svelte';
 	import SquareButton from '$lib/components/SquareButton.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
-	import { ScheduledXact, xact, xactSpan } from '$lib/data/mainStore';
+	import { ScheduledXact, xact, xactId } from '$lib/data/mainStore';
 	import { Posting, ScheduledTransaction, Xact } from '$lib/data/model';
 	import appService from '$lib/services/appService';
 	import ledgerService from '$lib/services/ledgerService';
@@ -11,9 +11,6 @@
 	import { xactToBeancountText } from '$lib/utils/xactUtils';
 	import { buildHighlightParams } from '$lib/utils/unifiedXacts';
 	import Notifier from '$lib/utils/notifier';
-	import { readFile } from '$lib/utils/opfslib';
-	import { CASHIER_XACT_FILE } from '$lib/constants';
-	import { locateXactsInSource, findXactAtLine } from '$lib/utils/xactLocator';
 	import {
 		CalendarClockIcon,
 		CopyIcon,
@@ -64,20 +61,20 @@
 	async function onDeleteConfirmed() {
 		closeModal();
 
-		const span = $xactSpan;
-		if (!span) {
+		const id = $xactId;
+		if (id === undefined) {
 			Notifier.error('Cannot delete: transaction location unknown');
 			return;
 		}
 
 		try {
-			await ledgerService.deleteTransaction(span);
+			await ledgerService.deleteTransaction(id);
 		} catch (e) {
 			Notifier.error(e instanceof Error ? e.message : 'Failed to delete transaction');
 			return;
 		}
 
-		xactSpan.set(undefined);
+		xactId.set(undefined);
 		xact.set(Xact.create());
 
 		Notifier.success('Transaction deleted');
@@ -96,7 +93,7 @@
 		const newXact = appService.createXactFrom($xact);
 		const defaultCurrency = await appService.getDefaultCurrency();
 		const beancountText = xactToBeancountText(newXact, defaultCurrency);
-		const newLine = await ledgerService.appendTransaction(beancountText);
+		const location = await ledgerService.appendTransaction(beancountText);
 
 		// Re-parse the full book in the background.
 		void reloadLedgerFromOpfs();
@@ -105,11 +102,8 @@
 
 		// Load the new tx for editing, with its span so that saving on the /tx
 		// page edits this already-appended copy instead of appending another one.
-		const source = await readFile(CASHIER_XACT_FILE);
-		const locations = source ? await locateXactsInSource(source) : [];
-		const location = findXactAtLine(locations, newLine);
-		xact.set(location?.xact ?? newXact);
-		xactSpan.set(location?.span);
+		xact.set(location.xact);
+		xactId.set(location.id);
 
 		goto('/tx', { replaceState: true });
 	}
@@ -152,7 +146,7 @@
 
 	<!-- button grid -->
 	<div class="mx-auto mt-8 grid grid-cols-3 max-w-[550px]">
-		{#if $xactSpan}
+		{#if $xactId !== undefined}
 			<SquareButton Icon={SquarePenIcon} classes="bg-accent text-secondary" onclick={onEditClicked}>
 				Edit
 			</SquareButton>
@@ -170,7 +164,7 @@
 		<SquareButton Icon={CopyIcon} classes="bg-primary text-accent" onclick={onCopyClicked}>
 			Copy
 		</SquareButton>
-		{#if $xactSpan}
+		{#if $xactId !== undefined}
 			<SquareButton Icon={TrashIcon} classes="bg-secondary text-accent" onclick={onDeleteClicked}>
 				Delete
 			</SquareButton>

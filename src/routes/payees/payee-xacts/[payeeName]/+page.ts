@@ -5,12 +5,12 @@
 import ledgerService from '$lib/services/ledgerService.js';
 import fullLedgerService from '$lib/services/ledgerWorkerClient';
 import { Xact, Posting } from '$lib/data/model';
-import type { DirectiveSpan } from '$lib/rledger/sourceEditor';
+import type { XactId } from '$lib/storage/xactStore';
 import type { PageLoad } from './$types';
 
 export type PayeeXactRow = {
 	xact: Xact;
-	span?: DirectiveSpan;
+	id?: XactId;
 	isDevice: boolean;
 };
 
@@ -23,8 +23,8 @@ export const load: PageLoad = async ({ params }) => {
 	// On-device transactions. The Payees list uses COALESCE(payee, narration), so
 	// match the same way here: an empty payee falls back to the narration.
 	await ledgerService.load();
-	const xactsWithSpans = await ledgerService.getXactsWithSpans();
-	const deviceXacts = xactsWithSpans.filter(
+	const storedXacts = await ledgerService.getStoredXacts();
+	const deviceXacts = storedXacts.filter(
 		({ xact }) => (xact.payee || xact.note || '') === payeeName
 	);
 
@@ -96,9 +96,9 @@ export const load: PageLoad = async ({ params }) => {
 		isDevice: false
 	}));
 
-	const deviceRows: PayeeXactRow[] = deviceXacts.map(({ xact, span }) => ({
+	const deviceRows: PayeeXactRow[] = deviceXacts.map(({ xact, id }) => ({
 		xact,
-		span,
+		id,
 		isDevice: true
 	}));
 

@@ -9,7 +9,7 @@ import fullLedgerService from '$lib/services/ledgerWorkerClient';
 import { STOP_WORDS } from '$lib/utils/nlpEntry';
 import ledgerService from '$lib/services/ledgerService';
 import { Xact, Posting } from '$lib/data/model';
-import type { DirectiveSpan } from '$lib/rledger/sourceEditor';
+import type { XactId } from '$lib/storage/xactStore';
 import type { EntityCategory, EntitySearchTerm } from '$lib/utils/entitySearch';
 
 const FIELD_FOR_CATEGORY: Record<Exclude<EntityCategory, 'any'>, string> = {
@@ -95,12 +95,12 @@ export const searchCommodities = (conditions: string[]) => searchDistinct('curre
 
 export interface TransactionResult {
 	xact: Xact;
-	span?: DirectiveSpan;
+	id?: XactId;
 }
 
 /**
  * Full transactions (grouped postings) matching `conditions`, merged with on-device rows
- * from the live cashier.bean source (which carry an editable DirectiveSpan) — mirrors the
+ * from the live cashier.bean source (which carry an editable store ID) — mirrors the
  * payee-xacts page's device/ledger merge. `termValues` approximates the same AND filter
  * against device rows, which aren't queryable via BQL, by substring-matching the term
  * values against each device xact's payee/narration/account text.
@@ -112,8 +112,8 @@ export async function searchTransactions(
 	if (conditions.length === 0) return [];
 
 	await ledgerService.load();
-	const xactsWithSpans = await ledgerService.getXactsWithSpans();
-	const deviceRows: TransactionResult[] = xactsWithSpans
+	const storedXacts = await ledgerService.getStoredXacts();
+	const deviceRows: TransactionResult[] = storedXacts
 		.filter(({ xact }) => {
 			const haystack = [xact.payee, xact.note, ...(xact.postings ?? []).map((p) => p.account)]
 				.filter(Boolean)
@@ -121,7 +121,7 @@ export async function searchTransactions(
 				.toLowerCase();
 			return termValues.every((term) => haystack.includes(term));
 		})
-		.map(({ xact, span }) => ({ xact, span }));
+		.map(({ xact, id }) => ({ xact, id }));
 
 	const bql = `SELECT id, date, flag, payee, narration, account, number, currency WHERE ${conditions.join(' AND ')} ORDER BY date DESC`;
 	const { columns, rows } = await fullLedgerService.query(bql);

@@ -9,15 +9,8 @@ import {
 import type { DirectiveJson as Directive, BeancountError, ParsedLedger } from '@rustledger/wasm';
 import { Account, Xact } from '$lib/data/model';
 import { directiveToXact } from '$lib/utils/transactionParser';
-import * as opfslib from '$lib/utils/opfslib';
-import {
-	mapDirectiveSpans,
-	replaceDirectiveBySpan,
-	type DirectiveSpan
-} from '$lib/rledger/sourceEditor';
-import { CASHIER_XACT_FILE } from '$lib/constants';
-import { locateXactsInSource } from '$lib/utils/xactLocator';
-import { scheduleBackup } from './webdavAutoBackupService';
+import { getXactStore } from '$lib/storage/xactStoreRegistry';
+import type { StoredXact, XactId } from '$lib/storage/xactStore';
 
 interface QueryError {
 	message: string;
@@ -107,111 +100,30 @@ class LedgerService {
 		return formatWasm(source);
 	}
 
-	/** Sort a Beancount source string by directive date, preserving raw source text. */
-	private async _sortSource(source: string): Promise<string> {
-		if (!source.trim()) return source;
-		const tempLedger = createParsedLedger(source);
-		if (!tempLedger) return source;
-		try {
-			const spans = mapDirectiveSpans(source, tempLedger);
-			const pairs = spans.map((span) => ({
-				date: span.sourceText.slice(0, 10),
-				sourceText: span.sourceText
-			}));
-			pairs.sort((a, b) => a.date.localeCompare(b.date));
-			return pairs.map((p) => p.sourceText).join('\n\n') + '\n';
-		} finally {
-			tempLedger.free();
-		}
+	/** Append a transaction to the working-set store, then invalidate. Returns its location. */
+	async appendTransaction(beancountText: string): Promise<StoredXact> {
+		const location = await getXactStore().append(beancountText);
+		await this.invalidate();
+		return location;
 	}
 
-	/**
-	 * Append a formatted transaction to cashier.bean → sort by date → invalidate.
-	 * Returns the transaction's 1-based line number in the sorted file so callers
-	 * can locate it (e.g. to continue editing it in place instead of re-appending).
-	 */
-	async appendTransaction(beancountText: string): Promise<number> {
-		await ensureInitialized();
-		let content = (await opfslib.readFile(CASHIER_XACT_FILE)) ?? '';
-
-		// Ensure a blank-line separator before the new entry.
-		if (content.length > 0 && !content.endsWith('\n\n')) {
-			content = content.trimEnd() + '\n\n';
-		}
-		const trimmedNewText = beancountText.trimEnd();
-		content += trimmedNewText + '\n';
-
-		content = await this._sortSource(content);
-		await opfslib.saveFile(CASHIER_XACT_FILE, content);
+	/** Replace the transaction identified by `id`, then invalidate. Returns its new location. */
+	async editTransaction(id: XactId, newBeancountText: string): Promise<StoredXact> {
+		const location = await getXactStore().update(id, newBeancountText);
 		await this.invalidate();
-		scheduleBackup();
-
-		// _sortSource preserves sourceText verbatim, so indexOf is exact.
-		const charIdx = content.indexOf(trimmedNewText);
-		return charIdx >= 0 ? content.slice(0, charIdx).split('\n').length : 1;
+		return location;
 	}
 
-	/**
-	 * Edit a transaction in cashier.bean identified by its DirectiveSpan.
-	 * Parses cashier.bean independently, locates the span by startLine,
-	 * splices in the new text, sorts by date, writes back, and invalidates.
-	 */
-	async editTransaction(span: DirectiveSpan, newBeancountText: string): Promise<number> {
-		await ensureInitialized();
-		const source = (await opfslib.readFile(CASHIER_XACT_FILE)) ?? '';
-		const tempLedger = createParsedLedger(source);
-		if (!tempLedger) throw new Error('Failed to parse cashier.bean');
-		let newLine1Based = span.startLine + 1; // fallback: original position (1-based)
-		try {
-			const spans = mapDirectiveSpans(source, tempLedger);
-			const idx = spans.findIndex((s) => s.startLine === span.startLine);
-			if (idx === -1) {
-				throw new Error(
-					`Could not locate directive at line ${span.startLine} in ${CASHIER_XACT_FILE}`
-				);
-			}
-			let updated = replaceDirectiveBySpan(source, spans, idx, newBeancountText.trimEnd());
-			updated = await this._sortSource(updated);
-			await opfslib.saveFile(CASHIER_XACT_FILE, updated);
-			// Find the new position of the edited transaction in the sorted output.
-			// _sortSource preserves sourceText verbatim, so indexOf is exact.
-			const charIdx = updated.indexOf(newBeancountText.trimEnd());
-			if (charIdx >= 0) {
-				newLine1Based = updated.slice(0, charIdx).split('\n').length;
-			}
-		} finally {
-			tempLedger.free();
-		}
+	/** Delete the transaction identified by `id`, then invalidate. */
+	async deleteTransaction(id: XactId): Promise<void> {
+		await getXactStore().remove(id);
 		await this.invalidate();
-		scheduleBackup();
-		return newLine1Based;
 	}
 
-	/**
-	 * Delete a transaction from cashier.bean identified by its DirectiveSpan.
-	 * Removes the span lines and collapses extra blank lines.
-	 */
-	async deleteTransaction(span: DirectiveSpan): Promise<void> {
-		const source = (await opfslib.readFile(CASHIER_XACT_FILE)) ?? '';
-		const tempLedger = createParsedLedger(source);
-		if (!tempLedger) throw new Error('Failed to parse cashier.bean');
-		try {
-			const spans = mapDirectiveSpans(source, tempLedger);
-			const idx = spans.findIndex((s) => s.startLine === span.startLine);
-			if (idx === -1) {
-				throw new Error(
-					`Could not locate directive at line ${span.startLine} in ${CASHIER_XACT_FILE}`
-				);
-			}
-			let updated = replaceDirectiveBySpan(source, spans, idx, '');
-			// Collapse runs of 3+ blank lines down to 2 (one visual separator).
-			updated = updated.replace(/\n{3,}/g, '\n\n');
-			await opfslib.saveFile(CASHIER_XACT_FILE, updated);
-		} finally {
-			tempLedger.free();
-		}
+	/** Delete every transaction in the working-set store, then invalidate. */
+	async clearTransactions(): Promise<void> {
+		await getXactStore().clear();
 		await this.invalidate();
-		scheduleBackup();
 	}
 
 	/** Parse a provided Beancount source string and set as the current ledger. */
@@ -284,30 +196,17 @@ class LedgerService {
 		return directives.filter((d) => d.type === 'transaction').map((d) => this.directiveToXact(d));
 	}
 
-	/** Read and combine all .bean sources from OPFS: infrastructure files + cashier.bean */
+	/** Working-set source from the active store. */
 	private async readAndCombineSources(): Promise<string> {
-		const parts: string[] = [];
-
-		// Read beancount files (synced from desktop).
-		// Read or create cashier.bean (device transactions).
-		let cashier = await opfslib.readFile(CASHIER_XACT_FILE);
-		if (cashier === undefined) {
-			await opfslib.saveFile(CASHIER_XACT_FILE, '');
-			cashier = '';
-		}
-		parts.push(cashier);
-
-		return parts.join('\n\n');
+		return getXactStore().toBeancount();
 	}
 
 	/**
-	 * Read cashier.bean, parse it independently, and return all transaction directives
-	 * zipped with their DirectiveSpans (line ranges). Used by the journal page to populate
-	 * the list and supply the span needed for editing.
+	 * All working-set transactions paired with their store IDs (used by the journal
+	 * to populate the list and supply the ID needed for editing).
 	 */
-	async getXactsWithSpans(): Promise<Array<{ xact: Xact; span: DirectiveSpan }>> {
-		const source = (await opfslib.readFile(CASHIER_XACT_FILE)) ?? '';
-		return locateXactsInSource(source);
+	async getStoredXacts(): Promise<StoredXact[]> {
+		return getXactStore().list();
 	}
 
 	private directiveToXact = directiveToXact;

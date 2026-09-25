@@ -32,8 +32,8 @@ export const load: PageLoad = async ({ params }) => {
 
 	// On-device transactions
 	await ledgerService.load();
-	const xactsWithSpans = await ledgerService.getXactsWithSpans();
-	const deviceXacts = xactsWithSpans.filter(({ xact }) =>
+	const storedXacts = await ledgerService.getStoredXacts();
+	const deviceXacts = storedXacts.filter(({ xact }) =>
 		xact.postings?.some((p) => p.account === params.accountName)
 	);
 
@@ -44,7 +44,7 @@ WHERE account = '${params.accountName}'`;
 	if (errors?.length) console.warn('Ledger xact query errors:', errors);
 
 	// Normalize device xacts
-	const deviceRows: UnifiedXact[] = deviceXacts.map(({ xact, span }) => {
+	const deviceRows: UnifiedXact[] = deviceXacts.map(({ xact, id }) => {
 		const posting = xact.postings?.find((p) => p.account === params.accountName);
 		return {
 			date: xact.date ?? '',
@@ -54,7 +54,7 @@ WHERE account = '${params.accountName}'`;
 			currency: posting?.currency ?? '',
 			isDevice: true,
 			xact,
-			span
+			id
 		};
 	});
 
@@ -69,7 +69,7 @@ WHERE account = '${params.accountName}'`;
 	const currencyIdx = safeColumns.indexOf('currency');
 
 	const ledgerNormalized: UnifiedXact[] = safeRows.map((row) => ({
-		id: row[idIdx] as number,
+		rledgerId: row[idIdx] as number,
 		date: row[dateIdx] as string,
 		payee: row[payeeIdx] as string,
 		narration: row[narrationIdx] as string,

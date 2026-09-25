@@ -2,7 +2,7 @@
     import { goto } from '$app/navigation'
     import Toolbar from '$lib/components/Toolbar.svelte'
     import { Xact } from '$lib/data/model'
-    import { xact as xactStore, xactSpan } from '$lib/data/mainStore'
+    import { xact as xactStore, xactId } from '$lib/data/mainStore'
     import { type ParseResult, parseTranscript, buildTransaction, formatBeancount } from '$lib/utils/nlpEntry'
     import fullLedgerService from '$lib/services/ledgerWorkerClient'
 
@@ -116,7 +116,7 @@
     function openInEditor() {
         if (!transaction) return
         xactStore.set(transaction)
-        xactSpan.set(undefined)
+        xactId.set(undefined)
         goto('/tx')
     }
 

@@ -2,7 +2,7 @@
 	import Fab from '$lib/components/FAB.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { Check, ShieldCheck, TriangleAlertIcon } from '@lucide/svelte';
-	import { xact, xactSpan } from '$lib/data/mainStore';
+	import { xact, xactId } from '$lib/data/mainStore';
 	import { get } from 'svelte/store';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import { afterNavigate, goto } from '$app/navigation';
@@ -15,11 +15,9 @@
 	import { base } from '$app/paths';
 	import TransactionEditor from '$lib/components/XactEditor.svelte';
 	import { Xact } from '$lib/data/model';
+	import type { StoredXact } from '$lib/storage/xactStore';
 	import HelpButton from '$lib/help/HelpButton.svelte';
 	import type { ValidationIssue } from '$lib/data/validation';
-	import { readFile } from '$lib/utils/opfslib';
-	import { CASHIER_XACT_FILE } from '$lib/constants';
-	import { locateXactsInSource, findXactAtLine } from '$lib/utils/xactLocator';
 
 	Notifier.init();
 
@@ -27,7 +25,7 @@
 	// start a new one instead of leaving the editor with an undefined $xact.
 	if (!get(xact)) {
 		xact.set(Xact.create());
-		xactSpan.set(undefined);
+		xactId.set(undefined);
 	}
 
 	let previousUrl: URL | null = null;
@@ -60,44 +58,36 @@
 	}
 
 	/**
-	 * Re-locate an edited transaction by its new line number (the file was
-	 * re-sorted by date, so the old span may be stale) and refresh `xact`/
-	 * `xactSpan` with the current data — keeps pages like xact-actions, which
-	 * gate Edit/Delete on `$xactSpan`, working after returning from a save.
+	 * Refresh `xact`/`xactId` from the saved transaction (the store may have
+	 * re-sorted, so the old ID can be stale) — keeps pages like xact-actions,
+	 * which gate Edit/Delete on `$xactId`, working after returning from a save.
 	 */
-	async function refreshXactLocation(newLine: number) {
-		const source = await readFile(CASHIER_XACT_FILE);
-		if (!source) return;
-		const locations = await locateXactsInSource(source);
-		const location = findXactAtLine(locations, newLine);
-		if (!location) return;
-		xact.set(location.xact);
-		xactSpan.set(location.span);
+	function refreshXact(stored: StoredXact) {
+		xact.set(stored.xact);
+		xactId.set(stored.id);
 	}
 
 	async function saveXact() {
 		const clonedXact = JSON.parse(JSON.stringify($xact));
 		const defaultCurrency = await appService.getDefaultCurrency();
 		const beancountText = xactToBeancountText(clonedXact, defaultCurrency);
-		const span = get(xactSpan);
+		const id = get(xactId);
 
-		if (span) {
-			const newLine = await ledgerService.editTransaction(span, beancountText);
-			await refreshXactLocation(newLine);
+		if (id !== undefined) {
+			const stored = await ledgerService.editTransaction(id, beancountText);
+			refreshXact(stored);
 			// Re-parse the full book in the background.
 			void reloadLedgerFromOpfs();
-			// If we came from the detail page, navigate back with the refreshed line
-			// number — the file was re-sorted so the old line is stale.
+			// If we came from the detail page, navigate back with the refreshed ID —
+			// the store may have re-sorted, so the old ID is stale.
 			if (previousUrl?.pathname.endsWith('/tx/detail')) {
-				const params = new URLSearchParams(previousUrl.search);
-				params.set('line', String(newLine));
-				await goto(`/tx/detail?${params}`);
+				await goto(`/tx/detail?${new URLSearchParams({ id: stored.id })}`);
 			} else {
 				history.back();
 			}
 		} else {
 			await ledgerService.appendTransaction(beancountText);
-			xactSpan.set(undefined);
+			xactId.set(undefined);
 			// Re-parse the full book in the background.
 			void reloadLedgerFromOpfs();
 			history.back();

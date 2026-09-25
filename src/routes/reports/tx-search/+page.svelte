@@ -218,7 +218,7 @@
 			narration: xact.note ?? '',
 			amount: 0,
 			currency: '',
-			id: xact.id,
+			rledgerId: xact.id,
 			isDevice: false,
 		});
 	}

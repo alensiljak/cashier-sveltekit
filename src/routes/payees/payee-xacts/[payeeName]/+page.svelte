@@ -4,13 +4,13 @@
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import HelpButton from '$lib/help/HelpButton.svelte';
 	import JournalXactRow from '$lib/components/JournalXactRow.svelte';
-	import { xact as xactStore, xactSpan } from '$lib/data/mainStore';
+	import { xact as xactStore, xactId } from '$lib/data/mainStore';
 	import type { Xact } from '$lib/data/model';
 	import type { PayeeXactRow } from './+page.ts';
 
 	async function onRowClick(row: PayeeXactRow) {
 		xactStore.set(row.xact);
-		xactSpan.set(row.span);
+		xactId.set(row.id);
 		await goto('/xact-actions');
 	}
 </script>

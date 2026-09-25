@@ -11,7 +11,7 @@
 		EntitySearchTermStore,
 		EntitySearchScopeStore,
 		xact as xactStore,
-		xactSpan,
+		xactId,
 		type EntitySearchScope
 	} from '$lib/data/mainStore';
 	import {
@@ -184,7 +184,7 @@
 	// Same destination as tapping a transaction on the Payee Transactions page.
 	async function onTransactionClick(result: TransactionResult) {
 		xactStore.set(result.xact);
-		xactSpan.set(result.span);
+		xactId.set(result.id);
 		await goto('/xact-actions');
 	}
 

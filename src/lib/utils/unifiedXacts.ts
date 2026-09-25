@@ -7,9 +7,9 @@
 */
 
 import { goto } from '$app/navigation';
-import { xact, xactSpan } from '$lib/data/mainStore';
+import { xact, xactId } from '$lib/data/mainStore';
 import { Xact, Posting } from '$lib/data/model';
-import type { DirectiveSpan } from '$lib/rledger/sourceEditor';
+import type { XactId } from '$lib/storage/xactStore';
 import fullLedgerService from '$lib/services/ledgerWorkerClient';
 import Notifier from '$lib/utils/notifier';
 
@@ -21,11 +21,12 @@ export type UnifiedXact = {
 	currency: string;
 	/** Posting account for this row. Omitted when the list is already scoped to one account. */
 	account?: string;
-	/** Transaction id from the full ledger. Present on ledger rows; absent on device rows. */
-	id?: number;
+	/** Transaction id from the full ledger (rledger). Present on ledger rows; absent on device rows. */
+	rledgerId?: number;
 	isDevice: boolean;
 	xact?: Xact;
-	span?: DirectiveSpan;
+	/** Working-set store ID. Present on device rows only; identifies the editable transaction. */
+	id?: XactId;
 };
 
 /**
@@ -51,7 +52,7 @@ export function mergeUnifiedRows(
 		if (matchIdx !== -1) {
 			ledgerRows[matchIdx].isDevice = true;
 			ledgerRows[matchIdx].xact = dr.xact;
-			ledgerRows[matchIdx].span = dr.span;
+			ledgerRows[matchIdx].id = dr.id;
 		} else {
 			unmatchedDeviceRows.push(dr);
 		}
@@ -66,17 +67,17 @@ export function mergeUnifiedRows(
  * transaction id (preferred) or date/payee/narration to gather every posting.
  */
 export async function openXactDetails(row: UnifiedXact): Promise<void> {
-	if (row.isDevice && row.xact && row.span) {
+	if (row.isDevice && row.xact && row.id !== undefined) {
 		xact.set(row.xact);
-		xactSpan.set(row.span);
+		xactId.set(row.id);
 		await goto('/xact-actions');
 		return;
 	}
 
 	// Read-only transaction: fetch postings from the full ledger.
 	// Prefer id-based lookup (exact) over date/payee/narration (fragile).
-	const bql = row.id
-		? `SELECT flag, account, number, currency WHERE id = ${row.id}`
+	const bql = row.rledgerId
+		? `SELECT flag, account, number, currency WHERE id = ${row.rledgerId}`
 		: (() => {
 				const payeeClause = row.payee
 					? `AND payee = "${row.payee.replace(/"/g, '\\"')}"`
@@ -100,7 +101,7 @@ export async function openXactDetails(row: UnifiedXact): Promise<void> {
 	const currencyIdx = columns.indexOf('currency');
 
 	const xactObj = new Xact();
-	xactObj.id = row.id;
+	xactObj.id = row.rledgerId;
 	xactObj.date = row.date;
 	xactObj.payee = row.payee;
 	xactObj.note = row.narration;
@@ -114,7 +115,7 @@ export async function openXactDetails(row: UnifiedXact): Promise<void> {
 	});
 
 	xact.set(xactObj);
-	xactSpan.set(undefined);
+	xactId.set(undefined);
 	await goto('/xact-actions');
 }
 
@@ -149,7 +150,7 @@ export function findHighlightedRow(
 	const idParam = searchParams.get('highlightId');
 	if (idParam !== null) {
 		const id = Number(idParam);
-		return rows.find((r) => r.id === id);
+		return rows.find((r) => r.rledgerId === id);
 	}
 
 	const date = searchParams.get('highlightDate');
