@@ -16,6 +16,7 @@ The decisions made in the architecture of the app.
 
 - `ledgerService` is the light version, loading only the Transactions. It provides the LSP features and is used for saving the Xact record to a correct place in the source file.
 - `ledgerWorkerClient` (imported as `fullLedgerService`) loads the complete book in a background Worker and is used to run financial reports and queries. It reads all `.bean` files from OPFS; if the user has configured their own book file, that file (not `cashier.bean`) is used as the WASM parse entry point, with `cashier.bean`'s device transactions folded in via an `include` line injected in memory. This keeps `option` directives declared in the user's book authoritative — Beancount/rledger only honors options set in the top-level (entry point) file, ignoring the same option when it appears in an included file. With no user book configured, `cashier.bean` is the entry point on its own.
+- `cashier.bean` is a _virtual_ file: the worker is handed the working set as Beancount text (`XactStore.toBeancount()`) and places it in the file map under that name, regardless of where the working set is actually persisted (see [Working Set Store](#working-set-store)).
 - Individual pages send queries and use the returned data asynchronously.
 
 ### Key directories
@@ -86,16 +87,63 @@ bg-none` so the track matches the surrounding surface:
 See `src/routes/peer-sync/+page.svelte` (Connect toggle) and
 `src/lib/components/ScheduleEditor.svelte` (Repayment toggle).
 
-## Reloading After a cashier.bean Mutation
+## Working Set Store
 
-Any code path that writes to `cashier.bean` (append/edit/delete a
+The device's working set — the transactions entered on this device — is
+accessed through the `XactStore` interface (`src/lib/storage/xactStore.ts`).
+Consumers (`ledgerService`, the editor, the journal, peer sync) never touch
+storage directly; they call `getXactStore()`
+(`src/lib/storage/xactStoreRegistry.ts`), which resolves the implementation
+once from the `xactStore` device setting.
+
+| Store           | Persistence                               | Notes                                                        |
+| --------------- | ----------------------------------------- | ------------------------------------------------------------ |
+| `CrdtXactStore` | Yjs document in IndexedDB (`y-indexeddb`) | **Default.** Enables seamless peer sync.                     |
+| `OpfsXactStore` | The `cashier.bean` text file in OPFS      | Legacy. Kept for devices that already have a `cashier.bean`. |
+
+Selection: if the setting is unset, new installs get CRDT, while a device that
+already has a `cashier.bean` in OPFS gets OPFS so its working set is kept. The
+choice is then saved, so it stays stable. A changed setting takes effect on the
+next load.
+
+### CRDT store
+
+- Each transaction is one record with a stable, monotonic ULID, stored as a
+  plain JSON value in a `Y.Map`. IDs stay valid across edits.
+- Concurrent edits of the _same_ transaction resolve last-writer-wins per
+  record; adds and removes of _different_ transactions merge cleanly. Two
+  devices can therefore enter transactions independently and converge without
+  conflicts or manual merging.
+- Peer sync (`src/lib/sync/peerConnection.svelte.ts`) exchanges Yjs updates
+  between devices directly. Updates merged in from another device carry the
+  `remote` origin so they are not echoed back.
+- Yjs is loaded on demand, so OPFS-store users don't pay for it.
+
+### What `cashier.bean` means now
+
+With the CRDT store there is no `cashier.bean` file in OPFS. The name remains
+as the _logical_ file that holds the working set: it is generated from the
+store via `toBeancount()` and fed to the light `ledgerService` and to the
+full-book worker (as the in-memory entry point or `include`, see above). With
+the legacy OPFS store it is a real file, and the behaviour is the same.
+
+Backups differ by store: the OPFS store uploads `cashier.bean` to WebDAV, while
+the CRDT store uploads its Yjs document state to a per-device file
+(`webdavAutoBackupService.ts`).
+
+Do not read or write `cashier.bean` in OPFS directly; go through
+`getXactStore()`, or the behaviour will diverge between the two stores.
+
+## Reloading After a Working-Set Mutation
+
+Any code path that writes to the working set (append/edit/delete a
 transaction, delete-all, import, sync) must refresh state in the same
 two-step pattern, or the light-service cache, the full-book cache, and the
 homepage "modified" change indicator drift out of sync with each other:
 
 1. **Light ledger (`ledgerService`)** — `appendTransaction` / `editTransaction`
    / `deleteTransaction` already call `invalidate()` internally, which
-   re-reads `cashier.bean` and bumps the `version` store. Pages that list
+   re-reads the device transactions and bumps the `version` store. Pages that list
    transactions (e.g. `src/routes/journal/+page.svelte`) key an `$effect` off
    `ledgerService.version` and re-fetch when it changes. If you mutate
    `cashier.bean` directly instead of through one of those three methods
