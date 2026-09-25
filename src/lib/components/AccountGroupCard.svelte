@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { ChevronDownIcon, ChevronRightIcon, Settings2Icon } from '@lucide/svelte';
-	import HomeCardTemplate from './HomeCardTemplate.svelte';
+	import CashierCardTemplate from './CashierCardTemplate.svelte';
 	import AccountRow from './AccountRow.svelte';
 	import { goto } from '$app/navigation';
 	import { Account, Money } from '$lib/data/model';
@@ -144,7 +144,7 @@
 	}
 </script>
 
-<HomeCardTemplate headerStyle={group.color ? `background-color: ${group.color}` : undefined}>
+<CashierCardTemplate headerStyle={group.color ? `background-color: ${group.color}` : undefined}>
 	{#snippet title()}
 		{group.title}
 		{#if $isReloading}<span class="loading loading-spinner loading-xs ml-2 opacity-70"></span>{/if}
@@ -191,4 +191,4 @@
 			</div>
 		{/if}
 	{/snippet}
-</HomeCardTemplate>
+</CashierCardTemplate>

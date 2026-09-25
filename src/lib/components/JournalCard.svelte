@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { FileUpIcon, PlusIcon, ScrollIcon, TriangleAlertIcon } from '@lucide/svelte';
-	import HomeCardTemplate from './HomeCardTemplate.svelte';
+	import CashierCardTemplate from './CashierCardTemplate.svelte';
 	import { goto } from '$app/navigation';
 	import { xact } from '$lib/data/mainStore';
 	import { Money, Posting, Xact } from '$lib/data/model';
@@ -161,7 +161,7 @@
 	}
 </script>
 
-<HomeCardTemplate onclick={onClick}>
+<CashierCardTemplate onclick={onClick}>
 	{#snippet icon()}
 		<ScrollIcon />
 	{/snippet}
@@ -214,4 +214,4 @@
 			</button>
 		</center>
 	{/snippet}
-</HomeCardTemplate>
+</CashierCardTemplate>

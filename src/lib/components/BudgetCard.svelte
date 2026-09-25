@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { WalletIcon, Settings2Icon } from '@lucide/svelte';
-	import HomeCardTemplate from './HomeCardTemplate.svelte';
+	import CashierCardTemplate from './CashierCardTemplate.svelte';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import moment from 'moment';
@@ -135,7 +135,7 @@
 	}
 </script>
 
-<HomeCardTemplate onclick={onCardClick}>
+<CashierCardTemplate onclick={onCardClick}>
 	{#snippet icon()}
 		<WalletIcon />
 	{/snippet}
@@ -185,4 +185,4 @@
 			</div>
 		{/if}
 	{/snippet}
-</HomeCardTemplate>
+</CashierCardTemplate>

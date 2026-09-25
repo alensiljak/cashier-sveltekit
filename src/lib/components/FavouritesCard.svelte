@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { ChevronDownIcon, ChevronUpIcon, Settings2Icon, StarIcon } from '@lucide/svelte';
-	import HomeCardTemplate from './HomeCardTemplate.svelte';
+	import CashierCardTemplate from './CashierCardTemplate.svelte';
 	import AccountRow from './AccountRow.svelte';
 	import { goto } from '$app/navigation';
 	import { Account, Money } from '$lib/data/model';
@@ -177,7 +177,7 @@
 	}
 </script>
 
-<HomeCardTemplate onclick={onClick}>
+<CashierCardTemplate onclick={onClick}>
 	{#snippet icon()}
 		<StarIcon />
 	{/snippet}
@@ -216,4 +216,4 @@
 			{/each}
 		{/if}
 	{/snippet}
-</HomeCardTemplate>
+</CashierCardTemplate>

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { CalendarClockIcon, CalendarDaysIcon } from '@lucide/svelte';
-	import HomeCardTemplate from './HomeCardTemplate.svelte';
+	import CashierCardTemplate from './CashierCardTemplate.svelte';
 	import { goto } from '$app/navigation';
 	import type { Money, ScheduledTransaction, Xact } from '$lib/data/model';
 	import { onMount } from 'svelte';
@@ -37,7 +37,7 @@
 	}
 </script>
 
-<HomeCardTemplate onclick={onClick}>
+<CashierCardTemplate onclick={onClick}>
 	{#snippet icon()}
 		<CalendarClockIcon />
 	{/snippet}
@@ -74,4 +74,4 @@
 		</button>
 	</center>
 	{/snippet}
-</HomeCardTemplate>
+</CashierCardTemplate>

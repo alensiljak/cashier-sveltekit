@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { ReceiptTextIcon, Settings2Icon, TrendingUpIcon, TrendingDownIcon, MinusIcon } from '@lucide/svelte';
-	import HomeCardTemplate from './HomeCardTemplate.svelte';
+	import CashierCardTemplate from './CashierCardTemplate.svelte';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import moment from 'moment';
@@ -156,7 +156,7 @@
 	}
 </script>
 
-<HomeCardTemplate onclick={onCardClick}>
+<CashierCardTemplate onclick={onCardClick}>
 	{#snippet icon()}
 		<ReceiptTextIcon />
 	{/snippet}
@@ -212,4 +212,4 @@
 			</div>
 		{/if}
 	{/snippet}
-</HomeCardTemplate>
+</CashierCardTemplate>

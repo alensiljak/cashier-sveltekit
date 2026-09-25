@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { ChartLineIcon, Settings2Icon } from '@lucide/svelte';
-	import HomeCardTemplate from './HomeCardTemplate.svelte';
+	import CashierCardTemplate from './CashierCardTemplate.svelte';
 	import { Constants, SettingKeys, settings } from '$lib/settings';
 	import { onMount } from 'svelte';
 	import DailyForecastChart from './DailyForecastChart.svelte';
@@ -31,7 +31,7 @@
 	}
 </script>
 
-<HomeCardTemplate>
+<CashierCardTemplate>
 	{#snippet icon()}
 		<ChartLineIcon />
 	{/snippet}
@@ -52,4 +52,4 @@
 			<DailyForecastChart daysCount={_days} accountNames={_accountNames} />
 		{/if}
 	{/snippet}
-</HomeCardTemplate>
+</CashierCardTemplate>

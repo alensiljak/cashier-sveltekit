@@ -15,15 +15,22 @@
 		ShortDateFormatStore
 	} from '$lib/data/mainStore.js';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
-	import SectionTitle from '$lib/components/SectionTitle.svelte';
+	import CashierCardTemplate from '$lib/components/CashierCardTemplate.svelte';
 	import {
+		BellIcon,
+		BookOpenIcon,
 		BoxIcon,
+		ChartPieIcon,
 		Check,
 		ChevronRight,
 		FileBraces,
+		FlaskConicalIcon,
+		ListTreeIcon,
 		NetworkIcon,
 		RefreshCwIcon,
 		RotateCcw,
+		SlidersHorizontalIcon,
+		SmartphoneIcon,
 		TrendingUpIcon
 	} from '@lucide/svelte';
 	import Fab from '$lib/components/FAB.svelte';
@@ -337,308 +344,300 @@
 </Toolbar>
 
 <main class="mx-auto max-w-2xl space-y-3 p-3 pb-20">
-	<!-- ── Ledger Configuration ────────────────────────────── -->
-	<div class="divider text-sm"><SectionTitle>Ledger Configuration</SectionTitle></div>
+	<!-- ── Ledger ──────────────────────────────────────────── -->
+	<CashierCardTemplate heading="Ledger" Icon={BookOpenIcon} bodyClass="space-y-3 px-3">
+		{#snippet description()}
+			<a href="/opfs/import-ledger" class="link">Import Ledger files</a> first, then choose the book
+			file below.
+		{/snippet}
 
-	<p class="text-xs opacity-60">
-		<a href="/opfs/import-ledger" class="link">Import Ledger files</a> first, then choose the book file
-		below.
-	</p>
-
-	<!-- Book file -->
-	<div class="flex items-center gap-3">
-		<div class="min-w-0 flex-1">
-			<p class="text-sm font-medium">Book file</p>
-			<p class="truncate font-mono text-xs opacity-60">{bookFilename ?? 'Not set'}</p>
-		</div>
-		<div class="flex shrink-0 items-center gap-1">
-			{#if bookFilenameDirty}
-				<button
-					type="button"
-					class="btn btn-ghost btn-xs btn-square"
-					title="Revert"
-					onclick={() => (bookFilename = savedBookFilename)}
-				>
-					<RotateCcw size={14} />
-				</button>
-			{/if}
-			<button
-				class="btn btn-primary btn-xs rounded"
-				type="button"
-				onclick={() => goto(`/opfs/file-picker?returnSetting=${USER_BOOK_FILENAME}`)}
-			>
-				Select
-			</button>
-		</div>
-	</div>
-
-	<!-- ── Asset Allocation ────────────────────────────────── -->
-	<div class="divider text-sm"><SectionTitle>Asset Allocation</SectionTitle></div>
-
-	<!-- AA definition file -->
-	<div class="flex items-center gap-3">
-		<div class="min-w-0 flex-1">
-			<p class="text-sm font-medium">Definition file</p>
-			<p class="truncate font-mono text-xs opacity-60">
-				{assetAllocationDefinition ?? 'Not set'}
-			</p>
-		</div>
-		<div class="flex shrink-0 items-center gap-1">
-			{#if assetAllocationDirty}
-				<button
-					type="button"
-					class="btn btn-ghost btn-xs btn-square"
-					title="Revert"
-					onclick={() => (assetAllocationDefinition = savedAssetAllocationDefinition)}
-				>
-					<RotateCcw size={14} />
-				</button>
-			{/if}
-			<button class="btn btn-secondary btn-xs rounded" type="button" onclick={onCreateOrEditAA}>
-				{assetAllocationDefinition ? 'Edit' : 'Create'}
-			</button>
-			<button
-				class="btn btn-primary btn-xs rounded"
-				type="button"
-				onclick={() =>
-					goto(`/opfs/file-picker?returnSetting=${SettingKeys.assetAllocationDefinition}`)}
-			>
-				Select
-			</button>
-		</div>
-	</div>
-
-	<!-- Investment account root -->
-	<div class="flex items-center gap-3">
-		<label for="investment-account-root" class="flex-1 text-sm font-medium">
-			Investment account root
-		</label>
-		<div class="flex shrink-0 items-center gap-1">
-			<input
-				id="investment-account-root"
-				class="input input-sm w-44 rounded"
-				type="text"
-				placeholder="Assets:Investments"
-				bind:value={rootInvestmentAccount}
-			/>
-			{#if rootInvestmentDirty}
-				<button
-					type="button"
-					class="btn btn-ghost btn-xs btn-square"
-					title="Revert"
-					onclick={() => (rootInvestmentAccount = savedRootInvestmentAccount)}
-				>
-					<RotateCcw size={14} />
-				</button>
-			{/if}
-		</div>
-	</div>
-
-	<!-- ── General ─────────────────────────────────────────── -->
-	<div class="divider text-sm"><SectionTitle>General</SectionTitle></div>
-
-	<!-- Currency -->
-	<div class="flex items-center gap-3">
-		<label for="currency" class="flex-1 text-sm font-medium">Main Currency</label>
-		<div class="flex shrink-0 items-center gap-1">
-			<input
-				id="currency"
-				class="input input-sm w-28 rounded"
-				type="text"
-				placeholder="EUR, USD…"
-				bind:value={currency}
-			/>
-			{#if currencyDirty}
-				<button
-					type="button"
-					class="btn btn-ghost btn-xs btn-square"
-					title="Revert"
-					onclick={() => (currency = savedCurrency)}
-				>
-					<RotateCcw size={14} />
-				</button>
-			{/if}
-		</div>
-	</div>
-	{#if bookCurrencies.length > 0}
-		<p class="text-right text-xs opacity-60">Book: {bookCurrencies.join(', ')}</p>
-	{/if}
-
-	<!-- Long Date Format -->
-	<div class="flex items-center gap-3">
-		<label for="date-format" class="flex-1 text-sm font-medium">Long Date Format</label>
-		<div class="flex shrink-0 items-center gap-1">
-			<select id="date-format" class="select select-sm w-40 rounded" bind:value={dateFormat}>
-				{#each dateFormatOptions as opt}
-					<option value={opt.value}>{opt.label}</option>
-				{/each}
-			</select>
-			{#if dateFormatDirty}
-				<button
-					type="button"
-					class="btn btn-ghost btn-xs btn-square"
-					title="Revert"
-					onclick={() => (dateFormat = savedDateFormat)}
-				>
-					<RotateCcw size={14} />
-				</button>
-			{/if}
-		</div>
-	</div>
-
-	<!-- Short Date Format -->
-	<div class="flex items-center gap-3">
-		<label for="short-date-format" class="flex-1 text-sm font-medium">Short Date Format</label>
-		<div class="flex shrink-0 items-center gap-1">
-			<select
-				id="short-date-format"
-				class="select select-sm w-40 rounded"
-				bind:value={shortDateFormat}
-			>
-				{#each shortDateFormatOptions as opt}
-					<option value={opt.value}>{opt.label}</option>
-				{/each}
-			</select>
-			{#if shortDateFormatDirty}
-				<button
-					type="button"
-					class="btn btn-ghost btn-xs btn-square"
-					title="Revert"
-					onclick={() => (shortDateFormat = savedShortDateFormat)}
-				>
-					<RotateCcw size={14} />
-				</button>
-			{/if}
-		</div>
-	</div>
-
-	<!-- ── Forecast ────────────────────────────────────────── -->
-	<div class="divider text-sm"><SectionTitle>Forecast</SectionTitle></div>
-
-	{@render settingsLink('/forecast-settings', 'Forecast Settings', TrendingUpIcon)}
-
-	<!-- ── Notifications ───────────────────────────────────── -->
-	<div class="divider text-sm"><SectionTitle>Notifications</SectionTitle></div>
-
-	<p class="text-xs opacity-60">
-		Reminds you of scheduled transactions due today. Shown when the app is open or resumed after
-		the set time.
-	</p>
-
-	<div class="flex items-center gap-3">
-		<label for="notifications-enabled" class="flex-1 text-sm font-medium">
-			Scheduled transactions
-		</label>
-		<input
-			id="notifications-enabled"
-			class="toggle toggle-success shrink-0 bg-transparent bg-none"
-			type="checkbox"
-			bind:checked={notificationsEnabled}
-			onchange={onNotificationsToggle}
-		/>
-	</div>
-
-	<div class="flex items-center gap-3">
-		<label for="notification-time" class="flex-1 text-sm font-medium">Notification time</label>
-		<input
-			id="notification-time"
-			class="input input-sm w-28 shrink-0"
-			type="time"
-			bind:value={notificationTime}
-			disabled={!notificationsEnabled}
-		/>
-	</div>
-
-	<!-- ── Device Settings ────────────────────────────────── -->
-	<div class="divider text-sm"><SectionTitle>Device Settings</SectionTitle></div>
-
-	<p class="text-xs opacity-60">These settings apply only to this device and are not exported.</p>
-
-	<!-- Ledger cache -->
-	<div class="flex items-center gap-3">
-		<label for="ledger-cache-enabled" class="flex-1 text-sm font-medium">
-			Enable ledger cache
-		</label>
-		<input
-			id="ledger-cache-enabled"
-			class="toggle toggle-success shrink-0 bg-transparent bg-none"
-			type="checkbox"
-			bind:checked={ledgerCacheEnabled}
-		/>
-	</div>
-
-	<!-- Transaction storage -->
-	<fieldset class="flex flex-col gap-1">
-		<legend class="text-sm font-medium">Transaction storage</legend>
-		<label class="flex items-center gap-3 text-sm">
-			<input
-				class="radio radio-primary radio-sm"
-				type="radio"
-				name="xact-store"
-				value="opfs"
-				bind:group={xactStoreType}
-			/>
-			OPFS (cashier.bean file, legacy)
-		</label>
-		<label class="flex items-center gap-3 text-sm">
-			<input
-				class="radio radio-primary radio-sm"
-				type="radio"
-				name="xact-store"
-				value="crdt"
-				bind:group={xactStoreType}
-			/>
-			CRDT
-		</label>
-		{#if xactStoreType !== loadedXactStoreType}
-			<p class="text-xs text-warning">
-				The ledger needs to be reloaded for the storage change to take effect.
-			</p>
-		{/if}
-	</fieldset>
-
-	<!-- ── Sync ────────────────────────────────────────────── -->
-	<div class="divider text-sm"><SectionTitle>Sync</SectionTitle></div>
-
-	{@render settingsLink('/settings/webdav-cfg', 'WebDAV Settings', NetworkIcon)}
-	{@render settingsLink('/peer-sync/setup', 'Peer Sync Settings', RefreshCwIcon)}
-
-	<!-- ── Demo Data ───────────────────────────────────────── -->
-	<div class="divider text-sm"><SectionTitle>Demo Data</SectionTitle></div>
-
-	<p class="text-xs opacity-60">
-		A sample book (transactions, accounts, asset allocation target) to explore Cashier without your
-		own data. Demo files live under <code>{DEMO_DIR}/</code> and are read-only — your own entries
-		always go to the device transaction store.
-	</p>
-
-	<div class="flex items-center gap-3">
-		<div class="min-w-0 flex-1">
-			<p class="text-sm font-medium">Demo data</p>
-			<p class="text-xs opacity-60">{demoActive ? 'Active' : 'Not loaded'}</p>
-		</div>
-		<div class="flex shrink-0 items-center gap-1">
-			{#if demoActive}
-				<button
-					class="btn btn-error btn-xs rounded"
-					type="button"
-					onclick={onRemoveDemoClick}
-					disabled={demoBusy}
-				>
-					Remove
-				</button>
-			{:else}
+		<div class="flex items-center gap-3">
+			<div class="min-w-0 flex-1">
+				<p class="text-sm font-medium">Book file</p>
+				<p class="truncate text-xs opacity-60">{bookFilename ?? 'Not set'}</p>
+			</div>
+			<div class="flex shrink-0 items-center gap-1">
+				{#if bookFilenameDirty}
+					<button
+						type="button"
+						class="btn btn-ghost btn-xs btn-square"
+						title="Revert"
+						onclick={() => (bookFilename = savedBookFilename)}
+					>
+						<RotateCcw size={14} />
+					</button>
+				{/if}
 				<button
 					class="btn btn-primary btn-xs rounded"
 					type="button"
-					onclick={onLoadDemoClick}
-					disabled={demoBusy}
+					onclick={() => goto(`/opfs/file-picker?returnSetting=${USER_BOOK_FILENAME}`)}
 				>
-					Load demo data
+					Select
 				</button>
+			</div>
+		</div>
+	</CashierCardTemplate>
+
+	<!-- ── Asset Allocation ────────────────────────────────── -->
+	<CashierCardTemplate heading="Asset Allocation" Icon={ChartPieIcon} bodyClass="space-y-3 px-3">
+		<div class="flex items-center gap-3">
+			<div class="min-w-0 flex-1">
+				<p class="text-sm font-medium">Definition file</p>
+				<p class="truncate text-xs opacity-60">{assetAllocationDefinition ?? 'Not set'}</p>
+			</div>
+			<div class="flex shrink-0 items-center gap-1">
+				{#if assetAllocationDirty}
+					<button
+						type="button"
+						class="btn btn-ghost btn-xs btn-square"
+						title="Revert"
+						onclick={() => (assetAllocationDefinition = savedAssetAllocationDefinition)}
+					>
+						<RotateCcw size={14} />
+					</button>
+				{/if}
+				<button class="btn btn-secondary btn-xs rounded" type="button" onclick={onCreateOrEditAA}>
+					{assetAllocationDefinition ? 'Edit' : 'Create'}
+				</button>
+				<button
+					class="btn btn-primary btn-xs rounded"
+					type="button"
+					onclick={() =>
+						goto(`/opfs/file-picker?returnSetting=${SettingKeys.assetAllocationDefinition}`)}
+				>
+					Select
+				</button>
+			</div>
+		</div>
+
+		<div class="flex items-center gap-3">
+			<label for="investment-account-root" class="flex-1 text-sm font-medium">
+				Investment account root
+			</label>
+			<div class="flex shrink-0 items-center gap-1">
+				<input
+					id="investment-account-root"
+					class="input input-sm w-44 rounded"
+					type="text"
+					placeholder="Assets:Investments"
+					bind:value={rootInvestmentAccount}
+				/>
+				{#if rootInvestmentDirty}
+					<button
+						type="button"
+						class="btn btn-ghost btn-xs btn-square"
+						title="Revert"
+						onclick={() => (rootInvestmentAccount = savedRootInvestmentAccount)}
+					>
+						<RotateCcw size={14} />
+					</button>
+				{/if}
+			</div>
+		</div>
+	</CashierCardTemplate>
+
+	<!-- ── General ─────────────────────────────────────────── -->
+	<CashierCardTemplate heading="General" Icon={SlidersHorizontalIcon} bodyClass="space-y-3 px-3">
+		<div>
+			<div class="flex items-center gap-3">
+				<label for="currency" class="flex-1 text-sm font-medium">Main Currency</label>
+				<div class="flex shrink-0 items-center gap-1">
+					<input
+						id="currency"
+						class="input input-sm w-28 rounded"
+						type="text"
+						placeholder="EUR, USD…"
+						bind:value={currency}
+					/>
+					{#if currencyDirty}
+						<button
+							type="button"
+							class="btn btn-ghost btn-xs btn-square"
+							title="Revert"
+							onclick={() => (currency = savedCurrency)}
+						>
+							<RotateCcw size={14} />
+						</button>
+					{/if}
+				</div>
+			</div>
+			{#if bookCurrencies.length > 0}
+				<p class="mt-1 text-right text-xs opacity-60">Book: {bookCurrencies.join(', ')}</p>
 			{/if}
 		</div>
-	</div>
+
+		<div class="flex items-center gap-3">
+			<label for="date-format" class="flex-1 text-sm font-medium">Long Date Format</label>
+			<div class="flex shrink-0 items-center gap-1">
+				<select id="date-format" class="select select-sm w-40 rounded" bind:value={dateFormat}>
+					{#each dateFormatOptions as opt}
+						<option value={opt.value}>{opt.label}</option>
+					{/each}
+				</select>
+				{#if dateFormatDirty}
+					<button
+						type="button"
+						class="btn btn-ghost btn-xs btn-square"
+						title="Revert"
+						onclick={() => (dateFormat = savedDateFormat)}
+					>
+						<RotateCcw size={14} />
+					</button>
+				{/if}
+			</div>
+		</div>
+
+		<div class="flex items-center gap-3">
+			<label for="short-date-format" class="flex-1 text-sm font-medium">Short Date Format</label>
+			<div class="flex shrink-0 items-center gap-1">
+				<select
+					id="short-date-format"
+					class="select select-sm w-40 rounded"
+					bind:value={shortDateFormat}
+				>
+					{#each shortDateFormatOptions as opt}
+						<option value={opt.value}>{opt.label}</option>
+					{/each}
+				</select>
+				{#if shortDateFormatDirty}
+					<button
+						type="button"
+						class="btn btn-ghost btn-xs btn-square"
+						title="Revert"
+						onclick={() => (shortDateFormat = savedShortDateFormat)}
+					>
+						<RotateCcw size={14} />
+					</button>
+				{/if}
+			</div>
+		</div>
+	</CashierCardTemplate>
+
+	<!-- ── Notifications ───────────────────────────────────── -->
+	<CashierCardTemplate heading="Notifications" Icon={BellIcon} bodyClass="space-y-3 px-3">
+		{#snippet description()}
+			Reminds you of scheduled transactions due today. Shown when the app is open or resumed after
+			the set time.
+		{/snippet}
+
+		<div class="flex items-center gap-3">
+			<label for="notifications-enabled" class="flex-1 text-sm font-medium">
+				Scheduled transactions
+			</label>
+			<input
+				id="notifications-enabled"
+				class="toggle toggle-success shrink-0 bg-transparent bg-none"
+				type="checkbox"
+				bind:checked={notificationsEnabled}
+				onchange={onNotificationsToggle}
+			/>
+		</div>
+
+		<div class="flex items-center gap-3">
+			<label for="notification-time" class="flex-1 text-sm font-medium">Notification time</label>
+			<input
+				id="notification-time"
+				class="input input-sm w-28 shrink-0"
+				type="time"
+				bind:value={notificationTime}
+				disabled={!notificationsEnabled}
+			/>
+		</div>
+	</CashierCardTemplate>
+
+	<!-- ── Device Settings ────────────────────────────────── -->
+	<CashierCardTemplate heading="Device Settings" Icon={SmartphoneIcon} bodyClass="space-y-3 px-3">
+		{#snippet description()}
+			These settings apply only to this device and are not exported.
+		{/snippet}
+
+		<div class="flex items-center gap-3">
+			<label for="ledger-cache-enabled" class="flex-1 text-sm font-medium">
+				Enable ledger cache
+			</label>
+			<input
+				id="ledger-cache-enabled"
+				class="toggle toggle-success shrink-0 bg-transparent bg-none"
+				type="checkbox"
+				bind:checked={ledgerCacheEnabled}
+			/>
+		</div>
+
+		<fieldset class="flex flex-col gap-1">
+			<legend class="text-sm font-medium">Transaction storage</legend>
+			<label class="flex items-center gap-3 text-sm">
+				<input
+					class="radio radio-primary radio-sm"
+					type="radio"
+					name="xact-store"
+					value="opfs"
+					bind:group={xactStoreType}
+				/>
+				OPFS (cashier.bean file, legacy)
+			</label>
+			<label class="flex items-center gap-3 text-sm">
+				<input
+					class="radio radio-primary radio-sm"
+					type="radio"
+					name="xact-store"
+					value="crdt"
+					bind:group={xactStoreType}
+				/>
+				CRDT
+			</label>
+			{#if xactStoreType !== loadedXactStoreType}
+				<p class="text-xs text-warning">
+					The ledger needs to be reloaded for the storage change to take effect.
+				</p>
+			{/if}
+		</fieldset>
+	</CashierCardTemplate>
+
+	<!-- ── Specific Settings (sub-pages) ───────────────────── -->
+	<CashierCardTemplate heading="Specific Settings" Icon={ListTreeIcon} bodyClass="space-y-3 px-3">
+		<div class="space-y-1">
+			{@render settingsLink('/forecast-settings', 'Forecast', TrendingUpIcon)}
+			{@render settingsLink('/settings/webdav-cfg', 'WebDAV', NetworkIcon)}
+			{@render settingsLink('/peer-sync/setup', 'Peer Sync', RefreshCwIcon)}
+		</div>
+	</CashierCardTemplate>
+
+	<!-- ── Demo Data ───────────────────────────────────────── -->
+	<CashierCardTemplate heading="Demo Data" Icon={FlaskConicalIcon} bodyClass="space-y-3 px-3">
+		{#snippet description()}
+			A sample book (transactions, accounts, asset allocation target) to explore Cashier without
+			your own data. Demo files live under <code>{DEMO_DIR}/</code> and are read-only — your own
+			entries always go to the device transaction store.
+		{/snippet}
+
+		<div class="flex items-center gap-3">
+			<div class="min-w-0 flex-1">
+				<p class="text-sm font-medium">Demo data</p>
+				<p class="text-xs opacity-60">{demoActive ? 'Active' : 'Not loaded'}</p>
+			</div>
+			<div class="flex shrink-0 items-center gap-1">
+				{#if demoActive}
+					<button
+						class="btn btn-error btn-xs rounded"
+						type="button"
+						onclick={onRemoveDemoClick}
+						disabled={demoBusy}
+					>
+						Remove
+					</button>
+				{:else}
+					<button
+						class="btn btn-primary btn-xs rounded"
+						type="button"
+						onclick={onLoadDemoClick}
+						disabled={demoBusy}
+					>
+						Load demo data
+					</button>
+				{/if}
+			</div>
+		</div>
+	</CashierCardTemplate>
 
 	<Fab Icon={Check} onclick={saveSettings} />
 

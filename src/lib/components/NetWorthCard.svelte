@@ -5,7 +5,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { TrendingUpIcon, Settings2Icon } from '@lucide/svelte';
-	import HomeCardTemplate from './HomeCardTemplate.svelte';
+	import CashierCardTemplate from './CashierCardTemplate.svelte';
 	import NetWorthMountainChart from './NetWorthMountainChart.svelte';
 	import { type Period } from './PeriodPicker.svelte';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
@@ -144,7 +144,7 @@
 	}
 </script>
 
-<HomeCardTemplate onclick={onCardClick}>
+<CashierCardTemplate onclick={onCardClick}>
 	{#snippet icon()}
 		<TrendingUpIcon />
 	{/snippet}
@@ -194,4 +194,4 @@
 			{/if}
 		</div>
 	{/snippet}
-</HomeCardTemplate>
+</CashierCardTemplate>
