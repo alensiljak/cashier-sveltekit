@@ -19,8 +19,10 @@
 	import {
 		BoxIcon,
 		Check,
+		ChevronRight,
 		FileBraces,
 		NetworkIcon,
+		RefreshCwIcon,
 		RotateCcw,
 		TrendingUpIcon
 	} from '@lucide/svelte';
@@ -289,6 +291,14 @@
 	}
 </script>
 
+{#snippet settingsLink(href: string, label: string, Icon: typeof TrendingUpIcon)}
+	<a href={href} class="flex items-center gap-3 rounded py-1 hover:bg-base-200">
+		<Icon size={16} class="shrink-0 opacity-70" />
+		<span class="flex-1 text-sm font-medium">{label}</span>
+		<ChevronRight size={16} class="shrink-0 opacity-50" />
+	</a>
+{/snippet}
+
 <Toolbar title="Settings">
 	{#snippet actions()}
 		<HelpButton topic="settings" />
@@ -296,89 +306,10 @@
 	{#snippet menuItems()}
 		<ToolbarMenuItem text="OPFS Storage" Icon={BoxIcon} onclick={onOpfsClick} />
 		<ToolbarMenuItem text="JSON Editor" Icon={FileBraces} targetNav="/settings/json-editor" />
-		<ToolbarMenuItem text="WebDAV Config" Icon={NetworkIcon} targetNav="/settings/webdav-cfg" />
 	{/snippet}
 </Toolbar>
 
 <main class="mx-auto max-w-2xl space-y-3 p-3 pb-20">
-	<!-- ── General ─────────────────────────────────────────── -->
-	<div class="divider text-sm"><SectionTitle>General</SectionTitle></div>
-
-	<!-- Currency -->
-	<div class="flex items-center gap-3">
-		<label for="currency" class="flex-1 text-sm font-medium">Main Currency</label>
-		<div class="flex shrink-0 items-center gap-1">
-			<input
-				id="currency"
-				class="input input-sm w-28 rounded"
-				type="text"
-				placeholder="EUR, USD…"
-				bind:value={currency}
-			/>
-			{#if currencyDirty}
-				<button
-					type="button"
-					class="btn btn-ghost btn-xs btn-square"
-					title="Revert"
-					onclick={() => (currency = savedCurrency)}
-				>
-					<RotateCcw size={14} />
-				</button>
-			{/if}
-		</div>
-	</div>
-	{#if bookCurrencies.length > 0}
-		<p class="text-right text-xs opacity-60">Book: {bookCurrencies.join(', ')}</p>
-	{/if}
-
-	<!-- Long Date Format -->
-	<div class="flex items-center gap-3">
-		<label for="date-format" class="flex-1 text-sm font-medium">Long Date Format</label>
-		<div class="flex shrink-0 items-center gap-1">
-			<select id="date-format" class="select select-sm w-40 rounded" bind:value={dateFormat}>
-				{#each dateFormatOptions as opt}
-					<option value={opt.value}>{opt.label}</option>
-				{/each}
-			</select>
-			{#if dateFormatDirty}
-				<button
-					type="button"
-					class="btn btn-ghost btn-xs btn-square"
-					title="Revert"
-					onclick={() => (dateFormat = savedDateFormat)}
-				>
-					<RotateCcw size={14} />
-				</button>
-			{/if}
-		</div>
-	</div>
-
-	<!-- Short Date Format -->
-	<div class="flex items-center gap-3">
-		<label for="short-date-format" class="flex-1 text-sm font-medium">Short Date Format</label>
-		<div class="flex shrink-0 items-center gap-1">
-			<select
-				id="short-date-format"
-				class="select select-sm w-40 rounded"
-				bind:value={shortDateFormat}
-			>
-				{#each shortDateFormatOptions as opt}
-					<option value={opt.value}>{opt.label}</option>
-				{/each}
-			</select>
-			{#if shortDateFormatDirty}
-				<button
-					type="button"
-					class="btn btn-ghost btn-xs btn-square"
-					title="Revert"
-					onclick={() => (shortDateFormat = savedShortDateFormat)}
-				>
-					<RotateCcw size={14} />
-				</button>
-			{/if}
-		</div>
-	</div>
-
 	<!-- ── Ledger Configuration ────────────────────────────── -->
 	<div class="divider text-sm"><SectionTitle>Ledger Configuration</SectionTitle></div>
 
@@ -476,15 +407,88 @@
 		</div>
 	</div>
 
+	<!-- ── General ─────────────────────────────────────────── -->
+	<div class="divider text-sm"><SectionTitle>General</SectionTitle></div>
+
+	<!-- Currency -->
+	<div class="flex items-center gap-3">
+		<label for="currency" class="flex-1 text-sm font-medium">Main Currency</label>
+		<div class="flex shrink-0 items-center gap-1">
+			<input
+				id="currency"
+				class="input input-sm w-28 rounded"
+				type="text"
+				placeholder="EUR, USD…"
+				bind:value={currency}
+			/>
+			{#if currencyDirty}
+				<button
+					type="button"
+					class="btn btn-ghost btn-xs btn-square"
+					title="Revert"
+					onclick={() => (currency = savedCurrency)}
+				>
+					<RotateCcw size={14} />
+				</button>
+			{/if}
+		</div>
+	</div>
+	{#if bookCurrencies.length > 0}
+		<p class="text-right text-xs opacity-60">Book: {bookCurrencies.join(', ')}</p>
+	{/if}
+
+	<!-- Long Date Format -->
+	<div class="flex items-center gap-3">
+		<label for="date-format" class="flex-1 text-sm font-medium">Long Date Format</label>
+		<div class="flex shrink-0 items-center gap-1">
+			<select id="date-format" class="select select-sm w-40 rounded" bind:value={dateFormat}>
+				{#each dateFormatOptions as opt}
+					<option value={opt.value}>{opt.label}</option>
+				{/each}
+			</select>
+			{#if dateFormatDirty}
+				<button
+					type="button"
+					class="btn btn-ghost btn-xs btn-square"
+					title="Revert"
+					onclick={() => (dateFormat = savedDateFormat)}
+				>
+					<RotateCcw size={14} />
+				</button>
+			{/if}
+		</div>
+	</div>
+
+	<!-- Short Date Format -->
+	<div class="flex items-center gap-3">
+		<label for="short-date-format" class="flex-1 text-sm font-medium">Short Date Format</label>
+		<div class="flex shrink-0 items-center gap-1">
+			<select
+				id="short-date-format"
+				class="select select-sm w-40 rounded"
+				bind:value={shortDateFormat}
+			>
+				{#each shortDateFormatOptions as opt}
+					<option value={opt.value}>{opt.label}</option>
+				{/each}
+			</select>
+			{#if shortDateFormatDirty}
+				<button
+					type="button"
+					class="btn btn-ghost btn-xs btn-square"
+					title="Revert"
+					onclick={() => (shortDateFormat = savedShortDateFormat)}
+				>
+					<RotateCcw size={14} />
+				</button>
+			{/if}
+		</div>
+	</div>
+
 	<!-- ── Forecast ────────────────────────────────────────── -->
 	<div class="divider text-sm"><SectionTitle>Forecast</SectionTitle></div>
 
-	<div class="flex flex-col gap-2">
-		<a href="/forecast-settings" class="btn btn-outline btn-sm w-full gap-2">
-			<TrendingUpIcon size={16} />
-			Forecast Settings
-		</a>
-	</div>
+	{@render settingsLink('/forecast-settings', 'Forecast Settings', TrendingUpIcon)}
 
 	<!-- ── Device Settings ────────────────────────────────── -->
 	<div class="divider text-sm"><SectionTitle>Device Settings</SectionTitle></div>
@@ -533,6 +537,12 @@
 			</p>
 		{/if}
 	</fieldset>
+
+	<!-- ── Sync ────────────────────────────────────────────── -->
+	<div class="divider text-sm"><SectionTitle>Sync</SectionTitle></div>
+
+	{@render settingsLink('/settings/webdav-cfg', 'WebDAV Settings', NetworkIcon)}
+	{@render settingsLink('/peer-sync/setup', 'Peer Sync Settings', RefreshCwIcon)}
 
 	<!-- ── Demo Data ───────────────────────────────────────── -->
 	<div class="divider text-sm"><SectionTitle>Demo Data</SectionTitle></div>

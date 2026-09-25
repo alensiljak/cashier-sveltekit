@@ -2,11 +2,11 @@
 
 ## Projects
 
-None at the moment. Regular ongoing maintenance.
+See the Projects folder for any active projects.
 
 ## General
 
-- [ ] research storing the configuration in OPFS, as a TOML file
+- [x] research storing the configuration in OPFS, as a TOML file
 - [x] currency calculator
 - [ ] transaction import
 
