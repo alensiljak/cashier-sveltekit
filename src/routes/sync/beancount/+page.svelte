@@ -7,20 +7,18 @@
 		FolderOpenIcon,
 		FileIcon,
 		TriangleAlertIcon,
-		Check,
 		DownloadIcon,
 		RefreshCwIcon,
 		GitCompareArrowsIcon,
 		ChevronDownIcon,
 		ChevronRightIcon,
-		FunnelIcon
+		FunnelIcon,
+		SettingsIcon
 	} from '@lucide/svelte';
 	import { PeerSource } from '$lib/sync/PeerSource';
 	import Toolbar from '$lib/components/Toolbar.svelte';
-	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import HelpButton from '$lib/help/HelpButton.svelte';
 	import Notifier from '$lib/utils/notifier';
-	import { RELAY_STRATEGIES, type RelayStrategy } from '$lib/sync/peerPresence.svelte';
 	import { peerConnection } from '$lib/sync/peerConnection.svelte';
 	import { OpfsSource } from '$lib/sync/OpfsSource';
 	import { normalizeEol, type SyncEntry } from '$lib/sync/SyncSource';
@@ -112,27 +110,6 @@
 		if (urlPeerId) activePeerId = urlPeerId;
 		presenceReady = true;
 	});
-
-	/** Switches the signaling network — delegates to the shared connection. */
-	async function selectStrategy(value: RelayStrategy) {
-		if (presence.strategy === value) return;
-		await peerConnection.setStrategy(value);
-		peerSources.clear();
-		// Peer set differs on the new network — force a refetch for everyone,
-		// but keep each peer's baseline/overrides (unaffected by the network).
-		peerStates = new Map(
-			Array.from(peerStates, ([id, s]) => [
-				id,
-				{
-					...s,
-					remoteEntries: null,
-					remoteLoading: false,
-					remoteError: null,
-					fetchedTrysteroId: null
-				}
-			])
-		);
-	}
 
 	$effect(() => {
 		if (!presence.isInRoom) {
@@ -804,16 +781,6 @@
 	}
 </script>
 
-{#snippet menuItems()}
-	{#each RELAY_STRATEGIES as s (s.value)}
-		<ToolbarMenuItem
-			text={s.label}
-			Icon={presence.strategy === s.value ? Check : undefined}
-			onclick={() => selectStrategy(s.value)}
-		/>
-	{/each}
-{/snippet}
-
 {#snippet directoryRow(row: TreeRow)}
 	<button
 		type="button"
@@ -901,8 +868,16 @@
 {/snippet}
 
 <main class="flex h-full flex-col">
-	<Toolbar title="Beancount Sync" {menuItems}>
+	<Toolbar title="Beancount Sync">
 		{#snippet actions()}
+			<a
+				href="/peer-sync/setup"
+				class="btn btn-ghost btn-sm btn-square"
+				aria-label="Peer sync setup"
+				title="Peer sync setup"
+			>
+				<SettingsIcon size={20} />
+			</a>
 			<HelpButton topic="beancount-sync" />
 		{/snippet}
 	</Toolbar>

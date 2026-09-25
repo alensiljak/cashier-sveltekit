@@ -3,29 +3,23 @@
 	import JsonMergeViewer from '$lib/components/JsonMergeViewer.svelte';
 	import db from '$lib/data/db';
 	import Toolbar from '$lib/components/Toolbar.svelte';
-	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import HelpButton from '$lib/help/HelpButton.svelte';
 	import { Setting, ScheduledTransaction } from '$lib/data/model';
 	import Notifier from '$lib/utils/notifier';
-	import { reloadLedgerFromOpfs } from '$lib/services/ledgerReload';
 	import {
 		GitCompareArrowsIcon,
 		EyeIcon,
 		DownloadIcon,
-		Check,
 		RefreshCwIcon,
-		RefreshCcwIcon,
-		PencilIcon,
-		XIcon,
 		Circle,
 		CircleCheck,
-		FolderSyncIcon
+		FolderSyncIcon,
+		ChevronRightIcon,
+		PlugZap,
+		Unplug,
+		SettingsIcon
 	} from '@lucide/svelte';
-	import {
-		RELAY_STRATEGIES,
-		type ActivePeer,
-		type RelayStrategy
-	} from '$lib/sync/peerPresence.svelte';
+	import type { ActivePeer } from '$lib/sync/peerPresence.svelte';
 	import {
 		peerConnection,
 		getLocalData,
@@ -80,9 +74,6 @@
 	// across navigation; only the Connect toggle below or leaving the app
 	// disconnects it.
 	const presence = peerConnection.presence;
-	let editingConfig = $state(false);
-	let nameInput = $state('');
-	let roomInput = $state('cashier');
 	let connecting = $state(false);
 
 	// ─── Sync UI ─────────────────────────────────────────────────────────────────
@@ -93,6 +84,11 @@
 	// Selected peer disappeared from the room — drop the stale selection.
 	$effect(() => {
 		if (syncTargetId && !presence.peersMap[syncTargetId]) syncTargetId = null;
+	});
+
+	// Trust removed (e.g. on the Setup page) while selected — drop the selection.
+	$effect(() => {
+		if (syncTarget && !syncTarget.isTrusted) syncTargetId = null;
 	});
 
 	// Sole trusted peer in the room and nothing chosen yet — pick it automatically.
@@ -153,28 +149,6 @@
 		if (syncTargetId) checkHashes(syncTargetId);
 	}
 
-	// ─── Ledger reload suggestion ──────────────────────────────────────────────
-	// Pulled/merged Settings or Scheduled Transactions may affect ledger-derived
-	// views (e.g. account settings, projections), so — same as import-ledger and
-	// /opfs/sync — surface a manual "Reload Ledger" action once local data changed.
-	let pulledSinceReload = $state(false);
-	let reloadPhase = $state<'idle' | 'reloading' | 'done' | 'error'>('idle');
-	let reloadError = $state('');
-
-	async function reloadLedger() {
-		reloadPhase = 'reloading';
-		reloadError = '';
-		try {
-			await reloadLedgerFromOpfs();
-			reloadPhase = 'done';
-			pulledSinceReload = false;
-		} catch (e) {
-			const err = e as { message?: string };
-			reloadError = err?.message ?? String(e);
-			reloadPhase = 'error';
-		}
-	}
-
 	let includeSettings = $state(false);
 	let includeScheduled = $state(false);
 	let noneSelected = $derived(!includeSettings && !includeScheduled);
@@ -208,49 +182,23 @@
 	let diffSections = $state<RawDiffSection[]>([]);
 	let previewSections = $state<PreviewSection[]>([]);
 
-	function formatDate(iso: string | undefined = undefined): string {
-		if (!iso) return '—';
-		return new Date(iso).toLocaleString();
-	}
-
 	// ─── Mount ───────────────────────────────────────────────────────────────────
 
 	onMount(async () => {
 		await peerConnection.ensureInit();
+		// Join the saved room automatically; the Connect button is for manual control.
+		if (!presence.isInRoom) await joinPeerRoom(presence.roomCode, true);
 	});
 
-	// ─── Identity & Room ────────────────────────────────────────────────────────
+	// ─── Connection ─────────────────────────────────────────────────────────────
+	// Name, room and network are edited on /peer-sync/setup.
 
-	function startEditConfig() {
-		nameInput = presence.myName;
-		roomInput = presence.roomCode;
-		editingConfig = true;
-	}
-
-	function cancelEditConfig() {
-		editingConfig = false;
-	}
-
-	async function saveConfig() {
-		const trimmedName = nameInput.trim();
-		if (trimmedName && trimmedName !== presence.myName) {
-			await presence.setName(trimmedName);
-		}
-		const trimmedRoom = roomInput.trim();
-		if (trimmedRoom && trimmedRoom !== presence.roomCode) {
-			if (presence.isInRoom) await leaveRoom();
-			await joinPeerRoom(trimmedRoom);
-		}
-		editingConfig = false;
-		Notifier.success('Saved');
-	}
-
-	async function joinPeerRoom(code: string) {
+	async function joinPeerRoom(code: string, silent = false) {
 		if (!code.trim() || presence.isInRoom) return;
 		connecting = true;
 		try {
 			await peerConnection.connect(code);
-			Notifier.success('Connected');
+			if (!silent) Notifier.success('Connected');
 		} catch (e) {
 			Notifier.error('Failed to connect: ' + (e as Error).message);
 		} finally {
@@ -287,7 +235,7 @@
 		}
 	}
 
-	/** Slider at the top of the page — the only way to connect/disconnect from this page. */
+	/** Connect slider in the Connection card. */
 	async function toggleConnection() {
 		if (presence.isInRoom) {
 			await leaveRoom();
@@ -296,24 +244,11 @@
 		}
 	}
 
-	// ─── Relay strategy ──────────────────────────────────────────────────────────
-
-	/** Switches the signaling network. Reconnects a live room so the new strategy takes effect immediately. */
-	async function selectStrategy(value: RelayStrategy) {
-		await peerConnection.setStrategy(value);
-	}
-
 	// ─── Trust ───────────────────────────────────────────────────────────────────
 
 	async function trustPeer(peer: ActivePeer) {
 		await presence.trust(peer);
 		Notifier.success(`Trusted "${peer.name}"`);
-	}
-
-	async function removeTrust(persistentId: string) {
-		await presence.removeTrust(persistentId);
-		if (syncTarget?.persistentId === persistentId) syncTargetId = null;
-		Notifier.info('Trust removed');
 	}
 
 	// ─── Sync actions ─────────────────────────────────────────────────────────────
@@ -393,7 +328,6 @@
 				await db.scheduled.bulkPut(entries);
 				Notifier.success('Scheduled transactions updated');
 			}
-			pulledSinceReload = true;
 			refreshHashesIfSelected();
 		} catch (e) {
 			Notifier.error('Pull failed: ' + (e as Error).message);
@@ -411,7 +345,6 @@
 			await db.settings.clear();
 			await db.settings.bulkPut(merged.map((s) => new Setting(s.key, s.value)));
 			Notifier.success('Settings: merge applied.');
-			pulledSinceReload = true;
 			showDiff = false;
 			refreshHashesIfSelected();
 		} catch (e) {
@@ -441,7 +374,6 @@
 			const rows = merged.map((t) => (localSet.has(t) ? t : { ...t, id: undefined }));
 			await db.scheduled.clear();
 			await db.scheduled.bulkPut(rows);
-			pulledSinceReload = true;
 			showDiff = false;
 			refreshHashesIfSelected();
 		} catch (e) {
@@ -451,16 +383,6 @@
 		}
 	}
 </script>
-
-{#snippet menuItems()}
-	{#each RELAY_STRATEGIES as s (s.value)}
-		<ToolbarMenuItem
-			text={s.label}
-			Icon={presence.strategy === s.value ? Check : undefined}
-			onclick={() => selectStrategy(s.value)}
-		/>
-	{/each}
-{/snippet}
 
 {#snippet hashBadge(status: HashStatus | null)}
 	{#if status === 'checking'}
@@ -477,130 +399,72 @@
 {/snippet}
 
 <main class="flex h-full flex-col">
-	<Toolbar title="Peer Sync" {menuItems}>
+	<Toolbar title="Peer Sync">
 		{#snippet actions()}
+			<a
+				href="/peer-sync/setup"
+				class="btn btn-ghost btn-sm btn-square"
+				aria-label="Setup"
+				title="Setup"
+			>
+				<SettingsIcon size={20} />
+			</a>
 			<HelpButton topic="peer-sync" />
 		{/snippet}
 	</Toolbar>
 	<section class="flex-1 space-y-3 overflow-y-auto touch-pan-y p-4">
-		<!-- Identity/room — one-liner, edit icon toggles both fields into an editable row. -->
+		<!-- Connection — identity, room status and peers in one card. The room is
+		     joined automatically on open; the button is for manual control. -->
 		<div class="card bg-base-200 shadow-sm">
-			<div class="card-body flex-row items-center gap-2 p-3">
-				{#if editingConfig}
-					<div class="flex min-w-0 flex-1 flex-col gap-2">
-						<div class="flex items-center gap-2">
-							<input
-								type="text"
-								bind:value={nameInput}
-								class="input input-bordered input-sm min-w-0 flex-1"
-								placeholder="My Phone"
-								aria-label="Device name"
-								onkeydown={(e) => e.key === 'Enter' && saveConfig()}
-							/>
-							<input
-								type="text"
-								bind:value={roomInput}
-								class="input input-bordered input-sm min-w-0 flex-1 font-mono"
-								placeholder="cashier"
-								aria-label="Room"
-								onkeydown={(e) => e.key === 'Enter' && saveConfig()}
-							/>
-							<button
-								class="btn btn-success btn-xs"
-								aria-label="Save"
-								title="Save"
-								onclick={saveConfig}
-							>
-								<Check size={14} />
-							</button>
-							<button
-								class="btn btn-ghost btn-xs"
-								aria-label="Cancel"
-								title="Cancel"
-								onclick={cancelEditConfig}
-							>
-								<XIcon size={14} />
-							</button>
+			<div class="card-body gap-3 p-4">
+				<div class="flex items-center gap-3">
+					{#if presence.isInRoom}
+						<PlugZap size={24} class="text-success shrink-0" />
+					{:else}
+						<Unplug size={24} class="text-warning shrink-0" />
+					{/if}
+					<div class="min-w-0 flex-1">
+						<div class="flex items-center gap-1 text-sm">
+							<span class="truncate">
+								<span class="font-semibold">{presence.myName || '…'}</span>
+								<span class="opacity-40">· Room:</span>
+								<span class="font-mono">{presence.roomCode || '—'}</span>
+							</span>
 						</div>
-						<div class="font-mono text-xs break-all opacity-60">ID: {presence.myId}</div>
+						<div class="flex items-center gap-1 text-xs opacity-60">
+							{#if connecting}
+								{presence.isInRoom ? 'Disconnecting…' : 'Connecting…'}
+							{:else if presence.isInRoom}
+								Connected · {presence.activePeerList.length}
+								{presence.activePeerList.length === 1 ? 'peer' : 'peers'}
+								<button
+									class="btn btn-ghost btn-sm btn-square -my-1.5"
+									aria-label="Rescan for peers"
+									title="Rescan for peers"
+									disabled={rescanning}
+									onclick={rescanRoom}
+								>
+									<RefreshCwIcon size={16} class={rescanning ? 'animate-spin' : ''} />
+								</button>
+							{:else}
+								Not connected
+							{/if}
+						</div>
 					</div>
-				{:else}
-					<div class="min-w-0 flex-1 truncate text-sm">
-						{#if presence.isInRoom}
-							<span class="status status-success status-xs mr-1"></span>
-						{:else}
-							<span class="status status-warning status-xs mr-1"></span>
-						{/if}
-						<span class="font-semibold">{presence.myName || '…'}</span>
-						<span class="opacity-40">· Room:</span>
-						<span class="font-mono">{presence.roomCode || '—'}</span>
-						<span class="opacity-40">·</span>
-						<span class="font-mono text-xs opacity-40">ID: {presence.myId}</span>
-					</div>
-					<button
-						class="btn btn-warning btn-outline btn-xs"
-						aria-label="Edit device name and room"
-						title="Edit device name and room"
-						onclick={startEditConfig}
-					>
-						<PencilIcon size={14} />
-					</button>
-				{/if}
-			</div>
-		</div>
-
-		<!-- Connect toggle — the only way to join/leave the room from this page.
-		     Stays connected across navigation to other pages; only this toggle
-		     or leaving the app disconnects. -->
-		<div class="card bg-base-200 shadow-sm">
-			<div class="card-body flex-row items-center justify-between gap-3 p-4">
-				<div>
-					<p class="font-semibold">Connect</p>
-					<p class="text-xs opacity-60">
-						{#if connecting}
-							{presence.isInRoom ? 'Disconnecting…' : 'Connecting…'}
-						{:else if presence.isInRoom}
-							Connected — stays active while you browse other pages
-						{:else}
-							Not connected
-						{/if}
-					</p>
+					{#if connecting}
+						<span class="loading loading-spinner loading-md"></span>
+					{:else}
+						<input
+							type="checkbox"
+							class="toggle toggle-success toggle-lg bg-transparent bg-none"
+							checked={presence.isInRoom}
+							aria-label={presence.isInRoom ? 'Disconnect' : 'Connect'}
+							onchange={toggleConnection}
+						/>
+					{/if}
 				</div>
-				{#if connecting}
-					<span class="loading loading-spinner loading-sm"></span>
-				{:else}
-					<input
-						type="checkbox"
-						class="toggle toggle-success bg-transparent bg-none"
-						checked={presence.isInRoom}
-						aria-label={presence.isInRoom ? 'Disconnect' : 'Connect'}
-						onchange={toggleConnection}
-					/>
-				{/if}
-			</div>
-		</div>
 
-		<!-- Active Peers in Room -->
-		{#if presence.isInRoom}
-			<div class="card bg-base-200 shadow-sm">
-				<div class="card-body p-4">
-					<h2 class="card-title flex items-center justify-between text-sm">
-						<span
-							>Peers in Room
-							<span class="badge badge-neutral badge-sm">{presence.activePeerList.length}</span
-							></span
-						>
-						<button
-							class="btn btn-ghost btn-xs"
-							aria-label="Rescan for peers"
-							title="Rescan for peers"
-							disabled={rescanning}
-							onclick={rescanRoom}
-						>
-							<RefreshCwIcon size={14} class={rescanning ? 'animate-spin' : ''} />
-						</button>
-					</h2>
-
+				{#if presence.isInRoom}
 					{#if presence.activePeerList.length === 0}
 						<p class="text-sm opacity-50">Waiting for other devices…</p>
 					{:else}
@@ -656,9 +520,9 @@
 							{/each}
 						</ul>
 					{/if}
-				</div>
+				{/if}
 			</div>
-		{/if}
+		</div>
 
 		<!-- Sync Panel -->
 		{#if syncTarget}
@@ -673,7 +537,10 @@
 							disabled={hashStatus.settings === 'checking'}
 							onclick={refreshHashesIfSelected}
 						>
-							<RefreshCwIcon size={14} class={hashStatus.settings === 'checking' ? 'animate-spin' : ''} />
+							<RefreshCwIcon
+								size={14}
+								class={hashStatus.settings === 'checking' ? 'animate-spin' : ''}
+							/>
 						</button>
 					</div>
 
@@ -709,14 +576,6 @@
 						</label>
 					</div>
 
-					<a
-						href="/sync/beancount?peer={syncTarget.persistentId}"
-						class="btn btn-outline btn-primary btn-sm w-full"
-					>
-						<FolderSyncIcon size={14} />
-						Sync journal files
-					</a>
-
 					<div class="flex gap-2 flex-wrap pt-1">
 						<button
 							class="btn btn-sm btn-outline flex-1"
@@ -747,67 +606,21 @@
 						</button>
 					</div>
 
-					{#if pulledSinceReload}
-						<div class="alert alert-info text-sm mt-2 flex items-center justify-between gap-2">
-							<span>Local data changed — reload the ledger to pick it up.</span>
-							<button
-								class="btn btn-sm btn-outline"
-								disabled={reloadPhase === 'reloading'}
-								onclick={reloadLedger}
-							>
-								{#if reloadPhase === 'reloading'}
-									<span class="loading loading-spinner loading-xs"></span>
-									Reloading…
-								{:else}
-									<RefreshCcwIcon class="w-3.5 h-3.5" />
-									Reload Ledger
-								{/if}
-							</button>
-						</div>
-						{#if reloadPhase === 'done'}
-							<p class="text-xs text-success mt-1">Ledger reloaded.</p>
-						{/if}
-						{#if reloadError}
-							<p class="text-xs text-error mt-1">{reloadError}</p>
-						{/if}
-					{/if}
+					<!-- Leads to a different context (whole-file sync), so it sits apart and reads as navigation. -->
+					<div class="divider my-0"></div>
+					<a
+						href="/sync/beancount?peer={syncTarget.persistentId}"
+						class="btn btn-ghost btn-sm w-full justify-between"
+					>
+						<span class="flex items-center gap-2">
+							<FolderSyncIcon size={14} />
+							Sync journal files
+						</span>
+						<ChevronRightIcon size={16} class="opacity-60" />
+					</a>
 				</div>
 			</div>
 		{/if}
-
-		<!-- Trusted Devices -->
-		<div class="collapse collapse-arrow bg-base-200 rounded-box">
-			<input type="checkbox" />
-			<div class="collapse-title text-sm font-medium py-2">
-				Trusted Devices
-				<span class="badge badge-neutral badge-sm ml-1">{presence.trustedPeers.length}</span>
-			</div>
-			<div class="collapse-content pt-0">
-				{#if presence.trustedPeers.length === 0}
-					<p class="text-sm opacity-50">No trusted devices yet.</p>
-				{:else}
-					<ul class="divide-base-300 divide-y">
-						{#each presence.trustedPeers as tp (tp.id)}
-							<li class="flex items-start justify-between gap-2 py-2">
-								<div class="min-w-0 flex-1">
-									<p class="font-semibold text-sm">{tp.name}</p>
-									<p class="font-mono text-xs opacity-40 break-all">{tp.id}</p>
-									<p class="text-xs opacity-40">
-										Trusted: {formatDate(tp.trustedAt)} · Seen: {formatDate(tp.lastSeen)}
-									</p>
-								</div>
-								<button
-									class="btn btn-ghost btn-xs text-error shrink-0"
-									onclick={() => removeTrust(tp.id)}
-								>
-									Remove
-								</button>
-							</li>
-						{/each}
-					</ul>
-				{/if}
-			</div>
-		</div>
 	</section>
 </main>
 

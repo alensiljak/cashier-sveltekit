@@ -110,6 +110,8 @@ export const DeviceSettingKeys = {
 	// Peer sync identity for this device
 	peerId: 'peerId',
 	peerName: 'peerName',
+	// Whether to automatically reload the ledger after a peer sync pull/merge (default: true)
+	peerAutoReload: 'peerAutoReload',
 	// import book from filesystem via File System API
 	importBookDirectory: 'importBookDirectory',
 	// Whether to automatically reload the ledger after an OPFS import (default: true)
