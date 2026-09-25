@@ -79,6 +79,16 @@ export class WebDavClient {
 			});
 	}
 
+	/** Cheap existence check (HEAD). Returns true on any non-404/410 response so odd servers still get a download attempt. */
+	async exists(filename: string): Promise<boolean> {
+		const res = await fetch(this.fileUrl(filename), {
+			method: 'HEAD',
+			cache: 'no-store',
+			headers: { Authorization: this.authHeader() }
+		});
+		return res.status !== 404 && res.status !== 410;
+	}
+
 	async lastModified(filename: string): Promise<Date | null> {
 		try {
 			const res = await fetch(this.fileUrl(filename), {

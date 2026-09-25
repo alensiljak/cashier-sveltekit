@@ -138,7 +138,7 @@ Open: merged records are only visible in the ledger after "Reload Ledger". Recor
 - ✅ The `initialized` flag lives in the shared doc. Once devices merge docs, a new device would count as initialized. Decide whether that is intended.
 - ✅ Persistence has only been checked manually (the ledger loads the CRDT store's content). No automated tests for `CrdtXactStore`.
 
-#### Other code paths
+#### ✅ Other code paths
 
-- Code that reads or writes `cashier.bean` in OPFS directly still bypasses the store choice: `appService.stripIncludesFromBookFile()` / `saveCashierFile()`, the export page, `opfsExport`, and the import-ledger page. _Not audited_ beyond a search for `CASHIER_XACT_FILE`.
-- Onboarding with CRDT selected on a clean slate (demo data, import, empty) is _unverified_, as is whether the demo and import flows write transactions through the store.
+- ✅ Code that reads or writes `cashier.bean` in OPFS directly still bypasses the store choice: `appService.stripIncludesFromBookFile()` / `saveCashierFile()`, the export page, `opfsExport`, and the import-ledger page. _Not audited_ beyond a search for `CASHIER_XACT_FILE`.
+- ✅ Onboarding with CRDT selected on a clean slate (demo data, import, empty) is _unverified_, as is whether the demo and import flows write transactions through the store.

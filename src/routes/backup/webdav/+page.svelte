@@ -294,16 +294,20 @@
 				}
 			}
 			if (includeCashierBean && isCrdt) {
-				const res = await dav.get(ydocFile);
-				if (res.ok) {
-					const update = new Uint8Array(await res.arrayBuffer());
-					await ((await getXactStore()) as CrdtXactStore).importState(update);
-					Notifier.success('Local transactions merged from backup');
-					await ydocDevices?.mergeTrusted();
-				needsReload = true;
-				} else {
-					Notifier.error(`Download failed for ${ydocFile}: ${res.status} ${res.statusText}`);
+				// A new device has no backup of its own yet; skip it rather than fail, so
+				// files from other (trusted) devices still get merged below.
+				if (await dav.exists(ydocFile)) {
+					const res = await dav.get(ydocFile);
+					if (res.ok) {
+						const update = new Uint8Array(await res.arrayBuffer());
+						await ((await getXactStore()) as CrdtXactStore).importState(update);
+						Notifier.success('Local transactions merged from backup');
+					} else {
+						Notifier.error(`Download failed for ${ydocFile}: ${res.status} ${res.statusText}`);
+					}
 				}
+				await ydocDevices?.mergeTrusted();
+				needsReload = true;
 			} else if (includeCashierBean) {
 				const res = await dav.get('cashier.bean');
 				if (res.ok) {
