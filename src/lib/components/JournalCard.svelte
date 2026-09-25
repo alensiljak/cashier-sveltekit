@@ -8,8 +8,7 @@
 	import Notifier from '$lib/utils/notifier';
 	import { formatAmount, getReadableDate, getXactAmountColour } from '$lib/utils/formatter';
 	import { ensureInitialized, createParsedLedger } from '$lib/services/rustledger';
-	import { readFile } from '$lib/utils/opfslib';
-	import { CASHIER_XACT_FILE } from '$lib/constants';
+	import { getXactStore } from '$lib/storage/xactStoreRegistry';
 	import ledgerService from '$lib/services/ledgerService';
 	import { homeCache } from '$lib/services/homeCache';
 	import { ShortDateFormatStore } from '$lib/data/mainStore';
@@ -75,7 +74,7 @@
 
 		try {
 			await ensureInitialized();
-			const source = (await readFile(CASHIER_XACT_FILE)) ?? '';
+			const source = await getXactStore().toBeancount();
 			if (!source.trim()) {
 				xacts = [];
 				xactBalances = [];

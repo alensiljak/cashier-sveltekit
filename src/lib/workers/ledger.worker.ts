@@ -146,7 +146,8 @@ async function opfsBeanFilesMaxModified(): Promise<number> {
 
 async function loadFromCacheOrFiles(
 	mainFileName: string,
-	userBookFilename?: string,
+	userBookFilename: string | undefined,
+	workingSetSource: string,
 	useCaching = true
 ): Promise<void> {
 	if (useCaching) {
@@ -177,7 +178,7 @@ async function loadFromCacheOrFiles(
 		}
 		// No cache exists — fall through to file parse
 	}
-	await loadFromFiles(mainFileName, userBookFilename);
+	await loadFromFiles(mainFileName, userBookFilename, workingSetSource);
 }
 
 // ---------------------------------------------------------------------------
@@ -197,9 +198,21 @@ export type WorkerRequestPayload =
 	 */
 	| { type: 'warmup' }
 	// --- Persistent-ledger operations ---
-	| { type: 'load'; mainFileName: string; userBookFilename?: string }
-	| { type: 'ensure-loaded'; mainFileName: string; userBookFilename?: string; useCaching?: boolean }
-	| { type: 'invalidate'; mainFileName: string; userBookFilename?: string; useCaching?: boolean }
+	| { type: 'load'; mainFileName: string; userBookFilename?: string; workingSetSource: string }
+	| {
+			type: 'ensure-loaded';
+			mainFileName: string;
+			userBookFilename?: string;
+			workingSetSource: string;
+			useCaching?: boolean;
+	  }
+	| {
+			type: 'invalidate';
+			mainFileName: string;
+			userBookFilename?: string;
+			workingSetSource: string;
+			useCaching?: boolean;
+	  }
 	| { type: 'query'; bql: string }
 	| { type: 'get-directives' }
 	| { type: 'get-errors' }
@@ -245,7 +258,17 @@ export type WorkerResponse = { id: number } & WorkerResponsePayload;
 // Helpers
 // ---------------------------------------------------------------------------
 
-async function loadFromFiles(mainFileName: string, userBookFilename?: string): Promise<void> {
+/**
+ * `workingSetSource` is the device's working set as Beancount text, supplied by
+ * the caller from the active XactStore. It is registered in the file map under
+ * `mainFileName` (overriding any file of that name in OPFS), so the ledger no
+ * longer depends on where the working set is actually kept.
+ */
+async function loadFromFiles(
+	mainFileName: string,
+	userBookFilename: string | undefined,
+	workingSetSource: string
+): Promise<void> {
 	const wasm = wasmModule!;
 	if (ledger) {
 		ledger.free();
@@ -257,6 +280,7 @@ async function loadFromFiles(mainFileName: string, userBookFilename?: string): P
 	for (const { path, content } of beanFiles) {
 		fileMap[path] = content;
 	}
+	fileMap[mainFileName] = workingSetSource;
 	// When the user has their own book, treat *it* as the top-level ledger —
 	// exactly as if it were opened directly on desktop (e.g. via `rledger check`) —
 	// and fold cashier.bean's device transactions into it via an in-memory
@@ -314,7 +338,7 @@ async function handleMessage(e: MessageEvent<WorkerRequest>): Promise<void> {
 
 			case 'load': {
 				const t0 = performance.now();
-				await loadFromFiles(e.data.mainFileName, e.data.userBookFilename);
+				await loadFromFiles(e.data.mainFileName, e.data.userBookFilename, e.data.workingSetSource);
 				const ms = performance.now() - t0;
 				reply({
 					type: 'load-done',
@@ -331,6 +355,7 @@ async function handleMessage(e: MessageEvent<WorkerRequest>): Promise<void> {
 					await loadFromCacheOrFiles(
 						e.data.mainFileName,
 						e.data.userBookFilename,
+						e.data.workingSetSource,
 						e.data.useCaching ?? true
 					);
 					const ms = performance.now() - t0;
@@ -353,7 +378,7 @@ async function handleMessage(e: MessageEvent<WorkerRequest>): Promise<void> {
 
 			case 'invalidate': {
 				const t0 = performance.now();
-				await loadFromFiles(e.data.mainFileName, e.data.userBookFilename);
+				await loadFromFiles(e.data.mainFileName, e.data.userBookFilename, e.data.workingSetSource);
 				// Update the cache so future ensure-loaded calls get fresh data
 				if (e.data.useCaching ?? true) {
 					try {

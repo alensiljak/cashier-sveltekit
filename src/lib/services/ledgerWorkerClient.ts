@@ -18,6 +18,7 @@ import type {
 	WorkerResponsePayload
 } from '$lib/workers/ledger.worker';
 import { CASHIER_XACT_FILE, USER_BOOK_FILENAME } from '$lib/constants';
+import { getXactStore } from '$lib/storage/xactStoreRegistry';
 
 // Extract the response shape for a given `type` discriminant.
 type ResponseOf<T extends WorkerResponsePayload['type']> = Extract<
@@ -112,6 +113,11 @@ class LedgerWorkerClient {
 		return CASHIER_XACT_FILE;
 	}
 
+	/** The device working set (from the active XactStore) as Beancount text. */
+	private async workingSetSource(): Promise<string> {
+		return getXactStore().toBeancount();
+	}
+
 	private async userBookFilename(): Promise<string | undefined> {
 		return (await settings.get<string>(USER_BOOK_FILENAME)) ?? undefined;
 	}
@@ -135,7 +141,8 @@ class LedgerWorkerClient {
 			await this.send<'load-done'>({
 				type: 'load',
 				mainFileName: await this.mainFileName(),
-				userBookFilename: await this.userBookFilename()
+				userBookFilename: await this.userBookFilename(),
+				workingSetSource: await this.workingSetSource()
 			});
 			this.setLoaded(true);
 			this._isConfigured.set(true);
@@ -166,6 +173,7 @@ class LedgerWorkerClient {
 				type: 'ensure-loaded',
 				mainFileName: await this.mainFileName(),
 				userBookFilename: await this.userBookFilename(),
+				workingSetSource: await this.workingSetSource(),
 				useCaching
 			});
 			this.setLoaded(true);
@@ -193,6 +201,7 @@ class LedgerWorkerClient {
 				type: 'invalidate',
 				mainFileName: await this.mainFileName(),
 				userBookFilename: await this.userBookFilename(),
+				workingSetSource: await this.workingSetSource(),
 				useCaching
 			});
 			this.setLoaded(true);
