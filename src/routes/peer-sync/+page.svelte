@@ -637,7 +637,7 @@
 							{@render hashBadge(ydocStatus)}
 							<button
 								class="btn btn-sm btn-primary"
-								disabled={syncingYdoc}
+								disabled={syncingYdoc || ydocStatus === 'same'}
 								onclick={syncLocalTransactions}
 							>
 								{#if syncingYdoc}<span class="loading loading-spinner loading-xs"></span>{/if}
