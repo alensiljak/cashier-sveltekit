@@ -8,7 +8,7 @@
  */
 
 import wasmUrl from '@rustledger/wasm/rustledger_wasm_bg.wasm?url';
-import { LEDGER_CACHE_FILE } from '../constants';
+import { LEDGER_CACHE_FILE, LEDGER_CACHE_WORKING_SET_HASH_FILE } from '../constants';
 
 // ---------------------------------------------------------------------------
 // State
@@ -16,6 +16,8 @@ import { LEDGER_CACHE_FILE } from '../constants';
 
 let wasmModule: typeof import('@rustledger/wasm') | null = null;
 let ledger: import('@rustledger/wasm').Ledger | null = null;
+/** Hash of the working-set source the current ledger was built from (see saveLedgerCache). */
+let loadedWorkingSetHash: string | undefined;
 
 // ---------------------------------------------------------------------------
 // WASM init
@@ -63,6 +65,32 @@ async function opfsSaveBinary(filename: string, data: Uint8Array): Promise<void>
 	const stream = await handle.createWritable();
 	await stream.write(data.buffer as ArrayBuffer);
 	await stream.close();
+}
+
+async function hashText(text: string): Promise<string> {
+	const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+	return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function readCachedWorkingSetHash(): Promise<string | undefined> {
+	const bytes = await opfsReadBinary(LEDGER_CACHE_WORKING_SET_HASH_FILE);
+	return bytes ? new TextDecoder().decode(bytes) : undefined;
+}
+
+/**
+ * Serialize the loaded ledger to the cache, recording the hash of the working set it was
+ * built from so a later load can tell whether that working set has changed since.
+ */
+async function saveLedgerCache(bytes: Uint8Array): Promise<void> {
+	await opfsSaveBinary(LEDGER_CACHE_FILE, bytes);
+	if (loadedWorkingSetHash === undefined) {
+		await opfsDeleteFile(LEDGER_CACHE_WORKING_SET_HASH_FILE);
+	} else {
+		await opfsSaveBinary(
+			LEDGER_CACHE_WORKING_SET_HASH_FILE,
+			new TextEncoder().encode(loadedWorkingSetHash)
+		);
+	}
 }
 
 async function opfsDeleteFile(filename: string): Promise<void> {
@@ -150,6 +178,7 @@ async function loadFromCacheOrFiles(
 	workingSetSource: string,
 	useCaching = true
 ): Promise<void> {
+	const workingSetHash = await hashText(workingSetSource);
 	if (useCaching) {
 		// Check timestamps before reading the (potentially large) cache binary.
 		// If any .bean source file is newer than the cache, the cache is stale —
@@ -158,7 +187,9 @@ async function loadFromCacheOrFiles(
 		const cacheModified = await opfsCacheLastModified();
 		if (cacheModified > 0) {
 			const beanModified = await opfsBeanFilesMaxModified();
-			if (beanModified <= cacheModified) {
+			// The working set may not live in a .bean file, so compare its content hash too.
+			const workingSetUnchanged = (await readCachedWorkingSetHash()) === workingSetHash;
+			if (beanModified <= cacheModified && workingSetUnchanged) {
 				// Cache is at least as recent as all source files — attempt to load it.
 				const bytes = await opfsReadBinary(LEDGER_CACHE_FILE);
 				if (bytes) {
@@ -168,6 +199,7 @@ async function loadFromCacheOrFiles(
 							ledger = null;
 						}
 						ledger = wasmModule!.Ledger.fromCache(bytes);
+						loadedWorkingSetHash = workingSetHash;
 						return;
 					} catch {
 						// Cache corrupt or version mismatch — fall through to file parse
@@ -281,6 +313,7 @@ async function loadFromFiles(
 		fileMap[path] = content;
 	}
 	fileMap[mainFileName] = workingSetSource;
+	loadedWorkingSetHash = await hashText(workingSetSource);
 	// When the user has their own book, treat *it* as the top-level ledger —
 	// exactly as if it were opened directly on desktop (e.g. via `rledger check`) —
 	// and fold cashier.bean's device transactions into it via an in-memory
@@ -382,7 +415,7 @@ async function handleMessage(e: MessageEvent<WorkerRequest>): Promise<void> {
 				// Update the cache so future ensure-loaded calls get fresh data
 				if (e.data.useCaching ?? true) {
 					try {
-						await opfsSaveBinary(LEDGER_CACHE_FILE, ledger!.serialize());
+						await saveLedgerCache(ledger!.serialize());
 					} catch {
 						// Non-fatal — cache update failed but ledger is in memory
 					}
@@ -443,7 +476,7 @@ async function handleMessage(e: MessageEvent<WorkerRequest>): Promise<void> {
 				if (!ledger) throw new Error('Ledger not loaded — call load or ensure-loaded first');
 				const t0 = performance.now();
 				const bytes = ledger.serialize();
-				await opfsSaveBinary(LEDGER_CACHE_FILE, bytes);
+				await saveLedgerCache(bytes);
 				const ms = performance.now() - t0;
 				// Transfer the buffer zero-copy; the worker no longer needs it
 				reply({ type: 'serialize-ledger-done', bytes: bytes.length, ms });
@@ -459,6 +492,7 @@ async function handleMessage(e: MessageEvent<WorkerRequest>): Promise<void> {
 					ledger = null;
 				}
 				ledger = wasmModule!.Ledger.fromCache(bytes);
+				loadedWorkingSetHash = await readCachedWorkingSetHash();
 				const ms = performance.now() - t0;
 				reply({
 					type: 'load-from-cache-done',
@@ -474,6 +508,7 @@ async function handleMessage(e: MessageEvent<WorkerRequest>): Promise<void> {
 					ledger = null;
 				}
 				await opfsDeleteFile(LEDGER_CACHE_FILE);
+				await opfsDeleteFile(LEDGER_CACHE_WORKING_SET_HASH_FILE);
 				reply({ type: 'delete-cache-done' });
 				break;
 			}

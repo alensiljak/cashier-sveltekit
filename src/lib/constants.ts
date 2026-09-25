@@ -13,6 +13,13 @@ export const CASHIER_DATA_DIR = '.cashier' as const;
 export const LEDGER_CACHE_FILE = `${CASHIER_DATA_DIR}/ledger-cache.bin`;
 /** OPFS filename for the source hash recorded at last serialization. */
 export const LEDGER_CACHE_HASH_FILE = `${CASHIER_DATA_DIR}/ledger-cache.hash`;
+/**
+ * OPFS filename for the hash of the working-set source the ledger cache was built from.
+ * The working set may not be a file (see XactStore), so file modified times can't tell
+ * whether it changed. Distinct from `LEDGER_CACHE_HASH_FILE`, which is a diagnostic
+ * record written from the cache utility page.
+ */
+export const LEDGER_CACHE_WORKING_SET_HASH_FILE = `${CASHIER_DATA_DIR}/ledger-cache.workingset.hash`;
 export const ISODATEFORMAT = 'YYYY-MM-DD';
 export const LONGTIMEFORMAT = 'HHmmss';
 export const SHORT_DATE_FORMAT_DEFAULT = 'DD.MM.';
