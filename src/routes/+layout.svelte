@@ -46,6 +46,9 @@
 			return;
 		}
 
+		const { initNotifications } = await import('$lib/services/notificationService');
+		initNotifications();
+
 		if (pwaInfo) {
 			const { initPwa } = await import('$lib/services/pwaUpdate');
 			await initPwa();

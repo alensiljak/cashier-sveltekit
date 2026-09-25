@@ -43,7 +43,7 @@ See the Projects folder for any active projects.
 
 ## Notifications
 
-- [ ] bill payment notification. Time setting, like in Orgzly.
+- [x] bill payment notification. Time setting, like in Orgzly. (in-app only; see Settings)
 - [ ] low balance notifications (?)
 
 ## Reports

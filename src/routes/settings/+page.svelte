@@ -40,6 +40,11 @@
 	import { saveFile, fileExists } from '$lib/utils/opfslib';
 	import HelpButton from '$lib/help/HelpButton.svelte';
 	import demoDataService from '$lib/services/demoDataService';
+	import {
+		NOTIFICATION_TIME_DEFAULT,
+		scheduleNotificationCheck
+	} from '$lib/services/notificationService';
+	import { requestNotificationPermission } from '$lib/utils/webNotification';
 
 	Notifier.init();
 
@@ -73,6 +78,8 @@
 	let rootInvestmentAccount = $state<string>();
 	let dateFormat = $state<string>(DATE_FORMAT_DEFAULT);
 	let shortDateFormat = $state<string>(SHORT_DATE_FORMAT_DEFAULT);
+	let notificationsEnabled = $state<boolean>(false);
+	let notificationTime = $state<string>(NOTIFICATION_TIME_DEFAULT);
 	let loaded = $state(false);
 	let demoActive = $state(false);
 	let showDemoLoadConfirm = $state(false);
@@ -188,7 +195,22 @@
 		dateFormat = pending?.dateFormat ?? savedDateFormat;
 		shortDateFormat = pending?.shortDateFormat ?? savedShortDateFormat;
 
+		notificationsEnabled =
+			(await deviceSettings.get<boolean>(DeviceSettingKeys.notificationsEnabled)) ?? false;
+		notificationTime =
+			(await deviceSettings.get<string>(DeviceSettingKeys.notificationTime)) ??
+			NOTIFICATION_TIME_DEFAULT;
+
 		demoActive = await demoDataService.isDemoActive();
+	}
+
+	async function onNotificationsToggle() {
+		if (!notificationsEnabled) return;
+		// Permission must be requested from a user gesture.
+		if (!(await requestNotificationPermission())) {
+			notificationsEnabled = false;
+			Notifier.error('Notification permission was not granted');
+		}
 	}
 
 	async function onOpfsClick() {
@@ -273,6 +295,11 @@
 		await settings.set(SettingKeys.assetAllocationDefinition, assetAllocationDefinition);
 		await settings.set(SettingKeys.dateFormat, dateFormat);
 		await settings.set(SettingKeys.shortDateFormat, shortDateFormat);
+		await deviceSettings.set(DeviceSettingKeys.notificationsEnabled, notificationsEnabled);
+		await deviceSettings.set(DeviceSettingKeys.notificationTime, notificationTime);
+		// A changed time should be able to fire again today.
+		await deviceSettings.set(DeviceSettingKeys.notificationLastShown, null);
+		scheduleNotificationCheck();
 		ShortDateFormatStore.set(shortDateFormat);
 
 		// Save book filename in cashier.bean
@@ -490,6 +517,38 @@
 
 	{@render settingsLink('/forecast-settings', 'Forecast Settings', TrendingUpIcon)}
 
+	<!-- ── Notifications ───────────────────────────────────── -->
+	<div class="divider text-sm"><SectionTitle>Notifications</SectionTitle></div>
+
+	<p class="text-xs opacity-60">
+		Reminds you of scheduled transactions due today. Shown when the app is open or resumed after
+		the set time.
+	</p>
+
+	<div class="flex items-center gap-3">
+		<label for="notifications-enabled" class="flex-1 text-sm font-medium">
+			Scheduled transactions
+		</label>
+		<input
+			id="notifications-enabled"
+			class="toggle toggle-success shrink-0 bg-transparent bg-none"
+			type="checkbox"
+			bind:checked={notificationsEnabled}
+			onchange={onNotificationsToggle}
+		/>
+	</div>
+
+	<div class="flex items-center gap-3">
+		<label for="notification-time" class="flex-1 text-sm font-medium">Notification time</label>
+		<input
+			id="notification-time"
+			class="input input-sm w-28 shrink-0"
+			type="time"
+			bind:value={notificationTime}
+			disabled={!notificationsEnabled}
+		/>
+	</div>
+
 	<!-- ── Device Settings ────────────────────────────────── -->
 	<div class="divider text-sm"><SectionTitle>Device Settings</SectionTitle></div>
 
@@ -502,7 +561,7 @@
 		</label>
 		<input
 			id="ledger-cache-enabled"
-			class="checkbox checkbox-primary checkbox-sm shrink-0 rounded"
+			class="toggle toggle-success shrink-0 bg-transparent bg-none"
 			type="checkbox"
 			bind:checked={ledgerCacheEnabled}
 		/>

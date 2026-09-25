@@ -126,6 +126,10 @@ export const DeviceSettingKeys = {
 	demoXactIds: 'demoXactIds',
 	// OPFS file metadata snapshot for staleness detection (path -> "size|lastModified")
 	ledgerMetaSnapshot: 'ledger.metaSnapshot',
+	// Scheduled-transaction reminder: enabled flag, time of day ('HH:mm') and the date it last fired
+	notificationsEnabled: 'notifications.enabled',
+	notificationTime: 'notifications.time',
+	notificationLastShown: 'notifications.lastShown',
 	// Auto-upload cashier.bean to WebDAV after each write
 	webdavAutoBackup: 'webdav-auto-backup',
 	// Per-file remote timestamps at last successful WebDAV upload or download
