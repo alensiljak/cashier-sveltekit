@@ -81,7 +81,9 @@ export async function trustDevice(deviceId: string, name?: string): Promise<Trus
 }
 
 export async function getMergeState(): Promise<Record<string, MergeState>> {
-	return (await deviceSettings.get<Record<string, MergeState>>(DeviceSettingKeys.crdtMergeState)) ?? {};
+	return (
+		(await deviceSettings.get<Record<string, MergeState>>(DeviceSettingKeys.crdtMergeState)) ?? {}
+	);
 }
 
 export async function setMergeState(deviceId: string, state: MergeState): Promise<void> {

@@ -10,7 +10,13 @@ import { toRecord, fromRecord } from '../../src/lib/storage/crdtXactRecord';
 import { Xact } from '../../src/lib/data/model';
 
 function device(lastModified: Date | null): RemoteDevice {
-	return { deviceId: 'abc', filename: ydocFilename('abc'), size: 1, lastModified, status: 'trusted' };
+	return {
+		deviceId: 'abc',
+		filename: ydocFilename('abc'),
+		size: 1,
+		lastModified,
+		status: 'trusted'
+	};
 }
 
 describe('ydoc file names', () => {
