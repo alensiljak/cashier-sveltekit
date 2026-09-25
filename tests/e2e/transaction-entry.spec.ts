@@ -16,10 +16,10 @@ test('creating a transaction shows it in the journal', async ({ page }) => {
 	await page.goto('/tx');
 
 	const note = `Supermarket shopping ${Date.now()}`;
-	await page.getByPlaceholder('Note').fill(note);
+	await page.getByTitle('Note', { exact: true }).fill(note);
 
-	const accountFields = page.getByPlaceholder('Account');
-	const amountFields = page.getByPlaceholder('Amount');
+	const accountFields = page.getByTitle('Account', { exact: true });
+	const amountFields = page.getByTitle('Amount', { exact: true });
 
 	// First posting: the expense side.
 	await accountFields.nth(0).click();
@@ -36,6 +36,8 @@ test('creating a transaction shows it in the journal', async ({ page }) => {
 
 	// Save (the FAB's check-mark button).
 	await page.locator('button.btn-circle.btn-xl').click();
+	// Saving is async and ends with history.back(); navigating away sooner would abort it.
+	await expect(page).not.toHaveURL('/tx');
 
 	await page.goto('/journal');
 
