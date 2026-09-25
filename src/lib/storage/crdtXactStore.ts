@@ -12,8 +12,19 @@ const DB_NAME = 'cashier-xacts';
 const RECORDS_KEY = 'xacts';
 // Monotonic, so IDs made within the same millisecond still sort in creation order.
 const newId = monotonicFactory();
-const META_KEY = 'meta';
-const INITIALIZED_FLAG = 'initialized';
+
+/** Whether an IndexedDB database of this name exists, without creating it. */
+async function databaseExists(name: string): Promise<boolean> {
+	if (!indexedDB.databases) return false;
+	return (await indexedDB.databases()).some((d) => d.name === name);
+}
+
+async function sha256Hex(data: Uint8Array<ArrayBuffer>): Promise<string> {
+	const digest = await crypto.subtle.digest('SHA-256', data);
+	return Array.from(new Uint8Array(digest))
+		.map((b) => b.toString(16).padStart(2, '0'))
+		.join('');
+}
 
 /**
  * Working set kept in a Yjs document, persisted to IndexedDB via y-indexeddb.
@@ -21,39 +32,57 @@ const INITIALIZED_FLAG = 'initialized';
  * across writes. Each record is stored as one plain JSON value in a `Y.Map`,
  * so concurrent edits of the same transaction resolve last-writer-wins per
  * record, while adds/removes of different records merge cleanly.
+ *
+ * The IndexedDB database is opened (and so created) on first use, not in the
+ * constructor, so its existence tells whether the store was set up on this
+ * device; see `isInitialized()`.
  */
 export class CrdtXactStore implements XactStore {
 	readonly kind = 'crdt';
 
 	readonly doc: Y.Doc;
 	private readonly records: Y.Map<XactRecord>;
-	private readonly meta: Y.Map<boolean>;
-	private readonly persistence: IndexeddbPersistence;
+	private opening?: Promise<void>;
+	private existedBeforeOpen?: Promise<boolean>;
+	private initializedHere = false;
 
+	private readonly dbName: string;
 	private readonly getOrigin: () => Promise<string>;
 
 	constructor(dbName: string = DB_NAME, getOrigin: () => Promise<string> = getDeviceId) {
+		this.dbName = dbName;
 		this.getOrigin = getOrigin;
 		this.doc = new Y.Doc();
 		this.records = this.doc.getMap<XactRecord>(RECORDS_KEY);
-		this.meta = this.doc.getMap<boolean>(META_KEY);
-		this.persistence = new IndexeddbPersistence(dbName, this.doc);
 	}
 
-	/** Resolves once the persisted state has been loaded into the document. */
+	/** Whether the database existed before this store first opened it (memoized, so opening can't change the answer). */
+	private existed(): Promise<boolean> {
+		return (this.existedBeforeOpen ??= databaseExists(this.dbName));
+	}
+
+	/** Opens the database if needed and resolves once its state is loaded into the document. */
 	private async ready(): Promise<void> {
-		await this.persistence.whenSynced;
+		this.opening ??= (async () => {
+			await this.existed();
+			await new IndexeddbPersistence(this.dbName, this.doc).whenSynced;
+		})();
+		await this.opening;
 	}
 
-	/** Initialized once the document carries the flag set by `initialize()` (persisted with it). */
+	/**
+	 * Initialized once the IndexedDB database exists, i.e. the store was opened
+	 * on this device before (by `initialize()`, or by merging in another
+	 * device's state). Nothing is kept inside the document for this.
+	 */
 	async isInitialized(): Promise<boolean> {
-		await this.ready();
-		return this.meta.get(INITIALIZED_FLAG) === true;
+		return this.initializedHere || (await this.existed());
 	}
 
+	/** Creates the (empty) database. */
 	async initialize(): Promise<void> {
 		await this.ready();
-		this.meta.set(INITIALIZED_FLAG, true);
+		this.initializedHere = true;
 	}
 
 	/** Parse a single transaction from Beancount text. */
@@ -139,6 +168,33 @@ export class CrdtXactStore implements XactStore {
 		Y.applyUpdate(this.doc, update);
 		// Merged records reach other devices through this device's own file too.
 		scheduleBackup();
+	}
+
+	/** State vector, describing which updates this document already has. */
+	async stateVector(): Promise<Uint8Array> {
+		await this.ready();
+		return Y.encodeStateVector(this.doc);
+	}
+
+	/**
+	 * Hash of the document's content: the state vector plus the delete set, so
+	 * deletions count too. Equal on two devices exactly when they hold the same
+	 * records.
+	 */
+	async contentHash(): Promise<string> {
+		await this.ready();
+		return sha256Hex(Y.encodeSnapshot(Y.snapshot(this.doc)) as Uint8Array<ArrayBuffer>);
+	}
+
+	/**
+	 * Two-way sync step for a peer: merges the peer's full state and returns the
+	 * updates the peer is still missing, computed from the state vector of what
+	 * it sent.
+	 */
+	async mergeAndDiff(remoteState: Uint8Array): Promise<Uint8Array> {
+		const remoteVector = Y.encodeStateVectorFromUpdate(remoteState);
+		await this.importState(remoteState);
+		return Y.encodeStateAsUpdate(this.doc, remoteVector);
 	}
 
 	async clear(): Promise<void> {

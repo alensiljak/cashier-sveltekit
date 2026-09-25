@@ -19,6 +19,7 @@
 		Unplug,
 		SettingsIcon
 	} from '@lucide/svelte';
+	import { reloadLedgerFromOpfs } from '$lib/services/ledgerReload';
 	import type { ActivePeer } from '$lib/sync/peerPresence.svelte';
 	import {
 		peerConnection,
@@ -116,6 +117,7 @@
 		const targetId = syncTargetId;
 		if (!targetId) {
 			hashStatus = { settings: null, scheduled: null };
+			ydocStatus = null;
 			return;
 		}
 		checkHashes(targetId);
@@ -128,6 +130,7 @@
 
 	async function checkHashes(targetId: string) {
 		hashStatus = { settings: 'checking', scheduled: 'checking' };
+		void checkYdocHash(targetId);
 		try {
 			const [local, remote] = await Promise.all([
 				getLocalHashes(ALL_ITEMS),
@@ -141,6 +144,47 @@
 		} catch {
 			if (targetId !== syncTargetId) return;
 			hashStatus = { settings: 'error', scheduled: 'error' };
+		}
+	}
+
+	// ─── Local Transactions (CRDT store) ──────────────────────────────────────
+	// Merged automatically (no diff view), so it's a status plus one Sync action.
+	// Hidden when this device uses the OPFS store (local hash is null).
+	let ydocStatus = $state<HashStatus | null>(null);
+	let hasLocalYdoc = $state(false);
+	let syncingYdoc = $state(false);
+
+	async function checkYdocHash(targetId: string) {
+		ydocStatus = 'checking';
+		try {
+			const local = await peerConnection.getLocalYdocHash();
+			hasLocalYdoc = local !== null;
+			if (!hasLocalYdoc) {
+				ydocStatus = null;
+				return;
+			}
+			const remote = await peerConnection.fetchRemoteYdocHash(targetId);
+			if (targetId !== syncTargetId) return;
+			ydocStatus = itemHashStatus(local, remote);
+		} catch {
+			if (targetId !== syncTargetId) return;
+			ydocStatus = 'error';
+		}
+	}
+
+	async function syncLocalTransactions() {
+		if (!syncTargetId || syncingYdoc) return;
+		const targetId = syncTargetId;
+		syncingYdoc = true;
+		try {
+			const changed = await peerConnection.syncYdoc(targetId);
+			if (changed) await reloadLedgerFromOpfs();
+			Notifier.success(changed ? 'Local Transactions merged' : 'Local Transactions already in sync');
+			await checkYdocHash(targetId);
+		} catch (e) {
+			Notifier.error('Sync failed: ' + (e as Error).message);
+		} finally {
+			syncingYdoc = false;
 		}
 	}
 
@@ -586,6 +630,21 @@
 							{@render hashBadge(hashStatus.scheduled)}
 						</label>
 					</div>
+
+					{#if hasLocalYdoc}
+						<div class="flex items-center gap-3 py-1">
+							<span class="flex-1 text-sm">Local Transactions</span>
+							{@render hashBadge(ydocStatus)}
+							<button
+								class="btn btn-sm btn-primary"
+								disabled={syncingYdoc}
+								onclick={syncLocalTransactions}
+							>
+								{#if syncingYdoc}<span class="loading loading-spinner loading-xs"></span>{/if}
+								Sync
+							</button>
+						</div>
+					{/if}
 
 					<div class="flex gap-2 flex-wrap pt-1">
 						<button

@@ -39,4 +39,7 @@ Simplify the Peer Sync page and make it more intuitive and user-friendly.
 ## CRDT Store Sync
 
 - Sync the CRDT store
-- Update the CRDT store hash after peer sync
+- ✅ Update the CRDT store hash after peer sync
+- ✅ Peer sync of the CRDT store ("Local Transactions"): `ydoc-hash` and `ydoc-sync` actions in `peerConnection.svelte.ts`, Sync row on the page. The requester sends its full state; the responder merges it and replies with what the requester lacks.
+- Live sync (broadcast `doc.on('update')` to online trusted peers) — not done.
+- Verify with two devices; no unit tests for `CrdtXactStore` / the sync yet.

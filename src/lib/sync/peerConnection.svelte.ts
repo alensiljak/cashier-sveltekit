@@ -24,6 +24,8 @@ import { PeerPresence, type RelayStrategy } from './peerPresence.svelte';
 import { PeerProtocol } from './PeerSource';
 import { OpfsSource } from './OpfsSource';
 import { normalizeEol } from './SyncSource';
+import { getXactStore } from '$lib/storage/xactStoreRegistry';
+import type { CrdtXactStore } from '$lib/storage/crdtXactStore';
 import type { MessageAction, RequestAction } from '@trystero-p2p/core';
 
 const REQUEST_TIMEOUT_MS = 30_000;
@@ -54,6 +56,12 @@ type SyncResponseMsg = {
 	scheduled: string | null;
 	[key: string]: string | null;
 };
+
+/** The CRDT transaction store, or null when this device uses another store. */
+async function getCrdtStore(): Promise<CrdtXactStore | null> {
+	const store = await getXactStore();
+	return store.kind === 'crdt' ? (store as CrdtXactStore) : null;
+}
 
 async function hashText(content: string): Promise<string> {
 	const digest = await crypto.subtle.digest(
@@ -91,6 +99,8 @@ class PeerConnection {
 	private syncRequestAction: MessageAction<SyncRequestMsg> | null = null;
 	private syncResponseAction: MessageAction<SyncResponseMsg> | null = null;
 	private hashAction: RequestAction<string[], RemoteHashes> | null = null;
+	private ydocHashAction: RequestAction<null, string> | null = null;
+	private ydocSyncAction: RequestAction<Uint8Array, Uint8Array> | null = null;
 	private pendingRequests = new Map<
 		string,
 		{ resolve: (d: RemoteData) => void; reject: (e: Error) => void }
@@ -132,6 +142,31 @@ class PeerConnection {
 			}
 		);
 
+		// Local Transactions (CRDT store). Payloads are binary Yjs updates; an
+		// empty result means "not available" (untrusted requester, or this
+		// device doesn't use the CRDT store).
+		this.ydocHashAction = this.presence.makeRequestAction<null, string>(
+			'ydoc-hash',
+			async (_request, { peerId: fromId }) => {
+				if (!this.presence.peersMap[fromId]?.isTrusted) return '';
+				return (await (await getCrdtStore())?.contentHash()) ?? '';
+			}
+		);
+
+		// The requester sends its full state; we merge it and answer with what it lacks.
+		this.ydocSyncAction = this.presence.makeRequestAction<Uint8Array, Uint8Array>(
+			'ydoc-sync',
+			async (remoteState, { peerId: fromId }) => {
+				const store = await getCrdtStore();
+				if (!store || !this.presence.peersMap[fromId]?.isTrusted) return new Uint8Array(0);
+				const diff = await store.mergeAndDiff(remoteState);
+				// The merge may have added records the loaded ledger doesn't know yet.
+				const { reloadLedgerFromOpfs } = await import('$lib/services/ledgerReload');
+				void reloadLedgerFromOpfs();
+				return diff;
+			}
+		);
+
 		// Resolve pending fetchRemoteData() promises.
 		this.syncResponseAction.onMessage = ({ requestId, settings: s, scheduled }) => {
 			const pending = this.pendingRequests.get(requestId);
@@ -149,6 +184,8 @@ class PeerConnection {
 		this.syncRequestAction = null;
 		this.syncResponseAction = null;
 		this.hashAction = null;
+		this.ydocHashAction = null;
+		this.ydocSyncAction = null;
 		this.protocol = null;
 		for (const { reject } of this.pendingRequests.values()) {
 			reject(new Error('Disconnected'));
@@ -181,6 +218,42 @@ class PeerConnection {
 	fetchRemoteHashes(targetTrysteroId: string, files: string[]): Promise<RemoteHashes> {
 		if (!this.hashAction) return Promise.reject(new Error('Not connected'));
 		return this.hashAction.request(files, { target: targetTrysteroId, timeoutMs: HASH_TIMEOUT_MS });
+	}
+
+	/** Content hash of a peer's Local Transactions, or `null` if it has none to compare. */
+	async fetchRemoteYdocHash(targetTrysteroId: string): Promise<string | null> {
+		if (!this.ydocHashAction) throw new Error('Not connected');
+		const hash = await this.ydocHashAction.request(null, {
+			target: targetTrysteroId,
+			timeoutMs: HASH_TIMEOUT_MS
+		});
+		return hash || null;
+	}
+
+	/** Content hash of this device's Local Transactions, or `null` if it doesn't use the CRDT store. */
+	async getLocalYdocHash(): Promise<string | null> {
+		return (await (await getCrdtStore())?.contentHash()) ?? null;
+	}
+
+	/**
+	 * Two-way merges Local Transactions with a trusted, online peer: sends this
+	 * device's state, applies the updates the peer sends back. Returns whether
+	 * this device received anything new. Idempotent, so safe to repeat.
+	 */
+	async syncYdoc(targetTrysteroId: string): Promise<boolean> {
+		const store = await getCrdtStore();
+		if (!store) throw new Error('This device does not use the CRDT transaction store');
+		if (!this.ydocSyncAction) throw new Error('Not connected');
+		const before = await store.contentHash();
+		const diff = await this.ydocSyncAction.request(await store.exportState(), {
+			target: targetTrysteroId,
+			timeoutMs: REQUEST_TIMEOUT_MS
+		});
+		if (diff.length === 0) {
+			throw new Error('Peer refused the sync (not trusted, or not using the CRDT store)');
+		}
+		await store.importState(diff);
+		return (await store.contentHash()) !== before;
 	}
 
 	/** Requests `files` from a trusted, currently-online peer via the quick sync-request/response protocol. */
