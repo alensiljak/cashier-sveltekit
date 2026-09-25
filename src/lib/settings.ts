@@ -126,7 +126,10 @@ export const DeviceSettingKeys = {
 	webdavAutoBackup: 'webdav-auto-backup',
 	// Per-file remote timestamps at last successful WebDAV upload or download
 	// Shape: { settings: ISO | null, cashierBean: ISO | null, scheduled: ISO | null }
-	webdavLastSyncTs: 'webdav-last-sync-ts'
+	webdavLastSyncTs: 'webdav-last-sync-ts',
+	// Per-device state at the last merge of another device's Yjs file
+	// Shape: Record<deviceId, { remoteTs: ISO | null, mergedAt: ISO }>
+	crdtMergeState: 'crdt-merge-state'
 };
 
 class UserSettings {

@@ -6,6 +6,8 @@
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import { Xact } from '$lib/data/model';
+	import db from '$lib/data/db';
+	import { getDeviceId } from '$lib/sync/ydocDevices';
 	import { xact, xactId } from '$lib/data/mainStore';
 	import ledgerService from '$lib/services/ledgerService';
 	import type { StoredXact, XactId } from '$lib/storage/xactStore';
@@ -21,10 +23,22 @@
 
 	const lsVersion = ledgerService.version;
 	let storedXacts: StoredXact[] = $state([]);
+	let ownDeviceId = $state('');
+	let peerNames = $state<Record<string, string>>({});
+
+	/** Name of the device that created a record, or null for records made here (or without an origin). */
+	function foreignOrigin(origin?: string): string | null {
+		if (!origin || origin === ownDeviceId) return null;
+		return peerNames[origin] ?? `Device ${origin.slice(0, 6)}`;
+	}
 
 	$effect(() => {
 		const _v = $lsVersion;
-		ledgerService.getStoredXacts().then((result) => {
+		ledgerService.getStoredXacts().then(async (result) => {
+			if (result.some((r) => r.origin)) {
+				ownDeviceId = await getDeviceId();
+				peerNames = Object.fromEntries((await db.peers.toArray()).map((p) => [p.id, p.name]));
+			}
 			storedXacts = result;
 			// A single tick() can fire before the browser has reflowed newly-mounted rows
 			// (e.g. wrapped account names), leaving scrollHeight stale and the last xact's
@@ -97,6 +111,12 @@
 			<p>The device journal is empty</p>
 		{:else}
 			{#each storedXacts as item (item.id)}
+				{@const from = foreignOrigin(item.origin)}
+				{#if from}
+					<span class="badge badge-ghost badge-sm ml-2" title="Created on another device">
+						{from}
+					</span>
+				{/if}
 				<JournalXactRow xact={item.xact} onclick={() => onRowClick(item.xact, item.id)} />
 			{/each}
 		{/if}

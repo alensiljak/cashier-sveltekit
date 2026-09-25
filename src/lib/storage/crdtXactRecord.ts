@@ -12,6 +12,8 @@ export const XACT_SCHEMA_VERSION = 1;
 export type XactRecord = Omit<Xact, 'id' | 'postings'> & {
 	id: XactId;
 	schemaVersion: number;
+	/** ID of the device that created the record. Optional: older records lack it. */
+	origin?: string;
 	postings: Posting[];
 };
 
@@ -20,9 +22,9 @@ function clean<T extends object>(obj: T): T {
 	return JSON.parse(JSON.stringify(obj)) as T;
 }
 
-export function toRecord(xact: Xact, id: XactId): XactRecord {
+export function toRecord(xact: Xact, id: XactId, origin?: string): XactRecord {
 	const { id: _ledgerId, ...rest } = xact;
-	return clean({ ...rest, id, schemaVersion: XACT_SCHEMA_VERSION });
+	return clean({ ...rest, id, schemaVersion: XACT_SCHEMA_VERSION, origin });
 }
 
 /** True if the record was written by a newer app version than this one. */
@@ -53,7 +55,7 @@ export function fromRecord(record: XactRecord): Xact {
 			);
 		}
 	}
-	const { id: _id, schemaVersion: _v, postings, ...rest } = record;
+	const { id: _id, schemaVersion: _v, origin: _o, postings, ...rest } = record;
 	const xact = Object.assign(new Xact(), rest);
 	xact.postings = postings.map((p) => Object.assign(new Posting(), p));
 	return xact;

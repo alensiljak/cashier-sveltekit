@@ -90,14 +90,11 @@ Removing a trusted device stops synchronizing that device's file.
 
 Raised while implementing step 1 (`CrdtXactStore`, store selection by the `xactStore` device setting). Items marked _unverified_ were not checked in a browser or against the code.
 
-#### Backup to WebDAV
+#### WebDAV Sync
 
-Saving to WebDAV needs implementation and review.
+Implemented on the WebDAV backup page (CRDT store only): all `cashier-xacts-<id>.ydoc` files are listed and matched against Trusted Peers by device ID. Untrusted files can be trusted (added to Trusted Peers) or deleted; a manual "Merge trusted devices" button merges the files that changed since their last merge. Records carry an `origin` device ID, shown as a badge in the Device Journal for records created elsewhere. Merging does not run automatically.
 
-#### Migration and switching
-
-- Switching to the CRDT store starts empty. Nothing copies `cashier.bean` into it (step 2, manual). The setting takes effect after a reload; the settings page only shows a notice.
-- Switching back to OPFS does not carry CRDT records over either.
+Open: merged records are only visible in the ledger after "Reload Ledger". Records created before `origin` was added have no origin and show no badge. Not covered by tests yet.
 
 #### Data fidelity
 

@@ -14,6 +14,7 @@ import { WebDavClient } from '$lib/utils/webdav';
 import { settings, deviceSettings, SettingKeys, DeviceSettingKeys } from '$lib/settings';
 import { getXactStore } from '$lib/storage/xactStoreRegistry';
 import type { CrdtXactStore } from '$lib/storage/crdtXactStore';
+import { getDeviceId, ydocFilename } from '$lib/sync/ydocDevices';
 import { writable } from 'svelte/store';
 import { showBackupNotification } from '$lib/utils/webNotification';
 
@@ -67,12 +68,7 @@ export async function updateCashierBeanBaseline(content: string, remoteTs: Date)
  * so concurrent devices never overwrite each other. Shares the device ID with peer sync.
  */
 export async function crdtBackupFilename(): Promise<string> {
-	let id = await deviceSettings.get<string>(DeviceSettingKeys.peerId);
-	if (!id) {
-		id = crypto.randomUUID();
-		await deviceSettings.set(DeviceSettingKeys.peerId, id);
-	}
-	return `cashier-xacts-${id}.ydoc`;
+	return ydocFilename(await getDeviceId());
 }
 
 /** Reactive timestamp of the most recent successful auto-backup (null = never). */

@@ -5,6 +5,7 @@ import { scheduleBackup } from '$lib/services/webdavAutoBackupService';
 import { locateXactsInSource } from '$lib/utils/xactLocator';
 import { xactToBeancountText } from '$lib/utils/xactUtils';
 import { fromRecord, isNewerSchema, toRecord, type XactRecord } from './crdtXactRecord';
+import { getDeviceId } from '$lib/sync/ydocDevices';
 import type { StoredXact, XactId, XactStore } from './xactStore';
 
 const DB_NAME = 'cashier-xacts';
@@ -29,7 +30,10 @@ export class CrdtXactStore implements XactStore {
 	private readonly meta: Y.Map<boolean>;
 	private readonly persistence: IndexeddbPersistence;
 
-	constructor(dbName: string = DB_NAME) {
+	private readonly getOrigin: () => Promise<string>;
+
+	constructor(dbName: string = DB_NAME, getOrigin: () => Promise<string> = getDeviceId) {
+		this.getOrigin = getOrigin;
 		this.doc = new Y.Doc();
 		this.records = this.doc.getMap<XactRecord>(RECORDS_KEY);
 		this.meta = this.doc.getMap<boolean>(META_KEY);
@@ -69,14 +73,14 @@ export class CrdtXactStore implements XactStore {
 	private put(id: XactId, record: XactRecord): StoredXact {
 		this.records.set(id, record);
 		scheduleBackup();
-		return { xact: fromRecord(record), id };
+		return { xact: fromRecord(record), id, origin: record.origin };
 	}
 
 	async append(beancountText: string): Promise<StoredXact> {
 		await this.ready();
 		const xact = await this.parse(beancountText);
 		const id = newId();
-		return this.put(id, toRecord(xact, id));
+		return this.put(id, toRecord(xact, id, await this.getOrigin()));
 	}
 
 	async update(id: XactId, beancountText: string): Promise<StoredXact> {
@@ -90,7 +94,8 @@ export class CrdtXactStore implements XactStore {
 			);
 		}
 		const xact = await this.parse(beancountText);
-		return this.put(id, toRecord(xact, id));
+		// The creator stays the origin; records predating origin tracking stay without one.
+		return this.put(id, toRecord(xact, id, existing.origin));
 	}
 
 	async remove(id: XactId): Promise<void> {
@@ -101,7 +106,18 @@ export class CrdtXactStore implements XactStore {
 
 	async list(): Promise<StoredXact[]> {
 		await this.ready();
-		return this.sorted().map((r) => ({ xact: fromRecord(r), id: r.id }));
+		return this.sorted().map((r) => ({ xact: fromRecord(r), id: r.id, origin: r.origin }));
+	}
+
+	/** Number of records per creating device; records without an origin count under `''`. */
+	async originCounts(): Promise<Record<string, number>> {
+		await this.ready();
+		const counts: Record<string, number> = {};
+		for (const r of this.records.values()) {
+			const key = r.origin ?? '';
+			counts[key] = (counts[key] ?? 0) + 1;
+		}
+		return counts;
 	}
 
 	async toBeancount(): Promise<string> {
@@ -121,6 +137,8 @@ export class CrdtXactStore implements XactStore {
 	async importState(update: Uint8Array): Promise<void> {
 		await this.ready();
 		Y.applyUpdate(this.doc, update);
+		// Merged records reach other devices through this device's own file too.
+		scheduleBackup();
 	}
 
 	async clear(): Promise<void> {

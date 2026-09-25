@@ -20,6 +20,7 @@
 		XIcon
 	} from '@lucide/svelte';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
+	import YdocDevices from '$lib/components/YdocDevices.svelte';
 	import { goto } from '$app/navigation';
 	import {
 		lastBackupTime,
@@ -480,6 +481,15 @@
 			</label>
 		</div>
 	</section>
+
+	{#if isCrdt && webdavUrl}
+		<YdocDevices
+			url={webdavUrl}
+			username={webdavUsername}
+			password={webdavPassword}
+			onmerged={() => (needsReload = true)}
+		/>
+	{/if}
 
 	<!-- Auto-backup -->
 	<section class="card bg-base-200">

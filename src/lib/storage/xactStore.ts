@@ -22,6 +22,8 @@ export type XactId = string;
 export interface StoredXact {
 	xact: Xact;
 	id: XactId;
+	/** ID of the device that created the transaction (CRDT store only). */
+	origin?: string;
 }
 
 export interface XactStore {

@@ -44,6 +44,13 @@ export class WebDavClient {
 		});
 	}
 
+	async delete(filename: string): Promise<Response> {
+		return fetch(this.fileUrl(filename), {
+			method: 'DELETE',
+			headers: { Authorization: this.authHeader() }
+		});
+	}
+
 	async list(): Promise<WebDavEntry[]> {
 		const res = await fetch(this.baseUrl, {
 			method: 'PROPFIND',
