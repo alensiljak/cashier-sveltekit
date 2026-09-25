@@ -115,7 +115,7 @@ class LedgerWorkerClient {
 
 	/** The device working set (from the active XactStore) as Beancount text. */
 	private async workingSetSource(): Promise<string> {
-		return getXactStore().toBeancount();
+		return (await getXactStore()).toBeancount();
 	}
 
 	private async userBookFilename(): Promise<string | undefined> {

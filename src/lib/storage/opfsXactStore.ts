@@ -60,6 +60,15 @@ export class OpfsXactStore implements XactStore {
 		return { xact: location.xact, id: OpfsXactStore.toId(location.span.startLine) };
 	}
 
+	/** Initialized once the `cashier.bean` file exists. */
+	async isInitialized(): Promise<boolean> {
+		return opfslib.fileExists(CASHIER_XACT_FILE);
+	}
+
+	async initialize(): Promise<void> {
+		await opfslib.saveFile(CASHIER_XACT_FILE, '');
+	}
+
 	async append(beancountText: string): Promise<StoredXact> {
 		await ensureInitialized();
 		let content = await this.read();

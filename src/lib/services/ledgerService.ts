@@ -102,27 +102,27 @@ class LedgerService {
 
 	/** Append a transaction to the working-set store, then invalidate. Returns its location. */
 	async appendTransaction(beancountText: string): Promise<StoredXact> {
-		const location = await getXactStore().append(beancountText);
+		const location = await (await getXactStore()).append(beancountText);
 		await this.invalidate();
 		return location;
 	}
 
 	/** Replace the transaction identified by `id`, then invalidate. Returns its new location. */
 	async editTransaction(id: XactId, newBeancountText: string): Promise<StoredXact> {
-		const location = await getXactStore().update(id, newBeancountText);
+		const location = await (await getXactStore()).update(id, newBeancountText);
 		await this.invalidate();
 		return location;
 	}
 
 	/** Delete the transaction identified by `id`, then invalidate. */
 	async deleteTransaction(id: XactId): Promise<void> {
-		await getXactStore().remove(id);
+		await (await getXactStore()).remove(id);
 		await this.invalidate();
 	}
 
 	/** Delete every transaction in the working-set store, then invalidate. */
 	async clearTransactions(): Promise<void> {
-		await getXactStore().clear();
+		await (await getXactStore()).clear();
 		await this.invalidate();
 	}
 
@@ -198,7 +198,7 @@ class LedgerService {
 
 	/** Working-set source from the active store. */
 	private async readAndCombineSources(): Promise<string> {
-		return getXactStore().toBeancount();
+		return (await getXactStore()).toBeancount();
 	}
 
 	/**
@@ -206,7 +206,7 @@ class LedgerService {
 	 * to populate the list and supply the ID needed for editing).
 	 */
 	async getStoredXacts(): Promise<StoredXact[]> {
-		return getXactStore().list();
+		return (await getXactStore()).list();
 	}
 
 	private directiveToXact = directiveToXact;

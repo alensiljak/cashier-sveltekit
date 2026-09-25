@@ -12,7 +12,6 @@
     decides how `cashier.bean` gets created.
 */
 import {
-	CASHIER_XACT_FILE,
 	DEMO_DIR,
 	SHORT_DATE_FORMAT_DEFAULT,
 	USER_BOOK_FILENAME
@@ -22,15 +21,14 @@ import appService from '$lib/services/appService';
 import fullLedgerService from '$lib/services/ledgerWorkerClient';
 import { ShortDateFormatStore } from '$lib/data/mainStore';
 import * as OpfsLib from '$lib/utils/opfslib';
+import { getXactStore } from '$lib/storage/xactStoreRegistry';
 
 /**
  * Initialize the application. Returns whether onboarding should run instead
  * of proceeding straight into the app.
  */
 export async function ensureInitialized(): Promise<{ needsOnboarding: boolean }> {
-	// check if the ledger file exists in OPFS
-	const mainFileExists = await OpfsLib.fileExists(CASHIER_XACT_FILE);
-	if (mainFileExists) return { needsOnboarding: false };
+	if (await (await getXactStore()).isInitialized()) return { needsOnboarding: false };
 
 	if (await isCleanSlate()) {
 		return { needsOnboarding: true };

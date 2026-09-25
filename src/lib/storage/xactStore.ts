@@ -27,6 +27,12 @@ export interface StoredXact {
 export interface XactStore {
 	readonly kind: 'opfs' | 'crdt';
 
+	/** Whether the store has been set up on this device (each store defines what that means). */
+	isInitialized(): Promise<boolean>;
+
+	/** Set the store up as empty, marking it initialized. */
+	initialize(): Promise<void>;
+
 	/** Add a transaction. Returns it with its ID, ready to be edited in place. */
 	append(beancountText: string): Promise<StoredXact>;
 

@@ -14,6 +14,7 @@ import { CASHIER_XACT_FILE, USER_BOOK_FILENAME } from '$lib/constants';
 import { ensureInitialized, createParsedLedger } from './rustledger';
 import { mapDirectiveSpans } from '$lib/rledger/sourceEditor';
 import { scheduleBackup } from './webdavAutoBackupService';
+import { getXactStore } from '$lib/storage/xactStoreRegistry';
 
 // interface AccountIndex {
 // 	[key: string]: Account;
@@ -463,7 +464,7 @@ class AppService {
 	 * parse time by the ledger worker, so it is never written to disk.
 	 */
 	async createDefaultCashierFile(): Promise<void> {
-		await saveFile(CASHIER_XACT_FILE, '');
+		await (await getXactStore()).initialize();
 	}
 
 	/**

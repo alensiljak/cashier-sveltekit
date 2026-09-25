@@ -74,7 +74,7 @@
 
 		try {
 			await ensureInitialized();
-			const source = await getXactStore().toBeancount();
+			const source = await (await getXactStore()).toBeancount();
 			if (!source.trim()) {
 				xacts = [];
 				xactBalances = [];

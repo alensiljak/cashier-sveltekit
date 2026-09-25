@@ -4,6 +4,7 @@
 	import { get } from 'svelte/store';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { SettingKeys, settings, DeviceSettingKeys, deviceSettings } from '$lib/settings';
+	import { getXactStore } from '$lib/storage/xactStoreRegistry';
 	import { SHORT_DATE_FORMAT_DEFAULT } from '$lib/constants';
 	import Notifier from '$lib/utils/notifier';
 	import appService from '$lib/services/appService';
@@ -61,6 +62,8 @@
 
 	let ledgerCacheEnabled = $state<boolean>(true);
 	let xactStoreType = $state<'opfs' | 'crdt'>('opfs');
+	// The store in use since load; a different selection needs a reload to take effect.
+	let loadedXactStoreType = $state<'opfs' | 'crdt'>('opfs');
 	let currency = $state<string>();
 	let bookCurrencies = $state<string[]>([]);
 	let bookFilename = $state<string | null>(null);
@@ -157,6 +160,7 @@
 			(await deviceSettings.get<boolean>(DeviceSettingKeys.ledgerCacheEnabled)) ?? true;
 		xactStoreType =
 			(await deviceSettings.get<'opfs' | 'crdt'>(DeviceSettingKeys.xactStore)) ?? 'opfs';
+		loadedXactStoreType = (await getXactStore()).kind;
 		savedAssetAllocationDefinition =
 			(await settings.get<string>(SettingKeys.assetAllocationDefinition)) ?? null;
 		savedDateFormat = (await settings.get<string>(SettingKeys.dateFormat)) ?? DATE_FORMAT_DEFAULT;
@@ -521,6 +525,11 @@
 			/>
 			CRDT
 		</label>
+		{#if xactStoreType !== loadedXactStoreType}
+			<p class="text-xs text-warning">
+				The ledger needs to be reloaded for the storage change to take effect.
+			</p>
+		{/if}
 	</fieldset>
 
 	<!-- ── Demo Data ───────────────────────────────────────── -->

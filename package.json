@@ -33,7 +33,10 @@
 		"svelte": "^5.17.0",
 		"toml": "^5.0.0",
 		"typescript": "^6.0.0",
-		"webdav": "^5.7.1"
+		"ulid": "^3.0.2",
+		"webdav": "^5.7.1",
+		"y-indexeddb": "^9.0.12",
+		"yjs": "^13.6.33"
 	},
 	"devDependencies": {
 		"@floating-ui/dom": "^1.6.13",

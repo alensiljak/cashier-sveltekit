@@ -85,3 +85,35 @@ Removing a trusted device stops synchronizing that device's file.
 5. Archiving and deletions.
 6. p2p sync of the working set.
 7. Compaction.
+
+### Open Issues
+
+Raised while implementing step 1 (`CrdtXactStore`, store selection by the `xactStore` device setting). Items marked *unverified* were not checked in a browser or against the code.
+
+#### Migration and switching
+
+- Switching to the CRDT store starts empty. Nothing copies `cashier.bean` into it (step 2, manual). The setting takes effect after a reload; the settings page only shows a notice.
+- Switching back to OPFS does not carry CRDT records over either.
+
+#### Data fidelity
+
+- `toBeancount()` rebuilds text from the `Xact` fields via `xactToBeancountText`. Anything the model does not carry (comments, tags, links, other posting-level details) is lost on the way out. *Unverified* which of these the model covers.
+- `xactToBeancountText` rewrites data: it forces the `!` flag on postings without an account and writes explicit zero amounts. The OPFS store keeps the source text verbatim, so the two stores can produce different ledgers from the same input.
+- `fromRecord` throws for a record with a newer `schemaVersion`. One such record makes `list()` and `toBeancount()` fail for the whole store. Decide: skip and warn, or block.
+
+#### Persistence and sync
+
+- `scheduleBackup()` is still called on CRDT writes, but it backs up OPFS files, not IndexedDB. The CRDT data is not covered by the WebDAV backup, and the OPFS `cashier.bean` it may upload is stale. Resolved by step 4, or earlier if backup must work first.
+- y-indexeddb keeps its own database (`cashier-xacts`), separate from the Dexie one; this cannot be changed without dropping y-indexeddb (e.g. storing a `Y.encodeStateAsUpdate` snapshot in Dexie instead).
+- Two open tabs each hold their own `Y.Doc` on the same database. y-indexeddb does not propagate changes between them live, so a tab may show stale data or overwrite-by-merge on next load. *Unverified*; likely needs a BroadcastChannel provider or a single-tab guard.
+- The `initialized` flag lives in the shared doc. Once devices merge docs, a new device would count as initialized. Decide whether that is intended.
+- Persistence has only been checked manually (the ledger loads the CRDT store's content). No automated tests for `CrdtXactStore`.
+
+#### Other code paths
+
+- Code that reads or writes `cashier.bean` in OPFS directly still bypasses the store choice: `appService.stripIncludesFromBookFile()` / `saveCashierFile()`, the export page, `opfsExport`, and the import-ledger page. *Not audited* beyond a search for `CASHIER_XACT_FILE`.
+- Onboarding with CRDT selected on a clean slate (demo data, import, empty) is *unverified*, as is whether the demo and import flows write transactions through the store.
+
+#### Housekeeping
+
+- `npm install yjs y-indexeddb` printed `npm audit` warnings. Not reviewed; may be pre-existing.
