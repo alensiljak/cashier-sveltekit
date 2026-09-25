@@ -4,7 +4,7 @@ import { monotonicFactory } from 'ulid';
 import { scheduleBackup } from '$lib/services/webdavAutoBackupService';
 import { locateXactsInSource } from '$lib/utils/xactLocator';
 import { xactToBeancountText } from '$lib/utils/xactUtils';
-import { fromRecord, toRecord, type XactRecord } from './crdtXactRecord';
+import { fromRecord, isNewerSchema, toRecord, type XactRecord } from './crdtXactRecord';
 import type { StoredXact, XactId, XactStore } from './xactStore';
 
 const DB_NAME = 'cashier-xacts';
@@ -81,7 +81,14 @@ export class CrdtXactStore implements XactStore {
 
 	async update(id: XactId, beancountText: string): Promise<StoredXact> {
 		await this.ready();
-		if (!this.records.has(id)) throw new Error(`Transaction ${id} not found`);
+		const existing = this.records.get(id);
+		if (!existing) throw new Error(`Transaction ${id} not found`);
+		if (isNewerSchema(existing)) {
+			// Rewriting would drop fields this version doesn't know about.
+			throw new Error(
+				`Transaction ${id} was written by a newer app version (schema ${existing.schemaVersion}) and cannot be edited here. Update the app.`
+			);
+		}
 		const xact = await this.parse(beancountText);
 		return this.put(id, toRecord(xact, id));
 	}
@@ -102,6 +109,18 @@ export class CrdtXactStore implements XactStore {
 		const records = this.sorted();
 		if (records.length === 0) return '';
 		return records.map((r) => xactToBeancountText(fromRecord(r)).trimEnd()).join('\n\n') + '\n';
+	}
+
+	/** The full document state as a Yjs update, for backup or relay to other devices. */
+	async exportState(): Promise<Uint8Array> {
+		await this.ready();
+		return Y.encodeStateAsUpdate(this.doc);
+	}
+
+	/** Merge a Yjs update (e.g. another device's exported state) into the document. Idempotent. */
+	async importState(update: Uint8Array): Promise<void> {
+		await this.ready();
+		Y.applyUpdate(this.doc, update);
 	}
 
 	async clear(): Promise<void> {

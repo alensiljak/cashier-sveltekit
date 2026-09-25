@@ -12,6 +12,8 @@ import { readFile } from '$lib/utils/opfslib';
 import { normalizeEol } from '$lib/sync/SyncSource';
 import { WebDavClient } from '$lib/utils/webdav';
 import { settings, deviceSettings, SettingKeys, DeviceSettingKeys } from '$lib/settings';
+import { getXactStore } from '$lib/storage/xactStoreRegistry';
+import type { CrdtXactStore } from '$lib/storage/crdtXactStore';
 import { writable } from 'svelte/store';
 import { showBackupNotification } from '$lib/utils/webNotification';
 
@@ -60,6 +62,19 @@ export async function updateCashierBeanBaseline(content: string, remoteTs: Date)
 	await deviceSettings.set(DeviceSettingKeys.webdavLastSyncTs, baseline);
 }
 
+/**
+ * Per-device file name for the Yjs state. Each device writes only its own file,
+ * so concurrent devices never overwrite each other. Shares the device ID with peer sync.
+ */
+export async function crdtBackupFilename(): Promise<string> {
+	let id = await deviceSettings.get<string>(DeviceSettingKeys.peerId);
+	if (!id) {
+		id = crypto.randomUUID();
+		await deviceSettings.set(DeviceSettingKeys.peerId, id);
+	}
+	return `cashier-xacts-${id}.ydoc`;
+}
+
 /** Reactive timestamp of the most recent successful auto-backup (null = never). */
 export const lastBackupTime = writable<Date | null>(null);
 
@@ -76,11 +91,35 @@ async function doBackup(): Promise<void> {
 
 	if (!navigator.onLine) return;
 
+	const client = new WebDavClient(cfg.url, cfg.username, cfg.password);
+
+	// With the CRDT store the working set lives in IndexedDB, not cashier.bean:
+	// back up the Yjs document state to this device's own file.
+	const store = await getXactStore();
+	if (store.kind === 'crdt') {
+		try {
+			const filename = await crdtBackupFilename();
+			const res = await client.put(
+				filename,
+				await (store as CrdtXactStore).exportState(),
+				'application/octet-stream'
+			);
+			if (res.ok) {
+				lastBackupTime.set(new Date());
+				void showBackupNotification();
+			} else {
+				console.warn(`[webdav-auto-backup] PUT failed: ${res.status} ${res.statusText}`);
+			}
+		} catch (err) {
+			console.warn('[webdav-auto-backup] Yjs upload error:', err);
+		}
+		return;
+	}
+
 	const content = await readFile('cashier.bean');
 	if (content === undefined) return;
 
 	try {
-		const client = new WebDavClient(cfg.url, cfg.username, cfg.password);
 		const res = await client.put('cashier.bean', content);
 		if (res.ok) {
 			lastBackupTime.set(new Date());

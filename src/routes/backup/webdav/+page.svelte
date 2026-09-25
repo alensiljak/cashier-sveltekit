@@ -11,6 +11,7 @@
 	import {
 		SettingsIcon,
 		RefreshCwIcon,
+		RefreshCcwIcon,
 		GitCompareArrowsIcon,
 		EyeIcon,
 		CloudIcon,
@@ -23,10 +24,14 @@
 	import {
 		lastBackupTime,
 		contentHash,
+		crdtBackupFilename,
 		type SyncRecord,
 		type WebDavLastSyncTs as LastSyncTs
 	} from '$lib/services/webdavAutoBackupService';
 	import { requestNotificationPermission } from '$lib/utils/webNotification';
+	import { reloadLedgerFromOpfs } from '$lib/services/ledgerReload';
+	import { getXactStore } from '$lib/storage/xactStoreRegistry';
+	import type { CrdtXactStore } from '$lib/storage/crdtXactStore';
 
 	type SyncDirection = 'up' | 'down' | 'conflict' | null;
 
@@ -46,6 +51,10 @@
 	let cashierBeanLocalHash = $state<string | null>(null);
 	let scheduledLastModified = $state<Date | null>(null);
 	let autoBackupEnabled = $state(false);
+	// The working set is either cashier.bean (OPFS store) or the Yjs document (CRDT store).
+	let isCrdt = $state(false);
+	let ydocFile = $state('');
+	const workingSetLabel = $derived(isCrdt ? 'Local Transactions' : 'cashier.bean');
 	let lastSyncTs = $state<LastSyncTs>({ settings: null, cashierBean: null, scheduled: null });
 
 	/** Remote timestamp from a baseline record (supports legacy plain-string or new object form). */
@@ -66,6 +75,8 @@
 	// Remote change still uses timestamp — fetching remote content just to hash it on every
 	// status check is too expensive.
 	const cashierBeanDirection = $derived.by<SyncDirection>(() => {
+		// CRDT documents merge, so there is no newer/older or conflict to flag.
+		if (isCrdt) return null;
 		const remote = cashierBeanLastModified;
 		const localHash = cashierBeanLocalHash;
 		if (!remote && !localHash) return null;
@@ -128,6 +139,8 @@
 			(await deviceSettings.get<boolean>(DeviceSettingKeys.webdavAutoBackup)) ?? false;
 		const storedSyncTs = await deviceSettings.get<LastSyncTs>(DeviceSettingKeys.webdavLastSyncTs);
 		if (storedSyncTs) lastSyncTs = storedSyncTs;
+		isCrdt = (await getXactStore()).kind === 'crdt';
+		if (isCrdt) ydocFile = await crdtBackupFilename();
 		fetchLastModified();
 	});
 
@@ -146,18 +159,20 @@
 	async function fetchLastModified() {
 		isCheckingRemote = true;
 		try {
-			const localMeta = await getFileMetadata('cashier.bean');
-			if (localMeta) cashierBeanLocalLastModified = new Date(localMeta.lastModified);
+			if (!isCrdt) {
+				const localMeta = await getFileMetadata('cashier.bean');
+				if (localMeta) cashierBeanLocalLastModified = new Date(localMeta.lastModified);
 
-			// Hash local content for accurate change detection (avoids false conflicts from mtime skew)
-			const localContent = await readFile('cashier.bean');
-			cashierBeanLocalHash = localContent !== undefined ? await contentHash(localContent) : null;
+				// Hash local content for accurate change detection (avoids false conflicts from mtime skew)
+				const localContent = await readFile('cashier.bean');
+				cashierBeanLocalHash = localContent !== undefined ? await contentHash(localContent) : null;
+			}
 
 			if (!webdavUrl) return;
 			const dav = client();
 			const [sm, cm, scm] = await Promise.allSettled([
 				dav.lastModified('settings.json'),
-				dav.lastModified('cashier.bean'),
+				dav.lastModified(isCrdt ? ydocFile : 'cashier.bean'),
 				dav.lastModified('scheduled.json')
 			]);
 			if (sm.status === 'fulfilled') settingsLastModified = sm.value;
@@ -197,7 +212,12 @@
 				if (res.ok) { Notifier.success('Settings uploaded'); uploaded.settings = true; }
 				else Notifier.error(`Upload failed for settings.json: ${res.status} ${res.statusText}`);
 			}
-			if (includeCashierBean) {
+			if (includeCashierBean && isCrdt) {
+				const state = await ((await getXactStore()) as CrdtXactStore).exportState();
+				const res = await dav.put(ydocFile, state, 'application/octet-stream');
+				if (res.ok) Notifier.success('Local transactions uploaded');
+				else Notifier.error(`Upload failed for ${ydocFile}: ${res.status} ${res.statusText}`);
+			} else if (includeCashierBean) {
 				const content = await readFile('cashier.bean');
 				if (content === undefined) {
 					Notifier.error('cashier.bean not found in private filesystem');
@@ -239,7 +259,25 @@
 	}
 
 	function onDownloadClick() {
-		showDownloadDialog = true;
+		// The CRDT file is merged, not overwritten, so it needs no warning.
+		if (overwrittenLabels.length === 0) void confirmDownload();
+		else showDownloadDialog = true;
+	}
+
+	let needsReload = $state(false);
+	let isReloading = $state(false);
+
+	async function reloadLedger() {
+		isReloading = true;
+		try {
+			await reloadLedgerFromOpfs();
+			needsReload = false;
+			Notifier.success('Ledger reloaded');
+		} catch (err) {
+			Notifier.error('Reload error: ' + (err as Error).message);
+		} finally {
+			isReloading = false;
+		}
 	}
 
 	async function confirmDownload() {
@@ -265,7 +303,17 @@
 					Notifier.error(`Download failed for settings.json: ${res.status} ${res.statusText}`);
 				}
 			}
-			if (includeCashierBean) {
+			if (includeCashierBean && isCrdt) {
+				const res = await dav.get(ydocFile);
+				if (res.ok) {
+					const update = new Uint8Array(await res.arrayBuffer());
+					await ((await getXactStore()) as CrdtXactStore).importState(update);
+					Notifier.success('Local transactions merged from backup');
+				needsReload = true;
+				} else {
+					Notifier.error(`Download failed for ${ydocFile}: ${res.status} ${res.statusText}`);
+				}
+			} else if (includeCashierBean) {
 				const res = await dav.get('cashier.bean');
 				if (res.ok) {
 					const text = await res.text();
@@ -323,9 +371,9 @@
 		goto(`/backup/webdav/preview?source=${source}&${fileParams()}`);
 	}
 
-	const selectedLabels = $derived([
+	const overwrittenLabels = $derived([
 		...(includeSettings ? ['Settings'] : []),
-		...(includeCashierBean ? ['cashier.bean'] : []),
+		...(includeCashierBean && !isCrdt ? ['cashier.bean'] : []),
 		...(includeScheduled ? ['Scheduled Transactions'] : [])
 	]);
 </script>
@@ -417,7 +465,7 @@
 					class="checkbox checkbox-primary"
 					bind:checked={includeCashierBean}
 				/>
-				<span class="flex-1">cashier.bean</span>
+				<span class="flex-1">{workingSetLabel}</span>
 				{@render syncBadge(cashierBeanLastModified, cashierBeanDirection)}
 			</label>
 			<label class="flex items-center gap-3 cursor-pointer">
@@ -438,7 +486,7 @@
 		<div class="card-body p-4 gap-3">
 			<label class="flex items-center gap-3 cursor-pointer">
 				<span class="flex-1">
-					<span class="font-medium">Auto-backup cashier.bean</span>
+					<span class="font-medium">Auto-backup {workingSetLabel}</span>
 					<span class="block text-xs text-base-content/50">
 						Upload to WebDAV automatically after each change
 					</span>
@@ -476,6 +524,20 @@
 		</button>
 	</section>
 
+	{#if needsReload}
+		<section class="flex justify-center">
+			<button class="btn btn-outline" disabled={isReloading} onclick={reloadLedger}>
+				{#if isReloading}
+					<span class="loading loading-spinner loading-sm"></span>
+					Reloading…
+				{:else}
+					<RefreshCcwIcon size={16} />
+					Reload Ledger
+				{/if}
+			</button>
+		</section>
+	{/if}
+
 	<!-- View actions -->
 	<section class="flex gap-3 justify-center flex-wrap">
 		<button class="btn btn-secondary" disabled={noneSelected} onclick={openDiff}>
@@ -500,7 +562,7 @@
 			<h3 class="font-bold text-lg">Confirm Download</h3>
 			<p class="py-4">
 				The local content of
-				<strong>{selectedLabels.join(' and ')}</strong>
+				<strong>{overwrittenLabels.join(' and ')}</strong>
 				will be overwritten by the remote version. Continue?
 			</p>
 			<div class="modal-action">

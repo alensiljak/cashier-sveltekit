@@ -25,12 +25,33 @@ export function toRecord(xact: Xact, id: XactId): XactRecord {
 	return clean({ ...rest, id, schemaVersion: XACT_SCHEMA_VERSION });
 }
 
+/** True if the record was written by a newer app version than this one. */
+export function isNewerSchema(record: XactRecord): boolean {
+	return record.schemaVersion > XACT_SCHEMA_VERSION;
+}
+
+const warnedIds = new Set<XactId>();
+
+/**
+ * Best-effort read. A record with a newer schema is still converted, using the
+ * fields this version knows about, and a warning is logged once per record.
+ * Writing such a record back would drop the newer fields, so callers must not.
+ */
 export function fromRecord(record: XactRecord): Xact {
-	if (record.schemaVersion > XACT_SCHEMA_VERSION) {
-		throw new Error(
+	if (isNewerSchema(record) && !warnedIds.has(record.id)) {
+		warnedIds.add(record.id);
+		console.warn(
 			`Transaction ${record.id} has schema version ${record.schemaVersion}; ` +
-				`this app supports up to ${XACT_SCHEMA_VERSION}. Update the app.`
+				`this app supports up to ${XACT_SCHEMA_VERSION}. Read as-is; update the app.`
 		);
+		// Imported lazily: the toaster touches `document` on load, which is absent in workers/tests.
+		if (typeof document !== 'undefined') {
+			void import('$lib/utils/notifier').then(({ default: notifier }) =>
+				notifier.warning(
+					'Some transactions were saved by a newer version of the app and may be incomplete. Please update the app.'
+				)
+			);
+		}
 	}
 	const { id: _id, schemaVersion: _v, postings, ...rest } = record;
 	const xact = Object.assign(new Xact(), rest);

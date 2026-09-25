@@ -11,11 +11,7 @@
     `/onboarding` first, where the user's choice (demo data / import / empty)
     decides how `cashier.bean` gets created.
 */
-import {
-	DEMO_DIR,
-	SHORT_DATE_FORMAT_DEFAULT,
-	USER_BOOK_FILENAME
-} from '$lib/constants';
+import { DEMO_DIR, SHORT_DATE_FORMAT_DEFAULT, USER_BOOK_FILENAME } from '$lib/constants';
 import { SettingKeys, settings } from '$lib/settings';
 import appService from '$lib/services/appService';
 import fullLedgerService from '$lib/services/ledgerWorkerClient';

@@ -26,13 +26,13 @@ export class WebDavClient {
 
 	async put(
 		filename: string,
-		content: string,
+		content: string | Uint8Array,
 		contentType = 'text/plain; charset=utf-8'
 	): Promise<Response> {
 		return fetch(this.fileUrl(filename), {
 			method: 'PUT',
 			headers: { Authorization: this.authHeader(), 'Content-Type': contentType },
-			body: content
+			body: typeof content === 'string' ? content : new Blob([content as BlobPart])
 		});
 	}
 
