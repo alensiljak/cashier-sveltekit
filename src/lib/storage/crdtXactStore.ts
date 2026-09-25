@@ -10,6 +10,8 @@ import type { StoredXact, XactId, XactStore } from './xactStore';
 
 const DB_NAME = 'cashier-xacts';
 const RECORDS_KEY = 'xacts';
+/** Transaction origin of updates merged in from another device, so live sync doesn't echo them back. */
+export const REMOTE_ORIGIN = 'remote';
 // Monotonic, so IDs made within the same millisecond still sort in creation order.
 const newId = monotonicFactory();
 
@@ -165,7 +167,7 @@ export class CrdtXactStore implements XactStore {
 	/** Merge a Yjs update (e.g. another device's exported state) into the document. Idempotent. */
 	async importState(update: Uint8Array): Promise<void> {
 		await this.ready();
-		Y.applyUpdate(this.doc, update);
+		Y.applyUpdate(this.doc, update, REMOTE_ORIGIN);
 		// Merged records reach other devices through this device's own file too.
 		scheduleBackup();
 	}

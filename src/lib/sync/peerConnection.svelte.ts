@@ -101,6 +101,8 @@ class PeerConnection {
 	private hashAction: RequestAction<string[], RemoteHashes> | null = null;
 	private ydocHashAction: RequestAction<null, string> | null = null;
 	private ydocSyncAction: RequestAction<Uint8Array, Uint8Array> | null = null;
+	private ydocUpdateAction: MessageAction<Uint8Array> | null = null;
+	private stopLiveSyncFn: (() => void) | null = null;
 	private pendingRequests = new Map<
 		string,
 		{ resolve: (d: RemoteData) => void; reject: (e: Error) => void }
@@ -167,6 +169,18 @@ class PeerConnection {
 			}
 		);
 
+		// Live sync: local edits are pushed to every online trusted peer, and
+		// pushed updates are merged as they arrive.
+		this.ydocUpdateAction = this.presence.makeAction<Uint8Array>('ydoc-update');
+		this.ydocUpdateAction.onMessage = async (update, { peerId: fromId }) => {
+			const store = await getCrdtStore();
+			if (!store || !this.presence.peersMap[fromId]?.isTrusted) return;
+			await store.importState(update);
+			const { reloadLedgerFromOpfs } = await import('$lib/services/ledgerReload');
+			void reloadLedgerFromOpfs();
+		};
+		void this.startLiveSync();
+
 		// Resolve pending fetchRemoteData() promises.
 		this.syncResponseAction.onMessage = ({ requestId, settings: s, scheduled }) => {
 			const pending = this.pendingRequests.get(requestId);
@@ -179,7 +193,31 @@ class PeerConnection {
 		this.protocol = new PeerProtocol(this.presence, new OpfsSource());
 	}
 
+	/** Broadcasts local (non-remote) CRDT updates to online trusted peers while connected. */
+	private async startLiveSync(): Promise<void> {
+		const store = await getCrdtStore();
+		if (!store || !this.ydocUpdateAction) return;
+		this.stopLiveSync();
+		const handler = (update: Uint8Array, origin: unknown) => {
+			// Local edits have no origin; remote merges and IndexedDB loads carry one.
+			if (origin !== null && origin !== undefined) return;
+			for (const peer of this.presence.activePeerList) {
+				if (!peer.isTrusted) continue;
+				void this.ydocUpdateAction?.send(update, { target: peer.trysteroId });
+			}
+		};
+		store.doc.on('update', handler);
+		this.stopLiveSyncFn = () => store.doc.off('update', handler);
+	}
+
+	private stopLiveSync(): void {
+		this.stopLiveSyncFn?.();
+		this.stopLiveSyncFn = null;
+	}
+
 	async disconnect(): Promise<void> {
+		this.stopLiveSync();
+		this.ydocUpdateAction = null;
 		await this.presence.leave();
 		this.syncRequestAction = null;
 		this.syncResponseAction = null;
