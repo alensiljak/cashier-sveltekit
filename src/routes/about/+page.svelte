@@ -7,9 +7,11 @@
 	import { MicIcon, RefreshCw } from '@lucide/svelte';
 
 	let wasmVersion = '';
+	let buildTimestamp = $state('fetching…');
 	let checking = false;
 
 	onMount(async () => {
+		loadBuildTimestamp();
 		try {
 			await rustledger.ensureInitialized();
 			wasmVersion = rustledger.version();
@@ -17,6 +19,16 @@
 			wasmVersion = 'unavailable';
 		}
 	});
+
+	// build-info.json is emitted at build time (see vite.config.ts) and precached by the service worker.
+	async function loadBuildTimestamp() {
+		try {
+			const response = await fetch('/build-info.json');
+			buildTimestamp = (await response.json()).buildTimestamp;
+		} catch {
+			buildTimestamp = 'unavailable';
+		}
+	}
 
 	async function checkForUpdates() {
 		checking = true;
@@ -80,7 +92,7 @@
 
 		<h3 class="text-3xl font-semibold">Version</h3>
 		<p>
-			Build: <code>{__BUILD_TIMESTAMP__}</code>
+			Build: <code>{buildTimestamp}</code>
 		</p>
 		<p>
 			RustLedger WASM: <code>{wasmVersion || 'loading…'}</code>

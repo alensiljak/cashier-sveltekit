@@ -14,7 +14,6 @@ declare global {
 		// interface PageData {}
 		// interface Platform {}
 	}
-	const __BUILD_TIMESTAMP__: string;
 }
 
 export {};
