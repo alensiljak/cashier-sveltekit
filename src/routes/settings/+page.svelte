@@ -61,7 +61,7 @@
 	];
 
 	let ledgerCacheEnabled = $state<boolean>(true);
-	let xactStoreType = $state<'opfs' | 'crdt'>('opfs');
+	let xactStoreType = $state<'opfs' | 'crdt'>('crdt');
 	// The store in use since load; a different selection needs a reload to take effect.
 	let loadedXactStoreType = $state<'opfs' | 'crdt'>('opfs');
 	let currency = $state<string>();
@@ -158,9 +158,11 @@
 			string | undefined;
 		ledgerCacheEnabled =
 			(await deviceSettings.get<boolean>(DeviceSettingKeys.ledgerCacheEnabled)) ?? true;
-		xactStoreType =
-			(await deviceSettings.get<'opfs' | 'crdt'>(DeviceSettingKeys.xactStore)) ?? 'opfs';
+		// Resolving the store also saves the default, so the setting is set afterwards.
 		loadedXactStoreType = (await getXactStore()).kind;
+		xactStoreType =
+			(await deviceSettings.get<'opfs' | 'crdt'>(DeviceSettingKeys.xactStore)) ??
+			loadedXactStoreType;
 		savedAssetAllocationDefinition =
 			(await settings.get<string>(SettingKeys.assetAllocationDefinition)) ?? null;
 		savedDateFormat = (await settings.get<string>(SettingKeys.dateFormat)) ?? DATE_FORMAT_DEFAULT;
@@ -513,7 +515,7 @@
 				value="opfs"
 				bind:group={xactStoreType}
 			/>
-			OPFS (cashier.bean file)
+			OPFS (cashier.bean file, legacy)
 		</label>
 		<label class="flex items-center gap-3 text-sm">
 			<input
@@ -538,7 +540,7 @@
 	<p class="text-xs opacity-60">
 		A sample book (transactions, accounts, asset allocation target) to explore Cashier without your
 		own data. Demo files live under <code>{DEMO_DIR}/</code> and are read-only — your own entries
-		always go to <code>cashier.bean</code>.
+		always go to the device transaction store.
 	</p>
 
 	<div class="flex items-center gap-3">

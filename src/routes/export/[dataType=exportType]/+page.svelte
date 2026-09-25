@@ -43,7 +43,7 @@
 	async function loadData() {
 		switch (dataType) {
 			case 'journal':
-				output = await appService.stripIncludesFromBookFile();
+				output = await appService.getWorkingSetSource();
 				break;
 			case 'scheduled':
 				output = await loadScheduledTransactions();
@@ -57,10 +57,6 @@
 			return;
 		}
 		output = await appService.sortTransactionsByDate(output);
-		if (dataType === 'journal') {
-			await appService.saveCashierFile(output);
-			Notifier.success('Transactions sorted and saved to cashier.bean.');
-		}
 	}
 
 	async function loadScheduledTransactions() {

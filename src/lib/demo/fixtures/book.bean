@@ -26,10 +26,10 @@ include "prices.bean"
 ;; ── August 2025 ──────────────────────────────────────────────────────────
 
 2025-08-01 * "Opening Balances"
-  Assets:Bank:Checking                2500.00 EUR
+  Assets:Bank:Checking                 2500.00 EUR
   Assets:Bank:Savings                  8000.00 EUR
-  Assets:Investments:Brokerage:Cash     500.00 EUR
-  Assets:Investments:Brokerage:IBAus:Cash  1000.00 AUD
+  Assets:Investments:Brokerage:Cash-EUR  500.00 EUR
+  Assets:Investments:Brokerage:Cash-AUD  1000.00 AUD
   Equity:Opening-Balances
 
 2025-08-02 * "Acme Corp" "Monthly salary"
@@ -41,16 +41,16 @@ include "prices.bean"
   Assets:Bank:Checking
 
 2025-08-04 * "Investment contribution"
-  Assets:Investments:Brokerage:Cash    300.00 EUR
+  Assets:Investments:Brokerage:Cash-EUR    300.00 EUR
   Assets:Bank:Checking
 
 2025-08-05 * "Vanguard" "Buy VTI shares"
   Assets:Investments:Brokerage:VTI    2 VTI {200.00 EUR}
-  Assets:Investments:Brokerage:Cash
+  Assets:Investments:Brokerage:Cash-EUR
 
 2025-08-06 * "IB Australia" "Buy RING shares"
-  Assets:Investments:Brokerage:IBAus:RING    15 RING {32.00 AUD}
-  Assets:Investments:Brokerage:IBAus:Cash
+  Assets:Investments:Brokerage:RING    15 RING {32.00 AUD}
+  Assets:Investments:Brokerage:Cash-AUD
 
 2025-08-07 * "City Utilities" "Electricity & water"
   Expenses:Utilities    88.00 EUR
@@ -103,7 +103,7 @@ include "prices.bean"
 2025-08-31 * "Vanguard" "VTI dividend"
   isin: "US9229087690"
   Income:Dividends                     -4.50 EUR
-  Assets:Investments:Brokerage:Cash     4.50 EUR
+  Assets:Investments:Brokerage:Cash-EUR     4.50 EUR
 
 ;; ── September 2025 ───────────────────────────────────────────────────────
 
@@ -116,12 +116,12 @@ include "prices.bean"
   Assets:Bank:Checking
 
 2025-09-04 * "Investment contribution"
-  Assets:Investments:Brokerage:Cash    300.00 EUR
+  Assets:Investments:Brokerage:Cash-EUR    300.00 EUR
   Assets:Bank:Checking
 
 2025-09-05 * "Vanguard" "Buy BND shares"
   Assets:Investments:Brokerage:BND    4 BND {70.20 EUR}
-  Assets:Investments:Brokerage:Cash
+  Assets:Investments:Brokerage:Cash-EUR
 
 2025-09-07 * "City Utilities" "Electricity & water"
   Expenses:Utilities    89.40 EUR
@@ -173,7 +173,7 @@ include "prices.bean"
 
 2025-09-30 * "Vanguard" "BND distribution (legacy account-name convention, no isin tag)"
   Income:Dividends:BND                  -2.25 EUR
-  Assets:Investments:Brokerage:Cash      2.25 EUR
+  Assets:Investments:Brokerage:Cash-EUR      2.25 EUR
 
 ;; ── October 2025 ─────────────────────────────────────────────────────────
 
@@ -186,12 +186,12 @@ include "prices.bean"
   Assets:Bank:Checking
 
 2025-10-04 * "Investment contribution"
-  Assets:Investments:Brokerage:Cash    300.00 EUR
+  Assets:Investments:Brokerage:Cash-EUR    300.00 EUR
   Assets:Bank:Checking
 
 2025-10-05 * "Vanguard" "Buy VTI shares"
   Assets:Investments:Brokerage:VTI    1 VTI {204.00 EUR}
-  Assets:Investments:Brokerage:Cash
+  Assets:Investments:Brokerage:Cash-EUR
 
 2025-10-07 * "City Utilities" "Electricity & water"
   Expenses:Utilities    90.80 EUR
@@ -244,7 +244,7 @@ include "prices.bean"
 2025-10-31 * "Vanguard" "VTI dividend"
   isin: "US9229087690"
   Income:Dividends                     -4.94 EUR
-  Assets:Investments:Brokerage:Cash     4.94 EUR
+  Assets:Investments:Brokerage:Cash-EUR     4.94 EUR
 
 ;; ── November 2025 ────────────────────────────────────────────────────────
 
@@ -257,16 +257,16 @@ include "prices.bean"
   Assets:Bank:Checking
 
 2025-11-04 * "Investment contribution"
-  Assets:Investments:Brokerage:Cash    300.00 EUR
+  Assets:Investments:Brokerage:Cash-EUR    300.00 EUR
   Assets:Bank:Checking
 
 2025-11-05 * "Vanguard" "Buy BND shares"
   Assets:Investments:Brokerage:BND    4 BND {70.35 EUR}
-  Assets:Investments:Brokerage:Cash
+  Assets:Investments:Brokerage:Cash-EUR
 
 2025-11-06 * "IB Australia" "Buy RING shares"
-  Assets:Investments:Brokerage:IBAus:RING    10 RING {35.00 AUD}
-  Assets:Investments:Brokerage:IBAus:Cash
+  Assets:Investments:Brokerage:RING    10 RING {35.00 AUD}
+  Assets:Investments:Brokerage:Cash-AUD
 
 2025-11-07 * "City Utilities" "Electricity & water"
   Expenses:Utilities    92.20 EUR
@@ -318,7 +318,7 @@ include "prices.bean"
 
 2025-11-30 * "Vanguard" "BND distribution (legacy account-name convention, no isin tag)"
   Income:Dividends:BND                  -2.55 EUR
-  Assets:Investments:Brokerage:Cash      2.55 EUR
+  Assets:Investments:Brokerage:Cash-EUR      2.55 EUR
 
 ;; ── December 2025 ────────────────────────────────────────────────────────
 
@@ -331,12 +331,12 @@ include "prices.bean"
   Assets:Bank:Checking
 
 2025-12-04 * "Investment contribution"
-  Assets:Investments:Brokerage:Cash    300.00 EUR
+  Assets:Investments:Brokerage:Cash-EUR    300.00 EUR
   Assets:Bank:Checking
 
 2025-12-05 * "Vanguard" "Buy VTI shares"
   Assets:Investments:Brokerage:VTI    1 VTI {209.20 EUR}
-  Assets:Investments:Brokerage:Cash
+  Assets:Investments:Brokerage:Cash-EUR
 
 2025-12-06 * "Bank" "Currency exchange for winter trip"
   Assets:Cash:Travel    500.00 USD @ 0.92 EUR
@@ -405,7 +405,7 @@ include "prices.bean"
 2025-12-31 * "Vanguard" "VTI dividend"
   isin: "US9229087690"
   Income:Dividends                     -5.38 EUR
-  Assets:Investments:Brokerage:Cash     5.38 EUR
+  Assets:Investments:Brokerage:Cash-EUR     5.38 EUR
 
 ;; ── January 2026 ─────────────────────────────────────────────────────────
 
@@ -418,12 +418,12 @@ include "prices.bean"
   Assets:Bank:Checking
 
 2026-01-04 * "Investment contribution"
-  Assets:Investments:Brokerage:Cash    300.00 EUR
+  Assets:Investments:Brokerage:Cash-EUR    300.00 EUR
   Assets:Bank:Checking
 
 2026-01-05 * "Vanguard" "Buy BND shares"
   Assets:Investments:Brokerage:BND    4 BND {70.85 EUR}
-  Assets:Investments:Brokerage:Cash
+  Assets:Investments:Brokerage:Cash-EUR
 
 2026-01-07 * "City Utilities" "Electricity & water"
   Expenses:Utilities    88.00 EUR
@@ -475,7 +475,7 @@ include "prices.bean"
 
 2026-01-31 * "Vanguard" "BND distribution (legacy account-name convention, no isin tag)"
   Income:Dividends:BND                  -2.85 EUR
-  Assets:Investments:Brokerage:Cash      2.85 EUR
+  Assets:Investments:Brokerage:Cash-EUR      2.85 EUR
 
 ;; ── February 2026 ────────────────────────────────────────────────────────
 
@@ -488,16 +488,16 @@ include "prices.bean"
   Assets:Bank:Checking
 
 2026-02-04 * "Investment contribution"
-  Assets:Investments:Brokerage:Cash    300.00 EUR
+  Assets:Investments:Brokerage:Cash-EUR    300.00 EUR
   Assets:Bank:Checking
 
 2026-02-05 * "Vanguard" "Buy VTI shares"
   Assets:Investments:Brokerage:VTI    1 VTI {211.00 EUR}
-  Assets:Investments:Brokerage:Cash
+  Assets:Investments:Brokerage:Cash-EUR
 
 2026-02-06 * "IB Australia" "Buy RING shares"
-  Assets:Investments:Brokerage:IBAus:RING    4 RING {38.00 AUD}
-  Assets:Investments:Brokerage:IBAus:Cash
+  Assets:Investments:Brokerage:RING    4 RING {38.00 AUD}
+  Assets:Investments:Brokerage:Cash-AUD
 
 2026-02-07 * "City Utilities" "Electricity & water"
   Expenses:Utilities    89.40 EUR
@@ -550,7 +550,7 @@ include "prices.bean"
 2026-02-28 * "Vanguard" "VTI dividend"
   isin: "US9229087690"
   Income:Dividends                     -5.82 EUR
-  Assets:Investments:Brokerage:Cash     5.82 EUR
+  Assets:Investments:Brokerage:Cash-EUR     5.82 EUR
 
 ;; ── March 2026 ───────────────────────────────────────────────────────────
 
@@ -563,12 +563,12 @@ include "prices.bean"
   Assets:Bank:Checking
 
 2026-03-04 * "Investment contribution"
-  Assets:Investments:Brokerage:Cash    300.00 EUR
+  Assets:Investments:Brokerage:Cash-EUR    300.00 EUR
   Assets:Bank:Checking
 
 2026-03-05 * "Vanguard" "Buy BND shares"
   Assets:Investments:Brokerage:BND    4 BND {70.75 EUR}
-  Assets:Investments:Brokerage:Cash
+  Assets:Investments:Brokerage:Cash-EUR
 
 2026-03-07 * "City Utilities" "Electricity & water"
   Expenses:Utilities    90.80 EUR
@@ -620,7 +620,7 @@ include "prices.bean"
 
 2026-03-31 * "Vanguard" "BND distribution (legacy account-name convention, no isin tag)"
   Income:Dividends:BND                  -3.15 EUR
-  Assets:Investments:Brokerage:Cash      3.15 EUR
+  Assets:Investments:Brokerage:Cash-EUR      3.15 EUR
 
 ;; ── April 2026 ───────────────────────────────────────────────────────────
 
@@ -633,12 +633,12 @@ include "prices.bean"
   Assets:Bank:Checking
 
 2026-04-04 * "Investment contribution"
-  Assets:Investments:Brokerage:Cash    300.00 EUR
+  Assets:Investments:Brokerage:Cash-EUR    300.00 EUR
   Assets:Bank:Checking
 
 2026-04-05 * "Vanguard" "Buy VTI shares"
   Assets:Investments:Brokerage:VTI    1 VTI {210.90 EUR}
-  Assets:Investments:Brokerage:Cash
+  Assets:Investments:Brokerage:Cash-EUR
 
 2026-04-07 * "City Utilities" "Electricity & water"
   Expenses:Utilities    92.20 EUR
@@ -691,7 +691,7 @@ include "prices.bean"
 2026-04-30 * "Vanguard" "VTI dividend"
   isin: "US9229087690"
   Income:Dividends                     -6.26 EUR
-  Assets:Investments:Brokerage:Cash     6.26 EUR
+  Assets:Investments:Brokerage:Cash-EUR     6.26 EUR
 
 ;; ── May 2026 ─────────────────────────────────────────────────────────────
 
@@ -704,12 +704,12 @@ include "prices.bean"
   Assets:Bank:Checking
 
 2026-05-04 * "Investment contribution"
-  Assets:Investments:Brokerage:Cash    300.00 EUR
+  Assets:Investments:Brokerage:Cash-EUR    300.00 EUR
   Assets:Bank:Checking
 
 2026-05-05 * "Vanguard" "Buy BND shares"
   Assets:Investments:Brokerage:BND    4 BND {71.35 EUR}
-  Assets:Investments:Brokerage:Cash
+  Assets:Investments:Brokerage:Cash-EUR
 
 2026-05-07 * "City Utilities" "Electricity & water"
   Expenses:Utilities    93.60 EUR
@@ -761,7 +761,7 @@ include "prices.bean"
 
 2026-05-31 * "Vanguard" "BND distribution (legacy account-name convention, no isin tag)"
   Income:Dividends:BND                  -3.45 EUR
-  Assets:Investments:Brokerage:Cash      3.45 EUR
+  Assets:Investments:Brokerage:Cash-EUR      3.45 EUR
 
 ;; ── June 2026 ────────────────────────────────────────────────────────────
 
@@ -774,12 +774,12 @@ include "prices.bean"
   Assets:Bank:Checking
 
 2026-06-04 * "Investment contribution"
-  Assets:Investments:Brokerage:Cash    300.00 EUR
+  Assets:Investments:Brokerage:Cash-EUR    300.00 EUR
   Assets:Bank:Checking
 
 2026-06-05 * "Vanguard" "Buy VTI shares"
   Assets:Investments:Brokerage:VTI    1 VTI {218.60 EUR}
-  Assets:Investments:Brokerage:Cash
+  Assets:Investments:Brokerage:Cash-EUR
 
 2026-06-07 * "City Utilities" "Electricity & water"
   Expenses:Utilities    88.00 EUR
@@ -814,12 +814,12 @@ include "prices.bean"
   Liabilities:CreditCard
 
 2026-06-22 * "Investment contribution (Gold)"
-  Assets:Investments:Brokerage:Cash    600.00 EUR
+  Assets:Investments:Brokerage:Cash-EUR    600.00 EUR
   Assets:Bank:Checking
 
 2026-06-25 * "Trade Republic" "Buy UBUD.DE shares"
-  Assets:Investments:Brokerage:TradeRepublic:UBUD-DE    3 UBUD.DE {170.00 EUR}
-  Assets:Investments:Brokerage:Cash
+  Assets:Investments:Brokerage:UBUD-DE    3 UBUD.DE {170.00 EUR}
+  Assets:Investments:Brokerage:Cash-EUR
 
 2026-06-22 * "Supermarket" "Groceries"
   Expenses:Groceries    61.35 EUR
@@ -840,7 +840,7 @@ include "prices.bean"
 2026-06-30 * "Vanguard" "VTI dividend"
   isin: "US9229087690"
   Income:Dividends                     -6.70 EUR
-  Assets:Investments:Brokerage:Cash     6.70 EUR
+  Assets:Investments:Brokerage:Cash-EUR     6.70 EUR
 
 ;; ── July 2026 (partial, through today) ───────────────────────────────────
 
@@ -853,12 +853,12 @@ include "prices.bean"
   Assets:Bank:Checking
 
 2026-07-04 * "Investment contribution"
-  Assets:Investments:Brokerage:Cash    300.00 EUR
+  Assets:Investments:Brokerage:Cash-EUR    300.00 EUR
   Assets:Bank:Checking
 
 2026-07-05 * "Vanguard" "Buy BND shares"
   Assets:Investments:Brokerage:BND    4 BND {71.45 EUR}
-  Assets:Investments:Brokerage:Cash
+  Assets:Investments:Brokerage:Cash-EUR
 
 2026-07-07 * "City Utilities" "Electricity & water"
   Expenses:Utilities    89.40 EUR

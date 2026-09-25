@@ -6,7 +6,15 @@
 	never touches.
 */
 import * as OpfsLib from '$lib/utils/opfslib';
-import { settings, SettingKeys } from '$lib/settings';
+import {
+	settings,
+	deviceSettings,
+	SettingKeys,
+	DeviceSettingKeys,
+	defaultAccountGroups,
+	type AccountGroup
+} from '$lib/settings';
+import { getXactStore } from '$lib/storage/xactStoreRegistry';
 import {
 	USER_BOOK_FILENAME,
 	DEMO_DIR,
@@ -26,6 +34,33 @@ const fixtures = import.meta.glob('$lib/demo/fixtures/*', {
 	import: 'default',
 	eager: true
 }) as Record<string, string>;
+
+/** Demo accounts placed into the default account groups, by group title. */
+const DEMO_GROUP_ACCOUNTS: Record<string, string[]> = {
+	'Cash Accounts': ['Assets:Cash:Wallet', 'Assets:Cash:Travel'],
+	'Bank Accounts': ['Assets:Bank:Checking'],
+	'Savings Accounts': ['Assets:Bank:Savings'],
+	'Credit Cards': ['Liabilities:CreditCard'],
+	// Not one of the default groups; added by the demo (see `seedAccountGroups`).
+	Investments: ['Assets:Investments:Brokerage:Cash-EUR', 'Assets:Investments:Brokerage:Cash-AUD']
+};
+const DEMO_INVESTMENTS_GROUP = 'Investments';
+
+/** Demo accounts marked as favourites. */
+const DEMO_FAVOURITE_ACCOUNTS = ['Assets:Bank:Checking', 'Liabilities:CreditCard'];
+
+/** Two recent local (unarchived) transactions, so the Device Journal isn't empty. */
+function demoLocalXacts(): string[] {
+	const day = (offset: number) => {
+		const d = new Date();
+		d.setDate(d.getDate() - offset);
+		return d.toISOString().slice(0, 10);
+	};
+	return [
+		`${day(1)} * "Corner Cafe" "Coffee"\n  Expenses:Dining    4.50 EUR\n  Assets:Cash:Wallet`,
+		`${day(0)} * "Supermarket" "Groceries"\n  Expenses:Groceries    27.80 EUR\n  Liabilities:CreditCard`
+	];
+}
 
 function fixture(name: string): string {
 	const entry = Object.entries(fixtures).find(([path]) => path.endsWith(`/${name}`));
@@ -57,7 +92,78 @@ class DemoDataService {
 			await settings.set(SettingKeys.currency, 'EUR');
 		}
 
+		await this.seedAccountGroups();
+		await this.seedFavourites();
+		await this.seedLocalXacts();
+
 		await reloadLedgerFromOpfs();
+	}
+
+	/** Fills the default account groups with demo accounts, unless the user already grouped accounts. */
+	private async seedAccountGroups(): Promise<void> {
+		const stored = await settings.get<AccountGroup[]>(SettingKeys.accountGroups);
+		const groups = stored && stored.length > 0 ? stored : defaultAccountGroups;
+		if (groups.some((g) => g.accounts.length > 0)) return;
+		const seeded = groups.map((g) => ({
+			...g,
+			accounts: DEMO_GROUP_ACCOUNTS[g.title] ?? g.accounts
+		}));
+		if (!seeded.some((g) => g.title === DEMO_INVESTMENTS_GROUP)) {
+			seeded.push({
+				title: DEMO_INVESTMENTS_GROUP,
+				accounts: DEMO_GROUP_ACCOUNTS[DEMO_INVESTMENTS_GROUP]
+			});
+		}
+		await settings.set(SettingKeys.accountGroups, seeded);
+	}
+
+	/** Marks two demo accounts as favourites, unless the user already has some. */
+	private async seedFavourites(): Promise<void> {
+		const stored = (await settings.get<string[]>(SettingKeys.favouriteAccounts)) ?? [];
+		if (stored.length > 0) return;
+		await settings.set(SettingKeys.favouriteAccounts, DEMO_FAVOURITE_ACCOUNTS);
+	}
+
+	/** Adds sample transactions to an empty device store and remembers their IDs. */
+	private async seedLocalXacts(): Promise<void> {
+		const store = await getXactStore();
+		// OPFS-store IDs are positional and go stale, so only the CRDT store can be cleaned up later.
+		if (store.kind !== 'crdt' || (await store.list()).length > 0) return;
+		const ids: string[] = [];
+		for (const text of demoLocalXacts()) {
+			ids.push((await store.append(text)).id);
+		}
+		await deviceSettings.set(DeviceSettingKeys.demoXactIds, ids);
+	}
+
+	/** Removes the seeded sample transactions and demo accounts from the favourites and groups. */
+	private async removeSeeded(): Promise<void> {
+		const ids = await deviceSettings.get<string[]>(DeviceSettingKeys.demoXactIds);
+		if (ids?.length) {
+			const store = await getXactStore();
+			for (const id of ids) await store.remove(id);
+		}
+		await deviceSettings.set(DeviceSettingKeys.demoXactIds, null);
+
+		const favourites = await settings.get<string[]>(SettingKeys.favouriteAccounts);
+		if (favourites) {
+			await settings.set(
+				SettingKeys.favouriteAccounts,
+				favourites.filter((a) => !DEMO_FAVOURITE_ACCOUNTS.includes(a))
+			);
+		}
+
+		const demoAccounts = new Set(Object.values(DEMO_GROUP_ACCOUNTS).flat());
+		const groups = await settings.get<AccountGroup[]>(SettingKeys.accountGroups);
+		if (groups) {
+			await settings.set(
+				SettingKeys.accountGroups,
+				groups
+					.map((g) => ({ ...g, accounts: g.accounts.filter((a) => !demoAccounts.has(a)) }))
+					// The demo-added group goes away once it holds nothing of the user's.
+					.filter((g) => g.title !== DEMO_INVESTMENTS_GROUP || g.accounts.length > 0)
+			);
+		}
 	}
 
 	/**
@@ -81,6 +187,7 @@ class DemoDataService {
 			await settings.set(SettingKeys.rootInvestmentAccount, null);
 		}
 
+		await this.removeSeeded();
 		await OpfsLib.deleteDirectory(DEMO_DIR);
 		await reloadLedgerFromOpfs();
 	}

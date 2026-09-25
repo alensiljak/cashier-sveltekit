@@ -18,7 +18,7 @@ Constraints:
 
 ## Solution
 
-### Device Store
+### ✅ Device Store
 
 The currently-used `cashier.bean` file, holding the unarchived working set, would be replaced by a different store.
 
@@ -30,13 +30,13 @@ The working copy (transactions) is assembled on the fly by reading it from Index
 
 Each transaction is one (JSON) record, including an ID (ULID) and eventually a schemaVersion. The current Xact record JSON can be stored directly.
 
-### Device Management
+### ✅ Device Management
 
 There will be a device management, similar to Trusted Peers in p2p setup.
 Each device will have a separate file in WebDAV store, representing their Yjs document state. These files will be merged into the logical Yjs document on the current device and stored in IndexedDb. This avoids issues during file synchronization with WebDAV between concurrent devices since each file is only written by one device.
 Duplicate records are ignored in a CRDT store so the records appearing in multiple files are not a problem.
 
-### Device Sync
+### ✅ Device Sync
 
 The content would be synchronized between multiple instances of Cashier, for example mobile and desktop.
 
@@ -50,7 +50,7 @@ There are two options to consider: server and serverless.
 
 The preferred option is a file store (WebDAV). If this shows as enough during usage, the server option might be redundant. It requires more setup than a WebDAV server and is therefore discouraged.
 
-### Archiving
+### ✅ Archiving
 
 Archiving is the process of moving records from the active working set into the .bean files that are committed to a git repository.
 A desktop instance would be used to perform this due to performance. If necessary, a mobile instance could also do this but is slower and requires more user prompts.
@@ -63,13 +63,13 @@ To distribute the archived records to the devices, the Beancount files need to b
 2. p2p sync,
 3. WebDAV (optionally keep the whole Beancount repo in WebDAV) - not in scope
 
-### Known Limitations
+### ✅ Known Limitations
 
-- Until a device pulls and imports the updated journal files, the archived transactions are absent from its ledger, since the doc deletions reach it before the journal does.
-- A concurrent edit of a record that is being archived loses to the delete.
-- Once archived, a transaction is no longer editable through the doc; it lives in the journal files (git is the source of truth).
+- ✅ Until a device pulls and imports the updated journal files, the archived transactions are absent from its ledger, since the doc deletions reach it before the journal does.
+- ✅ A concurrent edit of a record that is being archived loses to the delete.
+- ✅ Once archived, a transaction is no longer editable through the doc; it lives in the journal files (git is the source of truth).
 
-### Clean-up
+### ✅ Clean-up
 
 The devices should periodically compact the CRDT store, purging the deleted items. With `gc` on by default, this is done automatically, keeping only tombstones.
 To clean-up the tombstones, we would need to keep the epoch or a reset marker so that deleted records don't reappear. Rebuilding the doc with an epoch is rarely needed, though.
@@ -82,7 +82,7 @@ Removing a trusted device stops synchronizing that device's file.
 2. ✅ Any existing records in `cashier.bean` migrated manually.
 3. ✅ Transaction editor adaptation to the new store.
 4. ✅ WebDAV per-device relay.
-5. Archiving and deletions.
+5. ✅ Archiving and deletions.
 6. ✅ p2p sync of the working set.
 7. Compaction.
 

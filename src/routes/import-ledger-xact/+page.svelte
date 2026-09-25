@@ -6,9 +6,7 @@
 	import { parseXact } from '$lib/utils/transactionParser';
 	import { getXactStore } from '$lib/storage/xactStoreRegistry';
 	import { locateXactsInSource } from '$lib/utils/xactLocator';
-	import { readFile } from '$lib/utils/opfslib';
-	import { CASHIER_XACT_FILE } from '$lib/constants';
-	import { DatabaseIcon, FileDownIcon, ImportIcon } from '@lucide/svelte';
+	import { DatabaseIcon, ImportIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 
 	Notifier.init();
@@ -30,24 +28,11 @@
 		}
 	}
 
-	async function onLoadFromFileClicked() {
-		try {
-			const text = await readFile(CASHIER_XACT_FILE);
-			if (!text) {
-				Notifier.info(`${CASHIER_XACT_FILE} is empty or missing in OPFS`);
-				return;
-			}
-			inputText = text;
-		} catch (error) {
-			Notifier.error((error as Error).message);
-		}
-	}
-
 	/** Add every transaction in the input to the active store. */
 	async function onImportAllClicked() {
 		try {
 			if (!inputText.trim()) {
-				Notifier.info('Paste transactions or load them from the file first');
+				Notifier.info('Paste transactions first');
 				return;
 			}
 			const locations = await locateXactsInSource(inputText);
@@ -85,15 +70,11 @@
 	<Toolbar title="Import Ledger item"></Toolbar>
 
 	<section class="flex h-full flex-col space-y-3 p-1">
-		<p>Paste transaction records below, or load them from the OPFS file. "Import one" opens the first in the editor; "Import all to store" adds every record to the active store.</p>
+		<p>Paste transaction records below. "Import one" opens the first in the editor; "Import all to store" adds every record to the active store.</p>
 
 		<textarea class="textarea w-full grow" bind:value={inputText} bind:this={inputControl}></textarea>
 
 		<div class="flex flex-wrap justify-center gap-2 py-6">
-			<button type="button" class="btn" onclick={onLoadFromFileClicked}>
-				<span><FileDownIcon /></span>
-				<span>Load {CASHIER_XACT_FILE}</span>
-			</button>
 			<button type="button" class="btn btn-primary" onclick={onImportClicked}>
 				<span><ImportIcon /></span>
 				<span>Import one</span>

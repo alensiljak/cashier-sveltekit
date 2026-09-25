@@ -307,7 +307,6 @@ async function loadFromFiles(
 		ledger = null;
 	}
 	const beanFiles = await opfsListBeanFiles();
-	if (beanFiles.length === 0) throw new Error('No .bean files found in OPFS');
 	const fileMap: Record<string, string> = {};
 	for (const { path, content } of beanFiles) {
 		fileMap[path] = content;

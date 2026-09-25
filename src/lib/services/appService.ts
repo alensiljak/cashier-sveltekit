@@ -9,11 +9,9 @@ import { DefaultCurrencyStore, ScheduledXact, xact } from '$lib/data/mainStore';
 import { loadInvestmentAccounts } from './accountsService';
 import { get } from 'svelte/store';
 import { formatAmount } from '$lib/utils/formatter';
-import { readFile, saveFile } from '$lib/utils/opfslib';
-import { CASHIER_XACT_FILE, USER_BOOK_FILENAME } from '$lib/constants';
+import { USER_BOOK_FILENAME } from '$lib/constants';
 import { ensureInitialized, createParsedLedger } from './rustledger';
 import { mapDirectiveSpans } from '$lib/rledger/sourceEditor';
-import { scheduleBackup } from './webdavAutoBackupService';
 import { getXactStore } from '$lib/storage/xactStoreRegistry';
 
 // interface AccountIndex {
@@ -481,18 +479,9 @@ class AppService {
 		await settings.set(USER_BOOK_FILENAME, filename);
 	}
 
-	/**
-	 * Returns the cashier.bean content for export.
-	 * The file no longer contains include directives, so no stripping is needed.
-	 */
-	async stripIncludesFromBookFile(): Promise<string> {
-		return (await readFile(CASHIER_XACT_FILE)) ?? '';
-	}
-
-	/** Overwrite cashier.bean with the given content. */
-	async saveCashierFile(content: string): Promise<void> {
-		await saveFile(CASHIER_XACT_FILE, content);
-		scheduleBackup();
+	/** The device working set (from the active store) as Beancount text, for export. */
+	async getWorkingSetSource(): Promise<string> {
+		return (await getXactStore()).toBeancount();
 	}
 
 	/**
