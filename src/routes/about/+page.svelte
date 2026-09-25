@@ -6,9 +6,9 @@
 	import Notifier from '$lib/utils/notifier';
 	import { MicIcon, RefreshCw } from '@lucide/svelte';
 
-	let wasmVersion = '';
+	let wasmVersion = $state('');
 	let buildTimestamp = $state('fetching…');
-	let checking = false;
+	let checking = $state(false);
 
 	onMount(async () => {
 		loadBuildTimestamp();
