@@ -60,6 +60,7 @@
 	];
 
 	let ledgerCacheEnabled = $state<boolean>(true);
+	let xactStoreType = $state<'opfs' | 'crdt'>('opfs');
 	let currency = $state<string>();
 	let bookCurrencies = $state<string[]>([]);
 	let bookFilename = $state<string | null>(null);
@@ -154,6 +155,8 @@
 			string | undefined;
 		ledgerCacheEnabled =
 			(await deviceSettings.get<boolean>(DeviceSettingKeys.ledgerCacheEnabled)) ?? true;
+		xactStoreType =
+			(await deviceSettings.get<'opfs' | 'crdt'>(DeviceSettingKeys.xactStore)) ?? 'opfs';
 		savedAssetAllocationDefinition =
 			(await settings.get<string>(SettingKeys.assetAllocationDefinition)) ?? null;
 		savedDateFormat = (await settings.get<string>(SettingKeys.dateFormat)) ?? DATE_FORMAT_DEFAULT;
@@ -258,6 +261,7 @@
 
 		await settings.set(SettingKeys.rootInvestmentAccount, rootInvestmentAccount);
 		await deviceSettings.set(DeviceSettingKeys.ledgerCacheEnabled, ledgerCacheEnabled);
+		await deviceSettings.set(DeviceSettingKeys.xactStore, xactStoreType);
 		await settings.set(SettingKeys.assetAllocationDefinition, assetAllocationDefinition);
 		await settings.set(SettingKeys.dateFormat, dateFormat);
 		await settings.set(SettingKeys.shortDateFormat, shortDateFormat);
@@ -493,6 +497,31 @@
 			bind:checked={ledgerCacheEnabled}
 		/>
 	</div>
+
+	<!-- Transaction storage -->
+	<fieldset class="flex flex-col gap-1">
+		<legend class="text-sm font-medium">Transaction storage</legend>
+		<label class="flex items-center gap-3 text-sm">
+			<input
+				class="radio radio-primary radio-sm"
+				type="radio"
+				name="xact-store"
+				value="opfs"
+				bind:group={xactStoreType}
+			/>
+			OPFS (cashier.bean file)
+		</label>
+		<label class="flex items-center gap-3 text-sm">
+			<input
+				class="radio radio-primary radio-sm"
+				type="radio"
+				name="xact-store"
+				value="crdt"
+				bind:group={xactStoreType}
+			/>
+			CRDT
+		</label>
+	</fieldset>
 
 	<!-- ── Demo Data ───────────────────────────────────────── -->
 	<div class="divider text-sm"><SectionTitle>Demo Data</SectionTitle></div>

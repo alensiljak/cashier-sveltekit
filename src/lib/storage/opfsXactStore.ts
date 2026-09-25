@@ -12,7 +12,7 @@ import type { StoredXact, XactId, XactStore } from './xactStore';
  * by date and re-locates the affected transaction.
  */
 export class OpfsXactStore implements XactStore {
-	readonly kind = 'opfs-file';
+	readonly kind = 'opfs';
 
 	private async read(): Promise<string> {
 		return (await opfslib.readFile(CASHIER_XACT_FILE)) ?? '';

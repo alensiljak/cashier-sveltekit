@@ -25,7 +25,7 @@ export interface StoredXact {
 }
 
 export interface XactStore {
-	readonly kind: 'opfs-file' | 'yjs';
+	readonly kind: 'opfs' | 'crdt';
 
 	/** Add a transaction. Returns it with its ID, ready to be edited in place. */
 	append(beancountText: string): Promise<StoredXact>;

@@ -118,6 +118,8 @@ export const DeviceSettingKeys = {
 	exportBookDirectory: 'exportBookDirectory',
 	// Whether to use the binary ledger cache on load (default: true)
 	ledgerCacheEnabled: 'ledgerCacheEnabled',
+	// Working-set storage backend: 'opfs' (default) or 'crdt' (see xactStoreRegistry)
+	xactStore: 'xactStore',
 	// OPFS file metadata snapshot for staleness detection (path -> "size|lastModified")
 	ledgerMetaSnapshot: 'ledger.metaSnapshot',
 	// Auto-upload cashier.bean to WebDAV after each write
