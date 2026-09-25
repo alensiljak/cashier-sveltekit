@@ -2,7 +2,10 @@
 	import { onMount } from 'svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import Notifier from '$lib/utils/notifier';
-	import { settings, SettingKeys } from '$lib/settings';
+	import { settings, deviceSettings, SettingKeys, DeviceSettingKeys } from '$lib/settings';
+	import { lastBackupTime } from '$lib/services/webdavAutoBackupService';
+	import { CloudIcon } from '@lucide/svelte';
+	import { requestNotificationPermission } from '$lib/utils/webNotification';
 	import { WebDavClient, type WebDavEntry } from '$lib/utils/webdav';
 	import { ChevronRight, ChevronUp } from '@lucide/svelte';
 
@@ -21,8 +24,11 @@
 	let isTesting = false;
 	let remoteFiles: WebDavEntry[] = [];
 	let testDone = false;
+	let autoBackupEnabled = false;
 
 	onMount(async () => {
+		autoBackupEnabled =
+			(await deviceSettings.get<boolean>(DeviceSettingKeys.webdavAutoBackup)) ?? false;
 		const saved = await settings.get<{ url: string; username: string; password: string }>(
 			SettingKeys.webdavSettings
 		);
@@ -55,6 +61,12 @@
 		} finally {
 			isTesting = false;
 		}
+	}
+
+	async function toggleAutoBackup() {
+		autoBackupEnabled = !autoBackupEnabled;
+		await deviceSettings.set(DeviceSettingKeys.webdavAutoBackup, autoBackupEnabled);
+		if (autoBackupEnabled) await requestNotificationPermission();
 	}
 
 	async function saveSettings() {
@@ -114,7 +126,7 @@
 </script>
 
 <main class="flex h-screen flex-col">
-	<Toolbar title="WebDAV Sync Demo" />
+	<Toolbar title="WebDAV Configuration" />
 	<section class="flex-1 space-y-4 overflow-y-auto touch-pan-y p-4">
 		<div class="mx-auto max-w-2xl space-y-4">
 			<!-- Config Card -->
@@ -161,6 +173,33 @@
 							class="input input-bordered md:flex-1"
 						/>
 					</div>
+				</div>
+			</div>
+
+			<!-- Auto-backup -->
+			<div class="card bg-base-200 shadow-xl">
+				<div class="card-body p-4">
+					<label class="flex items-center gap-3 cursor-pointer">
+						<span class="flex-1">
+							<span class="font-medium">Auto-backup local transactions</span>
+							<span class="block text-xs text-base-content/50">
+								Upload to WebDAV automatically after each change
+							</span>
+						</span>
+						<input
+							type="checkbox"
+							class="toggle toggle-primary bg-transparent bg-none"
+							checked={autoBackupEnabled}
+							disabled={!url}
+							onclick={toggleAutoBackup}
+						/>
+					</label>
+					{#if $lastBackupTime}
+						<p class="text-xs text-base-content/50 flex items-center gap-1">
+							<CloudIcon size={12} />
+							Last auto-backup: {$lastBackupTime.toLocaleString()}
+						</p>
+					{/if}
 				</div>
 			</div>
 
@@ -324,10 +363,10 @@
 				</div>
 			</details>
 
-			<!-- Notes -->
+			<!-- Instructions -->
 			<div class="card bg-base-200 shadow-xl">
 				<div class="card-body p-4">
-					<h2 class="card-title text-lg">Notes</h2>
+					<h2 class="card-title text-lg">Instructions</h2>
 					<ul class="list-disc list-inside space-y-1 text-sm opacity-80">
 						<li>
 							NextCloud WebDAV URL format: <code class="text-xs"

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { RefreshCwIcon, Trash2Icon, UserCheckIcon, GitMergeIcon } from '@lucide/svelte';
+	import { RefreshCwIcon, Trash2Icon, UserCheckIcon } from '@lucide/svelte';
 	import Notifier from '$lib/utils/notifier';
 	import { WebDavClient } from '$lib/utils/webdav';
 	import { getXactStore } from '$lib/storage/xactStoreRegistry';
@@ -29,7 +29,6 @@
 	let mergeState = $state<Record<string, MergeState>>({});
 	let counts = $state<Record<string, number>>({});
 	let isLoading = $state(false);
-	let isMerging = $state(false);
 	let error = $state('');
 	let deleting = $state<RemoteDevice | null>(null);
 	let trusting = $state<RemoteDevice | null>(null);
@@ -64,8 +63,8 @@
 
 	onMount(refresh);
 
-	async function mergeAll() {
-		isMerging = true;
+	/** Merge every trusted device whose file changed since the last merge. */
+	export async function mergeTrusted() {
 		const dav = client();
 		const store = await crdtStore();
 		let merged = 0;
@@ -92,7 +91,6 @@
 				onmerged?.();
 			}
 		} finally {
-			isMerging = false;
 			await refresh();
 		}
 	}
@@ -133,10 +131,9 @@
 	}
 </script>
 
-<section class="card bg-base-200">
-	<div class="card-body p-4 gap-3">
+<div class="flex flex-col gap-3">
 		<div class="flex items-center justify-between">
-			<h2 class="font-semibold">Devices</h2>
+			<h3 class="text-sm font-medium text-base-content/60">Files from all devices</h3>
 			{#if isLoading}
 				<RefreshCwIcon size={14} class="animate-spin text-base-content/40" />
 			{:else}
@@ -197,19 +194,7 @@
 				</li>
 			{/each}
 		</ul>
-
-		<button
-			class="btn btn-primary btn-sm self-center"
-			disabled={mergeable.length === 0 || isMerging}
-			onclick={mergeAll}
-		>
-			{#if isMerging}<span class="loading loading-spinner loading-sm"></span>{:else}<GitMergeIcon
-					size={16}
-				/>{/if}
-			Merge trusted devices{mergeable.length > 0 ? ` (${mergeable.length})` : ''}
-		</button>
-	</div>
-</section>
+</div>
 
 {#if trusting}
 	<div class="modal modal-open">

@@ -17,19 +17,17 @@
 		CloudIcon,
 		ArrowUpIcon,
 		ArrowDownIcon,
+		ChevronDownIcon,
 		XIcon
 	} from '@lucide/svelte';
-	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import YdocDevices from '$lib/components/YdocDevices.svelte';
 	import { goto } from '$app/navigation';
 	import {
-		lastBackupTime,
-		contentHash,
+			contentHash,
 		crdtBackupFilename,
 		type SyncRecord,
 		type WebDavLastSyncTs as LastSyncTs
 	} from '$lib/services/webdavAutoBackupService';
-	import { requestNotificationPermission } from '$lib/utils/webNotification';
 	import { reloadLedgerFromOpfs } from '$lib/services/ledgerReload';
 	import { getXactStore } from '$lib/storage/xactStoreRegistry';
 	import type { CrdtXactStore } from '$lib/storage/crdtXactStore';
@@ -51,9 +49,10 @@
 	let cashierBeanLocalLastModified = $state<Date | null>(null);
 	let cashierBeanLocalHash = $state<string | null>(null);
 	let scheduledLastModified = $state<Date | null>(null);
-	let autoBackupEnabled = $state(false);
 	// The working set is either cashier.bean (OPFS store) or the Yjs document (CRDT store).
 	let isCrdt = $state(false);
+	let devicesOpen = $state(false);
+	let ydocDevices: YdocDevices | undefined = $state();
 	let ydocFile = $state('');
 	const workingSetLabel = $derived(isCrdt ? 'Local Transactions' : 'cashier.bean');
 	let lastSyncTs = $state<LastSyncTs>({ settings: null, cashierBean: null, scheduled: null });
@@ -136,8 +135,6 @@
 		webdavUrl = saved?.url ?? '';
 		webdavUsername = saved?.username ?? '';
 		webdavPassword = saved?.password ?? '';
-		autoBackupEnabled =
-			(await deviceSettings.get<boolean>(DeviceSettingKeys.webdavAutoBackup)) ?? false;
 		const storedSyncTs = await deviceSettings.get<LastSyncTs>(DeviceSettingKeys.webdavLastSyncTs);
 		if (storedSyncTs) lastSyncTs = storedSyncTs;
 		isCrdt = (await getXactStore()).kind === 'crdt';
@@ -147,14 +144,6 @@
 
 	async function saveLastSyncTs() {
 		await deviceSettings.set(DeviceSettingKeys.webdavLastSyncTs, { ...lastSyncTs });
-	}
-
-	async function toggleAutoBackup() {
-		autoBackupEnabled = !autoBackupEnabled;
-		await deviceSettings.set(DeviceSettingKeys.webdavAutoBackup, autoBackupEnabled);
-		if (autoBackupEnabled) {
-			await requestNotificationPermission();
-		}
 	}
 
 	async function fetchLastModified() {
@@ -310,6 +299,7 @@
 					const update = new Uint8Array(await res.arrayBuffer());
 					await ((await getXactStore()) as CrdtXactStore).importState(update);
 					Notifier.success('Local transactions merged from backup');
+					await ydocDevices?.mergeTrusted();
 				needsReload = true;
 				} else {
 					Notifier.error(`Download failed for ${ydocFile}: ${res.status} ${res.statusText}`);
@@ -380,11 +370,18 @@
 </script>
 
 {#snippet menuItems()}
-	<ToolbarMenuItem text="WebDAV Config" Icon={SettingsIcon} targetNav="/settings/webdav-cfg" />
+	<HelpButton topic="webdav-backup" variant="menu-item" />
 {/snippet}
 
 {#snippet actions()}
-	<HelpButton topic="webdav-backup" />
+	<a
+		href="/settings/webdav-cfg"
+		class="btn btn-ghost btn-sm btn-square"
+		aria-label="WebDAV Config"
+		title="WebDAV Config"
+	>
+		<SettingsIcon size={20} />
+	</a>
 {/snippet}
 
 {#snippet syncBadge(remoteMod: Date | null, direction: SyncDirection)}
@@ -461,15 +458,6 @@
 			</label>
 			<div class="divider my-0"></div>
 			<label class="flex items-center gap-3 cursor-pointer">
-				<input
-					type="checkbox"
-					class="checkbox checkbox-primary"
-					bind:checked={includeCashierBean}
-				/>
-				<span class="flex-1">{workingSetLabel}</span>
-				{@render syncBadge(cashierBeanLastModified, cashierBeanDirection)}
-			</label>
-			<label class="flex items-center gap-3 cursor-pointer">
 				<input type="checkbox" class="checkbox checkbox-primary" bind:checked={includeSettings} />
 				<span class="flex-1">Settings</span>
 				{@render syncBadge(settingsLastModified, settingsDirection)}
@@ -479,41 +467,37 @@
 				<span class="flex-1">Scheduled Transactions</span>
 				{@render syncBadge(scheduledLastModified, scheduledDirection)}
 			</label>
-		</div>
-	</section>
-
-	{#if isCrdt && webdavUrl}
-		<YdocDevices
-			url={webdavUrl}
-			username={webdavUsername}
-			password={webdavPassword}
-			onmerged={() => (needsReload = true)}
-		/>
-	{/if}
-
-	<!-- Auto-backup -->
-	<section class="card bg-base-200">
-		<div class="card-body p-4 gap-3">
-			<label class="flex items-center gap-3 cursor-pointer">
-				<span class="flex-1">
-					<span class="font-medium">Auto-backup {workingSetLabel}</span>
-					<span class="block text-xs text-base-content/50">
-						Upload to WebDAV automatically after each change
-					</span>
-				</span>
-				<input
-					type="checkbox"
-					class="toggle toggle-primary bg-transparent bg-none"
-					checked={autoBackupEnabled}
-					disabled={!webdavUrl}
-					onclick={toggleAutoBackup}
-				/>
-			</label>
-			{#if $lastBackupTime}
-				<p class="text-xs text-base-content/50 flex items-center gap-1">
-					<CloudIcon size={12} />
-					Last auto-backup: {$lastBackupTime.toLocaleString()}
-				</p>
+			<div class="flex items-center gap-3">
+				<label class="flex flex-1 items-center gap-3 cursor-pointer">
+					<input
+						type="checkbox"
+						class="checkbox checkbox-primary"
+						bind:checked={includeCashierBean}
+					/>
+					<span class="flex-1">{workingSetLabel}</span>
+					{@render syncBadge(cashierBeanLastModified, cashierBeanDirection)}
+				</label>
+				{#if isCrdt && webdavUrl}
+					<button
+						class="btn btn-xs btn-ghost btn-square"
+						aria-label="Show files from all devices"
+						aria-expanded={devicesOpen}
+						onclick={() => (devicesOpen = !devicesOpen)}
+					>
+						<ChevronDownIcon size={16} class={devicesOpen ? 'rotate-180' : ''} />
+					</button>
+				{/if}
+			</div>
+			{#if isCrdt && webdavUrl}
+				<div class:hidden={!devicesOpen} class="rounded-box bg-base-100 p-3 shadow-sm border border-base-300">
+					<YdocDevices
+						bind:this={ydocDevices}
+						url={webdavUrl}
+						username={webdavUsername}
+						password={webdavPassword}
+						onmerged={() => (needsReload = true)}
+					/>
+				</div>
 			{/if}
 		</div>
 	</section>
