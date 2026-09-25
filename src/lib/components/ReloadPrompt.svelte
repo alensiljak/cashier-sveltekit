@@ -1,14 +1,5 @@
 <script lang="ts">
-	import { useRegisterSW } from 'virtual:pwa-register/svelte';
-
-	const { offlineReady, needRefresh, updateServiceWorker } = useRegisterSW({
-		onRegistered(swr) {
-			console.log(`SW registered: ${swr}`);
-		},
-		onRegisterError(error) {
-			console.log('SW registration error', error);
-		}
-	});
+	import { needRefresh, offlineReady, updateApp } from '$lib/services/pwaUpdate';
 
 	function close() {
 		offlineReady.set(false);
@@ -30,7 +21,7 @@
 			</div>
 			<div class="flex-none flex gap-2">
 				{#if $needRefresh}
-					<button class="btn btn-sm btn-primary" onclick={() => updateServiceWorker(true)}> Reload </button>
+					<button class="btn btn-sm btn-primary" onclick={() => updateApp()}> Reload </button>
 				{/if}
 				<button class="btn btn-sm btn-ghost" onclick={close}> Close </button>
 			</div>
