@@ -1,20 +1,11 @@
 import adapter from '@sveltejs/adapter-static';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
-import { execSync } from 'node:child_process';
 
-// SvelteKit's default version is Date.now(), which is inlined into a shared chunk.
-// That changes the hash of every route chunk on every build, so the service worker
-// re-downloads everything. Use the commit SHA so identical sources give identical output.
-function buildVersion() {
-	if (process.env.GITHUB_SHA) return process.env.GITHUB_SHA;
-	try {
-		return execSync('git rev-parse HEAD', { stdio: ['ignore', 'pipe', 'ignore'] })
-			.toString()
-			.trim();
-	} catch {
-		return String(Date.now());
-	}
-}
+// SvelteKit's default version is Date.now(). Any per-build value (timestamp, commit SHA) is
+// inlined into a shared chunk and into the `__sveltekit_<hash>` global of every prerendered
+// page, so each build renames nearly every file and the service worker re-downloads all of
+// them. The app never reads the version and updates are detected via sw.js, so keep it constant.
+const APP_VERSION = 'static';
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
@@ -38,7 +29,7 @@ const config = {
 			assets: 'build'
 		}),
 		prerender: { entries: ['*'] },
-		version: { name: buildVersion() }
+		version: { name: APP_VERSION }
 	},
 	runes: true,
 	// plugin options
