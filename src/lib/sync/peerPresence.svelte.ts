@@ -53,16 +53,41 @@ export interface ActivePeer {
 	trysteroId: string;
 	persistentId: string;
 	name: string;
+	/** 8-digit code bound to this connection's DTLS certificates; '' when they can't be read (pairing is then refused). */
 	pairingCode: string;
 	isTrusted: boolean;
+	/** The peer has already confirmed the code and trusted this device. */
+	peerConfirmed: boolean;
 }
 
-export async function computePairingCode(id1: string, id2: string): Promise<string> {
-	const combined = [id1, id2].sort().join('|');
-	const buffer = new TextEncoder().encode(combined);
-	const hash = await crypto.subtle.digest('SHA-256', buffer);
-	const view = new DataView(hash);
-	return (view.getUint32(0) % 1_000_000).toString().padStart(6, '0');
+/** First DTLS `a=fingerprint` in an SDP blob, or null. */
+function sdpFingerprint(sdp: string | undefined): string | null {
+	return sdp?.match(/a=fingerprint:\S+\s+([0-9A-Fa-f:]+)/)?.[1]?.toUpperCase() ?? null;
+}
+
+/** DTLS certificate fingerprints of both ends of a live peer connection. */
+function connectionFingerprints(pc: RTCPeerConnection | undefined) {
+	const local = sdpFingerprint(pc?.localDescription?.sdp);
+	const remote = sdpFingerprint(pc?.remoteDescription?.sdp);
+	return local && remote ? { local, remote } : null;
+}
+
+/**
+ * Short authentication string for a pairing. Hashes both devices' IDs *and*
+ * the DTLS fingerprints of the connection between them, so the code is
+ * different every session and a man-in-the-middle relaying two separate
+ * connections cannot make both users see the same code.
+ */
+export async function computePairingCode(
+	self: { id: string; fingerprint: string },
+	peer: { id: string; fingerprint: string }
+): Promise<string> {
+	const combined = [self, peer]
+		.map((d) => `${d.id}|${d.fingerprint}`)
+		.sort()
+		.join('\n');
+	const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(combined));
+	return (new DataView(hash).getUint32(0) % 100_000_000).toString().padStart(8, '0');
 }
 
 export class PeerPresence {
@@ -78,6 +103,9 @@ export class PeerPresence {
 
 	room: Room | null = null;
 	private helloAction: MessageAction<{ id: string; name: string }> | null = null;
+	private confirmAction: MessageAction<{ id: string }> | null = null;
+	/** trysteroIds that confirmed the pairing code; kept apart from `peersMap` because the confirmation can arrive before their hello. */
+	private confirmedBy = new Set<string>();
 	/** Polls `room.getPeers()` so a dead RTCPeerConnection is evicted even when
 	 *  `onPeerLeave` never fires — WebRTC's own disconnect detection can take
 	 *  tens of seconds to minutes, which otherwise leaves a since-refreshed
@@ -150,8 +178,26 @@ export class PeerPresence {
 			this.helloAction!.send({ id: this.myId, name: this.myName }, { target: trysteroId });
 		};
 
+		this.confirmAction = this.room.makeAction('pair-confirm') as unknown as MessageAction<{
+			id: string;
+		}>;
+		this.confirmAction.onMessage = (data, { peerId: trysteroId }) => {
+			this.confirmedBy.add(trysteroId);
+			const peer = this.peersMap[trysteroId];
+			// Ignore a confirmation whose ID doesn't match the hello we saw.
+			if (peer && peer.persistentId === data.id) {
+				this.peersMap = { ...this.peersMap, [trysteroId]: { ...peer, peerConfirmed: true } };
+			}
+		};
+
 		this.helloAction.onMessage = async (data, { peerId: trysteroId }) => {
-			const code = await computePairingCode(this.myId, data.id);
+			const fps = connectionFingerprints(this.room?.getPeers()[trysteroId]);
+			const code = fps
+				? await computePairingCode(
+						{ id: this.myId, fingerprint: fps.local },
+						{ id: data.id, fingerprint: fps.remote }
+					)
+				: '';
 			const isTrusted = this.trustedPeers.some((p) => p.id === data.id);
 			this.peersMap = {
 				...this.peersMap,
@@ -160,7 +206,8 @@ export class PeerPresence {
 					persistentId: data.id,
 					name: data.name,
 					pairingCode: code,
-					isTrusted
+					isTrusted,
+					peerConfirmed: this.confirmedBy.has(trysteroId)
 				}
 			};
 			if (isTrusted) {
@@ -173,6 +220,7 @@ export class PeerPresence {
 		};
 
 		this.room.onPeerLeave = (trysteroId) => {
+			this.confirmedBy.delete(trysteroId);
 			const { [trysteroId]: _removed, ...rest } = this.peersMap;
 			this.peersMap = rest;
 		};
@@ -226,12 +274,16 @@ export class PeerPresence {
 			await this.room.leave();
 			this.room = null;
 			this.helloAction = null;
+			this.confirmAction = null;
 		}
+		this.confirmedBy.clear();
 		this.peersMap = {};
 		this.isInRoom = false;
 	}
 
+	/** Trusts a peer after the user confirmed the pairing code, and tells the peer so its UI can show it. */
 	async trust(peer: ActivePeer): Promise<TrustedPeer> {
+		if (!peer.pairingCode) throw new Error('Cannot pair: connection fingerprint unavailable');
 		const tp = new TrustedPeer();
 		tp.id = peer.persistentId;
 		tp.name = peer.name;
@@ -240,6 +292,7 @@ export class PeerPresence {
 		await db.peers.put(tp);
 		this.trustedPeers = await db.peers.toArray();
 		this.peersMap = { ...this.peersMap, [peer.trysteroId]: { ...peer, isTrusted: true } };
+		void this.confirmAction?.send({ id: this.myId }, { target: peer.trysteroId });
 		return tp;
 	}
 

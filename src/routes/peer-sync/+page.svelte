@@ -246,9 +246,27 @@
 
 	// ─── Trust ───────────────────────────────────────────────────────────────────
 
+	// The pairing prompt is opened explicitly ("Pair") rather than popping up
+	// for every stranger in a shared room. Derived from `peersMap` so the code
+	// shown is always the live one, and the prompt closes if the peer leaves.
+	let pairingTargetId = $state<string | null>(null);
+	let pairingPeer = $derived(pairingTargetId ? (presence.peersMap[pairingTargetId] ?? null) : null);
+	$effect(() => {
+		if (pairingPeer?.isTrusted) pairingTargetId = null;
+	});
+
+	/** "12345678" → "1234 5678" */
+	function groupCode(code: string): string {
+		return code.replace(/(\d{4})(?=\d)/g, '$1 ');
+	}
+
 	async function trustPeer(peer: ActivePeer) {
-		await presence.trust(peer);
-		Notifier.success(`Trusted "${peer.name}"`);
+		try {
+			await presence.trust(peer);
+			Notifier.success(`Trusted "${peer.name}"`);
+		} catch (e) {
+			Notifier.error(e instanceof Error ? e.message : String(e));
+		}
 	}
 
 	// ─── Sync actions ─────────────────────────────────────────────────────────────
@@ -496,23 +514,16 @@
 											>
 										</button>
 									{:else}
-										<div class="bg-base-300 rounded-box p-3">
-											<div class="flex items-center gap-2">
-												<span class="font-semibold flex-1">{peer.name}</span>
-											</div>
-											<div class="mt-2 rounded bg-warning/15 p-2 text-sm">
-												<p class="text-xs font-medium opacity-70">
-													Confirm pairing code on both devices:
-												</p>
-												<p class="font-mono text-2xl font-bold tracking-[0.25em]">
-													{peer.pairingCode}
-												</p>
-											</div>
+										<div class="bg-base-300 rounded-box flex items-center gap-2 p-3">
+											<span class="font-semibold flex-1">{peer.name}</span>
+											{#if peer.peerConfirmed}
+												<span class="badge badge-warning badge-sm">Wants to pair</span>
+											{/if}
 											<button
-												class="btn btn-success btn-sm mt-2 w-full"
-												onclick={() => trustPeer(peer)}
+												class="btn btn-primary btn-sm"
+												onclick={() => (pairingTargetId = peer.trysteroId)}
 											>
-												Trust This Device
+												Pair
 											</button>
 										</div>
 									{/if}
@@ -683,6 +694,47 @@
 			</div>
 		</div>
 		<button class="modal-backdrop" aria-label="Close" onclick={() => (showDiff = false)}></button>
+	</div>
+{/if}
+
+<!-- ─── Pairing ────────────────────────────────────────────────────────────── -->
+{#if pairingPeer}
+	<div class="modal modal-open">
+		<div class="modal-box text-center">
+			<h3 class="font-bold text-lg">Pair with "{pairingPeer.name}"</h3>
+			{#if pairingPeer.pairingCode}
+				<p class="py-3 text-sm opacity-70">
+					Check that <strong>this exact code</strong> is shown on the other device, then trust it on both.
+				</p>
+				<p class="font-mono text-4xl font-bold tracking-widest py-3" aria-label="Pairing code">
+					{groupCode(pairingPeer.pairingCode)}
+				</p>
+				{#if pairingPeer.peerConfirmed}
+					<p class="text-success text-sm">"{pairingPeer.name}" has confirmed this code.</p>
+				{:else}
+					<p class="text-xs opacity-60">Waiting for "{pairingPeer.name}" to confirm.</p>
+				{/if}
+				<p class="text-warning mt-3 text-xs">
+					If the codes differ, do not trust — someone may be intercepting the connection.
+				</p>
+			{:else}
+				<p class="py-4 text-sm">
+					Couldn't read this connection's security details. Rescan for devices and try again.
+				</p>
+			{/if}
+			<div class="modal-action justify-center">
+				<button class="btn btn-ghost" onclick={() => (pairingTargetId = null)}>Cancel</button>
+				<button
+					class="btn btn-success"
+					disabled={!pairingPeer.pairingCode}
+					onclick={() => trustPeer(pairingPeer)}
+				>
+					Codes match — Trust
+				</button>
+			</div>
+		</div>
+		<button class="modal-backdrop" aria-label="Close" onclick={() => (pairingTargetId = null)}
+		></button>
 	</div>
 {/if}
 
