@@ -78,19 +78,48 @@ Removing a trusted device stops synchronizing that device's file.
 
 ## Implementation Plan
 
-1. A Yjs document with y-indexeddb store, the record schema, serialization to beancount format for inclusion in WASM journal.
-2. Any existing records in `cashier.bean` migrated manually.
-3. Transaction editor adaptation to the new store.
-4. WebDAV per-device relay.
+1. ✅ A Yjs document with y-indexeddb store, the record schema, serialization to beancount format for inclusion in WASM journal.
+2. ✅ Any existing records in `cashier.bean` migrated manually.
+3. ✅ Transaction editor adaptation to the new store.
+4. ✅ WebDAV per-device relay.
 5. Archiving and deletions.
-6. p2p sync of the working set.
+6. ✅ p2p sync of the working set.
 7. Compaction.
+
+### Step 5 and 7 Details: Keeping the Store Small
+
+Why it grows: records are whole JSON values in a `Y.Map`. Deleting one (archive) or overwriting one (edit) leaves a tombstone. `gc` frees the deleted _content_, but the item struct stays, because its parent map is alive. Map items of different keys do not merge with each other, so each tombstone costs roughly the record's ULID key plus the item header (tens of bytes, _estimate, unmeasured_). Live records are small; the tombstones are what accumulates, and they are carried in every device's state file on WebDAV as well as in IndexedDB.
+
+#### Step 5: Archiving
+
+- Delete in one `doc.transact` per archive run, so it is one update and one delete-set range set.
+- Write the `.bean` files first, delete from the doc after the write succeeds. A crash in between re-exports on the next run, so add the record ID to the archived transaction (metadata, e.g. `cashierId: "<ULID>"`) and skip IDs already present in the journal. This also gives the archive a duplicate check.
+- Archive in bulk (everything older than N days or everything not pending review) rather than one record at a time: fewer runs, fewer epochs needed.
+- Report the store's size after archiving (see Measure below), so the user sees the effect.
+
+#### Step 7: Compaction
+
+`gc` alone is not enough (see above). Options, cheapest first:
+
+1. **Measure.** Show on the WebDAV/settings page: live records, deleted items, encoded state bytes (`exportState().length`). Only compact when it matters (e.g. state > 1 MB, or deleted > live × 5). Until that is measured, the rest may be unnecessary.
+2. **Compress the relay files.** Gzip (`CompressionStream`) the `.ydoc` files on WebDAV. Yjs updates are repetitive (ULIDs, JSON keys), so this should shrink them several times over. Store-only, no protocol impact; a marker or extension tells old from new files.
+3. **Epoch reset (rebuild).** Build a fresh `Y.Doc` from the live records only (same IDs), which drops all tombstones. Needs an epoch so old state cannot bring deleted records back:
+   - The epoch number is written in each device's `.ydoc` file envelope, and in the IndexedDB name (`cashier-xacts` for epoch 0, then `cashier-xacts-e<N>`), so an old database is never mixed into a new doc.
+   - Peers and WebDAV merges ignore state from a lower epoch. Old-epoch files are then safe to delete.
+   - Only the archiving device (desktop) resets, and only right after merging every trusted device's file, so that little is outstanding.
+   - The resetter first writes a final old-epoch file. A device that finds a higher epoch merges that final file (so it learns the archive deletes), diffs its live records against the new epoch, and re-adds those that are missing (local work the resetter never saw). Then it switches to the new database and removes the old one.
+   - Reset is rare (after big archive runs, when the measure says so), so this can be a manual "Compact store" action at first, not automatic.
+4. **Drop old device files** from WebDAV when a device is retired (already possible by hand). Epoch reset makes this automatic for stale epochs.
+
+Not worth doing: shortening record JSON keys or splitting records into per-field Yjs types. Live data is small and per-field types would add tombstones on edit.
+
+y-indexeddb already folds its update log into one after a number of updates, so the IndexedDB side needs no extra work beyond the epoch switch.
 
 ### Open Issues
 
-Raised while implementing step 1 (`CrdtXactStore`, store selection by the `xactStore` device setting). Items marked _unverified_ were not checked in a browser or against the code.
+Items marked _unverified_ were not checked in a browser or against the code.
 
-#### WebDAV Sync
+#### ✅ WebDAV Sync
 
 Implemented on the WebDAV backup page (CRDT store only): all `cashier-xacts-<id>.ydoc` files are listed and matched against Trusted Peers by device ID. Untrusted files can be trusted (added to Trusted Peers) or deleted; a manual "Merge trusted devices" button merges the files that changed since their last merge. Records carry an `origin` device ID, shown as a badge in the Device Journal for records created elsewhere. Merging does not run automatically.
 
@@ -103,11 +132,11 @@ Open: merged records are only visible in the ledger after "Reload Ledger". Recor
 
 #### Persistence and sync
 
-- `scheduleBackup()` is still called on CRDT writes, but it backs up OPFS files, not IndexedDB. The CRDT data is not covered by the WebDAV backup, and the OPFS `cashier.bean` it may upload is stale. Resolved by step 4, or earlier if backup must work first.
-- y-indexeddb keeps its own database (`cashier-xacts`), separate from the Dexie one; this cannot be changed without dropping y-indexeddb (e.g. storing a `Y.encodeStateAsUpdate` snapshot in Dexie instead).
+- ✅ `scheduleBackup()` is called on every CRDT write, remove, clear and remote merge. `doBackup()` detects the CRDT store and uploads `exportState()` (the Yjs state) to this device's own `ydocFilename(deviceId)` file, so the CRDT data is covered by the WebDAV backup. OPFS `cashier.bean` is only uploaded when the OPFS store is active. The CRDT path does not update the `cashierBean` sync baseline, as it has no such baseline.
+- ✅ y-indexeddb keeps its own database (`cashier-xacts`), separate from the Dexie one; this cannot be changed without dropping y-indexeddb (e.g. storing a `Y.encodeStateAsUpdate` snapshot in Dexie instead).
 - Two open tabs each hold their own `Y.Doc` on the same database. y-indexeddb does not propagate changes between them live, so a tab may show stale data or overwrite-by-merge on next load. _Unverified_; likely needs a BroadcastChannel provider or a single-tab guard.
-- The `initialized` flag lives in the shared doc. Once devices merge docs, a new device would count as initialized. Decide whether that is intended.
-- Persistence has only been checked manually (the ledger loads the CRDT store's content). No automated tests for `CrdtXactStore`.
+- ✅ The `initialized` flag lives in the shared doc. Once devices merge docs, a new device would count as initialized. Decide whether that is intended.
+- ✅ Persistence has only been checked manually (the ledger loads the CRDT store's content). No automated tests for `CrdtXactStore`.
 
 #### Other code paths
 

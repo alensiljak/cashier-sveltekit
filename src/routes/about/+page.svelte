@@ -2,12 +2,12 @@
 	import { onMount } from 'svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import rustledger from '$lib/services/rustledger';
-	import { checkForUpdate, type UpdateCheckResult } from '$lib/services/pwaUpdate';
+	import { checkForUpdate } from '$lib/services/pwaUpdate';
+	import Notifier from '$lib/utils/notifier';
 	import { MicIcon, RefreshCw } from '@lucide/svelte';
 
 	let wasmVersion = '';
 	let checking = false;
-	let updateResult: UpdateCheckResult | null = null;
 
 	onMount(async () => {
 		try {
@@ -20,9 +20,22 @@
 
 	async function checkForUpdates() {
 		checking = true;
-		updateResult = null;
 		try {
-			updateResult = await checkForUpdate();
+			const result = await checkForUpdate();
+			switch (result) {
+				case 'latest':
+					Notifier.success('You are on the latest version.');
+					break;
+				case 'available':
+					Notifier.info('Update available. Use the prompt to update.');
+					break;
+				case 'unavailable':
+					Notifier.warning('Updates are not available (no service worker registered).');
+					break;
+				case 'error':
+					Notifier.error('Could not check for updates. Are you online?');
+					break;
+			}
 		} finally {
 			checking = false;
 		}
@@ -78,15 +91,6 @@
 				{checking ? 'Checking…' : 'Check for updates'}
 			</button>
 		</p>
-		{#if updateResult === 'latest'}
-			<p>You are on the latest version.</p>
-		{:else if updateResult === 'available'}
-			<p>A new version is available. Use the prompt to update.</p>
-		{:else if updateResult === 'unavailable'}
-			<p>Updates are not available (no service worker registered).</p>
-		{:else if updateResult === 'error'}
-			<p>Could not check for updates. Are you online?</p>
-		{/if}
 
 		<h3 class="text-3xl font-semibold">Experiments</h3>
 
