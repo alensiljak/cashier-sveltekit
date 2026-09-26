@@ -112,12 +112,12 @@
 		{:else}
 			{#each storedXacts as item (item.id)}
 				{@const from = foreignOrigin(item.origin)}
-				{#if from}
-					<span class="badge badge-ghost badge-sm ml-2" title="Created on another device">
-						{from}
-					</span>
-				{/if}
-				<JournalXactRow xact={item.xact} onclick={() => onRowClick(item.xact, item.id)} />
+				<JournalXactRow
+					xact={item.xact}
+					badge={from}
+					badgeTitle="Created on another device"
+					onclick={() => onRowClick(item.xact, item.id)}
+				/>
 			{/each}
 		{/if}
 	</section>

@@ -15,7 +15,8 @@
 		[HomeCardNames.SCHEDULED]: 'Scheduled Transactions',
 		[HomeCardNames.EXPENSES]: 'Expenses',
 		[HomeCardNames.BUDGET]: 'Budget',
-		[HomeCardNames.NET_WORTH]: 'Net Worth'
+		[HomeCardNames.NET_WORTH]: 'Net Worth',
+		[HomeCardNames.SYNC]: 'Sync'
 	};
 
 	interface Item {

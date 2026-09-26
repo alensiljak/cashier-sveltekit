@@ -6,7 +6,7 @@
 	import { xact } from '$lib/data/mainStore';
 	import { Xact } from '$lib/data/model';
 	import FavouritesCard from '$lib/components/FavouritesCard.svelte';
-	// import SyncCard from '$lib/components/SyncCard.svelte';
+	import SyncCard from '$lib/components/SyncCard.svelte';
 	import ForecastCard from '$lib/components/ForecastCard.svelte';
 	import ScheduledXactsCard from '$lib/components/ScheduledXactsCard.svelte';
 	import ExpensesCard from '$lib/components/ExpensesCard.svelte';
@@ -72,9 +72,9 @@
 			case HomeCardNames.NET_WORTH:
 				card = NetWorthCard;
 				break;
-			// case HomeCardNames.SYNC:
-			// 	card = SyncCard;
-			// 	break;
+			case HomeCardNames.SYNC:
+				card = SyncCard;
+				break;
 			}
 			if (card) {
 				cards.push(card);

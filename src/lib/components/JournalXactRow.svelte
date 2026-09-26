@@ -8,8 +8,11 @@
 		onclick?: (xact: Xact) => void;
 		/** Whether the row navigates on click. Defaults to true; set false for read-only views. */
 		linksEnabled?: boolean;
+		/** Short label shown as a pill after the narration, e.g. the name of the device that created the record. */
+		badge?: string | null;
+		badgeTitle?: string;
 	}
-	let { xact, onclick, linksEnabled = true }: Props = $props();
+	let { xact, onclick, linksEnabled = true, badge = null, badgeTitle }: Props = $props();
 
 	function onRowClicked() {
 		if (linksEnabled && onclick) {
@@ -22,7 +25,12 @@
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <article onclick={onRowClicked} class:cursor-pointer={linksEnabled}>
 	<!-- date / payee / narration — inline flow; hanging indent aligns wrapped lines with postings -->
-	<div class="pl-6" style="text-indent: -1.5rem"><time class="opacity-85">{xact.date}</time>{#if xact.flag === '!'} <WarningTriangleIcon class="size-4 inline-block align-text-bottom" />{/if} {xact.payee || xact.note}{#if xact.payee && xact.note} <span class="opacity-50">· {xact.note}</span>{/if}</div>
+	<div class="pl-6" style="text-indent: -1.5rem">
+		<time class="opacity-85">{xact.date}</time>
+		{#if xact.flag === '!'} <WarningTriangleIcon class="size-4 inline-block align-text-bottom" />{/if}
+		{xact.payee || xact.note}{#if xact.payee && xact.note}
+		<span class="opacity-50">· {xact.note}</span>{/if}
+		{#if badge} <span class="badge badge-xs ml-3 border-0 bg-base-content/45 h-3 px-1 text-[0.5625rem] leading-none font-bold text-black align-middle whitespace-nowrap" style="text-indent: 0" title={badgeTitle}>{badge}</span>{/if}</div>
 
 	<!-- postings -->
 	{#if xact.postings}

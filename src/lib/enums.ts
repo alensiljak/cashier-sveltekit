@@ -10,8 +10,8 @@ export const HomeCardNames = {
 	SCHEDULED: 'ScheduledXactCard',
 	EXPENSES: 'ExpensesCard',
 	BUDGET: 'BudgetCard',
-	NET_WORTH: 'NetWorthCard'
-	// SYNC: 'SyncCard'
+	NET_WORTH: 'NetWorthCard',
+	SYNC: 'SyncCard'
 } as const;
 
 export enum LedgerDataSource {

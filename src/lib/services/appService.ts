@@ -77,10 +77,10 @@ class AppService {
 				HomeCardNames.FAVOURITES,
 				HomeCardNames.JOURNAL,
 				HomeCardNames.SCHEDULED,
-				// HomeCardNames.SYNC,
 				HomeCardNames.FORECAST,
 				HomeCardNames.EXPENSES,
-				HomeCardNames.BUDGET
+				HomeCardNames.BUDGET,
+				HomeCardNames.SYNC
 			];
 		}
 		return visibleCardNames;
