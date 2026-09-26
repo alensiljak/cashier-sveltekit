@@ -321,7 +321,7 @@
 
 		Notifier.success('Settings saved');
 
-		await goto('/'); // Go to home after saving settings
+		await goto('/', { replaceState: true }); // Go to home, replacing Settings in history
 	}
 </script>
 
