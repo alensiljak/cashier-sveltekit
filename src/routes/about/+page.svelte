@@ -39,7 +39,7 @@
 					Notifier.success('You are on the latest version.');
 					break;
 				case 'available':
-					Notifier.info('Update available. Use the prompt to update.');
+					// The update prompt panel is shown separately; no toast needed.
 					break;
 				case 'unavailable':
 					Notifier.warning('Updates are not available (no service worker registered).');
