@@ -6,12 +6,62 @@
 import { ISODATEFORMAT, LONGTIMEFORMAT } from '$lib/constants';
 import db from '$lib/data/db';
 import type { ScheduledTransaction } from '$lib/data/model';
-import { settings } from '$lib/settings';
+import { SettingKeys, settings } from '$lib/settings';
 import moment from 'moment';
 
+interface StoredSetting {
+	key: string;
+	value: string;
+}
+
 interface Backup {
-	settings: Array<string>;
+	settings: Array<StoredSetting>;
 	scx: Array<ScheduledTransaction>;
+}
+
+type WebDavCredentials = { url?: string; username?: string; password?: string };
+
+function parseWebDav(setting: StoredSetting | undefined): WebDavCredentials | undefined {
+	if (!setting) return undefined;
+	try {
+		const parsed = JSON.parse(setting.value);
+		return parsed && typeof parsed === 'object' ? parsed : undefined;
+	} catch {
+		return undefined;
+	}
+}
+
+/**
+ * Blanks the WebDAV password, so the backup file (which gets downloaded, shared
+ * and stored elsewhere) never carries credentials.
+ */
+function withoutPassword(all: StoredSetting[]): StoredSetting[] {
+	return all.map((setting) => {
+		if (setting.key !== SettingKeys.webdavSettings) return setting;
+		const webdav = parseWebDav(setting);
+		if (!webdav) return setting;
+		return { ...setting, value: JSON.stringify({ ...webdav, password: '' }) };
+	});
+}
+
+/**
+ * The backup has no WebDAV password, so restoring must not erase the one already on
+ * this device: keep it when the backup points at the same server and user.
+ */
+function keepExistingPassword(
+	restored: StoredSetting[],
+	existing: StoredSetting | undefined
+): StoredSetting[] {
+	const current = parseWebDav(existing);
+	if (!current?.password) return restored;
+
+	return restored.map((setting) => {
+		if (setting.key !== SettingKeys.webdavSettings) return setting;
+		const webdav = parseWebDav(setting);
+		if (!webdav || webdav.password) return setting;
+		if (webdav.url !== current.url || webdav.username !== current.username) return setting;
+		return { ...setting, value: JSON.stringify({ ...webdav, password: current.password }) };
+	});
 }
 
 export function getBackupFilename(): string {
@@ -40,7 +90,7 @@ export async function createBackupFile(filename: string) {
 export async function createBackup() {
 	// assemble the backup content:
 	// settings
-	const allSettings = await settings.getAll();
+	const allSettings = withoutPassword(await settings.getAll());
 	// scheduled transactions
 	const scx: ScheduledTransaction[] = await db.scheduled.toArray();
 
@@ -71,18 +121,37 @@ function downloadTextFile(content: string, fileName: string) {
 	}, 1500);
 }
 
+/** Parses and checks the backup file, so nothing is deleted for a file that can't be restored. */
+function parseBackup(content: string): Backup {
+	let backup: Partial<Backup> | null;
+	try {
+		backup = JSON.parse(content);
+	} catch {
+		throw new Error('The backup file is not valid JSON');
+	}
+	if (!backup || !Array.isArray(backup.settings) || !Array.isArray(backup.scx)) {
+		throw new Error('Not a Cashier backup file: settings and scheduled transactions are missing');
+	}
+	return backup as Backup;
+}
+
 /**
  * Restores the backup, deleting any existing data.
+ * All-or-nothing: if the file is invalid or a write fails, existing data is kept.
  * @param content JSON contents of the backup file
  */
 export async function restoreBackup(content: string) {
-	const backup: Backup = JSON.parse(content);
+	const backup = parseBackup(content);
 
-	// backup.settings
-	await db.settings.clear();
-	await db.settings.bulkAdd(backup.settings);
+	await db.transaction('rw', db.settings, db.scheduled, async () => {
+		const restoredSettings = keepExistingPassword(
+			backup.settings,
+			await db.settings.get(SettingKeys.webdavSettings)
+		);
+		await db.settings.clear();
+		await db.settings.bulkAdd(restoredSettings);
 
-	// backup.scx
-	await db.scheduled.clear();
-	await db.scheduled.bulkAdd(backup.scx);
+		await db.scheduled.clear();
+		await db.scheduled.bulkAdd(backup.scx);
+	});
 }

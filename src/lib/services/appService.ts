@@ -371,10 +371,15 @@ class AppService {
 		}
 
 		const parsed = JSON.parse(jsonList);
-		// first delete all existing records?
-		await db.scheduled.clear();
+		if (!Array.isArray(parsed)) {
+			throw new Error('The transactions list must be a JSON array!');
+		}
 
-		await db.scheduled.bulkPut(parsed);
+		// Replace all existing records, all-or-nothing.
+		await db.transaction('rw', db.scheduled, async () => {
+			await db.scheduled.clear();
+			await db.scheduled.bulkPut(parsed);
+		});
 	}
 
 	// async loadAccount(name: string) {

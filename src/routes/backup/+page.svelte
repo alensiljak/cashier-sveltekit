@@ -72,8 +72,15 @@
 		const reader = new FileReader();
 		reader.onload = async (e: any) => {
 			fileContent = e?.target?.result; // Store the file content
-			await BackupService.restoreBackup(fileContent);
-			Notifier.success('Backup restored');
+			try {
+				await BackupService.restoreBackup(fileContent);
+				Notifier.success('Backup restored');
+			} catch (error) {
+				console.error('Restore failed:', error);
+				Notifier.error(
+					`Restore failed, existing data was kept: ${error instanceof Error ? error.message : error}`
+				);
+			}
 		};
 		reader.readAsText(file); // Read as text
 	}
@@ -92,7 +99,7 @@
 			<p>You can backup all local data:</p>
 			<ul class="list-disc mx-8 pl-4">
 				<li>scheduled transactions</li>
-				<li>settings</li>
+				<li>settings (without the WebDAV password)</li>
 			</ul>
 			<p>into</p>
 
