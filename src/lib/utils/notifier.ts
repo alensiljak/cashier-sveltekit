@@ -26,8 +26,8 @@ const Notifier = {
 		}
 	},
 
-	success(message: string) {
-		toaster.success(message);
+	success(message: string, action?: { label: string; onclick: () => void }, duration?: number) {
+		toaster.success(message, action, duration);
 	},
 	error(message: string) {
 		toaster.error(message);

@@ -17,8 +17,13 @@
 		buildTransaction,
 		refineFromMatches
 	} from '$lib/utils/nlpEntry';
-	import { CodeIcon, FilePlusIcon, TriangleAlertIcon } from '@lucide/svelte';
+	import { CodeIcon, FilePlusIcon, FileTextIcon, TriangleAlertIcon } from '@lucide/svelte';
 	import HelpButton from '$lib/help/HelpButton.svelte';
+	import Notifier from '$lib/utils/notifier';
+	import appService from '$lib/services/appService';
+	import { getXactStore } from '$lib/storage/xactStoreRegistry';
+	import { reloadLedgerFromOpfs } from '$lib/services/ledgerReload';
+	import { xactToBeancountText } from '$lib/utils/xactUtils';
 
 	function focusOnMount(el: HTMLElement) {
 		el.focus();
@@ -39,6 +44,7 @@
 	let searchText = $state('');
 	let isLoading = $state(false);
 	let isSelecting = $state(false);
+	let isSavingPlaceholder = $state(false);
 	let filtersExpanded = $state(false);
 	let templates = $state<Xact[]>([]);
 	let visibleResultsCount = $state(MAX_RESULTS);
@@ -308,6 +314,56 @@
 		setTimeout(() => (copySuccess = false), 2000);
 	}
 
+	/**
+	 * Saves the typed text as a `!`-flagged placeholder transaction (narration only, dummy
+	 * accounts, zero amounts) and returns to the previous page, to be completed later.
+	 */
+	async function savePlaceholder() {
+		const text = searchText.trim();
+		if (isSavingPlaceholder) return;
+		if (!text) {
+			Notifier.warning('Type or say a few words first');
+			return;
+		}
+		isSavingPlaceholder = true;
+		try {
+			const tx = new Xact();
+			tx.date = new Date().toISOString().substring(0, 10);
+			tx.flag = '!';
+			tx.note = text;
+			const currency = await appService.getDefaultCurrency();
+			tx.postings = ['Expenses:Unknown', 'Assets:Unknown'].map((account) => {
+				const p = new Posting();
+				p.account = account;
+				p.amount = 0;
+				p.currency = currency;
+				return p;
+			});
+			const store = await getXactStore();
+			const stored = await store.append(xactToBeancountText(tx, currency));
+			void reloadLedgerFromOpfs();
+			Notifier.success(
+				'Placeholder saved',
+				{
+					label: 'Undo',
+					onclick: async () => {
+						try {
+							await store.remove(stored.id);
+							void reloadLedgerFromOpfs();
+						} catch (e) {
+							Notifier.error(e instanceof Error ? e.message : String(e));
+						}
+					}
+				},
+				6000
+			);
+			history.back();
+		} catch (e) {
+			Notifier.error(e instanceof Error ? e.message : String(e));
+			isSavingPlaceholder = false;
+		}
+	}
+
 	async function selectTemplate(template: Xact) {
 		isSelecting = true;
 		try {
@@ -537,7 +593,14 @@
 		{/if}
 	</section>
 
-	<Fab Icon={FilePlusIcon} onclick={() => goto('/tx')} />
+	<Fab
+		Icon={FileTextIcon}
+		bottom="bottom-28"
+		ariaLabel="Save typed text as a placeholder transaction"
+		onclick={savePlaceholder}
+		disabled={isSavingPlaceholder}
+	/>
+	<Fab Icon={FilePlusIcon} ariaLabel="New transaction" onclick={() => goto('/tx')} />
 
 	<!-- BQL query debug dialog -->
 	<dialog bind:this={queryDialog} class="modal">

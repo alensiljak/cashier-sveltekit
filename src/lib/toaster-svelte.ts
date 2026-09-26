@@ -4,6 +4,8 @@ type ToastOptions = {
 	message: string;
 	type?: ToastType;
 	duration?: number;
+	/** Optional button (e.g. Undo); clicking it dismisses the toast. */
+	action?: { label: string; onclick: () => void };
 };
 
 class DaisyUIToaster {
@@ -47,6 +49,17 @@ class DaisyUIToaster {
 		}
 
 		toast.innerHTML = `<span>${options.message}</span>`;
+		if (options.action) {
+			const { label, onclick } = options.action;
+			const button = document.createElement('button');
+			button.className = 'btn btn-sm btn-ghost';
+			button.textContent = label;
+			button.onclick = () => {
+				toast.remove();
+				onclick();
+			};
+			toast.appendChild(button);
+		}
 		this.toastContainer.appendChild(toast);
 
 		// Remove the toast after the specified duration
@@ -55,8 +68,8 @@ class DaisyUIToaster {
 		}, options.duration || 3000);
 	}
 
-	success(message: string) {
-		this.show({ message, type: 'success' });
+	success(message: string, action?: ToastOptions['action'], duration?: number) {
+		this.show({ message, type: 'success', action, duration });
 	}
 
 	error(message: string) {
