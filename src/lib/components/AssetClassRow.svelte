@@ -103,7 +103,7 @@
 	<td class="text-end tabular-nums{valueHidden}">
 		{numeral(assetClass.currentValue).format(NUMBER_FORMAT)}
 	</td>
-	<td class="pr-1 text-end tabular-nums{valueHidden}{getOffsetColor(assetClass.diffPerc)}">
+	<td class="pr-1 text-end tabular-nums{valueHidden} {getOffsetColor(assetClass.diffPerc)}">
 		{numeral(assetClass.diffAmount).format(NUMBER_FORMAT)}
 	</td>
 </tr>
