@@ -194,7 +194,7 @@ export async function loadInvestmentAccounts(
         sum(position) as balances
 		WHERE account ~ '^${rootAccount}'
 		GROUP BY account
-		HAVING number(value(sum(position), 'EUR')) != 0
+		HAVING number(value(sum(position), '${currency}')) != 0
 		ORDER BY account`;
 	// HAVING NOT empty(sum(position))
 

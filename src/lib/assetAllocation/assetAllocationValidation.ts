@@ -47,8 +47,8 @@ function validateGroupAllocation(assetClass: AssetClass, engine: AssetAllocation
 		sum += children[i].allocation;
 	}
 
-	//let equal = parseFloat(assetClass.allocation) === sum
-	const equal = assetClass.allocation === sum;
+	// Compare with a tolerance: percentages like 0.1 + 0.2 are not exact in floating point.
+	const equal = Math.abs(assetClass.allocation - sum) < 1e-9;
 
 	if (!equal) {
 		return "- '" + assetClass.fullname + "' does not match the sum of child classes!\n";
