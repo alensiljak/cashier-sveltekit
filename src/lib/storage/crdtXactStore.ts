@@ -179,9 +179,19 @@ export class CrdtXactStore implements XactStore {
 	/** Merge a Yjs update (e.g. another device's exported state) into the document. Idempotent. */
 	async importState(update: Uint8Array): Promise<void> {
 		await this.ready();
-		Y.applyUpdate(this.doc, update, REMOTE_ORIGIN);
-		// Merged records reach other devices through this device's own file too.
-		scheduleBackup();
+		let changed = false;
+		const onUpdate = () => {
+			changed = true;
+		};
+		this.doc.on('update', onUpdate);
+		try {
+			Y.applyUpdate(this.doc, update, REMOTE_ORIGIN);
+		} finally {
+			this.doc.off('update', onUpdate);
+		}
+		// Merged records reach other devices through this device's own file too,
+		// but a no-op merge leaves nothing new to upload.
+		if (changed) scheduleBackup();
 	}
 
 	/** State vector, describing which updates this document already has. */
