@@ -22,10 +22,8 @@
 
 		_accountNames = accountNames;
 
-		_days = await settings.get(SettingKeys.forecastDays) as number;
-		if (_days === 0) {
-			_days = Constants.ForecastDays;
-		}
+		// Never saved (null) or 0: use the default length.
+		_days = ((await settings.get(SettingKeys.forecastDays)) as number | null) || Constants.ForecastDays;
 
 		_settingsLoaded = true;
 	}

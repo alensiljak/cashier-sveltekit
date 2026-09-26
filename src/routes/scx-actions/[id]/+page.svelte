@@ -4,9 +4,12 @@
 	import JournalXactRow from '$lib/components/JournalXactRow.svelte';
 	import SquareButton from '$lib/components/SquareButton.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
-	import { ScheduledXact, xact } from '$lib/data/mainStore';
+	import { ScheduledXact, xact, xactId } from '$lib/data/mainStore';
 	import type { ScheduledTransaction, Xact } from '$lib/data/model';
 	import appService from '$lib/services/appService';
+	import { getXactStore } from '$lib/storage/xactStoreRegistry';
+	import { reloadLedgerFromOpfs } from '$lib/services/ledgerReload';
+	import { xactToBeancountText } from '$lib/utils/xactUtils';
 	import Notifier from '$lib/utils/notifier';
 	import { calculateNextIteration } from '$lib/scheduledTransactions';
 	import { saveScheduledTransaction } from '$lib/data/dbdal';
@@ -57,21 +60,28 @@
 	}
 
 	async function enterXact() {
-		// Create the journal transaction.
-		let newTx: Xact = JSON.parse(JSON.stringify($xact));
+		// Create the journal transaction and save it right away, so cancelling the edit
+		// afterwards still leaves it in the journal. Done before moving the schedule on:
+		// if saving fails, the occurrence is not lost.
+		const newTx: Xact = JSON.parse(JSON.stringify($xact));
 		// clear the id field, if any, to get a new one on save.
 		newTx.id = undefined;
-		// const dal = new CashierDAL();
-		// const id = await dal.saveXact(newTx);
+		const defaultCurrency = await appService.getDefaultCurrency();
+		const stored = await (
+			await getXactStore()
+		).append(xactToBeancountText(newTx, defaultCurrency));
+		// Re-parse the full book in the background.
+		void reloadLedgerFromOpfs();
 
 		// update the iteration date
 		await skip();
 
 		Notifier.success('Transaction created');
 
-		// load transaction into store
-		// const tx = await appService.loadTransaction(id);
-		xact.set(newTx);
+		// Open the saved transaction for editing; saving on /tx then updates it
+		// instead of appending another one.
+		xact.set(stored.xact);
+		xactId.set(stored.id);
 
 		// open the transaction. Maintain page navigation history.
 		await goto('/tx', { replaceState: true });

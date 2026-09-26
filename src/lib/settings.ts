@@ -124,6 +124,8 @@ export const DeviceSettingKeys = {
 	xactStore: 'xactStore',
 	// IDs of the sample transactions seeded into the CRDT store by the demo data (removed with it)
 	demoXactIds: 'demoXactIds',
+	// IDs of the sample scheduled transactions seeded by the demo data (removed with it)
+	demoScxIds: 'demoScxIds',
 	// OPFS file metadata snapshot for staleness detection (path -> "size|lastModified")
 	ledgerMetaSnapshot: 'ledger.metaSnapshot',
 	// Scheduled-transaction reminder: enabled flag, time of day ('HH:mm') and the date it last fired

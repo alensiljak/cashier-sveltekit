@@ -6,38 +6,16 @@
  * shopping: Expenses:Groceries / Assets:Bank:Checking), saves it, then
  * verifies it shows up in the device journal.
  */
-import { expect, test } from './fixtures';
+import { addTransaction, expect, test } from './fixtures';
 
-test('creating a transaction shows it in the journal', async ({ page }) => {
-	await page.goto('/onboarding');
-	await page.getByRole('button', { name: 'Try demo data' }).click();
-	await expect(page).toHaveURL('/');
-
-	await page.goto('/tx');
-
+test('creating a transaction shows it in the journal', async ({ demoPage: page }) => {
 	const note = `Supermarket shopping ${Date.now()}`;
-	await page.getByTitle('Note', { exact: true }).fill(note);
-
-	const accountFields = page.getByTitle('Account', { exact: true });
-	const amountFields = page.getByTitle('Amount', { exact: true });
-
-	// First posting: the expense side.
-	await accountFields.nth(0).click();
-	await expect(page).toHaveURL('/accounts');
-	await page.getByText('Expenses:Groceries', { exact: true }).click();
-	await expect(page).toHaveURL('/tx');
-	await amountFields.nth(0).fill('45.5');
-
-	// Second posting: the asset side, left auto-balancing.
-	await accountFields.nth(1).click();
-	await expect(page).toHaveURL('/accounts');
-	await page.getByText('Assets:Bank:Checking', { exact: true }).click();
-	await expect(page).toHaveURL('/tx');
-
-	// Save (the FAB's check-mark button).
-	await page.locator('button.btn-circle.btn-xl').click();
-	// Saving is async and ends with history.back(); navigating away sooner would abort it.
-	await expect(page).not.toHaveURL('/tx');
+	await addTransaction(page, {
+		note,
+		expenseAccount: 'Expenses:Groceries',
+		assetAccount: 'Assets:Bank:Checking',
+		amount: '45.5'
+	});
 
 	await page.goto('/journal');
 

@@ -42,7 +42,11 @@ const pages: { path: string; title: string; expected?: string | RegExp }[] = [
 	{ path: '/reports/net-worth', title: 'Net Worth' },
 	{ path: '/reports/expenses', title: 'Expenses' },
 	{ path: '/reports/portfolio-returns', title: 'Portfolio Returns' },
-	{ path: '/forecast-settings', title: 'Financial Forecast Settings' },
+	{
+		path: '/forecast-settings',
+		title: 'Financial Forecast Settings',
+		expected: 'Assets:Cash:Wallet'
+	},
 	{ path: '/scheduled-xacts', title: 'Scheduled Transactions' },
 	{ path: '/favourites', title: 'Favourites' },
 	{ path: '/settings', title: 'Settings' }

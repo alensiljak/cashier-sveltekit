@@ -6,6 +6,9 @@
 	never touches.
 */
 import * as OpfsLib from '$lib/utils/opfslib';
+import db from '$lib/data/db';
+import { Posting, ScheduledTransaction, Xact } from '$lib/data/model';
+import { RecurrencePeriods } from '$lib/enums';
 import {
 	settings,
 	deviceSettings,
@@ -49,6 +52,9 @@ const DEMO_INVESTMENTS_GROUP = 'Investments';
 /** Demo accounts marked as favourites. */
 const DEMO_FAVOURITE_ACCOUNTS = ['Assets:Bank:Checking', 'Liabilities:CreditCard'];
 
+/** Demo accounts included in the financial forecast. */
+const DEMO_FORECAST_ACCOUNTS = ['Assets:Cash:Wallet'];
+
 /** Two recent local (unarchived) transactions, so the Device Journal isn't empty. */
 function demoLocalXacts(): string[] {
 	const day = (offset: number) => {
@@ -59,6 +65,52 @@ function demoLocalXacts(): string[] {
 	return [
 		`${day(1)} * "Corner Cafe" "Coffee"\n  Expenses:Dining    4.50 EUR\n  Assets:Cash:Wallet`,
 		`${day(0)} * "Supermarket" "Groceries"\n  Expenses:Groceries    27.80 EUR\n  Liabilities:CreditCard`
+	];
+}
+
+/** Monthly scheduled transactions, due over the next few weeks, so the scheduled views aren't empty. */
+function demoScheduledXacts(): ScheduledTransaction[] {
+	const inDays = (offset: number) => {
+		const d = new Date();
+		d.setDate(d.getDate() + offset);
+		return d.toISOString().slice(0, 10);
+	};
+	const monthly = (
+		daysAhead: number,
+		payee: string,
+		note: string,
+		postings: [account: string, amount?: number][]
+	) => {
+		const scx = new ScheduledTransaction();
+		scx.nextDate = inDays(daysAhead);
+		scx.period = RecurrencePeriods.Months;
+		scx.count = 1;
+		scx.endDate = null;
+
+		const xact = Xact.create();
+		xact.date = scx.nextDate;
+		xact.payee = payee;
+		xact.note = note;
+		xact.postings = postings.map(([account, amount]) => {
+			const posting = new Posting();
+			posting.account = account;
+			posting.currency = 'EUR';
+			if (amount !== undefined) posting.amount = amount;
+			return posting;
+		});
+		scx.transaction = xact;
+		return scx;
+	};
+	return [
+		monthly(3, 'Landlord', 'Rent', [['Expenses:Rent', 900], ['Assets:Bank:Checking']]),
+		monthly(10, 'Fitness Club', 'Gym membership', [
+			['Expenses:Entertainment', 35],
+			['Liabilities:CreditCard']
+		]),
+		monthly(20, 'Savings Deposit', 'Monthly savings', [
+			['Assets:Bank:Savings', 200],
+			['Assets:Bank:Checking']
+		])
 	];
 }
 
@@ -94,7 +146,9 @@ class DemoDataService {
 
 		await this.seedAccountGroups();
 		await this.seedFavourites();
+		await this.seedForecastAccounts();
 		await this.seedLocalXacts();
+		await this.seedScheduledXacts();
 
 		await reloadLedgerFromOpfs();
 	}
@@ -124,6 +178,13 @@ class DemoDataService {
 		await settings.set(SettingKeys.favouriteAccounts, DEMO_FAVOURITE_ACCOUNTS);
 	}
 
+	/** Adds the Wallet to the forecast, unless the user already chose forecast accounts. */
+	private async seedForecastAccounts(): Promise<void> {
+		const stored = (await settings.get<string[]>(SettingKeys.forecastAccounts)) ?? [];
+		if (stored.length > 0) return;
+		await settings.set(SettingKeys.forecastAccounts, DEMO_FORECAST_ACCOUNTS);
+	}
+
 	/** Adds sample transactions to an empty device store and remembers their IDs. */
 	private async seedLocalXacts(): Promise<void> {
 		const store = await getXactStore();
@@ -136,6 +197,16 @@ class DemoDataService {
 		await deviceSettings.set(DeviceSettingKeys.demoXactIds, ids);
 	}
 
+	/** Adds sample scheduled transactions when there are none, and remembers their IDs. */
+	private async seedScheduledXacts(): Promise<void> {
+		if ((await db.scheduled.count()) > 0) return;
+		const ids: number[] = [];
+		for (const scx of demoScheduledXacts()) {
+			ids.push((await db.scheduled.add(scx)) as number);
+		}
+		await deviceSettings.set(DeviceSettingKeys.demoScxIds, ids);
+	}
+
 	/** Removes the seeded sample transactions and demo accounts from the favourites and groups. */
 	private async removeSeeded(): Promise<void> {
 		const ids = await deviceSettings.get<string[]>(DeviceSettingKeys.demoXactIds);
@@ -145,11 +216,23 @@ class DemoDataService {
 		}
 		await deviceSettings.set(DeviceSettingKeys.demoXactIds, null);
 
+		const scxIds = await deviceSettings.get<number[]>(DeviceSettingKeys.demoScxIds);
+		if (scxIds?.length) await db.scheduled.bulkDelete(scxIds);
+		await deviceSettings.set(DeviceSettingKeys.demoScxIds, null);
+
 		const favourites = await settings.get<string[]>(SettingKeys.favouriteAccounts);
 		if (favourites) {
 			await settings.set(
 				SettingKeys.favouriteAccounts,
 				favourites.filter((a) => !DEMO_FAVOURITE_ACCOUNTS.includes(a))
+			);
+		}
+
+		const forecast = await settings.get<string[]>(SettingKeys.forecastAccounts);
+		if (forecast) {
+			await settings.set(
+				SettingKeys.forecastAccounts,
+				forecast.filter((a) => !DEMO_FORECAST_ACCOUNTS.includes(a))
 			);
 		}
 

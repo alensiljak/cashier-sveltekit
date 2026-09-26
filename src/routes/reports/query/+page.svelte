@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Toolbar from "$lib/components/Toolbar.svelte";
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
+	import { formatCellValue as formatCell } from '$lib/utils/queryValueFormatter';
 
 	let bql = $state('SELECT account, sum(number) as balance, currency ORDER BY account');
 
@@ -10,19 +11,6 @@
 	let errors: QueryError[] = $state([]);
 
 	let isRunning = $state(false);
-
-	function formatCell(value: any): string {
-		if (value == null) return '';
-		if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-			return String(value);
-		}
-		// Structured objects (e.g. positions from sum(position))
-		try {
-			return JSON.stringify(value, null, 1);
-		} catch {
-			return String(value);
-		}
-	}
 
 	async function runQuery() {
 		isRunning = true;
