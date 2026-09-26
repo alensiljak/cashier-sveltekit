@@ -42,7 +42,7 @@
 		onkeydown={hasMultiple && loaded ? (e) => e.key === 'Enter' && toggle(e) : undefined}
 	>
 		{#if loaded}
-			{formatAmount(primaryQuantity)}&nbsp;{primaryCurrency}{#if hasMultiple}<span class="text-base-content/40"> …</span>{/if}
+			{formatAmount(primaryQuantity)}&nbsp;<span class="font-mono">{primaryCurrency}</span>{#if hasMultiple}<span class="text-base-content/40"> …</span>{/if}
 		{:else}
 			···
 		{/if}
@@ -51,7 +51,7 @@
 	{#if expanded && loaded}
 		{#each extraBalances as [currency, amount]}
 			<data class={`text-right ${getAmountColour(amount)}`}>
-				{formatAmount(amount)}&nbsp;{currency}
+				{formatAmount(amount)}&nbsp;<span class="font-mono">{currency}</span>
 			</data>
 		{/each}
 	{/if}

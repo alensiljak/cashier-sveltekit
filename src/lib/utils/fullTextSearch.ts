@@ -116,6 +116,9 @@ export function parseSearchTerms(searchTerm: string): SearchTerm[] {
  * plain substring). A term matches a line when the line's text contains it,
  * or — for "any"-scoped terms — when the file's path contains it instead;
  * "path"-scoped terms (`file:`/`path:` prefix) only ever match the path.
+ * When every term is path-scoped there is nothing to look for inside the files,
+ * so each matching file yields a single result (its first line) instead of one
+ * per line.
  * Stops once `limit` matches have been collected so a broad query on a large
  * book stays fast.
  */
@@ -134,6 +137,13 @@ export function searchInFiles(
 		// A path-scoped term that doesn't match this file's name rules out
 		// every line in it — skip the file without scanning its lines.
 		if (terms.some((term, i) => term.scope === 'path' && !pathMatches[i])) continue;
+
+		// Path-only query: the file itself is the result, not each of its lines.
+		if (terms.every((term) => term.scope === 'path')) {
+			results.push({ path: file.path, line: 1, col: 1, text: file.lines[0] ?? '' });
+			if (results.length >= limit) break;
+			continue;
+		}
 
 		for (let i = 0; i < file.lines.length; i++) {
 			const line = file.lines[i];

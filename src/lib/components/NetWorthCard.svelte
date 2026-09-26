@@ -171,7 +171,7 @@
 					<div class="mb-1 flex items-baseline justify-between px-1">
 						<span class="text-xs text-base-content/50">Current</span>
 						<span class="font-mono text-sm tabular-nums font-semibold">
-							{formatAmount(latestNetWorth)}
+							{formatAmount(latestNetWorth, 2)}
 							<span class="text-xs text-base-content/50 ml-1">{baseCurrency}</span>
 						</span>
 					</div>
@@ -186,7 +186,7 @@
 							class:text-success={change >= 0}
 							class:text-error={change < 0}
 						>
-							{change >= 0 ? '+' : ''}{formatAmount(change)}
+							{change >= 0 ? '+' : ''}{formatAmount(change, 2)}
 							<span class="text-base-content/40 ml-1">over period</span>
 						</span>
 					</div>

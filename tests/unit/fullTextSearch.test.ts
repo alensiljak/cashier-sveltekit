@@ -79,7 +79,7 @@ describe('searchInFiles', () => {
 			parseSearchTerms('file:2026')
 		);
 
-		expect(matches.map((m) => m.path)).toEqual(['books/2026.bean', 'books/2026.bean']);
+		expect(matches.map((m) => m.path)).toEqual(['books/2026.bean']);
 	});
 
 	it('combines a path term with a line term', () => {
@@ -94,8 +94,21 @@ describe('searchInFiles', () => {
 		expect(searchInFiles(many, parseSearchTerms('match'), 5)).toHaveLength(5);
 	});
 
-	// TODO: a path-only query (all terms file:/path:) matches every line of matching files,
-	// hitting the limit quickly on big files. Confirm that's the wanted behaviour.
+	it('returns one result per file for a path-only query, not one per line', () => {
+		const matches = searchInFiles(files, parseSearchTerms('file:books'));
+
+		expect(matches).toEqual([
+			{ path: 'books/2025.bean', line: 1, col: 1, text: '2025-08-10 * "Shop"' },
+			{ path: 'books/2026.bean', line: 1, col: 1, text: '2026-01-02 * "Landlord"' }
+		]);
+	});
+
+	it('returns an empty first line for an empty file, and respects the limit', () => {
+		expect(searchInFiles([file('empty.bean', '')], parseSearchTerms('file:empty'))).toEqual([
+			{ path: 'empty.bean', line: 1, col: 1, text: '' }
+		]);
+		expect(searchInFiles(files, parseSearchTerms('file:books'), 1)).toHaveLength(1);
+	});
 });
 
 describe('loadSearchableFiles', () => {

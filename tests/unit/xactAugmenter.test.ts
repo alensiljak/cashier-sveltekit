@@ -114,8 +114,41 @@ describe('calculateEmptyPostingAmounts', () => {
 		expect(XactAugmenter.calculateEmptyPostingAmounts(xacts)).toBe(xacts);
 	});
 
-	// TODO: a posting with an explicit amount of 0 is treated as "empty" (`!posting.amount`),
-	// so `Expenses:Gift 0 EUR` next to a real posting gets overwritten. Decide if that's intended.
+	it('does not treat an explicit 0 amount as empty', () => {
+		const xact = makeXact({
+			postings: [
+				{ account: 'Expenses:Gift', amount: 0, currency: 'EUR' },
+				{ account: 'Expenses:Food', amount: 10, currency: 'EUR' },
+				{ account: 'Assets:Cash' }
+			]
+		});
+
+		XactAugmenter.calculateEmptyPostingAmounts([xact]);
+
+		expect(xact.postings.map((p) => p.amount)).toEqual([0, 10, -10]);
+	});
+
+	it('leaves a transaction alone when its only amounts are explicit zeros', () => {
+		const xact = makeXact({
+			postings: [
+				{ account: 'Expenses:Gift', amount: 0, currency: 'EUR' },
+				{ account: 'Assets:Cash', amount: 0, currency: 'EUR' }
+			]
+		});
+
+		XactAugmenter.calculateEmptyPostingAmounts([xact]);
+
+		expect(xact.postings.map((p) => p.amount)).toEqual([0, 0]);
+	});
+
+	it('gives a lone amount-less posting a zero amount rather than NaN', () => {
+		const xact = makeXact({ postings: [{ account: 'Assets:Cash', currency: 'EUR' }] });
+
+		XactAugmenter.calculateEmptyPostingAmounts([xact]);
+
+		expect(xact.postings[0].amount).toBeCloseTo(0);
+		expect(Number.isNaN(xact.postings[0].amount)).toBe(false);
+	});
 });
 
 describe('calculateXactAmount', () => {

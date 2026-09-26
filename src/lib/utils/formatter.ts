@@ -60,7 +60,8 @@ export function getDateColour(dateString: string): string | undefined {
 		// red
 		return 'text-secondary-400';
 	}
-	if (date === today) {
+	// Compare by value: two Date objects are never `===`.
+	if (date.getTime() === today.getTime()) {
 		// yellow
 		return 'text-neutral';
 	}
@@ -82,28 +83,22 @@ export function getReadableDate(dateString: string, format = 'MMM DD'): string {
 
 /**
  * One place to control the number formatting.
+ * Always shows at least 2 decimals, so amounts line up in columns ("1,234.00"),
+ * and up to `maxDecimals` (default 4) so quantities like 12.3456 are not rounded.
+ * Compact views such as the home cards pass 2.
  * @param amount amount to format
+ * @param maxDecimals most fraction digits to show; at least 2
  * @returns string, the number formatted to the app-wide standard.
  */
-export function formatAmount(amount: number): string {
+export function formatAmount(amount: number, maxDecimals = 4): string {
 	if (amount === null || amount === undefined) {
 		return '';
 	}
 
-	// Check if it's a whole number
-	if (amount % 1 === 0) {
-		return amount.toLocaleString('en-UK', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-	}
-
-	// const amountStr = String(amount);
-	// const decimalPlaces = amountStr.split('.')[1]?.length || 0;
-
-	const numberOptions = {
-		minimumFractionDigits: 2
-		// maximumFractionDigits: Math.max(2, decimalPlaces)
-	};
-
-	return amount.toLocaleString('en-UK', numberOptions);
+	return amount.toLocaleString('en-GB', {
+		minimumFractionDigits: 2,
+		maximumFractionDigits: Math.max(2, maxDecimals)
+	});
 }
 
 /**

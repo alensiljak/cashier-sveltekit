@@ -47,15 +47,11 @@ export class XactAugmenter {
 			if (amounts.length <= 0) return;
 
 			// add all the existing amounts
-			const sum = amounts.reduce((prev, curr) => {
-				if (!prev) prev = 0;
-				if (!curr) curr = 0;
+			const sum = amounts.reduce((prev: number, curr) => prev + (curr ?? 0), 0);
 
-				return prev + curr;
-			});
-
-			// put this value into the empty posting.
-			const emptyPostings = postings.filter((posting) => !posting.amount);
+			// put this value into the empty posting. Only a missing amount counts as empty:
+			// an explicit 0 is a real (zero) amount, as in xactToBeancountText.
+			const emptyPostings = postings.filter((posting) => posting.amount == null);
 			if (emptyPostings.length > 1) {
 				const msg = `Multiple empty postings found on ${tx.payee}`;
 				//throw new Error(msg)

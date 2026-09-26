@@ -143,9 +143,9 @@
 			<div class="container text-base">
 				{#each xacts as xact, index (index)}
 					<div class="border-base-content/15 flow-root border-b py-1">
-						<div class={`float-right ml-2 shrink-0 text-right ${getXactColour(index)}`}>
-							{formatAmount(xactBalances[index].quantity)}
-							{xactBalances[index].currency}
+						<div class={`float-right ml-2 shrink-0 text-right tabular-nums ${getXactColour(index)}`}>
+							{formatAmount(xactBalances[index].quantity, 2)}
+							<span class="font-mono">{xactBalances[index].currency}</span>
 						</div>
 						<div class="pl-6" style="text-indent: -1.5rem">
 							<time class="opacity-60">

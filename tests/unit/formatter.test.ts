@@ -91,15 +91,24 @@ describe('getColourForGainLoss', () => {
 
 describe('formatAmount', () => {
 	it.each([
-		[0, '0'],
-		[1234, '1,234'],
-		[-1234, '-1,234'],
+		[0, '0.00'],
+		[1234, '1,234.00'],
+		[-1234, '-1,234.00'],
 		[1234.5, '1,234.50'],
 		[-5.5, '-5.50'],
 		[0.5, '0.50'],
-		[12.345, '12.345']
+		[12.345, '12.345'],
+		[12.3456, '12.3456'],
+		[1.234567, '1.2346']
 	])('%s -> %s', (amount, expected) => {
 		expect(formatAmount(amount)).toBe(expected);
+	});
+
+	it('caps the decimals at maxDecimals, never below 2', () => {
+		expect(formatAmount(1234.5678, 2)).toBe('1,234.57');
+		expect(formatAmount(1234, 2)).toBe('1,234.00');
+		expect(formatAmount(1.23456, 1)).toBe('1.23');
+		expect(formatAmount(1.23456, 3)).toBe('1.235');
 	});
 
 	it('returns an empty string for null/undefined', () => {
@@ -107,9 +116,8 @@ describe('formatAmount', () => {
 		expect(formatAmount(undefined as unknown as number)).toBe('');
 	});
 
-	// TODO: whole numbers drop their decimals ("1,234") while fractional ones show 2-3
-	// ("1,234.50", "12.345"), so a column of amounts has inconsistent precision. Decide the
-	// intended rule (fixed 2? currency-aware?) and pin it here.
+	// TODO: ideally every number in one context (a report column) would share the same
+	// number of decimals; that needs the caller to know the whole set, so it isn't done here.
 });
 
 describe('getReadableDate', () => {
