@@ -6,7 +6,7 @@
  * shopping: Expenses:Groceries / Assets:Bank:Checking), saves it, then
  * verifies it shows up in the device journal.
  */
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 
 test('creating a transaction shows it in the journal', async ({ page }) => {
 	await page.goto('/onboarding');
