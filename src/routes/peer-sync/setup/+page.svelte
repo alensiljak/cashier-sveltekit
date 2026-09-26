@@ -155,8 +155,7 @@
 				<div>
 					<p class="text-sm font-semibold">Reload ledger after sync</p>
 					<p class="text-xs opacity-60">
-						Reload the ledger automatically after synchronizing ledger files. Settings and scheduled
-						transactions never need a reload.
+						Reload the ledger automatically after synchronizing journal transactions.
 					</p>
 				</div>
 				<input

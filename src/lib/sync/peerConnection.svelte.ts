@@ -18,7 +18,7 @@
 	singleton instead of owning their own `PeerPresence`, so switching pages
 	never drops the room or re-triggers the `hello` handshake.
 */
-import { settings } from '$lib/settings';
+import { settings, deviceSettings, DeviceSettingKeys } from '$lib/settings';
 import db from '$lib/data/db';
 import { PeerPresence, type RelayStrategy } from './peerPresence.svelte';
 import { PeerProtocol } from './PeerSource';
@@ -162,9 +162,7 @@ class PeerConnection {
 				const store = await getCrdtStore();
 				if (!store || !this.presence.peersMap[fromId]?.isTrusted) return new Uint8Array(0);
 				const diff = await store.mergeAndDiff(remoteState);
-				// The merge may have added records the loaded ledger doesn't know yet.
-				const { reloadLedgerFromOpfs } = await import('$lib/services/ledgerReload');
-				void reloadLedgerFromOpfs();
+				void this.reloadAfterMerge();
 				return diff;
 			}
 		);
@@ -176,8 +174,7 @@ class PeerConnection {
 			const store = await getCrdtStore();
 			if (!store || !this.presence.peersMap[fromId]?.isTrusted) return;
 			await store.importState(update);
-			const { reloadLedgerFromOpfs } = await import('$lib/services/ledgerReload');
-			void reloadLedgerFromOpfs();
+			void this.reloadAfterMerge();
 		};
 		void this.startLiveSync();
 
@@ -191,6 +188,26 @@ class PeerConnection {
 		};
 
 		this.protocol = new PeerProtocol(this.presence, new OpfsSource());
+	}
+
+	/**
+	 * A merge may have added records the loaded ledgers don't know yet. Reloads
+	 * both the worker ledger and the device-journal ledger (whose version store
+	 * drives the Journal page and Journal card), unless auto-reload is off.
+	 */
+	private async reloadAfterMerge(): Promise<void> {
+		try {
+			const autoReload =
+				(await deviceSettings.get<boolean>(DeviceSettingKeys.peerAutoReload)) ?? true;
+			if (!autoReload) return;
+			const [{ reloadLedgerFromOpfs }, { default: ledgerService }] = await Promise.all([
+				import('$lib/services/ledgerReload'),
+				import('$lib/services/ledgerService')
+			]);
+			await Promise.all([reloadLedgerFromOpfs(), ledgerService.invalidate()]);
+		} catch (e) {
+			console.error('Reload after peer merge failed', e);
+		}
 	}
 
 	/** Broadcasts local (non-remote) CRDT updates to online trusted peers while connected. */
