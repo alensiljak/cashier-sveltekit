@@ -18,31 +18,21 @@
 	import { HomeCardNames } from '$lib/enums';
 	import appService from '$lib/services/appService';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
-	import { checkOpfsStale, recheckOpfsStale } from '$lib/services/opfsMetaCheck';
+	import { recheckOpfsStale } from '$lib/services/opfsMetaCheck';
 	import { reloadLedgerFromOpfs } from '$lib/services/ledgerReload';
+	import LedgerStatusIndicator from '$lib/components/LedgerStatusIndicator.svelte';
 	import HelpButton from '$lib/help/HelpButton.svelte';
 
 	let cards: Array<Component> = $state([]);
 	let hasErrors = $state(false);
+	let isValidated = $state(false);
 	let isStale = $state(false);
-	let isChecking = $state(false);
 	let showStaleDialog = $state(false);
 	let isReloading = $state(false);
 
 	onMount(async () => {
 		// display the cards ordered.
 		await loadCardList();
-		// background staleness check — does not block render.
-		// checkOpfsStale() caches per session, so only the first mount actually runs I/O.
-		const p = checkOpfsStale();
-		// Show spinner only if the promise hasn't resolved yet.
-		let settled = false;
-		p.then((stale) => {
-			isStale = stale;
-			settled = true;
-			isChecking = false;
-		});
-		if (!settled) isChecking = true;
 	});
 
 	async function loadCardList() {
@@ -85,10 +75,14 @@
 	// When the ledger becomes loaded, check for validation errors.
 	$effect(() => {
 		const unsubscribe = fullLedgerService.loaded.subscribe(async (isLoaded) => {
-			if (!isLoaded) return;
+			if (!isLoaded) {
+				isValidated = false;
+				return;
+			}
 			try {
 				const allErrors = (await fullLedgerService.getErrors()) as Array<{ severity: string }>;
 				hasErrors = allErrors.some((e) => e.severity === 'error');
+				isValidated = true;
 			} catch {
 				// Ledger not ready yet; ignore.
 			}
@@ -106,11 +100,9 @@
 	}
 
 	async function handleManualCheck() {
-		isChecking = true;
 		isStale = false;
 		recheckOpfsStale().then((stale) => {
 			isStale = stale;
-			isChecking = false;
 		});
 	}
 
@@ -129,9 +121,7 @@
 <main class="flex h-screen flex-col">
 	<Toolbar>
 		{#snippet actions()}
-			{#if isChecking}
-				<span class="loading loading-spinner loading-xs opacity-50 mr-1"></span>
-			{/if}
+			<LedgerStatusIndicator validated={isValidated} {hasErrors} />
 			{#if isStale}
 				<button
 					class="btn btn-ghost btn-circle hover-transparent"
@@ -155,6 +145,7 @@
 		{#snippet menuItems()}
 			<ToolbarMenuItem text="Home Settings" Icon={SettingsIcon} targetNav="/home-settings" />
 			<ToolbarMenuItem text="Check files" Icon={ScanSearchIcon} onclick={handleManualCheck} />
+			<ToolbarMenuItem text="Reload ledger" Icon={RefreshCwIcon} onclick={handleReload} />
 		{/snippet}
 	</Toolbar>
 

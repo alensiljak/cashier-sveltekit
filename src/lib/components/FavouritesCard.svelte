@@ -46,7 +46,6 @@
 	});
 
 	const lsVersion = fullLedgerService.version;
-	let isLoading = $state(false);
 
 	$effect(() => {
 		const _v = $lsVersion;
@@ -113,7 +112,6 @@
 	async function loadData() {
 		if (get(fullLedgerService.isReloading)) return;
 
-		isLoading = true;
 		try {
 			const favNames: string[] = (await settings.get<string[]>(SettingKeys.favouriteAccounts)) ?? [];
 			if (favNames.length === 0) {
@@ -162,8 +160,6 @@
 		} catch (error: any) {
 			console.error(error);
 			Notifier.error(error.message);
-		} finally {
-			isLoading = false;
 		}
 	}
 
@@ -205,7 +201,6 @@
 
 	{#snippet title()}
 		Favourites
-		{#if isLoading}<span class="loading loading-spinner loading-xs ml-2 opacity-70"></span>{/if}
 	{/snippet}
 	{#snippet content()}
 		{#if accounts.length === 0}

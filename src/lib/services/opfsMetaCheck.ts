@@ -3,9 +3,6 @@ import { deviceSettings, DeviceSettingKeys } from '$lib/settings';
 
 type MetaMap = Record<string, string>;
 
-// Cached per session — module state persists across SPA navigations.
-let sessionCheck: Promise<boolean> | null = null;
-
 function metaEntry(size: number, lastModified: number): string {
 	return `${size}|${lastModified}`;
 }
@@ -30,21 +27,12 @@ async function runCheck(): Promise<boolean> {
 
 /**
  * Checks whether any .bean file in OPFS differs from the stored metadata snapshot.
- * Runs at most once per app session; subsequent calls return the cached result.
- */
-export function checkOpfsStale(): Promise<boolean> {
-	if (!sessionCheck) {
-		sessionCheck = runCheck();
-	}
-	return sessionCheck;
-}
-
-/**
- * Forces a fresh check regardless of the session cache. Useful for manual re-checks.
+ * Run on demand ("Check files" menu item). Not run at startup: the ledger load already
+ * compares source file timestamps to the binary cache, so this only matters for changes
+ * made while the app is open.
  */
 export function recheckOpfsStale(): Promise<boolean> {
-	sessionCheck = runCheck();
-	return sessionCheck;
+	return runCheck();
 }
 
 /**
@@ -61,5 +49,4 @@ export async function saveOpfsMetaSnapshot(): Promise<void> {
 	}
 
 	await deviceSettings.set(DeviceSettingKeys.ledgerMetaSnapshot, map);
-	sessionCheck = Promise.resolve(false);
 }

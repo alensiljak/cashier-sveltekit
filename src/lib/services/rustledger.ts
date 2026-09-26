@@ -36,7 +36,7 @@ async function initWasm(): Promise<void> {
 
 			// Store the module (contains ParsedLedger class and other exports)
 			wasmModule = rustledger;
-			console.log('RustLedger WASM module loaded and initialized successfully');
+			// console.log('RustLedger WASM module loaded and initialized successfully');
 		} catch (error) {
 			initPromise = null;
 			console.error('Failed to load RustLedger WASM module:', error);
