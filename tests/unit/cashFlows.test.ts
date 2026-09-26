@@ -9,6 +9,7 @@ import {
 } from '$lib/portfolioReturns/cashFlows';
 import type { InvestmentGroup } from '$lib/portfolioReturns/investmentGroups';
 import { describe, expect, it } from 'vitest';
+import { mockQueryFn, type QueryResult } from '../helpers/queryMock';
 
 function group(name: string, symbols: string[], accountNames: string[]): InvestmentGroup {
 	return { name, symbols, accounts: accountNames.map((n) => new Account(n)) };
@@ -16,21 +17,6 @@ function group(name: string, symbols: string[], accountNames: string[]): Investm
 
 const VTI = group('Allocation:Equity:US', ['VTI'], ['Assets:Investments:Broker:VTI']);
 const BND = group('Allocation:Bonds', ['BND'], ['Assets:Investments:Broker:BND']);
-
-interface QueryResult {
-	columns: string[];
-	rows: unknown[][];
-	errors: unknown[];
-}
-
-/** Builds a mock QueryFn from a list of { match, result } rules, tried in order. */
-function mockQueryFn(rules: { match: (bql: string) => boolean; result: QueryResult }[]): QueryFn {
-	return async (bql: string) => {
-		const rule = rules.find((r) => r.match(bql));
-		if (!rule) throw new Error(`Unmatched BQL in test: ${bql}`);
-		return rule.result;
-	};
-}
 
 const noAccountValues: QueryResult = { columns: ['account', 'value'], rows: [], errors: [] };
 const noIds: QueryResult = { columns: ['id', 'account'], rows: [], errors: [] };

@@ -30,3 +30,4 @@ vite.config.*.timestamp-*
 
 # SSL keys
 /**/localhost*.pem
+coverage

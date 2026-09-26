@@ -6,18 +6,9 @@ import {
 	pickBestMatch,
 	refineFromMatches
 } from '$lib/utils/nlpEntry';
-import { Xact, Posting } from '$lib/data/model';
+import { makeXact as buildXact } from '../helpers/factories';
 
-function makeXact(payee: string, accounts: string[]): Xact {
-	const xact = new Xact();
-	xact.payee = payee;
-	xact.postings = accounts.map((account) => {
-		const p = new Posting();
-		p.account = account;
-		return p;
-	});
-	return xact;
-}
+const makeXact = (payee: string, accounts: string[]) => buildXact({ payee, postings: accounts });
 
 test('currency word is not picked as payee', () => {
 	const result = parseTranscript('50 euro at billa');

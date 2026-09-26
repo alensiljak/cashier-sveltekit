@@ -16,6 +16,13 @@ export default defineConfig({
 		environment: 'jsdom',
 		setupFiles: ['./tests/setup.ts'],
 		include: ['tests/**/*.test.ts'],
-		exclude: ['tests/e2e/**']
+		exclude: ['tests/e2e/**'],
+		coverage: {
+			provider: 'v8',
+			include: ['src/lib/**/*.{ts,svelte}'],
+			// Generated/vendored or data-only files that would just dilute the numbers.
+			exclude: ['src/lib/demo/fixtures/**', 'src/lib/help/**', '**/*.d.ts'],
+			reporter: ['text-summary', 'html']
+		}
 	}
 });

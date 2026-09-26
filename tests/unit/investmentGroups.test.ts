@@ -1,5 +1,6 @@
 import { AssetClass } from '$lib/assetAllocation/AssetClass';
-import { Account, Money } from '$lib/data/model';
+import { Account } from '$lib/data/model';
+import { makeAccount } from '../helpers/factories';
 import { deriveInvestmentGroups } from '$lib/portfolioReturns/investmentGroups';
 import { describe, expect, it } from 'vitest';
 
@@ -10,14 +11,7 @@ function assetClass(fullname: string, symbols: string[]): AssetClass {
 	return ac;
 }
 
-function account(name: string, currency: string): Account {
-	const acct = new Account(name);
-	const balance = new Money();
-	balance.currency = currency;
-	balance.quantity = 100;
-	acct.balance = balance;
-	return acct;
-}
+const account = (name: string, currency: string) => makeAccount(name, { quantity: 100, currency });
 
 describe('deriveInvestmentGroups', () => {
 	it('groups accounts by the leaf asset class holding their commodity', () => {

@@ -12,16 +12,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { get } from 'svelte/store';
 import PostingEditor from '$lib/components/PostingEditor.svelte';
 import { xact, postingEditorIndex } from '$lib/data/mainStore';
-import { Posting, Xact } from '$lib/data/model';
+import type { Posting, Xact } from '$lib/data/model';
+import { makeXact as buildXact } from '../helpers/factories';
 
 const { gotoMock } = vi.hoisted(() => ({ gotoMock: vi.fn() }));
 vi.mock('$app/navigation', () => ({ goto: gotoMock }));
 
-function makeXact(postings: Array<Partial<Posting>>): Xact {
-	const tx = new Xact();
-	tx.postings = postings.map((overrides) => Object.assign(new Posting(), overrides));
-	return tx;
-}
+const makeXact = (postings: Array<Partial<Posting>>): Xact => buildXact({ postings });
 
 beforeEach(() => {
 	gotoMock.mockClear();
