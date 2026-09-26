@@ -88,22 +88,22 @@
 			</span>
 		</div>
 	</td>
-	<td class="text-end{allocHidden}">
+	<td class="text-end tabular-nums{allocHidden}">
 		{numeral(assetClass.allocation).format(NUMBER_FORMAT)}
 	</td>
-	<td class="text-end{allocHidden}">
+	<td class="text-end tabular-nums{allocHidden}">
 		{numeral(assetClass.currentAllocation).format(NUMBER_FORMAT)}
 	</td>
-	<td class="text-end{allocHidden} {getOffsetColor(assetClass.diffPerc)}">
+	<td class="text-end tabular-nums{allocHidden} {getOffsetColor(assetClass.diffPerc)}">
 		{numeral(assetClass.diffPerc).format(NUMBER_FORMAT)}
 	</td>
-	<td class="text-end{valueHidden}">
+	<td class="text-end tabular-nums{valueHidden}">
 		{numeral(assetClass.allocatedValue).format(NUMBER_FORMAT)}
 	</td>
-	<td class="text-end{valueHidden}">
+	<td class="text-end tabular-nums{valueHidden}">
 		{numeral(assetClass.currentValue).format(NUMBER_FORMAT)}
 	</td>
-	<td class="pr-1 text-end{valueHidden} {getOffsetColor(assetClass.diffPerc)}">
+	<td class="pr-1 text-end tabular-nums{valueHidden}{getOffsetColor(assetClass.diffPerc)}">
 		{numeral(assetClass.diffAmount).format(NUMBER_FORMAT)}
 	</td>
 </tr>
