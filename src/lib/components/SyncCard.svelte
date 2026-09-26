@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { RefreshCwIcon, UsersIcon } from '@lucide/svelte';
 	import CashierCardTemplate from './CashierCardTemplate.svelte';
@@ -13,6 +13,32 @@
 	let syncing = $state(false);
 
 	let trustedPeers = $derived(presence.activePeerList.filter((p) => p.isTrusted));
+
+	/** Per-peer comparison of Local Transactions, done as soon as a trusted peer appears. */
+	type DiffState = 'checking' | 'same' | 'differs' | 'unknown';
+	let diffs = $state<Record<string, DiffState>>({});
+
+	async function checkPeer(id: string) {
+		diffs[id] = 'checking';
+		try {
+			const [local, remote] = await Promise.all([
+				peerConnection.getLocalYdocHash(),
+				peerConnection.fetchRemoteYdocHash(id)
+			]);
+			diffs[id] =
+				local === null || remote === null ? 'unknown' : local === remote ? 'same' : 'differs';
+		} catch {
+			diffs[id] = 'unknown';
+		}
+	}
+
+	$effect(() => {
+		const ids = trustedPeers.map((p) => p.trysteroId);
+		untrack(() => {
+			for (const id of ids) if (!(id in diffs)) void checkPeer(id);
+			for (const id of Object.keys(diffs)) if (!ids.includes(id)) delete diffs[id];
+		});
+	});
 
 	onMount(() => peerConnection.ensureInit());
 
@@ -45,6 +71,7 @@
 			for (const peer of trustedPeers) {
 				changed = (await peerConnection.syncYdoc(peer.trysteroId)) || changed;
 			}
+			await Promise.all(trustedPeers.map((p) => checkPeer(p.trysteroId)));
 			if (changed) await reloadLedgerFromOpfs();
 			Notifier.success(changed ? 'Synced — new transactions received' : 'Already in sync');
 		} catch (e) {
@@ -62,49 +89,60 @@
 	{#snippet title()}
 		Sync
 	{/snippet}
-	{#snippet menu()}
-		<!-- svelte-ignore a11y_click_events_have_key_events -->
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<span onclick={(e) => e.stopPropagation()}>
-			{#if connecting}
-				<span class="loading loading-spinner loading-sm"></span>
-			{:else}
-				<input
-					type="checkbox"
-					class="toggle toggle-success bg-transparent bg-none"
-					checked={presence.isInRoom}
-					aria-label={presence.isInRoom ? 'Disconnect peer sync' : 'Connect peer sync'}
-					onchange={toggleConnection}
-				/>
-			{/if}
-		</span>
-	{/snippet}
 	{#snippet content()}
-		{#if !presence.isInRoom}
-			<p class="text-sm opacity-60">Peer sync is off.</p>
-		{:else if presence.activePeerList.length === 0}
-			<p class="text-sm opacity-60">Looking for other devices…</p>
-		{:else}
-			<ul class="space-y-1 text-base">
-				{#each presence.activePeerList as peer (peer.trysteroId)}
-					<li class="flex items-center gap-2">
-						<span class="grow truncate">{peer.name}</span>
-						{#if peer.isTrusted}
-							<span class="badge badge-success badge-sm">Trusted</span>
-						{:else}
-							<span class="badge badge-ghost badge-sm">Not paired</span>
-						{/if}
-					</li>
-				{/each}
-			</ul>
-		{/if}
+		<div class="flex items-start gap-3">
+			<!-- svelte-ignore a11y_click_events_have_key_events -->
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<span class="shrink-0" onclick={(e) => e.stopPropagation()}>
+				{#if connecting}
+					<span class="loading loading-spinner loading-sm"></span>
+				{:else}
+					<input
+						type="checkbox"
+						class="toggle toggle-success bg-transparent bg-none"
+						checked={presence.isInRoom}
+						aria-label={presence.isInRoom ? 'Disconnect peer sync' : 'Connect peer sync'}
+						onchange={toggleConnection}
+					/>
+				{/if}
+			</span>
+			<div class="grow min-w-0">
+				{#if !presence.isInRoom}
+					<p class="text-sm opacity-60">Peer sync is off.</p>
+				{:else if presence.activePeerList.length === 0}
+					<p class="text-sm opacity-60">Looking for other devices…</p>
+				{:else}
+					<ul class="space-y-1 text-base">
+						{#each presence.activePeerList as peer (peer.trysteroId)}
+							<li class="flex items-center gap-2">
+								<span class="grow truncate">{peer.name}</span>
+								{#if !peer.isTrusted}
+									<span class="badge badge-ghost badge-sm">Not paired</span>
+								{:else if diffs[peer.trysteroId] === 'checking'}
+									<span class="loading loading-spinner loading-xs"></span>
+								{:else if diffs[peer.trysteroId] === 'same'}
+									<span class="badge badge-success badge-sm">In sync</span>
+								{:else if diffs[peer.trysteroId] === 'differs'}
+									<span class="badge badge-warning badge-sm">Changes</span>
+								{:else}
+									<span class="badge badge-success badge-sm">Trusted</span>
+								{/if}
+							</li>
+						{/each}
+					</ul>
+				{/if}
+			</div>
+		</div>
 	{/snippet}
 	{#snippet footer()}
 		<center>
 			<button
 				type="button"
 				class="btn btn-outline btn-warning uppercase"
-				disabled={syncing || !presence.isInRoom || trustedPeers.length === 0}
+				disabled={syncing ||
+					!presence.isInRoom ||
+					trustedPeers.length === 0 ||
+					trustedPeers.every((p) => diffs[p.trysteroId] === 'same')}
 				onclick={(e) => {
 					e.stopPropagation();
 					onSync();
