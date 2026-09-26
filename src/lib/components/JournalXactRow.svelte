@@ -30,7 +30,7 @@
 		{#if xact.flag === '!'} <WarningTriangleIcon class="size-4 inline-block align-text-bottom" />{/if}
 		{xact.payee || xact.note}{#if xact.payee && xact.note}
 		<span class="opacity-50">· {xact.note}</span>{/if}
-		{#if badge} <span class="badge badge-xs ml-3 border-0 bg-base-content/45 h-3 px-1 text-[0.5625rem] leading-none font-bold text-black align-middle whitespace-nowrap" style="text-indent: 0" title={badgeTitle}>{badge}</span>{/if}</div>
+		{#if badge} <span class="badge badge-xs ml-3 border-0 bg-base-content/45 h-3.5 px-1.5 text-[0.625rem] leading-none font-bold text-black align-middle whitespace-nowrap" style="text-indent: 0" title={badgeTitle}>{badge}</span>{/if}</div>
 
 	<!-- postings -->
 	{#if xact.postings}
