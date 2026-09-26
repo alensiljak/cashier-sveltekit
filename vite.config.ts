@@ -73,8 +73,12 @@ const config: UserConfig = defineConfig({
 			workbox: {
 				globPatterns: [
 					'client/**/*.{js,css,ico,png,svg,txt,webp,webmanifest,wasm,json}',
-					'prerendered/**/*.html'
+					// Only the root shell. Every prerendered page embeds the hashed app.*.js, so
+					// precaching all of them re-downloads every page on each update. The app is
+					// ssr=false, so any route can be served by the root shell.
+					'prerendered/pages/index.html'
 				],
+				navigateFallback: '/',
 				maximumFileSizeToCacheInBytes: 10 * 1024 * 1024 // 10 MB (adjust as needed)
 			},
 			devOptions: {
