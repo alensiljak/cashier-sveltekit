@@ -191,20 +191,17 @@ class PeerConnection {
 	}
 
 	/**
-	 * A merge may have added records the loaded ledgers don't know yet. Reloads
-	 * both the worker ledger and the device-journal ledger (whose version store
-	 * drives the Journal page and Journal card), unless auto-reload is off.
+	 * A merge may have added records the loaded full ledger doesn't know yet, so
+	 * reload it, unless auto-reload is off. The device journal views don't depend
+	 * on this: they subscribe to the store itself.
 	 */
 	private async reloadAfterMerge(): Promise<void> {
 		try {
 			const autoReload =
 				(await deviceSettings.get<boolean>(DeviceSettingKeys.peerAutoReload)) ?? true;
 			if (!autoReload) return;
-			const [{ reloadLedgerFromOpfs }, { default: ledgerService }] = await Promise.all([
-				import('$lib/services/ledgerReload'),
-				import('$lib/services/ledgerService')
-			]);
-			await Promise.all([reloadLedgerFromOpfs(), ledgerService.invalidate()]);
+			const { reloadLedgerFromOpfs } = await import('$lib/services/ledgerReload');
+			await reloadLedgerFromOpfs();
 		} catch (e) {
 			console.error('Reload after peer merge failed', e);
 		}

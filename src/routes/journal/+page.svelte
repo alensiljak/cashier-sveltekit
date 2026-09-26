@@ -9,8 +9,8 @@
 	import db from '$lib/data/db';
 	import { getDeviceId } from '$lib/sync/ydocDevices';
 	import { xact, xactId } from '$lib/data/mainStore';
-	import ledgerService from '$lib/services/ledgerService';
 	import type { StoredXact, XactId } from '$lib/storage/xactStore';
+	import { getXactStore, subscribeXactStore } from '$lib/storage/xactStoreRegistry';
 	import Notifier from '$lib/utils/notifier';
 	import { FileDownIcon, ImportIcon, PlusIcon, TrashIcon } from '@lucide/svelte';
 	import HelpButton from '$lib/help/HelpButton.svelte';
@@ -21,7 +21,6 @@
 	let isDeleteAllConfirmationOpen = $state(false);
 	let listContainer = $state<HTMLElement | null>(null);
 
-	const lsVersion = ledgerService.version;
 	let storedXacts: StoredXact[] = $state([]);
 	let ownDeviceId = $state('');
 	let peerNames = $state<Record<string, string>>({});
@@ -32,23 +31,26 @@
 		return peerNames[origin] ?? `Device ${origin.slice(0, 6)}`;
 	}
 
-	$effect(() => {
-		const _v = $lsVersion;
-		ledgerService.getStoredXacts().then(async (result) => {
-			if (result.some((r) => r.origin)) {
-				ownDeviceId = await getDeviceId();
-				peerNames = Object.fromEntries((await db.peers.toArray()).map((p) => [p.id, p.name]));
-			}
-			storedXacts = result;
-			// A single tick() can fire before the browser has reflowed newly-mounted rows
-			// (e.g. wrapped account names), leaving scrollHeight stale and the last xact's
-			// postings cut off — wait an extra frame for layout to actually settle.
-			tick().then(() => {
-				requestAnimationFrame(() => {
-					if (listContainer) listContainer.scrollTop = listContainer.scrollHeight;
-				});
+	async function loadXacts() {
+		const result = await (await getXactStore()).list();
+		if (result.some((r) => r.origin)) {
+			ownDeviceId = await getDeviceId();
+			peerNames = Object.fromEntries((await db.peers.toArray()).map((p) => [p.id, p.name]));
+		}
+		storedXacts = result;
+		// A single tick() can fire before the browser has reflowed newly-mounted rows
+		// (e.g. wrapped account names), leaving scrollHeight stale and the last xact's
+		// postings cut off — wait an extra frame for layout to actually settle.
+		tick().then(() => {
+			requestAnimationFrame(() => {
+				if (listContainer) listContainer.scrollTop = listContainer.scrollHeight;
 			});
 		});
+	}
+
+	$effect(() => {
+		void loadXacts();
+		return subscribeXactStore(() => void loadXacts());
 	});
 
 	function closeModal() {
@@ -61,7 +63,7 @@
 
 	async function onDeleteAllConfirmed() {
 		closeModal();
-		await ledgerService.clearTransactions();
+		await (await getXactStore()).clear();
 		// Re-parse the full book in the background — keeps the fullLedgerService
 		// cache and the "modified" change indicator in sync (same pattern as
 		// every other cashier.bean mutation; see doc/architecture.md).

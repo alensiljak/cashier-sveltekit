@@ -2,7 +2,7 @@
     Payee Transactions
 */
 
-import ledgerService from '$lib/services/ledgerService.js';
+import { getXactStore } from '$lib/storage/xactStoreRegistry';
 import fullLedgerService from '$lib/services/ledgerWorkerClient';
 import { Xact, Posting } from '$lib/data/model';
 import type { XactId } from '$lib/storage/xactStore';
@@ -22,8 +22,7 @@ export const load: PageLoad = async ({ params }) => {
 
 	// On-device transactions. The Payees list uses COALESCE(payee, narration), so
 	// match the same way here: an empty payee falls back to the narration.
-	await ledgerService.load();
-	const storedXacts = await ledgerService.getStoredXacts();
+	const storedXacts = await (await getXactStore()).list();
 	const deviceXacts = storedXacts.filter(
 		({ xact }) => (xact.payee || xact.note || '') === payeeName
 	);

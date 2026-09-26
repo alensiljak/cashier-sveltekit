@@ -52,4 +52,10 @@ export interface XactStore {
 
 	/** Remove every transaction. */
 	clear(): Promise<void>;
+
+	/**
+	 * Calls `callback` whenever the set of transactions changes, whatever the
+	 * cause (local edit, merge from another device, clear). Returns the unsubscribe function.
+	 */
+	subscribe(callback: () => void): () => void;
 }

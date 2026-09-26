@@ -2,7 +2,13 @@
 	import { onMount } from 'svelte';
 	import Toolbar from "$lib/components/Toolbar.svelte";
 	import AccordionSection from '$lib/components/AccordionSection.svelte';
-	import ledgerService from '$lib/services/ledgerService';
+	import {
+		ensureInitialized,
+		createParsedLedger,
+		format as formatSource,
+		getAccountsFromTransactions,
+		version as getWasmVersion
+	} from '$lib/services/rustledger';
 	import type { BeancountError, DirectiveJson as Directive, ParsedLedger } from '@rustledger/wasm';
 	import { DirectiveFormatter } from '$lib/rledger/directiveFormatter';
 	import { Account } from '$lib/data/model';
@@ -82,8 +88,8 @@
 			isLoading = true;
 			error = null;
 
-			await ledgerService.ensureInitialized();
-			wasmVersion = ledgerService.getWasmVersion();
+			await ensureInitialized();
+			wasmVersion = getWasmVersion();
 			initialized = true;
 
 			// await loadInfrastructure();
@@ -112,13 +118,13 @@
 				parsedLedger = null;
 			}
 
-			parsedLedger = ledgerService.createParsedLedger(fullBeancountSource);
+			parsedLedger = createParsedLedger(fullBeancountSource);
 			if (!parsedLedger) {
 				throw new Error('Failed to create ParsedLedger — WASM module not available');
 			}
 
 			parsedDirectives = parsedLedger.getDirectives();
-			parsedAccounts = ledgerService.getAccountsFromTransactions(parsedLedger);
+			parsedAccounts = getAccountsFromTransactions(parsedLedger);
 			parsedPayees = extractPayees(parsedDirectives);
 		} catch (err) {
 			if (parsedLedger) { parsedLedger.free(); parsedLedger = null; }
@@ -178,7 +184,7 @@
 			formattedSource = '';
 			formatErrors = [];
 
-			const result = ledgerService.format(fullBeancountSource);
+			const result = formatSource(fullBeancountSource);
 			formattedSource = result.formatted ?? '';
 			formatErrors = result.errors ?? [];
 		} catch (err) {

@@ -2,7 +2,8 @@
 	import { onMount } from 'svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import AccordionSection from '$lib/components/AccordionSection.svelte';
-	import ledgerService from '$lib/services/ledgerService';
+	import { createParsedLedger, ensureInitialized } from '$lib/services/rustledger';
+	import { getXactStore } from '$lib/storage/xactStoreRegistry';
 	import JsonTreeNode from './JsonTreeNode.svelte';
 
 	let isLoading = $state(false);
@@ -19,14 +20,21 @@
 			isLoading = true;
 			error = null;
 
-			await ledgerService.invalidate();
-
-			ledgerData = {
-				isValid: ledgerService.isValid(),
-				directives: ledgerService.getDirectives(),
-				parseErrors: ledgerService.getParseErrors(),
-				validationErrors: ledgerService.getValidationErrors(),
-			};
+			// Inspect the device transactions only: parse the store's text on its own.
+			const source = await (await getXactStore()).toBeancount();
+			await ensureInitialized();
+			const ledger = createParsedLedger(source);
+			if (!ledger) throw new Error('Beancount parser is not available');
+			try {
+				ledgerData = {
+					isValid: ledger.isValid(),
+					directives: ledger.getDirectives(),
+					parseErrors: ledger.getParseErrors(),
+					validationErrors: ledger.getValidationErrors(),
+				};
+			} finally {
+				ledger.free();
+			}
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to read ledger';
 			console.error('Ledger read error:', err);

@@ -2,7 +2,9 @@ import * as Y from 'yjs';
 import { IndexeddbPersistence } from 'y-indexeddb';
 import { monotonicFactory } from 'ulid';
 import { scheduleBackup } from '$lib/services/webdavAutoBackupService';
-import { locateXactsInSource } from '$lib/utils/xactLocator';
+import type { DirectiveJson } from '@rustledger/wasm';
+import { createParsedLedger, ensureInitialized } from '$lib/services/rustledger';
+import { directiveToXact } from '$lib/utils/transactionParser';
 import { xactToBeancountText } from '$lib/utils/xactUtils';
 import { fromRecord, isNewerSchema, toRecord, type XactRecord } from './crdtXactRecord';
 import { getDeviceId } from '$lib/sync/ydocDevices';
@@ -89,9 +91,19 @@ export class CrdtXactStore implements XactStore {
 
 	/** Parse a single transaction from Beancount text. */
 	private async parse(beancountText: string) {
-		const [location] = await locateXactsInSource(beancountText);
-		if (!location) throw new Error('No transaction found in the given text');
-		return location.xact;
+		await ensureInitialized();
+		const ledger = createParsedLedger(beancountText);
+		if (!ledger) throw new Error('Beancount parser is not available');
+		try {
+			// Records aren't tied to file positions, so no span lookup is needed.
+			const directive = (ledger.getDirectives() as DirectiveJson[]).find(
+				(d) => d.type === 'transaction'
+			);
+			if (!directive) throw new Error('No transaction found in the given text');
+			return directiveToXact(directive, beancountText);
+		} finally {
+			ledger.free();
+		}
 	}
 
 	/** Records in date order; the ID breaks ties so the order is deterministic. */
@@ -197,6 +209,13 @@ export class CrdtXactStore implements XactStore {
 		const remoteVector = Y.encodeStateVectorFromUpdate(remoteState);
 		await this.importState(remoteState);
 		return Y.encodeStateAsUpdate(this.doc, remoteVector);
+	}
+
+	subscribe(callback: () => void): () => void {
+		// The map exists from construction, so this works before the database is open;
+		// the initial load from IndexedDB is reported as a change too.
+		this.records.observe(callback);
+		return () => this.records.unobserve(callback);
 	}
 
 	async clear(): Promise<void> {

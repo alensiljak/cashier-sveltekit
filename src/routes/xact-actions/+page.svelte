@@ -6,7 +6,7 @@
 	import { ScheduledXact, xact, xactId } from '$lib/data/mainStore';
 	import { Posting, ScheduledTransaction, Xact } from '$lib/data/model';
 	import appService from '$lib/services/appService';
-	import ledgerService from '$lib/services/ledgerService';
+	import { getXactStore } from '$lib/storage/xactStoreRegistry';
 	import { reloadLedgerFromOpfs } from '$lib/services/ledgerReload';
 	import { xactToBeancountText } from '$lib/utils/xactUtils';
 	import { buildHighlightParams } from '$lib/utils/unifiedXacts';
@@ -68,7 +68,7 @@
 		}
 
 		try {
-			await ledgerService.deleteTransaction(id);
+			await (await getXactStore()).remove(id);
 		} catch (e) {
 			Notifier.error(e instanceof Error ? e.message : 'Failed to delete transaction');
 			return;
@@ -93,7 +93,7 @@
 		const newXact = appService.createXactFrom($xact);
 		const defaultCurrency = await appService.getDefaultCurrency();
 		const beancountText = xactToBeancountText(newXact, defaultCurrency);
-		const location = await ledgerService.appendTransaction(beancountText);
+		const location = await (await getXactStore()).append(beancountText);
 
 		// Re-parse the full book in the background.
 		void reloadLedgerFromOpfs();

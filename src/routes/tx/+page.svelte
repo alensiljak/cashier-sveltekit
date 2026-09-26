@@ -7,7 +7,8 @@
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import { afterNavigate, goto } from '$app/navigation';
 	import Notifier from '$lib/utils/notifier';
-	import ledgerService from '$lib/services/ledgerService';
+	import { createParsedLedger, ensureInitialized } from '$lib/services/rustledger';
+	import { getXactStore } from '$lib/storage/xactStoreRegistry';
 	import appService from '$lib/services/appService';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import { reloadLedgerFromOpfs } from '$lib/services/ledgerReload';
@@ -74,7 +75,7 @@
 		const id = get(xactId);
 
 		if (id !== undefined) {
-			const stored = await ledgerService.editTransaction(id, beancountText);
+			const stored = await (await getXactStore()).update(id, beancountText);
 			refreshXact(stored);
 			// Re-parse the full book in the background.
 			void reloadLedgerFromOpfs();
@@ -86,7 +87,7 @@
 				history.back();
 			}
 		} else {
-			await ledgerService.appendTransaction(beancountText);
+			await (await getXactStore()).append(beancountText);
 			xactId.set(undefined);
 			// Re-parse the full book in the background.
 			void reloadLedgerFromOpfs();
@@ -145,10 +146,10 @@
 		const hasAnyAmount = tx.postings.some((p) => p.amount != null);
 		if (hasAnyAmount) {
 			try {
-				await ledgerService.ensureInitialized();
+				await ensureInitialized();
 				const defaultCurrency = await appService.getDefaultCurrency();
 				const beancountText = xactToBeancountText(JSON.parse(JSON.stringify(tx)), defaultCurrency);
-				const tempLedger = ledgerService.createParsedLedger(beancountText);
+				const tempLedger = createParsedLedger(beancountText);
 				if (tempLedger) {
 					try {
 						for (const err of tempLedger.getParseErrors()) {
@@ -196,11 +197,13 @@
 			{#if validationIssues.length > 0}
 				<button
 					type="button"
-					class="btn btn-ghost btn-circle hover-transparent"
+					class="btn btn-circle btn-sm border-0 shadow-none {hasValidationError
+						? 'bg-error text-warning'
+						: 'bg-warning text-warning-content'}"
 					title={hasValidationError ? 'Errors found — tap to view' : 'Warnings found — tap to view'}
 					onclick={() => validationDialog?.showModal()}
 				>
-					<TriangleAlertIcon size={20} class={hasValidationError ? 'text-error' : 'text-warning'} />
+					<TriangleAlertIcon size={18} strokeWidth={2.5} />
 				</button>
 			{/if}
 		{/snippet}
@@ -216,7 +219,10 @@
 		<Fab Icon={Check} onclick={onFab} disabled={isSaving} />
 
 		<!-- tx editor -->
-		<TransactionEditor onValidationChange={onLiveValidationChange} />
+		<TransactionEditor
+			onValidationChange={onLiveValidationChange}
+			onShowIssues={() => validationDialog?.showModal()}
+		/>
 
 		<!-- dialog for confirming reset -->
 

@@ -7,9 +7,7 @@
 	import { XactAugmenter } from '$lib/utils/xactAugmenter';
 	import Notifier from '$lib/utils/notifier';
 	import { formatAmount, getReadableDate, getXactAmountColour } from '$lib/utils/formatter';
-	import { ensureInitialized, createParsedLedger } from '$lib/services/rustledger';
-	import { getXactStore } from '$lib/storage/xactStoreRegistry';
-	import ledgerService from '$lib/services/ledgerService';
+	import { getXactStore, subscribeXactStore } from '$lib/storage/xactStoreRegistry';
 	import { homeCache } from '$lib/services/homeCache';
 	import { ShortDateFormatStore } from '$lib/data/mainStore';
 
@@ -46,12 +44,11 @@
 	let xacts: Xact[] = $state(_initial.xacts);
 	let xactBalances: Money[] = $state(_initial.amounts);
 
-	const lsVersion = ledgerService.version;
 	let isLoading = $state(false);
 
 	$effect(() => {
-		const _v = $lsVersion;
 		loadData();
+		return subscribeXactStore(loadData);
 	});
 
 	/**
@@ -73,30 +70,16 @@
 		isLoading = true;
 
 		try {
-			await ensureInitialized();
-			const source = await (await getXactStore()).toBeancount();
-			if (!source.trim()) {
+			// The store lists records in date order; take the last 5, newest first.
+			const stored = await (await getXactStore()).list();
+			const newXacts = stored
+				.slice(-5)
+				.reverse()
+				.map((s) => s.xact);
+			if (newXacts.length === 0) {
 				xacts = [];
 				xactBalances = [];
 				return;
-			}
-
-			const ledger = createParsedLedger(source);
-			if (!ledger) {
-				xacts = [];
-				xactBalances = [];
-				return;
-			}
-
-			let newXacts: Xact[];
-			try {
-				const directives: any[] = ledger.getDirectives();
-				const txDirectives = directives.filter((d) => d.type === 'transaction');
-				// Last 5, newest first
-				const last5 = txDirectives.slice(-5).reverse();
-				newXacts = last5.map(directiveToXact);
-			} finally {
-				ledger.free();
 			}
 
 			const newAmounts = XactAugmenter.calculateXactAmounts(newXacts);
@@ -127,22 +110,6 @@
 		} finally {
 			isLoading = false;
 		}
-	}
-
-	function directiveToXact(directive: any): Xact {
-		const tx = new Xact();
-		tx.date = directive.date;
-		tx.payee = directive.payee ?? '';
-		tx.note = directive.narration ?? '';
-		tx.flag = directive.flag ?? '*';
-		tx.postings = (directive.postings ?? []).map((p: any) => {
-			const posting = new Posting();
-			posting.account = p.account ?? '';
-			if (p.units?.number != null) posting.amount = parseFloat(p.units.number);
-			if (p.units?.currency) posting.currency = p.units.currency;
-			return posting;
-		});
-		return tx;
 	}
 
 	async function onClick() {

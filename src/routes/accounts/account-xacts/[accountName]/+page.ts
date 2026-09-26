@@ -3,7 +3,7 @@
 */
 
 import { Account, Money } from '$lib/data/model.js';
-import ledgerService from '$lib/services/ledgerService.js';
+import { getXactStore } from '$lib/storage/xactStoreRegistry';
 import fullLedgerService from '$lib/services/ledgerWorkerClient';
 import { mergeUnifiedRows, type UnifiedXact } from '$lib/utils/unifiedXacts';
 import type { MetaValueJson } from '@rustledger/wasm';
@@ -31,8 +31,7 @@ export const load: PageLoad = async ({ params }) => {
 	total.currency = balanceKeys[0] ?? '';
 
 	// On-device transactions
-	await ledgerService.load();
-	const storedXacts = await ledgerService.getStoredXacts();
+	const storedXacts = await (await getXactStore()).list();
 	const deviceXacts = storedXacts.filter(({ xact }) =>
 		xact.postings?.some((p) => p.account === params.accountName)
 	);

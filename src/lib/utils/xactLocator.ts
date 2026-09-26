@@ -1,9 +1,8 @@
 /*
 	Locates transaction directives by source line within an arbitrary
-	Beancount source string — the same span-mapping approach
-	`ledgerService` uses for cashier.bean, generalized to any file so
-	callers (e.g. full-text search) can resolve a matched line to the
-	exact transaction that contains it, in any .bean file.
+	Beancount source string, so callers (e.g. full-text search) can resolve
+	a matched line to the exact transaction that contains it, in any .bean
+	file.
 */
 import type { DirectiveJson } from '@rustledger/wasm';
 import { Xact } from '$lib/data/model';

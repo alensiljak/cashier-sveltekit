@@ -18,9 +18,17 @@ export class OpfsXactStore implements XactStore {
 		return (await opfslib.readFile(CASHIER_XACT_FILE)) ?? '';
 	}
 
+	private readonly listeners = new Set<() => void>();
+
 	private async write(content: string): Promise<void> {
 		await opfslib.saveFile(CASHIER_XACT_FILE, content);
 		scheduleBackup();
+		this.listeners.forEach((notify) => notify());
+	}
+
+	subscribe(callback: () => void): () => void {
+		this.listeners.add(callback);
+		return () => this.listeners.delete(callback);
 	}
 
 	/** Sort a Beancount source string by directive date, preserving raw source text. */

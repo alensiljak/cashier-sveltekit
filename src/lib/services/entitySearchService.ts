@@ -7,7 +7,7 @@
 */
 import fullLedgerService from '$lib/services/ledgerWorkerClient';
 import { STOP_WORDS } from '$lib/utils/nlpEntry';
-import ledgerService from '$lib/services/ledgerService';
+import { getXactStore } from '$lib/storage/xactStoreRegistry';
 import { Xact, Posting } from '$lib/data/model';
 import type { XactId } from '$lib/storage/xactStore';
 import type { EntityCategory, EntitySearchTerm } from '$lib/utils/entitySearch';
@@ -111,8 +111,7 @@ export async function searchTransactions(
 ): Promise<TransactionResult[]> {
 	if (conditions.length === 0) return [];
 
-	await ledgerService.load();
-	const storedXacts = await ledgerService.getStoredXacts();
+	const storedXacts = await (await getXactStore()).list();
 	const deviceRows: TransactionResult[] = storedXacts
 		.filter(({ xact }) => {
 			const haystack = [xact.payee, xact.note, ...(xact.postings ?? []).map((p) => p.account)]

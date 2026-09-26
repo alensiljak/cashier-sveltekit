@@ -20,6 +20,24 @@ export function getXactStore(): Promise<XactStore> {
 	return active;
 }
 
+/**
+ * Calls `callback` on every change to the active store's transactions.
+ * Synchronous for the caller (the store resolves in the background), so it fits
+ * a Svelte `$effect`: `$effect(() => subscribeXactStore(load))`.
+ * Returns the unsubscribe function.
+ */
+export function subscribeXactStore(callback: () => void): () => void {
+	let unsubscribe: (() => void) | undefined;
+	let cancelled = false;
+	void getXactStore().then((store) => {
+		if (!cancelled) unsubscribe = store.subscribe(callback);
+	});
+	return () => {
+		cancelled = true;
+		unsubscribe?.();
+	};
+}
+
 /** Replace the active store (e.g. in tests). */
 export function setXactStore(store: XactStore): void {
 	active = Promise.resolve(store);

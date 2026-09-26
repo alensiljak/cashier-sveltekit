@@ -33,8 +33,10 @@
 
 	type Props = {
 		onValidationChange?: (issues: ValidationIssue[]) => void;
+		/** Called when the inline issue summary is tapped, to show the full details. */
+		onShowIssues?: () => void;
 	};
-	let { onValidationChange }: Props = $props();
+	let { onValidationChange, onShowIssues }: Props = $props();
 
 	const DATE_FORMAT_DEFAULT = 'D MMM YYYY';
 	let dateFormatValue = $state(DATE_FORMAT_DEFAULT);
@@ -114,29 +116,22 @@
 		'E8002' // Plugin Execution Failed
 	]);
 
+	let liveHasError = $derived(liveIssues.some((i) => i.kind === 'error'));
+	let liveSummary = $derived(
+		liveIssues.length === 0
+			? ''
+			: liveIssues.length === 1
+				? liveIssues[0].message
+				: `${liveIssues[0].message} (+${liveIssues.length - 1} more)`
+	);
+
 	/**
-	 * Apply a freshly computed live-issue set: fire a toast on the appear/resolve
-	 * transition (matching the timing of the old inline banner), then hand the
-	 * current set to the parent, which keeps a persistent toolbar indicator for
-	 * re-opening the details later.
+	 * Apply a freshly computed live-issue set: show it inline in the flag row (no
+	 * toasts, which get in the way while typing) and hand it to the parent, which
+	 * keeps a toolbar indicator and the details dialog.
 	 */
 	function applyLiveIssues(next: ValidationIssue[]) {
-		const hadIssues = liveIssues.length > 0;
 		liveIssues = next;
-		const hasIssues = liveIssues.length > 0;
-
-		if (!hadIssues && hasIssues) {
-			const hasError = liveIssues.some((i) => i.kind === 'error');
-			const summary =
-				liveIssues.length === 1
-					? liveIssues[0].message
-					: `${liveIssues[0].message} (+${liveIssues.length - 1} more)`;
-			if (hasError) Notifier.error(summary);
-			else Notifier.warning(summary);
-		} else if (hadIssues && !hasIssues) {
-			Notifier.success('Validation issues resolved');
-		}
-
 		onValidationChange?.(liveIssues);
 	}
 
@@ -361,6 +356,19 @@
 				<span>*</span>
 			</button>
 		</div>
+		{#if liveIssues.length > 0}
+			<button
+				type="button"
+				class="flex min-w-0 flex-1 items-center gap-1 text-left text-xs {liveHasError
+					? 'text-error'
+					: 'text-warning'}"
+				title={liveSummary}
+				onclick={() => onShowIssues?.()}
+			>
+				<TriangleAlertIcon class="h-4 w-4 shrink-0" />
+				<span class="truncate">{liveSummary}</span>
+			</button>
+		{/if}
 		<button
 			type="button"
 			class="btn btn-sm btn-outline"
