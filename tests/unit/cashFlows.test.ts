@@ -4,8 +4,7 @@ import {
 	extractAllGroupFlows,
 	extractGroupFlows,
 	marketValuesForGroups,
-	transactionFlowsForGroups,
-	type QueryFn
+	transactionFlowsForGroups
 } from '$lib/portfolioReturns/cashFlows';
 import type { InvestmentGroup } from '$lib/portfolioReturns/investmentGroups';
 import { describe, expect, it } from 'vitest';

@@ -267,6 +267,14 @@ describe('buildLotsQuery', () => {
 	});
 });
 
+// TODO: the builder interpolates user text straight into '...' BQL literals (account/@payee
+// patterns, currencies, exchange), so a single quote breaks the query. Harmless (own data,
+// own device) but should be escaped or rejected; then replace this with real tests.
+describe('quoting of user input', () => {
+	it.todo('escapes or rejects a single quote in an account pattern, e.g. "Joe\'s"');
+	it.todo('escapes or rejects a single quote in an @payee filter');
+});
+
 describe('buildQuery', () => {
 	it('dispatches to the right builder per command', () => {
 		const c = common();
