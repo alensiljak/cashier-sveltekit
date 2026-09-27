@@ -287,7 +287,7 @@
 
 </script>
 
-<div class="flex h-full flex-col space-y-3 py-2">
+<div class="flex flex-col space-y-3 py-2">
 	<DateField bind:value={$xact.date} />
 	<div class="flex items-center justify-between gap-2">
 		<div class="join">
@@ -397,7 +397,7 @@
 		</span>
 	</div>
 	<!-- posting list -->
-	<div class="flex-1 overflow-y-auto">
+	<div>
 		{#each $xact?.postings as posting, index (posting)}
 			<PostingEditor
 				{index}
