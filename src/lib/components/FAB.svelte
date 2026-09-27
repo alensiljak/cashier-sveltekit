@@ -27,7 +27,7 @@
 </script>
 
 <button
-	class={`btn btn-circle btn-xl text-current! ${backgroundColor} ${textColor} border-0 fixed right-7 ${bottom} z-50 shadow-lg transition duration-200`}
+	class={`btn btn-circle btn-xl text-current! ${backgroundColor} ${textColor} border-0 fixed right-7 ${bottom} z-50 shadow-lg hover:shadow-xl focus-visible:shadow-xl active:shadow-md transition-shadow duration-200`}
 	{onclick}
 	{disabled}
 	aria-label={ariaLabel}
