@@ -36,12 +36,12 @@ Example usage:
 	<button
 		type="button"
 		role="menuitem"
-		class="flex w-full items-center gap-2 py-2 disabled:pointer-events-none disabled:opacity-40 {extraClass}"
+		class="flex min-h-12 w-full items-center gap-2 py-3 text-base disabled:pointer-events-none disabled:opacity-40 {extraClass}"
 		{disabled}
 		onclick={onMenuClicked}
 	>
 		{#if Icon}
-			<Icon size={18} class={iconClass} />
+			<Icon size={20} class={iconClass} />
 		{/if}
 		<span class="grow text-start">{text}</span>
 	</button>

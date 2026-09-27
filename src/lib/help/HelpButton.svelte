@@ -16,19 +16,24 @@
 {#if topic in helpTopics}
 	{#if variant === 'menu-item'}
 		<li>
-			<button type="button" role="menuitem" class="flex w-full items-center gap-2 py-2" onclick={() => (isOpen = true)}>
-				<CircleQuestionMarkIcon size={18} />
+			<button
+				type="button"
+				role="menuitem"
+				class="flex min-h-12 w-full items-center gap-2 py-3 text-base"
+				onclick={() => (isOpen = true)}
+			>
+				<CircleQuestionMarkIcon size={20} />
 				<span class="grow text-start">Help</span>
 			</button>
 		</li>
 	{:else}
 		<button
 			type="button"
-			class="btn btn-ghost btn-circle hover-transparent"
+			class="btn btn-ghost btn-circle hover-transparent h-12 w-12"
 			title="Help"
 			onclick={() => (isOpen = true)}
 		>
-			<CircleQuestionMarkIcon size={20} />
+			<CircleQuestionMarkIcon size={22} />
 		</button>
 	{/if}
 

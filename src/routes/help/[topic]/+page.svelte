@@ -14,11 +14,11 @@
 		{#snippet actions()}
 			<button
 				type="button"
-				class="btn btn-ghost btn-circle hover-transparent"
+				class="btn btn-ghost btn-circle hover-transparent h-12 w-12"
 				title="Back to Help index"
 				onclick={() => goto('/help')}
 			>
-				<ArrowLeftIcon size={20} />
+				<ArrowLeftIcon size={22} />
 			</button>
 		{/snippet}
 	</Toolbar>

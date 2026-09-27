@@ -124,20 +124,20 @@
 			<LedgerStatusIndicator validated={isValidated} {hasErrors} />
 			{#if isStale}
 				<button
-					class="btn btn-ghost btn-circle hover-transparent"
+					class="btn btn-ghost btn-circle hover-transparent h-12 w-12"
 					title="Ledger files have changed — tap to reload"
 					onclick={() => (showStaleDialog = true)}
 				>
-					<RefreshCwIcon size={20} class="text-warning" />
+					<RefreshCwIcon size={22} class="text-warning" />
 				</button>
 			{/if}
 			{#if hasErrors}
 				<button
-					class="btn btn-ghost btn-circle hover-transparent"
+					class="btn btn-ghost btn-circle hover-transparent h-12 w-12"
 					title="Validation errors found"
 					onclick={() => goto('/util/validation')}
 				>
-					<CircleAlert size={20} class="text-error" />
+					<CircleAlert size={22} class="text-error" />
 				</button>
 			{/if}
 			<HelpButton topic="home" />

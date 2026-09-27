@@ -106,11 +106,11 @@
 		{#snippet actions()}
 			<button
 				type="button"
-				class="btn btn-ghost btn-circle hover-transparent"
+				class="btn btn-ghost btn-circle hover-transparent h-12 w-12"
 				title="Search"
 				onclick={toggleSearch}
 			>
-				<SearchIcon size={20} />
+				<SearchIcon size={22} />
 			</button>
 		{/snippet}
 	</Toolbar>

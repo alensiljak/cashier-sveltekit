@@ -25,16 +25,16 @@
 
 <!-- Toolbar for pages -->
 <div class="relative sticky top-0 z-10">
-	<div class="navbar bg-primary text-base-content h-12 min-h-12 py-1 shadow-sm">
+	<div class="navbar bg-primary text-base-content h-14 min-h-14 py-1 shadow-sm">
 		<div class="flex-none">
 			<button
-				class="btn btn-square btn-ghost hover-transparent rounded border-0 {$desktopNavVisible
+				class="btn btn-square btn-ghost hover-transparent h-12 w-12 rounded border-0 {$desktopNavVisible
 					? 'lg:hidden'
 					: ''}"
 				onclick={toggleSidebar}
 			>
 				<span>
-					<Menu size={20} />
+					<Menu size={22} />
 				</span>
 			</button>
 		</div>
@@ -52,14 +52,14 @@
 					<button
 						bind:this={dropdownBtn}
 						tabindex="0"
-						class="btn btn-ghost btn-circle hover-transparent"
+						class="btn btn-ghost btn-circle hover-transparent h-12 w-12"
 					>
-						<EllipsisVertical size={18} />
+						<EllipsisVertical size={22} />
 					</button>
 					<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 					<ul
 						role="menu"
-						class="menu menu-sm dropdown-content bg-primary rounded-box z-1 mt-1 w-52 p-2 shadow"
+						class="menu dropdown-content bg-primary rounded-box z-1 mt-1 w-52 p-2 shadow"
 						onclick={() => {
 							dropdownBtn.blur();
 							if (document.activeElement instanceof HTMLElement) {

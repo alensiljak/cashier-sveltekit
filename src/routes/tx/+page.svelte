@@ -197,13 +197,13 @@
 			{#if validationIssues.length > 0}
 				<button
 					type="button"
-					class="btn btn-circle btn-sm border-0 shadow-none {hasValidationError
+					class="btn btn-circle h-12 w-12 border-0 shadow-none {hasValidationError
 						? 'bg-error text-warning'
 						: 'bg-warning text-warning-content'}"
 					title={hasValidationError ? 'Errors found — tap to view' : 'Warnings found — tap to view'}
 					onclick={() => validationDialog?.showModal()}
 				>
-					<TriangleAlertIcon size={18} strokeWidth={2.5} />
+					<TriangleAlertIcon size={20} strokeWidth={2.5} />
 				</button>
 			{/if}
 		{/snippet}
