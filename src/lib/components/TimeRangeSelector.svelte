@@ -16,6 +16,7 @@
 -->
 <script lang="ts">
 	import moment from 'moment';
+	import { untrack } from 'svelte';
 	import { ISODATEFORMAT } from '$lib/constants';
 	import { ChevronLeftIcon, ChevronRightIcon, RotateCcwIcon } from '@lucide/svelte';
 
@@ -74,10 +75,17 @@
 
 	const today = () => moment().format(ISODATEFORMAT);
 
-	let selectedChip = $state(initial);
-	let anchor = $state(initialAnchor ?? today()); // the period currently shown, as an absolute date
-	let customFrom = $state(initialCustomFrom ?? moment().startOf('month').format(ISODATEFORMAT));
-	let customTo = $state(initialCustomTo ?? moment().endOf('month').format(ISODATEFORMAT));
+	// Props are seeds for one-time initialization only (see `initial`/`initialAnchor` docs
+	// above), not meant to stay in sync with the parent — untrack silences Svelte's
+	// state_referenced_locally warning, which would otherwise suggest the opposite.
+	let selectedChip = $state(untrack(() => initial));
+	let anchor = $state(untrack(() => initialAnchor ?? today())); // the period currently shown, as an absolute date
+	let customFrom = $state(
+		untrack(() => initialCustomFrom ?? moment().startOf('month').format(ISODATEFORMAT))
+	);
+	let customTo = $state(
+		untrack(() => initialCustomTo ?? moment().endOf('month').format(ISODATEFORMAT))
+	);
 
 	const isCustom = $derived(selectedChip === 'custom');
 	const activePreset = $derived(PRESETS.find((p) => p.key === selectedChip) ?? PRESETS[0]);

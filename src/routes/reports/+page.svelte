@@ -5,17 +5,14 @@
 	import SquareButton from '$lib/components/SquareButton.svelte';
 	import {
 		TerminalIcon,
-		SearchIcon,
 		LandmarkIcon,
 		TrendingUpIcon,
 		ReceiptIcon,
 		ArrowLeftRightIcon,
 		ScaleIcon,
 		ActivityIcon,
-		LineChartIcon,
-		PercentIcon,
-
 		ChartLineIcon,
+		PercentIcon,
 		ChartColumnStackedIcon
 
 	} from '@lucide/svelte';
