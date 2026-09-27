@@ -22,7 +22,8 @@
 		CirclePlusIcon,
 		TriangleAlertIcon,
 		CircleCheckIcon,
-		TagsIcon
+		TagsIcon,
+		ArrowUpDownIcon
 	} from '@lucide/svelte';
 	import { Big } from 'big.js';
 
@@ -380,7 +381,14 @@
 		<div class="flex items-center gap-2">
 			<SectionTitle class="text-xs opacity-70">Postings:</SectionTitle>
 			{#if ($xact?.postings?.length ?? 0) > 1}
-				<a href="/postings/reorder" class="link text-xs opacity-60">Reorder</a>
+				<a
+					href="/postings/reorder"
+					class="btn btn-primary btn-square btn-sm"
+					aria-label="Reorder postings"
+					title="Reorder postings"
+				>
+					<ArrowUpDownIcon class="h-4 w-4" />
+				</a>
 			{/if}
 		</div>
 		<span class="flex items-center gap-1 text-sm opacity-70">
