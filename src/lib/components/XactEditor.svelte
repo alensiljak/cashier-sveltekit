@@ -4,12 +4,13 @@
 	import PostingEditor from './PostingEditor.svelte';
 	import MetadataEditor from './MetadataEditor.svelte';
 	import SectionTitle from './SectionTitle.svelte';
+	import DateField from './DateField.svelte';
 	import { goto } from '$app/navigation';
 	import Notifier from '$lib/utils/notifier';
 	import appService from '$lib/services/appService';
 	import { ensureInitialized, validateSource } from '$lib/services/rustledger';
 	import { getAccountBalance, loadAccount } from '$lib/services/accountsService';
-	import { SelectionModeMetadata, SettingKeys, settings } from '$lib/settings';
+	import { SelectionModeMetadata } from '$lib/settings';
 	import { getEmptyPostingIndex, xactToBeancountText } from '$lib/utils/xactUtils';
 	import { debounce } from '$lib/utils/debounce';
 	import { Posting } from '$lib/data/model';
@@ -17,17 +18,13 @@
 	import {
 		SigmaIcon,
 		UserIcon,
-		CalendarIcon,
 		FileTextIcon,
 		CirclePlusIcon,
 		TriangleAlertIcon,
 		CircleCheckIcon,
-		ChevronLeftIcon,
-		ChevronRightIcon,
 		TagsIcon
 	} from '@lucide/svelte';
 	import { Big } from 'big.js';
-	import moment from 'moment';
 
 	Notifier.init();
 
@@ -38,15 +35,7 @@
 	};
 	let { onValidationChange, onShowIssues }: Props = $props();
 
-	const DATE_FORMAT_DEFAULT = 'D MMM YYYY';
-	let dateFormatValue = $state(DATE_FORMAT_DEFAULT);
-	let dateInputEl: HTMLInputElement | undefined;
 	let metadataExpanded = $state(false);
-
-	let formattedDate = $derived.by(() => {
-		if (!$xact?.date) return 'Date';
-		return moment($xact.date).format(dateFormatValue);
-	});
 
 	// Beancount-style balance weight: a posting with a price (`@`/`@@`) or cost
 	// (`{}`) annotation is checked for balance in that currency, not its own —
@@ -185,9 +174,6 @@
 	}
 
 	onMount(async () => {
-		const fmt = await settings.get<string>(SettingKeys.dateFormat);
-		if (fmt) dateFormatValue = fmt;
-
 		if ($selectionMetadata) {
 			handleEntitySelection();
 		}
@@ -294,13 +280,6 @@
 		}
 	}
 
-	function shiftDate(days: number) {
-		if (!$xact?.date) return;
-		const d = new Date($xact.date);
-		d.setDate(d.getDate() + days);
-		$xact.date = d.toISOString().slice(0, 10);
-	}
-
 	function onMetaChange(meta: Record<string, string>) {
 		if ($xact) $xact.meta = meta;
 	}
@@ -308,28 +287,7 @@
 </script>
 
 <div class="flex h-full flex-col space-y-3 py-2">
-	<div class="flex items-center">
-		<CalendarIcon class="h-5 w-5 mr-2 opacity-70" />
-		<button type="button" class="btn btn-ghost h-11 w-11 p-0" onclick={() => shiftDate(-1)}><ChevronLeftIcon class="h-4 w-4" /></button>
-		<div class="relative flex-1">
-			<button
-				type="button"
-				class="field-material flex items-center cursor-pointer px-1 pt-4 pb-1 w-full text-left"
-				onclick={() => dateInputEl?.showPicker?.()}
-			>
-				{formattedDate}
-			</button>
-			<span class="field-label" class:field-label-floated={!!$xact?.date}>Date</span>
-			<input
-				bind:this={dateInputEl}
-				title="Date"
-				type="date"
-				class="sr-only"
-				bind:value={$xact.date}
-			/>
-		</div>
-		<button type="button" class="btn btn-ghost h-11 w-11 p-0" onclick={() => shiftDate(1)}><ChevronRightIcon class="h-4 w-4" /></button>
-	</div>
+	<DateField bind:value={$xact.date} />
 	<div class="flex items-center justify-between gap-2">
 		<div class="join">
 			<button
