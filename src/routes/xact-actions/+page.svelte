@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import JournalXactRow from '$lib/components/JournalXactRow.svelte';
 	import SquareButton from '$lib/components/SquareButton.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
+	import XactDetailHero from '$lib/components/XactDetailHero.svelte';
 	import { ScheduledXact, xact, xactId } from '$lib/data/mainStore';
 	import { Posting, ScheduledTransaction, Xact } from '$lib/data/model';
 	import appService from '$lib/services/appService';
@@ -16,8 +16,7 @@
 		CopyIcon,
 		ClipboardIcon,
 		SquarePenIcon,
-		TrashIcon,
-		ListIcon
+		TrashIcon
 	} from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import HelpButton from '$lib/help/HelpButton.svelte';
@@ -143,7 +142,11 @@
 
 <main class="mx-auto max-w-2xl w-full p-1">
 	{#if $xact}
-		<JournalXactRow xact={$xact} />
+		<XactDetailHero
+			xact={$xact}
+			onPayeeClick={$xact.payee ? onPayeeTransactionsClick : undefined}
+			onAccountClick={onAccountTransactionsClick}
+		/>
 	{/if}
 
 	<!-- button grid -->
@@ -178,48 +181,6 @@
 			Delete
 		</SquareButton>
 	</div>
-
-	<!-- related transactions -->
-	{#if $xact}
-		<hr class="border-base-content/10 mt-10" />
-		<div class="mt-4 space-y-1">
-			{#if $xact.payee}
-				<div class="pt-2 pb-1 opacity-70">Payee:</div>
-				<div class="flex items-center justify-between gap-2 py-2 pl-4">
-					<span class="min-w-0 truncate">{$xact.payee}</span>
-					<button
-						type="button"
-						class="btn btn-sm btn-primary text-accent shrink-0 gap-1"
-						onclick={onPayeeTransactionsClick}
-					>
-						<ListIcon class="size-4" />
-						Transactions
-					</button>
-				</div>
-			{/if}
-			{#if $xact.postings && $xact.postings.length > 0}
-				<div class="pt-2 pb-1 opacity-70">Accounts:</div>
-				{#each $xact.postings as posting, i (posting)}
-					<div
-						class={[
-							'flex items-center justify-between gap-2 py-2 pl-4',
-							i % 2 === 1 && 'bg-base-content/5'
-						]}
-					>
-						<span class="min-w-0 truncate">{posting.account}</span>
-						<button
-							type="button"
-							class="btn btn-sm btn-primary text-accent shrink-0 gap-1"
-							onclick={() => onAccountTransactionsClick(posting)}
-						>
-							<ListIcon class="size-4" />
-							Transactions
-						</button>
-					</div>
-				{/each}
-			{/if}
-		</div>
-	{/if}
 </main>
 <!-- "Delete" dialog -->
 <input
