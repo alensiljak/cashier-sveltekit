@@ -26,7 +26,7 @@ See the Projects folder for any active projects.
 
 ## Controls
 
-- [ ] standardize time period selection: day, week, month, quarter, year; this, last.
+- [x] standardize time period selection: day, week, month, quarter, year; this, last.
 - [ ] charts: bar/line for trends, pie/donut for categories
 
 ## Investments

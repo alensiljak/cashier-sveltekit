@@ -142,21 +142,26 @@
 </Toolbar>
 
 <main class="mx-auto max-w-2xl w-full p-1">
-	<JournalXactRow xact={$xact} />
+	{#if $xact}
+		<JournalXactRow xact={$xact} />
+	{/if}
 
 	<!-- button grid -->
 	<div class="mx-auto mt-8 grid grid-cols-3 max-w-[550px]">
-		{#if $xactId !== undefined}
-			<SquareButton Icon={SquarePenIcon} classes="bg-accent text-secondary" onclick={onEditClicked}>
-				Edit
-			</SquareButton>
-		{/if}
+		<SquareButton
+			Icon={SquarePenIcon}
+			classes="bg-accent text-secondary"
+			disabled={$xactId === undefined}
+			onclick={onEditClicked}
+		>
+			Edit
+		</SquareButton>
 		<SquareButton Icon={ClipboardIcon} classes="bg-primary text-accent" onclick={onDuplicateClick}>
 			Duplicate
 		</SquareButton>
 		<SquareButton
 			Icon={CalendarClockIcon}
-			classes="bg-accent text-secondary"
+			classes="bg-primary text-accent"
 			onclick={onScheduleClick}
 		>
 			Schedule
@@ -164,22 +169,27 @@
 		<SquareButton Icon={CopyIcon} classes="bg-primary text-accent" onclick={onCopyClicked}>
 			Copy
 		</SquareButton>
-		{#if $xactId !== undefined}
-			<SquareButton Icon={TrashIcon} classes="bg-secondary text-accent" onclick={onDeleteClicked}>
-				Delete
-			</SquareButton>
-		{/if}
+		<SquareButton
+			Icon={TrashIcon}
+			classes="bg-secondary text-accent"
+			disabled={$xactId === undefined}
+			onclick={onDeleteClicked}
+		>
+			Delete
+		</SquareButton>
 	</div>
 
 	<!-- related transactions -->
 	{#if $xact}
-		<div class="mt-10 space-y-2">
+		<hr class="border-base-content/10 mt-10" />
+		<div class="mt-4 space-y-1">
 			{#if $xact.payee}
-				<div class="flex items-center justify-between gap-2 border-base-content/10 border-b py-1">
-					<span class="min-w-0 truncate">Payee: {$xact.payee}</span>
+				<div class="pt-2 pb-1 opacity-70">Payee:</div>
+				<div class="flex items-center justify-between gap-2 py-2 pl-4">
+					<span class="min-w-0 truncate">{$xact.payee}</span>
 					<button
 						type="button"
-						class="btn btn-sm btn-outline shrink-0 gap-1"
+						class="btn btn-sm btn-primary text-accent shrink-0 gap-1"
 						onclick={onPayeeTransactionsClick}
 					>
 						<ListIcon class="size-4" />
@@ -188,15 +198,18 @@
 				</div>
 			{/if}
 			{#if $xact.postings && $xact.postings.length > 0}
-				<div class="py-1">Accounts:</div>
-				{#each $xact.postings as posting (posting)}
+				<div class="pt-2 pb-1 opacity-70">Accounts:</div>
+				{#each $xact.postings as posting, i (posting)}
 					<div
-						class="flex items-center justify-between gap-2 border-base-content/10 border-b py-1 pl-4"
+						class={[
+							'flex items-center justify-between gap-2 py-2 pl-4',
+							i % 2 === 1 && 'bg-base-content/5'
+						]}
 					>
 						<span class="min-w-0 truncate">{posting.account}</span>
 						<button
 							type="button"
-							class="btn btn-sm btn-outline shrink-0 gap-1"
+							class="btn btn-sm btn-primary text-accent shrink-0 gap-1"
 							onclick={() => onAccountTransactionsClick(posting)}
 						>
 							<ListIcon class="size-4" />

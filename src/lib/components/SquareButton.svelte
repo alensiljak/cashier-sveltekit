@@ -9,10 +9,11 @@
 		// textColour?: string;
 		// bgColour?: string;
 		classes: string;
+		disabled?: boolean;
 		onclick?: EventHandler;
 		children: Snippet;
 	}
-	let { Icon, colour, classes, onclick, children }: Props = $props();
+	let { Icon, colour, classes, disabled = false, onclick, children }: Props = $props();
 	// colour = 'primary',
 
 	let buttonColour = $derived(colour ? 'btn-' + colour : '');
@@ -20,7 +21,12 @@
 
 <!-- flex-col text-center -->
 <div class="bg-base-content/5 m-2 sm:m-4 flex aspect-square items-center justify-center">
-	<button type="button" class={`btn aspect-square w-full max-w-20 h-auto flex-col items-center justify-center gap-1.5 rounded-lg ${buttonColour} ${classes}`} {onclick}>
+	<button
+		type="button"
+		class={`btn aspect-square w-full max-w-20 h-auto flex-col items-center justify-center gap-1.5 rounded-lg ${disabled ? 'btn-disabled bg-neutral text-base-content/30' : `${buttonColour} ${classes}`}`}
+		{disabled}
+		{onclick}
+	>
 		<span class="text-current">
 			<Icon class="w-6 h-6" />
 		</span>
