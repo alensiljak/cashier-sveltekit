@@ -48,10 +48,13 @@ See the Projects folder for any active projects.
 
 ## Reports
 
+- [ ] spending trends over time (total, per category)
+- [x] stacked bar expense report with main categories (first pass, 12 mo., top 6 + Other)
+- [ ] base line in expense report: average or budget
+- [ ] budget report: budgeted vs real amounts over 12 mo.
 - [ ] tax report, capital gains
 - [x] net worth (assets - liabilities)
 - [ ] net worth projection
-- [ ] spending trends over time
 - [x] balance history: running balance over time
 - [x] balance sheet - monthly, yearly. Income vs expenses summary.
 - [ ] saving customized reports. Choose parameters and save under a name. Show on home screen.

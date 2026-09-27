@@ -15,7 +15,8 @@
 		LineChartIcon,
 		PercentIcon,
 
-		ChartLineIcon
+		ChartLineIcon,
+		ChartColumnStackedIcon
 
 	} from '@lucide/svelte';
 </script>
@@ -37,11 +38,18 @@
 				Queries
 			</SquareButton>
 			<SquareButton
+				Icon={ChartColumnStackedIcon}
+				classes="bg-secondary text-accent"
+				onclick={() => goto('/reports/expense-trend')}
+			>
+				Expense Trend
+			</SquareButton>
+			<SquareButton
 				Icon={ReceiptIcon}
 				classes="bg-secondary text-accent"
 				onclick={() => goto('/reports/expenses')}
 			>
-				Expenses
+				Expense Categories
 			</SquareButton>
 			<SquareButton
 				Icon={ScaleIcon}

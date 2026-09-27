@@ -1,9 +1,13 @@
 <script lang="ts">
 	import { tick } from 'svelte';
-	import { goto } from '$app/navigation';
+	import { goto, replaceState } from '$app/navigation';
+	import { page } from '$app/state';
 	import { ChartBar, ChartPie, Funnel, FunnelX, ListFilter } from '@lucide/svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
-	import PeriodSelector, { type Period } from '$lib/components/PeriodSelector.svelte';
+	import TimeRangeSelector, {
+		type TimeRange,
+		type TimeRangeState
+	} from '$lib/components/TimeRangeSelector.svelte';
 	import ExpensesBarChart from '$lib/components/ExpensesBarChart.svelte';
 	import ExpensesDonutChart from '$lib/components/ExpensesDonutChart.svelte';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
@@ -25,7 +29,26 @@
 	let filterEnabled = $state(false);
 	let filterSettingsLoaded = false;
 
-	let currentPeriod = $state<Period | null>(null);
+	let currentPeriod = $state<TimeRange | null>(null);
+
+	// The URL is the source of truth for which period is showing, read once on load:
+	// - ?period=&anchor= identifies an exact period (e.g. "month" + "2025-11-15") — used both
+	//   for external deep-links (e.g. from the Expense Trend report's "Other" bucket, which
+	//   points at one specific month) and for this page's own bookkeeping, written via
+	//   replaceState on every selection so the Back button restores it exactly rather than
+	//   always landing back on the hardcoded default. Being an absolute date, it stays
+	//   correct however long the link sits around, unlike a "steps back from today" offset.
+	// - ?dateFrom=&dateTo= (no ?period=) seeds the Custom chip, the one shape an anchor can't
+	//   express (an arbitrary two-date range).
+	// With none of these present (report opened fresh from the nav), TimeRangeSelector's own
+	// default applies.
+	const urlDateFrom = page.url.searchParams.get('dateFrom');
+	const urlDateTo = page.url.searchParams.get('dateTo');
+	const urlPeriod = page.url.searchParams.get('period');
+	const urlAnchor = page.url.searchParams.get('anchor');
+	const isLinked = !!(urlDateFrom && urlDateTo);
+	const initialChip = isLinked ? 'custom' : (urlPeriod ?? 'month');
+	const initialAnchor = urlAnchor ?? undefined;
 
 	// Visible data: apply filter only when enabled AND there is something to hide
 	const chartLabels = $derived.by(() => {
@@ -52,8 +75,18 @@
 		goto(`/reports/tx-search?${params}`);
 	}
 
-	async function loadExpenses(period: Period) {
+	async function loadExpenses(period: TimeRange, state: TimeRangeState) {
 		currentPeriod = period;
+
+		// Keep the URL in sync with the current selection (replacing, not pushing, so
+		// stepping through periods doesn't spam browser history) so a later Back navigation
+		// restores this exact period instead of the component's hardcoded default.
+		const params =
+			state.chip === 'custom'
+				? new URLSearchParams({ dateFrom: period.dateFrom, dateTo: period.dateTo })
+				: new URLSearchParams({ period: state.chip, anchor: state.anchor });
+		replaceState(`?${params}`, {});
+
 		isLoading = true;
 		error = null;
 		await tick();
@@ -119,7 +152,7 @@
 </script>
 
 <main class="flex h-screen flex-col" class:cursor-wait={isLoading}>
-	<Toolbar title="Expenses">
+	<Toolbar title="Expense Categories">
 		{#snippet actions()}
 			<!-- Filter toggle: always visible; icon shows what clicking will do -->
 			<button
@@ -145,10 +178,15 @@
 		{/snippet}
 	</Toolbar>
 
-	<!-- Period selector + chart type toggle -->
-	<div class="flex items-center gap-3 px-4 pt-3 pb-2">
-		<span class="text-sm font-medium text-base-content/60">Period:</span>
-		<PeriodSelector onselect={loadExpenses} />
+	<!-- Time range selector + chart type toggle -->
+	<div class="flex items-start gap-3 border-b border-base-300 px-4 py-3">
+		<TimeRangeSelector
+			onselect={loadExpenses}
+			initial={initialChip}
+			{initialAnchor}
+			initialCustomFrom={urlDateFrom ?? undefined}
+			initialCustomTo={urlDateTo ?? undefined}
+		/>
 		<div class="ml-auto flex gap-1">
 			<button
 				class="btn btn-ghost btn-sm btn-square"
