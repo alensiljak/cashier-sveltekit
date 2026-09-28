@@ -63,7 +63,7 @@ export function getDateColour(dateString: string): string | undefined {
 	// Compare by value: two Date objects are never `===`.
 	if (date.getTime() === today.getTime()) {
 		// yellow
-		return 'text-neutral';
+		return 'text-warning';
 	}
 	if (date > today) {
 		// green
