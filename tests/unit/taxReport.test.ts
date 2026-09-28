@@ -5,7 +5,7 @@ import {
 	financialYearRange,
 	validateTaxReportConfig
 } from '$lib/taxReport/engine';
-import { detectCurrencies } from '$lib/taxReport/currencies';
+import { detectCurrencies, findUnconvertedCurrencies } from '$lib/taxReport/currencies';
 import { auIndividual } from '$lib/taxReport/templates/auIndividual';
 import type { TaxReportConfig } from '$lib/taxReport/types';
 
@@ -100,5 +100,17 @@ describe('detectCurrencies', () => {
 			['EUR']
 		);
 		expect(result).toEqual(['AUD', 'EUR', 'USD']);
+	});
+});
+
+describe('findUnconvertedCurrencies', () => {
+	it('flags foreign currencies whose converted amount equals their units', () => {
+		const rows = [
+			{ currency: 'AUD', units: 100, converted: 100 },
+			{ currency: 'EUR', units: 50, converted: 82.5 },
+			{ currency: 'USD', units: 10, converted: 10 },
+			{ currency: 'USD', units: 0, converted: 0 }
+		];
+		expect(findUnconvertedCurrencies(rows, 'AUD')).toEqual(['USD']);
 	});
 });

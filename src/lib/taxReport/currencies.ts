@@ -33,3 +33,24 @@ export function detectCurrencies(
 	for (const c of costCurrencies) result.add(c);
 	return [...result].sort();
 }
+
+/** A posting with its original units and the amount after CONVERT to the report currency. */
+export interface ConvertedAmount {
+	currency: string;
+	units: number;
+	converted: number;
+}
+
+/**
+ * Currencies that were not converted to the report currency. When the book has no
+ * price path to the target, BQL CONVERT returns the amount unchanged, so a
+ * different currency whose converted amount equals its units has no exchange rate.
+ */
+export function findUnconvertedCurrencies(rows: ConvertedAmount[], target: string): string[] {
+	const missing = new Set<string>();
+	for (const r of rows) {
+		if (!r.currency || r.currency === target || r.units === 0) continue;
+		if (r.converted === r.units) missing.add(r.currency);
+	}
+	return [...missing].sort();
+}

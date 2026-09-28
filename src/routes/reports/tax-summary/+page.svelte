@@ -10,7 +10,11 @@
 		financialYearRange,
 		validateTaxReportConfig
 	} from '$lib/taxReport/engine';
-	import { detectCurrencies } from '$lib/taxReport/currencies';
+	import {
+		detectCurrencies,
+		findUnconvertedCurrencies,
+		type ConvertedAmount
+	} from '$lib/taxReport/currencies';
 	import { defaultTaxReportConfig } from '$lib/taxReport/templates';
 	import type { CategoryResult, TaxReportConfig, TaxReportResult } from '$lib/taxReport/types';
 
@@ -22,6 +26,7 @@
 	let currency = $state('');
 	let bookCurrencies = $state<string[]>([]);
 	let mainCurrency = '';
+	let unconverted = $state<string[]>([]);
 	let configText = $state('');
 	let configError = $state<string | null>(null);
 	let showConfig = $state(false);
@@ -84,7 +89,7 @@
 			if (!currency) currency = config.currency ?? mainCurrency;
 			if (bookCurrencies.length === 0) await loadBookCurrencies();
 
-			const bql = `SELECT date, account, NUMBER(CONVERT(units(position), '${currency}')) AS number, currency WHERE (account ~ "^Income" OR account ~ "^Expenses") AND date >= ${range.from} AND date <= ${range.to}`;
+			const bql = `SELECT date, account, NUMBER(CONVERT(units(position), '${currency}')) AS number, NUMBER(units(position)) AS units_number, currency WHERE (account ~ "^Income" OR account ~ "^Expenses") AND date >= ${range.from} AND date <= ${range.to}`;
 			const res = await fullLedgerService.query(bql);
 			if (res?.errors?.length) {
 				error = (res.errors as any[]).map((e) => e.message).join('; ');
@@ -96,22 +101,33 @@
 			const accountIdx = cols.indexOf('account');
 			const numberIdx = cols.indexOf('number');
 			const currencyIdx = cols.indexOf('currency');
+			const unitsIdx = cols.indexOf('units_number');
 			if (dateIdx === -1 || accountIdx === -1 || numberIdx === -1) {
 				error = 'Unexpected query result columns.';
 				return;
 			}
 
 			const postings = [];
+			const amounts: ConvertedAmount[] = [];
 			for (const row of (res?.rows ?? []) as any[]) {
 				// Skip securities: CONVERT would value the units at market price.
 				const orig = currencyIdx !== -1 ? String(row[currencyIdx] ?? '') : currency;
 				if (bookCurrencies.length > 0 && !bookCurrencies.includes(orig)) continue;
+				const amount = parseFloat(String(row[numberIdx] ?? '0')) || 0;
 				postings.push({
 					date: toDateStr(row[dateIdx]),
 					account: String(row[accountIdx] ?? ''),
-					amount: parseFloat(String(row[numberIdx] ?? '0')) || 0
+					amount
 				});
+				if (unitsIdx !== -1) {
+					amounts.push({
+						currency: orig,
+						units: parseFloat(String(row[unitsIdx] ?? '0')) || 0,
+						converted: amount
+					});
+				}
 			}
+			unconverted = findUnconvertedCurrencies(amounts, currency);
 			result = buildTaxReport(config, postings);
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
@@ -260,6 +276,13 @@
 				{error}
 			</div>
 		{:else if result}
+			{#if unconverted.length > 0}
+				<div class="mt-3 rounded-lg border border-warning bg-warning/10 p-3 text-sm">
+					No exchange rate to {currency} found for {unconverted.join(', ')}. Those amounts are
+					shown unconverted, so the totals mix currencies. Add price directives (e.g. {unconverted[0]}
+					→ {currency}) to the book.
+				</div>
+			{/if}
 			{@render section(
 				'Income',
 				result.categories.filter((c) => c.kind === 'income')
