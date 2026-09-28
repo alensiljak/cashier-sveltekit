@@ -24,7 +24,7 @@
             if (files.includes('settings')) {
                 const allSettings = await settings.getAll();
                 const localContent = JSON.stringify(allSettings, null, 2);
-                const res = await dav.get('settings.json');
+                const res = await dav.getJson('settings.json');
                 if (res.ok) {
                     const remoteContent = await res.text();
                     const lines = buildDiffLines(remoteContent, localContent);
@@ -47,7 +47,7 @@
             if (files.includes('scheduled')) {
                 const all = await db.scheduled.toArray();
                 const localContent = JSON.stringify(all, null, 2);
-                const res = await dav.get('scheduled.json');
+                const res = await dav.getJson('scheduled.json');
                 if (res.ok) {
                     const remoteContent = await res.text();
                     const lines = buildDiffLines(remoteContent, localContent);
