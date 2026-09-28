@@ -44,6 +44,34 @@ export class WebDavClient {
 		});
 	}
 
+	/** Uploads JSON gzip-compressed as `<name>.gz`. */
+	async putJsonGz(name: string, json: string): Promise<Response> {
+		const stream = new Blob([json]).stream().pipeThrough(new CompressionStream('gzip'));
+		const bytes = new Uint8Array(await new Response(stream).arrayBuffer());
+		return this.put(name + '.gz', bytes, 'application/gzip');
+	}
+
+	/**
+	 * Fetches JSON stored as `<name>.gz`, falling back to a legacy uncompressed `<name>`.
+	 * Returns a Response whose body is the decompressed text.
+	 */
+	async getJson(name: string): Promise<Response> {
+		const gz = await this.get(name + '.gz');
+		if (!gz.ok) return this.get(name);
+		const bytes = new Uint8Array(await gz.arrayBuffer());
+		// Some servers send Content-Encoding: gzip, in which case fetch has already decoded it.
+		const isGzip = bytes[0] === 0x1f && bytes[1] === 0x8b;
+		const body = isGzip
+			? new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))
+			: bytes;
+		return new Response(body, { status: gz.status, statusText: gz.statusText });
+	}
+
+	/** Last-modified of `<name>.gz`, falling back to a legacy uncompressed `<name>`. */
+	async lastModifiedJson(name: string): Promise<Date | null> {
+		return (await this.lastModified(name + '.gz')) ?? (await this.lastModified(name));
+	}
+
 	async delete(filename: string): Promise<Response> {
 		return fetch(this.fileUrl(filename), {
 			method: 'DELETE',

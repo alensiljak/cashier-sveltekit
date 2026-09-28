@@ -42,7 +42,7 @@
                     const allSettings = await settings.getAll();
                     content = JSON.stringify(allSettings, null, 2);
                 } else {
-                    const res = await dav!.get('settings.json');
+                    const res = await dav!.getJson('settings.json');
                     content = res.ok ? await res.text() : `Error ${res.status}: ${res.statusText}`;
                 }
                 result.push({ filename: 'settings.json', content });
@@ -63,7 +63,7 @@
                     const all = await db.scheduled.toArray();
                     content = JSON.stringify(all, null, 2);
                 } else {
-                    const res = await dav!.get('scheduled.json');
+                    const res = await dav!.getJson('scheduled.json');
                     content = res.ok ? await res.text() : `Error ${res.status}: ${res.statusText}`;
                 }
                 result.push({ filename: 'scheduled.json', content });

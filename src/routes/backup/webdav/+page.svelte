@@ -161,9 +161,9 @@
 			if (!webdavUrl) return;
 			const dav = client();
 			const [sm, cm, scm] = await Promise.allSettled([
-				dav.lastModified('settings.json'),
+				dav.lastModifiedJson('settings.json'),
 				dav.lastModified(isCrdt ? ydocFile : 'cashier.bean'),
-				dav.lastModified('scheduled.json')
+				dav.lastModifiedJson('scheduled.json')
 			]);
 			if (sm.status === 'fulfilled') settingsLastModified = sm.value;
 			if (cm.status === 'fulfilled') cashierBeanLastModified = cm.value;
@@ -198,9 +198,9 @@
 			if (includeSettings) {
 				const allSettings = await settings.getAll();
 				const json = JSON.stringify(allSettings, null, 2);
-				const res = await dav.put('settings.json', json, 'application/json; charset=utf-8');
+				const res = await dav.putJsonGz('settings.json', json);
 				if (res.ok) { Notifier.success('Settings uploaded'); uploaded.settings = true; }
-				else Notifier.error(`Upload failed for settings.json: ${res.status} ${res.statusText}`);
+				else Notifier.error(`Upload failed for settings.json.gz: ${res.status} ${res.statusText}`);
 			}
 			if (includeCashierBean && isCrdt) {
 				const state = await ((await getXactStore()) as CrdtXactStore).exportState();
@@ -223,9 +223,9 @@
 			if (includeScheduled) {
 				const all = await db.scheduled.toArray();
 				const json = JSON.stringify(all, null, 2);
-				const res = await dav.put('scheduled.json', json, 'application/json; charset=utf-8');
+				const res = await dav.putJsonGz('scheduled.json', json);
 				if (res.ok) { Notifier.success('Scheduled transactions uploaded'); uploaded.scheduled = true; }
-				else Notifier.error(`Upload failed for scheduled.json: ${res.status} ${res.statusText}`);
+				else Notifier.error(`Upload failed for scheduled.json.gz: ${res.status} ${res.statusText}`);
 			}
 		} catch (err) {
 			Notifier.error('Upload error: ' + (err as Error).message);
@@ -282,7 +282,7 @@
 		let downloadedBeanContent: string | undefined;
 		try {
 			if (includeSettings) {
-				const res = await dav.get('settings.json');
+				const res = await dav.getJson('settings.json');
 				if (res.ok) {
 					const entries: Setting[] = JSON.parse(await res.text());
 					await db.settings.clear();
@@ -321,7 +321,7 @@
 				}
 			}
 			if (includeScheduled) {
-				const res = await dav.get('scheduled.json');
+				const res = await dav.getJson('scheduled.json');
 				if (res.ok) {
 					const entries: ScheduledTransaction[] = JSON.parse(await res.text());
 					await db.scheduled.clear();
