@@ -84,6 +84,8 @@ export function validateTaxReportConfig(value: unknown): string | null {
 		ys.day > 31
 	)
 		return 'yearStart must have a valid month (1-12) and day (1-31).';
+	if (c.currency !== undefined && (typeof c.currency !== 'string' || !c.currency))
+		return 'currency must be a currency code, e.g. "AUD".';
 	if (!Array.isArray(c.categories)) return 'categories must be a list.';
 	for (const cat of c.categories) {
 		if (!cat || typeof cat.name !== 'string' || !cat.name) return 'Every category needs a name.';

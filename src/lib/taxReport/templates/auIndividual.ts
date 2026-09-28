@@ -9,6 +9,7 @@ export const auIndividual: TaxReportConfig = {
 	templateId: 'au-individual',
 	name: 'Australia – Individual',
 	yearStart: { month: 7, day: 1 },
+	currency: 'AUD',
 	categories: [
 		{ name: 'Salary and wages', accounts: ['^Income:(Salary|Wages|Employment)'], kind: 'income' },
 		{ name: 'Bank interest', accounts: ['^Income:.*Interest'], kind: 'income' },

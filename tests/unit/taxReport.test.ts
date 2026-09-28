@@ -5,6 +5,7 @@ import {
 	financialYearRange,
 	validateTaxReportConfig
 } from '$lib/taxReport/engine';
+import { detectCurrencies } from '$lib/taxReport/currencies';
 import { auIndividual } from '$lib/taxReport/templates/auIndividual';
 import type { TaxReportConfig } from '$lib/taxReport/types';
 
@@ -83,5 +84,21 @@ describe('validateTaxReportConfig', () => {
 				categories: [{ name: 'X', accounts: ['('], kind: 'income' }]
 			})
 		).toMatch(/invalid pattern/);
+	});
+});
+
+describe('detectCurrencies', () => {
+	it('excludes securities held at cost but keeps their cost currencies', () => {
+		const result = detectCurrencies(
+			[
+				{ currency: 'EUR' },
+				{ currency: 'AUD', costCurrency: null },
+				{ currency: 'VTI', costCurrency: 'USD' },
+				{ currency: 'RING', costCurrency: 'AUD' },
+				{ currency: 'VTI' }
+			],
+			['EUR']
+		);
+		expect(result).toEqual(['AUD', 'EUR', 'USD']);
 	});
 });

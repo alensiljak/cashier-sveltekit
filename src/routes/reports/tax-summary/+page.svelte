@@ -10,6 +10,7 @@
 		financialYearRange,
 		validateTaxReportConfig
 	} from '$lib/taxReport/engine';
+	import { detectCurrencies } from '$lib/taxReport/currencies';
 	import { defaultTaxReportConfig } from '$lib/taxReport/templates';
 	import type { CategoryResult, TaxReportConfig, TaxReportResult } from '$lib/taxReport/types';
 
@@ -19,6 +20,8 @@
 	let error = $state<string | null>(null);
 	let result = $state<TaxReportResult | null>(null);
 	let currency = $state('');
+	let bookCurrencies = $state<string[]>([]);
+	let mainCurrency = '';
 	let configText = $state('');
 	let configError = $state<string | null>(null);
 	let showConfig = $state(false);
@@ -28,6 +31,9 @@
 			{ length: 8 },
 			(_, i) => currentFinancialYearStart(config.yearStart) - i
 		)
+	);
+	let currencyOptions = $derived(
+		[...new Set([...bookCurrencies, currency].filter(Boolean))].sort()
 	);
 	let range = $derived(financialYearRange(config.yearStart, startYear));
 
@@ -45,13 +51,38 @@
 		return `/reports/tx-search?${params}`;
 	}
 
+	/** Currencies in the book, excluding securities (commodities held at cost). */
+	async function loadBookCurrencies() {
+		const res = await fullLedgerService.query(
+			'SELECT currency, cost_currency GROUP BY currency, cost_currency'
+		);
+		// On failure leave the list empty: the report then keeps every posting.
+		if (res?.errors?.length) return;
+		const cols = res?.columns ?? [];
+		const ci = cols.indexOf('currency');
+		const cci = cols.indexOf('cost_currency');
+		const usages = ((res?.rows ?? []) as any[]).map((r) => ({
+			currency: String(r[ci] ?? ''),
+			costCurrency: cci === -1 ? null : ((r[cci] as string | null) ?? null)
+		}));
+		const operating = await fullLedgerService.getOperatingCurrencies();
+		bookCurrencies = detectCurrencies(usages, operating);
+	}
+
+	async function changeCurrency() {
+		await settings.set(SettingKeys.taxReportConfig, { ...config, currency });
+		config = { ...config, currency };
+		await loadData();
+	}
+
 	async function loadData() {
 		isLoading = true;
 		error = null;
 		await tick();
 		try {
-			currency = (await settings.get<string>(SettingKeys.currency)) ?? '';
 			await fullLedgerService.ensureLoaded();
+			if (!currency) currency = config.currency ?? mainCurrency;
+			if (bookCurrencies.length === 0) await loadBookCurrencies();
 
 			const bql = `SELECT date, account, NUMBER(CONVERT(units(position), '${currency}')) AS number, currency WHERE (account ~ "^Income" OR account ~ "^Expenses") AND date >= ${range.from} AND date <= ${range.to}`;
 			const res = await fullLedgerService.query(bql);
@@ -72,9 +103,9 @@
 
 			const postings = [];
 			for (const row of (res?.rows ?? []) as any[]) {
-				// Skip commodity positions: CONVERT would value the units at market price.
+				// Skip securities: CONVERT would value the units at market price.
 				const orig = currencyIdx !== -1 ? String(row[currencyIdx] ?? '') : currency;
-				if (orig.length > 4) continue;
+				if (bookCurrencies.length > 0 && !bookCurrencies.includes(orig)) continue;
 				postings.push({
 					date: toDateStr(row[dateIdx]),
 					account: String(row[accountIdx] ?? ''),
@@ -108,6 +139,7 @@
 
 	async function saveConfig(next: TaxReportConfig) {
 		config = next;
+		currency = next.currency ?? mainCurrency;
 		await settings.set(SettingKeys.taxReportConfig, next);
 		startYear = currentFinancialYearStart(next.yearStart);
 		showConfig = false;
@@ -141,6 +173,8 @@
 	onMount(async () => {
 		const saved = await settings.get<TaxReportConfig>(SettingKeys.taxReportConfig);
 		if (saved && !validateTaxReportConfig(saved)) config = saved;
+		mainCurrency = (await settings.get<string>(SettingKeys.currency)) ?? '';
+		currency = config.currency ?? mainCurrency;
 		configText = JSON.stringify(config, null, 2);
 		startYear = currentFinancialYearStart(config.yearStart);
 		await loadData();
@@ -186,7 +220,7 @@
 <main class="flex h-screen flex-col" class:cursor-wait={isLoading}>
 	<Toolbar title="Tax Summary" />
 
-	<div class="flex items-center gap-3 border-b border-base-300 px-4 py-2">
+	<div class="flex flex-wrap items-center gap-3 border-b border-base-300 px-4 py-2">
 		<span class="text-sm font-medium text-base-content/60">Year:</span>
 		<select
 			class="select select-bordered select-sm"
@@ -198,12 +232,23 @@
 				<option value={y}>{financialYearLabel(config.yearStart, y)}</option>
 			{/each}
 		</select>
+		<span class="text-sm font-medium text-base-content/60">Currency:</span>
+		<select
+			class="select select-bordered select-sm"
+			bind:value={currency}
+			onchange={changeCurrency}
+			disabled={isLoading}
+		>
+			{#each currencyOptions as c}
+				<option value={c}>{c}</option>
+			{/each}
+		</select>
 		<span class="text-xs text-base-content/50">{range.from} → {range.to}</span>
 	</div>
 
 	<section class="mx-auto w-full max-w-2xl grow touch-pan-y overflow-y-auto px-4 py-4">
 		<div class="text-xs text-base-content/50">
-			{config.name}{currency ? ` · ${currency}` : ''}
+			{config.name}
 		</div>
 
 		{#if isLoading}

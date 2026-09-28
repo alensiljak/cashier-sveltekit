@@ -15,6 +15,8 @@ export interface TaxReportConfig {
 	name: string;
 	/** First day of the financial year. Australia: July 1st. */
 	yearStart: { month: number; day: number };
+	/** Currency the report is converted to. Falls back to the main currency if unset. */
+	currency?: string;
 	categories: TaxCategory[];
 }
 
