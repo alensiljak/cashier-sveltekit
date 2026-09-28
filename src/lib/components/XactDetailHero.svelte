@@ -29,7 +29,7 @@
 <article class="bg-base-100 rounded-lg p-4 space-y-3">
 	<div>
 		<time class="font-mono text-sm tracking-wide opacity-60"
-			>{getReadableDate(xact.date, $DateFormatStore)}</time
+			>{getReadableDate(xact.date ?? '', $DateFormatStore)}</time
 		>
 		{#if xact.flag === '!'}
 			<WarningTriangleIcon class="ml-1 inline-block size-4 align-text-bottom" />

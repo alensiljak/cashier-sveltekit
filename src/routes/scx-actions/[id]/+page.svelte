@@ -211,7 +211,7 @@
 		</div>
 
 		<!-- actions -->
-		<div class="grid grid-cols-3 pt-3 lg:px-20">
+		<div class="mx-auto flex max-w-[390px] flex-wrap justify-center gap-16 pt-10">
 			<SquareButton
 				Icon={ScrollIcon}
 				classes="bg-primary text-accent"

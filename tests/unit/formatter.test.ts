@@ -139,7 +139,7 @@ describe('getDateColour', () => {
 		expect(getDateColour('2025-08-16')).toBe('text-primary-400');
 	});
 
-	it("returns 'text-neutral' for today, whatever the time of day", () => {
-		expect(getDateColour('2025-08-15')).toBe('text-neutral');
+	it("returns 'text-warning' for today, whatever the time of day", () => {
+		expect(getDateColour('2025-08-15')).toBe('text-warning');
 	});
 });

@@ -150,7 +150,7 @@
 	{/if}
 
 	<!-- button grid -->
-	<div class="mx-auto mt-8 grid grid-cols-3 max-w-[550px]">
+	<div class="mx-auto mt-20 flex max-w-[390px] flex-wrap justify-center gap-16">
 		<SquareButton
 			Icon={SquarePenIcon}
 			classes="bg-accent text-secondary"

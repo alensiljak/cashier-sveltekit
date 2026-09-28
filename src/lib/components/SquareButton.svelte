@@ -20,10 +20,10 @@
 </script>
 
 <!-- flex-col text-center -->
-<div class="bg-base-content/5 m-2 sm:m-4 flex aspect-square items-center justify-center">
+<div class="flex items-center justify-center">
 	<button
 		type="button"
-		class={`btn aspect-square w-full max-w-20 h-auto flex-col items-center justify-center gap-1.5 rounded-lg ${disabled ? 'btn-disabled bg-neutral text-base-content/30' : `${buttonColour} ${classes}`}`}
+		class={`btn h-20 w-20 flex-col items-center justify-center gap-1.5 rounded-lg ${disabled ? 'btn-disabled bg-neutral text-base-content/30' : `${buttonColour} ${classes}`}`}
 		{disabled}
 		{onclick}
 	>
