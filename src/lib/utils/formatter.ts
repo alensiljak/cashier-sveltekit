@@ -143,3 +143,24 @@ export function getColourForGainLoss(gainloss: string): string {
 	const colour = getAmountColour(amountPart);
 	return colour;
 }
+
+/**
+ * Colour for an account name based on its type (Assets/Liabilities/Income/Expenses/Equity),
+ * matching the scheme used on the Accounts list.
+ * @param accountName full account name, e.g. 'Expenses:Hospitality:Dining'
+ */
+export function getAccountColour(accountName: string | undefined): string {
+	if (!accountName) return '';
+
+	if (accountName.startsWith('Income:')) {
+		return 'text-primary-200';
+	} else if (accountName.startsWith('Expenses:')) {
+		return 'text-secondary-200';
+	} else if (accountName.startsWith('Assets:')) {
+		return 'text-base-content';
+	} else if (accountName.startsWith('Liabilities:')) {
+		return 'text-purple-200';
+	} else {
+		return '';
+	}
+}

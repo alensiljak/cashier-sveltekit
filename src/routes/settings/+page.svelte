@@ -5,11 +5,12 @@
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { SettingKeys, settings, DeviceSettingKeys, deviceSettings } from '$lib/settings';
 	import { getXactStore } from '$lib/storage/xactStoreRegistry';
-	import { SHORT_DATE_FORMAT_DEFAULT } from '$lib/constants';
+	import { DATE_FORMAT_DEFAULT, SHORT_DATE_FORMAT_DEFAULT } from '$lib/constants';
 	import Notifier from '$lib/utils/notifier';
 	import appService from '$lib/services/appService';
 	import { goto, replaceState } from '$app/navigation';
 	import {
+		DateFormatStore,
 		DefaultCurrencyStore,
 		PendingSettingsStore,
 		ShortDateFormatStore
@@ -55,7 +56,6 @@
 
 	Notifier.init();
 
-	const DATE_FORMAT_DEFAULT = 'D MMM YYYY';
 	const dateFormatOptions = [
 		{ label: '29 Aug 2026', value: 'D MMM YYYY' },
 		{ label: 'Aug 29, 2026', value: 'MMM D, YYYY' },
@@ -308,6 +308,7 @@
 		await deviceSettings.set(DeviceSettingKeys.notificationLastShown, null);
 		scheduleNotificationCheck();
 		ShortDateFormatStore.set(shortDateFormat);
+		DateFormatStore.set(dateFormat);
 
 		// Save book filename in cashier.bean
 		if (bookFilename) {

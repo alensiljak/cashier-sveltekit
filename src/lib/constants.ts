@@ -23,6 +23,7 @@ export const LEDGER_CACHE_WORKING_SET_HASH_FILE = `${CASHIER_DATA_DIR}/ledger-ca
 export const ISODATEFORMAT = 'YYYY-MM-DD';
 export const LONGTIMEFORMAT = 'HHmmss';
 export const SHORT_DATE_FORMAT_DEFAULT = 'DD.MM.';
+export const DATE_FORMAT_DEFAULT = 'D MMM YYYY';
 export const NUMBER_FORMAT = '#,##0.00';
 
 /** Default OPFS filename for asset allocation definition. */

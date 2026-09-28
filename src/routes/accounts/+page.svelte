@@ -8,6 +8,7 @@
 	import type { Account } from '$lib/data/model';
 	import { goto } from '$app/navigation';
 	import HelpButton from '$lib/help/HelpButton.svelte';
+	import { getAccountColour } from '$lib/utils/formatter';
 
 	let searchTerm = $state('');
 	let isInSelectionMode = $derived($selectionMetadata !== undefined);
@@ -40,27 +41,6 @@
 		const regex = search.getRegex(searchTerm);
 		return base.filter((item) => regex.test(item.name ?? ''));
 	});
-
-	/**
-	 * Colour the account names based on the account type.
-	 */
-	function getAccountColour(accountName: string | undefined): string {
-		if (!accountName) {
-			console.warn('Account record has undefined accountName. Please check and adjust the underlying data.');
-			return '';
-		}
-		if (accountName.startsWith('Income:')) {
-			return 'text-primary-200';
-		} else if (accountName.startsWith('Expenses:')) {
-			return 'text-secondary-200';
-		} else if (accountName.startsWith('Assets:')) {
-			return 'text-base-content';
-		} else if (accountName.startsWith('Liabilities:')) {
-			return 'text-purple-200';
-		} else {
-			return '';
-		}
-	}
 
 	function onAccountSelected(name: string) {
 		if (isInSelectionMode) {

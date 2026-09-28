@@ -11,11 +11,16 @@
     `/onboarding` first, where the user's choice (demo data / import / empty)
     decides how `cashier.bean` gets created.
 */
-import { DEMO_DIR, SHORT_DATE_FORMAT_DEFAULT, USER_BOOK_FILENAME } from '$lib/constants';
+import {
+	DATE_FORMAT_DEFAULT,
+	DEMO_DIR,
+	SHORT_DATE_FORMAT_DEFAULT,
+	USER_BOOK_FILENAME
+} from '$lib/constants';
 import { SettingKeys, settings } from '$lib/settings';
 import appService from '$lib/services/appService';
 import fullLedgerService from '$lib/services/ledgerWorkerClient';
-import { ShortDateFormatStore } from '$lib/data/mainStore';
+import { DateFormatStore, ShortDateFormatStore } from '$lib/data/mainStore';
 import * as OpfsLib from '$lib/utils/opfslib';
 import { getXactStore } from '$lib/storage/xactStoreRegistry';
 
@@ -58,6 +63,9 @@ async function isCleanSlate(): Promise<boolean> {
 export async function finishInitialization(): Promise<void> {
 	const savedShortDateFormat = await settings.get<string>(SettingKeys.shortDateFormat);
 	ShortDateFormatStore.set(savedShortDateFormat ?? SHORT_DATE_FORMAT_DEFAULT);
+
+	const savedDateFormat = await settings.get<string>(SettingKeys.dateFormat);
+	DateFormatStore.set(savedDateFormat ?? DATE_FORMAT_DEFAULT);
 
 	await fullLedgerService.ensureLoaded();
 }
