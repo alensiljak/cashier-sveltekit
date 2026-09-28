@@ -40,7 +40,7 @@
 		{#if xact.payee}
 			<button
 				type="button"
-				class="text-left align-baseline text-2xl leading-snug font-bold"
+				class="text-left align-baseline text-2xl leading-snug font-bold underline decoration-1 decoration-current/50 underline-offset-4"
 				disabled={!onPayeeClick}
 				onclick={onPayeeClick}
 			>
@@ -55,31 +55,36 @@
 	<div class="border-base-content/20 border-t"></div>
 
 	{#if xact.postings}
-		<div class="font-mono text-sm space-y-1.5">
+		<div class="font-mono text-sm space-y-2.5">
 			{#each xact.postings as posting (posting)}
 				{@const cost = formatPostingCost(posting)}
 				{@const price = formatPostingPrice(posting)}
 				{@const sep = posting.account.lastIndexOf(':')}
-				<div class="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+				<div class="space-y-0.5">
 					<button
 						type="button"
-						class="flex min-w-0 flex-auto items-baseline text-left"
+						class="flex w-full min-w-0 items-baseline text-left"
 						disabled={!onAccountClick}
 						onclick={() => onAccountClick?.(posting)}
 					>
 						{#if sep === -1}
-							<span class="underline {getAccountColour(posting.account)}">{posting.account}</span>
+							<span class="underline decoration-current/50 {getAccountColour(posting.account)}"
+								>{posting.account}</span
+							>
 						{:else}
 							<span
 								class="min-w-0 shrink overflow-hidden text-ellipsis whitespace-nowrap opacity-85 {getAccountColour(
 									posting.account
 								)}">{posting.account.slice(0, sep + 1)}</span
-							><span class="shrink-0 whitespace-nowrap underline {getAccountColour(posting.account)}"
+							><span
+								class="shrink-0 whitespace-nowrap underline decoration-current/50 {getAccountColour(
+									posting.account
+								)}"
 								>{posting.account.slice(sep + 1)}</span
 							>
 						{/if}
 					</button>
-					<div class="ml-auto flex shrink-0 flex-row items-baseline gap-3">
+					<div class="flex flex-row items-baseline justify-end gap-3">
 						{#if cost}
 							<data class="font-mono text-xs opacity-45">{cost}</data>
 						{/if}
