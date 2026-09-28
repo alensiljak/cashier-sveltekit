@@ -60,19 +60,21 @@
 				{@const cost = formatPostingCost(posting)}
 				{@const price = formatPostingPrice(posting)}
 				{@const sep = posting.account.lastIndexOf(':')}
-				<div class="flex items-baseline gap-3">
+				<div class="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
 					<button
 						type="button"
-						class="min-w-0 flex-auto overflow-hidden text-left text-ellipsis whitespace-nowrap"
+						class="flex min-w-0 flex-auto items-baseline text-left"
 						disabled={!onAccountClick}
 						onclick={() => onAccountClick?.(posting)}
 					>
 						{#if sep === -1}
 							<span class="underline {getAccountColour(posting.account)}">{posting.account}</span>
 						{:else}
-							<span class="opacity-85 {getAccountColour(posting.account)}"
-								>{posting.account.slice(0, sep + 1)}</span
-							><span class="underline {getAccountColour(posting.account)}"
+							<span
+								class="min-w-0 shrink overflow-hidden text-ellipsis whitespace-nowrap opacity-85 {getAccountColour(
+									posting.account
+								)}">{posting.account.slice(0, sep + 1)}</span
+							><span class="shrink-0 whitespace-nowrap underline {getAccountColour(posting.account)}"
 								>{posting.account.slice(sep + 1)}</span
 							>
 						{/if}

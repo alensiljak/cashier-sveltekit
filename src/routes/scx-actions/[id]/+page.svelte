@@ -3,6 +3,7 @@
 	import { page } from '$app/state';
 	import JournalXactRow from '$lib/components/JournalXactRow.svelte';
 	import SquareButton from '$lib/components/SquareButton.svelte';
+	import SquareButtonGroup from '$lib/components/SquareButtonGroup.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { ScheduledXact, xact, xactId } from '$lib/data/mainStore';
 	import type { ScheduledTransaction, Xact } from '$lib/data/model';
@@ -211,7 +212,7 @@
 		</div>
 
 		<!-- actions -->
-		<div class="mx-auto flex max-w-[390px] flex-wrap justify-center gap-16 pt-10">
+		<SquareButtonGroup>
 			<SquareButton
 				Icon={ScrollIcon}
 				classes="bg-primary text-accent"
@@ -240,7 +241,7 @@
 			>
 				Delete
 			</SquareButton>
-		</div>
+		</SquareButtonGroup>
 	</section>
 </main>
 

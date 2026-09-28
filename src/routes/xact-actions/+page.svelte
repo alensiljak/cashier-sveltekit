@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import SquareButton from '$lib/components/SquareButton.svelte';
+	import SquareButtonGroup from '$lib/components/SquareButtonGroup.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import XactDetailHero from '$lib/components/XactDetailHero.svelte';
 	import { ScheduledXact, xact, xactId } from '$lib/data/mainStore';
@@ -150,7 +151,7 @@
 	{/if}
 
 	<!-- button grid -->
-	<div class="mx-auto mt-20 flex max-w-[390px] flex-wrap justify-center gap-16">
+	<SquareButtonGroup class="mt-20">
 		<SquareButton
 			Icon={SquarePenIcon}
 			classes="bg-accent text-secondary"
@@ -180,7 +181,7 @@
 		>
 			Delete
 		</SquareButton>
-	</div>
+	</SquareButtonGroup>
 </main>
 <!-- "Delete" dialog -->
 <input

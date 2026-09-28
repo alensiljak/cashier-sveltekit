@@ -3,6 +3,7 @@
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import HelpButton from '$lib/help/HelpButton.svelte';
 	import SquareButton from '$lib/components/SquareButton.svelte';
+	import SquareButtonGroup from '$lib/components/SquareButtonGroup.svelte';
 	import {
 		TerminalIcon,
 		LandmarkIcon,
@@ -26,7 +27,7 @@
 	</Toolbar>
 
 	<div class="flex-1 overflow-y-auto touch-pan-y px-1">
-		<div class="mx-auto flex max-w-[390px] flex-wrap justify-center gap-16 pt-10">
+		<SquareButtonGroup>
 			<SquareButton
 				Icon={TerminalIcon}
 				classes="bg-accent text-secondary"
@@ -97,6 +98,6 @@
 			>
 				Portfolio Returns
 			</SquareButton>
-		</div>
+		</SquareButtonGroup>
 	</div>
 </main>
