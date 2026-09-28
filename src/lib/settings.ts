@@ -99,6 +99,8 @@ export const SettingKeys = {
 	expensesHiddenAccounts: 'expenses.hiddenAccounts',
 	// Budget category definitions (monthly targets)
 	budgetDefinition: 'budget.definition',
+	// Tax summary report definition (year start + account categories)
+	taxReportConfig: 'taxReport.config',
 	// Expenses home card: 'calendar-month' or 'rolling-days'
 	expensesCardPeriodType: 'expensesCard.periodType',
 	// Expenses home card: window size when periodType is 'rolling-days'

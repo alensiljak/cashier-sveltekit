@@ -14,7 +14,8 @@
 		ActivityIcon,
 		ChartLineIcon,
 		PercentIcon,
-		ChartColumnStackedIcon
+		ChartColumnStackedIcon,
+		FileSpreadsheetIcon
 
 	} from '@lucide/svelte';
 </script>
@@ -97,6 +98,13 @@
 				onclick={() => goto('/reports/portfolio-returns')}
 			>
 				Portfolio Returns
+			</SquareButton>
+			<SquareButton
+				Icon={FileSpreadsheetIcon}
+				classes="bg-primary text-accent"
+				onclick={() => goto('/reports/tax-summary')}
+			>
+				Tax Summary
 			</SquareButton>
 		</SquareButtonGroup>
 	</div>
