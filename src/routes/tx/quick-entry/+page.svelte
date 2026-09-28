@@ -254,7 +254,14 @@
 		const txKeyOrder: string[] = [];
 		const txMap = new Map<
 			string,
-			{ date: string; payee: string; narration: string; accounts: string[]; postings: Posting[] }
+			{
+				id: number;
+				date: string;
+				payee: string;
+				narration: string;
+				accounts: string[];
+				postings: Posting[];
+			}
 		>();
 
 		for (const row of rows) {
@@ -267,7 +274,7 @@
 			const currency = String(row[currencyIdx] ?? '');
 
 			if (!txMap.has(id)) {
-				txMap.set(id, { date, payee, narration, accounts: [], postings: [] });
+				txMap.set(id, { id: Number(id), date, payee, narration, accounts: [], postings: [] });
 				txKeyOrder.push(id);
 			}
 
@@ -292,6 +299,7 @@
 			seen.add(fingerprint);
 
 			const xact = new Xact();
+			xact.id = tx.id;
 			xact.date = tx.date;
 			xact.payee = tx.payee;
 			xact.note = tx.narration;
@@ -314,16 +322,14 @@
 			const origPayee = template.payee ?? '';
 			const origNarration = template.note ?? '';
 
-			// Fetch ALL postings for this transaction. Use = for exact string equality.
-			// Skip payee condition when empty to avoid `payee = ""` edge cases.
-			const conditions = [`date = ${template.date}`, `narration = "${origNarration}"`];
-			if (origPayee) conditions.push(`payee = "${origPayee}"`);
-
-			const fetchQuery = `SELECT account, number, currency WHERE ${conditions.join(' AND ')}`;
-			const result = await fullLedgerService.query(fetchQuery);
+			// Fetch ALL postings for this exact transaction by id. date/payee/narration
+			// alone aren't unique — same-day transactions with a generic narration
+			// (e.g. "Transfer") would otherwise merge postings from multiple transactions.
+			const fetchQuery = `SELECT account, number, currency WHERE id = ${template.id}`;
+			const result = template.id !== undefined ? await fullLedgerService.query(fetchQuery) : null;
 
 			let postings: Posting[];
-			if (!result.errors?.length && (result.rows as unknown[][])?.length) {
+			if (result && !result.errors?.length && (result.rows as unknown[][])?.length) {
 				const cols = result.columns ?? [];
 				const accountIdx = cols.indexOf('account');
 				const numberIdx = cols.indexOf('number');
