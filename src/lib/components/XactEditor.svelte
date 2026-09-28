@@ -383,7 +383,7 @@
 			{#if ($xact?.postings?.length ?? 0) > 1}
 				<a
 					href="/postings/reorder"
-					class="btn btn-primary btn-square btn-sm"
+					class="btn btn-outline btn-square btn-sm"
 					aria-label="Reorder postings"
 					title="Reorder postings"
 				>
@@ -404,15 +404,14 @@
 				onAccountClicked={(event) => onPostingAccountClicked(index)}
 			/>
 		{/each}
-		<div class="flex justify-center pt-3 pb-6">
-			<button
-				type="button"
-				class="btn btn-outline btn-accent btn-square rounded"
-				onclick={onAddPostingClicked}
-				title="Add posting"
-			>
-				<CirclePlusIcon />
-			</button>
-		</div>
+		<button
+			type="button"
+			class="btn btn-ghost btn-sm border border-dashed border-base-300 mt-1 mb-6 w-full"
+			onclick={onAddPostingClicked}
+			title="Add posting"
+		>
+			<CirclePlusIcon class="h-4 w-4" />
+			<span>Add posting</span>
+		</button>
 	</div>
 </div>
