@@ -55,10 +55,16 @@
 				<data class="grow">
 					{page.data.account.getAccountName()}
 				</data>
-				<data class={`${Formatter.getAmountColour(page.data.total.quantity)}`}>
-					{Formatter.formatAmount(page.data.total.quantity)}
-					{page.data.total.currency}
-				</data>
+				<div class="grid grid-cols-[1fr_auto] items-baseline gap-x-2 tabular-nums">
+					{#each page.data.totals as total (total.currency)}
+						<data class={`text-right ${Formatter.getAmountColour(total.quantity)}`}>
+							{Formatter.formatAmount(total.quantity)}
+						</data>
+						<data class={`font-mono ${Formatter.getAmountColour(total.quantity)}`}>
+							{total.currency}
+						</data>
+					{/each}
+				</div>
 			</div>
 			{#if Object.keys(page.data.accountMeta as AccountMeta).length > 0}
 				<dl class="mt-2 space-y-0.5 text-sm">

@@ -24,11 +24,14 @@ export const load: PageLoad = async ({ params }) => {
 		(await fullLedgerService.getAccountWithBalances(params.accountName)) ??
 		new Account(params.accountName);
 
-	// take the first balance
-	const total: Money = new Money();
+	// one total per currency held in this account
 	const balanceKeys = account.balances ? Object.keys(account.balances) : [];
-	total.quantity = balanceKeys.length ? account.balances![balanceKeys[0]] : 0;
-	total.currency = balanceKeys[0] ?? '';
+	const totals: Money[] = balanceKeys.map((currency) => {
+		const money = new Money();
+		money.quantity = account.balances![currency];
+		money.currency = currency;
+		return money;
+	});
 
 	// On-device transactions
 	const storedXacts = await (await getXactStore()).list();
@@ -91,5 +94,5 @@ WHERE account = '${params.accountName}'`;
 	) as { meta?: AccountMeta } | undefined;
 	const accountMeta: AccountMeta = openDirective?.meta ?? {};
 
-	return { account, total, unifiedRows, hasDeviceXacts, accountMeta };
+	return { account, totals, unifiedRows, hasDeviceXacts, accountMeta };
 };
