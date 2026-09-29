@@ -4,27 +4,33 @@
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { getImporter } from '$lib/importers';
 	import { loadImporterConfig } from '$lib/importers/config';
-	import { takePendingImport } from '$lib/importers/pendingImport';
+	import { clearPendingImport, loadPendingImport } from '$lib/importers/pendingImport';
 	import ImportReview from '$lib/importers/ImportReview.svelte';
 
 	type Session = {
 		importer: NonNullable<ReturnType<typeof getImporter>>;
 		config: unknown;
-		file: File;
+		fileName: string;
+		text: string;
 	};
 	let session = $state<Session | null>(null);
 
 	onMount(async () => {
-		const pending = takePendingImport();
+		const pending = loadPendingImport();
 		const importer = pending ? getImporter(pending.importerId) : undefined;
 		const config = importer ? await loadImporterConfig<unknown>(importer.id) : null;
 		if (!pending || !importer || !config) {
-			// Nothing to review, e.g. the page was reloaded.
+			// Nothing to review, e.g. it was already accepted or cancelled.
 			await goto('/importers', { replaceState: true });
 			return;
 		}
-		session = { importer, config, file: pending.file };
+		session = { importer, config, fileName: pending.fileName, text: pending.text };
 	});
+
+	async function cancel() {
+		clearPendingImport();
+		await goto('/importers');
+	}
 </script>
 
 <main class="h-screen flex flex-col overflow-hidden">
@@ -34,8 +40,9 @@
 		<ImportReview
 			importer={session.importer}
 			config={session.config}
-			file={session.file}
-			oncancel={() => goto('/importers')}
+			fileName={session.fileName}
+			text={session.text}
+			oncancel={cancel}
 		/>
 	{/if}
 </main>

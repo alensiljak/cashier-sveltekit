@@ -3,7 +3,7 @@
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { goto } from '$app/navigation';
 	import { listImporters } from '$lib/importers';
-	import { setPendingImport } from '$lib/importers/pendingImport';
+	import { savePendingImport } from '$lib/importers/pendingImport';
 	import {
 		loadImporterConfig,
 		resetImporterConfig,
@@ -56,7 +56,7 @@
 		// Allow picking the same file again later.
 		fileInput.value = '';
 		if (!file || !id) return;
-		setPendingImport(id, file);
+		savePendingImport({ importerId: id, fileName: file.name, text: await file.text() });
 		await goto('/importers/review');
 	}
 

@@ -1,16 +1,45 @@
 /**
- * Hands the file the user picked on the Importers page to the review page.
- * A File can't travel in a URL, so it waits here for one navigation.
+ * The file being reviewed, kept in sessionStorage so the review survives
+ * navigating away (e.g. to look at a matched transaction) and page reloads.
+ * A File can't be stored, but bank exports are small text, so the text is kept
+ * and everything else is recomputed on return.
  */
-let pending: { importerId: string; file: File } | null = null;
+const KEY = 'importer.pending';
 
-export function setPendingImport(importerId: string, file: File): void {
-	pending = { importerId, file };
+export interface PendingImport {
+	importerId: string;
+	fileName: string;
+	text: string;
+	/** Which rows are ticked, by row index. Applies only if the row count is unchanged. */
+	selection?: boolean[];
 }
 
-/** Returns the waiting file and clears it. Null if there is none, e.g. after a page reload. */
-export function takePendingImport(): { importerId: string; file: File } | null {
-	const result = pending;
-	pending = null;
-	return result;
+export function savePendingImport(pending: PendingImport): void {
+	try {
+		sessionStorage.setItem(KEY, JSON.stringify(pending));
+	} catch {
+		// Storage unavailable or full: the review still works, it just won't survive leaving the page.
+	}
+}
+
+export function loadPendingImport(): PendingImport | null {
+	try {
+		const raw = sessionStorage.getItem(KEY);
+		return raw ? (JSON.parse(raw) as PendingImport) : null;
+	} catch {
+		return null;
+	}
+}
+
+export function saveSelection(selection: boolean[]): void {
+	const pending = loadPendingImport();
+	if (pending) savePendingImport({ ...pending, selection });
+}
+
+export function clearPendingImport(): void {
+	try {
+		sessionStorage.removeItem(KEY);
+	} catch {
+		// Nothing to clear.
+	}
 }

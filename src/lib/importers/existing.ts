@@ -19,12 +19,13 @@ export async function loadExistingBankXacts(
 ): Promise<Xact[]> {
 	await fullLedgerService.ensureLoaded();
 	const quoted = account.replace(/'/g, "\\'");
-	const bql = `SELECT date, payee, narration, number, currency WHERE account = '${quoted}' AND date >= ${from} AND date <= ${to}`;
+	const bql = `SELECT id, date, payee, narration, number, currency WHERE account = '${quoted}' AND date >= ${from} AND date <= ${to}`;
 	const { columns, rows } = await fullLedgerService.query(bql);
 	const idx = (name: string) => columns.indexOf(name);
 
 	return rows.map((row) => {
 		const x = new Xact();
+		x.id = Number(row[idx('id')]);
 		x.date = String(row[idx('date')]);
 		x.payee = (row[idx('payee')] as string | null) ?? '';
 		x.note = (row[idx('narration')] as string | null) ?? '';
@@ -35,6 +36,37 @@ export async function loadExistingBankXacts(
 		x.postings = [p];
 		return x;
 	});
+}
+
+/**
+ * The whole recorded transaction (all postings) that `summary` was loaded from,
+ * for showing what an imported row matched. Falls back to `summary` if it can't be read.
+ */
+export async function loadFullXact(summary: Xact): Promise<Xact> {
+	if (summary.id == null) return summary;
+	try {
+		const { columns, rows } = await fullLedgerService.query(
+			`SELECT flag, account, number, currency WHERE id = ${summary.id}`
+		);
+		if (rows.length === 0) return summary;
+		const idx = (name: string) => columns.indexOf(name);
+		const x = new Xact();
+		x.id = summary.id;
+		x.date = summary.date;
+		x.payee = summary.payee;
+		x.note = summary.note;
+		x.flag = (rows[0][idx('flag')] as string) ?? '*';
+		x.postings = rows.map((r) => {
+			const p = new Posting();
+			p.account = String(r[idx('account')]);
+			p.amount = parseFloat(String(r[idx('number')]));
+			p.currency = String(r[idx('currency')]);
+			return p;
+		});
+		return x;
+	} catch {
+		return summary;
+	}
 }
 
 /** ISIN -> commodity symbol, from the `isin` metadata on the book's commodity directives. */
