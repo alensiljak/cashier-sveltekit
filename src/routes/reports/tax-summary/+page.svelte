@@ -4,6 +4,7 @@
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import { SettingKeys, settings } from '$lib/settings';
+	import { getAccountColour } from '$lib/utils/formatter';
 	import {
 		accountExcluder,
 		buildTaxReport,
@@ -231,7 +232,12 @@
 								href={txSearchUrl(acc.account)}
 								class="flex items-center justify-between rounded px-2 py-1 text-sm hover:bg-base-200"
 							>
-								<span class="truncate text-base-content/70">{acc.account}</span>
+								<span
+										class="truncate {getAccountColour(acc.account)
+											? `${getAccountColour(acc.account)} opacity-70`
+											: 'text-base-content/85'}"
+										>{acc.account}</span
+									>
 								<span class="font-mono tabular-nums">{fmt(acc.total)}</span>
 							</a>
 						{:else}
