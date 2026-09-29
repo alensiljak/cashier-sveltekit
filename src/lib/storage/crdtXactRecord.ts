@@ -1,5 +1,5 @@
 import { Posting, Xact } from '$lib/data/model';
-import type { XactId } from './xactStore';
+import type { XactId } from './crdtXactStore';
 
 /** Bump when the record shape changes; readers must refuse newer versions. */
 export const XACT_SCHEMA_VERSION = 1;

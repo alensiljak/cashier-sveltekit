@@ -292,7 +292,7 @@ export type WorkerResponse = { id: number } & WorkerResponsePayload;
 
 /**
  * `workingSetSource` is the device's working set as Beancount text, supplied by
- * the caller from the active XactStore. It is registered in the file map under
+ * the caller from the CRDT store. It is registered in the file map under
  * `mainFileName` (overriding any file of that name in OPFS), so the ledger no
  * longer depends on where the working set is actually kept.
  */
@@ -315,7 +315,7 @@ async function loadFromFiles(
 	loadedWorkingSetHash = await hashText(workingSetSource);
 	// When the user has their own book, treat *it* as the top-level ledger —
 	// exactly as if it were opened directly on desktop (e.g. via `rledger check`) —
-	// and fold cashier.bean's device transactions into it via an in-memory
+	// and fold the device transactions (the working set) into it via an in-memory
 	// `include`, never persisted to disk and never rewriting the book's own
 	// content. `option` directives only take effect in the top-level file
 	// (the same option in an included file is silently ignored, e.g. E7009),
@@ -329,7 +329,7 @@ async function loadFromFiles(
 		fileMap[userBookFilename] !== undefined
 	) {
 		// `include` paths resolve relative to the including file's own directory,
-		// while cashier.bean always lives at the OPFS root — so climb back up to
+		// while the virtual working-set file sits at the root — so climb back up to
 		// root when the book itself lives in a subdirectory (e.g. a demo scenario).
 		const bookDepth = userBookFilename.split('/').length - 1;
 		const relativeMainFilePath = '../'.repeat(bookDepth) + mainFileName;

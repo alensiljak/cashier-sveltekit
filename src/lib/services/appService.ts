@@ -461,12 +461,8 @@ class AppService {
 		return JSON.stringify(content);
 	}
 
-	/**
-	 * Creates (or overwrites) cashier.bean with empty content.
-	 * The include directive for the user's book is injected on-the-fly at
-	 * parse time by the ledger worker, so it is never written to disk.
-	 */
-	async createDefaultCashierFile(): Promise<void> {
+	/** Sets the (empty) transaction store up on this device. */
+	async initializeXactStore(): Promise<void> {
 		await (await getXactStore()).initialize();
 	}
 

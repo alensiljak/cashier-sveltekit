@@ -2,7 +2,7 @@
 
 Export Ledger from OPFS copies Beancount files the other direction from Import: Cashier's private storage (OPFS) is the source of truth, and the whole directory structure is written out to your local file system.
 
-`.cashier/` (Cashier's internal binary cache and hash) and `cashier.bean` (the on-device transaction store) are never exported — they're app-local bookkeeping, not part of your book.
+`.cashier/` (Cashier's internal binary cache and hash) is never exported — it's app-local bookkeeping, not part of your book. Your device's own quick-entry transactions (Local Transactions) are not stored in OPFS, so they are not part of this export either; use the Export page or [WebDAV Backup](/help/webdav-backup) for those.
 
 ## Steps
 

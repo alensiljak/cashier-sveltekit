@@ -1,9 +1,8 @@
 /*
 	Manages the bundled demo book: activating it (write the static fixtures into
 	OPFS and point the app's book/asset-allocation settings at them) and removing
-	it again. Demo content is read-only reference data — the only file the app
-	ever appends to is `cashier.bean` (see constants.ts), which this service
-	never touches.
+	it again. Demo content is read-only reference data — new transactions go
+	only to the CRDT store, never into these files.
 */
 import * as OpfsLib from '$lib/utils/opfslib';
 import db from '$lib/data/db';
@@ -125,7 +124,7 @@ class DemoDataService {
 	 * Writes the bundled demo fixtures into OPFS under `DEMO_DIR` and links
 	 * them as the active book / asset-allocation definition. Always
 	 * overwrites `DEMO_DIR` contents (they're static, versioned with the app)
-	 * but never touches `cashier.bean` or any of the user's own files.
+	 * but never touches any of the user's own files.
 	 */
 	async activateDemoData(): Promise<void> {
 		await OpfsLib.saveFile(DEMO_BOOK_FILE, fixture('book.bean'));
@@ -188,8 +187,7 @@ class DemoDataService {
 	/** Adds sample transactions to an empty device store and remembers their IDs. */
 	private async seedLocalXacts(): Promise<void> {
 		const store = await getXactStore();
-		// OPFS-store IDs are positional and go stale, so only the CRDT store can be cleaned up later.
-		if (store.kind !== 'crdt' || (await store.list()).length > 0) return;
+		if ((await store.list()).length > 0) return;
 		const ids: string[] = [];
 		for (const text of demoLocalXacts()) {
 			ids.push((await store.append(text)).id);

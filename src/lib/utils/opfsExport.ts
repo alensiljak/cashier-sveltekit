@@ -5,17 +5,14 @@
  * (native directory, where supported) or into a downloadable ZIP archive
  * (browsers without the File System Access API, e.g. Firefox).
  *
- * Two root-level entries are always excluded:
- *  - `CASHIER_DATA_DIR` (`.cashier/`) — Cashier's internal cache & hash, not source data.
- *  - `CASHIER_XACT_FILE` (`cashier.bean`) — the on-device transaction store, which
- *    is app-local for now and not part of the exported book.
+ * The root-level `CASHIER_DATA_DIR` (`.cashier/`) is always excluded: it holds
+ * Cashier's internal cache & hash, not source data.
  */
-import { CASHIER_DATA_DIR, CASHIER_XACT_FILE } from '$lib/constants';
+import { CASHIER_DATA_DIR } from '$lib/constants';
 import { createZipArchive } from '$lib/utils/zip';
 
 const EXCLUDED_ROOT_ENTRIES: Record<string, true> = {
-	[CASHIER_DATA_DIR]: true,
-	[CASHIER_XACT_FILE]: true
+	[CASHIER_DATA_DIR]: true
 };
 
 export interface ExportFileEntry {

@@ -1,16 +1,14 @@
 /*
     Automatic WebDAV backup: debouncing, the guard conditions, and what gets
-    uploaded for each store kind. Settings run on fake IndexedDB; the WebDAV
-    client, OPFS and the store registry are mocked.
+    uploaded. Settings run on fake IndexedDB; the WebDAV client and the store
+    registry are mocked.
 */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { get } from 'svelte/store';
 
 const mocks = vi.hoisted(() => ({
 	put: vi.fn(),
-	lastModified: vi.fn(),
 	clientArgs: [] as unknown[][],
-	readFile: vi.fn(),
 	getXactStore: vi.fn(),
 	notify: vi.fn()
 }));
@@ -20,24 +18,20 @@ vi.mock('$lib/utils/webdav', () => ({
 			mocks.clientArgs.push(args);
 		}
 		put = mocks.put;
-		lastModified = mocks.lastModified;
 	}
 }));
-vi.mock('$lib/utils/opfslib', () => ({ readFile: mocks.readFile }));
 vi.mock('$lib/storage/xactStoreRegistry', () => ({ getXactStore: mocks.getXactStore }));
 vi.mock('$lib/utils/webNotification', () => ({ showBackupNotification: mocks.notify }));
 
 import { DeviceSettingKeys, SettingKeys, deviceSettings, settings } from '$lib/settings';
 import {
-	contentHash,
 	crdtBackupFilename,
 	lastBackupTime,
-	scheduleBackup,
-	updateCashierBeanBaseline,
-	type WebDavLastSyncTs
+	scheduleBackup
 } from '$lib/services/webdavAutoBackupService';
 import { getDeviceId, ydocFilename } from '$lib/sync/ydocDevices';
 
+const STATE = new Uint8Array([1, 2, 3]);
 const CFG = { url: 'https://dav.example.com/', username: 'alice', password: 'pw' };
 
 async function configure({ enabled = true, cfg = CFG as unknown } = {}) {
@@ -64,10 +58,8 @@ beforeEach(async () => {
 		settledFlag = true;
 		return new Response('', { status: 201 });
 	});
-	mocks.lastModified.mockReset().mockResolvedValue(new Date('2026-08-15T10:00:00Z'));
 	mocks.clientArgs.length = 0;
-	mocks.readFile.mockReset().mockResolvedValue('2026-08-10 * "Shop"\n');
-	mocks.getXactStore.mockReset().mockResolvedValue({ kind: 'opfs' });
+	mocks.getXactStore.mockReset().mockResolvedValue({ exportState: async () => STATE });
 	mocks.notify.mockReset();
 	lastBackupTime.set(null);
 	await configure();
@@ -76,40 +68,6 @@ beforeEach(async () => {
 afterEach(() => {
 	vi.useRealTimers();
 	vi.restoreAllMocks();
-});
-
-describe('contentHash', () => {
-	it('is a SHA-256 hex digest', async () => {
-		expect(await contentHash('abc')).toBe(
-			'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad'
-		);
-	});
-
-	it('ignores line-ending differences', async () => {
-		expect(await contentHash('a\r\nb\r\n')).toBe(await contentHash('a\nb\n'));
-	});
-});
-
-describe('updateCashierBeanBaseline', () => {
-	it('records the remote timestamp and local hash, keeping the other baselines', async () => {
-		await deviceSettings.set(DeviceSettingKeys.webdavLastSyncTs, {
-			settings: 'S',
-			cashierBean: null,
-			scheduled: 'X'
-		});
-
-		await updateCashierBeanBaseline('content', new Date('2026-08-15T10:00:00Z'));
-
-		const stored = await deviceSettings.get<WebDavLastSyncTs>(DeviceSettingKeys.webdavLastSyncTs);
-		expect(stored).toEqual({
-			settings: 'S',
-			scheduled: 'X',
-			cashierBean: {
-				remoteTs: '2026-08-15T10:00:00.000Z',
-				localHash: await contentHash('content')
-			}
-		});
-	});
 });
 
 describe('crdtBackupFilename', () => {
@@ -174,33 +132,18 @@ describe('guards', () => {
 	});
 });
 
-describe('OPFS store', () => {
-	it('uploads cashier.bean with the configured credentials', async () => {
+describe('upload', () => {
+	it('uploads the Yjs state to this device’s own file with the configured credentials', async () => {
 		await runBackup();
 
 		expect(mocks.clientArgs[0]).toEqual([CFG.url, CFG.username, CFG.password]);
-		expect(mocks.put).toHaveBeenCalledWith('cashier.bean', '2026-08-10 * "Shop"\n');
+		expect(mocks.put).toHaveBeenCalledWith(
+			await crdtBackupFilename(),
+			STATE,
+			'application/octet-stream'
+		);
 		expect(get(lastBackupTime)).toBeInstanceOf(Date);
 		expect(mocks.notify).toHaveBeenCalled();
-	});
-
-	it('updates the sync baseline from the server timestamp', async () => {
-		await runBackup();
-
-		await vi.waitFor(async () => {
-			const stored = await deviceSettings.get<WebDavLastSyncTs>(DeviceSettingKeys.webdavLastSyncTs);
-			expect(stored?.cashierBean).toMatchObject({ remoteTs: '2026-08-15T10:00:00.000Z' });
-		});
-	});
-
-	it('skips the upload when cashier.bean does not exist', async () => {
-		mocks.readFile.mockResolvedValue(undefined);
-
-		scheduleBackup();
-		await vi.advanceTimersByTimeAsync(2000);
-		await vi.advanceTimersByTimeAsync(50);
-
-		expect(mocks.put).not.toHaveBeenCalled();
 	});
 
 	it('warns instead of throwing when the server rejects the upload', async () => {
@@ -216,41 +159,8 @@ describe('OPFS store', () => {
 		expect(mocks.notify).not.toHaveBeenCalled();
 	});
 
-	it('warns instead of throwing when the network fails', async () => {
-		mocks.put.mockImplementation(async () => {
-			settledFlag = true;
-			throw new Error('network down');
-		});
-
-		await runBackup();
-
-		expect(console.warn).toHaveBeenCalledWith(
-			expect.stringContaining('Upload error'),
-			expect.any(Error)
-		);
-		expect(get(lastBackupTime)).toBeNull();
-	});
-});
-
-describe('CRDT store', () => {
-	it('uploads the Yjs state to this device’s own file', async () => {
-		const state = new Uint8Array([1, 2, 3]);
-		mocks.getXactStore.mockResolvedValue({ kind: 'crdt', exportState: async () => state });
-
-		await runBackup();
-
-		expect(mocks.put).toHaveBeenCalledWith(
-			await crdtBackupFilename(),
-			state,
-			'application/octet-stream'
-		);
-		expect(mocks.readFile).not.toHaveBeenCalled();
-		expect(get(lastBackupTime)).toBeInstanceOf(Date);
-	});
-
 	it('warns when exporting or uploading fails', async () => {
 		mocks.getXactStore.mockResolvedValue({
-			kind: 'crdt',
 			exportState: async () => {
 				settledFlag = true;
 				throw new Error('export failed');

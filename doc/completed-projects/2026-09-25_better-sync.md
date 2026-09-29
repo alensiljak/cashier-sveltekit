@@ -140,5 +140,5 @@ Open: merged records are only visible in the ledger after "Reload Ledger". Recor
 
 #### ✅ Other code paths
 
-- ✅ Code that reads or writes `cashier.bean` in OPFS directly still bypasses the store choice: `appService.stripIncludesFromBookFile()` / `saveCashierFile()`, the export page, `opfsExport`, and the import-ledger page. _Not audited_ beyond a search for `CASHIER_XACT_FILE`.
+- ✅ Done in [remove-opfs-cashier-bean](../projects/2026-09-26_remove-opfs-cashier-bean.md): the OPFS store and every direct `cashier.bean` path are removed. Previously, code that read or wrote `cashier.bean` in OPFS directly bypassed the store choice: `appService.stripIncludesFromBookFile()` / `saveCashierFile()`, the export page, `opfsExport`, and the import-ledger page. _Not audited_ beyond a search for `CASHIER_XACT_FILE`.
 - ✅ Onboarding with CRDT selected on a clean slate (demo data, import, empty) is _unverified_, as is whether the demo and import flows write transactions through the store.

@@ -4,7 +4,6 @@
 	import { get } from 'svelte/store';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { SettingKeys, settings, DeviceSettingKeys, deviceSettings } from '$lib/settings';
-	import { getXactStore } from '$lib/storage/xactStoreRegistry';
 	import { DATE_FORMAT_DEFAULT, SHORT_DATE_FORMAT_DEFAULT } from '$lib/constants';
 	import Notifier from '$lib/utils/notifier';
 	import appService from '$lib/services/appService';
@@ -75,9 +74,6 @@
 	];
 
 	let ledgerCacheEnabled = $state<boolean>(true);
-	let xactStoreType = $state<'opfs' | 'crdt'>('crdt');
-	// The store in use since load; a different selection needs a reload to take effect.
-	let loadedXactStoreType = $state<'opfs' | 'crdt'>('opfs');
 	let currency = $state<string>();
 	let bookCurrencies = $state<string[]>([]);
 	let bookFilename = $state<string | null>(null);
@@ -174,11 +170,6 @@
 			string | undefined;
 		ledgerCacheEnabled =
 			(await deviceSettings.get<boolean>(DeviceSettingKeys.ledgerCacheEnabled)) ?? true;
-		// Resolving the store also saves the default, so the setting is set afterwards.
-		loadedXactStoreType = (await getXactStore()).kind;
-		xactStoreType =
-			(await deviceSettings.get<'opfs' | 'crdt'>(DeviceSettingKeys.xactStore)) ??
-			loadedXactStoreType;
 		savedAssetAllocationDefinition =
 			(await settings.get<string>(SettingKeys.assetAllocationDefinition)) ?? null;
 		savedDateFormat = (await settings.get<string>(SettingKeys.dateFormat)) ?? DATE_FORMAT_DEFAULT;
@@ -298,7 +289,6 @@
 
 		await settings.set(SettingKeys.rootInvestmentAccount, rootInvestmentAccount);
 		await deviceSettings.set(DeviceSettingKeys.ledgerCacheEnabled, ledgerCacheEnabled);
-		await deviceSettings.set(DeviceSettingKeys.xactStore, xactStoreType);
 		await settings.set(SettingKeys.assetAllocationDefinition, assetAllocationDefinition);
 		await settings.set(SettingKeys.dateFormat, dateFormat);
 		await settings.set(SettingKeys.shortDateFormat, shortDateFormat);
@@ -310,7 +300,7 @@
 		ShortDateFormatStore.set(shortDateFormat);
 		DateFormatStore.set(dateFormat);
 
-		// Save book filename in cashier.bean
+		// Save the book filename
 		if (bookFilename) {
 			await appService.writeBookFilename(bookFilename);
 		}
@@ -563,35 +553,6 @@
 				bind:checked={ledgerCacheEnabled}
 			/>
 		</div>
-
-		<fieldset class="flex flex-col gap-1">
-			<legend class="text-sm font-medium">Transaction storage</legend>
-			<label class="flex items-center gap-3 text-sm">
-				<input
-					class="radio radio-primary radio-sm"
-					type="radio"
-					name="xact-store"
-					value="opfs"
-					bind:group={xactStoreType}
-				/>
-				OPFS (cashier.bean file, legacy)
-			</label>
-			<label class="flex items-center gap-3 text-sm">
-				<input
-					class="radio radio-primary radio-sm"
-					type="radio"
-					name="xact-store"
-					value="crdt"
-					bind:group={xactStoreType}
-				/>
-				CRDT
-			</label>
-			{#if xactStoreType !== loadedXactStoreType}
-				<p class="text-xs text-warning">
-					The ledger needs to be reloaded for the storage change to take effect.
-				</p>
-			{/if}
-		</fieldset>
 	</CashierCardTemplate>
 
 	<!-- ── Specific Settings (sub-pages) ───────────────────── -->

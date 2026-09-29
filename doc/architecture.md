@@ -9,14 +9,15 @@ The decisions made in the architecture of the app.
 - Uses **TailwindCSS v4** and **DaisyUI v5** — class names and config differ from v3/v4 respectively.
 - It is deployed as a static website to Netlify (via `npm run deploy`).
 - The ledger files are stored in OPFS, in Beancount format. The app data is in IndexedDb (via **Dexie**).
+- The transactions entered on the device (the _working set_) are not a file: they live in a Yjs (CRDT) document, persisted in IndexedDb. See [Working Set Store](#working-set-store).
 - The configuration information is in Settings table in IndexedDb.
 - The app uses File System API to access the ledger files on the device.
 
 ### Rust Ledger WASM
 
-- `ledgerService` is the light version, loading only the Transactions. It provides the LSP features and is used for saving the Xact record to a correct place in the source file.
-- `ledgerWorkerClient` (imported as `fullLedgerService`) loads the complete book in a background Worker and is used to run financial reports and queries. It reads all `.bean` files from OPFS; if the user has configured their own book file, that file (not `cashier.bean`) is used as the WASM parse entry point, with `cashier.bean`'s device transactions folded in via an `include` line injected in memory. This keeps `option` directives declared in the user's book authoritative — Beancount/rledger only honors options set in the top-level (entry point) file, ignoring the same option when it appears in an included file. With no user book configured, `cashier.bean` is the entry point on its own.
-- `cashier.bean` is a _virtual_ file: the worker is handed the working set as Beancount text (`XactStore.toBeancount()`) and places it in the file map under that name, regardless of where the working set is actually persisted (see [Working Set Store](#working-set-store)).
+- `ledgerWorkerClient` (imported as `fullLedgerService`) loads the complete book in a background Worker and is used to run financial reports and queries. It reads all `.bean` files from OPFS and is also handed the working set as Beancount text (`CrdtXactStore.toBeancount()`).
+- The working set is registered in the worker's file map under a _virtual_ filename, `DEVICE_XACTS_FILE` (`src/lib/constants.ts`, value `cashier.bean`). It is never a real file in OPFS; a real file of that name would be overridden.
+- If the user has configured their own book file, that file is used as the WASM parse entry point, with the virtual working-set file folded in via an `include` line injected in memory (never written to disk). This keeps `option` directives declared in the user's book authoritative — Beancount/rledger only honors options set in the top-level (entry point) file, ignoring the same option when it appears in an included file. With no user book configured, the virtual working-set file is the entry point on its own.
 - Individual pages send queries and use the returned data asynchronously.
 
 ### Key directories
@@ -24,7 +25,7 @@ The decisions made in the architecture of the app.
 - `src/lib/components/` — shared UI components
 - `src/lib/data/` — data access layer
 - `src/lib/services/` — business logic services
-- `src/lib/storage/` — OPFS and IndexedDb storage abstractions
+- `src/lib/storage/` — OPFS and IndexedDb storage, including the CRDT working-set store
 - `src/lib/stores/` — Svelte stores (reactive state)
 - `src/lib/sync/` — synchronization logic
 - `src/lib/rledger/` — Rust Ledger WASM integration
@@ -89,78 +90,80 @@ See `src/routes/peer-sync/+page.svelte` (Connect toggle) and
 
 ## Working Set Store
 
-The device's working set — the transactions entered on this device — is
-accessed through the `XactStore` interface (`src/lib/storage/xactStore.ts`).
-Consumers (`ledgerService`, the editor, the journal, peer sync) never touch
-storage directly; they call `getXactStore()`
-(`src/lib/storage/xactStoreRegistry.ts`), which resolves the implementation
-once from the `xactStore` device setting.
+The device's working set — the transactions entered on this device, not yet
+archived into the user's book — is kept in a CRDT store, `CrdtXactStore`
+(`src/lib/storage/crdtXactStore.ts`): a Yjs document persisted to IndexedDB via
+`y-indexeddb`. There is no `cashier.bean` file in OPFS.
 
-| Store           | Persistence                               | Notes                                                        |
-| --------------- | ----------------------------------------- | ------------------------------------------------------------ |
-| `CrdtXactStore` | Yjs document in IndexedDB (`y-indexeddb`) | **Default.** Enables seamless peer sync.                     |
-| `OpfsXactStore` | The `cashier.bean` text file in OPFS      | Legacy. Kept for devices that already have a `cashier.bean`. |
+Consumers (the editor, the journal, search, the ledger loader, peer sync,
+backup) never create the store themselves. They call `getXactStore()`
+(`src/lib/storage/xactStoreRegistry.ts`), which creates it on first use and
+hands out the same instance afterwards. `subscribeXactStore(callback)` runs
+`callback` on every change to the store, whatever the cause: a local edit, a
+merge from another device, or clear. `setXactStore()` replaces the instance in
+tests. The store is imported on demand, which also avoids an import cycle
+(`crdtXactStore` → `webdavAutoBackupService` → registry).
 
-Selection: if the setting is unset, new installs get CRDT, while a device that
-already has a `cashier.bean` in OPFS gets OPFS so its working set is kept. The
-choice is then saved, so it stays stable. A changed setting takes effect on the
-next load.
-
-### CRDT store
-
-- Each transaction is one record with a stable, monotonic ULID, stored as a
-  plain JSON value in a `Y.Map`. IDs stay valid across edits.
+- Each transaction is one record with a stable, monotonic ULID (`XactId`),
+  stored as a plain JSON value in a `Y.Map`. IDs stay valid across edits.
 - Concurrent edits of the _same_ transaction resolve last-writer-wins per
   record; adds and removes of _different_ transactions merge cleanly. Two
   devices can therefore enter transactions independently and converge without
   conflicts or manual merging.
-- Peer sync (`src/lib/sync/peerConnection.svelte.ts`) exchanges Yjs updates
-  between devices directly. Updates merged in from another device carry the
-  `remote` origin so they are not echoed back.
-- Yjs is loaded on demand, so OPFS-store users don't pay for it.
+- Each record remembers the ID of the device that created it (`origin`).
+- The store is initialized once its IndexedDB database exists
+  (`isInitialized()`); onboarding calls `appService.initializeXactStore()`.
 
-### What `cashier.bean` means now
+### Sync and backup
 
-With the CRDT store there is no `cashier.bean` file in OPFS. The name remains
-as the _logical_ file that holds the working set: it is generated from the
-store via `toBeancount()` and fed to the light `ledgerService` and to the
-full-book worker (as the in-memory entry point or `include`, see above). With
-the legacy OPFS store it is a real file, and the behaviour is the same.
+- **Peer sync** (`src/lib/sync/peerConnection.svelte.ts`) exchanges Yjs updates
+  between trusted devices directly, and pushes local edits live while
+  connected. Updates merged in from another device carry the `remote` origin
+  so they are not echoed back.
+- **WebDAV backup** (`webdavAutoBackupService.ts`) uploads the Yjs document
+  state to a per-device file, so devices never overwrite each other. Files of
+  other trusted devices are merged in on download (`ydocDevices.ts`).
+- Merging is idempotent and order-independent, so any sync path can be
+  repeated safely.
 
-Backups differ by store: the OPFS store uploads `cashier.bean` to WebDAV, while
-the CRDT store uploads its Yjs document state to a per-device file
-(`webdavAutoBackupService.ts`).
+### How the working set reaches the WASM engine
 
-Do not read or write `cashier.bean` in OPFS directly; go through
-`getXactStore()`, or the behaviour will diverge between the two stores.
+The store is not a file, so the ledger worker is given its content as text:
+`ledgerWorkerClient` calls `getXactStore().toBeancount()` and passes the
+result with the load request (`workingSetSource`). The worker registers it in
+the file map under the virtual `DEVICE_XACTS_FILE` name and either makes it
+the entry point or folds it into the user's book (see
+[Rust Ledger WASM](#rust-ledger-wasm)). A hash of the text is kept next to the
+ledger cache, so the cache is rebuilt when the working set changes even though
+no file modification time changed.
+
+Do not read or write a `cashier.bean` in OPFS. It is not the working set, and
+any real file of that name is ignored when the ledger loads.
 
 ## Reloading After a Working-Set Mutation
 
 Any code path that writes to the working set (append/edit/delete a
-transaction, delete-all, import, sync) must refresh state in the same
-two-step pattern, or the light-service cache, the full-book cache, and the
-homepage "modified" change indicator drift out of sync with each other:
+transaction, delete-all, import, sync) must keep two things up to date:
 
-1. **Light ledger (`ledgerService`)** — `appendTransaction` / `editTransaction`
-   / `deleteTransaction` already call `invalidate()` internally, which
-   re-reads the device transactions and bumps the `version` store. Pages that list
-   transactions (e.g. `src/routes/journal/+page.svelte`) key an `$effect` off
-   `ledgerService.version` and re-fetch when it changes. If you mutate
-   `cashier.bean` directly instead of through one of those three methods
-   (e.g. `appService.createDefaultCashierFile()` for "Delete All"), call
-   `ledgerService.invalidate()` yourself afterwards.
+1. **Device transaction lists** — the store notifies its subscribers on every
+   change. Pages that list device transactions (e.g.
+   `src/routes/journal/+page.svelte`) call
+   `$effect(() => subscribeXactStore(load))` and re-fetch, so they need no
+   manual refresh. This also covers changes that arrive from another device.
 2. **Full ledger + change indicator (`reloadLedgerFromOpfs`,
    `src/lib/services/ledgerReload.ts`)** — call `void reloadLedgerFromOpfs()`
-   (fire-and-forget, in the background) after step 1. It invalidates
-   `fullLedgerService` (used for reports/queries/asset-allocation) and
-   rebases the OPFS staleness snapshot so the homepage "modified" indicator
-   doesn't stay stuck out of date.
+   (fire-and-forget, in the background) after the write. It invalidates
+   `fullLedgerService` (used for reports/queries/asset-allocation) so the
+   working set is folded in again, and rebases the OPFS staleness snapshot so
+   the homepage "modified" indicator doesn't stay stuck out of date. Peer sync
+   does this itself after a merge (unless auto-reload is off), and the WebDAV
+   page offers a **Reload Ledger** button after a download.
 
 See `src/routes/tx/+page.svelte` (`saveXact`) and
 `src/routes/xact-actions/+page.svelte` (`onDeleteConfirmed`,
 `onDuplicateClick`) for the reference pattern, and
 `src/routes/journal/+page.svelte` (`onDeleteAllConfirmed`) for the same
-pattern applied to a direct file write.
+pattern applied to `clear()`.
 
 ## Toolbar Overflow Menu
 

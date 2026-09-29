@@ -16,7 +16,7 @@
 	import { base } from '$app/paths';
 	import TransactionEditor from '$lib/components/XactEditor.svelte';
 	import { Xact } from '$lib/data/model';
-	import type { StoredXact } from '$lib/storage/xactStore';
+	import type { StoredXact } from '$lib/storage/crdtXactStore';
 	import HelpButton from '$lib/help/HelpButton.svelte';
 	import type { ValidationIssue } from '$lib/data/validation';
 

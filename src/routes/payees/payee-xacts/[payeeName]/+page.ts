@@ -5,7 +5,7 @@
 import { getXactStore } from '$lib/storage/xactStoreRegistry';
 import fullLedgerService from '$lib/services/ledgerWorkerClient';
 import { Xact, Posting } from '$lib/data/model';
-import type { XactId } from '$lib/storage/xactStore';
+import type { XactId } from '$lib/storage/crdtXactStore';
 import type { PageLoad } from './$types';
 
 export type PayeeXactRow = {

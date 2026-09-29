@@ -1,59 +1,24 @@
 /*
-    xactStoreRegistry tests: which working-set store is chosen, and that the
-    choice is made once and shared. The registry keeps module-level state, so
-    each test loads a fresh copy of it.
+    xactStoreRegistry tests: the working-set store is the CRDT store, created
+    once and shared. The registry keeps module-level state, so each test loads
+    a fresh copy of it.
 */
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-const opfsFiles = vi.hoisted(() => new Set<string>());
-vi.mock('$lib/utils/opfslib', () => ({
-	fileExists: vi.fn(async (name: string) => opfsFiles.has(name))
-}));
 vi.mock('$lib/services/webdavAutoBackupService', () => ({ scheduleBackup: vi.fn() }));
 
 async function load() {
 	vi.resetModules();
 	const registry = await import('$lib/storage/xactStoreRegistry');
-	const { DeviceSettingKeys, deviceSettings } = await import('$lib/settings');
-	return { registry, DeviceSettingKeys, deviceSettings };
+	return { registry };
 }
 
-beforeEach(async () => {
-	opfsFiles.clear();
-	// Forget any saved choice from a previous test.
-	const { deviceSettings, DeviceSettingKeys } = await load();
-	await deviceSettings.set(DeviceSettingKeys.xactStore, undefined as unknown as string);
-});
-
 describe('getXactStore', () => {
-	it('defaults to CRDT for a new install and remembers the choice', async () => {
-		const { registry, deviceSettings, DeviceSettingKeys } = await load();
+	it('returns the CRDT store', async () => {
+		const { registry } = await load();
+		const { CrdtXactStore } = await import('$lib/storage/crdtXactStore');
 
-		expect((await registry.getXactStore()).kind).toBe('crdt');
-		expect(await deviceSettings.get(DeviceSettingKeys.xactStore)).toBe('crdt');
-	});
-
-	it('keeps OPFS when a legacy cashier.bean exists, and remembers it', async () => {
-		opfsFiles.add('cashier.bean');
-		const { registry, deviceSettings, DeviceSettingKeys } = await load();
-
-		expect((await registry.getXactStore()).kind).toBe('opfs');
-		expect(await deviceSettings.get(DeviceSettingKeys.xactStore)).toBe('opfs');
-	});
-
-	it('honours an explicit setting over the legacy file check', async () => {
-		opfsFiles.add('cashier.bean');
-		const { registry, deviceSettings, DeviceSettingKeys } = await load();
-		await deviceSettings.set(DeviceSettingKeys.xactStore, 'crdt');
-
-		expect((await registry.getXactStore()).kind).toBe('crdt');
-	});
-
-	it('falls back to OPFS for an unrecognised setting', async () => {
-		const { registry, deviceSettings, DeviceSettingKeys } = await load();
-		await deviceSettings.set(DeviceSettingKeys.xactStore, 'something-new');
-
-		expect((await registry.getXactStore()).kind).toBe('opfs');
+		expect(await registry.getXactStore()).toBeInstanceOf(CrdtXactStore);
 	});
 
 	it('hands out the same store to every caller, whichever comes first', async () => {
@@ -69,7 +34,7 @@ describe('getXactStore', () => {
 describe('setXactStore', () => {
 	it('replaces the active store', async () => {
 		const { registry } = await load();
-		const fake = { kind: 'opfs' } as never;
+		const fake = {} as never;
 
 		registry.setXactStore(fake);
 

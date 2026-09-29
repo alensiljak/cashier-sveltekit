@@ -12,8 +12,8 @@
 	let url = '';
 	let username = '';
 	let password = '';
-	let uploadFilename = 'cashier.bean';
-	let downloadFilename = 'cashier.bean';
+	let uploadFilename = 'test.txt';
+	let downloadFilename = 'test.txt';
 	let content = '';
 	let readContent = '';
 	let isUploading = false;
@@ -379,10 +379,6 @@
 						<li>
 							If you see a CORS error, the server must allow your app's origin. NextCloud does not
 							enable CORS by default for browser requests.
-						</li>
-						<li>
-							Workflow: phone uploads <code class="text-xs">cashier.bean</code> → PC polls / downloads
-							→ PC sorts into ledger files → PC deletes or clears the remote file.
 						</li>
 					</ul>
 				</div>

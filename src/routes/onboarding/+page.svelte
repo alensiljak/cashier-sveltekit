@@ -10,7 +10,7 @@
 	async function chooseDemo() {
 		busy = true;
 		try {
-			await appService.createDefaultCashierFile();
+			await appService.initializeXactStore();
 			await demoDataService.activateDemoData();
 			await finishInitialization();
 			await goto('/');
@@ -23,7 +23,7 @@
 	async function chooseImport() {
 		busy = true;
 		try {
-			await appService.createDefaultCashierFile();
+			await appService.initializeXactStore();
 			await finishInitialization();
 			await goto('/opfs/import-ledger');
 		} catch (err) {
@@ -35,7 +35,7 @@
 	async function chooseEmpty() {
 		busy = true;
 		try {
-			await appService.createDefaultCashierFile();
+			await appService.initializeXactStore();
 			await finishInitialization();
 			await goto('/');
 		} catch (err) {

@@ -3,7 +3,6 @@
     import { page } from '$app/state';
     import Toolbar from '$lib/components/Toolbar.svelte';
     import { settings, SettingKeys } from '$lib/settings';
-    import { readFile } from '$lib/utils/opfslib';
     import { WebDavClient } from '$lib/utils/webdav';
     import db from '$lib/data/db';
     import { CheckIcon, CopyIcon } from '@lucide/svelte';
@@ -46,16 +45,6 @@
                     content = res.ok ? await res.text() : `Error ${res.status}: ${res.statusText}`;
                 }
                 result.push({ filename: 'settings.json', content });
-            }
-            if (files.includes('bean')) {
-                let content: string;
-                if (source === 'local') {
-                    content = await readFile('cashier.bean') ?? '(file not found)';
-                } else {
-                    const res = await dav!.get('cashier.bean');
-                    content = res.ok ? await res.text() : `Error ${res.status}: ${res.statusText}`;
-                }
-                result.push({ filename: 'cashier.bean', content });
             }
             if (files.includes('scheduled')) {
                 let content: string;

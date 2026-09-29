@@ -9,7 +9,7 @@
 	import { getXactStore } from '$lib/storage/xactStoreRegistry';
 	import { readFile } from '$lib/utils/opfslib';
 	import { locateXactsInSource, findXactAtLine } from '$lib/utils/xactLocator';
-	import type { XactId } from '$lib/storage/xactStore';
+	import type { XactId } from '$lib/storage/crdtXactStore';
 	import type { Xact } from '$lib/data/model';
 	import { SquarePenIcon } from '@lucide/svelte';
 

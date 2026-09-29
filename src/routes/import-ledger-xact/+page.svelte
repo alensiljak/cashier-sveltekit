@@ -45,7 +45,7 @@
 			for (const { span } of locations) {
 				await store.append(lines.slice(span.startLine, span.endLine + 1).join(NL));
 			}
-			Notifier.success(`Imported ${locations.length} transaction(s) into the ${store.kind} store`);
+			Notifier.success(`Imported ${locations.length} transaction(s) into the device store`);
 		} catch (error) {
 			Notifier.error((error as Error).message);
 		}

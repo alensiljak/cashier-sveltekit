@@ -8,8 +8,8 @@
 		counter, and (when `onApplyMerge` is supplied) a per-hunk Theirs/Mine
 		toggle that lets the caller write back a hunk-level merge instead of a
 		whole-file overwrite. Used by both the generic beancount peer-sync
-		preview modal and peer-sync's own cashier.bean/settings/scheduled diff
-		modal — merge only makes sense for line-oriented content (cashier.bean),
+		preview modal and peer-sync's own settings/scheduled diff
+		modal — merge only makes sense for line-oriented content (Beancount),
 		so JSON sections there simply omit `onApplyMerge` and get a read-only
 		diff with the same navigation.
 	*/

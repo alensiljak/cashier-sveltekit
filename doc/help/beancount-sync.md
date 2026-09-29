@@ -1,6 +1,6 @@
 # Beancount Sync
 
-Open Beancount Sync compares your device's full ledger book — every `*.bean`/`*.toml` file, including `cashier.bean` — against a trusted peer's copy, file by file, and lets you pull the peer's changes.
+Open Beancount Sync compares your device's full ledger book — every `*.bean`/`*.toml` file — against a trusted peer's copy, file by file, and lets you pull the peer's changes.
 
 ## Prerequisites
 
@@ -29,6 +29,6 @@ Use the toolbar menu's **Show differences only** to collapse the tree down to fi
 
 Tap **Pull N files** to download every file currently marked **Pull**. This overwrites the local copy (or removes it, if the peer deleted the file) and cannot be undone. Files marked **Skip** or **Conflict** are left alone.
 
-**Caution:** `cashier.bean` holds this device's own pending quick-entry transactions. Pulling it replaces the whole file with the peer's copy — any entries you added here since the last sync that aren't also on the peer are lost, since this is a whole-file copy, not a merge. Use **Preview** on that row before pulling if you're not sure the two sides agree.
+Your device's own quick-entry transactions (Local Transactions) are not files, so they don't appear here. They are merged between devices from the [Peer Sync](/help/peer-sync) page instead.
 
 If the peer goes offline mid-session, the page keeps showing your local files but can't classify their status until the peer reconnects.

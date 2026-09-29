@@ -6,4 +6,4 @@ Works for a transaction in **any** `.bean` file, including ones pulled in via `i
 
 ## Editing
 
-Only transactions in `cashier.bean` — the on-device file the app writes to — can be edited. For those, an **Edit** button opens the transaction in the [Transaction Editor](/help/transaction-editor). Transactions from any other file are shown for reference only, since the app has no safe way to write changes back into files it didn't create.
+Only transactions entered on this device (the Local Transactions the app writes to) can be edited. For those, an **Edit** button opens the transaction in the [Transaction Editor](/help/transaction-editor). Transactions from any other file are shown for reference only, since the app has no safe way to write changes back into files it didn't create.

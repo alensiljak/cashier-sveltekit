@@ -17,7 +17,7 @@ import type {
 	WorkerResponse,
 	WorkerResponsePayload
 } from '$lib/workers/ledger.worker';
-import { CASHIER_XACT_FILE, USER_BOOK_FILENAME } from '$lib/constants';
+import { DEVICE_XACTS_FILE, USER_BOOK_FILENAME } from '$lib/constants';
 import { getXactStore } from '$lib/storage/xactStoreRegistry';
 
 // Extract the response shape for a given `type` discriminant.
@@ -110,10 +110,10 @@ class LedgerWorkerClient {
 	// -------------------------------------------------------------------------
 
 	private async mainFileName(): Promise<string> {
-		return CASHIER_XACT_FILE;
+		return DEVICE_XACTS_FILE;
 	}
 
-	/** The device working set (from the active XactStore) as Beancount text. */
+	/** The device working set (from the CRDT store) as Beancount text. */
 	private async workingSetSource(): Promise<string> {
 		return (await getXactStore()).toBeancount();
 	}

@@ -13,13 +13,13 @@ It is implemented as a PWA using Svelte and DaisyUI frameworks.
 ### Mobile App
 
 - balance overview
-- quick transaction entry. Stored in `cashier.bean`.
+- quick transaction entry. Stored in the working-set store (a CRDT document in IndexedDB).
 - import/sync Beancount files into local storage (OPFS)
 
 #### Desktop App
 
 - detailed review, analysis, reports
-- sorting transactions from `cashier.bean` into appropriate beancount files
+- sorting transactions from the working set (exported from the app) into appropriate beancount files
 
 ## Architecture
 
@@ -31,8 +31,8 @@ See [`/doc/architecture.md`](/doc/architecture.md) for the app's architecture, W
 
 ## Demo Data
 
-- A fresh install/cleared OPFS lands on `/onboarding`. When testing in a browser (e.g. via `agent-browser` against `http://localhost:5173/`), pick **"Try demo data"** there, or go to **Settings → Demo Data → Load demo data** if `cashier.bean` already exists — otherwise every page renders blank and you're not exercising real behavior.
-- Demo content (`src/lib/demo/fixtures/*`) is read-only reference data written into `cashier-demo/` in OPFS by `demoDataService.ts`; it is never a substitute for `cashier.bean`, which stays the only file the app writes new transactions to.
+- A fresh install/cleared site data (OPFS and IndexedDB) lands on `/onboarding`. When testing in a browser (e.g. via `agent-browser` against `http://localhost:5173/`), pick **"Try demo data"** there, or go to **Settings → Demo Data → Load demo data** if the app is already initialized — otherwise every page renders blank and you're not exercising real behavior.
+- Demo content (`src/lib/demo/fixtures/*`) is read-only reference data written into `cashier-demo/` in OPFS by `demoDataService.ts`; it is never a substitute for the working-set store, which stays the only place the app writes new transactions to.
 - If the demo book is missing an account, commodity, price, or scenario needed to exercise the feature you're testing, do not hand-edit OPFS to patch around it — report the specific gap back so the fixtures in `src/lib/demo/fixtures/` can be extended for future dev and end-user use.
 
 ## Tools

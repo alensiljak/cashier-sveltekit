@@ -27,7 +27,7 @@
 	} from '$lib/utils/opfslib';
 	import { reloadLedgerFromOpfs } from '$lib/services/ledgerReload';
 	import { buildDiffLines, type DiffLine } from '$lib/utils/diffText';
-	import { CASHIER_XACT_FILE, CASHIER_DATA_DIR } from '$lib/constants';
+	import { CASHIER_DATA_DIR } from '$lib/constants';
 
 	const CACHE_DIR_PREFIX = `${CASHIER_DATA_DIR}/`;
 
@@ -392,9 +392,9 @@
 	// OPFS page rather than through this import flow. Reconcile it against what
 	// is actually in OPFS right now: add/update entries for files that exist,
 	// drop entries for files that don't, and leave everything else untouched
-	// (importedAt is preserved for files still present). cashier.bean and
-	// .cashier/ are Cashier-internal and never part of the imported source
-	// book, so they're skipped here too — same as OpfsSource.listTree() does
+	// (importedAt is preserved for files still present). .cashier/ is
+	// Cashier-internal and never part of the imported source book, so it's
+	// skipped here too — same as OpfsSource.listTree() does
 	// for peer sync.
 	async function rebuildManifestAndRescan() {
 		const [manifest, tree] = await Promise.all([getManifest(), listFileTree()]);
@@ -405,7 +405,7 @@
 
 		for (const entry of tree) {
 			if (entry.kind !== 'file') continue;
-			if (entry.path === CASHIER_XACT_FILE || entry.path.startsWith(CACHE_DIR_PREFIX)) continue;
+			if (entry.path.startsWith(CACHE_DIR_PREFIX)) continue;
 			if (patterns.length > 0 && !matchesAny(entry.name, patterns)) continue;
 			if (entry.size === undefined || entry.lastModified === undefined) continue;
 

@@ -153,21 +153,13 @@
 
 	// ─── Local Transactions (CRDT store) ──────────────────────────────────────
 	// Merged automatically (no diff view), so it's a status plus one Sync action.
-	// Hidden when this device uses the OPFS store (local hash is null).
 	let ydocStatus = $state<HashStatus | null>(null);
-	let hasLocalYdoc = $state(false);
 	let syncingYdoc = $state(false);
 
 	async function checkYdocHash(targetId: string) {
 		ydocStatus = 'checking';
 		try {
 			const local = await peerConnection.getLocalYdocHash();
-			hasLocalYdoc = local !== null;
-			if (!hasLocalYdoc) {
-				ydocStatus = null;
-				filesState = null;
-				return;
-			}
 			const remote = await peerConnection.fetchRemoteYdocHash(targetId);
 			if (targetId !== syncTargetId) return;
 			ydocStatus = itemHashStatus(local, remote);
@@ -669,23 +661,21 @@
 							</div>
 						{/each}
 
-						{#if hasLocalYdoc}
-							<div class="flex items-center gap-2 py-1">
-								<span class="flex-1 text-sm">Local Transactions</span>
-								{@render hashBadge(ydocStatus)}
-								<!-- Merged automatically (CRDT), so no Diff — Sync pulls and merges. -->
-								<button
-									class="btn btn-sm btn-square btn-primary"
-									aria-label="Sync Local Transactions"
-									title="Pull &amp; merge"
-									disabled={syncingYdoc || ydocStatus !== 'different'}
-									onclick={syncLocalTransactions}
-								>
-									{#if syncingYdoc}<span class="loading loading-spinner loading-xs"
-											></span>{:else}<DownloadIcon size={16} />{/if}
-								</button>
-							</div>
-						{/if}
+						<div class="flex items-center gap-2 py-1">
+							<span class="flex-1 text-sm">Local Transactions</span>
+							{@render hashBadge(ydocStatus)}
+							<!-- Merged automatically (CRDT), so no Diff — Sync pulls and merges. -->
+							<button
+								class="btn btn-sm btn-square btn-primary"
+								aria-label="Sync Local Transactions"
+								title="Pull &amp; merge"
+								disabled={syncingYdoc || ydocStatus !== 'different'}
+								onclick={syncLocalTransactions}
+							>
+								{#if syncingYdoc}<span class="loading loading-spinner loading-xs"
+										></span>{:else}<DownloadIcon size={16} />{/if}
+							</button>
+						</div>
 					</div>
 
 					<!-- Journal files: status + pull-all-newer here; the link leads to the whole-file sync page for per-file review and conflicts. -->

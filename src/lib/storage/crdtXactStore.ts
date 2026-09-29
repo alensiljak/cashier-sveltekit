@@ -8,7 +8,23 @@ import { directiveToXact } from '$lib/utils/transactionParser';
 import { xactToBeancountText } from '$lib/utils/xactUtils';
 import { fromRecord, isNewerSchema, toRecord, type XactRecord } from './crdtXactRecord';
 import { getDeviceId } from '$lib/sync/ydocDevices';
-import type { StoredXact, XactId, XactStore } from './xactStore';
+import type { Xact } from '$lib/data/model';
+
+/**
+ * Stable record ID of a transaction in the working set (a ULID). Opaque to
+ * callers: only pass back what the store gave them.
+ *
+ * Not to be confused with the full ledger's numeric transaction id (`rledgerId`),
+ * which exists only for read-only, already-archived transactions.
+ */
+export type XactId = string;
+
+export interface StoredXact {
+	xact: Xact;
+	id: XactId;
+	/** ID of the device that created the transaction. */
+	origin?: string;
+}
 
 const DB_NAME = 'cashier-xacts';
 const RECORDS_KEY = 'xacts';
@@ -31,7 +47,10 @@ async function sha256Hex(data: Uint8Array<ArrayBuffer>): Promise<string> {
 }
 
 /**
- * Working set kept in a Yjs document, persisted to IndexedDB via y-indexeddb.
+ * The device's working set of transactions (the unarchived ones), kept in a
+ * Yjs document and persisted to IndexedDB via y-indexeddb. Get the shared
+ * instance through `getXactStore()` in `xactStoreRegistry.ts`.
+ *
  * Transactions are identified by a stable record ID, so an ID stays valid
  * across writes. Each record is stored as one plain JSON value in a `Y.Map`,
  * so concurrent edits of the same transaction resolve last-writer-wins per
@@ -41,9 +60,7 @@ async function sha256Hex(data: Uint8Array<ArrayBuffer>): Promise<string> {
  * constructor, so its existence tells whether the store was set up on this
  * device; see `isInitialized()`.
  */
-export class CrdtXactStore implements XactStore {
-	readonly kind = 'crdt';
-
+export class CrdtXactStore {
 	readonly doc: Y.Doc;
 	private readonly records: Y.Map<XactRecord>;
 	private opening?: Promise<void>;
@@ -221,6 +238,10 @@ export class CrdtXactStore implements XactStore {
 		return Y.encodeStateAsUpdate(this.doc, remoteVector);
 	}
 
+	/**
+	 * Calls `callback` whenever the set of transactions changes, whatever the
+	 * cause (local edit, merge from another device, clear). Returns the unsubscribe function.
+	 */
 	subscribe(callback: () => void): () => void {
 		// The map exists from construction, so this works before the database is open;
 		// the initial load from IndexedDB is reported as a change too.

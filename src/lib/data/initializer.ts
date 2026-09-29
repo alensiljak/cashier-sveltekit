@@ -1,15 +1,15 @@
 /*
     Initializes the minumum set of data required for running the application.
-    The basic ledger is `cashier.bean` file, which is created in OPFS. This provides
-    a functioning application.
-    If the user imports their Ledger and selects the root file, that file is then
-    included in `cashier.bean` and the whole book is parsed.
+    The device's working set of transactions lives in the CRDT store (IndexedDB).
+    Initializing it as empty provides a functioning application.
+    If the user imports their Ledger and selects the root file, the working set is
+    folded into that book at load time and the whole book is parsed.
 
-    On a genuine clean slate (no cashier.bean, no other .bean files, no book
-    linked yet) `ensureInitialized()` does NOT create the empty file itself —
+    On a genuine clean slate (store not initialized, no .bean files, no book
+    linked yet) `ensureInitialized()` does NOT initialize the store itself —
     it reports `needsOnboarding: true` so the root layout can route to
     `/onboarding` first, where the user's choice (demo data / import / empty)
-    decides how `cashier.bean` gets created.
+    decides how the store gets initialized.
 */
 import {
 	DATE_FORMAT_DEFAULT,
@@ -35,12 +35,11 @@ export async function ensureInitialized(): Promise<{ needsOnboarding: boolean }>
 		return { needsOnboarding: true };
 	}
 
-	// Create the transactions file.
-	await appService.createDefaultCashierFile();
+	await appService.initializeXactStore();
 	return { needsOnboarding: false };
 }
 
-/** No transactions file, no other book linked or present anywhere in OPFS. */
+/** No book linked and no .bean file present anywhere in OPFS. */
 async function isCleanSlate(): Promise<boolean> {
 	const userBookFilename = await settings.get<string>(USER_BOOK_FILENAME);
 	if (userBookFilename) return false;
@@ -57,8 +56,8 @@ async function isCleanSlate(): Promise<boolean> {
 
 /**
  * Loads device-local display settings and the full ledger. Call once
- * `cashier.bean` is known to exist (i.e. after `ensureInitialized()`, or
- * after the onboarding flow has created it).
+ * the transaction store is initialized (i.e. after `ensureInitialized()`, or
+ * after the onboarding flow has initialized it).
  */
 export async function finishInitialization(): Promise<void> {
 	const savedShortDateFormat = await settings.get<string>(SettingKeys.shortDateFormat);

@@ -4,7 +4,6 @@
 	import Notifier from '$lib/utils/notifier';
 	import { WebDavClient } from '$lib/utils/webdav';
 	import { getXactStore } from '$lib/storage/xactStoreRegistry';
-	import type { CrdtXactStore } from '$lib/storage/crdtXactStore';
 	import {
 		listRemoteDevices,
 		trustDevice,
@@ -42,10 +41,6 @@
 		return new WebDavClient(url, username, password);
 	}
 
-	async function crdtStore() {
-		return (await getXactStore()) as CrdtXactStore;
-	}
-
 	async function refresh() {
 		if (!url) return;
 		isLoading = true;
@@ -53,7 +48,7 @@
 		try {
 			devices = await listRemoteDevices(client());
 			mergeState = await getMergeState();
-			counts = await (await crdtStore()).originCounts();
+			counts = await (await getXactStore()).originCounts();
 		} catch (err) {
 			error = (err as Error).message;
 		} finally {
@@ -66,7 +61,7 @@
 	/** Merge every trusted device whose file changed since the last merge. */
 	export async function mergeTrusted() {
 		const dav = client();
-		const store = await crdtStore();
+		const store = await getXactStore();
 		let merged = 0;
 		try {
 			for (const d of mergeable) {

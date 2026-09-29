@@ -25,7 +25,6 @@ import { PeerProtocol } from './PeerSource';
 import { OpfsSource } from './OpfsSource';
 import { normalizeEol } from './SyncSource';
 import { getXactStore } from '$lib/storage/xactStoreRegistry';
-import type { CrdtXactStore } from '$lib/storage/crdtXactStore';
 import type { MessageAction, RequestAction } from '@trystero-p2p/core';
 
 const REQUEST_TIMEOUT_MS = 30_000;
@@ -56,12 +55,6 @@ type SyncResponseMsg = {
 	scheduled: string | null;
 	[key: string]: string | null;
 };
-
-/** The CRDT transaction store, or null when this device uses another store. */
-async function getCrdtStore(): Promise<CrdtXactStore | null> {
-	const store = await getXactStore();
-	return store.kind === 'crdt' ? (store as CrdtXactStore) : null;
-}
 
 async function hashText(content: string): Promise<string> {
 	const digest = await crypto.subtle.digest(
@@ -145,13 +138,12 @@ class PeerConnection {
 		);
 
 		// Local Transactions (CRDT store). Payloads are binary Yjs updates; an
-		// empty result means "not available" (untrusted requester, or this
-		// device doesn't use the CRDT store).
+		// empty result means "not available" (untrusted requester).
 		this.ydocHashAction = this.presence.makeRequestAction<null, string>(
 			'ydoc-hash',
 			async (_request, { peerId: fromId }) => {
 				if (!this.presence.peersMap[fromId]?.isTrusted) return '';
-				return (await (await getCrdtStore())?.contentHash()) ?? '';
+				return (await getXactStore()).contentHash();
 			}
 		);
 
@@ -159,9 +151,8 @@ class PeerConnection {
 		this.ydocSyncAction = this.presence.makeRequestAction<Uint8Array, Uint8Array>(
 			'ydoc-sync',
 			async (remoteState, { peerId: fromId }) => {
-				const store = await getCrdtStore();
-				if (!store || !this.presence.peersMap[fromId]?.isTrusted) return new Uint8Array(0);
-				const diff = await store.mergeAndDiff(remoteState);
+				if (!this.presence.peersMap[fromId]?.isTrusted) return new Uint8Array(0);
+				const diff = await (await getXactStore()).mergeAndDiff(remoteState);
 				void this.reloadAfterMerge();
 				return diff;
 			}
@@ -171,9 +162,8 @@ class PeerConnection {
 		// pushed updates are merged as they arrive.
 		this.ydocUpdateAction = this.presence.makeAction<Uint8Array>('ydoc-update');
 		this.ydocUpdateAction.onMessage = async (update, { peerId: fromId }) => {
-			const store = await getCrdtStore();
-			if (!store || !this.presence.peersMap[fromId]?.isTrusted) return;
-			await store.importState(update);
+			if (!this.presence.peersMap[fromId]?.isTrusted) return;
+			await (await getXactStore()).importState(update);
 			void this.reloadAfterMerge();
 		};
 		void this.startLiveSync();
@@ -209,8 +199,8 @@ class PeerConnection {
 
 	/** Broadcasts local (non-remote) CRDT updates to online trusted peers while connected. */
 	private async startLiveSync(): Promise<void> {
-		const store = await getCrdtStore();
-		if (!store || !this.ydocUpdateAction) return;
+		const store = await getXactStore();
+		if (!this.ydocUpdateAction) return;
 		this.stopLiveSync();
 		const handler = (update: Uint8Array, origin: unknown) => {
 			// Local edits have no origin; remote merges and IndexedDB loads carry one.
@@ -282,9 +272,9 @@ class PeerConnection {
 		return hash || null;
 	}
 
-	/** Content hash of this device's Local Transactions, or `null` if it doesn't use the CRDT store. */
-	async getLocalYdocHash(): Promise<string | null> {
-		return (await (await getCrdtStore())?.contentHash()) ?? null;
+	/** Content hash of this device's Local Transactions. */
+	async getLocalYdocHash(): Promise<string> {
+		return (await getXactStore()).contentHash();
 	}
 
 	/**
@@ -293,9 +283,8 @@ class PeerConnection {
 	 * this device received anything new. Idempotent, so safe to repeat.
 	 */
 	async syncYdoc(targetTrysteroId: string): Promise<boolean> {
-		const store = await getCrdtStore();
-		if (!store) throw new Error('This device does not use the CRDT transaction store');
 		if (!this.ydocSyncAction) throw new Error('Not connected');
+		const store = await getXactStore();
 		const before = await store.contentHash();
 		const diff = await this.ydocSyncAction.request(await store.exportState(), {
 			target: targetTrysteroId,

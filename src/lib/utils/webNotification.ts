@@ -32,7 +32,7 @@ export async function showBackupNotification(): Promise<void> {
 
 	const icon = '/icon-192.png';
 	const title = 'Journal backed up';
-	const body = 'cashier.bean has been uploaded to your WebDAV server.';
+	const body = 'Your transactions have been uploaded to your WebDAV server.';
 
 	try {
 		// Prefer service-worker notifications (work when the tab is in background/PWA).

@@ -101,20 +101,13 @@
 	}
 
 	// ── Scan ──────────────────────────────────────────────────────────────────────
-	async function scan(retrying = false) {
+	async function scan() {
 		phase = 'scanning';
 		errorMsg = '';
 		try {
 			entries = await collectExportableFiles();
 			phase = 'idle';
 		} catch (e) {
-			if (!retrying) {
-				// The very first scan can race the root layout's concurrent OPFS
-				// initialization (e.g. cashier.bean being created) — retry once
-				// before surfacing a transient error to the user.
-				await scan(true);
-				return;
-			}
 			const err = e as { message?: string };
 			errorMsg = err?.message ?? String(e);
 			phase = 'error';
@@ -224,8 +217,7 @@
 				{/if}
 			</div>
 			<p class="text-xs text-base-content/50">
-				Everything in OPFS is exported except <code>.cashier/</code> (Cashier's internal cache) and
-				<code>cashier.bean</code> (the on-device transaction store).
+				Everything in OPFS is exported except <code>.cashier/</code> (Cashier's internal cache).
 			</p>
 
 			<!-- File preview list -->

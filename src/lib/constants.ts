@@ -5,8 +5,11 @@
 export const DEFAULT_FORECAST_DAYS = 7 as const;
 export const DEFAULT_EXPENSES_CARD_ROLLING_DAYS = 30 as const;
 
-/** The default Cashier filename. Hard-coded for now. */
-export const CASHIER_XACT_FILE = 'cashier.bean' as const;
+/**
+ * Virtual filename the device working set (CRDT store) is registered under when the
+ * ledger is loaded. Never written to OPFS; any real file of this name is overridden.
+ */
+export const DEVICE_XACTS_FILE = 'cashier.bean' as const;
 /** OPFS folder for Cashier's internal bookkeeping (cache, hashes) — always excluded from exports. */
 export const CASHIER_DATA_DIR = '.cashier' as const;
 /** OPFS filename for the serialized ledger binary cache. */
@@ -15,7 +18,7 @@ export const LEDGER_CACHE_FILE = `${CASHIER_DATA_DIR}/ledger-cache.bin`;
 export const LEDGER_CACHE_HASH_FILE = `${CASHIER_DATA_DIR}/ledger-cache.hash`;
 /**
  * OPFS filename for the hash of the working-set source the ledger cache was built from.
- * The working set may not be a file (see XactStore), so file modified times can't tell
+ * The working set is not a file (it lives in the CRDT store), so file modified times can't tell
  * whether it changed. Distinct from `LEDGER_CACHE_HASH_FILE`, which is a diagnostic
  * record written from the cache utility page.
  */
@@ -35,9 +38,8 @@ export const USER_BOOK_FILENAME = 'userBookFilename';
 // Demo data — bundled sample book so first-time users (and agents testing in a
 // browser) get a populated, working app instead of a blank one. Files live in a
 // dedicated root-level folder (never `.cashier/`, which the ledger's `.bean`
-// scanner skips entirely) so `include` resolution still finds them. Only
-// `cashier.bean` is ever written to directly — everything under `DEMO_DIR` is
-// read-only reference data managed by demoDataService.
+// scanner skips entirely) so `include` resolution still finds them. Everything
+// under `DEMO_DIR` is read-only reference data managed by demoDataService.
 export const DEMO_DIR = 'cashier-demo';
 export const DEMO_BOOK_FILE = `${DEMO_DIR}/book.bean`;
 export const DEMO_ACCOUNTS_FILE = `${DEMO_DIR}/accounts.bean`;

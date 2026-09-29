@@ -5,7 +5,6 @@
 	import { settings, deviceSettings, SettingKeys, DeviceSettingKeys } from '$lib/settings';
 	import { ScheduledTransaction, Setting } from '$lib/data/model';
 	import db from '$lib/data/db';
-	import { readFile, saveFile, getFileMetadata } from '$lib/utils/opfslib';
 	import Notifier from '$lib/utils/notifier';
 	import { WebDavClient } from '$lib/utils/webdav';
 	import {
@@ -23,19 +22,16 @@
 	import YdocDevices from '$lib/components/YdocDevices.svelte';
 	import { goto } from '$app/navigation';
 	import {
-			contentHash,
 		crdtBackupFilename,
-		type SyncRecord,
 		type WebDavLastSyncTs as LastSyncTs
 	} from '$lib/services/webdavAutoBackupService';
 	import { reloadLedgerFromOpfs } from '$lib/services/ledgerReload';
 	import { getXactStore } from '$lib/storage/xactStoreRegistry';
-	import type { CrdtXactStore } from '$lib/storage/crdtXactStore';
 
 	type SyncDirection = 'up' | 'down' | 'conflict' | null;
 
 	let includeSettings = $state(false);
-	let includeCashierBean = $state(false);
+	let includeXacts = $state(false);
 	let includeScheduled = $state(false);
 	let showDownloadDialog = $state(false);
 	let webdavUrl = $state('');
@@ -45,64 +41,14 @@
 	let isDownloading = $state(false);
 	let isCheckingRemote = $state(false);
 	let settingsLastModified = $state<Date | null>(null);
-	let cashierBeanLastModified = $state<Date | null>(null);
-	let cashierBeanLocalLastModified = $state<Date | null>(null);
-	let cashierBeanLocalHash = $state<string | null>(null);
+	let xactsLastModified = $state<Date | null>(null);
 	let scheduledLastModified = $state<Date | null>(null);
-	// The working set is either cashier.bean (OPFS store) or the Yjs document (CRDT store).
-	let isCrdt = $state(false);
 	let devicesOpen = $state(false);
 	let ydocDevices: YdocDevices | undefined = $state();
 	let ydocFile = $state('');
-	const workingSetLabel = $derived(isCrdt ? 'Local Transactions' : 'cashier.bean');
-	let lastSyncTs = $state<LastSyncTs>({ settings: null, cashierBean: null, scheduled: null });
+	let lastSyncTs = $state<LastSyncTs>({ settings: null, scheduled: null });
 
-	/** Remote timestamp from a baseline record (supports legacy plain-string or new object form). */
-	function baseRemoteTs(r: SyncRecord | null): Date | null {
-		if (!r) return null;
-		const ts = typeof r === 'string' ? r : r.remoteTs;
-		return new Date(ts);
-	}
-
-	/** Local hash stored at last sync, or null if the record pre-dates hash storage. */
-	function baseLocalHash(r: SyncRecord | null): string | null {
-		if (!r || typeof r === 'string') return null;
-		return r.localHash;
-	}
-
-	// cashier.bean: local change detected via content hash (not mtime) to avoid false conflicts
-	// when upload/download resets the remote timestamp but OPFS mtime diverges from it.
-	// Remote change still uses timestamp — fetching remote content just to hash it on every
-	// status check is too expensive.
-	const cashierBeanDirection = $derived.by<SyncDirection>(() => {
-		// CRDT documents merge, so there is no newer/older or conflict to flag.
-		if (isCrdt) return null;
-		const remote = cashierBeanLastModified;
-		const localHash = cashierBeanLocalHash;
-		if (!remote && !localHash) return null;
-		const baseRecord = lastSyncTs.cashierBean;
-		const baseTs = baseRemoteTs(baseRecord);
-		const baseHash = baseLocalHash(baseRecord);
-		if (baseTs) {
-			const localChanged = baseHash
-				? localHash != null && localHash !== baseHash
-				: cashierBeanLocalLastModified != null && cashierBeanLocalLastModified > baseTs;
-			const remoteChanged = remote != null && remote > baseTs;
-			if (localChanged && remoteChanged) return 'conflict';
-			if (localChanged) return 'up';
-			if (remoteChanged) return 'down';
-			return null;
-		}
-		// No baseline yet: fall back to simple timestamp comparison
-		const local = cashierBeanLocalLastModified;
-		if (!remote) return local ? 'up' : null;
-		if (!local) return 'down';
-		if (local > remote) return 'up';
-		if (remote > local) return 'down';
-		return null;
-	});
-
-	// settings/scheduled: no local timestamp — only detect remote changed since last sync
+	// No local timestamp — only detect remote changed since last sync
 	const settingsDirection = $derived.by<SyncDirection>(() => {
 		if (!settingsLastModified || !lastSyncTs.settings) return null;
 		return settingsLastModified > new Date(lastSyncTs.settings) ? 'down' : null;
@@ -113,9 +59,12 @@
 		return scheduledLastModified > new Date(lastSyncTs.scheduled) ? 'down' : null;
 	});
 
-	const noneSelected = $derived(!includeSettings && !includeCashierBean && !includeScheduled);
-	const allSelected = $derived(includeSettings && includeCashierBean && includeScheduled);
-	const someSelected = $derived(includeSettings || includeCashierBean || includeScheduled);
+	const noneSelected = $derived(!includeSettings && !includeXacts && !includeScheduled);
+	// Local Transactions are a binary Yjs document, merged rather than compared, so only
+	// the JSON files can be diffed or previewed.
+	const noneViewable = $derived(!includeSettings && !includeScheduled);
+	const allSelected = $derived(includeSettings && includeXacts && includeScheduled);
+	const someSelected = $derived(includeSettings || includeXacts || includeScheduled);
 	let indeterminate = $state(false);
 	$effect(() => {
 		indeterminate = someSelected && !allSelected;
@@ -124,7 +73,7 @@
 	function toggleSelectAll() {
 		const next = !allSelected;
 		includeSettings = next;
-		includeCashierBean = next;
+		includeXacts = next;
 		includeScheduled = next;
 	}
 
@@ -137,8 +86,7 @@
 		webdavPassword = saved?.password ?? '';
 		const storedSyncTs = await deviceSettings.get<LastSyncTs>(DeviceSettingKeys.webdavLastSyncTs);
 		if (storedSyncTs) lastSyncTs = storedSyncTs;
-		isCrdt = (await getXactStore()).kind === 'crdt';
-		if (isCrdt) ydocFile = await crdtBackupFilename();
+		ydocFile = await crdtBackupFilename();
 		fetchLastModified();
 	});
 
@@ -149,24 +97,15 @@
 	async function fetchLastModified() {
 		isCheckingRemote = true;
 		try {
-			if (!isCrdt) {
-				const localMeta = await getFileMetadata('cashier.bean');
-				if (localMeta) cashierBeanLocalLastModified = new Date(localMeta.lastModified);
-
-				// Hash local content for accurate change detection (avoids false conflicts from mtime skew)
-				const localContent = await readFile('cashier.bean');
-				cashierBeanLocalHash = localContent !== undefined ? await contentHash(localContent) : null;
-			}
-
 			if (!webdavUrl) return;
 			const dav = client();
 			const [sm, cm, scm] = await Promise.allSettled([
 				dav.lastModifiedJson('settings.json'),
-				dav.lastModified(isCrdt ? ydocFile : 'cashier.bean'),
+				dav.lastModified(ydocFile),
 				dav.lastModifiedJson('scheduled.json')
 			]);
 			if (sm.status === 'fulfilled') settingsLastModified = sm.value;
-			if (cm.status === 'fulfilled') cashierBeanLastModified = cm.value;
+			if (cm.status === 'fulfilled') xactsLastModified = cm.value;
 			if (scm.status === 'fulfilled') scheduledLastModified = scm.value;
 		} finally {
 			isCheckingRemote = false;
@@ -180,7 +119,6 @@
 	function fileParams(): URLSearchParams {
 		const p = new URLSearchParams();
 		if (includeSettings) p.append('f', 'settings');
-		if (includeCashierBean) p.append('f', 'bean');
 		if (includeScheduled) p.append('f', 'scheduled');
 		return p;
 	}
@@ -192,8 +130,7 @@
 		}
 		isUploading = true;
 		const dav = client();
-		const uploaded = { settings: false, cashierBean: false, scheduled: false };
-		let uploadedBeanContent: string | undefined;
+		const uploaded = { settings: false, scheduled: false };
 		try {
 			if (includeSettings) {
 				const allSettings = await settings.getAll();
@@ -202,23 +139,11 @@
 				if (res.ok) { Notifier.success('Settings uploaded'); uploaded.settings = true; }
 				else Notifier.error(`Upload failed for settings.json.gz: ${res.status} ${res.statusText}`);
 			}
-			if (includeCashierBean && isCrdt) {
-				const state = await ((await getXactStore()) as CrdtXactStore).exportState();
+			if (includeXacts) {
+				const state = await (await getXactStore()).exportState();
 				const res = await dav.put(ydocFile, state, 'application/octet-stream');
 				if (res.ok) Notifier.success('Local transactions uploaded');
 				else Notifier.error(`Upload failed for ${ydocFile}: ${res.status} ${res.statusText}`);
-			} else if (includeCashierBean) {
-				const content = await readFile('cashier.bean');
-				if (content === undefined) {
-					Notifier.error('cashier.bean not found in private filesystem');
-				} else {
-				const res = await dav.put('cashier.bean', content);
-				if (res.ok) {
-					Notifier.success('cashier.bean uploaded');
-					uploaded.cashierBean = true;
-					uploadedBeanContent = content;
-				} else Notifier.error(`Upload failed for cashier.bean: ${res.status} ${res.statusText}`);
-				}
 			}
 			if (includeScheduled) {
 				const all = await db.scheduled.toArray();
@@ -233,17 +158,11 @@
 			isUploading = false;
 			await fetchLastModified();
 			// Record fresh remote timestamps as the new sync baseline for uploaded files.
-			// cashier.bean uses a hash-based record to avoid false conflicts from mtime skew.
 			if (uploaded.settings && settingsLastModified)
 				lastSyncTs.settings = settingsLastModified.toISOString();
-			if (uploaded.cashierBean && cashierBeanLastModified && uploadedBeanContent !== undefined)
-				lastSyncTs.cashierBean = {
-					remoteTs: cashierBeanLastModified.toISOString(),
-					localHash: await contentHash(uploadedBeanContent)
-				};
 			if (uploaded.scheduled && scheduledLastModified)
 				lastSyncTs.scheduled = scheduledLastModified.toISOString();
-			if (uploaded.settings || uploaded.cashierBean || uploaded.scheduled)
+			if (uploaded.settings || uploaded.scheduled)
 				await saveLastSyncTs();
 		}
 	}
@@ -278,8 +197,7 @@
 		}
 		isDownloading = true;
 		const dav = client();
-		const downloaded = { settings: false, cashierBean: false, scheduled: false };
-		let downloadedBeanContent: string | undefined;
+		const downloaded = { settings: false, scheduled: false };
 		try {
 			if (includeSettings) {
 				const res = await dav.getJson('settings.json');
@@ -293,14 +211,14 @@
 					Notifier.error(`Download failed for settings.json: ${res.status} ${res.statusText}`);
 				}
 			}
-			if (includeCashierBean && isCrdt) {
+			if (includeXacts) {
 				// A new device has no backup of its own yet; skip it rather than fail, so
 				// files from other (trusted) devices still get merged below.
 				if (await dav.exists(ydocFile)) {
 					const res = await dav.get(ydocFile);
 					if (res.ok) {
 						const update = new Uint8Array(await res.arrayBuffer());
-						await ((await getXactStore()) as CrdtXactStore).importState(update);
+						await (await getXactStore()).importState(update);
 						Notifier.success('Local transactions merged from backup');
 					} else {
 						Notifier.error(`Download failed for ${ydocFile}: ${res.status} ${res.statusText}`);
@@ -308,17 +226,6 @@
 				}
 				await ydocDevices?.mergeTrusted();
 				needsReload = true;
-			} else if (includeCashierBean) {
-				const res = await dav.get('cashier.bean');
-				if (res.ok) {
-					const text = await res.text();
-					await saveFile('cashier.bean', text);
-					downloadedBeanContent = text;
-					Notifier.success('cashier.bean restored');
-					downloaded.cashierBean = true;
-				} else {
-					Notifier.error(`Download failed for cashier.bean: ${res.status} ${res.statusText}`);
-				}
 			}
 			if (includeScheduled) {
 				const res = await dav.getJson('scheduled.json');
@@ -337,20 +244,11 @@
 		} finally {
 			isDownloading = false;
 			// Record the remote timestamps we just downloaded as the new sync baseline.
-			// cashier.bean uses a hash-based record to avoid false conflicts from mtime skew.
 			if (downloaded.settings && settingsLastModified)
 				lastSyncTs.settings = settingsLastModified.toISOString();
-			if (downloaded.cashierBean && cashierBeanLastModified && downloadedBeanContent !== undefined)
-				lastSyncTs.cashierBean = {
-					remoteTs: cashierBeanLastModified.toISOString(),
-					localHash: await contentHash(downloadedBeanContent)
-				};
 			if (downloaded.scheduled && scheduledLastModified)
 				lastSyncTs.scheduled = scheduledLastModified.toISOString();
-			if (downloaded.settings || downloaded.cashierBean || downloaded.scheduled)
-				await saveLastSyncTs();
-			// Refresh local metadata (cashier.bean was overwritten)
-			if (downloaded.cashierBean) fetchLastModified();
+			if (downloaded.settings || downloaded.scheduled) await saveLastSyncTs();
 		}
 	}
 
@@ -368,7 +266,6 @@
 
 	const overwrittenLabels = $derived([
 		...(includeSettings ? ['Settings'] : []),
-		...(includeCashierBean && !isCrdt ? ['cashier.bean'] : []),
 		...(includeScheduled ? ['Scheduled Transactions'] : [])
 	]);
 </script>
@@ -476,12 +373,13 @@
 					<input
 						type="checkbox"
 						class="checkbox checkbox-primary"
-						bind:checked={includeCashierBean}
+						bind:checked={includeXacts}
 					/>
-					<span class="flex-1">{workingSetLabel}</span>
-					{@render syncBadge(cashierBeanLastModified, cashierBeanDirection)}
+					<span class="flex-1">Local Transactions</span>
+					<!-- Merged, so there is no newer/older or conflict to flag. -->
+					{@render syncBadge(xactsLastModified, null)}
 				</label>
-				{#if isCrdt && webdavUrl}
+				{#if webdavUrl}
 					<button
 						class="btn btn-xs btn-ghost btn-square"
 						aria-label="Show files from all devices"
@@ -492,7 +390,7 @@
 					</button>
 				{/if}
 			</div>
-			{#if isCrdt && webdavUrl}
+			{#if webdavUrl}
 				<div class:hidden={!devicesOpen} class="rounded-box bg-base-100 p-3 shadow-sm border border-base-300">
 					<YdocDevices
 						bind:this={ydocDevices}
@@ -538,15 +436,15 @@
 
 	<!-- View actions -->
 	<section class="flex gap-3 justify-center flex-wrap">
-		<button class="btn btn-secondary" disabled={noneSelected} onclick={openDiff}>
+		<button class="btn btn-secondary" disabled={noneViewable} onclick={openDiff}>
 			<GitCompareArrowsIcon size={16} />
 			Diff
 		</button>
-		<button class="btn btn-outline" disabled={noneSelected} onclick={() => openPreview('local')}>
+		<button class="btn btn-outline" disabled={noneViewable} onclick={() => openPreview('local')}>
 			<EyeIcon size={16} />
 			Preview Local
 		</button>
-		<button class="btn btn-outline" disabled={noneSelected} onclick={() => openPreview('remote')}>
+		<button class="btn btn-outline" disabled={noneViewable} onclick={() => openPreview('remote')}>
 			<EyeIcon size={16} />
 			Preview Remote
 		</button>

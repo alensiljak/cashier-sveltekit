@@ -12,7 +12,7 @@ See the Projects folder for any active projects.
 
 ## Onboarding
 
-- [x] Setup wizard at `/onboarding` — triggered by clean-slate detection (no `cashier.bean`, no other `.bean` files, no linked book) rather than a stored `onboarded` flag, so it can't get stuck skipped/shown by a stale setting. Offers Try demo data / Import my ledger / Start empty.
+- [x] Setup wizard at `/onboarding` — triggered by clean-slate detection (transaction store not initialized, no `.bean` files, no linked book) rather than a stored `onboarded` flag, so it can't get stuck skipped/shown by a stale setting. Offers Try demo data / Import my ledger / Start empty.
 - [x] Go through the initial settings (data storage, server)
 - [ ] Add default settings to the wizard.
 

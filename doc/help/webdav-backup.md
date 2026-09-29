@@ -8,20 +8,22 @@ Before using it, open **WebDAV Config** from the toolbar menu (also under Settin
 
 Three items can be backed up independently:
 
-- **cashier.bean** — your main journal file.
+- **Local Transactions** — the transactions entered on this device. They are saved as a per-device file, so devices never overwrite each other.
 - **Settings**
 - **Scheduled Transactions**
 
 Check the ones you want, or use **Select all**. Each item shows the last-modified time on the remote, refreshed automatically or via the refresh icon.
 
-If your local `cashier.bean` has changes newer than what's on the remote, a cloud-upload icon appears next to it as a reminder to back it up.
+Tap the arrow next to **Local Transactions** to list the files of all devices in the folder. Files from trusted devices are merged into yours on **Download**.
 
 ## Actions
 
 - **Upload** — sends the checked items to the WebDAV folder, overwriting the remote copies.
-- **Download** — after a confirmation (since this overwrites local data), pulls the checked items from the WebDAV folder.
-- **Diff** — shows a line-by-line comparison between the local and remote versions of the checked items.
-- **Preview Local** / **Preview Remote** — shows the raw content of the checked items on either side, without changing anything.
+- **Download** — pulls the checked items from the WebDAV folder. Settings and Scheduled Transactions overwrite local data, so a confirmation is asked first. Local Transactions are merged instead, so nothing is lost; afterwards a **Reload Ledger** button appears.
+- **Diff** — shows a line-by-line comparison between the local and remote versions of the checked Settings and Scheduled Transactions.
+- **Preview Local** / **Preview Remote** — shows the raw content of the checked Settings and Scheduled Transactions on either side, without changing anything.
+
+Local Transactions are a binary file, so Diff and Preview don't include them.
 
 ## Setting up a WebDAV server
 

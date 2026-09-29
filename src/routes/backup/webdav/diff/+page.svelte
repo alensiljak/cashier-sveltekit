@@ -3,7 +3,6 @@
     import { page } from '$app/state';
     import Toolbar from '$lib/components/Toolbar.svelte';
     import { settings, SettingKeys } from '$lib/settings';
-    import { readFile } from '$lib/utils/opfslib';
     import { WebDavClient } from '$lib/utils/webdav';
     import db from '$lib/data/db';
     import { buildDiffLines, type DiffSection } from '$lib/utils/diffText';
@@ -31,17 +30,6 @@
                     result.push({ filename: 'settings.json', lines, identical: lines.every(l => l.type === 'context') });
                 } else {
                     error = `Cannot fetch remote settings.json: ${res.status} ${res.statusText}`;
-                }
-            }
-            if (files.includes('bean')) {
-                const localContent = await readFile('cashier.bean') ?? '';
-                const res = await dav.get('cashier.bean');
-                if (res.ok) {
-                    const remoteContent = await res.text();
-                    const lines = buildDiffLines(remoteContent, localContent);
-                    result.push({ filename: 'cashier.bean', lines, identical: lines.every(l => l.type === 'context') });
-                } else {
-                    error = `Cannot fetch remote cashier.bean: ${res.status} ${res.statusText}`;
                 }
             }
             if (files.includes('scheduled')) {

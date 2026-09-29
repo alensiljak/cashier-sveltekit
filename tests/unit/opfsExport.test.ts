@@ -78,21 +78,16 @@ describe('collectExportableFiles', () => {
 		]);
 	});
 
-	it('excludes the internal cache and the on-device transaction file at the root only', async () => {
+	it('excludes the internal cache at the root only', async () => {
 		stubOpfs({
 			'book.bean': '1',
-			'cashier.bean': 'device',
 			'.cashier': { 'cache.bin': 'cache' },
-			books: { 'cashier.bean': 'kept', '.cashier': { x: 'kept too' } }
+			books: { '.cashier': { x: 'kept too' } }
 		});
 
 		const files = await collectExportableFiles();
 
-		expect(files.map((f) => f.path)).toEqual([
-			'book.bean',
-			'books/.cashier/x',
-			'books/cashier.bean'
-		]);
+		expect(files.map((f) => f.path)).toEqual(['book.bean', 'books/.cashier/x']);
 	});
 
 	it('returns nothing for an empty OPFS', async () => {

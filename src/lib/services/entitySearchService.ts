@@ -9,7 +9,7 @@ import fullLedgerService from '$lib/services/ledgerWorkerClient';
 import { STOP_WORDS } from '$lib/utils/nlpEntry';
 import { getXactStore } from '$lib/storage/xactStoreRegistry';
 import { Xact, Posting } from '$lib/data/model';
-import type { XactId } from '$lib/storage/xactStore';
+import type { XactId } from '$lib/storage/crdtXactStore';
 import type { EntityCategory, EntitySearchTerm } from '$lib/utils/entitySearch';
 
 const FIELD_FOR_CATEGORY: Record<Exclude<EntityCategory, 'any'>, string> = {
@@ -100,7 +100,7 @@ export interface TransactionResult {
 
 /**
  * Full transactions (grouped postings) matching `conditions`, merged with on-device rows
- * from the live cashier.bean source (which carry an editable store ID) — mirrors the
+ * from the live working set (which carry an editable store ID) — mirrors the
  * payee-xacts page's device/ledger merge. `termValues` approximates the same AND filter
  * against device rows, which aren't queryable via BQL, by substring-matching the term
  * values against each device xact's payee/narration/account text.

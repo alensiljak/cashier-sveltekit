@@ -7,7 +7,6 @@
 	import Notifier from '$lib/utils/notifier';
 	import { ArrowDownNarrowWideIcon, CopyIcon, FileDownIcon, Share2Icon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
-	import { CASHIER_XACT_FILE } from '$lib/constants';
 	import HelpButton from '$lib/help/HelpButton.svelte';
 
 	Notifier.init();
@@ -36,7 +35,7 @@
 			return true;
 		}
 
-		const shareFile = new File([''], CASHIER_XACT_FILE, { type: 'text/plain' });
+		const shareFile = new File([''], 'journal.bean', { type: 'text/plain' });
 		return navigator.canShare({ files: [shareFile] });
 	}
 

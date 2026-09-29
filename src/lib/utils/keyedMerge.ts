@@ -1,7 +1,7 @@
 /*
 	Structural (keyed) diff + merge — the JSON counterpart to diffText.ts's
 	line-level diff. A raw line-hunk merge (see DiffViewer.svelte) is safe for
-	cashier.bean because Beancount transactions are flat, blank-line-delimited
+	Beancount source because Beancount transactions are flat, blank-line-delimited
 	blocks: splicing at a line boundary can't corrupt the format. JSON has
 	structural constraints a line splice doesn't know about (matching braces,
 	no trailing comma on the last array element), so splicing text hunks

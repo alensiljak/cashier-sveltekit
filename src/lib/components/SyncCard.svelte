@@ -26,7 +26,7 @@
 				peerConnection.fetchRemoteYdocHash(id)
 			]);
 			diffs[id] =
-				local === null || remote === null ? 'unknown' : local === remote ? 'same' : 'differs';
+				remote === null ? 'unknown' : local === remote ? 'same' : 'differs';
 		} catch {
 			diffs[id] = 'unknown';
 		}
@@ -62,11 +62,6 @@
 		if (syncing || trustedPeers.length === 0) return;
 		syncing = true;
 		try {
-			if ((await peerConnection.getLocalYdocHash()) === null) {
-				// Not the CRDT store — the remaining items need the review screens.
-				await goto('/peer-sync');
-				return;
-			}
 			let changed = false;
 			for (const peer of trustedPeers) {
 				changed = (await peerConnection.syncYdoc(peer.trysteroId)) || changed;

@@ -122,8 +122,6 @@ export const DeviceSettingKeys = {
 	exportBookDirectory: 'exportBookDirectory',
 	// Whether to use the binary ledger cache on load (default: true)
 	ledgerCacheEnabled: 'ledgerCacheEnabled',
-	// Working-set storage backend: 'crdt' (default for new installs) or 'opfs' (legacy; see xactStoreRegistry)
-	xactStore: 'xactStore',
 	// IDs of the sample transactions seeded into the CRDT store by the demo data (removed with it)
 	demoXactIds: 'demoXactIds',
 	// IDs of the sample scheduled transactions seeded by the demo data (removed with it)
@@ -134,10 +132,10 @@ export const DeviceSettingKeys = {
 	notificationsEnabled: 'notifications.enabled',
 	notificationTime: 'notifications.time',
 	notificationLastShown: 'notifications.lastShown',
-	// Auto-upload cashier.bean to WebDAV after each write
+	// Auto-upload the working set (Yjs state) to WebDAV after each write
 	webdavAutoBackup: 'webdav-auto-backup',
 	// Per-file remote timestamps at last successful WebDAV upload or download
-	// Shape: { settings: ISO | null, cashierBean: ISO | null, scheduled: ISO | null }
+	// Shape: { settings: ISO | null, scheduled: ISO | null }
 	webdavLastSyncTs: 'webdav-last-sync-ts',
 	// Per-device state at the last merge of another device's Yjs file
 	// Shape: Record<deviceId, { remoteTs: ISO | null, mergedAt: ISO }>

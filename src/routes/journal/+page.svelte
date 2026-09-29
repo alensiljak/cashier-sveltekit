@@ -9,7 +9,7 @@
 	import db from '$lib/data/db';
 	import { getDeviceId } from '$lib/sync/ydocDevices';
 	import { xact, xactId } from '$lib/data/mainStore';
-	import type { StoredXact, XactId } from '$lib/storage/xactStore';
+	import type { StoredXact, XactId } from '$lib/storage/crdtXactStore';
 	import { getXactStore, subscribeXactStore } from '$lib/storage/xactStoreRegistry';
 	import Notifier from '$lib/utils/notifier';
 	import { FileDownIcon, ImportIcon, PlusIcon, TrashIcon } from '@lucide/svelte';
@@ -66,7 +66,7 @@
 		await (await getXactStore()).clear();
 		// Re-parse the full book in the background — keeps the fullLedgerService
 		// cache and the "modified" change indicator in sync (same pattern as
-		// every other cashier.bean mutation; see doc/architecture.md).
+		// every other working-set mutation; see doc/architecture.md).
 		void reloadLedgerFromOpfs();
 		Notifier.success('All local transactions deleted.');
 	}
