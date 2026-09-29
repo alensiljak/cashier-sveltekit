@@ -131,7 +131,7 @@
 			{#each entries as entry}
 				{#if isEntryVisible(entry)}
 					<tr
-						class="cursor-pointer hover"
+						class="cursor-pointer hover:bg-base-300 has-[.btn-error:hover]:bg-error/20"
 						class:bg-secondary={selectedFile === entry.path}
 						onclick={() => onEntryClick(entry)}
 					>
