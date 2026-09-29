@@ -127,7 +127,7 @@ Open: merged records are only visible in the ledger after "Reload Ledger". Recor
 
 #### Data fidelity
 
-- `toBeancount()` rebuilds text from the `Xact` fields via `xactToBeancountText`. Anything the model does not carry (comments, tags, links, other posting-level details) is lost on the way out. _Unverified_ which of these the model covers.
+- ✅ Posting comments (both `; text` trailing a posting and standalone `; text` lines between postings) are lost before the app ever sees the transaction: `@rustledger/wasm`'s `PostingJson` type has no `comment` field, and standalone comment lines have no representation anywhere in the directive JSON (verified in `tests/unit/dataFidelity.comments.test.ts`). `DirectiveFormatter.formatTransaction`'s `posting.comment` output path is dead code — nothing ever populates it, since `directiveToXact` (`src/lib/utils/transactionParser.ts`) has no `p.comment` to read from the WASM directive either. Fixing this needs a change in the `rustledger` crate itself (capture posting comments in `PostingJson`, and either drop or attach standalone comment lines), not in Cashier's TS layer. Tags and links round-trip fine (`directive.tags`/`directive.links`).
 - `xactToBeancountText` rewrites data: it forces the `!` flag on postings without an account and writes explicit zero amounts. The OPFS store keeps the source text verbatim, so the two stores can produce different ledgers from the same input.
 
 #### Persistence and sync
