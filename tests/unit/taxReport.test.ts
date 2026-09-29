@@ -70,6 +70,19 @@ describe('buildTaxReport', () => {
 		]);
 		expect(result.categories.map((c) => c.total)).toEqual([5, 0]);
 	});
+
+	it('sets excluded accounts aside, out of categories and unmapped', () => {
+		const result = buildTaxReport(
+			{ ...config, excludeAccounts: ['^Expenses:Vacation'] },
+			[
+				{ date: '2024-08-01', account: 'Expenses:Vacation:Days', amount: 3 },
+				{ date: '2024-08-02', account: 'Expenses:Work:Tools', amount: 80 }
+			]
+		);
+		expect(result.excluded.accounts).toEqual([{ account: 'Expenses:Vacation:Days', total: 3 }]);
+		expect(result.unmapped.accounts).toEqual([]);
+		expect(result.categories[1].total).toBe(80);
+	});
 });
 
 describe('validateTaxReportConfig', () => {
@@ -84,6 +97,10 @@ describe('validateTaxReportConfig', () => {
 				categories: [{ name: 'X', accounts: ['('], kind: 'income' }]
 			})
 		).toMatch(/invalid pattern/);
+		expect(validateTaxReportConfig({ ...config, excludeAccounts: ['('] })).toMatch(
+			/excludeAccounts/
+		);
+		expect(validateTaxReportConfig({ ...config, excludeAccounts: ['^Expenses:Vacation'] })).toBeNull();
 	});
 });
 

@@ -1,9 +1,11 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
+	import { ChevronLeftIcon, ChevronRightIcon } from '@lucide/svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import { SettingKeys, settings } from '$lib/settings';
 	import {
+		accountExcluder,
 		buildTaxReport,
 		currentFinancialYearStart,
 		financialYearLabel,
@@ -31,12 +33,19 @@
 	let configError = $state<string | null>(null);
 	let showConfig = $state(false);
 
+	let latestYear = $derived(currentFinancialYearStart(config.yearStart));
+	// Grows if the user steps back past the default window, so the selected year is always listed.
 	let years = $derived(
 		Array.from(
-			{ length: 8 },
-			(_, i) => currentFinancialYearStart(config.yearStart) - i
+			{ length: Math.max(8, latestYear - startYear + 1) },
+			(_, i) => latestYear - i
 		)
 	);
+
+	function stepYear(delta: number) {
+		startYear += delta;
+		loadData();
+	}
 	let currencyOptions = $derived(
 		[...new Set([...bookCurrencies, currency].filter(Boolean))].sort()
 	);
@@ -109,6 +118,7 @@
 
 			const postings = [];
 			const amounts: ConvertedAmount[] = [];
+			const isExcluded = accountExcluder(config);
 			for (const row of (res?.rows ?? []) as any[]) {
 				// Skip securities: CONVERT would value the units at market price.
 				const orig = currencyIdx !== -1 ? String(row[currencyIdx] ?? '') : currency;
@@ -119,7 +129,8 @@
 					account: String(row[accountIdx] ?? ''),
 					amount
 				});
-				if (unitsIdx !== -1) {
+				// Excluded accounts (e.g. non-monetary units) must not trigger the missing-rate warning.
+				if (unitsIdx !== -1 && !isExcluded(String(row[accountIdx] ?? ''))) {
 					amounts.push({
 						currency: orig,
 						units: parseFloat(String(row[unitsIdx] ?? '0')) || 0,
@@ -238,19 +249,39 @@
 
 	<div class="flex flex-wrap items-center gap-3 border-b border-base-300 px-4 py-2">
 		<span class="text-sm font-medium text-base-content/60">Year:</span>
-		<select
-			class="select select-bordered select-sm"
-			bind:value={startYear}
-			onchange={() => loadData()}
-			disabled={isLoading}
-		>
-			{#each years as y}
-				<option value={y}>{financialYearLabel(config.yearStart, y)}</option>
-			{/each}
-		</select>
+		<div class="join">
+			<button
+				type="button"
+				class="join-item btn btn-ghost btn-sm border border-base-content/20 px-2"
+				aria-label="Earlier year"
+				disabled={isLoading}
+				onclick={() => stepYear(-1)}
+			>
+				<ChevronLeftIcon size={18} />
+			</button>
+			<select
+				class="join-item select select-bordered select-sm"
+				bind:value={startYear}
+				onchange={() => loadData()}
+				disabled={isLoading}
+			>
+				{#each years as y}
+					<option value={y}>{financialYearLabel(config.yearStart, y)}</option>
+				{/each}
+			</select>
+			<button
+				type="button"
+				class="join-item btn btn-ghost btn-sm border border-base-content/20 px-2"
+				aria-label="Later year"
+				disabled={isLoading || startYear >= latestYear}
+				onclick={() => stepYear(1)}
+			>
+				<ChevronRightIcon size={18} />
+			</button>
+		</div>
 		<span class="text-sm font-medium text-base-content/60">Currency:</span>
 		<select
-			class="select select-bordered select-sm"
+			class="select select-bordered select-sm w-24"
 			bind:value={currency}
 			onchange={changeCurrency}
 			disabled={isLoading}
@@ -293,6 +324,9 @@
 			)}
 			{#if result.unmapped.accounts.length > 0}
 				{@render section('Not in any category (ledger sign)', [result.unmapped])}
+			{/if}
+			{#if result.excluded.accounts.length > 0 || (config.excludeAccounts?.length ?? 0) > 0}
+				{@render section('Excluded (ledger sign, original units)', [result.excluded])}
 			{/if}
 		{/if}
 

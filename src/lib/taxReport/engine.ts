@@ -36,13 +36,28 @@ export function financialYearLabel(
 		: `${startYear}–${String((startYear + 1) % 100).padStart(2, '0')}`;
 }
 
-/** Groups postings into the config's categories; the first matching category wins. */
+/** Returns a predicate telling whether an account is matched by the config's `excludeAccounts`. */
+export function accountExcluder(config: TaxReportConfig): (account: string) => boolean {
+	const matchers = (config.excludeAccounts ?? []).map((p) => new RegExp(p));
+	return (account) => matchers.some((m) => m.test(account));
+}
+
+/**
+ * Groups postings into the config's categories; the first matching category wins.
+ * Postings on excluded accounts are set aside in `excluded`.
+ */
 export function buildTaxReport(config: TaxReportConfig, postings: TaxPosting[]): TaxReportResult {
 	const matchers = config.categories.map((c) => c.accounts.map((p) => new RegExp(p)));
 	const perCategory = config.categories.map(() => new Map<string, number>());
 	const unmappedAccounts = new Map<string, number>();
+	const excludedAccounts = new Map<string, number>();
+	const isExcluded = accountExcluder(config);
 
 	for (const p of postings) {
+		if (isExcluded(p.account)) {
+			excludedAccounts.set(p.account, (excludedAccounts.get(p.account) ?? 0) + p.amount);
+			continue;
+		}
 		const idx = matchers.findIndex((ms) => ms.some((m) => m.test(p.account)));
 		const target = idx === -1 ? unmappedAccounts : perCategory[idx];
 		const sign = idx !== -1 && config.categories[idx].kind === 'income' ? -1 : 1;
@@ -63,7 +78,8 @@ export function buildTaxReport(config: TaxReportConfig, postings: TaxPosting[]):
 	return {
 		categories: config.categories.map((c, i) => toResult(c.name, c.kind, perCategory[i])),
 		// Unmapped keeps the ledger sign, so income shows negative and expenses positive.
-		unmapped: toResult('Unmapped', 'unmapped', unmappedAccounts)
+		unmapped: toResult('Unmapped', 'unmapped', unmappedAccounts),
+		excluded: toResult('Excluded', 'excluded', excludedAccounts)
 	};
 }
 
@@ -98,6 +114,17 @@ export function validateTaxReportConfig(value: unknown): string | null {
 				new RegExp(pattern);
 			} catch {
 				return `Category "${cat.name}": invalid pattern "${pattern}".`;
+			}
+		}
+	}
+	if (c.excludeAccounts !== undefined) {
+		if (!Array.isArray(c.excludeAccounts) || c.excludeAccounts.some((a) => typeof a !== 'string'))
+			return 'excludeAccounts must be a list of patterns.';
+		for (const pattern of c.excludeAccounts) {
+			try {
+				new RegExp(pattern);
+			} catch {
+				return `excludeAccounts: invalid pattern "${pattern}".`;
 			}
 		}
 	}

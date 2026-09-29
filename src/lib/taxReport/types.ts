@@ -18,6 +18,11 @@ export interface TaxReportConfig {
 	/** Currency the report is converted to. Falls back to the main currency if unset. */
 	currency?: string;
 	categories: TaxCategory[];
+	/**
+	 * Regular expressions matched against the full account name. Matching accounts are left
+	 * out of the categories, the unmapped bucket and the missing-exchange-rate warning.
+	 */
+	excludeAccounts?: string[];
 }
 
 export interface TaxPosting {
@@ -29,7 +34,7 @@ export interface TaxPosting {
 
 export interface CategoryResult {
 	name: string;
-	kind: TaxCategory['kind'] | 'unmapped';
+	kind: TaxCategory['kind'] | 'unmapped' | 'excluded';
 	total: number;
 	/** Totals per account, largest first. */
 	accounts: { account: string; total: number }[];
@@ -38,4 +43,6 @@ export interface CategoryResult {
 export interface TaxReportResult {
 	categories: CategoryResult[];
 	unmapped: CategoryResult;
+	/** Postings on accounts matched by `excludeAccounts`, kept for preview. Ledger sign. */
+	excluded: CategoryResult;
 }

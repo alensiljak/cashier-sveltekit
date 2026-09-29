@@ -30,5 +30,8 @@ export const auIndividual: TaxReportConfig = {
 			accounts: ['^Expenses:.*(Tax-?Agent|Accountant|TaxAffairs)'],
 			kind: 'deduction'
 		}
-	]
+	],
+	// Account patterns to leave out of the report, e.g. "^Expenses:Vacation" for
+	// non-monetary units. Excluded accounts are still previewed in their own section.
+	excludeAccounts: []
 };
