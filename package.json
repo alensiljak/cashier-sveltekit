@@ -96,8 +96,8 @@
 		"sharp@0.33.5": true,
 		"unix-dgram@2.0.7": true,
 		"esbuild@0.28.1": true,
-		"agent-browser@0.33.2": true,
 		"core-js@3.50.0": true,
-		"netlify-cli@27.1.0": true
+		"agent-browser@0.38.1": true,
+		"netlify-cli@27.10.2": true
 	}
 }
