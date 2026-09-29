@@ -24,10 +24,30 @@
 	async function loadBuildTimestamp() {
 		try {
 			const response = await fetch('/build-info.json');
-			buildTimestamp = (await response.json()).buildTimestamp;
+			buildTimestamp = formatTimestamp((await response.json()).buildTimestamp);
 		} catch {
 			buildTimestamp = 'unavailable';
 		}
+	}
+
+	// Formats an ISO timestamp as local "YYYY-MM-DD HH:mm TZ". Falls back to the raw value if unparsable.
+	function formatTimestamp(iso: string): string {
+		const d = new Date(iso);
+		if (isNaN(d.getTime())) return iso;
+		const parts = Object.fromEntries(
+			new Intl.DateTimeFormat('en-CA', {
+				year: 'numeric',
+				month: '2-digit',
+				day: '2-digit',
+				hour: '2-digit',
+				minute: '2-digit',
+				hourCycle: 'h23',
+				timeZoneName: 'short'
+			})
+				.formatToParts(d)
+				.map((p) => [p.type, p.value])
+		);
+		return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute} ${parts.timeZoneName}`;
 	}
 
 	async function checkForUpdates() {
