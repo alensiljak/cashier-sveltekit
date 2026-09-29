@@ -16,7 +16,8 @@ test.describe('app shell', () => {
 	});
 
 	test('quick-entry FAB navigates to quick entry', async ({ demoPage: page }) => {
-		await page.locator('button.btn-circle.btn-xl').click();
+		await page.getByRole('button', { name: 'Add', exact: true }).click();
+		await page.getByRole('button', { name: 'Quick entry' }).click();
 
 		await expect(page).toHaveURL(/\/tx\/quick-entry/);
 	});
@@ -40,7 +41,7 @@ const pages: { path: string; title: string; expected?: string | RegExp }[] = [
 	{ path: '/reports/income-statement', title: 'Income Statement', expected: /Income/ },
 	{ path: '/reports/trial-balance', title: 'Trial Balance', expected: /Assets/ },
 	{ path: '/reports/net-worth', title: 'Net Worth' },
-	{ path: '/reports/expenses', title: 'Expenses' },
+	{ path: '/reports/expenses', title: 'Expense Categories' },
 	{ path: '/reports/portfolio-returns', title: 'Portfolio Returns' },
 	{
 		path: '/forecast-settings',

@@ -78,20 +78,18 @@
 	async function loadExpenses(period: TimeRange, state: TimeRangeState) {
 		currentPeriod = period;
 
-		// Keep the URL in sync with the current selection (replacing, not pushing, so
-		// stepping through periods doesn't spam browser history) so a later Back navigation
-		// restores this exact period instead of the component's hardcoded default.
-		const params =
-			state.chip === 'custom'
-				? new URLSearchParams({ dateFrom: period.dateFrom, dateTo: period.dateTo })
-				: new URLSearchParams({ period: state.chip, anchor: state.anchor });
-		replaceState(`?${params}`, {});
-
 		isLoading = true;
 		error = null;
 		await tick();
 
 		try {
+			// Keep the URL in sync with the current selection (replacing, not pushing, so
+			// stepping through periods doesn't spam browser history) so a later Back navigation
+			// restores this exact period instead of the component's hardcoded default.
+			// Done after the settings/ledger awaits: the first call comes from the child's
+			// onMount, before SvelteKit's root component is set, and replaceState would
+			// crash on `root.$set` if invoked synchronously here.
+
 			// Load hidden accounts once per page lifetime so changes from the
 			// filter page are picked up on first period load after returning.
 			if (!filterSettingsLoaded) {
@@ -104,6 +102,12 @@
 
 			const defaultCurrency = await settings.get<string>(SettingKeys.currency);
 			await fullLedgerService.ensureLoaded();
+
+			const params =
+				state.chip === 'custom'
+					? new URLSearchParams({ dateFrom: period.dateFrom, dateTo: period.dateTo })
+					: new URLSearchParams({ period: state.chip, anchor: state.anchor });
+			replaceState(`?${params}`, {});
 
 			const bql = `SELECT account, NUMBER(CONVERT(units(position), "${defaultCurrency}")) AS number WHERE account ~ "^Expenses" AND date >= ${period.dateFrom} AND date <= ${period.dateTo}`;
 			const result = await fullLedgerService.query(bql);
