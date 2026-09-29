@@ -8,7 +8,6 @@
 	import Notifier from '$lib/utils/notifier';
 	import {
 		GitCompareArrowsIcon,
-		EyeIcon,
 		DownloadIcon,
 		RefreshCwIcon,
 		Circle,
@@ -20,6 +19,11 @@
 		SettingsIcon
 	} from '@lucide/svelte';
 	import { reloadLedgerFromOpfs } from '$lib/services/ledgerReload';
+	import { OpfsSource } from '$lib/sync/OpfsSource';
+	import { PeerSource } from '$lib/sync/PeerSource';
+	import { diffAgainstBaseline, type DiffEntry } from '$lib/sync/syncDiff';
+	import { getBaseline } from '$lib/sync/syncBaseline';
+	import { pullFiles } from '$lib/sync/pullFiles';
 	import type { ActivePeer } from '$lib/sync/peerPresence.svelte';
 	import {
 		peerConnection,
@@ -29,8 +33,6 @@
 	} from '$lib/sync/peerConnection.svelte';
 
 	// ─── Types ───────────────────────────────────────────────────────────────────
-	type PreviewSection = { filename: string; content: string };
-
 	/**
 	 * Settings/scheduled are JSON — a raw text-hunk splice on JSON risks
 	 * producing invalid output wherever a hunk boundary falls inside the
@@ -107,6 +109,7 @@
 	// pulls anything across the wire. Mirrors how /sync/beancount hashes its
 	// tree scan immediately rather than waiting for an explicit action.
 	type HashStatus = 'checking' | 'same' | 'different' | 'error';
+	type SyncItem = 'settings' | 'scheduled';
 	const ALL_ITEMS = ['settings', 'scheduled'];
 	let hashStatus = $state<Record<'settings' | 'scheduled', HashStatus | null>>({
 		settings: null,
@@ -131,6 +134,7 @@
 	async function checkHashes(targetId: string) {
 		hashStatus = { settings: 'checking', scheduled: 'checking' };
 		void checkYdocHash(targetId);
+		void checkFiles(targetId);
 		try {
 			const [local, remote] = await Promise.all([
 				getLocalHashes(ALL_ITEMS),
@@ -161,6 +165,7 @@
 			hasLocalYdoc = local !== null;
 			if (!hasLocalYdoc) {
 				ydocStatus = null;
+				filesState = null;
 				return;
 			}
 			const remote = await peerConnection.fetchRemoteYdocHash(targetId);
@@ -188,43 +193,99 @@
 		}
 	}
 
+	// ─── Journal files (OPFS tree) ────────────────────────────────────────────
+	// Same hash-based scan as /sync/beancount, summarised: how many files a pull
+	// would take (remote-newer) and how many conflict. "Pull" here only takes the
+	// unambiguous remote-newer files; conflicts are resolved on the detail page.
+	const opfsSource = new OpfsSource();
+	type FilesState = {
+		status: 'checking' | 'ready' | 'error';
+		diffs: DiffEntry[];
+	};
+	let filesState = $state<FilesState | null>(null);
+	let pullingFiles = $state(false);
+	let filesPullable = $derived(filesState?.diffs.filter((d) => d.status === 'remote-newer') ?? []);
+	let filesConflicts = $derived(filesState?.diffs.filter((d) => d.status === 'conflict') ?? []);
+
+	function peerSourceFor(persistentId: string): PeerSource | null {
+		return peerConnection.protocol
+			? new PeerSource(presence, peerConnection.protocol, persistentId)
+			: null;
+	}
+
+	async function checkFiles(targetId: string) {
+		const persistentId = presence.peersMap[targetId]?.persistentId;
+		const source = persistentId ? peerSourceFor(persistentId) : null;
+		if (!persistentId || !source) {
+			filesState = { status: 'error', diffs: [] };
+			return;
+		}
+		filesState = { status: 'checking', diffs: [] };
+		try {
+			const [local, remote, baseline] = await Promise.all([
+				opfsSource.listTree(),
+				source.listTree(),
+				getBaseline(persistentId)
+			]);
+			if (targetId !== syncTargetId) return;
+			filesState = { status: 'ready', diffs: diffAgainstBaseline(local, remote, baseline) };
+		} catch {
+			if (targetId !== syncTargetId) return;
+			filesState = { status: 'error', diffs: [] };
+		}
+	}
+
+	async function pullNewerFiles() {
+		if (!syncTargetId || !syncTarget || pullingFiles || filesPullable.length === 0) return;
+		const targetId = syncTargetId;
+		const source = peerSourceFor(syncTarget.persistentId);
+		if (!source) return;
+		pullingFiles = true;
+		try {
+			const { failures } = await pullFiles(
+				syncTarget.persistentId,
+				source,
+				opfsSource,
+				filesPullable
+			);
+			if (failures.length) {
+				Notifier.error(`${failures.length} file${failures.length === 1 ? '' : 's'} failed to sync`);
+			} else {
+				Notifier.success(
+					`Pulled ${filesPullable.length} file${filesPullable.length === 1 ? '' : 's'}`
+				);
+			}
+			await reloadLedgerFromOpfs();
+			await checkFiles(targetId);
+		} catch (e) {
+			Notifier.error('Pull failed: ' + (e as Error).message);
+		} finally {
+			pullingFiles = false;
+		}
+	}
+
 	/** Re-checks item status after a local write (pull/merge) that may have changed what's local. */
 	function refreshHashesIfSelected() {
-		if (syncTargetId) checkHashes(syncTargetId);
+		if (syncTargetId) {
+			checkHashes(syncTargetId);
+			void checkFiles(syncTargetId);
+		}
 	}
 
-	let includeSettings = $state(false);
-	let includeScheduled = $state(false);
-	let noneSelected = $derived(!includeSettings && !includeScheduled);
-	let allSelected = $derived(includeSettings && includeScheduled);
-	let indeterminate = $state(false);
-	$effect(() => {
-		indeterminate = (includeSettings || includeScheduled) && !allSelected;
-	});
+	/** Item whose Diff is being loaded / that is being pulled — disables just that row's buttons. */
+	let diffingItem = $state<SyncItem | null>(null);
+	let pullingItem = $state<SyncItem | null>(null);
+	let pullConfirmItem = $state<SyncItem | null>(null);
 
-	function toggleSelectAll() {
-		const next = !allSelected;
-		includeSettings = next;
-		includeScheduled = next;
-	}
-
-	function selectedFiles(): string[] {
-		const f: string[] = [];
-		if (includeSettings) f.push('settings');
-		if (includeScheduled) f.push('scheduled');
-		return f;
-	}
-
-	let isFetching = $state(false);
-	let isPulling = $state(false);
+	const ITEM_LABELS: Record<SyncItem, string> = {
+		settings: 'Settings',
+		scheduled: 'Scheduled Transactions'
+	};
 
 	// ─── Modal state ─────────────────────────────────────────────────────────────
 
 	let showDiff = $state(false);
-	let showPreview = $state(false);
-	let showPullConfirm = $state(false);
 	let diffSections = $state<RawDiffSection[]>([]);
-	let previewSections = $state<PreviewSection[]>([]);
 
 	// ─── Mount ───────────────────────────────────────────────────────────────────
 
@@ -320,34 +381,13 @@
 		return peerConnection.fetchRemoteData(syncTargetId, files);
 	}
 
-	async function openPreview() {
-		if (!syncTarget || noneSelected) return;
-		isFetching = true;
+	async function openDiff(item: SyncItem) {
+		if (!syncTarget || diffingItem) return;
+		diffingItem = item;
 		try {
-			const files = selectedFiles();
-			const remote = await fetchRemoteData(files);
-			const sections: PreviewSection[] = [];
-			if (remote.settings !== null)
-				sections.push({ filename: 'settings.json', content: remote.settings });
-			if (remote.scheduled !== null)
-				sections.push({ filename: 'scheduled.json', content: remote.scheduled });
-			previewSections = sections;
-			showPreview = true;
-		} catch (e) {
-			Notifier.error((e as Error).message);
-		} finally {
-			isFetching = false;
-		}
-	}
-
-	async function openDiff() {
-		if (!syncTarget || noneSelected) return;
-		isFetching = true;
-		try {
-			const files = selectedFiles();
-			const [remote, local] = await Promise.all([fetchRemoteData(files), getLocalData(files)]);
+			const [remote, local] = await Promise.all([fetchRemoteData([item]), getLocalData([item])]);
 			const sections: RawDiffSection[] = [];
-			if (remote.settings !== null && local.settings !== null) {
+			if (item === 'settings' && remote.settings !== null && local.settings !== null) {
 				sections.push({
 					filename: 'settings.json',
 					kind: 'settings',
@@ -355,7 +395,7 @@
 					remote: JSON.parse(remote.settings) as Setting[]
 				});
 			}
-			if (remote.scheduled !== null && local.scheduled !== null) {
+			if (item === 'scheduled' && remote.scheduled !== null && local.scheduled !== null) {
 				sections.push({
 					filename: 'scheduled.json',
 					kind: 'scheduled',
@@ -368,23 +408,24 @@
 		} catch (e) {
 			Notifier.error((e as Error).message);
 		} finally {
-			isFetching = false;
+			diffingItem = null;
 		}
 	}
 
 	async function confirmPull() {
-		if (!syncTarget || noneSelected) return;
-		isPulling = true;
-		showPullConfirm = false;
+		const item = pullConfirmItem;
+		pullConfirmItem = null;
+		if (!syncTarget || !item) return;
+		pullingItem = item;
 		try {
-			const remote = await fetchRemoteData(selectedFiles());
-			if (remote.settings !== null) {
+			const remote = await fetchRemoteData([item]);
+			if (item === 'settings' && remote.settings !== null) {
 				const entries: Setting[] = JSON.parse(remote.settings);
 				await db.settings.clear();
 				await db.settings.bulkPut(entries.map((e) => new Setting(e.key, e.value)));
 				Notifier.success('Settings updated');
 			}
-			if (remote.scheduled !== null) {
+			if (item === 'scheduled' && remote.scheduled !== null) {
 				const entries: ScheduledTransaction[] = JSON.parse(remote.scheduled);
 				await db.scheduled.clear();
 				await db.scheduled.bulkPut(entries);
@@ -394,7 +435,7 @@
 		} catch (e) {
 			Notifier.error('Pull failed: ' + (e as Error).message);
 		} finally {
-			isPulling = false;
+			pullingItem = null;
 		}
 	}
 
@@ -599,123 +640,100 @@
 						</button>
 					</div>
 
-					<div class="flex flex-col gap-2 py-1">
-						<label class="flex items-center gap-3 cursor-pointer">
-							<input
-								type="checkbox"
-								class="checkbox checkbox-primary checkbox-sm"
-								checked={allSelected}
-								bind:indeterminate
-								onclick={toggleSelectAll}
-							/>
-							<span class="text-xs opacity-60">Select all</span>
-						</label>
-						<div class="divider my-0"></div>
-						<label class="flex items-center gap-3 cursor-pointer">
-							<input
-								type="checkbox"
-								class="checkbox checkbox-primary checkbox-sm"
-								bind:checked={includeSettings}
-							/>
-							<span class="flex-1 text-sm">Settings</span>
-							{@render hashBadge(hashStatus.settings)}
-						</label>
-						<label class="flex items-center gap-3 cursor-pointer">
-							<input
-								type="checkbox"
-								class="checkbox checkbox-primary checkbox-sm"
-								bind:checked={includeScheduled}
-							/>
-							<span class="flex-1 text-sm">Scheduled Transactions</span>
-							{@render hashBadge(hashStatus.scheduled)}
-						</label>
+					<div class="flex flex-col gap-1">
+						{#each ['settings', 'scheduled'] as const as item (item)}
+							{@const status = hashStatus[item]}
+							<div class="flex items-center gap-2 py-1">
+								<span class="flex-1 text-sm">{ITEM_LABELS[item]}</span>
+								{@render hashBadge(status)}
+								<button
+									class="btn btn-sm btn-square btn-accent text-secondary"
+									aria-label="Diff {ITEM_LABELS[item]}"
+									title="Diff"
+									disabled={status !== 'different' || diffingItem !== null}
+									onclick={() => openDiff(item)}
+								>
+									{#if diffingItem === item}<span class="loading loading-spinner loading-xs"
+											></span>{:else}<GitCompareArrowsIcon size={16} />{/if}
+								</button>
+								<button
+									class="btn btn-sm btn-square btn-primary"
+									aria-label="Pull {ITEM_LABELS[item]}"
+									title="Pull"
+									disabled={status !== 'different' || pullingItem !== null}
+									onclick={() => (pullConfirmItem = item)}
+								>
+									{#if pullingItem === item}<span class="loading loading-spinner loading-xs"
+											></span>{:else}<DownloadIcon size={16} />{/if}
+								</button>
+							</div>
+						{/each}
+
+						{#if hasLocalYdoc}
+							<div class="flex items-center gap-2 py-1">
+								<span class="flex-1 text-sm">Local Transactions</span>
+								{@render hashBadge(ydocStatus)}
+								<!-- Merged automatically (CRDT), so no Diff — Sync pulls and merges. -->
+								<button
+									class="btn btn-sm btn-square btn-primary"
+									aria-label="Sync Local Transactions"
+									title="Pull &amp; merge"
+									disabled={syncingYdoc || ydocStatus !== 'different'}
+									onclick={syncLocalTransactions}
+								>
+									{#if syncingYdoc}<span class="loading loading-spinner loading-xs"
+											></span>{:else}<DownloadIcon size={16} />{/if}
+								</button>
+							</div>
+						{/if}
 					</div>
 
-					{#if hasLocalYdoc}
-						<div class="flex items-center gap-3 py-1">
-							<span class="flex-1 text-sm">Local Transactions</span>
-							{@render hashBadge(ydocStatus)}
-							<button
-								class="btn btn-sm btn-primary"
-								disabled={syncingYdoc || ydocStatus === 'same'}
-								onclick={syncLocalTransactions}
-							>
-								{#if syncingYdoc}<span class="loading loading-spinner loading-xs"></span>{/if}
-								Sync
-							</button>
-						</div>
-					{/if}
-
-					<div class="flex gap-2 flex-wrap pt-1">
-						<button
-							class="btn btn-sm btn-outline flex-1"
-							disabled={noneSelected || isFetching}
-							onclick={openPreview}
-						>
-							{#if isFetching}<span class="loading loading-spinner loading-xs"
-								></span>{:else}<EyeIcon size={14} />{/if}
-							Preview
-						</button>
-						<button
-							class="btn btn-sm btn-accent text-secondary flex-1"
-							disabled={noneSelected || isFetching}
-							onclick={openDiff}
-						>
-							{#if isFetching}<span class="loading loading-spinner loading-xs"
-								></span>{:else}<GitCompareArrowsIcon size={14} />{/if}
-							Diff
-						</button>
-						<button
-							class="btn btn-sm btn-primary flex-1"
-							disabled={noneSelected || isPulling}
-							onclick={() => (showPullConfirm = true)}
-						>
-							{#if isPulling}<span class="loading loading-spinner loading-xs"
-								></span>{:else}<DownloadIcon size={14} />{/if}
-							Pull
-						</button>
-					</div>
-
-					<!-- Leads to a different context (whole-file sync), so it sits apart and reads as navigation. -->
+					<!-- Journal files: status + pull-all-newer here; the link leads to the whole-file sync page for per-file review and conflicts. -->
 					<div class="divider my-0"></div>
-					<a
-						href="/sync/beancount?peer={syncTarget.persistentId}"
-						class="btn btn-ghost btn-sm w-full justify-between"
-					>
-						<span class="flex items-center gap-2">
-							<FolderSyncIcon size={14} />
-							Sync journal files
-						</span>
-						<ChevronRightIcon size={16} class="opacity-60" />
-					</a>
+					<div class="flex items-center gap-2">
+						<a
+							href="/sync/beancount?peer={syncTarget.persistentId}"
+							class="btn btn-ghost btn-sm flex-1 justify-between px-1"
+						>
+							<span class="flex items-center gap-2">
+								<FolderSyncIcon size={14} />
+								Journal files
+							</span>
+							<span class="flex items-center gap-1">
+								{#if filesState?.status === 'checking'}
+									{@render hashBadge('checking')}
+								{:else if filesState?.status === 'error'}
+									{@render hashBadge('error')}
+								{:else if filesState}
+									{#if filesPullable.length > 0}
+										<span class="badge badge-warning badge-xs">{filesPullable.length} newer</span>
+									{/if}
+									{#if filesConflicts.length > 0}
+										<span class="badge badge-error badge-xs">{filesConflicts.length} conflict</span>
+									{/if}
+									{#if filesPullable.length === 0 && filesConflicts.length === 0}
+										{@render hashBadge('same')}
+									{/if}
+								{/if}
+								<ChevronRightIcon size={16} class="opacity-60" />
+							</span>
+						</a>
+						<button
+							class="btn btn-sm btn-square btn-primary"
+							aria-label="Pull newer journal files"
+							title="Pull all newer files"
+							disabled={pullingFiles || filesPullable.length === 0}
+							onclick={pullNewerFiles}
+						>
+							{#if pullingFiles}<span class="loading loading-spinner loading-xs"
+									></span>{:else}<DownloadIcon size={16} />{/if}
+						</button>
+					</div>
 				</div>
 			</div>
 		{/if}
 	</section>
 </main>
-
-<!-- ─── Preview Modal ──────────────────────────────────────────────────────── -->
-{#if showPreview}
-	<div class="modal modal-open">
-		<div class="modal-box h-[90vh] max-w-3xl flex flex-col p-0">
-			<div class="flex items-center justify-between border-b border-base-300 px-4 py-3">
-				<h3 class="font-bold">Preview — {syncTarget?.name}</h3>
-				<button class="btn btn-ghost btn-sm" onclick={() => (showPreview = false)}>✕</button>
-			</div>
-			<div class="flex-1 overflow-y-auto touch-pan-y p-4 flex flex-col gap-6">
-				{#each previewSections as section}
-					<div>
-						<p class="font-mono text-sm font-semibold mb-1 opacity-60">{section.filename}</p>
-						<pre
-							class="text-xs font-mono leading-5 overflow-x-auto rounded bg-base-200 p-2 select-text whitespace-pre">{section.content}</pre>
-					</div>
-				{/each}
-			</div>
-		</div>
-		<button class="modal-backdrop" aria-label="Close" onclick={() => (showPreview = false)}
-		></button>
-	</div>
-{/if}
 
 <!-- ─── Diff Modal ─────────────────────────────────────────────────────────── -->
 {#if showDiff}
@@ -798,20 +816,20 @@
 {/if}
 
 <!-- ─── Pull Confirm ───────────────────────────────────────────────────────── -->
-{#if showPullConfirm}
+{#if pullConfirmItem}
 	<div class="modal modal-open">
 		<div class="modal-box">
 			<h3 class="font-bold text-lg">Confirm Pull</h3>
 			<p class="py-4 text-sm">
-				Overwrite local data with the version from <strong>{syncTarget?.name}</strong>? This cannot
+				Overwrite local <strong>{ITEM_LABELS[pullConfirmItem]}</strong> with the version from <strong>{syncTarget?.name}</strong>? This cannot
 				be undone.
 			</p>
 			<div class="modal-action">
-				<button class="btn btn-ghost" onclick={() => (showPullConfirm = false)}>Cancel</button>
+				<button class="btn btn-ghost" onclick={() => (pullConfirmItem = null)}>Cancel</button>
 				<button class="btn btn-warning" onclick={confirmPull}>Overwrite</button>
 			</div>
 		</div>
-		<button class="modal-backdrop" aria-label="Close" onclick={() => (showPullConfirm = false)}
+		<button class="modal-backdrop" aria-label="Close" onclick={() => (pullConfirmItem = null)}
 		></button>
 	</div>
 {/if}

@@ -28,12 +28,8 @@
 		type SyncStatus,
 		type SyncAction
 	} from '$lib/sync/syncDiff';
-	import {
-		getBaseline,
-		updateBaseline,
-		removeBaselineEntries,
-		type BaselineEntry
-	} from '$lib/sync/syncBaseline';
+	import { getBaseline, updateBaseline } from '$lib/sync/syncBaseline';
+	import { pullFiles } from '$lib/sync/pullFiles';
 	import DiffViewer from '$lib/components/DiffViewer.svelte';
 	import type { PeerSyncBaseline } from '$lib/data/model';
 
@@ -342,46 +338,7 @@
 
 		applying = true;
 		applyError = null;
-		const pulledRemote = new Map<string, SyncEntry>();
-		const baselineRemovals: string[] = [];
-		const failures: string[] = [];
-
-		for (const row of toPull) {
-			try {
-				if (row.remote) {
-					const content = await peerSource.readFile(row.path);
-					if (content === undefined) {
-						// Peer no longer has it (race since the list was fetched) — mirror the deletion.
-						await opfsSource.deleteFile(row.path);
-						baselineRemovals.push(row.path);
-					} else {
-						await opfsSource.writeFile(row.path, content);
-						pulledRemote.set(row.path, row.remote);
-					}
-				} else {
-					// Remote no longer has this file — pulling mirrors the deletion locally.
-					await opfsSource.deleteFile(row.path);
-					baselineRemovals.push(row.path);
-				}
-			} catch (e) {
-				failures.push(`${row.path}: ${(e as Error).message}`);
-			}
-		}
-
-		// Re-scan local so the baseline records each pulled file's actual
-		// post-write hash (writeFile doesn't hand it back) — pairing that with
-		// the remote entry from this pull is what lets both sides read back
-		// as unchanged next time (see syncDiff.ts / PeerSyncBaseline). Remote
-		// itself is untouched by a pull (v1 has no push), so no need to re-fetch it.
-		const freshLocal = await opfsSource.listTree();
-		const baselineUpserts: BaselineEntry[] = [];
-		for (const [path, remote] of pulledRemote) {
-			const local = freshLocal.find((e) => e.path === path);
-			if (local) baselineUpserts.push({ path, local, remote });
-		}
-
-		if (baselineUpserts.length) await updateBaseline(activePeer.id, baselineUpserts);
-		if (baselineRemovals.length) await removeBaselineEntries(activePeer.id, baselineRemovals);
+		const { freshLocal, failures } = await pullFiles(activePeer.id, peerSource, opfsSource, toPull);
 
 		localEntries = freshLocal;
 		localLoaded = true;
