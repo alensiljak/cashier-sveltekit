@@ -40,7 +40,8 @@
 		PinIcon,
 		PinOffIcon,
 
-		FileChartColumnIcon
+		FileChartColumnIcon,
+		CloudIcon
 
 	} from '@lucide/svelte';
 
@@ -443,6 +444,19 @@
 							>
 								<ContainerIcon />
 								<span>Cache</span>
+							</a>
+						</li>
+						<li>
+							<a
+								href="/util/webdav-explorer"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname ===
+								'/util/webdav-explorer'
+									? 'active bg-secondary text-secondary-content'
+									: ''}"
+								onclick={closeDrawer}
+							>
+								<CloudIcon />
+								<span>WebDAV Explorer</span>
 							</a>
 						</li>
 						<li>

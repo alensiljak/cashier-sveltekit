@@ -5,6 +5,11 @@ export interface WebDavEntry {
 	lastModified: Date | null;
 }
 
+/** Percent-encodes each path segment, keeping the `/` separators. */
+function encodePath(path: string): string {
+	return path.split('/').map(encodeURIComponent).join('/');
+}
+
 export class WebDavClient {
 	private baseUrl: string;
 	private username: string;
@@ -21,7 +26,15 @@ export class WebDavClient {
 	}
 
 	fileUrl(filename: string): string {
-		return this.baseUrl + filename;
+		return this.baseUrl + encodePath(filename);
+	}
+
+	/** Creates a directory (MKCOL). */
+	async mkcol(path: string): Promise<Response> {
+		return fetch(this.fileUrl(path.replace(/\/+$/, '') + '/'), {
+			method: 'MKCOL',
+			headers: { Authorization: this.authHeader() }
+		});
 	}
 
 	async put(
@@ -79,8 +92,10 @@ export class WebDavClient {
 		});
 	}
 
-	async list(): Promise<WebDavEntry[]> {
-		const res = await fetch(this.baseUrl, {
+	/** Lists a directory, given as a path relative to the configured base URL ('' = base). */
+	async list(path = ''): Promise<WebDavEntry[]> {
+		const trimmed = path.replace(/^\/+|\/+$/g, '');
+		const res = await fetch(trimmed ? this.fileUrl(trimmed + '/') : this.baseUrl, {
 			method: 'PROPFIND',
 			cache: 'no-store',
 			headers: {
