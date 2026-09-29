@@ -143,6 +143,25 @@ export class CrdtXactStore {
 		return this.put(id, toRecord(xact, id, await this.getOrigin()));
 	}
 
+	/**
+	 * Adds many transactions in one Yjs transaction, so they persist and sync as a
+	 * single update and observers are notified once.
+	 */
+	async appendMany(xacts: Xact[]): Promise<XactId[]> {
+		await this.ready();
+		const origin = await this.getOrigin();
+		const ids: XactId[] = [];
+		this.doc.transact(() => {
+			for (const xact of xacts) {
+				const id = newId();
+				this.records.set(id, toRecord(xact, id, origin));
+				ids.push(id);
+			}
+		});
+		if (ids.length > 0) scheduleBackup();
+		return ids;
+	}
+
 	async update(id: XactId, beancountText: string): Promise<StoredXact> {
 		await this.ready();
 		const existing = this.records.get(id);

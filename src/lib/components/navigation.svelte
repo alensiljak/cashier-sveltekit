@@ -20,29 +20,26 @@
 		ContainerIcon,
 		FolderOpenIcon,
 		FolderInputIcon,
+		FileSpreadsheetIcon,
 		FolderOutputIcon,
-		ArrowLeftRightIcon,
 		ChartNoAxesCombinedIcon,
 		HardDriveIcon,
 		CalculatorIcon,
 		CalendarIcon,
-		MicIcon,
 		CoinsIcon,
-	TrendingUpIcon,
+		TrendingUpIcon,
 		ListTreeIcon,
 		PiggyBankIcon,
 		ShieldCheckIcon,
 		CloudUploadIcon,
 		WifiIcon,
 		FilePlusIcon,
-		TerminalSquareIcon,
+		SquareTerminalIcon,
 		SearchIcon,
 		PinIcon,
 		PinOffIcon,
-
 		FileChartColumnIcon,
 		CloudIcon
-
 	} from '@lucide/svelte';
 
 	function closeDrawer(): void {
@@ -389,6 +386,18 @@
 						</li>
 						<li>
 							<a
+								href="/importers"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/importers'
+									? 'active bg-secondary text-secondary-content'
+									: ''}"
+								onclick={closeDrawer}
+							>
+								<FileSpreadsheetIcon />
+								<span>Importers</span>
+							</a>
+						</li>
+						<li>
+							<a
 								href="/opfs"
 								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/opfs'
 									? 'active bg-secondary text-secondary-content'
@@ -517,7 +526,7 @@
 									: ''}"
 								onclick={closeDrawer}
 							>
-								<TerminalSquareIcon />
+								<SquareTerminalIcon />
 								<span>Quick Query</span>
 							</a>
 						</li>

@@ -168,6 +168,10 @@ class UserSettings {
 
 		await db.settings.put(setting);
 	}
+
+	async delete(key: string) {
+		await db.settings.delete(key);
+	}
 }
 
 class DeviceSettings {
