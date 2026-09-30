@@ -1,5 +1,6 @@
 import { Posting, Xact } from '$lib/data/model';
 import fullLedgerService from '$lib/services/ledgerWorkerClient';
+import { metaFromBqlEntry } from '$lib/utils/transactionParser';
 import { commoditiesFromDirectives } from '$lib/assetAllocation/commodityYield';
 
 /**
@@ -46,7 +47,7 @@ export async function loadFullXact(summary: Xact): Promise<Xact> {
 	if (summary.id == null) return summary;
 	try {
 		const { columns, rows } = await fullLedgerService.query(
-			`SELECT flag, account, number, currency WHERE id = ${summary.id}`
+			`SELECT flag, account, number, currency, entry WHERE id = ${summary.id}`
 		);
 		if (rows.length === 0) return summary;
 		const idx = (name: string) => columns.indexOf(name);
@@ -56,6 +57,7 @@ export async function loadFullXact(summary: Xact): Promise<Xact> {
 		x.payee = summary.payee;
 		x.note = summary.note;
 		x.flag = (rows[0][idx('flag')] as string) ?? '*';
+		x.meta = metaFromBqlEntry(rows[0][idx('entry')]);
 		x.postings = rows.map((r) => {
 			const p = new Posting();
 			p.account = String(r[idx('account')]);

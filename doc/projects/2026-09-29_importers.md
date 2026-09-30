@@ -6,16 +6,17 @@ To import bank statements directly in Cashier. The reason is that rustledger onl
 
 ## To Do
 
-- [ ] modify payees
-- [ ] match categories / accounts
-  - [ ] fix ibkr importer interest vs dividends choice
-- [ ] booking date vs value date: banks dates often lag
-- [ ] deduplication
-- [ ] save importer configuration in Settings (or JSON in OPFS)
-  - [ ] support backup
-  - [ ] support sync
+- [x] modify payees
+- [x] match categories / accounts
+- [ ] fix ibkr importer interest vs dividends choice (manual symbol list!)
+- [x] booking date vs value date: banks dates often lag
+- [x] deduplication
+- [x] save importer configuration in Settings (or JSON in OPFS)
+  - [x] support backup
+  - [x] support sync
 
 ## Design
 
 - import presents the transactions before writing to the (CRDT) store. The whole batch can be scraped without leaving trace in the store.
 - the whole statement is imported to CRDT store as one transaction.
+- preview matched existing transactions

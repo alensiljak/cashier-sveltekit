@@ -12,6 +12,8 @@ export interface PendingImport {
 	text: string;
 	/** Which rows are ticked, by row index. Applies only if the row count is unchanged. */
 	selection?: boolean[];
+	/** What was open and where the list was scrolled to, restored when returning from the rule page. */
+	view?: { matchOpen: number[]; detailsOpen: number[]; scrollTop: number };
 }
 
 export function savePendingImport(pending: PendingImport): void {
@@ -34,6 +36,11 @@ export function loadPendingImport(): PendingImport | null {
 export function saveSelection(selection: boolean[]): void {
 	const pending = loadPendingImport();
 	if (pending) savePendingImport({ ...pending, selection });
+}
+
+export function saveView(view: NonNullable<PendingImport['view']>): void {
+	const pending = loadPendingImport();
+	if (pending) savePendingImport({ ...pending, view });
 }
 
 export function clearPendingImport(): void {

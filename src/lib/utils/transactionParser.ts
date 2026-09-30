@@ -116,7 +116,28 @@ function extractPriceFromSource(
  * boolean/amount-shaped meta round-trips as a quoted string on save (acceptable for the
  * xact-level metadata editor, which only targets simple string tags like `isin`).
  */
-function normalizeMeta(meta: unknown): Record<string, string> {
+/**
+ * Transaction meta from a BQL `entry` column value (the whole transaction as an object,
+ * or its JSON text). Internal keys such as `filename`/`lineno` are dropped.
+ */
+export function metaFromBqlEntry(entry: unknown): Record<string, string> {
+	let obj = entry;
+	if (typeof obj === 'string') {
+		try {
+			obj = JSON.parse(obj);
+		} catch {
+			return {};
+		}
+	}
+	if (obj instanceof Map) obj = Object.fromEntries(obj);
+	let meta = (obj as { meta?: unknown } | null)?.meta;
+	if (meta instanceof Map) meta = Object.fromEntries(meta);
+	const result = normalizeMeta(meta);
+	for (const key of ['filename', 'lineno']) delete result[key];
+	return result;
+}
+
+export function normalizeMeta(meta: unknown): Record<string, string> {
 	if (!meta || typeof meta !== 'object') return {};
 	const result: Record<string, string> = {};
 	for (const [key, value] of Object.entries(meta as Record<string, unknown>)) {

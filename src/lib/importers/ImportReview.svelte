@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { ChevronRightIcon } from '@lucide/svelte';
 	import JournalXactRow from '$lib/components/JournalXactRow.svelte';
 	import Notifier from '$lib/utils/notifier';
 	import { DEFAULT_DATE_WINDOW_DAYS, findDuplicates } from './dedup';
 	import { loadExistingBankXacts, loadFullXact, loadIsinSymbols } from './existing';
-	import { clearPendingImport, loadPendingImport, saveSelection } from './pendingImport';
+	import { clearPendingImport, loadPendingImport, saveSelection, saveView } from './pendingImport';
 	import { getXactStore } from '$lib/storage/xactStoreRegistry';
 	import type { Importer } from './types';
 	import type { Xact } from '$lib/data/model';
@@ -21,13 +21,26 @@
 	}
 	let { importer, config, fileName, text, oncancel }: Props = $props();
 
-	type Row = { xact: Xact; matchedWith?: Xact; selected: boolean };
+	type Row = {
+		xact: Xact;
+		details: [string, string][];
+		matchText: string[];
+		appliedRules: number[];
+		matchedWith?: Xact;
+		selected: boolean;
+	};
 
 	let busy = $state(true);
 	let error = $state('');
 	let rows = $state<Row[]>([]);
-	/** Full matched transactions for the rows the user expanded, by row index. */
-	let expanded = $state<Record<number, Xact | 'loading'>>({});
+	/** Full matched transactions for the rows whose Match pane is open, by row index. */
+	let matchOpen = $state<Record<number, Xact | 'loading'>>({});
+	let detailsOpen = $state<Record<number, boolean>>({});
+	/** Off shows the raw records, as the bank sent them. */
+	let applyRules = $state(true);
+	let scroller: HTMLDivElement;
+
+	let isinToSymbol: Record<string, string> = {};
 
 	let selectedCount = $derived(rows.filter((r) => r.selected).length);
 	let matchedCount = $derived(rows.filter((r) => r.matchedWith).length);
@@ -51,7 +64,6 @@
 				throw new Error(`This file does not look like a ${importer.name} export.`);
 			}
 
-			let isinToSymbol: Record<string, string> = {};
 			try {
 				isinToSymbol = await loadIsinSymbols();
 			} catch (e) {
@@ -59,10 +71,10 @@
 					`Could not read ISINs from the book (${e instanceof Error ? e.message : e}). Is the ledger loaded?`
 				);
 			}
-			const candidates = importer.extract(text, config, { isinToSymbol });
-			if (candidates.length === 0) throw new Error('The file contains no transactions.');
+			const imported = importer.extract(text, config, { isinToSymbol, applyRules });
+			if (imported.length === 0) throw new Error('The file contains no transactions.');
 
-			const dates = candidates.map((x) => x.date ?? '').sort();
+			const dates = imported.map((r) => r.xact.date ?? '').sort();
 			const account = importer.account(config);
 
 			let existing: Xact[] = [];
@@ -78,13 +90,23 @@
 				);
 			}
 
-			const saved = loadPendingImport()?.selection;
-			const restore = saved?.length === candidates.length ? saved : undefined;
-			rows = findDuplicates(candidates, existing, account).map((r, i) => ({
-				xact: r.xact,
-				matchedWith: r.duplicateOf,
-				selected: restore ? restore[i] : !r.duplicateOf
+			const matches = findDuplicates(
+				imported.map((r) => r.xact),
+				existing,
+				account
+			);
+			const pending = loadPendingImport();
+			const restore =
+				pending?.selection?.length === imported.length ? pending.selection : undefined;
+			rows = imported.map((r, i) => ({
+				...r,
+				appliedRules: r.appliedRules ?? [],
+				matchedWith: matches[i].duplicateOf,
+				selected: restore ? restore[i] : !matches[i].duplicateOf
 			}));
+			busy = false;
+
+			if (pending?.view) await restoreView(pending.view);
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
 		} finally {
@@ -92,15 +114,51 @@
 		}
 	}
 
+	/** Reopens the panes and scroll position as they were when the user left for the rule page. */
+	async function restoreView(view: NonNullable<ReturnType<typeof loadPendingImport>>['view']) {
+		if (!view) return;
+		for (const i of view.detailsOpen) if (i < rows.length) detailsOpen[i] = true;
+		await Promise.all(view.matchOpen.filter((i) => i < rows.length).map((i) => toggleMatch(i)));
+		await tick();
+		scroller.scrollTop = view.scrollTop;
+	}
+
+	/** Re-reads the file with the current rules setting. Rows keep their position, ticks and matches. */
+	function reextract() {
+		const imported = importer.extract(text, config, { isinToSymbol, applyRules });
+		if (imported.length !== rows.length) return;
+		imported.forEach((r, i) => {
+			rows[i].xact = r.xact;
+			rows[i].details = r.details;
+			rows[i].matchText = r.matchText;
+			rows[i].appliedRules = r.appliedRules ?? [];
+		});
+	}
+
 	async function toggleMatch(i: number) {
-		if (i in expanded) {
-			delete expanded[i];
+		if (i in matchOpen) {
+			delete matchOpen[i];
 			return;
 		}
 		const summary = rows[i].matchedWith;
 		if (!summary) return;
-		expanded[i] = 'loading';
-		expanded[i] = await loadFullXact(summary);
+		matchOpen[i] = 'loading';
+		matchOpen[i] = await loadFullXact(summary);
+	}
+
+	function toggleDetails(i: number) {
+		if (detailsOpen[i]) delete detailsOpen[i];
+		else detailsOpen[i] = true;
+	}
+
+	/** Opens the rule page for a new rule, or, with `rule`, for editing the rule at that position. */
+	async function openRule(i: number, rule?: number) {
+		saveView({
+			matchOpen: Object.keys(matchOpen).map(Number),
+			detailsOpen: Object.keys(detailsOpen).map(Number),
+			scrollTop: scroller.scrollTop
+		});
+		await goto(`/importers/rule?row=${i}${rule === undefined ? '' : `&rule=${rule}`}`);
 	}
 
 	async function accept() {
@@ -118,16 +176,30 @@
 	}
 </script>
 
-<div class="flex-1 overflow-y-auto touch-pan-y p-4 flex flex-col gap-4">
+<div bind:this={scroller} class="flex-1 overflow-y-auto touch-pan-y p-4 flex flex-col gap-4">
 	{#if busy && rows.length === 0 && !error}
 		<p class="opacity-70">Reading {fileName}…</p>
 	{/if}
 
 	{#if rows.length > 0}
-		<p class="text-sm">
-			<span class="font-medium">{fileName}</span>: {rows.length} transactions,
-			{matchedCount} matched with recorded ones.
-		</p>
+		<div class="flex items-center justify-between gap-3 flex-wrap">
+			<p class="text-sm">
+				<span class="font-medium">{fileName}</span>: {rows.length} transactions,
+				{matchedCount} matched with recorded ones.
+			</p>
+			{#if importer.usesRules}
+				<label class="flex items-center gap-2 text-sm cursor-pointer">
+					<input
+						type="checkbox"
+						class="toggle toggle-primary toggle-sm bg-transparent bg-none"
+						bind:checked={applyRules}
+						onchange={reextract}
+					/>
+					Apply rules
+				</label>
+			{/if}
+		</div>
+
 		<div class="flex flex-col divide-y divide-base-300">
 			{#each rows as row, i (i)}
 				<div class="flex items-start gap-3 py-2">
@@ -143,29 +215,64 @@
 							<JournalXactRow xact={row.xact} linksEnabled={false} />
 						</div>
 
-						{#if row.matchedWith}
+						<div class="mt-1 ml-6 flex gap-2">
+							{#if row.matchedWith}
+								<button
+									type="button"
+									class="badge badge-info badge-sm gap-0.5 font-medium"
+									aria-expanded={i in matchOpen}
+									onclick={() => toggleMatch(i)}
+								>
+									Match
+									<ChevronRightIcon
+										size={12}
+										class="transition-transform {i in matchOpen ? 'rotate-90' : ''}"
+									/>
+								</button>
+							{/if}
 							<button
 								type="button"
-								class="badge badge-info badge-sm mt-1 ml-6 gap-0.5 font-medium"
-								aria-expanded={i in expanded}
-								onclick={() => toggleMatch(i)}
+								class="badge badge-outline badge-sm gap-0.5"
+								aria-expanded={!!detailsOpen[i]}
+								onclick={() => toggleDetails(i)}
 							>
-								Match
+								Details
 								<ChevronRightIcon
 									size={12}
-									class="transition-transform {i in expanded ? 'rotate-90' : ''}"
+									class="transition-transform {detailsOpen[i] ? 'rotate-90' : ''}"
 								/>
 							</button>
+						</div>
 
-							{#if i in expanded}
-								<div class="ml-6 mt-1 rounded-box bg-base-200 p-2">
-									{#if expanded[i] === 'loading'}
-										<p class="text-xs opacity-70">Loading…</p>
-									{:else}
-										<JournalXactRow xact={expanded[i]} linksEnabled={false} />
-									{/if}
-								</div>
-							{/if}
+						{#if i in matchOpen}
+							<div class="ml-6 mt-1 rounded-box bg-base-200 p-2">
+								{#if matchOpen[i] === 'loading'}
+									<p class="text-xs opacity-70">Loading…</p>
+								{:else}
+									<JournalXactRow xact={matchOpen[i]} linksEnabled={false} />
+								{/if}
+							</div>
+						{/if}
+
+						{#if detailsOpen[i]}
+							<div class="ml-6 mt-1 rounded-box bg-base-200 p-2 text-xs">
+								<dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5">
+									{#each row.details as [label, value] (label)}
+										<dt class="opacity-60">{label}</dt>
+										<dd class="break-words">{value}</dd>
+									{/each}
+								</dl>
+								{#if importer.usesRules}
+									<div class="mt-2 flex flex-wrap gap-2">
+										{#each row.appliedRules as index (index)}
+											<button class="btn btn-xs" onclick={() => openRule(i, index)}>
+												Edit rule #{index + 1}
+											</button>
+										{/each}
+										<button class="btn btn-xs" onclick={() => openRule(i)}>New rule…</button>
+									</div>
+								{/if}
+							</div>
 						{/if}
 					</div>
 				</div>

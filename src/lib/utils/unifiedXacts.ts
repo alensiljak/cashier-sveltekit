@@ -12,6 +12,7 @@ import { Xact, Posting } from '$lib/data/model';
 import type { XactId } from '$lib/storage/crdtXactStore';
 import fullLedgerService from '$lib/services/ledgerWorkerClient';
 import Notifier from '$lib/utils/notifier';
+import { metaFromBqlEntry } from '$lib/utils/transactionParser';
 
 export type UnifiedXact = {
 	date: string;
@@ -77,13 +78,13 @@ export async function openXactDetails(row: UnifiedXact): Promise<void> {
 	// Read-only transaction: fetch postings from the full ledger.
 	// Prefer id-based lookup (exact) over date/payee/narration (fragile).
 	const bql = row.rledgerId
-		? `SELECT flag, account, number, currency WHERE id = ${row.rledgerId}`
+		? `SELECT flag, account, number, currency, entry WHERE id = ${row.rledgerId}`
 		: (() => {
 				const payeeClause = row.payee
 					? `AND payee = "${row.payee.replace(/"/g, '\\"')}"`
 					: `AND payee = ""`;
 				const narrationClause = `AND narration = "${(row.narration ?? '').replace(/"/g, '\\"')}"`;
-				return `SELECT flag, account, number, currency WHERE date = ${row.date} ${payeeClause} ${narrationClause}`;
+				return `SELECT flag, account, number, currency, entry WHERE date = ${row.date} ${payeeClause} ${narrationClause}`;
 			})();
 
 	const { columns, rows: postingRows, errors } = await fullLedgerService.query(bql);
@@ -106,6 +107,7 @@ export async function openXactDetails(row: UnifiedXact): Promise<void> {
 	xactObj.payee = row.payee;
 	xactObj.note = row.narration;
 	xactObj.flag = (safeRows[0][flagIdx] as string) ?? '*';
+	xactObj.meta = metaFromBqlEntry(safeRows[0][columns.indexOf('entry')]);
 	xactObj.postings = safeRows.map((pr) => {
 		const p = new Posting();
 		p.account = pr[accountIdx] as string;
