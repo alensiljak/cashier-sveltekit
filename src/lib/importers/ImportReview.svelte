@@ -38,6 +38,8 @@
 	let detailsOpen = $state<Record<number, boolean>>({});
 	/** Off shows the raw records, as the bank sent them. */
 	let applyRules = $state(true);
+	/** Hides the rows that match a recorded transaction, leaving what is new. */
+	let unmatchedOnly = $state(false);
 	let scroller: HTMLDivElement;
 
 	let isinToSymbol: Record<string, string> = {};
@@ -117,6 +119,7 @@
 	/** Reopens the panes and scroll position as they were when the user left for the rule page. */
 	async function restoreView(view: NonNullable<ReturnType<typeof loadPendingImport>>['view']) {
 		if (!view) return;
+		unmatchedOnly = view.unmatchedOnly ?? false;
 		for (const i of view.detailsOpen) if (i < rows.length) detailsOpen[i] = true;
 		await Promise.all(view.matchOpen.filter((i) => i < rows.length).map((i) => toggleMatch(i)));
 		await tick();
@@ -156,7 +159,8 @@
 		saveView({
 			matchOpen: Object.keys(matchOpen).map(Number),
 			detailsOpen: Object.keys(detailsOpen).map(Number),
-			scrollTop: scroller.scrollTop
+			scrollTop: scroller.scrollTop,
+			unmatchedOnly
 		});
 		await goto(`/importers/rule?row=${i}${rule === undefined ? '' : `&rule=${rule}`}`);
 	}
@@ -187,96 +191,113 @@
 				<span class="font-medium">{fileName}</span>: {rows.length} transactions,
 				{matchedCount} matched with recorded ones.
 			</p>
-			{#if importer.usesRules}
-				<label class="flex items-center gap-2 text-sm cursor-pointer">
-					<input
-						type="checkbox"
-						class="toggle toggle-primary toggle-sm bg-transparent bg-none"
-						bind:checked={applyRules}
-						onchange={reextract}
-					/>
-					Apply rules
-				</label>
-			{/if}
+			<div class="flex items-center gap-4 flex-wrap">
+				{#if matchedCount > 0}
+					<label class="flex items-center gap-2 text-sm cursor-pointer">
+						<input
+							type="checkbox"
+							class="toggle toggle-primary toggle-sm bg-transparent bg-none"
+							bind:checked={unmatchedOnly}
+						/>
+						Unmatched only
+					</label>
+				{/if}
+				{#if importer.usesRules}
+					<label class="flex items-center gap-2 text-sm cursor-pointer">
+						<input
+							type="checkbox"
+							class="toggle toggle-primary toggle-sm bg-transparent bg-none"
+							bind:checked={applyRules}
+							onchange={reextract}
+						/>
+						Apply rules
+					</label>
+				{/if}
+			</div>
 		</div>
 
 		<div class="flex flex-col divide-y divide-base-300">
 			{#each rows as row, i (i)}
-				<div class="flex items-start gap-3 py-2">
-					<input
-						type="checkbox"
-						class="checkbox checkbox-primary checkbox-sm not-checked:bg-transparent mt-1"
-						class:opacity-60={row.matchedWith && !row.selected}
-						aria-label="Import this transaction"
-						bind:checked={row.selected}
-					/>
-					<div class="flex-1 min-w-0">
-						<div class={row.matchedWith && !row.selected ? 'opacity-60' : ''}>
-							<JournalXactRow xact={row.xact} linksEnabled={false} />
-						</div>
+				{#if !unmatchedOnly || !row.matchedWith}
+					<div class="flex items-start gap-3 py-2">
+						<input
+							type="checkbox"
+							class="checkbox checkbox-primary checkbox-sm not-checked:bg-transparent mt-1"
+							class:opacity-60={row.matchedWith && !row.selected}
+							aria-label="Import this transaction"
+							bind:checked={row.selected}
+						/>
+						<div class="flex-1 min-w-0">
+							<div class={row.matchedWith && !row.selected ? 'opacity-60' : ''}>
+								<JournalXactRow xact={row.xact} linksEnabled={false} />
+							</div>
 
-						<div class="mt-1 ml-6 flex gap-2">
-							{#if row.matchedWith}
+							<div class="mt-1 ml-6 flex gap-2">
+								{#if row.matchedWith}
+									<button
+										type="button"
+										class="badge badge-info badge-sm gap-0.5 font-medium"
+										aria-expanded={i in matchOpen}
+										onclick={() => toggleMatch(i)}
+									>
+										Match
+										<ChevronRightIcon
+											size={12}
+											class="transition-transform {i in matchOpen ? 'rotate-90' : ''}"
+										/>
+									</button>
+								{/if}
 								<button
 									type="button"
-									class="badge badge-info badge-sm gap-0.5 font-medium"
-									aria-expanded={i in matchOpen}
-									onclick={() => toggleMatch(i)}
+									class="badge badge-outline badge-sm gap-0.5"
+									aria-expanded={!!detailsOpen[i]}
+									onclick={() => toggleDetails(i)}
 								>
-									Match
+									Details
 									<ChevronRightIcon
 										size={12}
-										class="transition-transform {i in matchOpen ? 'rotate-90' : ''}"
+										class="transition-transform {detailsOpen[i] ? 'rotate-90' : ''}"
 									/>
 								</button>
+							</div>
+
+							{#if i in matchOpen}
+								<div class="ml-6 mt-1 rounded-box bg-base-200 p-2">
+									{#if matchOpen[i] === 'loading'}
+										<p class="text-xs opacity-70">Loading…</p>
+									{:else}
+										<JournalXactRow xact={matchOpen[i]} linksEnabled={false} />
+									{/if}
+								</div>
 							{/if}
-							<button
-								type="button"
-								class="badge badge-outline badge-sm gap-0.5"
-								aria-expanded={!!detailsOpen[i]}
-								onclick={() => toggleDetails(i)}
-							>
-								Details
-								<ChevronRightIcon
-									size={12}
-									class="transition-transform {detailsOpen[i] ? 'rotate-90' : ''}"
-								/>
-							</button>
-						</div>
 
-						{#if i in matchOpen}
-							<div class="ml-6 mt-1 rounded-box bg-base-200 p-2">
-								{#if matchOpen[i] === 'loading'}
-									<p class="text-xs opacity-70">Loading…</p>
-								{:else}
-									<JournalXactRow xact={matchOpen[i]} linksEnabled={false} />
-								{/if}
-							</div>
-						{/if}
-
-						{#if detailsOpen[i]}
-							<div class="ml-6 mt-1 rounded-box bg-base-200 p-2 text-xs">
-								<dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5">
-									{#each row.details as [label, value] (label)}
-										<dt class="opacity-60">{label}</dt>
-										<dd class="break-words">{value}</dd>
-									{/each}
-								</dl>
-								{#if importer.usesRules}
-									<div class="mt-2 flex flex-wrap gap-2">
-										{#each row.appliedRules as index (index)}
-											<button class="btn btn-xs" onclick={() => openRule(i, index)}>
-												Edit rule #{index + 1}
-											</button>
+							{#if detailsOpen[i]}
+								<div class="ml-6 mt-1 rounded-box bg-base-200 p-2 text-xs">
+									<dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5">
+										{#each row.details as [label, value] (label)}
+											<dt class="opacity-60">{label}</dt>
+											<dd class="break-words">{value}</dd>
 										{/each}
-										<button class="btn btn-xs" onclick={() => openRule(i)}>New rule…</button>
-									</div>
-								{/if}
-							</div>
-						{/if}
+									</dl>
+									{#if importer.usesRules}
+										<div class="mt-2 flex flex-wrap gap-2">
+											{#each row.appliedRules as index (index)}
+												<button class="btn btn-xs" onclick={() => openRule(i, index)}>
+													Edit rule #{index + 1}
+												</button>
+											{/each}
+											<button class="btn btn-xs" onclick={() => openRule(i)}>New rule…</button>
+										</div>
+									{/if}
+								</div>
+							{/if}
+						</div>
 					</div>
-				</div>
+				{/if}
 			{/each}
+			{#if unmatchedOnly && matchedCount === rows.length}
+				<p class="py-4 text-sm opacity-70">Every row matches a recorded transaction.</p>
+			{/if}
 		</div>
 	{/if}
 

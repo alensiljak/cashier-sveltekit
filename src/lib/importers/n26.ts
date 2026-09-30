@@ -66,7 +66,7 @@ export const n26Importer: Importer<N26Config> = {
 			const xact = new Xact();
 			xact.date = row['Booking Date'];
 
-			const details: [string, string][] = [['Partner', partner]];
+			const details: [string, string][] = [['Original payee', partner]];
 			if (reference) details.push(['Reference', reference]);
 			if (row['Value Date'] !== row['Booking Date'])
 				details.push(['Value date', row['Value Date']]);

@@ -4,7 +4,7 @@
  * that sets it wins, so a specific rule placed before a general one overrides it.
  */
 export interface Rule {
-	/** Regex (case-insensitive), tested against the source strings of the row, e.g. partner name and payment reference. */
+	/** Regex (case-insensitive), tested against the source strings of the row, e.g. payee and payment reference. */
 	match: string;
 	/** New payee. */
 	payee?: string;

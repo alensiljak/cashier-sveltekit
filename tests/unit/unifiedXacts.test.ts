@@ -144,25 +144,30 @@ describe('openXactDetails', () => {
 	});
 
 	it('loads a ledger row by id and builds a read-only transaction', async () => {
+		// `entry` is the whole transaction; its metadata is carried over, minus internal keys.
+		const entry = { meta: { isin: 'IE00BZ163K21', filename: 'book.bean', lineno: 12 } };
 		queryMock.mockResolvedValue({
-			columns: ['flag', 'account', 'number', 'currency'],
+			columns: ['flag', 'account', 'number', 'currency', 'entry'],
 			rows: [
-				['!', 'Expenses:Food', '10.5', 'EUR'],
-				['!', 'Assets:Cash', '-10.5', 'EUR']
+				['!', 'Expenses:Food', '10.5', 'EUR', entry],
+				['!', 'Assets:Cash', '-10.5', 'EUR', entry]
 			],
 			errors: []
 		});
 
 		await openXactDetails(row({ rledgerId: 7 }));
 
-		expect(queryMock).toHaveBeenCalledWith('SELECT flag, account, number, currency WHERE id = 7');
+		expect(queryMock).toHaveBeenCalledWith(
+			'SELECT flag, account, number, currency, entry WHERE id = 7'
+		);
 		const opened = get(xact);
 		expect(opened).toMatchObject({
 			id: 7,
 			date: '2025-08-10',
 			payee: 'Shop',
 			note: 'Food',
-			flag: '!'
+			flag: '!',
+			meta: { isin: 'IE00BZ163K21' }
 		});
 		expect(opened.postings.map((p) => [p.account, p.amount, p.currency])).toEqual([
 			['Expenses:Food', 10.5, 'EUR'],
@@ -178,7 +183,7 @@ describe('openXactDetails', () => {
 		await openXactDetails(row({ payee: 'The "Best" Shop', narration: 'say "hi"' }));
 
 		expect(queryMock).toHaveBeenCalledWith(
-			'SELECT flag, account, number, currency WHERE date = 2025-08-10 AND payee = "The \\"Best\\" Shop" AND narration = "say \\"hi\\""'
+			'SELECT flag, account, number, currency, entry WHERE date = 2025-08-10 AND payee = "The \\"Best\\" Shop" AND narration = "say \\"hi\\""'
 		);
 	});
 

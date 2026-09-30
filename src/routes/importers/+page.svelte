@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
+	import HelpButton from '$lib/help/HelpButton.svelte';
 	import { goto } from '$app/navigation';
 	import { allRules, type RuleConfig } from '$lib/importers/rules';
 	import { listImporters } from '$lib/importers';
@@ -80,7 +81,11 @@
 </script>
 
 <main class="h-screen flex flex-col overflow-hidden">
-	<Toolbar title="Importers" />
+	<Toolbar title="Importers">
+		{#snippet actions()}
+			<HelpButton topic="importers" />
+		{/snippet}
+	</Toolbar>
 
 	<input
 		type="file"

@@ -32,7 +32,7 @@ export interface ImportedXact {
 	xact: Xact;
 	/** Label/value pairs for the Details pane: original names, value date, applied rules, etc. */
 	details: [string, string][];
-	/** Source strings that rules are matched against (e.g. partner name, payment reference). */
+	/** Source strings that rules are matched against (e.g. payee, payment reference). */
 	matchText: string[];
 	/** Positions in the rule list of the rules that changed this row, for editing them from the review. */
 	appliedRules?: number[];

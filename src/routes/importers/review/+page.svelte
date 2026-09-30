@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import Toolbar from '$lib/components/Toolbar.svelte';
+	import HelpButton from '$lib/help/HelpButton.svelte';
 	import { getImporter } from '$lib/importers';
 	import { trackOrigin } from '$lib/importers/navigation';
 	import { loadImporterConfig } from '$lib/importers/config';
@@ -37,7 +38,11 @@
 </script>
 
 <main class="h-screen flex flex-col overflow-hidden">
-	<Toolbar title={session ? `Import: ${session.importer.name}` : 'Import'} />
+	<Toolbar title={session ? `Import: ${session.importer.name}` : 'Import'}>
+		{#snippet actions()}
+			<HelpButton topic="importers" />
+		{/snippet}
+	</Toolbar>
 
 	{#if session}
 		<ImportReview

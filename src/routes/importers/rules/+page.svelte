@@ -6,6 +6,7 @@
 	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
 	import Fab from '$lib/components/FAB.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
+	import HelpButton from '$lib/help/HelpButton.svelte';
 	import DragReorderList from '$lib/components/DragReorderList.svelte';
 	import Notifier from '$lib/utils/notifier';
 	import { getImporter } from '$lib/importers';
@@ -66,7 +67,11 @@
 </script>
 
 <main class="h-screen flex flex-col overflow-hidden">
-	<Toolbar title={importer ? `Rules: ${importer.name}` : 'Rules'} />
+	<Toolbar title={importer ? `Rules: ${importer.name}` : 'Rules'}>
+		{#snippet actions()}
+			<HelpButton topic="importers" />
+		{/snippet}
+	</Toolbar>
 
 	<p class="px-4 pt-3 text-sm opacity-70">
 		Drag to reorder, tap a rule to edit it. For each field the first matching rule wins, so put

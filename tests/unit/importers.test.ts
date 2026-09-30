@@ -51,7 +51,7 @@ describe('n26 importer', () => {
 			[ACCOUNT, -13.58]
 		]);
 		expect(Object.fromEntries(purchase.details)).toMatchObject({
-			Partner: 'Lidl Oesterreich GmbH',
+			'Original payee': 'Lidl Oesterreich GmbH',
 			'Value date': '2026-09-02'
 		});
 		expect(dividend.xact.payee).toBe('VWRL distribution');

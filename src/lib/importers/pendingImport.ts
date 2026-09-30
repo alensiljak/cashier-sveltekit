@@ -13,7 +13,12 @@ export interface PendingImport {
 	/** Which rows are ticked, by row index. Applies only if the row count is unchanged. */
 	selection?: boolean[];
 	/** What was open and where the list was scrolled to, restored when returning from the rule page. */
-	view?: { matchOpen: number[]; detailsOpen: number[]; scrollTop: number };
+	view?: {
+		matchOpen: number[];
+		detailsOpen: number[];
+		scrollTop: number;
+		unmatchedOnly?: boolean;
+	};
 }
 
 export function savePendingImport(pending: PendingImport): void {

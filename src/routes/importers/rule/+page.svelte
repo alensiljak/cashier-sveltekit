@@ -4,6 +4,7 @@
 	import { goto } from '$app/navigation';
 	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
+	import HelpButton from '$lib/help/HelpButton.svelte';
 	import JournalXactRow from '$lib/components/JournalXactRow.svelte';
 	import SearchableSelect from '$lib/components/SearchableSelect.svelte';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
@@ -143,7 +144,11 @@
 </script>
 
 <main class="h-screen flex flex-col overflow-hidden">
-	<Toolbar title={editing ? `Edit rule #${ruleIndex + 1}` : 'New rule'} />
+	<Toolbar title={editing ? `Edit rule #${ruleIndex + 1}` : 'New rule'}>
+		{#snippet actions()}
+			<HelpButton topic="importers" />
+		{/snippet}
+	</Toolbar>
 
 	{#if ready}
 		<div class="flex-1 overflow-y-auto touch-pan-y p-4 flex flex-col gap-4">
@@ -160,7 +165,7 @@
 			{/if}
 
 			<label class="flex flex-col gap-1">
-				<span class="text-sm">When the partner name or reference matches</span>
+				<span class="text-sm">When the payee or reference matches</span>
 				<input
 					type="text"
 					class="input input-bordered w-full font-mono text-sm"
