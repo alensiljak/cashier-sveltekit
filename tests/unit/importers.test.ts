@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { findDuplicates } from '../../src/lib/importers/dedup';
 import { identifyImporter } from '../../src/lib/importers';
 import { n26Importer } from '../../src/lib/importers/n26';
-import { replaceRule, type RuleConfig } from '../../src/lib/importers/rules';
+import { allRules, replaceRule, withRules, type RuleConfig } from '../../src/lib/importers/rules';
 import { Posting, Xact } from '../../src/lib/data/model';
 
 const HEADER =
@@ -136,6 +136,15 @@ describe('n26 importer', () => {
 		const legacy = replaceRule(older, 1, null);
 		expect(legacy.rules?.map((r) => r.match)).toEqual(['a']);
 		expect(legacy.payeeRenames).toBeUndefined();
+	});
+
+	it('saves a reordered list, dropping the older-format lists', () => {
+		const older: RuleConfig = { payeeRenames: [['a', 'A']], categories: [['b', 'Expenses:B']] };
+		const reordered = allRules(older).reverse();
+		const next = withRules(older, reordered);
+		expect(next.rules?.map((r) => r.match)).toEqual(['b', 'a']);
+		expect(next.payeeRenames).toBeUndefined();
+		expect(next.categories).toBeUndefined();
 	});
 
 	it('shows the raw records when rules are muted', () => {

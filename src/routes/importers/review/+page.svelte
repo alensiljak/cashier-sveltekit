@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { getImporter } from '$lib/importers';
+	import { trackOrigin } from '$lib/importers/navigation';
 	import { loadImporterConfig } from '$lib/importers/config';
 	import { clearPendingImport, loadPendingImport } from '$lib/importers/pendingImport';
 	import ImportReview from '$lib/importers/ImportReview.svelte';
@@ -27,9 +28,11 @@
 		session = { importer, config, fileName: pending.fileName, text: pending.text };
 	});
 
+	const returnTo = trackOrigin();
+
 	async function cancel() {
 		clearPendingImport();
-		await goto('/importers');
+		await returnTo('/importers');
 	}
 </script>
 

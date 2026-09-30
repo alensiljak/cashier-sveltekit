@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import JournalXactRow from '$lib/components/JournalXactRow.svelte';
 	import SearchableSelect from '$lib/components/SearchableSelect.svelte';
@@ -9,6 +10,7 @@
 	import Notifier from '$lib/utils/notifier';
 	import { PLACEHOLDER_ACCOUNT } from '$lib/utils/xactUtils';
 	import { getImporter } from '$lib/importers';
+	import { trackOrigin } from '$lib/importers/navigation';
 	import { loadImporterConfig, saveImporterConfig } from '$lib/importers/config';
 	import { loadPendingImport } from '$lib/importers/pendingImport';
 	import {
@@ -23,7 +25,12 @@
 	} from '$lib/importers/rules';
 	import type { ImportedXact, Importer } from '$lib/importers/types';
 
+	/** Opened from the import review (with a row to show) or from the rules list (edit only, no row). */
+	const hasRow = page.url.searchParams.has('row');
 	const rowIndex = Number(page.url.searchParams.get('row'));
+	const importerParam = page.url.searchParams.get('importer');
+	/** A blank rule, from the Add button on the rules list. */
+	const isNew = page.url.searchParams.has('new');
 	/** Position of the rule being edited; null when creating a new one. */
 	const ruleParam = page.url.searchParams.get('rule');
 	const ruleIndex = ruleParam === null ? null : Number(ruleParam);
@@ -35,8 +42,12 @@
 	let form = $state({ match: '', payee: '', account: '', disabled: false });
 	let accounts = $state<string[]>([]);
 	let saving = $state(false);
+	let ready = $state(false);
+	/** Where Save, Delete and Cancel return to. */
+	let backTo = $state('/importers');
+	const returnTo = trackOrigin();
 
-	let row = $derived(imported[rowIndex]);
+	let row = $derived(hasRow ? imported[rowIndex] : undefined);
 	let affectedRows = $derived(
 		countMatches(
 			form.match,
@@ -49,13 +60,23 @@
 
 	onMount(async () => {
 		const pending = loadPendingImport();
-		const found = pending ? getImporter(pending.importerId) : undefined;
+		const found = getImporter(importerParam ?? pending?.importerId ?? '');
 		const saved = found ? await loadImporterConfig<RuleConfig>(found.id) : null;
-		const rows = pending && found && saved ? found.extract(pending.text, saved) : [];
-		const target = rows[rowIndex];
+		// A file waiting for review lets the page show how many of its rows a pattern hits.
+		const rows =
+			pending && found && saved && pending.importerId === found.id
+				? found.extract(pending.text, saved)
+				: [];
+		const target = hasRow ? rows[rowIndex] : undefined;
 		const existing = editing && saved ? allRules(saved)[ruleIndex] : undefined;
-		if (!found || !saved || !target || (editing && !existing)) {
-			// Nothing to attach a rule to, e.g. the review was already accepted or cancelled.
+		if (
+			!found ||
+			!saved ||
+			(hasRow && !target) ||
+			(editing && !existing) ||
+			(!hasRow && !editing && !isNew)
+		) {
+			// Nothing to edit, e.g. the review was already accepted or cancelled.
 			await goto('/importers', { replaceState: true });
 			return;
 		}
@@ -63,6 +84,7 @@
 		importer = found;
 		config = saved;
 		imported = rows;
+		backTo = hasRow ? '/importers/review' : `/importers/rules?importer=${found.id}`;
 		if (existing) {
 			form = {
 				match: existing.match,
@@ -70,7 +92,7 @@
 				account: existing.account ?? '',
 				disabled: !!existing.disabled
 			};
-		} else {
+		} else if (target) {
 			const bankAccount = found.account(saved);
 			const counter = target.xact.postings.find((p) => p.account !== bankAccount)?.account ?? '';
 			form = {
@@ -80,6 +102,8 @@
 				disabled: false
 			};
 		}
+
+		ready = true;
 
 		try {
 			accounts = (await fullLedgerService.getAllAccounts()).map((a) => a.name).sort();
@@ -99,17 +123,18 @@
 
 	async function remove() {
 		if (!importer || !config || !editing) return;
-		if (!confirm(`Delete rule #${ruleIndex + 1}?`)) return;
 		await store(replaceRule(config, ruleIndex, null));
 	}
 
-	/** Saves the config and returns to the review, which then reapplies the rules. */
+	let confirmDelete = $state(false);
+
+	/** Saves the config and returns to where the user came from, which then reflects the change. */
 	async function store(next: RuleConfig) {
 		if (!importer) return;
 		saving = true;
 		try {
 			await saveImporterConfig(importer.id, next);
-			await goto('/importers/review');
+			await returnTo(backTo);
 		} catch (e) {
 			Notifier.error(`Could not save the rule: ${e instanceof Error ? e.message : e}`);
 			saving = false;
@@ -120,17 +145,19 @@
 <main class="h-screen flex flex-col overflow-hidden">
 	<Toolbar title={editing ? `Edit rule #${ruleIndex + 1}` : 'New rule'} />
 
-	{#if row}
+	{#if ready}
 		<div class="flex-1 overflow-y-auto touch-pan-y p-4 flex flex-col gap-4">
-			<div class="rounded-box bg-base-200 p-3">
-				<JournalXactRow xact={row.xact} linksEnabled={false} />
-				<dl class="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 pl-6 text-xs">
-					{#each row.details as [label, value] (label)}
-						<dt class="opacity-60">{label}</dt>
-						<dd class="break-words">{value}</dd>
-					{/each}
-				</dl>
-			</div>
+			{#if row}
+				<div class="rounded-box bg-base-200 p-3">
+					<JournalXactRow xact={row.xact} linksEnabled={false} />
+					<dl class="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 pl-6 text-xs">
+						{#each row.details as [label, value] (label)}
+							<dt class="opacity-60">{label}</dt>
+							<dd class="break-words">{value}</dd>
+						{/each}
+					</dl>
+				</div>
+			{/if}
 
 			<label class="flex flex-col gap-1">
 				<span class="text-sm">When the partner name or reference matches</span>
@@ -142,8 +169,9 @@
 					spellcheck="false"
 				/>
 				<span class="text-xs opacity-70">
-					Case-insensitive regex. Shorten it to cover more, e.g. <code>hofer</code>. Matches
-					{affectedRows} of {imported.length} rows in this file.
+					Case-insensitive regex. Shorten it to cover more, e.g. <code>hofer</code>.
+					{#if imported.length > 0}Matches {affectedRows} of {imported.length} rows in the file being
+						imported.{/if}
 				</span>
 			</label>
 
@@ -180,12 +208,22 @@
 
 		<div class="flex gap-2 p-4 border-t border-base-300">
 			{#if editing}
-				<button class="btn btn-ghost text-error" disabled={saving} onclick={remove}>Delete</button>
+				<button
+					class="btn btn-ghost text-error"
+					disabled={saving}
+					onclick={() => (confirmDelete = true)}>Delete</button
+				>
 			{/if}
 			<span class="flex-1"></span>
-			<button class="btn" disabled={saving} onclick={() => goto('/importers/review')}>Cancel</button
-			>
+			<button class="btn" disabled={saving} onclick={() => returnTo(backTo)}>Cancel</button>
 			<button class="btn btn-primary" disabled={!valid || saving} onclick={save}>Save rule</button>
 		</div>
 	{/if}
 </main>
+
+<ConfirmDialog
+	bind:open={confirmDelete}
+	title="Confirm Delete"
+	message="Do you want to delete rule #{(ruleIndex ?? 0) + 1} &quot;{form.match}&quot;?"
+	onconfirm={remove}
+/>

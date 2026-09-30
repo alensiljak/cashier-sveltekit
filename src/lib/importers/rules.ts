@@ -38,6 +38,12 @@ export function withRule<T extends RuleConfig>(config: T, rule: Rule): T {
 	return { ...rest, rules: [rule, ...allRules(config)] } as T;
 }
 
+/** The config with exactly these rules (older-format lists dropped; `allRules` already folded them in). */
+export function withRules<T extends RuleConfig>(config: T, rules: Rule[]): T {
+	const { payeeRenames: _p, categories: _c, ...rest } = config;
+	return { ...rest, rules } as T;
+}
+
 /**
  * The config with the rule at `index` of `allRules(config)` replaced, or removed
  * when `rule` is null. Older-format lists are folded into `rules` first, so the

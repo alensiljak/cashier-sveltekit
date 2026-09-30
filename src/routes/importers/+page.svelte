@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { goto } from '$app/navigation';
+	import { allRules, type RuleConfig } from '$lib/importers/rules';
 	import { listImporters } from '$lib/importers';
 	import { savePendingImport } from '$lib/importers/pendingImport';
 	import {
@@ -60,8 +62,17 @@
 		await goto('/importers/review');
 	}
 
-	async function reset(id: string) {
-		if (!confirm('Delete the saved configuration for this importer?')) return;
+	let resetId = $state<string | null>(null);
+	let confirmReset = $state(false);
+
+	function askReset(id: string) {
+		resetId = id;
+		confirmReset = true;
+	}
+
+	async function reset() {
+		const id = resetId;
+		if (!id) return;
 		await resetImporterConfig(id);
 		delete configs[id];
 		if (editingId === id) editingId = null;
@@ -88,14 +99,8 @@
 			{@const configured = importer.id in configs}
 			<div class="card bg-base-200">
 				<div class="card-body p-4 gap-3">
-					<div class="flex items-center justify-between gap-2">
-						<span class="font-medium">{importer.name}</span>
-						<span class="badge {configured ? 'badge-success' : 'badge-warning'}">
-							{configured ? 'Configured' : 'Not configured'}
-						</span>
-					</div>
-
 					{#if editingId === importer.id}
+						<span class="font-medium">{importer.name}</span>
 						<textarea
 							class="textarea textarea-bordered w-full font-mono text-xs h-72"
 							bind:value={editorText}
@@ -112,16 +117,34 @@
 							</button>
 						</div>
 					{:else}
-						<div class="flex gap-2">
-							<button class="btn btn-sm" onclick={() => edit(importer.id, importer.defaultConfig)}>
-								{configured ? 'Edit' : 'Configure'}
-							</button>
+						<div class="flex items-center justify-between gap-3">
+							<div class="flex min-w-0 flex-col gap-3">
+								<span class="font-medium">{importer.name}</span>
+								<div class="flex flex-wrap items-center gap-2">
+									<button
+										class="btn btn-sm"
+										onclick={() => edit(importer.id, importer.defaultConfig)}
+									>
+										{configured ? 'Edit' : 'Configure'}
+									</button>
+									{#if configured}
+										{#if importer.usesRules}
+											<a class="btn btn-sm" href="/importers/rules?importer={importer.id}">
+												Rules ({allRules(configs[importer.id] as RuleConfig).length})
+											</a>
+										{/if}
+										<button
+											class="btn btn-ghost btn-sm text-error"
+											onclick={() => askReset(importer.id)}
+										>
+											Reset
+										</button>
+									{/if}
+								</div>
+							</div>
 							{#if configured}
-								<button class="btn btn-primary btn-sm" onclick={() => pickFile(importer.id)}>
+								<button class="btn btn-primary shrink-0" onclick={() => pickFile(importer.id)}>
 									Import file
-								</button>
-								<button class="btn btn-ghost btn-sm text-error" onclick={() => reset(importer.id)}>
-									Reset
 								</button>
 							{/if}
 						</div>
@@ -131,3 +154,11 @@
 		{/each}
 	</div>
 </main>
+
+<ConfirmDialog
+	bind:open={confirmReset}
+	title="Confirm Reset"
+	message="Do you want to reset {importers.find((i) => i.id === resetId)?.name ??
+		'this importer'}? Its saved configuration, including its rules, will be deleted."
+	onconfirm={reset}
+/>
