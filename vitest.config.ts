@@ -17,6 +17,10 @@ export default defineConfig({
 		setupFiles: ['./tests/setup.ts'],
 		include: ['tests/**/*.test.ts'],
 		exclude: ['tests/e2e/**'],
+		// Tests that dynamically import the CRDT store pull in yjs and the
+		// rustledger WASM wrapper; a cold transform under a parallel full run
+		// can exceed the 5s default.
+		testTimeout: 30000,
 		coverage: {
 			provider: 'v8',
 			include: ['src/lib/**/*.{ts,svelte}'],
