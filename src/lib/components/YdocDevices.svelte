@@ -41,7 +41,7 @@
 		return new WebDavClient(url, username, password);
 	}
 
-	async function refresh() {
+	export async function refresh() {
 		if (!url) return;
 		isLoading = true;
 		error = '';

@@ -112,6 +112,10 @@
 		}
 	}
 
+	async function refreshAll() {
+		await Promise.all([fetchLastModified(), ydocDevices?.refresh()]);
+	}
+
 	function client() {
 		return new WebDavClient(webdavUrl, webdavUsername, webdavPassword);
 	}
@@ -156,7 +160,7 @@
 			Notifier.error('Upload error: ' + (err as Error).message);
 		} finally {
 			isUploading = false;
-			await fetchLastModified();
+			await refreshAll();
 			// Record fresh remote timestamps as the new sync baseline for uploaded files.
 			if (uploaded.settings && settingsLastModified)
 				lastSyncTs.settings = settingsLastModified.toISOString();
@@ -339,7 +343,7 @@
 			{:else if webdavUrl}
 				<button
 					class="text-xs text-base-content/40 hover:text-base-content/70 flex items-center gap-1 cursor-pointer"
-					onclick={fetchLastModified}
+					onclick={refreshAll}
 				>
 					<RefreshCwIcon size={12} />
 					refresh
