@@ -49,6 +49,40 @@ const STRATEGY_LOADERS: Record<RelayStrategy, () => Promise<StrategyModule>> = {
 	torrent: () => import('@trystero-p2p/torrent')
 };
 
+/**
+ * Parses pasted TURN/ICE server config. Accepts a bare array of ICE server
+ * objects or an object with an `iceServers` array (the shape TURN providers
+ * return). Empty input means "none". Throws a readable error when invalid.
+ */
+export function parseIceServers(text: string): RTCIceServer[] {
+	const trimmed = text.trim();
+	if (!trimmed) return [];
+	let parsed: unknown;
+	try {
+		parsed = JSON.parse(trimmed);
+	} catch {
+		// Providers hand out JS object literals (bare keys, trailing commas); accept
+		// those too by normalizing to JSON, without evaluating the input.
+		const normalized = trimmed
+			.replace(/([{,]\s*)([A-Za-z_$][\w$]*)\s*:/g, '$1"$2":')
+			.replace(/,(\s*[}\]])/g, '$1');
+		try {
+			parsed = JSON.parse(normalized);
+		} catch {
+			throw new Error('Not valid JSON');
+		}
+	}
+	const list = Array.isArray(parsed) ? parsed : (parsed as { iceServers?: unknown })?.iceServers;
+	if (!Array.isArray(list)) throw new Error('Expected an array of ICE servers');
+	for (const s of list) {
+		const urls = (s as RTCIceServer)?.urls;
+		if (!urls || (typeof urls !== 'string' && !Array.isArray(urls))) {
+			throw new Error('Every ICE server needs "urls"');
+		}
+	}
+	return list as RTCIceServer[];
+}
+
 export interface ActivePeer {
 	trysteroId: string;
 	persistentId: string;
@@ -95,6 +129,8 @@ export class PeerPresence {
 	myName = $state('');
 	roomCode = $state('cashier');
 	strategy = $state<RelayStrategy>('nostr');
+	/** Extra TURN/ICE servers (device-only setting); empty = direct connections and default STUN only. */
+	iceServers = $state<RTCIceServer[]>([]);
 	isInRoom = $state(false);
 	peersMap = $state<Record<string, ActivePeer>>({});
 	trustedPeers = $state<TrustedPeer[]>([]);
@@ -131,7 +167,15 @@ export class PeerPresence {
 		const savedStrategy = await settings.get<RelayStrategy>(SettingKeys.peerRelayStrategy);
 		if (savedStrategy) this.strategy = savedStrategy;
 
+		this.iceServers = (await deviceSettings.get<RTCIceServer[]>(DeviceSettingKeys.peerIceServers)) ?? [];
+
 		this.trustedPeers = await db.peers.toArray();
+	}
+
+	/** Persists the TURN/ICE servers. Does NOT reconnect a live room — call `leave()` then `join()` to apply it. */
+	async setIceServers(servers: RTCIceServer[]): Promise<void> {
+		this.iceServers = servers;
+		await deviceSettings.set(DeviceSettingKeys.peerIceServers, servers);
 	}
 
 	async setName(name: string): Promise<void> {
@@ -166,7 +210,10 @@ export class PeerPresence {
 		if (!trimmed || this.isInRoom) return;
 
 		const { joinRoom } = await STRATEGY_LOADERS[this.strategy]();
-		this.room = joinRoom({ appId: APP_ID }, trimmed);
+		this.room = joinRoom(
+			{ appId: APP_ID, turnConfig: $state.snapshot(this.iceServers) as RTCIceServer[] },
+			trimmed
+		);
 		this.roomCode = trimmed;
 
 		this.helloAction = this.room.makeAction('hello') as unknown as MessageAction<{

@@ -5,7 +5,11 @@
 	import Notifier from '$lib/utils/notifier';
 	import { ArrowLeftIcon } from '@lucide/svelte';
 	import { settings, SettingKeys, deviceSettings, DeviceSettingKeys } from '$lib/settings';
-	import { RELAY_STRATEGIES, type RelayStrategy } from '$lib/sync/peerPresence.svelte';
+	import {
+		RELAY_STRATEGIES,
+		parseIceServers,
+		type RelayStrategy
+	} from '$lib/sync/peerPresence.svelte';
 	import { peerConnection } from '$lib/sync/peerConnection.svelte';
 
 	// Shared singleton — changes here apply to the live connection.
@@ -14,6 +18,16 @@
 	let nameInput = $state('');
 	let roomInput = $state('');
 	let autoReload = $state(true);
+	let iceInput = $state('');
+	let iceSaved = $state('');
+	let iceError = $derived.by(() => {
+		try {
+			parseIceServers(iceInput);
+			return '';
+		} catch (e) {
+			return (e as Error).message;
+		}
+	});
 	let saving = $state(false);
 	let ready = $state(false);
 
@@ -26,8 +40,25 @@
 		nameInput = presence.myName;
 		roomInput = presence.roomCode;
 		autoReload = (await deviceSettings.get<boolean>(DeviceSettingKeys.peerAutoReload)) ?? true;
+		iceSaved = presence.iceServers.length ? JSON.stringify(presence.iceServers, null, 2) : '';
+		iceInput = iceSaved;
 		ready = true;
 	});
+
+	async function saveIceServers() {
+		try {
+			const servers = parseIceServers(iceInput);
+			const wasConnected = presence.isInRoom;
+			if (wasConnected) await peerConnection.disconnect();
+			await presence.setIceServers(servers);
+			if (wasConnected) await peerConnection.connect();
+			iceSaved = servers.length ? JSON.stringify(servers, null, 2) : '';
+			iceInput = iceSaved;
+			Notifier.success('Saved');
+		} catch (e) {
+			Notifier.error('Save failed: ' + (e as Error).message);
+		}
+	}
 
 	function formatDate(iso: string | undefined = undefined): string {
 		if (!iso) return '—';
@@ -145,6 +176,37 @@
 							<span class="text-sm">{s.label}</span>
 						</label>
 					{/each}
+				</div>
+			</div>
+		</div>
+
+		<!-- Relay (TURN) -->
+		<div class="card bg-base-200 shadow-sm">
+			<div class="card-body gap-2 p-4">
+				<h2 class="card-title text-sm">Relay server (TURN)</h2>
+				<p class="text-xs opacity-60">
+					Optional. For devices that can't connect directly (e.g. mobile data). Paste the ICE servers
+					JSON from your TURN provider. Stored on this device only; set it on every device. Saving
+					reconnects a live room.
+				</p>
+				<textarea
+					bind:value={iceInput}
+					class="textarea textarea-bordered h-32 w-full font-mono text-xs"
+					class:textarea-error={iceError}
+					placeholder={'[{"urls": "turn:...", "username": "...", "credential": "..."}]'}
+					spellcheck="false"
+					autocomplete="off"
+					aria-label="ICE servers JSON"
+				></textarea>
+				{#if iceError}<span class="text-error text-xs">{iceError}</span>{/if}
+				<div>
+					<button
+						class="btn btn-success btn-sm"
+						disabled={!ready || !!iceError || iceInput.trim() === iceSaved.trim()}
+						onclick={saveIceServers}
+					>
+						Save
+					</button>
 				</div>
 			</div>
 		</div>

@@ -114,6 +114,8 @@ export const DeviceSettingKeys = {
 	peerName: 'peerName',
 	// Whether to automatically reload the ledger after a peer sync pull/merge (default: true)
 	peerAutoReload: 'peerAutoReload',
+	// TURN/ICE servers (JSON array) for peer connections that can't go direct. Device-only: holds credentials
+	peerIceServers: 'peerIceServers',
 	// import book from filesystem via File System API
 	importBookDirectory: 'importBookDirectory',
 	// Whether to automatically reload the ledger after an OPFS import (default: true)
