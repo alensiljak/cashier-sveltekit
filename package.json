@@ -63,6 +63,7 @@
 		"@vitest/coverage-v8": "^5.0.0",
 		"agent-browser": "^0.38.2",
 		"autoprefixer": "^10.4.20",
+		"cookie": "^0.6.0",
 		"esbuild-wasm": "^0.28.0",
 		"eslint-plugin-svelte": "^3.1.0",
 		"fake-indexeddb": "^6.2.5",
