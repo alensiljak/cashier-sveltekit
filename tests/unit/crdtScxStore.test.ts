@@ -47,6 +47,18 @@ describe('initialisation', () => {
 	it('starts empty', async () => {
 		expect(await newStore().list()).toEqual([]);
 	});
+
+	it('is initialised in the same session once anything has opened it', async () => {
+		// The migration creates the store by writing to it, never calling initialize();
+		// peers asking this device for its scheduled transactions must still see it.
+		const written = newStore();
+		await written.addMany([scx('Rent')]);
+		expect(await written.isInitialized()).toBe(true);
+
+		const merged = newStore();
+		await merged.importState(await written.exportState());
+		expect(await merged.isInitialized()).toBe(true);
+	});
 });
 
 describe('durability', () => {

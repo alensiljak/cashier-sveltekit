@@ -73,6 +73,9 @@ export abstract class CrdtDocStore<R> {
 			await this.existed();
 			this.persistence = new IndexeddbPersistence(this.dbName, this.doc);
 			await this.persistence.whenSynced;
+			// Opening creates the database, so from here on the store exists, whatever
+			// `existed()` found before (it is memoized and would stay false).
+			this.initializedHere = true;
 		})();
 		await this.opening;
 	}
