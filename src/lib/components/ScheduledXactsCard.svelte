@@ -4,7 +4,7 @@
 	import { goto } from '$app/navigation';
 	import type { Money, ScheduledTransaction, Xact } from '$lib/data/model';
 	import { onMount } from 'svelte';
-	import db from '$lib/data/db';
+	import { listScx } from '$lib/services/scxService';
 	import { XactAugmenter } from '$lib/utils/xactAugmenter';
 	import { formatAmount, getXactAmountColour, getDateColour, getReadableDate } from '$lib/utils/formatter';
 	import { ShortDateFormatStore } from '$lib/data/mainStore';
@@ -24,7 +24,7 @@
 	}
 
 	async function loadData() {
-		scxs = await db.scheduled.orderBy('nextDate').limit(5).toArray();
+		scxs = (await listScx()).slice(0, 5);
 	}
 
 	async function onCalendarClick(e: MouseEvent) {

@@ -4,6 +4,7 @@
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import appService from '$lib/services/appService';
 	import { getFilenameForBackup } from '$lib/services/cloudBackupService';
+	import { listScx } from '$lib/services/scxService';
 	import Notifier from '$lib/utils/notifier';
 	import { ArrowDownNarrowWideIcon, CopyIcon, FileDownIcon, Share2Icon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
@@ -59,7 +60,7 @@
 	}
 
 	async function loadScheduledTransactions() {
-		const collection = await appService.db.scheduled.orderBy('nextDate').toArray();
+		const collection = await listScx();
 		const output = JSON.stringify(collection);
 		return output;
 	}

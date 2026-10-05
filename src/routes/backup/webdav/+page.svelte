@@ -5,6 +5,7 @@
 	import { settings, deviceSettings, SettingKeys, DeviceSettingKeys } from '$lib/settings';
 	import { ScheduledTransaction, Setting } from '$lib/data/model';
 	import db from '$lib/data/db';
+	import { listScx, replaceAllScx } from '$lib/services/scxService';
 	import Notifier from '$lib/utils/notifier';
 	import { WebDavClient } from '$lib/utils/webdav';
 	import {
@@ -150,7 +151,7 @@
 				else Notifier.error(`Upload failed for ${ydocFile}: ${res.status} ${res.statusText}`);
 			}
 			if (includeScheduled) {
-				const all = await db.scheduled.toArray();
+				const all = await listScx();
 				const json = JSON.stringify(all, null, 2);
 				const res = await dav.putJsonGz('scheduled.json', json);
 				if (res.ok) { Notifier.success('Scheduled transactions uploaded'); uploaded.scheduled = true; }
@@ -235,8 +236,7 @@
 				const res = await dav.getJson('scheduled.json');
 				if (res.ok) {
 					const entries: ScheduledTransaction[] = JSON.parse(await res.text());
-					await db.scheduled.clear();
-					await db.scheduled.bulkPut(entries);
+					await replaceAllScx(entries);
 					Notifier.success('Scheduled transactions restored');
 					downloaded.scheduled = true;
 				} else {

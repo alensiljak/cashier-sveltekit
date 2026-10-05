@@ -2,7 +2,8 @@
 	Provide service layer for the application.
 */
 import db from '$lib/data/db';
-import { ScheduledTransaction, Xact } from '$lib/data/model';
+import { ScheduledTransaction, Xact, type ScxId } from '$lib/data/model';
+import { getScx, listScx, replaceAllScx } from '$lib/services/scxService';
 import { settings, SettingKeys } from '$lib/settings';
 import { HomeCardNames } from '$lib/enums';
 import { DefaultCurrencyStore, ScheduledXact, xact } from '$lib/data/mainStore';
@@ -252,7 +253,7 @@ class AppService {
 	 * @returns All Scheduled Xacts, serialized to JSON.
 	 */
 	async getScheduledXactsForExport(): Promise<string> {
-		const records: ScheduledTransaction[] = await db.scheduled.toArray();
+		const records: ScheduledTransaction[] = await listScx();
 		const output = this.serialize(records);
 		return output;
 	}
@@ -376,10 +377,7 @@ class AppService {
 		}
 
 		// Replace all existing records, all-or-nothing.
-		await db.transaction('rw', db.scheduled, async () => {
-			await db.scheduled.clear();
-			await db.scheduled.bulkPut(parsed);
-		});
+		await replaceAllScx(parsed);
 	}
 
 	// async loadAccount(name: string) {
@@ -441,14 +439,14 @@ class AppService {
 	// 	return accounts;
 	// }
 
-	async loadScheduledXact(id: number): Promise<ScheduledTransaction> {
-		const scx = await db.scheduled.get(id);
+	async loadScheduledXact(id: ScxId): Promise<ScheduledTransaction> {
+		const scx = await getScx(id);
 		if (!scx) {
 			throw new Error('Scheduled transaction not found!');
 		}
 
 		ScheduledXact.set(scx);
-		xact.set(scx.transaction);
+		xact.set(scx.transaction as Xact);
 
 		return scx;
 	}

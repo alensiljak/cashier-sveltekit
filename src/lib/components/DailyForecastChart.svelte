@@ -23,7 +23,7 @@
 	import { Composite6 } from 'hw-chartjs-plugin-colorschemes/src/colorschemes/colorschemes.office';
 	import { getShortAccountName } from '$lib/services/accountsService';
 	import { homeCache } from '$lib/services/homeCache';
-	import db from '$lib/data/db';
+	import { listScx } from '$lib/services/scxService';
 	import { type ScheduledTransaction, type Xact } from '$lib/data/model';
 	import appService from '$lib/services/appService';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
@@ -251,7 +251,7 @@
 	}
 
 	async function loadScxsFor(accountName: string) {
-		let scxs: ScheduledTransaction[] = await db.scheduled.orderBy('nextDate').toArray();
+		let scxs: ScheduledTransaction[] = await listScx();
 		let scxsForAccount = scxs.filter(
 			(scx) =>
 				scx?.transaction?.postings?.filter((scx) => scx.account == accountName).length &&

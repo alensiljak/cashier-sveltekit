@@ -7,7 +7,7 @@
  * open (or resumed) once the configured time of day has passed, at most once a day.
  */
 import moment from 'moment';
-import db from '$lib/data/db';
+import { listScxDueOn } from '$lib/services/scxService';
 import { DeviceSettingKeys, deviceSettings } from '$lib/settings';
 import { showDueTransactionsNotification } from '$lib/utils/webNotification';
 
@@ -28,7 +28,7 @@ export async function checkDueNotification(): Promise<void> {
 	if (now.isBefore(moment(`${today} ${time}`, `${DATE_FORMAT} HH:mm`))) return;
 	if ((await deviceSettings.get<string>(DeviceSettingKeys.notificationLastShown)) === today) return;
 
-	const due = await db.scheduled.where('nextDate').equals(today).toArray();
+	const due = await listScxDueOn(today);
 	// Mark as handled even when nothing is due, so we don't query again all day.
 	await deviceSettings.set(DeviceSettingKeys.notificationLastShown, today);
 	if (due.length === 0) return;

@@ -19,7 +19,7 @@
 	never drops the room or re-triggers the `hello` handshake.
 */
 import { settings, deviceSettings, DeviceSettingKeys } from '$lib/settings';
-import db from '$lib/data/db';
+import { listScx } from '$lib/services/scxService';
 import { PeerPresence, type RelayStrategy } from './peerPresence.svelte';
 import { PeerProtocol } from './PeerSource';
 import { OpfsSource } from './OpfsSource';
@@ -69,9 +69,7 @@ async function hashText(content: string): Promise<string> {
 export async function getLocalData(files: string[]): Promise<RemoteData> {
 	return {
 		settings: files.includes('settings') ? JSON.stringify(await settings.getAll(), null, 2) : null,
-		scheduled: files.includes('scheduled')
-			? JSON.stringify(await db.scheduled.toArray(), null, 2)
-			: null
+		scheduled: files.includes('scheduled') ? JSON.stringify(await listScx(), null, 2) : null
 	};
 }
 

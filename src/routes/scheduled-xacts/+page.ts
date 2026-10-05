@@ -1,7 +1,7 @@
 /*
     Scheduled Transactions list
 */
-import db from '$lib/data/db';
+import { listScx } from '$lib/services/scxService';
 import type { PageLoad } from './$types';
 
 export const load: PageLoad = async () => {
@@ -10,10 +10,7 @@ export const load: PageLoad = async () => {
 };
 
 async function loadData() {
-	const sorted = await db.scheduled
-		.orderBy('nextDate')
-		//.sortBy('symbol')
-		.toArray();
+	const sorted = await listScx();
 
 	// sort also by payee, case insensitive
 	sorted.sort((a, b) => {
@@ -22,7 +19,7 @@ async function loadData() {
 
 		const sorting = a.nextDate.localeCompare(b.nextDate);
 		return sorting == 0
-			? tx1.payee.localeCompare(tx2.payee, 'en', { sensitivity: 'base' })
+			? (tx1?.payee ?? '').localeCompare(tx2?.payee ?? '', 'en', { sensitivity: 'base' })
 			: sorting;
 	});
 

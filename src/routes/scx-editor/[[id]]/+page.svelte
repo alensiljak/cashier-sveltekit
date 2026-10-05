@@ -6,7 +6,7 @@
 	import XactEditor from '$lib/components/XactEditor.svelte';
 	import HelpButton from '$lib/help/HelpButton.svelte';
 	import Notifier from '$lib/utils/notifier';
-	import { saveScheduledTransaction } from '$lib/data/dbdal';
+	import { saveScx } from '$lib/services/scxService';
 	import { ScheduledXact, xact } from '$lib/data/mainStore';
 	import type { ScheduledTransaction } from '$lib/data/model';
 
@@ -39,7 +39,7 @@
 		$ScheduledXact.nextDate = $xact.date as string;
 
 		let raw: ScheduledTransaction = JSON.parse(JSON.stringify($ScheduledXact));
-		const result = await saveScheduledTransaction(raw);
+		await saveScx(raw);
 
 		Notifier.success('Scheduled transaction saved');
 		history.back();

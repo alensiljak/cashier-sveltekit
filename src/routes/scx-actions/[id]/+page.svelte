@@ -6,14 +6,14 @@
 	import SquareButtonGroup from '$lib/components/SquareButtonGroup.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { ScheduledXact, xact, xactId } from '$lib/data/mainStore';
-	import type { ScheduledTransaction, Xact } from '$lib/data/model';
+	import type { ScheduledTransaction, ScxId, Xact } from '$lib/data/model';
 	import appService from '$lib/services/appService';
 	import { getXactStore } from '$lib/storage/xactStoreRegistry';
 	import { reloadLedgerFromOpfs } from '$lib/services/ledgerReload';
 	import { xactToBeancountText } from '$lib/utils/xactUtils';
 	import Notifier from '$lib/utils/notifier';
 	import { calculateNextIteration } from '$lib/scheduledTransactions';
-	import { saveScheduledTransaction } from '$lib/data/dbdal';
+	import { removeScx, saveScx } from '$lib/services/scxService';
 	import {
 		ChevronsRightIcon,
 		SquarePenIcon,
@@ -21,7 +21,6 @@
 		TrashIcon
 	} from '@lucide/svelte';
 	import { onMount } from 'svelte';
-	import db from '$lib/data/db';
 	import HelpButton from '$lib/help/HelpButton.svelte';
 
 	Notifier.init();
@@ -48,8 +47,8 @@
 		isDeleteConfirmationOpen = false;
 	}
 
-	async function deleteXact(id: number) {
-		await db.scheduled.delete(id);
+	async function deleteXact(id: ScxId) {
+		await removeScx(id);
 
 		Notifier.success('Scheduled transaction deleted');
 
@@ -105,7 +104,7 @@
 	async function onDeleteConfirmed() {
 		closeModal();
 
-		const id = $ScheduledXact.id as number;
+		const id = $ScheduledXact.id as ScxId;
 		await deleteXact(id);
 	}
 
@@ -131,8 +130,7 @@
 	 */
 	async function saveData() {
 		let raw: ScheduledTransaction = JSON.parse(JSON.stringify($ScheduledXact));
-		const result = await saveScheduledTransaction(raw);
-		return result;
+		return await saveScx(raw);
 	}
 
 	/**

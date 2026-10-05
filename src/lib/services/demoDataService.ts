@@ -5,8 +5,8 @@
 	only to the CRDT store, never into these files.
 */
 import * as OpfsLib from '$lib/utils/opfslib';
-import db from '$lib/data/db';
-import { Posting, ScheduledTransaction, Xact } from '$lib/data/model';
+import { Posting, ScheduledTransaction, Xact, type ScxId } from '$lib/data/model';
+import { addScx, countScx, removeScx } from '$lib/services/scxService';
 import { RecurrencePeriods } from '$lib/enums';
 import {
 	settings,
@@ -197,11 +197,8 @@ class DemoDataService {
 
 	/** Adds sample scheduled transactions when there are none, and remembers their IDs. */
 	private async seedScheduledXacts(): Promise<void> {
-		if ((await db.scheduled.count()) > 0) return;
-		const ids: number[] = [];
-		for (const scx of demoScheduledXacts()) {
-			ids.push((await db.scheduled.add(scx)) as number);
-		}
+		if ((await countScx()) > 0) return;
+		const ids = await addScx(demoScheduledXacts());
 		await deviceSettings.set(DeviceSettingKeys.demoScxIds, ids);
 	}
 
@@ -214,8 +211,8 @@ class DemoDataService {
 		}
 		await deviceSettings.set(DeviceSettingKeys.demoXactIds, null);
 
-		const scxIds = await deviceSettings.get<number[]>(DeviceSettingKeys.demoScxIds);
-		if (scxIds?.length) await db.scheduled.bulkDelete(scxIds);
+		const scxIds = await deviceSettings.get<ScxId[]>(DeviceSettingKeys.demoScxIds);
+		if (scxIds?.length) await removeScx(scxIds);
 		await deviceSettings.set(DeviceSettingKeys.demoScxIds, null);
 
 		const favourites = await settings.get<string[]>(SettingKeys.favouriteAccounts);

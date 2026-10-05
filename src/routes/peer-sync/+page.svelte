@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import JsonMergeViewer from '$lib/components/JsonMergeViewer.svelte';
 	import db from '$lib/data/db';
+	import { replaceAllScx } from '$lib/services/scxService';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import HelpButton from '$lib/help/HelpButton.svelte';
 	import { Setting, ScheduledTransaction } from '$lib/data/model';
@@ -419,8 +420,7 @@
 			}
 			if (item === 'scheduled' && remote.scheduled !== null) {
 				const entries: ScheduledTransaction[] = JSON.parse(remote.scheduled);
-				await db.scheduled.clear();
-				await db.scheduled.bulkPut(entries);
+				await replaceAllScx(entries);
 				Notifier.success('Scheduled transactions updated');
 			}
 			refreshHashesIfSelected();
@@ -467,8 +467,7 @@
 		try {
 			const localSet = new Set(local);
 			const rows = merged.map((t) => (localSet.has(t) ? t : { ...t, id: undefined }));
-			await db.scheduled.clear();
-			await db.scheduled.bulkPut(rows);
+			await replaceAllScx(rows);
 			showDiff = false;
 			refreshHashesIfSelected();
 		} catch (e) {

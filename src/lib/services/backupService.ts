@@ -5,6 +5,7 @@
 
 import { ISODATEFORMAT, LONGTIMEFORMAT } from '$lib/constants';
 import db from '$lib/data/db';
+import { listScx, replaceAllScx } from '$lib/services/scxService';
 import type { ScheduledTransaction } from '$lib/data/model';
 import { SettingKeys, settings } from '$lib/settings';
 import moment from 'moment';
@@ -92,7 +93,7 @@ export async function createBackup() {
 	// settings
 	const allSettings = withoutPassword(await settings.getAll());
 	// scheduled transactions
-	const scx: ScheduledTransaction[] = await db.scheduled.toArray();
+	const scx: ScheduledTransaction[] = await listScx();
 
 	const backup: Backup = {
 		settings: allSettings,
@@ -137,21 +138,19 @@ function parseBackup(content: string): Backup {
 
 /**
  * Restores the backup, deleting any existing data.
- * All-or-nothing: if the file is invalid or a write fails, existing data is kept.
+ * The file is validated before anything is written, so an invalid file keeps existing data.
  * @param content JSON contents of the backup file
  */
 export async function restoreBackup(content: string) {
 	const backup = parseBackup(content);
 
-	await db.transaction('rw', db.settings, db.scheduled, async () => {
+	await db.transaction('rw', db.settings, async () => {
 		const restoredSettings = keepExistingPassword(
 			backup.settings,
 			await db.settings.get(SettingKeys.webdavSettings)
 		);
 		await db.settings.clear();
 		await db.settings.bulkAdd(restoredSettings);
-
-		await db.scheduled.clear();
-		await db.scheduled.bulkAdd(backup.scx);
 	});
+	await replaceAllScx(backup.scx);
 }

@@ -1,6 +1,5 @@
-import db from '$lib/data/db';
-import { saveScheduledTransaction } from '$lib/data/dbdal';
 import type { Posting } from '$lib/data/model';
+import { listScx, saveScx } from '$lib/services/scxService';
 import fullLedgerService from '$lib/services/ledgerWorkerClient';
 
 /**
@@ -12,7 +11,7 @@ import fullLedgerService from '$lib/services/ledgerWorkerClient';
  * The Assets posting is cleared so XactAugmenter fills it via zero-sum.
  */
 export async function updateRepaymentAmounts(): Promise<void> {
-	const scxs = await db.scheduled.toArray();
+	const scxs = await listScx();
 	const repaymentScxs = scxs.filter((s) => s.repayment);
 	if (!repaymentScxs.length) return;
 
@@ -47,6 +46,6 @@ export async function updateRepaymentAmounts(): Promise<void> {
 			assetsPosting.amount = undefined;
 		}
 
-		await saveScheduledTransaction(scx);
+		await saveScx(scx);
 	}
 }

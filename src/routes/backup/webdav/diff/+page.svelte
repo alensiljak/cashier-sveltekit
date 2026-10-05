@@ -4,7 +4,7 @@
     import Toolbar from '$lib/components/Toolbar.svelte';
     import { settings, SettingKeys } from '$lib/settings';
     import { WebDavClient } from '$lib/utils/webdav';
-    import db from '$lib/data/db';
+    import { listScx } from '$lib/services/scxService';
     import { buildDiffLines, type DiffSection } from '$lib/utils/diffText';
 
     let sections = $state<DiffSection[]>([]);
@@ -33,7 +33,7 @@
                 }
             }
             if (files.includes('scheduled')) {
-                const all = await db.scheduled.toArray();
+                const all = await listScx();
                 const localContent = JSON.stringify(all, null, 2);
                 const res = await dav.getJson('scheduled.json');
                 if (res.ok) {

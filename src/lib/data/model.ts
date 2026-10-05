@@ -96,8 +96,11 @@ export class Price {
 	currency: string | undefined;
 }
 
+/** Identifier of a scheduled transaction. Opaque to callers: only pass back what the storage gave them. */
+export type ScxId = number;
+
 export class ScheduledTransaction {
-	id?: number;
+	id?: ScxId;
 	nextDate: string;
 	transaction?: Xact;
 	period?: string;
