@@ -18,6 +18,16 @@ async function sha256Hex(data: Uint8Array<ArrayBuffer>): Promise<string> {
 		.join('');
 }
 
+/** One record's change caused by merging in another device's state. */
+export interface RecordChange<R> {
+	id: string;
+	action: 'add' | 'update' | 'delete';
+	/** The record before the merge; absent for an add. */
+	before?: R;
+	/** The record after the merge; absent for a delete. */
+	after?: R;
+}
+
 /**
  * A keyed collection of plain JSON records, kept in a Yjs document and
  * persisted to its own IndexedDB database via y-indexeddb. Holds everything
@@ -36,6 +46,7 @@ export abstract class CrdtDocStore<R> {
 	readonly doc: Y.Doc;
 	protected readonly records: Y.Map<R>;
 	private opening?: Promise<void>;
+	private persistence?: IndexeddbPersistence;
 	private existedBeforeOpen?: Promise<boolean>;
 	private initializedHere = false;
 
@@ -60,9 +71,28 @@ export abstract class CrdtDocStore<R> {
 	protected async ready(): Promise<void> {
 		this.opening ??= (async () => {
 			await this.existed();
-			await new IndexeddbPersistence(this.dbName, this.doc).whenSynced;
+			this.persistence = new IndexeddbPersistence(this.dbName, this.doc);
+			await this.persistence.whenSynced;
 		})();
 		await this.opening;
+	}
+
+	/**
+	 * Resolves once every change made so far is committed to IndexedDB. y-indexeddb
+	 * writes updates in the background and doesn't report when they are done, so a
+	 * caller that must not lose a write (a restore, a save followed by navigation)
+	 * awaits this. A read transaction on the updates store is queued behind the
+	 * pending write transactions, so it completes only after they have.
+	 */
+	protected async flush(): Promise<void> {
+		const db = this.persistence?.db;
+		if (!db) return;
+		await new Promise<void>((resolve, reject) => {
+			const tx = db.transaction('updates', 'readonly');
+			tx.objectStore('updates').count();
+			tx.oncomplete = () => resolve();
+			tx.onerror = tx.onabort = () => reject(tx.error ?? new Error('IndexedDB flush aborted'));
+		});
 	}
 
 	/**
@@ -86,22 +116,43 @@ export abstract class CrdtDocStore<R> {
 		return Y.encodeStateAsUpdate(this.doc);
 	}
 
-	/** Merge a Yjs update (e.g. another device's exported state) into the document. Idempotent. */
-	async importState(update: Uint8Array): Promise<void> {
+	/**
+	 * Merge a Yjs update (e.g. another device's exported state) into the document.
+	 * Idempotent. Returns what the merge changed, for a one-off report; nothing
+	 * is kept, so a later call can't tell what an earlier one did.
+	 */
+	async importState(update: Uint8Array): Promise<RecordChange<R>[]> {
 		await this.ready();
 		let changed = false;
 		const onUpdate = () => {
 			changed = true;
 		};
+		const changes: RecordChange<R>[] = [];
+		const onRecords = (event: Y.YMapEvent<R>) => {
+			for (const [id, change] of event.changes.keys) {
+				const before = change.oldValue as R | undefined;
+				const after = this.records.get(id);
+				// A record rewritten with identical content isn't a change worth reporting.
+				if (change.action === 'update' && JSON.stringify(before) === JSON.stringify(after))
+					continue;
+				changes.push({ id, action: change.action, before, after });
+			}
+		};
 		this.doc.on('update', onUpdate);
+		this.records.observe(onRecords);
 		try {
 			Y.applyUpdate(this.doc, update, REMOTE_ORIGIN);
 		} finally {
 			this.doc.off('update', onUpdate);
+			this.records.unobserve(onRecords);
 		}
 		// Merged records reach other devices through this device's own file too,
 		// but a no-op merge leaves nothing new to upload.
-		if (changed) scheduleBackup();
+		if (changed) {
+			scheduleBackup();
+			await this.flush();
+		}
+		return changes;
 	}
 
 	/** State vector, describing which updates this document already has. */
@@ -146,5 +197,6 @@ export abstract class CrdtDocStore<R> {
 		await this.ready();
 		this.doc.transact(() => this.records.clear());
 		scheduleBackup();
+		await this.flush();
 	}
 }

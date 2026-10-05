@@ -2,10 +2,10 @@
 	import { onMount } from 'svelte';
 	import JsonMergeViewer from '$lib/components/JsonMergeViewer.svelte';
 	import db from '$lib/data/db';
-	import { replaceAllScx } from '$lib/services/scxService';
+	import { summarizeScxReport, type ScxMergeReport } from '$lib/services/scxMergeReport';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import HelpButton from '$lib/help/HelpButton.svelte';
-	import { Setting, ScheduledTransaction } from '$lib/data/model';
+	import { Setting } from '$lib/data/model';
 	import Notifier from '$lib/utils/notifier';
 	import {
 		GitCompareArrowsIcon,
@@ -35,43 +35,18 @@
 
 	// ─── Types ───────────────────────────────────────────────────────────────────
 	/**
-	 * Settings/scheduled are JSON — a raw text-hunk splice on JSON risks
-	 * producing invalid output wherever a hunk boundary falls inside the
-	 * structure (trailing commas, unbalanced braces), so those go through
-	 * JsonMergeViewer's keyed (per-entry) merge instead. See keyedMerge.ts.
+	 * Settings are JSON — a raw text-hunk splice on JSON risks producing invalid
+	 * output wherever a hunk boundary falls inside the structure (trailing commas,
+	 * unbalanced braces), so they go through JsonMergeViewer's keyed (per-entry)
+	 * merge instead. See keyedMerge.ts. (Scheduled transactions are a CRDT and
+	 * merge automatically, so they have no diff.)
 	 */
-	type RawDiffSection =
-		| { filename: 'settings.json'; kind: 'settings'; local: Setting[]; remote: Setting[] }
-		| {
-				filename: 'scheduled.json';
-				kind: 'scheduled';
-				local: ScheduledTransaction[];
-				remote: ScheduledTransaction[];
-		  };
-
-	// ─── ScheduledTransaction identity (for JsonMergeViewer's keyed diff) ──────
-	// `id` is a device-local auto-increment (not portable across peers) and
-	// `amount` is display-only (derived from `transaction`) — both excluded
-	// from identity. Two entries are "the same" scheduled transaction iff
-	// everything else matches, so a genuine edit surfaces as a remove+add pair
-	// rather than a single "changed" entry (`scheduledEqual` is true whenever
-	// `scheduledKeyOf` already matched, so `changed` never fires here). Picking
-	// "Mine" on the old pair member and "Theirs" on the new one keeps both as
-	// separate rows — visible and easy to clean up manually, never a corrupt
-	// merge.
-	function scheduledIdentity(t: ScheduledTransaction) {
-		const { nextDate, transaction, period, count, endDate, remarks, repayment } = t;
-		return { nextDate, transaction, period, count, endDate, remarks, repayment };
-	}
-	function scheduledKeyOf(t: ScheduledTransaction): string {
-		return JSON.stringify(scheduledIdentity(t));
-	}
-	function scheduledEqual(a: ScheduledTransaction, b: ScheduledTransaction): boolean {
-		return scheduledKeyOf(a) === scheduledKeyOf(b);
-	}
-	function scheduledLabel(t: ScheduledTransaction): string {
-		return `${t.nextDate} · ${t.transaction?.payee || t.remarks || '(unnamed)'}`;
-	}
+	type RawDiffSection = {
+		filename: 'settings.json';
+		kind: 'settings';
+		local: Setting[];
+		remote: Setting[];
+	};
 
 	// ─── Presence (identity, room, peers, trust) ───────────────────────────────
 	// Shared singleton (see peerConnection.svelte.ts) — the room stays joined
@@ -110,18 +85,18 @@
 	// pulls anything across the wire. Mirrors how /sync/beancount hashes its
 	// tree scan immediately rather than waiting for an explicit action.
 	type HashStatus = 'checking' | 'same' | 'different' | 'error';
-	type SyncItem = 'settings' | 'scheduled';
-	const ALL_ITEMS = ['settings', 'scheduled'];
-	let hashStatus = $state<Record<'settings' | 'scheduled', HashStatus | null>>({
-		settings: null,
-		scheduled: null
+	type SyncItem = 'settings';
+	const ALL_ITEMS = ['settings'];
+	let hashStatus = $state<Record<SyncItem, HashStatus | null>>({
+		settings: null
 	});
 
 	$effect(() => {
 		const targetId = syncTargetId;
 		if (!targetId) {
-			hashStatus = { settings: null, scheduled: null };
+			hashStatus = { settings: null };
 			ydocStatus = null;
+			scxStatus = null;
 			return;
 		}
 		checkHashes(targetId);
@@ -133,8 +108,9 @@
 	}
 
 	async function checkHashes(targetId: string) {
-		hashStatus = { settings: 'checking', scheduled: 'checking' };
+		hashStatus = { settings: 'checking' };
 		void checkYdocHash(targetId);
+		void checkScxHash(targetId);
 		void checkFiles(targetId);
 		try {
 			const [local, remote] = await Promise.all([
@@ -143,12 +119,11 @@
 			]);
 			if (targetId !== syncTargetId) return; // stale — user switched peers meanwhile
 			hashStatus = {
-				settings: itemHashStatus(local.settings, remote.settings),
-				scheduled: itemHashStatus(local.scheduled, remote.scheduled)
+				settings: itemHashStatus(local.settings, remote.settings)
 			};
 		} catch {
 			if (targetId !== syncTargetId) return;
-			hashStatus = { settings: 'error', scheduled: 'error' };
+			hashStatus = { settings: 'error' };
 		}
 	}
 
@@ -183,6 +158,45 @@
 			Notifier.error('Sync failed: ' + (e as Error).message);
 		} finally {
 			syncingYdoc = false;
+		}
+	}
+
+	// ─── Scheduled Transactions (CRDT store) ──────────────────────────────────
+	// Merged like Local Transactions; the result is reported once, not kept.
+	let scxStatus = $state<HashStatus | null>(null);
+	let syncingScx = $state(false);
+	let scxReport = $state<ScxMergeReport | null>(null);
+
+	async function checkScxHash(targetId: string) {
+		scxStatus = 'checking';
+		try {
+			const local = await peerConnection.getLocalScxHash();
+			const remote = await peerConnection.fetchRemoteScxHash(targetId);
+			if (targetId !== syncTargetId) return;
+			scxStatus = itemHashStatus(local, remote);
+		} catch {
+			if (targetId !== syncTargetId) return;
+			scxStatus = 'error';
+		}
+	}
+
+	async function syncScheduledTransactions() {
+		if (!syncTargetId || syncingScx) return;
+		const targetId = syncTargetId;
+		syncingScx = true;
+		try {
+			const { changed, report } = await peerConnection.syncScx(targetId);
+			if (changed) scxReport = report;
+			Notifier.success(
+				changed
+					? `Scheduled Transactions merged: ${summarizeScxReport(report)}`
+					: 'Scheduled Transactions already in sync'
+			);
+			await checkScxHash(targetId);
+		} catch (e) {
+			Notifier.error('Sync failed: ' + (e as Error).message);
+		} finally {
+			syncingScx = false;
 		}
 	}
 
@@ -271,8 +285,7 @@
 	let pullConfirmItem = $state<SyncItem | null>(null);
 
 	const ITEM_LABELS: Record<SyncItem, string> = {
-		settings: 'Settings',
-		scheduled: 'Scheduled Transactions'
+		settings: 'Settings'
 	};
 
 	// ─── Modal state ─────────────────────────────────────────────────────────────
@@ -388,14 +401,6 @@
 					remote: JSON.parse(remote.settings) as Setting[]
 				});
 			}
-			if (item === 'scheduled' && remote.scheduled !== null && local.scheduled !== null) {
-				sections.push({
-					filename: 'scheduled.json',
-					kind: 'scheduled',
-					local: JSON.parse(local.scheduled) as ScheduledTransaction[],
-					remote: JSON.parse(remote.scheduled) as ScheduledTransaction[]
-				});
-			}
 			diffSections = sections;
 			showDiff = true;
 		} catch (e) {
@@ -417,11 +422,6 @@
 				await db.settings.clear();
 				await db.settings.bulkPut(entries.map((e) => new Setting(e.key, e.value)));
 				Notifier.success('Settings updated');
-			}
-			if (item === 'scheduled' && remote.scheduled !== null) {
-				const entries: ScheduledTransaction[] = JSON.parse(remote.scheduled);
-				await replaceAllScx(entries);
-				Notifier.success('Scheduled transactions updated');
 			}
 			refreshHashesIfSelected();
 		} catch (e) {
@@ -449,33 +449,6 @@
 		}
 	}
 
-	let applyingScheduledMerge = $state(false);
-
-	/**
-	 * Writes a keyed Theirs/Mine merge of ScheduledTransactions. `local` is the
-	 * exact array diffed against (same object references `merged` was built
-	 * from) — kept-local items pass through by reference and already carry a
-	 * valid local `id`; anything else (a remote-origin item) gets its `id`
-	 * stripped so Dexie assigns a fresh one instead of colliding with an
-	 * unrelated local row that happens to reuse the same device-local number.
-	 */
-	async function applyScheduledMerge(
-		local: ScheduledTransaction[],
-		merged: ScheduledTransaction[]
-	) {
-		applyingScheduledMerge = true;
-		try {
-			const localSet = new Set(local);
-			const rows = merged.map((t) => (localSet.has(t) ? t : { ...t, id: undefined }));
-			await replaceAllScx(rows);
-			showDiff = false;
-			refreshHashesIfSelected();
-		} catch (e) {
-			Notifier.error(`Merge failed: ${(e as Error).message}`);
-		} finally {
-			applyingScheduledMerge = false;
-		}
-	}
 </script>
 
 {#snippet hashBadge(status: HashStatus | null)}
@@ -632,7 +605,7 @@
 					</div>
 
 					<div class="flex flex-col gap-1">
-						{#each ['settings', 'scheduled'] as const as item (item)}
+						{#each ['settings'] as const as item (item)}
 							{@const status = hashStatus[item]}
 							<div class="flex items-center gap-2 py-1">
 								<span class="flex-1 text-sm">{ITEM_LABELS[item]}</span>
@@ -672,6 +645,22 @@
 								onclick={syncLocalTransactions}
 							>
 								{#if syncingYdoc}<span class="loading loading-spinner loading-xs"
+										></span>{:else}<DownloadIcon size={16} />{/if}
+							</button>
+						</div>
+
+						<div class="flex items-center gap-2 py-1">
+							<span class="flex-1 text-sm">Scheduled Transactions</span>
+							{@render hashBadge(scxStatus)}
+							<!-- Merged automatically (CRDT), so no Diff — Sync pulls and merges. -->
+							<button
+								class="btn btn-sm btn-square btn-primary"
+								aria-label="Sync Scheduled Transactions"
+								title="Pull &amp; merge"
+								disabled={syncingScx || scxStatus !== 'different'}
+								onclick={syncScheduledTransactions}
+							>
+								{#if syncingScx}<span class="loading loading-spinner loading-xs"
 										></span>{:else}<DownloadIcon size={16} />{/if}
 							</button>
 						</div>
@@ -734,32 +723,39 @@
 			</div>
 			<div class="flex-1 overflow-y-auto touch-pan-y p-4 flex flex-col gap-6">
 				{#each diffSections as section (section.filename)}
-					{#if section.kind === 'settings'}
-						<JsonMergeViewer
-							title={section.filename}
-							local={section.local}
-							remote={section.remote}
-							keyOf={(s) => s.key}
-							renderEntry={(s) => s.value}
-							onApplyMerge={applySettingsMerge}
-							applyingMerge={applyingSettingsMerge}
-						/>
-					{:else}
-						<JsonMergeViewer
-							title={section.filename}
-							local={section.local}
-							remote={section.remote}
-							keyOf={scheduledKeyOf}
-							equal={scheduledEqual}
-							labelOf={scheduledLabel}
-							onApplyMerge={(merged) => applyScheduledMerge(section.local, merged)}
-							applyingMerge={applyingScheduledMerge}
-						/>
-					{/if}
+					<JsonMergeViewer
+						title={section.filename}
+						local={section.local}
+						remote={section.remote}
+						keyOf={(s) => s.key}
+						renderEntry={(s) => s.value}
+						onApplyMerge={applySettingsMerge}
+						applyingMerge={applyingSettingsMerge}
+					/>
 				{/each}
 			</div>
 		</div>
 		<button class="modal-backdrop" aria-label="Close" onclick={() => (showDiff = false)}></button>
+	</div>
+{/if}
+
+<!-- ─── Scheduled Transactions merge report ────────────────────────────────── -->
+<!-- Shown once, right after the merge; nothing is stored. -->
+{#if scxReport}
+	<div class="modal modal-open">
+		<div class="modal-box">
+			<h3 class="font-bold text-lg">Scheduled Transactions merged</h3>
+			<p class="pt-2 text-sm opacity-70">{summarizeScxReport(scxReport)}</p>
+			<ul class="my-3 max-h-64 space-y-1 overflow-y-auto text-sm">
+				{#each scxReport.lines as line, i (i)}
+					<li>{line}</li>
+				{/each}
+			</ul>
+			<div class="modal-action">
+				<button class="btn btn-primary" onclick={() => (scxReport = null)}>OK</button>
+			</div>
+		</div>
+		<button class="modal-backdrop" aria-label="Close" onclick={() => (scxReport = null)}></button>
 	</div>
 {/if}
 

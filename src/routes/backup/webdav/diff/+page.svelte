@@ -4,7 +4,6 @@
     import Toolbar from '$lib/components/Toolbar.svelte';
     import { settings, SettingKeys } from '$lib/settings';
     import { WebDavClient } from '$lib/utils/webdav';
-    import { listScx } from '$lib/services/scxService';
     import { buildDiffLines, type DiffSection } from '$lib/utils/diffText';
 
     let sections = $state<DiffSection[]>([]);
@@ -30,18 +29,6 @@
                     result.push({ filename: 'settings.json', lines, identical: lines.every(l => l.type === 'context') });
                 } else {
                     error = `Cannot fetch remote settings.json: ${res.status} ${res.statusText}`;
-                }
-            }
-            if (files.includes('scheduled')) {
-                const all = await listScx();
-                const localContent = JSON.stringify(all, null, 2);
-                const res = await dav.getJson('scheduled.json');
-                if (res.ok) {
-                    const remoteContent = await res.text();
-                    const lines = buildDiffLines(remoteContent, localContent);
-                    result.push({ filename: 'scheduled.json', lines, identical: lines.every(l => l.type === 'context') });
-                } else {
-                    error = `Cannot fetch remote scheduled.json: ${res.status} ${res.statusText}`;
                 }
             }
         } catch (err) {

@@ -1,61 +1,78 @@
-import 'fake-indexeddb/auto';
+/*
+    Per-device Yjs state files on WebDAV: the working set and the scheduled
+    transactions are separate files per device, each with its own merge state.
+*/
 import { describe, expect, it } from 'vitest';
 import {
 	needsMerge,
 	parseYdocFilename,
 	ydocFilename,
+	type MergeState,
 	type RemoteDevice
-} from '../../src/lib/sync/ydocDevices';
-import { toRecord, fromRecord } from '../../src/lib/storage/crdtXactRecord';
-import { Xact } from '../../src/lib/data/model';
+} from '$lib/sync/ydocDevices';
 
-function device(lastModified: Date | null): RemoteDevice {
-	return {
-		deviceId: 'abc',
-		filename: ydocFilename('abc'),
-		size: 1,
-		lastModified,
-		status: 'trusted'
-	};
-}
+const device = (over: Partial<RemoteDevice> = {}): RemoteDevice => ({
+	deviceId: 'dev1',
+	filename: 'cashier-xacts-dev1.ydoc',
+	size: 10,
+	lastModified: new Date('2026-01-02T00:00:00Z'),
+	status: 'trusted',
+	...over
+});
 
-describe('ydoc file names', () => {
-	it('round-trips a device id', () => {
-		expect(parseYdocFilename(ydocFilename('1234-abcd'))).toBe('1234-abcd');
+describe('file names', () => {
+	it('builds and parses a name per kind', () => {
+		expect(ydocFilename('dev1')).toBe('cashier-xacts-dev1.ydoc');
+		expect(ydocFilename('dev1', 'scx')).toBe('cashier-scx-dev1.ydoc');
+		expect(parseYdocFilename('cashier-xacts-dev1.ydoc')).toBe('dev1');
+		expect(parseYdocFilename('cashier-scx-dev1.ydoc', 'scx')).toBe('dev1');
 	});
 
-	it('ignores unrelated files', () => {
-		expect(parseYdocFilename('cashier.bean')).toBeNull();
-		expect(parseYdocFilename('cashier-xacts-.ydoc')).toBeNull();
-		expect(parseYdocFilename('cashier-xacts-abc.ydoc.bak')).toBeNull();
+	it('does not mistake one kind for the other', () => {
+		expect(parseYdocFilename('cashier-scx-dev1.ydoc')).toBeNull();
+		expect(parseYdocFilename('cashier-xacts-dev1.ydoc', 'scx')).toBeNull();
+		expect(parseYdocFilename('settings.json')).toBeNull();
 	});
 });
 
 describe('needsMerge', () => {
-	const ts = new Date('2026-09-25T10:00:00Z');
+	const merged: MergeState = {
+		remoteTs: '2026-01-02T00:00:00.000Z',
+		mergedAt: '2026-01-03T00:00:00.000Z'
+	};
 
-	it('is true when never merged', () => {
-		expect(needsMerge(device(ts), undefined)).toBe(true);
+	it('working set: never merged, or changed since', () => {
+		expect(needsMerge(device(), undefined)).toBe(true);
+		expect(needsMerge(device(), merged)).toBe(false);
+		expect(needsMerge(device({ lastModified: new Date('2026-01-05T00:00:00Z') }), merged)).toBe(
+			true
+		);
 	});
 
-	it('is false when the remote timestamp is unchanged', () => {
-		expect(needsMerge(device(ts), { remoteTs: ts.toISOString(), mergedAt: 'x' })).toBe(false);
+	it('scheduled transactions: nothing to merge without a file', () => {
+		expect(needsMerge(device(), undefined, 'scx')).toBe(false);
 	});
 
-	it('is true when the remote file changed', () => {
-		const later = new Date('2026-09-25T11:00:00Z');
-		expect(needsMerge(device(later), { remoteTs: ts.toISOString(), mergedAt: 'x' })).toBe(true);
-	});
-});
+	it('scheduled transactions: never merged, or changed since', () => {
+		const withScx = device({
+			scx: { filename: 'cashier-scx-dev1.ydoc', lastModified: new Date('2026-01-02T00:00:00Z') }
+		});
 
-describe('record origin', () => {
-	it('is stored on the record and dropped when read back as an Xact', () => {
-		const record = toRecord(new Xact(), 'id1', 'device-a');
-		expect(record.origin).toBe('device-a');
-		expect(fromRecord(record)).not.toHaveProperty('origin');
+		// A state from before scheduled transactions were synced has no scx timestamp.
+		expect(needsMerge(withScx, merged, 'scx')).toBe(true);
+		expect(needsMerge(withScx, { ...merged, scxTs: '2026-01-02T00:00:00.000Z' }, 'scx')).toBe(
+			false
+		);
+		expect(needsMerge(withScx, { ...merged, scxTs: '2026-01-01T00:00:00.000Z' }, 'scx')).toBe(true);
 	});
 
-	it('is omitted when not given', () => {
-		expect(toRecord(new Xact(), 'id1')).not.toHaveProperty('origin');
+	it('the two kinds are tracked independently', () => {
+		const withScx = device({
+			scx: { filename: 'cashier-scx-dev1.ydoc', lastModified: new Date('2026-01-02T00:00:00Z') }
+		});
+		const state: MergeState = { ...merged, scxTs: '2026-01-01T00:00:00.000Z' };
+
+		expect(needsMerge(withScx, state)).toBe(false);
+		expect(needsMerge(withScx, state, 'scx')).toBe(true);
 	});
 });

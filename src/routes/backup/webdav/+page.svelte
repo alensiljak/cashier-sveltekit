@@ -3,9 +3,10 @@
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import HelpButton from '$lib/help/HelpButton.svelte';
 	import { settings, deviceSettings, SettingKeys, DeviceSettingKeys } from '$lib/settings';
-	import { ScheduledTransaction, Setting } from '$lib/data/model';
+	import { Setting } from '$lib/data/model';
 	import db from '$lib/data/db';
-	import { listScx, replaceAllScx } from '$lib/services/scxService';
+	import { getReadyScxStore } from '$lib/services/scxService';
+	import { describeScxChanges, summarizeScxReport } from '$lib/services/scxMergeReport';
 	import Notifier from '$lib/utils/notifier';
 	import { WebDavClient } from '$lib/utils/webdav';
 	import {
@@ -47,7 +48,8 @@
 	let devicesOpen = $state(false);
 	let ydocDevices: YdocDevices | undefined = $state();
 	let ydocFile = $state('');
-	let lastSyncTs = $state<LastSyncTs>({ settings: null, scheduled: null });
+	let scxFile = $state('');
+	let lastSyncTs = $state<LastSyncTs>({ settings: null });
 
 	// No local timestamp — only detect remote changed since last sync
 	const settingsDirection = $derived.by<SyncDirection>(() => {
@@ -55,15 +57,11 @@
 		return settingsLastModified > new Date(lastSyncTs.settings) ? 'down' : null;
 	});
 
-	const scheduledDirection = $derived.by<SyncDirection>(() => {
-		if (!scheduledLastModified || !lastSyncTs.scheduled) return null;
-		return scheduledLastModified > new Date(lastSyncTs.scheduled) ? 'down' : null;
-	});
 
 	const noneSelected = $derived(!includeSettings && !includeXacts && !includeScheduled);
-	// Local Transactions are a binary Yjs document, merged rather than compared, so only
-	// the JSON files can be diffed or previewed.
-	const noneViewable = $derived(!includeSettings && !includeScheduled);
+	// Local and Scheduled Transactions are binary Yjs documents, merged rather than compared,
+	// so only the settings JSON can be diffed or previewed.
+	const noneViewable = $derived(!includeSettings);
 	const allSelected = $derived(includeSettings && includeXacts && includeScheduled);
 	const someSelected = $derived(includeSettings || includeXacts || includeScheduled);
 	let indeterminate = $state(false);
@@ -88,6 +86,7 @@
 		const storedSyncTs = await deviceSettings.get<LastSyncTs>(DeviceSettingKeys.webdavLastSyncTs);
 		if (storedSyncTs) lastSyncTs = storedSyncTs;
 		ydocFile = await crdtBackupFilename();
+		scxFile = await crdtBackupFilename('scx');
 		fetchLastModified();
 	});
 
@@ -103,7 +102,7 @@
 			const [sm, cm, scm] = await Promise.allSettled([
 				dav.lastModifiedJson('settings.json'),
 				dav.lastModified(ydocFile),
-				dav.lastModifiedJson('scheduled.json')
+				dav.lastModified(scxFile)
 			]);
 			if (sm.status === 'fulfilled') settingsLastModified = sm.value;
 			if (cm.status === 'fulfilled') xactsLastModified = cm.value;
@@ -124,7 +123,6 @@
 	function fileParams(): URLSearchParams {
 		const p = new URLSearchParams();
 		if (includeSettings) p.append('f', 'settings');
-		if (includeScheduled) p.append('f', 'scheduled');
 		return p;
 	}
 
@@ -135,7 +133,7 @@
 		}
 		isUploading = true;
 		const dav = client();
-		const uploaded = { settings: false, scheduled: false };
+		const uploaded = { settings: false };
 		try {
 			if (includeSettings) {
 				const allSettings = await settings.getAll();
@@ -151,11 +149,10 @@
 				else Notifier.error(`Upload failed for ${ydocFile}: ${res.status} ${res.statusText}`);
 			}
 			if (includeScheduled) {
-				const all = await listScx();
-				const json = JSON.stringify(all, null, 2);
-				const res = await dav.putJsonGz('scheduled.json', json);
-				if (res.ok) { Notifier.success('Scheduled transactions uploaded'); uploaded.scheduled = true; }
-				else Notifier.error(`Upload failed for scheduled.json.gz: ${res.status} ${res.statusText}`);
+				const state = await (await getReadyScxStore()).exportState();
+				const res = await dav.put(scxFile, state, 'application/octet-stream');
+				if (res.ok) Notifier.success('Scheduled transactions uploaded');
+				else Notifier.error(`Upload failed for ${scxFile}: ${res.status} ${res.statusText}`);
 			}
 		} catch (err) {
 			Notifier.error('Upload error: ' + (err as Error).message);
@@ -165,10 +162,7 @@
 			// Record fresh remote timestamps as the new sync baseline for uploaded files.
 			if (uploaded.settings && settingsLastModified)
 				lastSyncTs.settings = settingsLastModified.toISOString();
-			if (uploaded.scheduled && scheduledLastModified)
-				lastSyncTs.scheduled = scheduledLastModified.toISOString();
-			if (uploaded.settings || uploaded.scheduled)
-				await saveLastSyncTs();
+			if (uploaded.settings) await saveLastSyncTs();
 		}
 	}
 
@@ -202,7 +196,7 @@
 		}
 		isDownloading = true;
 		const dav = client();
-		const downloaded = { settings: false, scheduled: false };
+		const downloaded = { settings: false };
 		try {
 			if (includeSettings) {
 				const res = await dav.getJson('settings.json');
@@ -229,19 +223,25 @@
 						Notifier.error(`Download failed for ${ydocFile}: ${res.status} ${res.statusText}`);
 					}
 				}
-				await ydocDevices?.mergeTrusted();
+				await ydocDevices?.mergeTrusted(['xacts']);
 				needsReload = true;
 			}
 			if (includeScheduled) {
-				const res = await dav.getJson('scheduled.json');
-				if (res.ok) {
-					const entries: ScheduledTransaction[] = JSON.parse(await res.text());
-					await replaceAllScx(entries);
-					Notifier.success('Scheduled transactions restored');
-					downloaded.scheduled = true;
-				} else {
-					Notifier.error(`Download failed for scheduled.json: ${res.status} ${res.statusText}`);
+				// Same as the working set: this device's own file (if it has one), then the
+				// trusted devices' files, all merged.
+				if (await dav.exists(scxFile)) {
+					const res = await dav.get(scxFile);
+					if (res.ok) {
+						const store = await getReadyScxStore();
+						const report = describeScxChanges(
+							await store.importState(new Uint8Array(await res.arrayBuffer()))
+						);
+						Notifier.success(`Scheduled transactions merged from backup: ${summarizeScxReport(report)}`);
+					} else {
+						Notifier.error(`Download failed for ${scxFile}: ${res.status} ${res.statusText}`);
+					}
 				}
+				await ydocDevices?.mergeTrusted(['scx']);
 			}
 		} catch (err) {
 			Notifier.error('Download error: ' + (err as Error).message);
@@ -250,9 +250,7 @@
 			// Record the remote timestamps we just downloaded as the new sync baseline.
 			if (downloaded.settings && settingsLastModified)
 				lastSyncTs.settings = settingsLastModified.toISOString();
-			if (downloaded.scheduled && scheduledLastModified)
-				lastSyncTs.scheduled = scheduledLastModified.toISOString();
-			if (downloaded.settings || downloaded.scheduled) await saveLastSyncTs();
+			if (downloaded.settings) await saveLastSyncTs();
 		}
 	}
 
@@ -268,10 +266,7 @@
 		goto(`/backup/webdav/preview?source=${source}&${fileParams()}`);
 	}
 
-	const overwrittenLabels = $derived([
-		...(includeSettings ? ['Settings'] : []),
-		...(includeScheduled ? ['Scheduled Transactions'] : [])
-	]);
+	const overwrittenLabels = $derived(includeSettings ? ['Settings'] : []);
 </script>
 
 {#snippet menuItems()}
@@ -370,7 +365,8 @@
 			<label class="flex items-center gap-3 cursor-pointer">
 				<input type="checkbox" class="checkbox checkbox-primary" bind:checked={includeScheduled} />
 				<span class="flex-1">Scheduled Transactions</span>
-				{@render syncBadge(scheduledLastModified, scheduledDirection)}
+				<!-- Merged, so there is no newer/older or conflict to flag. -->
+				{@render syncBadge(scheduledLastModified, null)}
 			</label>
 			<div class="flex items-center gap-3">
 				<label class="flex flex-1 items-center gap-3 cursor-pointer">

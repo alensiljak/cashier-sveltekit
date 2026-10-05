@@ -4,12 +4,19 @@
 	import Notifier from '$lib/utils/notifier';
 	import { WebDavClient } from '$lib/utils/webdav';
 	import { getXactStore } from '$lib/storage/xactStoreRegistry';
+	import { getReadyScxStore } from '$lib/services/scxService';
+	import {
+		describeScxChanges,
+		summarizeScxReport,
+		type ScxMergeReport
+	} from '$lib/services/scxMergeReport';
 	import {
 		listRemoteDevices,
 		trustDevice,
 		getMergeState,
 		setMergeState,
 		needsMerge,
+		type DocKind,
 		type MergeState,
 		type RemoteDevice
 	} from '$lib/sync/ydocDevices';
@@ -34,7 +41,11 @@
 	let trustName = $state('');
 
 	const mergeable = $derived(
-		devices.filter((d) => d.status === 'trusted' && needsMerge(d, mergeState[d.deviceId]))
+		devices.filter(
+			(d) =>
+				d.status === 'trusted' &&
+				(needsMerge(d, mergeState[d.deviceId]) || needsMerge(d, mergeState[d.deviceId], 'scx'))
+		)
 	);
 
 	function client() {
@@ -58,38 +69,71 @@
 
 	onMount(refresh);
 
-	/** Merge every trusted device whose file changed since the last merge. */
-	export async function mergeTrusted() {
+	/**
+	 * Merge every trusted device's file of the given kinds that changed since the
+	 * last merge. The scheduled-transactions merge is reported once, in a message.
+	 */
+	export async function mergeTrusted(kinds: DocKind[] = ['xacts', 'scx']) {
 		const dav = client();
-		const store = await getXactStore();
-		let merged = 0;
+		let xactDevices = 0;
+		let scxDevices = 0;
+		const scxReport: ScxMergeReport = { added: 0, changed: 0, deleted: 0, lines: [] };
 		try {
 			for (const d of mergeable) {
+				const who = d.name ?? d.deviceId;
 				try {
-					const res = await dav.get(d.filename);
-					if (!res.ok) {
-						Notifier.error(`Download failed for ${d.filename}: ${res.status} ${res.statusText}`);
-						continue;
+					if (kinds.includes('xacts') && needsMerge(d, mergeState[d.deviceId])) {
+						const res = await dav.get(d.filename);
+						if (!res.ok) {
+							Notifier.error(`Download failed for ${d.filename}: ${res.status} ${res.statusText}`);
+						} else {
+							await (await getXactStore()).importState(new Uint8Array(await res.arrayBuffer()));
+							await setMergeState(d.deviceId, {
+								remoteTs: d.lastModified?.toISOString() ?? null,
+								mergedAt: new Date().toISOString()
+							});
+							xactDevices++;
+						}
 					}
-					await store.importState(new Uint8Array(await res.arrayBuffer()));
-					await setMergeState(d.deviceId, {
-						remoteTs: d.lastModified?.toISOString() ?? null,
-						mergedAt: new Date().toISOString()
-					});
-					merged++;
+					if (kinds.includes('scx') && d.scx && needsMerge(d, mergeState[d.deviceId], 'scx')) {
+						const res = await dav.get(d.scx.filename);
+						if (!res.ok) {
+							Notifier.error(
+								`Download failed for ${d.scx.filename}: ${res.status} ${res.statusText}`
+							);
+						} else {
+							const store = await getReadyScxStore();
+							const part = describeScxChanges(
+								await store.importState(new Uint8Array(await res.arrayBuffer()))
+							);
+							scxReport.added += part.added;
+							scxReport.changed += part.changed;
+							scxReport.deleted += part.deleted;
+							scxReport.lines.push(...part.lines);
+							await setMergeState(d.deviceId, {
+								scxTs: d.scx.lastModified?.toISOString() ?? null,
+								mergedAt: new Date().toISOString()
+							});
+							scxDevices++;
+						}
+					}
 				} catch (err) {
-					Notifier.error(`Merge failed for ${d.name ?? d.deviceId}: ${(err as Error).message}`);
+					Notifier.error(`Merge failed for ${who}: ${(err as Error).message}`);
 				}
 			}
-			if (merged > 0) {
-				Notifier.success(`Merged ${merged} device${merged === 1 ? '' : 's'}`);
+			if (xactDevices > 0) {
+				Notifier.success(`Merged ${xactDevices} device${xactDevices === 1 ? '' : 's'}`);
 				onmerged?.();
+			}
+			if (scxDevices > 0) {
+				Notifier.success(
+					`Scheduled transactions merged from ${scxDevices} device${scxDevices === 1 ? '' : 's'}: ${summarizeScxReport(scxReport)}`
+				);
 			}
 		} finally {
 			await refresh();
 		}
 	}
-
 	function startTrust(d: RemoteDevice) {
 		trusting = d;
 		trustName = `Device ${d.deviceId.slice(0, 6)}`;

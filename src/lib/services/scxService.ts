@@ -25,6 +25,15 @@ async function store(): Promise<CrdtScxStore> {
 	return scxStore;
 }
 
+/**
+ * The store itself, once it exists on this device (offering the legacy migration
+ * first, if needed). For sync code that exchanges the document's state; background
+ * work that mustn't raise that prompt checks `isInitialized()` on `getScxStore()` instead.
+ */
+export async function getReadyScxStore(): Promise<CrdtScxStore> {
+	return store();
+}
+
 /** All scheduled transactions, by next date. */
 export async function listScx(): Promise<ScheduledTransaction[]> {
 	return (await store()).list();

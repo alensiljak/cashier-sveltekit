@@ -1,10 +1,12 @@
 /*
 	Singleton peer-sync connection shared across the whole app.
 
-	Wraps one `PeerPresence` (room join/leave, identity, trust) plus the three
+	Wraps one `PeerPresence` (room join/leave, identity, trust) plus the
 	protocols built on top of it:
-	  - the quick key/value sync (settings/scheduled) used by
+	  - the quick key/value sync (settings) used by
 	    peer-sync/+page.svelte's Preview/Diff/Pull actions
+	  - the CRDT stores (working set, scheduled transactions): hash, two-way
+	    merge and live-update actions each, merged rather than diffed
 	  - the cheap hash-only variant of the above (`sync-hash`), used by
 	    peer-sync/+page.svelte to show a same/different pill per item as soon
 	    as a peer is selected, without transferring full file content
@@ -19,12 +21,16 @@
 	never drops the room or re-triggers the `hello` handshake.
 */
 import { settings, deviceSettings, DeviceSettingKeys } from '$lib/settings';
-import { listScx } from '$lib/services/scxService';
+import { getReadyScxStore } from '$lib/services/scxService';
+import { describeScxChanges, type ScxMergeReport } from '$lib/services/scxMergeReport';
 import { PeerPresence, type RelayStrategy } from './peerPresence.svelte';
 import { PeerProtocol } from './PeerSource';
 import { OpfsSource } from './OpfsSource';
 import { normalizeEol } from './SyncSource';
 import { getXactStore } from '$lib/storage/xactStoreRegistry';
+import { getScxStore } from '$lib/storage/scxStoreRegistry';
+import type { CrdtScxStore } from '$lib/storage/crdtScxStore';
+import type { Doc } from 'yjs';
 import type { MessageAction, RequestAction } from '@trystero-p2p/core';
 
 const REQUEST_TIMEOUT_MS = 30_000;
@@ -32,7 +38,6 @@ const HASH_TIMEOUT_MS = 10_000;
 
 export interface RemoteData {
 	settings: string | null;
-	scheduled: string | null;
 }
 
 /**
@@ -43,7 +48,6 @@ export interface RemoteData {
  */
 export interface RemoteHashes {
 	settings: string | null;
-	scheduled: string | null;
 	[key: string]: string | null;
 }
 
@@ -52,7 +56,6 @@ type SyncRequestMsg = { requestId: string; files: string[] };
 type SyncResponseMsg = {
 	requestId: string;
 	settings: string | null;
-	scheduled: string | null;
 	[key: string]: string | null;
 };
 
@@ -68,8 +71,7 @@ async function hashText(content: string): Promise<string> {
 
 export async function getLocalData(files: string[]): Promise<RemoteData> {
 	return {
-		settings: files.includes('settings') ? JSON.stringify(await settings.getAll(), null, 2) : null,
-		scheduled: files.includes('scheduled') ? JSON.stringify(await listScx(), null, 2) : null
+		settings: files.includes('settings') ? JSON.stringify(await settings.getAll(), null, 2) : null
 	};
 }
 
@@ -77,9 +79,18 @@ export async function getLocalData(files: string[]): Promise<RemoteData> {
 export async function getLocalHashes(files: string[]): Promise<RemoteHashes> {
 	const data = await getLocalData(files);
 	return {
-		settings: data.settings !== null ? await hashText(data.settings) : null,
-		scheduled: data.scheduled !== null ? await hashText(data.scheduled) : null
+		settings: data.settings !== null ? await hashText(data.settings) : null
 	};
+}
+
+/**
+ * The scheduled-transactions store if it exists on this device, else `null`.
+ * For answering peers: a request from another device must not create the store,
+ * which would pre-empt the first-launch migration prompt.
+ */
+async function existingScxStore(): Promise<CrdtScxStore | null> {
+	const store = await getScxStore();
+	return (await store.isInitialized()) ? store : null;
 }
 
 class PeerConnection {
@@ -93,7 +104,10 @@ class PeerConnection {
 	private ydocHashAction: RequestAction<null, string> | null = null;
 	private ydocSyncAction: RequestAction<Uint8Array, Uint8Array> | null = null;
 	private ydocUpdateAction: MessageAction<Uint8Array> | null = null;
-	private stopLiveSyncFn: (() => void) | null = null;
+	private scxHashAction: RequestAction<null, string> | null = null;
+	private scxSyncAction: RequestAction<Uint8Array, Uint8Array> | null = null;
+	private scxUpdateAction: MessageAction<Uint8Array> | null = null;
+	private stopLiveSyncFns: (() => void)[] = [];
 	private pendingRequests = new Map<
 		string,
 		{ resolve: (d: RemoteData) => void; reject: (e: Error) => void }
@@ -129,7 +143,7 @@ class PeerConnection {
 			'sync-hash',
 			async (files, { peerId: fromId }) => {
 				if (!this.presence.peersMap[fromId]?.isTrusted) {
-					return { settings: null, scheduled: null };
+					return { settings: null };
 				}
 				return await getLocalHashes(files);
 			}
@@ -164,13 +178,36 @@ class PeerConnection {
 			await (await getXactStore()).importState(update);
 			void this.reloadAfterMerge();
 		};
+		// Scheduled transactions (CRDT store): the same three protocols. An empty
+		// result means "not available" (untrusted requester, or no store on this
+		// device yet).
+		this.scxHashAction = this.presence.makeRequestAction<null, string>(
+			'scx-hash',
+			async (_request, { peerId: fromId }) => {
+				if (!this.presence.peersMap[fromId]?.isTrusted) return '';
+				return (await (await existingScxStore())?.contentHash()) ?? '';
+			}
+		);
+		this.scxSyncAction = this.presence.makeRequestAction<Uint8Array, Uint8Array>(
+			'scx-sync',
+			async (remoteState, { peerId: fromId }) => {
+				if (!this.presence.peersMap[fromId]?.isTrusted) return new Uint8Array(0);
+				const store = await existingScxStore();
+				return store ? store.mergeAndDiff(remoteState) : new Uint8Array(0);
+			}
+		);
+		this.scxUpdateAction = this.presence.makeAction<Uint8Array>('scx-update');
+		this.scxUpdateAction.onMessage = async (update, { peerId: fromId }) => {
+			if (!this.presence.peersMap[fromId]?.isTrusted) return;
+			await (await existingScxStore())?.importState(update);
+		};
 		void this.startLiveSync();
 
 		// Resolve pending fetchRemoteData() promises.
-		this.syncResponseAction.onMessage = ({ requestId, settings: s, scheduled }) => {
+		this.syncResponseAction.onMessage = ({ requestId, settings: s }) => {
 			const pending = this.pendingRequests.get(requestId);
 			if (pending) {
-				pending.resolve({ settings: s, scheduled });
+				pending.resolve({ settings: s });
 				this.pendingRequests.delete(requestId);
 			}
 		};
@@ -197,29 +234,42 @@ class PeerConnection {
 
 	/** Broadcasts local (non-remote) CRDT updates to online trusted peers while connected. */
 	private async startLiveSync(): Promise<void> {
-		const store = await getXactStore();
-		if (!this.ydocUpdateAction) return;
+		const [xactStore, scxStore] = await Promise.all([getXactStore(), getScxStore()]);
+		if (!this.ydocUpdateAction || !this.scxUpdateAction) return;
 		this.stopLiveSync();
+		this.stopLiveSyncFns = [
+			this.pushLocalUpdates(xactStore.doc, () => this.ydocUpdateAction),
+			// Listening on a store that isn't open yet is harmless: nothing is
+			// written to it until it exists.
+			this.pushLocalUpdates(scxStore.doc, () => this.scxUpdateAction)
+		];
+	}
+
+	/** Sends `doc`'s local (non-remote) updates to every online trusted peer. Returns the unsubscribe function. */
+	private pushLocalUpdates(doc: Doc, action: () => MessageAction<Uint8Array> | null): () => void {
 		const handler = (update: Uint8Array, origin: unknown) => {
 			// Local edits have no origin; remote merges and IndexedDB loads carry one.
 			if (origin !== null && origin !== undefined) return;
 			for (const peer of this.presence.activePeerList) {
 				if (!peer.isTrusted) continue;
-				void this.ydocUpdateAction?.send(update, { target: peer.trysteroId });
+				void action()?.send(update, { target: peer.trysteroId });
 			}
 		};
-		store.doc.on('update', handler);
-		this.stopLiveSyncFn = () => store.doc.off('update', handler);
+		doc.on('update', handler);
+		return () => doc.off('update', handler);
 	}
 
 	private stopLiveSync(): void {
-		this.stopLiveSyncFn?.();
-		this.stopLiveSyncFn = null;
+		for (const stop of this.stopLiveSyncFns) stop();
+		this.stopLiveSyncFns = [];
 	}
 
 	async disconnect(): Promise<void> {
 		this.stopLiveSync();
 		this.ydocUpdateAction = null;
+		this.scxUpdateAction = null;
+		this.scxHashAction = null;
+		this.scxSyncAction = null;
 		await this.presence.leave();
 		this.syncRequestAction = null;
 		this.syncResponseAction = null;
@@ -293,6 +343,47 @@ class PeerConnection {
 		}
 		await store.importState(diff);
 		return (await store.contentHash()) !== before;
+	}
+
+	/** Content hash of a peer's scheduled transactions, or `null` if it has none to compare. */
+	async fetchRemoteScxHash(targetTrysteroId: string): Promise<string | null> {
+		if (!this.scxHashAction) throw new Error('Not connected');
+		const hash = await this.scxHashAction.request(null, {
+			target: targetTrysteroId,
+			timeoutMs: HASH_TIMEOUT_MS
+		});
+		return hash || null;
+	}
+
+	/** Content hash of this device's scheduled transactions. */
+	async getLocalScxHash(): Promise<string> {
+		return (await getReadyScxStore()).contentHash();
+	}
+
+	/**
+	 * Two-way merges the scheduled transactions with a trusted, online peer: sends
+	 * this device's state, applies the updates the peer sends back. Returns
+	 * whether this device received anything new, and a one-off report of what
+	 * changed here. Idempotent, so safe to repeat.
+	 */
+	async syncScx(targetTrysteroId: string): Promise<{ changed: boolean; report: ScxMergeReport }> {
+		if (!this.scxSyncAction) throw new Error('Not connected');
+		const store = await getReadyScxStore();
+		const before = await store.contentHash();
+		const diff = await this.scxSyncAction.request(await store.exportState(), {
+			target: targetTrysteroId,
+			timeoutMs: REQUEST_TIMEOUT_MS
+		});
+		if (diff.length === 0) {
+			throw new Error(
+				'Peer refused the sync (not trusted, or its scheduled transactions are not set up yet)'
+			);
+		}
+		const changes = await store.importState(diff);
+		return {
+			changed: (await store.contentHash()) !== before,
+			report: describeScxChanges(changes)
+		};
 	}
 
 	/** Requests `files` from a trusted, currently-online peer via the quick sync-request/response protocol. */

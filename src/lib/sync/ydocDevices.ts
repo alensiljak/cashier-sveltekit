@@ -1,14 +1,21 @@
 /**
  * Discovery of other devices' Yjs state files on WebDAV, and matching them
  * against the Trusted Peers list. Each device writes only its own
- * `cashier-xacts-<deviceId>.ydoc`; the device ID is the persistent peer ID.
+ * `cashier-xacts-<deviceId>.ydoc` (working set) and `cashier-scx-<deviceId>.ydoc`
+ * (scheduled transactions); the device ID is the persistent peer ID.
  */
 import db from '$lib/data/db';
 import { TrustedPeer } from '$lib/data/model';
 import { deviceSettings, DeviceSettingKeys } from '$lib/settings';
 import type { WebDavClient } from '$lib/utils/webdav';
 
-const FILE_PATTERN = /^cashier-xacts-(.+)\.ydoc$/;
+/** The documents synced as per-device state files. */
+export type DocKind = 'xacts' | 'scx';
+
+const FILE_PATTERNS: Record<DocKind, RegExp> = {
+	xacts: /^cashier-xacts-(.+)\.ydoc$/,
+	scx: /^cashier-scx-(.+)\.ydoc$/
+};
 
 export type RemoteDeviceStatus = 'self' | 'trusted' | 'untrusted';
 
@@ -20,11 +27,16 @@ export interface RemoteDevice {
 	status: RemoteDeviceStatus;
 	/** Name from the Trusted Peers list, when trusted. */
 	name?: string;
+	/** The device's scheduled-transactions file, if it has uploaded one. */
+	scx?: { filename: string; lastModified: Date | null };
 }
 
 export interface MergeState {
+	/** Modification time of the device's working-set file when it was last merged. */
 	remoteTs: string | null;
 	mergedAt: string;
+	/** Same for the scheduled-transactions file; absent until it was first merged. */
+	scxTs?: string | null;
 }
 
 /** This device's persistent ID (shared with peer sync), created on first use. */
@@ -37,13 +49,13 @@ export async function getDeviceId(): Promise<string> {
 	return id;
 }
 
-export function ydocFilename(deviceId: string): string {
-	return `cashier-xacts-${deviceId}.ydoc`;
+export function ydocFilename(deviceId: string, kind: DocKind = 'xacts'): string {
+	return `cashier-${kind}-${deviceId}.ydoc`;
 }
 
-/** Device ID encoded in a Yjs state file name, or null if it is not one. */
-export function parseYdocFilename(filename: string): string | null {
-	return FILE_PATTERN.exec(filename)?.[1] ?? null;
+/** Device ID encoded in a Yjs state file name of the given kind, or null if it is not one. */
+export function parseYdocFilename(filename: string, kind: DocKind = 'xacts'): string | null {
+	return FILE_PATTERNS[kind].exec(filename)?.[1] ?? null;
 }
 
 /** All Yjs state files in the WebDAV folder, each classified against the trusted peers. */
@@ -53,6 +65,12 @@ export async function listRemoteDevices(client: WebDavClient): Promise<RemoteDev
 		db.peers.toArray(),
 		getDeviceId()
 	]);
+	const scxFiles = new Map<string, NonNullable<RemoteDevice['scx']>>();
+	for (const e of entries) {
+		const deviceId = e.isDirectory ? null : parseYdocFilename(e.name, 'scx');
+		if (deviceId) scxFiles.set(deviceId, { filename: e.name, lastModified: e.lastModified });
+	}
+	// A device is listed by its working-set file; one with only an scx file is not.
 	const devices: RemoteDevice[] = [];
 	for (const e of entries) {
 		const deviceId = e.isDirectory ? null : parseYdocFilename(e.name);
@@ -64,7 +82,8 @@ export async function listRemoteDevices(client: WebDavClient): Promise<RemoteDev
 			size: e.size,
 			lastModified: e.lastModified,
 			status: deviceId === selfId ? 'self' : peer ? 'trusted' : 'untrusted',
-			name: peer?.name
+			name: peer?.name,
+			scx: scxFiles.get(deviceId)
 		});
 	}
 	return devices.sort((a, b) => a.deviceId.localeCompare(b.deviceId));
@@ -86,14 +105,25 @@ export async function getMergeState(): Promise<Record<string, MergeState>> {
 	);
 }
 
-export async function setMergeState(deviceId: string, state: MergeState): Promise<void> {
+/** Records a merge; only the fields given change, so merging one kind keeps the other's state. */
+export async function setMergeState(deviceId: string, state: Partial<MergeState>): Promise<void> {
 	const all = await getMergeState();
-	all[deviceId] = state;
+	const previous: Partial<MergeState> = all[deviceId] ?? {};
+	all[deviceId] = { remoteTs: null, mergedAt: new Date().toISOString(), ...previous, ...state };
 	await deviceSettings.set(DeviceSettingKeys.crdtMergeState, all);
 }
 
 /** True when the remote file changed since it was last merged (or was never merged). */
-export function needsMerge(device: RemoteDevice, state: MergeState | undefined): boolean {
+export function needsMerge(
+	device: RemoteDevice,
+	state: MergeState | undefined,
+	kind: DocKind = 'xacts'
+): boolean {
+	if (kind === 'scx') {
+		if (!device.scx) return false;
+		if (state?.scxTs === undefined) return true;
+		return (device.scx.lastModified?.toISOString() ?? null) !== state.scxTs;
+	}
 	if (!state) return true;
 	return (device.lastModified?.toISOString() ?? null) !== state.remoteTs;
 }

@@ -49,6 +49,21 @@ describe('initialisation', () => {
 	});
 });
 
+describe('durability', () => {
+	// A write must be committed to IndexedDB by the time its promise resolves: a
+	// restore or save is often followed at once by a page load.
+	it('is visible to a store opened on the same database right after a write resolves', async () => {
+		const name = 'durable-scx';
+		const writer = newStore(name);
+		await writer.addMany([scx('Rent')]);
+		await writer.replaceAll([scx('Replaced')]);
+
+		const reader = newStore(name);
+
+		expect((await reader.list()).map((s) => s.transaction?.payee)).toEqual(['Replaced']);
+	});
+});
+
 describe('save / get / list', () => {
 	it('adds a record with a new string id and reads it back as the model', async () => {
 		const store = newStore();
@@ -193,6 +208,41 @@ describe('sync', () => {
 
 		expect((await target.list()).map((s) => s.transaction?.payee)).toEqual(['A', 'B']);
 		expect(await target.contentHash()).toBe(await source.contentHash());
+	});
+
+	it('reports what a merge added, changed and deleted, with the old values', async () => {
+		const a = newStore();
+		const b = newStore();
+		const [keep, drop] = await a.addMany([scx('Keep'), scx('Drop')]);
+		await b.importState(await a.exportState());
+
+		// Device A edits one record, deletes another and adds a third.
+		const edited = (await a.get(keep))!;
+		edited.nextDate = '2026-02-01';
+		await a.save(edited);
+		await a.remove(drop);
+		const added = await a.save(scx('New'));
+
+		const changes = await b.importState(await a.exportState());
+
+		const byId = Object.fromEntries(changes.map((c) => [c.id, c]));
+		expect(Object.keys(byId).sort()).toEqual([added, drop, keep].sort());
+		expect(byId[added]).toMatchObject({ action: 'add', before: undefined });
+		expect(byId[keep]).toMatchObject({ action: 'update' });
+		expect(byId[keep].before?.nextDate).toBe('2026-01-01');
+		expect(byId[keep].after?.nextDate).toBe('2026-02-01');
+		expect(byId[drop]).toMatchObject({ action: 'delete', after: undefined });
+		expect(byId[drop].before?.transaction?.payee).toBe('Drop');
+	});
+
+	it('reports nothing when the merge brings nothing new', async () => {
+		const a = newStore();
+		const b = newStore();
+		await a.save(scx('A'));
+		const state = await a.exportState();
+		await b.importState(state);
+
+		expect(await b.importState(state)).toEqual([]);
 	});
 
 	it('mergeAndDiff brings both sides to the same content', async () => {

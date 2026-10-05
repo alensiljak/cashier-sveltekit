@@ -88,6 +88,7 @@ export class CrdtScxStore extends CrdtDocStore<ScxRecord> {
 		await this.ready();
 		const id = this.put(scx, this.idFor(scx));
 		scheduleBackup();
+		await this.flush();
 		return id;
 	}
 
@@ -104,6 +105,7 @@ export class CrdtScxStore extends CrdtDocStore<ScxRecord> {
 			for (const scx of list) ids.push(this.put(scx, this.idFor(scx)));
 		});
 		if (ids.length > 0) scheduleBackup();
+		await this.flush();
 		return ids;
 	}
 
@@ -118,6 +120,7 @@ export class CrdtScxStore extends CrdtDocStore<ScxRecord> {
 			for (const scx of list) ids.push(this.put(scx, this.idFor(scx)));
 		});
 		scheduleBackup();
+		await this.flush();
 		return ids;
 	}
 
@@ -131,5 +134,6 @@ export class CrdtScxStore extends CrdtDocStore<ScxRecord> {
 			for (const id of ids) this.records.delete(id);
 		});
 		if (ids.length > 0) scheduleBackup();
+		await this.flush();
 	}
 }

@@ -1,5 +1,5 @@
 /**
- * Automatic WebDAV backup of the working set (the CRDT store's Yjs state).
+ * Automatic WebDAV backup of the working set and the scheduled transactions\n * (the CRDT stores' Yjs state, one file each).
  *
  * Call `scheduleBackup()` after any write to the store. The upload is
  * debounced so rapid successive writes (e.g. sort + save) coalesce into one
@@ -11,7 +11,8 @@
 import { WebDavClient } from '$lib/utils/webdav';
 import { settings, deviceSettings, SettingKeys, DeviceSettingKeys } from '$lib/settings';
 import { getXactStore } from '$lib/storage/xactStoreRegistry';
-import { getDeviceId, ydocFilename } from '$lib/sync/ydocDevices';
+import { getScxStore } from '$lib/storage/scxStoreRegistry';
+import { getDeviceId, ydocFilename, type DocKind } from '$lib/sync/ydocDevices';
 import { writable } from 'svelte/store';
 import { showBackupNotification } from '$lib/utils/webNotification';
 
@@ -25,15 +26,14 @@ export interface WebDavSettings {
 /** Remote timestamps (ISO) recorded in DeviceSettingKeys.webdavLastSyncTs at the last sync. */
 export interface WebDavLastSyncTs {
 	settings: string | null;
-	scheduled: string | null;
 }
 
 /**
  * Per-device file name for the Yjs state. Each device writes only its own file,
  * so concurrent devices never overwrite each other. Shares the device ID with peer sync.
  */
-export async function crdtBackupFilename(): Promise<string> {
-	return ydocFilename(await getDeviceId());
+export async function crdtBackupFilename(kind: DocKind = 'xacts'): Promise<string> {
+	return ydocFilename(await getDeviceId(), kind);
 }
 
 /** Reactive timestamp of the most recent successful auto-backup (null = never). */
@@ -67,6 +67,25 @@ async function doBackup(): Promise<void> {
 		}
 	} catch (err) {
 		console.warn('[webdav-auto-backup] Yjs upload error:', err);
+	}
+
+	// The scheduled transactions, once their store exists. A device that hasn't been
+	// through the first-launch migration prompt yet is skipped: a background timer
+	// must not create the store (that would pre-empt the prompt).
+	try {
+		const scxStore = await getScxStore();
+		if (await scxStore.isInitialized()) {
+			const res = await client.put(
+				await crdtBackupFilename('scx'),
+				await scxStore.exportState(),
+				'application/octet-stream'
+			);
+			if (!res.ok) {
+				console.warn(`[webdav-auto-backup] scx PUT failed: ${res.status} ${res.statusText}`);
+			}
+		}
+	} catch (err) {
+		console.warn('[webdav-auto-backup] scx upload error:', err);
 	}
 }
 

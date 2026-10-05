@@ -4,7 +4,6 @@
     import Toolbar from '$lib/components/Toolbar.svelte';
     import { settings, SettingKeys } from '$lib/settings';
     import { WebDavClient } from '$lib/utils/webdav';
-    import { listScx } from '$lib/services/scxService';
     import { CheckIcon, CopyIcon } from '@lucide/svelte';
 
     type PreviewSection = { filename: string; content: string };
@@ -45,17 +44,6 @@
                     content = res.ok ? await res.text() : `Error ${res.status}: ${res.statusText}`;
                 }
                 result.push({ filename: 'settings.json', content });
-            }
-            if (files.includes('scheduled')) {
-                let content: string;
-                if (source === 'local') {
-                    const all = await listScx();
-                    content = JSON.stringify(all, null, 2);
-                } else {
-                    const res = await dav!.getJson('scheduled.json');
-                    content = res.ok ? await res.text() : `Error ${res.status}: ${res.statusText}`;
-                }
-                result.push({ filename: 'scheduled.json', content });
             }
         } catch (err) {
             error = (err as Error).message;
