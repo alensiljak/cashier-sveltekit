@@ -71,9 +71,11 @@ export class CrdtXactStore extends CrdtDocStore<XactRecord> {
 		);
 	}
 
-	private put(id: XactId, record: XactRecord): StoredXact {
+	/** Writes the record and resolves once it is committed to IndexedDB. */
+	private async put(id: XactId, record: XactRecord): Promise<StoredXact> {
 		this.records.set(id, record);
 		scheduleBackup();
+		await this.flush();
 		return { xact: fromRecord(record), id, origin: record.origin };
 	}
 
@@ -100,6 +102,7 @@ export class CrdtXactStore extends CrdtDocStore<XactRecord> {
 			}
 		});
 		if (ids.length > 0) scheduleBackup();
+		await this.flush();
 		return ids;
 	}
 
@@ -122,6 +125,7 @@ export class CrdtXactStore extends CrdtDocStore<XactRecord> {
 		await this.ready();
 		this.records.delete(id);
 		scheduleBackup();
+		await this.flush();
 	}
 
 	async list(): Promise<StoredXact[]> {
