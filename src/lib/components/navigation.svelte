@@ -386,6 +386,18 @@
 						</li>
 						<li>
 							<a
+								href="/backup/s3"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/backup/s3'
+									? 'active bg-secondary text-secondary-content'
+									: ''}"
+								onclick={closeDrawer}
+							>
+								<CloudIcon />
+								<span>S3 Sync</span>
+							</a>
+						</li>
+						<li>
+							<a
 								href="/importers"
 								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/importers'
 									? 'active bg-secondary text-secondary-content'

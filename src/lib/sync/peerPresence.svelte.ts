@@ -167,7 +167,8 @@ export class PeerPresence {
 		const savedStrategy = await settings.get<RelayStrategy>(SettingKeys.peerRelayStrategy);
 		if (savedStrategy) this.strategy = savedStrategy;
 
-		this.iceServers = (await deviceSettings.get<RTCIceServer[]>(DeviceSettingKeys.peerIceServers)) ?? [];
+		this.iceServers =
+			(await deviceSettings.get<RTCIceServer[]>(DeviceSettingKeys.peerIceServers)) ?? [];
 
 		this.trustedPeers = await db.peers.toArray();
 	}

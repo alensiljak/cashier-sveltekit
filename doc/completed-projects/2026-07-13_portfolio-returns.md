@@ -44,7 +44,7 @@ This is MWRR — timing and size of each flow affects the discount rate solved f
 
 - [x] Implemented: `src/lib/portfolioReturns/cashFlows.ts` —
       `extractAllGroupFlows(queryFn, groups, reportCurrency, startDate, endDate):
-Map<groupName, GroupFlowsResult>`, batching every group into 4 BQL queries total
+  Map<groupName, GroupFlowsResult>`, batching every group into 4 BQL queries total
       (2 market-value date points, 1 id-discovery query, 1 postings query) instead of 4 per
       group. `extractGroupFlows(queryFn, group, ...)` is a single-group convenience wrapper
       around it.
@@ -53,7 +53,7 @@ Map<groupName, GroupFlowsResult>`, batching every group into 4 BQL queries total
       real multi-level asset-class tree with dozens of leaf groups — each scan is O(ledger
       size) against a single-threaded WASM worker, so per-group querying was O(groups ×
       ledger size). Batched: 1 combined market-value query per date point (`GROUP BY
-account`, summed client-side per group), 1 combined id-discovery query across every
+  account`, summed client-side per group), 1 combined id-discovery query across every
       group's accounts (a transaction touching two groups' accounts, e.g. a rebalance, is
       recorded against both), 1 combined postings query over the union of ids. Total query
       count is now O(1) in the number of groups.
