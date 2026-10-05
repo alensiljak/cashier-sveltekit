@@ -97,7 +97,7 @@ export class Price {
 }
 
 /** Identifier of a scheduled transaction. Opaque to callers: only pass back what the storage gave them. */
-export type ScxId = number;
+export type ScxId = string;
 
 export class ScheduledTransaction {
 	id?: ScxId;

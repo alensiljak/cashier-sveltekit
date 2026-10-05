@@ -74,36 +74,48 @@ export class CrdtScxStore extends CrdtDocStore<ScxRecord> {
 			.map(fromRecord);
 	}
 
+	/**
+	 * The ID a record is stored under: its own if it is a store ID (a string),
+	 * otherwise a new one. So records from a backup or another device keep their
+	 * identity, while new ones and legacy numeric ones get a fresh ID.
+	 */
+	private idFor(scx: { id?: unknown }): CrdtScxId {
+		return typeof scx.id === 'string' && scx.id ? scx.id : newId();
+	}
+
 	/** Updates the record under `scx.id`, or adds a new one (with a new ID) if it has none. Returns the ID. */
 	async save(scx: Omit<ScheduledTransaction, 'id'> & { id?: unknown }): Promise<CrdtScxId> {
 		await this.ready();
-		const id = typeof scx.id === 'string' && scx.id ? scx.id : newId();
-		this.put(scx, id);
+		const id = this.put(scx, this.idFor(scx));
 		scheduleBackup();
 		return id;
 	}
 
 	/**
-	 * Adds many as new records in one Yjs transaction, so they persist and sync as
-	 * a single update and observers are notified once. Returns the new IDs.
+	 * Adds many records (IDs as for `save`) in one Yjs transaction, so they persist
+	 * and sync as a single update and observers are notified once. Returns their IDs.
 	 */
-	async addMany(list: Omit<ScheduledTransaction, 'id'>[]): Promise<CrdtScxId[]> {
+	async addMany(
+		list: (Omit<ScheduledTransaction, 'id'> & { id?: unknown })[]
+	): Promise<CrdtScxId[]> {
 		await this.ready();
 		const ids: CrdtScxId[] = [];
 		this.doc.transact(() => {
-			for (const scx of list) ids.push(this.put(scx, newId()));
+			for (const scx of list) ids.push(this.put(scx, this.idFor(scx)));
 		});
 		if (ids.length > 0) scheduleBackup();
 		return ids;
 	}
 
-	/** Replaces all records with `list` (all as new records), in one Yjs transaction. Returns the new IDs. */
-	async replaceAll(list: Omit<ScheduledTransaction, 'id'>[]): Promise<CrdtScxId[]> {
+	/** Replaces all records with `list` (IDs as for `save`), in one Yjs transaction. Returns their IDs. */
+	async replaceAll(
+		list: (Omit<ScheduledTransaction, 'id'> & { id?: unknown })[]
+	): Promise<CrdtScxId[]> {
 		await this.ready();
 		const ids: CrdtScxId[] = [];
 		this.doc.transact(() => {
 			this.records.clear();
-			for (const scx of list) ids.push(this.put(scx, newId()));
+			for (const scx of list) ids.push(this.put(scx, this.idFor(scx)));
 		});
 		scheduleBackup();
 		return ids;

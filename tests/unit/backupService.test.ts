@@ -4,10 +4,15 @@
     and a bad file never destroys existing data.
 */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+vi.mock('$lib/services/webdavAutoBackupService', () => ({ scheduleBackup: vi.fn() }));
+
 import db from '$lib/data/db';
 import { Setting } from '$lib/data/model';
 import { SettingKeys } from '$lib/settings';
 import appService from '$lib/services/appService';
+import { CrdtScxStore } from '$lib/storage/crdtScxStore';
+import { setScxStore } from '$lib/storage/scxStoreRegistry';
 import {
 	createBackup,
 	createBackupFile,
@@ -23,17 +28,19 @@ const scx = (payee: string, nextDate = '2026-01-01') => ({
 	transaction: { date: nextDate, payee, postings: [], meta: {} }
 });
 
+let scxCounter = 0;
+let scxStore: CrdtScxStore;
+
 async function seed() {
+	// A fresh store per test, so tests never share records.
+	scxStore = new CrdtScxStore(`backup-test-${scxCounter++}`);
+	setScxStore(scxStore);
 	await db.settings.clear();
-	await db.scheduled.clear();
 	await db.settings.bulkAdd([new Setting('currency', '"EUR"'), new Setting('theme', '"dark"')]);
-	await db.scheduled.bulkAdd([scx('Rent'), scx('Gym', '2026-02-01')]);
+	await scxStore.addMany([scx('Rent'), scx('Gym', '2026-02-01')]);
 }
 
-const payees = async () =>
-	(await db.scheduled.toArray()).map(
-		(s: { transaction: { payee: string } }) => s.transaction.payee
-	);
+const payees = async () => (await scxStore.list()).map((s) => s.transaction?.payee);
 
 beforeEach(seed);
 afterEach(() => vi.restoreAllMocks());
@@ -65,7 +72,7 @@ describe('createBackup', () => {
 
 	it('produces an empty but valid backup for an empty database', async () => {
 		await db.settings.clear();
-		await db.scheduled.clear();
+		await scxStore.clear();
 
 		expect(JSON.parse(await createBackup())).toEqual({ settings: [], scx: [] });
 	});
@@ -75,7 +82,7 @@ describe('restoreBackup', () => {
 	it('round-trips: restoring a backup brings back exactly what it saved', async () => {
 		const backup = await createBackup();
 		await db.settings.clear();
-		await db.scheduled.clear();
+		await scxStore.clear();
 		await db.settings.put(new Setting('other', '"x"'));
 
 		await restoreBackup(backup);

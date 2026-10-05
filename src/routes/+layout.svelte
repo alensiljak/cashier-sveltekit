@@ -10,6 +10,7 @@
 	import { onMount } from 'svelte';
 	import { desktopNavVisible, drawerState } from '$lib/data/mainStore';
 	import NavigationV3 from '$lib/components/navigation.svelte';
+	import ScxMigrationDialog from '$lib/components/ScxMigrationDialog.svelte';
 	import Notifier from '$lib/utils/notifier';
 	import { ensureInitialized, finishInitialization } from '$lib/data/initializer';
 	import { goto } from '$app/navigation';
@@ -132,6 +133,8 @@
 		</div>
 	</div>
 </div>
+
+<ScxMigrationDialog />
 
 {#await import('$lib/components/ReloadPrompt.svelte') then { default: ReloadPrompt }}
 	<ReloadPrompt />

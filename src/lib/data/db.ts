@@ -105,6 +105,11 @@ db.version(6).stores({
 	peerSyncBaseline: '[endpointId+path]'
 });
 
+// TODO: add a version that drops `scheduled` (`scheduled: null`) and remove the
+// legacy migration (`scxMigration.ts`, `ScxMigrationDialog.svelte`) with it. The
+// scheduled transactions now live in the CRDT store (`CrdtScxStore`); this table
+// is only read once, by that migration.
+
 // Mappings
 
 db.settings.mapToClass(Setting);

@@ -6,7 +6,7 @@
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import { ScheduledXact, xact } from '$lib/data/mainStore';
-	import { ScheduledTransaction, Xact, type Money } from '$lib/data/model';
+	import { ScheduledTransaction, Xact, type Money, type ScxId } from '$lib/data/model';
 	import appService from '$lib/services/appService';
 	import { getDateColour, getMoneyColour } from '$lib/utils/formatter';
 	import { ListSearch } from '$lib/utils/ListSearch';
@@ -63,7 +63,7 @@
 		await goto('/scx-editor/null');
 	}
 
-	async function onItemClicked(id: number) {
+	async function onItemClicked(id: ScxId) {
 		// load Scheduled Transaction into state.
 		await appService.loadScheduledXact(id);
 		// show details page
@@ -144,7 +144,7 @@
 					<!-- svelte-ignore a11y_no_static_element_interactions -->
 					<div
 						class="border-base-content/10 flex flex-row border-b py-2 px-1"
-						onclick={() => onItemClicked(scx.id as number)}
+						onclick={() => onItemClicked(scx.id as ScxId)}
 					>
 						<div class="grow">
 							<data>{scx.transaction?.payee}</data>

@@ -124,6 +124,19 @@ describe('bulk operations', () => {
 		expect(onChange).toHaveBeenCalledTimes(1);
 	});
 
+	it('keeps string ids it is given, and replaces numeric (legacy) ones', async () => {
+		const store = newStore();
+
+		const [kept, replaced] = await store.addMany([
+			{ ...scx('Kept'), id: 'my-ulid' },
+			{ ...scx('Legacy'), id: 7 }
+		]);
+
+		expect(kept).toBe('my-ulid');
+		expect(replaced).not.toBe(7);
+		expect(typeof replaced).toBe('string');
+	});
+
 	it('replaces everything', async () => {
 		const store = newStore();
 		await store.addMany([scx('A'), scx('B')]);

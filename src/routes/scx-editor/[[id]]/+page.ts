@@ -13,21 +13,15 @@ export const load: PageLoad = async ({ params }) => {
 };
 
 async function loadData(id?: string) {
-	if (!id) return;
-
 	// empty id is sent as "null"
-	const sxId = Number(id);
-	if (isNaN(sxId)) {
-		console.warn('specified id is not numeric');
-		return;
-	}
+	if (!id || id === 'null') return;
 
 	// If the transaction is already loaded, do not reload it.
 	// This allows us to return from sub-pages (like delete postings) without losing changes.
 	const currentScx = get(ScheduledXact);
-	if (currentScx && currentScx.id === sxId) {
+	if (currentScx && currentScx.id === id) {
 		return;
 	}
 
-	await appService.loadScheduledXact(sxId);
+	await appService.loadScheduledXact(id);
 }

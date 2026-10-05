@@ -2,7 +2,7 @@
 	import { goto } from '$app/navigation';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { listScx } from '$lib/services/scxService';
-	import type { ScheduledTransaction } from '$lib/data/model';
+	import type { ScheduledTransaction, ScxId } from '$lib/data/model';
 	import appService from '$lib/services/appService';
 	import { ChevronLeftIcon, ChevronRightIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
@@ -91,7 +91,7 @@
 		selectedDate = selectedDate === iso ? null : iso;
 	}
 
-	async function onItemClicked(id: number) {
+	async function onItemClicked(id: ScxId) {
 		await appService.loadScheduledXact(id);
 		await goto(`/scx-actions/${id}`);
 	}
@@ -163,7 +163,7 @@
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
 						<div
 							class="flex flex-row items-center rounded p-2 active:bg-base-200 cursor-pointer"
-							onclick={() => onItemClicked(scx.id as number)}
+							onclick={() => onItemClicked(scx.id as ScxId)}
 						>
 							<div class="grow">
 								<div class="font-medium">{scx.transaction?.payee}</div>

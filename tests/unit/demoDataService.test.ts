@@ -11,7 +11,6 @@ vi.mock('$lib/utils/opfslib', () => ({
 vi.mock('$lib/services/ledgerReload', () => ({ reloadLedgerFromOpfs: vi.fn(async () => {}) }));
 vi.mock('$lib/services/webdavAutoBackupService', () => ({ scheduleBackup: vi.fn() }));
 
-import db from '$lib/data/db';
 import demoDataService from '$lib/services/demoDataService';
 import {
 	DeviceSettingKeys,
@@ -23,6 +22,8 @@ import {
 } from '$lib/settings';
 import { setXactStore } from '$lib/storage/xactStoreRegistry';
 import { CrdtXactStore } from '$lib/storage/crdtXactStore';
+import { CrdtScxStore } from '$lib/storage/crdtScxStore';
+import { setScxStore } from '$lib/storage/scxStoreRegistry';
 
 const INVESTMENTS_CASH = [
 	'Assets:Investments:Brokerage:Cash-EUR',
@@ -31,6 +32,7 @@ const INVESTMENTS_CASH = [
 
 let dbCounter = 0;
 let store: CrdtXactStore;
+let scxStore: CrdtScxStore;
 
 async function groups() {
 	return (await settings.get<AccountGroup[]>(SettingKeys.accountGroups)) ?? [];
@@ -40,18 +42,16 @@ beforeEach(async () => {
 	// A fresh in-memory IndexedDB database per test, so stores never share records.
 	store = new CrdtXactStore(`demo-test-${dbCounter++}`, async () => 'test-device');
 	setXactStore(store);
+	scxStore = new CrdtScxStore(`demo-scx-test-${dbCounter}`);
+	setScxStore(scxStore);
 	await settings.set(SettingKeys.accountGroups, null);
 	await settings.set(SettingKeys.favouriteAccounts, null);
 	await settings.set(SettingKeys.forecastAccounts, null);
 	await deviceSettings.set(DeviceSettingKeys.demoXactIds, null);
 	await deviceSettings.set(DeviceSettingKeys.demoScxIds, null);
-	await db.scheduled.clear();
 });
 
-const scheduledPayees = async () =>
-	(await db.scheduled.orderBy('nextDate').toArray()).map(
-		(s: { transaction: { payee: string } }) => s.transaction.payee
-	);
+const scheduledPayees = async () => (await scxStore.list()).map((s) => s.transaction?.payee);
 
 describe('activateDemoData', () => {
 	it('fills the account groups and adds an Investments group', async () => {
@@ -100,8 +100,8 @@ describe('activateDemoData', () => {
 	it('seeds monthly scheduled transactions due in the next weeks and remembers their IDs', async () => {
 		await demoDataService.activateDemoData();
 
-		const scheduled = await db.scheduled.orderBy('nextDate').toArray();
-		expect(scheduled.map((s: { transaction: { payee: string } }) => s.transaction.payee)).toEqual([
+		const scheduled = await scxStore.list();
+		expect(scheduled.map((s) => s.transaction?.payee)).toEqual([
 			'Landlord',
 			'Fitness Club',
 			'Savings Deposit'
@@ -110,19 +110,22 @@ describe('activateDemoData', () => {
 		for (const scx of scheduled) {
 			expect(scx.nextDate > today).toBe(true);
 			expect(scx).toMatchObject({ period: 'months', count: 1 });
-			expect(scx.transaction.date).toBe(scx.nextDate);
+			expect(scx.transaction?.date).toBe(scx.nextDate);
 			// One posting is left without an amount, to be balanced by the app.
 			expect(
-				scx.transaction.postings.filter((p: { amount?: number }) => p.amount === undefined)
+				scx.transaction?.postings.filter((p: { amount?: number }) => p.amount === undefined)
 			).toHaveLength(1);
 		}
-		expect((await deviceSettings.get<number[]>(DeviceSettingKeys.demoScxIds))?.sort()).toEqual(
-			scheduled.map((s: { id: number }) => s.id).sort()
+		expect((await deviceSettings.get<string[]>(DeviceSettingKeys.demoScxIds))?.sort()).toEqual(
+			scheduled.map((s) => s.id).sort()
 		);
 	});
 
 	it('does not seed scheduled transactions when the user already has some', async () => {
-		await db.scheduled.add({ nextDate: '2030-01-01', transaction: { payee: 'Mine' } });
+		await scxStore.save({
+			nextDate: '2030-01-01',
+			transaction: { payee: 'Mine', postings: [] }
+		} as never);
 
 		await demoDataService.activateDemoData();
 
@@ -178,7 +181,10 @@ describe('removeDemoData', () => {
 
 	it('removes the seeded scheduled transactions but not ones the user added', async () => {
 		await demoDataService.activateDemoData();
-		await db.scheduled.add({ nextDate: '2030-01-01', transaction: { payee: 'Mine' } });
+		await scxStore.save({
+			nextDate: '2030-01-01',
+			transaction: { payee: 'Mine', postings: [] }
+		} as never);
 
 		await demoDataService.removeDemoData();
 

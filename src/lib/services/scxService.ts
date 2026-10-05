@@ -1,58 +1,63 @@
 /**
  * Access to the scheduled transactions (SCX). Everything outside the storage
- * layer goes through here, so the backing store can change without touching
- * the callers. Currently backed by the Dexie `scheduled` table.
+ * layer goes through here. Backed by the CRDT store; the first access on a
+ * device creates it, offering to migrate the legacy Dexie records (see
+ * `scxMigration.ts`).
  */
-import db from '$lib/data/db';
 import type { ScheduledTransaction, ScxId } from '$lib/data/model';
+import type { CrdtScxStore } from '$lib/storage/crdtScxStore';
+import { getScxStore } from '$lib/storage/scxStoreRegistry';
+import { ensureScxStoreExists } from '$lib/services/scxMigration';
+
+const prepared = new WeakMap<CrdtScxStore, Promise<void>>();
+
+/** The store, once it exists on this device. Concurrent first accesses share one preparation. */
+async function store(): Promise<CrdtScxStore> {
+	const scxStore = await getScxStore();
+	let preparing = prepared.get(scxStore);
+	if (!preparing) {
+		preparing = ensureScxStoreExists(scxStore);
+		prepared.set(scxStore, preparing);
+		// A failure must not stick: the next access tries again.
+		preparing.catch(() => prepared.delete(scxStore));
+	}
+	await preparing;
+	return scxStore;
+}
 
 /** All scheduled transactions, by next date. */
 export async function listScx(): Promise<ScheduledTransaction[]> {
-	return db.scheduled.orderBy('nextDate').toArray();
+	return (await store()).list();
 }
 
 export async function getScx(id: ScxId): Promise<ScheduledTransaction | undefined> {
-	return db.scheduled.get(id);
+	return (await store()).get(id);
 }
 
 export async function countScx(): Promise<number> {
-	return db.scheduled.count();
+	return (await store()).count();
 }
 
 /** Scheduled transactions whose next date is exactly `date` (YYYY-MM-DD). */
 export async function listScxDueOn(date: string): Promise<ScheduledTransaction[]> {
-	return db.scheduled.where('nextDate').equals(date).toArray();
+	return (await store()).dueOn(date);
 }
 
 /** Updates the record with `scx.id`, or adds a new one if it has none. Returns the ID. */
 export async function saveScx(scx: ScheduledTransaction): Promise<ScxId> {
-	if (!scx.id) {
-		scx.id = new Date().getTime();
-	}
-
-	// The template must not carry a transaction id.
-	if (scx.transaction && scx.transaction.id) {
-		delete scx.transaction.id;
-	}
-
-	return (await db.scheduled.put(scx)) as ScxId;
+	return (await store()).save(scx);
 }
 
 /** Adds many as new records. Returns their IDs. */
 export async function addScx(list: ScheduledTransaction[]): Promise<ScxId[]> {
-	const ids: ScxId[] = [];
-	for (const scx of list) ids.push((await db.scheduled.add(scx)) as ScxId);
-	return ids;
+	return (await store()).addMany(list);
 }
 
 export async function removeScx(ids: ScxId | ScxId[]): Promise<void> {
-	await db.scheduled.bulkDelete(Array.isArray(ids) ? ids : [ids]);
+	await (await store()).removeMany(Array.isArray(ids) ? ids : [ids]);
 }
 
-/** Replaces all records with `list`, all-or-nothing. */
+/** Replaces all records with `list` (as new records), in one update. */
 export async function replaceAllScx(list: ScheduledTransaction[]): Promise<void> {
-	await db.transaction('rw', db.scheduled, async () => {
-		await db.scheduled.clear();
-		await db.scheduled.bulkPut(list);
-	});
+	await (await store()).replaceAll(list);
 }
