@@ -577,6 +577,59 @@ async function recordLastSync(): Promise<void> {
 	await deviceSettings.set(DeviceSettingKeys.s3LastSync, new Date().toISOString());
 }
 
+/** Whether a file-based item differs between this device and the bucket, and which way. */
+export interface FileSyncStatus {
+	/** Files that exist or changed here and would be uploaded (or deleted from the bucket). */
+	upload: number;
+	/** Files that are newer in the bucket and would be downloaded (or deleted here). */
+	download: number;
+	conflict: number;
+}
+
+export type FileSyncOverview = Record<'settings' | 'beancount', FileSyncStatus>;
+
+/** What an upload or download would do per path, in the same terms as `decide`. */
+function classify(local: string | null, remote: string | null, base: string | null) {
+	const up = decide('upload', local, remote, base).action;
+	const down = decide('download', local, remote, base).action;
+	if (up === 'unchanged') return null;
+	if (up === 'conflict' || down === 'conflict') return 'conflict' as const;
+	if (up === 'upload' || up === 'delete-remote') return 'upload' as const;
+	if (down === 'download' || down === 'delete-local') return 'download' as const;
+	return null;
+}
+
+/**
+ * Dry run for Settings and Beancount files: compares local hashes with the newest manifest
+ * entries and the last-synced hashes, without writing anything. Decrypts the manifests, so it
+ * needs the passphrase.
+ */
+export async function fetchFileSyncStatus(cfg: S3Config): Promise<FileSyncOverview> {
+	const s = await openSession(cfg);
+	const remote = latestRemote(s.manifests);
+	const result: FileSyncOverview = {
+		settings: { upload: 0, download: 0, conflict: 0 },
+		beancount: { upload: 0, download: 0, conflict: 0 }
+	};
+	const tally = (item: 'settings' | 'beancount', path: string, local: string | null) => {
+		const kind = classify(local, remote.get(path)?.hash ?? null, s.bases[path] ?? null);
+		if (kind) result[item][kind]++;
+	};
+
+	const settings = await settingsFile().read();
+	tally('settings', SETTINGS_PATH, settings ? await sha256Hex(settings) : null);
+
+	const local = await listLocalFiles();
+	const paths = new Set([...local.keys()].map((p) => FILES_PREFIX + p));
+	for (const p of remote.keys()) if (p.startsWith(FILES_PREFIX)) paths.add(p);
+	for (const path of paths) {
+		if (!isSafePath(path.slice(FILES_PREFIX.length))) continue;
+		const bytes = await beancountFile(path, local).read();
+		tally('beancount', path, bytes ? await sha256Hex(bytes) : null);
+	}
+	return result;
+}
+
 // --- preview ---
 
 /** The decryption key for the configured bucket. Throws `WrongPassphraseError` on mismatch. */

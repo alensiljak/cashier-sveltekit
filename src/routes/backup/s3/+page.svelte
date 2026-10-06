@@ -7,11 +7,13 @@
 	import type { SyncDirection } from '$lib/services/s3SyncPlan';
 	import {
 		applyDeletion,
+		fetchFileSyncStatus,
 		fetchRemoteOverview,
 		getLastSync,
 		openSession,
 		resolveConflict,
 		runSync,
+		type FileSyncOverview,
 		type RemoteItemStatus,
 		type RemoteOverview,
 		type S3Session,
@@ -28,6 +30,7 @@
 	let overview = $state<RemoteOverview | null>(null);
 	let lastSync = $state<Date | null>(null);
 	let checkingRemote = $state(false);
+	let fileStatus = $state<FileSyncOverview | null>(null);
 
 	const statusRows: { label: string; key: keyof RemoteOverview }[] = [
 		{ label: 'Settings', key: 'settings' },
@@ -42,11 +45,42 @@
 		checkingRemote = true;
 		try {
 			[overview, lastSync] = await Promise.all([fetchRemoteOverview(cfg), getLastSync()]);
+			// The comparison decrypts the manifests, so it needs the passphrase.
+			fileStatus = null;
+			if (cfg.passphrase) {
+				try {
+					fileStatus = await fetchFileSyncStatus(cfg);
+				} catch (e) {
+					console.warn('[s3-sync] Could not compare with the bucket', e);
+				}
+			}
 		} catch (e) {
 			Notifier.error('Could not read the bucket: ' + (e instanceof Error ? e.message : describeS3Error(e)));
 		} finally {
 			checkingRemote = false;
 		}
+	}
+
+	/** What a sync of this item would do, or null when it is in sync or unknown. */
+	function badgeFor(key: keyof RemoteOverview): { text: string; cls: string } | null {
+		if (key === 'settings' || key === 'beancount') {
+			const s = fileStatus?.[key];
+			if (!s) return null;
+			const n = (count: number) => (key === 'beancount' ? ' (' + count + ')' : '');
+			if (s.conflict) return { text: 'Conflict' + n(s.conflict), cls: 'badge-error' };
+			if (s.upload && s.download) {
+				return { text: 'Upload' + n(s.upload) + ' / Download' + n(s.download), cls: 'badge-warning' };
+			}
+			if (s.upload) return { text: 'Upload needed' + n(s.upload), cls: 'badge-info' };
+			if (s.download) return { text: 'Download available' + n(s.download), cls: 'badge-warning' };
+			return { text: 'In sync', cls: 'badge-success' };
+		}
+		// CRDT stores: only another device's upload since our last sync is detectable.
+		const other = overview?.[key].otherDeviceModified;
+		if (other && (!lastSync || other > lastSync)) {
+			return { text: 'Download available', cls: 'badge-warning' };
+		}
+		return null;
 	}
 
 	function describeItem(item: RemoteItemStatus, key: keyof RemoteOverview): string {
@@ -173,6 +207,11 @@
 	});
 </script>
 
+{#snippet badge(key: keyof RemoteOverview)}
+	{@const b = badgeFor(key)}
+	{#if b}<span class="badge badge-sm badge-soft {b.cls} ml-1">{b.text}</span>{/if}
+{/snippet}
+
 <main class="flex h-screen flex-col">
 	<Toolbar title="S3 Sync">
 		{#snippet actions()}
@@ -210,15 +249,19 @@
 							</button>
 						{/if}
 					</div>
-					<p class="mb-2 text-sm text-base-content/70">
-						Last sync on this device: {lastSync ? lastSync.toLocaleString() : 'never'}
+					<p class="mb-2 flex items-baseline justify-between gap-3 text-sm text-base-content/70">
+						<span>Last sync on this device:</span>
+						<span class="text-right text-xs">{lastSync ? lastSync.toLocaleString() : 'never'}</span>
 					</p>
 					{#if overview}
 						<dl class="space-y-1 text-sm">
 							{#each statusRows as row (row.key)}
-								<div>
-									<dt class="inline">{row.label}:</dt>
-									<dd class="inline text-xs text-base-content/60">
+								<div class="flex items-baseline justify-between gap-3">
+									<dt>
+									{row.label}:
+									{@render badge(row.key)}
+								</dt>
+									<dd class="text-right text-xs text-base-content/60">
 										{describeItem(overview[row.key], row.key)}
 									</dd>
 								</div>
@@ -243,19 +286,19 @@
 						<div class="divider my-0"></div>
 						<label class="flex cursor-pointer items-center gap-3">
 							<input type="checkbox" class="checkbox checkbox-primary" bind:checked={includeSettings} />
-							<span class="flex-1">Settings</span>
+							<span class="flex-1">Settings {@render badge('settings')}</span>
 						</label>
 						<label class="flex cursor-pointer items-center gap-3">
 							<input type="checkbox" class="checkbox checkbox-primary" bind:checked={includeScheduled} />
-							<span class="flex-1">Scheduled Transactions</span>
+							<span class="flex-1">Scheduled Transactions {@render badge('scheduled')}</span>
 						</label>
 						<label class="flex cursor-pointer items-center gap-3">
 							<input type="checkbox" class="checkbox checkbox-primary" bind:checked={includeXacts} />
-							<span class="flex-1">Local Transactions</span>
+							<span class="flex-1">Local Transactions {@render badge('xacts')}</span>
 						</label>
 						<label class="flex cursor-pointer items-center gap-3">
 							<input type="checkbox" class="checkbox checkbox-primary" bind:checked={includeBeancount} />
-							<span class="flex-1">Beancount Files</span>
+							<span class="flex-1">Beancount Files {@render badge('beancount')}</span>
 						</label>
 					</div>
 				</section>
