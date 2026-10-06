@@ -25,7 +25,13 @@
 	import { reloadLedgerFromOpfs } from '$lib/services/ledgerReload';
 	import { trustDevice } from '$lib/sync/ydocDevices';
 	import Notifier from '$lib/utils/notifier';
-	import { RefreshCwIcon, SettingsIcon, UserCheckIcon } from '@lucide/svelte';
+	import {
+		CloudDownloadIcon,
+		CloudUploadIcon,
+		RefreshCwIcon,
+		SettingsIcon,
+		UserCheckIcon
+	} from '@lucide/svelte';
 
 	let cfg = $state<S3Config | null>(null);
 	let ready = $state(false);
@@ -392,7 +398,9 @@
 						disabled={!someSelected || busy}
 						onclick={requestUpload}
 					>
-						{#if busy}<span class="loading loading-spinner loading-sm"></span>{/if}
+						{#if busy}<span class="loading loading-spinner loading-sm"></span>{:else}<CloudUploadIcon
+								class="size-5"
+							/>{/if}
 						Upload
 					</button>
 					<button
@@ -400,6 +408,7 @@
 						disabled={!someSelected || busy}
 						onclick={() => run('download')}
 					>
+						<CloudDownloadIcon class="size-5" />
 						Download
 					</button>
 				</section>
