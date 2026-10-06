@@ -86,6 +86,38 @@ export async function listObjects(cfg: S3Config, keyPrefix: string): Promise<str
 	return keys;
 }
 
+export interface S3ObjectInfo {
+	/** Key relative to the configured prefix. */
+	key: string;
+	size: number;
+	lastModified: Date | null;
+}
+
+/** Like `listObjects`, but with each object's size and server-side modification time. */
+export async function listObjectInfos(cfg: S3Config, keyPrefix: string): Promise<S3ObjectInfo[]> {
+	const client = createClient(cfg);
+	const base = cfg.prefix.replace(/^\/+|\/+$/g, '');
+	const fullPrefix = base ? `${base}/${keyPrefix}` : keyPrefix;
+	const infos: S3ObjectInfo[] = [];
+	let token: string | undefined;
+
+	do {
+		const params = new URLSearchParams({ 'list-type': '2', prefix: fullPrefix });
+		if (token) params.set('continuation-token', token);
+		const url = `${cfg.endpoint.replace(/\/+$/, '')}/${encodeURIComponent(cfg.bucket)}?${params}`;
+		const res = await client.fetch(url, { method: 'GET' });
+		if (!res.ok) throw new S3HttpError(res.status, describeStatus(res));
+		// Without a delimiter every object is a file whose name is its key below the prefix.
+		const page = parseDirectoryResponse(await res.text(), fullPrefix);
+		for (const f of page.files) {
+			infos.push({ key: keyPrefix + f.name, size: f.size, lastModified: f.lastModified });
+		}
+		token = page.nextToken;
+	} while (token);
+
+	return infos;
+}
+
 export function parseListResponse(xml: string): { keys: string[]; nextToken?: string } {
 	const doc = new DOMParser().parseFromString(xml, 'application/xml');
 	const keys = Array.from(doc.getElementsByTagName('Contents'), (c) => {

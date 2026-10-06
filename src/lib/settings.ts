@@ -148,6 +148,8 @@ export const DeviceSettingKeys = {
 	// Content hash of each shared S3 object (settings, Beancount files) at the last sync, as the
 	// common ancestor for conflict detection. Shape: Record<path, hash>
 	s3SyncBase: 's3-sync-base',
+	// When this device last completed an S3 upload or download. Shape: ISO string
+	s3LastSync: 's3-last-sync',
 	// Which backup/sync options are enabled on this device (shown in the menu). Shape: boolean.
 	// When unset, an option counts as enabled if it was already configured (see syncOptions.svelte.ts)
 	syncWebdavEnabled: 'sync.webdav.enabled',

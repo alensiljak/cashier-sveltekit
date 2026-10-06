@@ -7,19 +7,57 @@
 	import type { SyncDirection } from '$lib/services/s3SyncPlan';
 	import {
 		applyDeletion,
+		fetchRemoteOverview,
+		getLastSync,
 		openSession,
 		resolveConflict,
 		runSync,
+		type RemoteItemStatus,
+		type RemoteOverview,
 		type S3Session,
 		type SyncItem,
 		type SyncLine
 	} from '$lib/services/s3Sync';
 	import { reloadLedgerFromOpfs } from '$lib/services/ledgerReload';
 	import Notifier from '$lib/utils/notifier';
-	import { SettingsIcon } from '@lucide/svelte';
+	import { RefreshCwIcon, SettingsIcon } from '@lucide/svelte';
 
 	let cfg = $state<S3Config | null>(null);
 	let ready = $state(false);
+
+	let overview = $state<RemoteOverview | null>(null);
+	let lastSync = $state<Date | null>(null);
+	let checkingRemote = $state(false);
+
+	const statusRows: { label: string; key: keyof RemoteOverview }[] = [
+		{ label: 'Settings', key: 'settings' },
+		{ label: 'Scheduled Transactions', key: 'scheduled' },
+		{ label: 'Local Transactions', key: 'xacts' },
+		{ label: 'Beancount Files', key: 'beancount' }
+	];
+
+	/** Reads the server-side modification times. A listing only, so it works without a passphrase. */
+	async function refreshStatus() {
+		if (!cfg) return;
+		checkingRemote = true;
+		try {
+			[overview, lastSync] = await Promise.all([fetchRemoteOverview(cfg), getLastSync()]);
+		} catch (e) {
+			Notifier.error('Could not read the bucket: ' + (e instanceof Error ? e.message : describeS3Error(e)));
+		} finally {
+			checkingRemote = false;
+		}
+	}
+
+	function describeItem(item: RemoteItemStatus, key: keyof RemoteOverview): string {
+		if (!item.count) return 'Nothing in the bucket';
+		const parts = [item.lastModified ? item.lastModified.toLocaleString() : 'unknown time'];
+		if (key === 'beancount') parts.push(`${item.count} ${item.count === 1 ? 'file' : 'files'}`);
+		if (item.otherDeviceModified) {
+			parts.push(`other devices: ${item.otherDeviceModified.toLocaleString()}`);
+		}
+		return parts.join(' · ');
+	}
 
 	let includeSettings = $state(false);
 	let includeScheduled = $state(false);
@@ -96,6 +134,7 @@
 			session = await openSession(cfg);
 			lines = await runSync(session, direction, selectedItems());
 			reloadIfNeeded(lines);
+			void refreshStatus();
 			if (
 				!lines.some(
 					(l) => l.outcome === 'conflict' || l.outcome === 'error' || l.outcome === 'pending-delete'
@@ -130,6 +169,7 @@
 		}
 		cfg = saved;
 		ready = true;
+		void refreshStatus();
 	});
 </script>
 
@@ -153,6 +193,38 @@
 					<span class="font-mono text-xs text-base-content/60">
 						{cfg.bucket}{cfg.prefix ? '/' + cfg.prefix : ''}
 					</span>
+				</section>
+
+				<section class="my-4">
+					<div class="mb-3 flex items-center justify-between">
+						<h2 class="text-lg font-semibold">Bucket status</h2>
+						{#if checkingRemote}
+							<RefreshCwIcon size={14} class="animate-spin text-base-content/40" />
+						{:else}
+							<button
+								class="flex cursor-pointer items-center gap-1 text-xs text-base-content/40 hover:text-base-content/70"
+								onclick={refreshStatus}
+							>
+								<RefreshCwIcon size={12} />
+								refresh
+							</button>
+						{/if}
+					</div>
+					<p class="mb-2 text-sm text-base-content/70">
+						Last sync on this device: {lastSync ? lastSync.toLocaleString() : 'never'}
+					</p>
+					{#if overview}
+						<dl class="space-y-1 text-sm">
+							{#each statusRows as row (row.key)}
+								<div>
+									<dt class="inline">{row.label}:</dt>
+									<dd class="inline text-xs text-base-content/60">
+										{describeItem(overview[row.key], row.key)}
+									</dd>
+								</div>
+							{/each}
+						</dl>
+					{/if}
 				</section>
 
 				<section class="my-4">
@@ -188,7 +260,7 @@
 					</div>
 				</section>
 
-				<section class="flex justify-center gap-3">
+				<section class="mt-20 flex justify-center gap-3">
 					<button
 						class="btn btn-primary"
 						disabled={!someSelected || busy}

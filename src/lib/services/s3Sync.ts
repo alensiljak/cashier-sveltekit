@@ -25,7 +25,7 @@ import { getScxStore } from '$lib/storage/scxStoreRegistry';
 import { collectExportableFiles } from '$lib/utils/opfsExport';
 import { deleteFile, saveBinaryFile } from '$lib/utils/opfslib';
 import type { S3Config } from './s3Config';
-import { deleteObject, getObject, listObjects, putObject } from './s3Client';
+import { deleteObject, getObject, listObjectInfos, listObjects, putObject } from './s3Client';
 import { createKeyParams, decrypt, encrypt, openKey, sha256Hex, type KeyParams } from './s3Crypto';
 import {
 	decide,
@@ -378,6 +378,7 @@ export async function runSync(
 	}
 
 	await persist(s);
+	if (!lines.some((l) => l.outcome === 'error')) await recordLastSync();
 	return lines;
 }
 
@@ -451,8 +452,10 @@ export async function syncCrdtStores(
 		...(await syncCrdt(s, 'upload', 'xacts')),
 		...(await syncCrdt(s, 'upload', 'scheduled'))
 	];
+	const errors = [...down, ...up].filter((l) => l.outcome === 'error');
+	if (!errors.length) await recordLastSync();
 	return {
-		errors: [...down, ...up].filter((l) => l.outcome === 'error'),
+		errors,
 		merged: down.some((l) => l.outcome === 'downloaded' && l.item === 'xacts')
 	};
 }
@@ -511,6 +514,67 @@ export async function applyDeletion(s: S3Session, line: SyncLine): Promise<SyncL
 	} catch (e) {
 		return { item, path, outcome: 'error', message: errorText(e) };
 	}
+}
+
+// --- status ---
+
+export interface RemoteItemStatus {
+	/** Newest server-side modification among the item's objects. */
+	lastModified: Date | null;
+	/** Objects (files, or per-device state files) behind the item. */
+	count: number;
+	/** CRDT items: the newest upload by another device, if any. */
+	otherDeviceModified?: Date | null;
+}
+
+export interface RemoteOverview {
+	settings: RemoteItemStatus;
+	scheduled: RemoteItemStatus;
+	xacts: RemoteItemStatus;
+	beancount: RemoteItemStatus;
+}
+
+const newest = (dates: (Date | null)[]): Date | null =>
+	dates.reduce<Date | null>((a, d) => (d && (!a || d > a) ? d : a), null);
+
+/**
+ * What the bucket holds and when it last changed, from a plain listing. Needs no passphrase and
+ * decrypts nothing.
+ */
+export async function fetchRemoteOverview(cfg: S3Config): Promise<RemoteOverview> {
+	const deviceId = await getDeviceId();
+	const [data, xacts, scx] = await Promise.all([
+		listObjectInfos(cfg, 'data/'),
+		listObjectInfos(cfg, 'crdt/xacts/'),
+		listObjectInfos(cfg, 'crdt/scx/')
+	]);
+
+	const crdt = (infos: typeof xacts): RemoteItemStatus => ({
+		lastModified: newest(infos.map((i) => i.lastModified)),
+		count: infos.length,
+		otherDeviceModified: newest(
+			infos.filter((i) => !i.key.endsWith(`/${deviceId}.ydoc`)).map((i) => i.lastModified)
+		)
+	});
+	const files = data.filter((i) => i.key.startsWith(dataKey(FILES_PREFIX)));
+	const settings = data.filter((i) => i.key === dataKey(SETTINGS_PATH));
+
+	return {
+		settings: { lastModified: newest(settings.map((i) => i.lastModified)), count: settings.length },
+		scheduled: crdt(scx),
+		xacts: crdt(xacts),
+		beancount: { lastModified: newest(files.map((i) => i.lastModified)), count: files.length }
+	};
+}
+
+/** When this device last finished an upload or download, or null if it never has. */
+export async function getLastSync(): Promise<Date | null> {
+	const iso = await deviceSettings.get<string>(DeviceSettingKeys.s3LastSync);
+	return iso ? new Date(iso) : null;
+}
+
+async function recordLastSync(): Promise<void> {
+	await deviceSettings.set(DeviceSettingKeys.s3LastSync, new Date().toISOString());
 }
 
 // --- preview ---
