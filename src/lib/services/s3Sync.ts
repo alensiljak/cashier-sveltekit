@@ -253,7 +253,12 @@ async function syncShared(
 		const remote = latestRemote(s.manifests).get(path)?.hash ?? null;
 		let d = decide(direction, local, remote, s.bases[path] ?? null);
 
-		if (d.action === 'conflict' && item === 'beancount' && bytes && (await sameText(s, file, bytes))) {
+		if (
+			d.action === 'conflict' &&
+			item === 'beancount' &&
+			bytes &&
+			(await sameText(s, file, bytes))
+		) {
 			// Only line endings differ: not a real conflict. Make both sides hold the same bytes.
 			d = { action: direction };
 		}
