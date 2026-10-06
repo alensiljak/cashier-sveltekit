@@ -237,6 +237,8 @@
 				</li>
 			{/each}
 		</ul>
+
+		<a href="/settings/trusted-devices" class="link text-xs">Manage trusted devices</a>
 </div>
 
 {#if trusting}

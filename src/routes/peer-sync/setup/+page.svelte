@@ -60,11 +60,6 @@
 		}
 	}
 
-	function formatDate(iso: string | undefined = undefined): string {
-		if (!iso) return '—';
-		return new Date(iso).toLocaleString();
-	}
-
 	async function saveIdentity() {
 		const name = nameInput.trim();
 		const room = roomInput.trim();
@@ -100,15 +95,6 @@
 		await deviceSettings.set(DeviceSettingKeys.peerAutoReload, value);
 	}
 
-	async function setReadOnly(persistentId: string, value: boolean) {
-		await presence.setReadOnly(persistentId, value);
-		Notifier.info(value ? 'Its data will be ignored' : 'Two-way sync restored');
-	}
-
-	async function removeTrust(persistentId: string) {
-		await presence.removeTrust(persistentId);
-		Notifier.info('Trust removed');
-	}
 </script>
 
 <main class="flex h-full flex-col">
@@ -236,51 +222,16 @@
 		</div>
 
 		<!-- Trusted Devices -->
-		<div class="card bg-base-200 shadow-sm">
-			<div class="card-body gap-2 p-4">
-				<h2 class="card-title text-sm">
-					Trusted devices
-					<span class="badge badge-neutral badge-sm">{presence.trustedPeers.length}</span>
-				</h2>
-				{#if presence.trustedPeers.length === 0}
-					<p class="text-sm opacity-50">
-						No trusted devices yet. Connect on the Peer Sync page and trust a device there.
+		<a href="/settings/trusted-devices" class="card bg-base-200 shadow-sm">
+			<div class="card-body flex-row items-center justify-between gap-3 p-4">
+				<div>
+					<p class="text-sm font-semibold">Trusted devices</p>
+					<p class="text-xs opacity-60">
+						Manage which devices to sync with. Also used by WebDAV and S3.
 					</p>
-				{:else}
-					<ul class="divide-base-300 divide-y">
-						{#each presence.trustedPeers as tp (tp.id)}
-							<li class="flex items-start justify-between gap-2 py-2">
-								<div class="min-w-0 flex-1">
-									<p class="text-sm font-semibold">
-										{tp.name}
-										{#if tp.readOnly}<span class="badge badge-neutral badge-sm">read-only</span>{/if}
-									</p>
-									<p class="font-mono text-xs break-all opacity-40">{tp.id}</p>
-									<p class="text-xs opacity-40">
-										Trusted: {formatDate(tp.trustedAt)} · Seen: {formatDate(tp.lastSeen)}
-									</p>
-									<label class="mt-1 flex cursor-pointer items-center gap-2">
-										<input
-											type="checkbox"
-											class="toggle toggle-sm toggle-warning bg-transparent bg-none"
-											checked={!!tp.readOnly}
-											aria-label="Read-only: ignore data from {tp.name}"
-											onchange={(e) => setReadOnly(tp.id, e.currentTarget.checked)}
-										/>
-										<span class="text-xs opacity-60">Read-only (ignore its data)</span>
-									</label>
-								</div>
-								<button
-									class="btn btn-ghost btn-sm text-error shrink-0"
-									onclick={() => removeTrust(tp.id)}
-								>
-									Remove
-								</button>
-							</li>
-						{/each}
-					</ul>
-				{/if}
+				</div>
+				<span class="badge badge-neutral badge-sm">{presence.trustedPeers.length}</span>
 			</div>
-		</div>
+		</a>
 	</section>
 </main>

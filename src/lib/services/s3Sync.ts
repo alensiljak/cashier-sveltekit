@@ -18,6 +18,7 @@ import * as Y from 'yjs';
 import { CASHIER_DATA_DIR } from '$lib/constants';
 import { deviceSettings, DeviceSettingKeys } from '$lib/settings';
 import { exportSettingsJson, importSettingsJson } from '$lib/services/backupService';
+import db from '$lib/data/db';
 import { getDeviceId } from '$lib/sync/ydocDevices';
 import { hasNewOps } from '$lib/sync/ydocCompare';
 import { getXactStore } from '$lib/storage/xactStoreRegistry';
@@ -275,6 +276,20 @@ async function syncShared(
 
 // --- CRDT stores (transactions, scheduled transactions) ---
 
+/** Device ID in a `crdt/<kind>/<deviceId>.ydoc` object key, or null. */
+const deviceIdOfKey = (objectKey: string): string | null =>
+	/\/([^/]+)\.ydoc$/.exec(objectKey)?.[1] ?? null;
+
+/** Why another device's CRDT state is not merged here: not on the Trusted Devices list, or read-only. */
+async function loadIgnoreReasons(): Promise<(deviceId: string | null) => string | null> {
+	const peers = new Map((await db.peers.toArray()).map((p) => [p.id, p]));
+	return (deviceId) => {
+		const peer = deviceId ? peers.get(deviceId) : undefined;
+		if (!peer) return 'Device not trusted';
+		return peer.readOnly ? 'Device is read-only' : null;
+	};
+}
+
 interface CrdtStoreLike {
 	isInitialized(): Promise<boolean>;
 	exportState(): Promise<Uint8Array>;
@@ -311,7 +326,13 @@ async function syncCrdt(
 				{ item, path: prefix, outcome: 'skipped', message: 'No other device has uploaded yet' }
 			];
 		}
+		const ignoreReason = await loadIgnoreReasons();
 		for (const key of keys) {
+			const reason = ignoreReason(deviceIdOfKey(key));
+			if (reason) {
+				lines.push({ item, path: key, outcome: 'skipped', message: reason });
+				continue;
+			}
 			try {
 				const raw = await getObject(s.cfg, key);
 				if (!raw) continue;
@@ -411,7 +432,9 @@ async function crdtDiffers(s: CrdtSession, item: 'xacts' | 'scheduled'): Promise
 
 	const local = await store.exportState();
 	let ownSeen = false;
+	const ignoreReason = await loadIgnoreReasons();
 	for (const key of await listObjects(s.cfg, prefix)) {
+		if (key !== ownKey && ignoreReason(deviceIdOfKey(key))) continue;
 		const raw = await getObject(s.cfg, key);
 		if (!raw) continue;
 		const remote = await decrypt(s.key, raw);
@@ -543,17 +566,21 @@ const newest = (dates: (Date | null)[]): Date | null =>
  */
 export async function fetchRemoteOverview(cfg: S3Config): Promise<RemoteOverview> {
 	const deviceId = await getDeviceId();
+	const ignoreReason = await loadIgnoreReasons();
 	const [data, xacts, scx] = await Promise.all([
 		listObjectInfos(cfg, 'data/'),
 		listObjectInfos(cfg, 'crdt/xacts/'),
 		listObjectInfos(cfg, 'crdt/scx/')
 	]);
 
+	// Only devices whose data would be merged count as "other devices".
 	const crdt = (infos: typeof xacts): RemoteItemStatus => ({
 		lastModified: newest(infos.map((i) => i.lastModified)),
 		count: infos.length,
 		otherDeviceModified: newest(
-			infos.filter((i) => !i.key.endsWith(`/${deviceId}.ydoc`)).map((i) => i.lastModified)
+			infos
+				.filter((i) => !i.key.endsWith(`/${deviceId}.ydoc`) && !ignoreReason(deviceIdOfKey(i.key)))
+				.map((i) => i.lastModified)
 		)
 	});
 	const files = data.filter((i) => i.key.startsWith(dataKey(FILES_PREFIX)));
@@ -565,6 +592,43 @@ export async function fetchRemoteOverview(cfg: S3Config): Promise<RemoteOverview
 		xacts: crdt(xacts),
 		beancount: { lastModified: newest(files.map((i) => i.lastModified)), count: files.length }
 	};
+}
+
+export interface BucketDevice {
+	deviceId: string;
+	lastModified: Date | null;
+	/** Name from the Trusted Devices list, when trusted. */
+	name?: string;
+	trusted: boolean;
+	readOnly: boolean;
+}
+
+/** Other devices that have uploaded CRDT state to the bucket, by a plain listing (no passphrase needed). */
+export async function listBucketDevices(cfg: S3Config): Promise<BucketDevice[]> {
+	const [selfId, peers, xacts, scx] = await Promise.all([
+		getDeviceId(),
+		db.peers.toArray(),
+		listObjectInfos(cfg, 'crdt/xacts/'),
+		listObjectInfos(cfg, 'crdt/scx/')
+	]);
+	const found = new Map<string, Date | null>();
+	for (const i of [...xacts, ...scx]) {
+		const id = deviceIdOfKey(i.key);
+		if (!id || id === selfId) continue;
+		found.set(id, newest([found.get(id) ?? null, i.lastModified]));
+	}
+	return [...found]
+		.map(([deviceId, lastModified]) => {
+			const peer = peers.find((p) => p.id === deviceId);
+			return {
+				deviceId,
+				lastModified,
+				name: peer?.name,
+				trusted: !!peer,
+				readOnly: !!peer?.readOnly
+			};
+		})
+		.sort((a, b) => a.deviceId.localeCompare(b.deviceId));
 }
 
 /** When this device last finished an upload or download, or null if it never has. */

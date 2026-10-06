@@ -10,7 +10,9 @@ Each device has an editable **Device Name** and a **Room** code (default `cashie
 
 When another device joins your room, it appears under **Peers in Room**. Before you can sync with it, both devices must confirm they see the same **pairing code** — a 6-digit code shown on both screens. Tap **Trust This Device** on each device once you've verified the codes match. Only trusted peers can be selected as a sync source.
 
-Trusted devices are remembered and listed under **Trusted Devices**, where you can remove trust for a device at any time.
+Trusted devices are remembered and listed on the **Trusted Devices** page (open it from the **Trusted devices** card on Peer Sync Setup, or from the WebDAV and S3 sync pages). There you can mark a device **read-only** — it stays on the list but its data is ignored — or remove trust at any time.
+
+The same list is used by WebDAV and S3 sync: they merge transactions only from trusted devices, so you can manage trust there even if you never use Peer Sync.
 
 ## Syncing from a trusted peer
 

@@ -10,7 +10,9 @@
 		fetchFileSyncStatus,
 		fetchRemoteOverview,
 		getLastSync,
+		listBucketDevices,
 		openSession,
+		type BucketDevice,
 		resolveConflict,
 		runSync,
 		type FileSyncOverview,
@@ -21,8 +23,9 @@
 		type SyncLine
 	} from '$lib/services/s3Sync';
 	import { reloadLedgerFromOpfs } from '$lib/services/ledgerReload';
+	import { trustDevice } from '$lib/sync/ydocDevices';
 	import Notifier from '$lib/utils/notifier';
-	import { RefreshCwIcon, SettingsIcon } from '@lucide/svelte';
+	import { RefreshCwIcon, SettingsIcon, UserCheckIcon } from '@lucide/svelte';
 
 	let cfg = $state<S3Config | null>(null);
 	let ready = $state(false);
@@ -31,6 +34,13 @@
 	let lastSync = $state<Date | null>(null);
 	let checkingRemote = $state(false);
 	let fileStatus = $state<FileSyncOverview | null>(null);
+	let devices = $state<BucketDevice[]>([]);
+
+	async function trust(d: BucketDevice) {
+		await trustDevice(d.deviceId);
+		Notifier.success('Device trusted');
+		await refreshStatus();
+	}
 
 	const statusRows: { label: string; key: keyof RemoteOverview }[] = [
 		{ label: 'Settings', key: 'settings' },
@@ -44,7 +54,11 @@
 		if (!cfg) return;
 		checkingRemote = true;
 		try {
-			[overview, lastSync] = await Promise.all([fetchRemoteOverview(cfg), getLastSync()]);
+			[overview, lastSync, devices] = await Promise.all([
+				fetchRemoteOverview(cfg),
+				getLastSync(),
+				listBucketDevices(cfg)
+			]);
 			// The comparison decrypts the manifests, so it needs the passphrase.
 			fileStatus = null;
 			if (cfg.passphrase) {
@@ -267,6 +281,49 @@
 								</div>
 							{/each}
 						</dl>
+					{/if}
+				</section>
+
+				<section class="my-4">
+					<div class="mb-3 flex items-center justify-between">
+						<h2 class="text-lg font-semibold">Other devices</h2>
+						<a href="/settings/trusted-devices" class="link text-xs">Manage trusted devices</a>
+					</div>
+					{#if devices.length === 0}
+						<p class="text-xs text-base-content/50">No other device has uploaded yet.</p>
+					{:else}
+						<ul class="space-y-2">
+							{#each devices as d (d.deviceId)}
+								<li class="flex items-center gap-2">
+									<div class="min-w-0 flex-1">
+										<div class="flex items-center gap-2 text-sm">
+											<span class="truncate font-medium">
+												{d.name ?? `Device ${d.deviceId.slice(0, 6)}`}
+											</span>
+											{#if !d.trusted}
+												<span class="badge badge-warning badge-sm">not trusted</span>
+											{:else if d.readOnly}
+												<span class="badge badge-neutral badge-sm">read-only</span>
+											{:else}
+												<span class="badge badge-success badge-sm">trusted</span>
+											{/if}
+										</div>
+										<div class="text-xs text-base-content/50">
+											{#if d.lastModified}Updated {d.lastModified.toLocaleString()}{/if}
+										</div>
+									</div>
+									{#if !d.trusted}
+										<button class="btn btn-xs btn-outline" onclick={() => trust(d)}>
+											<UserCheckIcon size={12} />
+											Trust
+										</button>
+									{/if}
+								</li>
+							{/each}
+						</ul>
+						<p class="mt-2 text-xs text-base-content/50">
+							Transactions are merged only from trusted devices.
+						</p>
 					{/if}
 				</section>
 

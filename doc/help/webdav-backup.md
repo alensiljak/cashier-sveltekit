@@ -14,7 +14,7 @@ Three items can be backed up independently:
 
 Check the ones you want, or use **Select all**. Each item shows the last-modified time on the remote, refreshed automatically or via the refresh icon.
 
-Tap the arrow next to **Local Transactions** to list the files of all devices in the folder. Files from trusted devices are merged into yours on **Download**.
+Tap the arrow next to **Local Transactions** to list the files of all devices in the folder. Files from trusted devices are merged into yours on **Download**. Tap **Trust** on an unknown device to add it, or open **Manage trusted devices** to mark a device read-only or remove its trust.
 
 ## Actions
 
