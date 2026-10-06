@@ -25,6 +25,7 @@
 		"@trystero-p2p/mqtt": "^0.26.0",
 		"@trystero-p2p/nostr": "^0.26.0",
 		"@trystero-p2p/torrent": "^0.26.0",
+		"aws4fetch": "^1.0.20",
 		"big.js": "^7.0.0",
 		"chart.js": "^4.4.7",
 		"daisyui": "^5.5.8",

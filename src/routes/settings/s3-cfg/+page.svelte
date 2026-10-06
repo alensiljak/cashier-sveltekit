@@ -10,8 +10,25 @@
 		saveS3Config,
 		type S3Config
 	} from '$lib/services/s3Config';
+	import { testConnection, type S3TestStep } from '$lib/services/s3Client';
 
 	let cfg = $state<S3Config>(emptyS3Config());
+	let testing = $state(false);
+	let testSteps = $state<S3TestStep[]>([]);
+
+	async function test() {
+		if (!isS3Configured(cfg)) {
+			Notifier.error('Endpoint, bucket, access key ID and secret access key are required');
+			return;
+		}
+		testing = true;
+		testSteps = [];
+		try {
+			testSteps = await testConnection({ ...cfg, prefix: cfg.prefix.replace(/^\/+|\/+$/g, '') });
+		} finally {
+			testing = false;
+		}
+	}
 
 	onMount(async () => {
 		const saved = await loadS3Config();
@@ -122,8 +139,23 @@
 						/>
 					</div>
 
-					<div class="card-actions mt-4 justify-end">
-						<button type="submit" class="btn btn-primary">Save</button>
+					{#if testSteps.length}
+							<ul class="mt-2 space-y-1 text-sm">
+								{#each testSteps as step (step.name)}
+									<li class={step.ok ? 'text-success' : 'text-error'}>
+										{step.ok ? '✓' : '✗'}
+										{step.name}: {step.message}
+									</li>
+								{/each}
+							</ul>
+						{/if}
+
+						<div class="card-actions mt-4 justify-end">
+						<button type="button" class="btn btn-outline" onclick={test} disabled={testing}>
+								{#if testing}<span class="loading loading-spinner loading-sm"></span>{/if}
+								Test connection
+							</button>
+							<button type="submit" class="btn btn-primary">Save</button>
 					</div>
 				</form>
 			</div>
