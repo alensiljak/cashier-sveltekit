@@ -10,7 +10,8 @@ const mocks = vi.hoisted(() => ({
 	put: vi.fn(),
 	clientArgs: [] as unknown[][],
 	getXactStore: vi.fn(),
-	notify: vi.fn()
+	notify: vi.fn(),
+	notifyFailure: vi.fn()
 }));
 vi.mock('$lib/utils/webdav', () => ({
 	WebDavClient: class {
@@ -21,7 +22,10 @@ vi.mock('$lib/utils/webdav', () => ({
 	}
 }));
 vi.mock('$lib/storage/xactStoreRegistry', () => ({ getXactStore: mocks.getXactStore }));
-vi.mock('$lib/utils/webNotification', () => ({ showBackupNotification: mocks.notify }));
+vi.mock('$lib/utils/webNotification', () => ({
+	showBackupNotification: mocks.notify,
+	showBackupFailureNotification: mocks.notifyFailure
+}));
 
 import { DeviceSettingKeys, SettingKeys, deviceSettings, settings } from '$lib/settings';
 import {
@@ -39,28 +43,27 @@ async function configure({ enabled = true, cfg = CFG as unknown } = {}) {
 	await settings.set(SettingKeys.webdavSettings, cfg);
 }
 
-// The service is fire-and-forget, so completion is detected through its first awaited
-// collaborator: each mock upload/export sets this flag when it is reached.
-let settledFlag = false;
-
-/** Runs the debounce timer and waits until the scheduled upload has finished. */
+/** Runs the debounce timer and waits until the scheduled upload has finished. The service is fire-and-forget, so completion is the success/failure notification. */
 async function runBackup() {
 	scheduleBackup();
 	await vi.advanceTimersByTimeAsync(2000);
 	// The upload continues asynchronously after the timer fires.
-	await vi.waitFor(() => expect(settledFlag).toBe(true));
+	await vi.waitFor(() =>
+		expect(mocks.notify.mock.calls.length + mocks.notifyFailure.mock.calls.length).toBeGreaterThan(
+			0
+		)
+	);
 }
 
 beforeEach(async () => {
 	vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
-	settledFlag = false;
 	mocks.put.mockReset().mockImplementation(async () => {
-		settledFlag = true;
 		return new Response('', { status: 201 });
 	});
 	mocks.clientArgs.length = 0;
 	mocks.getXactStore.mockReset().mockResolvedValue({ exportState: async () => STATE });
 	mocks.notify.mockReset();
+	mocks.notifyFailure.mockReset();
 	lastBackupTime.set(null);
 	await configure();
 	vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -148,30 +151,37 @@ describe('upload', () => {
 
 	it('warns instead of throwing when the server rejects the upload', async () => {
 		mocks.put.mockImplementation(async () => {
-			settledFlag = true;
 			return new Response('', { status: 507, statusText: 'Insufficient Storage' });
 		});
 
 		await runBackup();
 
-		expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('PUT failed: 507'));
+		await vi.waitFor(() =>
+			expect(console.warn).toHaveBeenCalledWith(
+				expect.stringContaining('upload failed'),
+				expect.arrayContaining([expect.stringContaining('507')])
+			)
+		);
 		expect(get(lastBackupTime)).toBeNull();
 		expect(mocks.notify).not.toHaveBeenCalled();
+		expect(mocks.notifyFailure).toHaveBeenCalledWith('WebDAV', expect.stringContaining('507'));
 	});
 
 	it('warns when exporting or uploading fails', async () => {
 		mocks.getXactStore.mockResolvedValue({
 			exportState: async () => {
-				settledFlag = true;
 				throw new Error('export failed');
 			}
 		});
 
 		await runBackup();
 
-		expect(console.warn).toHaveBeenCalledWith(
-			expect.stringContaining('Yjs upload error'),
-			expect.any(Error)
+		await vi.waitFor(() =>
+			expect(console.warn).toHaveBeenCalledWith(
+				expect.stringContaining('upload failed'),
+				expect.arrayContaining(['export failed'])
+			)
 		);
+		expect(mocks.notifyFailure).toHaveBeenCalledWith('WebDAV', 'export failed');
 	});
 });
