@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import Toolbar from '$lib/components/Toolbar.svelte';
+	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
 	import { isS3Configured, loadS3Config, type S3Config } from '$lib/services/s3Config';
 	import { SettingsIcon } from '@lucide/svelte';
 
@@ -41,18 +42,18 @@
 </script>
 
 <main class="flex h-screen flex-col">
-	<Toolbar title="S3 Sync" />
+	<Toolbar title="S3 Sync">
+		{#snippet menuItems()}
+			<ToolbarMenuItem text="Configure" Icon={SettingsIcon} targetNav="/settings/s3-cfg" />
+		{/snippet}
+	</Toolbar>
 	{#if ready && cfg}
 		<section class="flex-1 space-y-4 overflow-y-auto touch-pan-y p-4">
 			<div class="mx-auto max-w-2xl space-y-4">
-				<section class="flex items-center justify-between text-sm">
+				<section class="text-sm">
 					<span class="font-mono text-xs text-base-content/60">
 						{cfg.bucket}{cfg.prefix ? '/' + cfg.prefix : ''}
 					</span>
-					<a href="/settings/s3-cfg" class="btn btn-ghost btn-sm gap-1">
-						<SettingsIcon size={16} />
-						Configure
-					</a>
 				</section>
 
 				<section class="my-4">

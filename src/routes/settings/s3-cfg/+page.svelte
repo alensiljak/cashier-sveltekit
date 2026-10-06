@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import Fab from '$lib/components/FAB.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
+	import { CheckIcon } from '@lucide/svelte';
 	import Notifier from '$lib/utils/notifier';
 	import {
 		emptyS3Config,
@@ -150,13 +152,11 @@
 							</ul>
 						{/if}
 
-						<div class="card-actions mt-4 justify-end">
+						<div class="card-actions mt-4 justify-center">
 						<button type="button" class="btn btn-outline" onclick={test} disabled={testing}>
 								{#if testing}<span class="loading loading-spinner loading-sm"></span>{/if}
 								Test connection
-							</button>
-							<button type="submit" class="btn btn-primary">Save</button>
-					</div>
+							</button>					</div>
 				</form>
 			</div>
 
@@ -182,4 +182,5 @@
 			</div>
 		</div>
 	</section>
+	<Fab Icon={CheckIcon} onclick={save} />
 </main>
