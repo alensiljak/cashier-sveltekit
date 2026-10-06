@@ -147,7 +147,12 @@ export const DeviceSettingKeys = {
 	s3Settings: 's3-settings',
 	// Content hash of each shared S3 object (settings, Beancount files) at the last sync, as the
 	// common ancestor for conflict detection. Shape: Record<path, hash>
-	s3SyncBase: 's3-sync-base'
+	s3SyncBase: 's3-sync-base',
+	// Which backup/sync options are enabled on this device (shown in the menu). Shape: boolean.
+	// When unset, an option counts as enabled if it was already configured (see syncOptions.svelte.ts)
+	syncWebdavEnabled: 'sync.webdav.enabled',
+	syncS3Enabled: 'sync.s3.enabled',
+	syncPeerEnabled: 'sync.peer.enabled'
 };
 
 class UserSettings {

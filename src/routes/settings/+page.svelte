@@ -24,15 +24,13 @@
 		Check,
 		ChevronRight,
 		FileBraces,
+		CloudUploadIcon,
 		FlaskConicalIcon,
-		ListTreeIcon,
-		NetworkIcon,
-		RefreshCwIcon,
 		RotateCcw,
 		SlidersHorizontalIcon,
-		SmartphoneIcon,
-		TrendingUpIcon
+		SmartphoneIcon
 	} from '@lucide/svelte';
+	import { syncOptions, type SyncOption } from '$lib/services/syncOptions.svelte';
 	import Fab from '$lib/components/FAB.svelte';
 	import { page } from '$app/state';
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
@@ -71,6 +69,12 @@
 		{ label: '05.08.', value: 'DD.MM.' },
 		{ label: '05/08', value: 'DD/MM' },
 		{ label: '08/05 (US)', value: 'MM/DD' }
+	];
+
+	const syncOptionRows: { option: SyncOption; label: string; configHref: string }[] = [
+		{ option: 'webdav', label: 'WebDAV', configHref: '/settings/webdav-cfg' },
+		{ option: 's3', label: 'S3', configHref: '/settings/s3-cfg' },
+		{ option: 'peer', label: 'Peer Sync', configHref: '/peer-sync/setup' }
 	];
 
 	let ledgerCacheEnabled = $state<boolean>(true);
@@ -200,6 +204,7 @@
 			NOTIFICATION_TIME_DEFAULT;
 
 		demoActive = await demoDataService.isDemoActive();
+		await syncOptions.load();
 	}
 
 	async function onNotificationsToggle() {
@@ -315,14 +320,6 @@
 		await goto('/', { replaceState: true }); // Go to home, replacing Settings in history
 	}
 </script>
-
-{#snippet settingsLink(href: string, label: string, Icon: typeof TrendingUpIcon)}
-	<a href={href} class="flex items-center gap-3 rounded py-1 hover:bg-base-200">
-		<Icon size={16} class="shrink-0 opacity-70" />
-		<span class="flex-1 text-sm font-medium">{label}</span>
-		<ChevronRight size={16} class="shrink-0 opacity-50" />
-	</a>
-{/snippet}
 
 <Toolbar title="Settings">
 	{#snippet actions()}
@@ -555,13 +552,32 @@
 		</div>
 	</CashierCardTemplate>
 
-	<!-- ── Specific Settings (sub-pages) ───────────────────── -->
-	<CashierCardTemplate heading="Specific Settings" Icon={ListTreeIcon} bodyClass="space-y-3 px-3">
-		<div class="space-y-1">
-			{@render settingsLink('/forecast-settings', 'Forecast', TrendingUpIcon)}
-			{@render settingsLink('/settings/webdav-cfg', 'WebDAV', NetworkIcon)}
-			{@render settingsLink('/peer-sync/setup', 'Peer Sync', RefreshCwIcon)}
-		</div>
+	<!-- ── Backup & Sync ───────────────────────────────────── -->
+	<CashierCardTemplate heading="Backup & Sync" Icon={CloudUploadIcon} bodyClass="space-y-3 px-3">
+		{#snippet description()}
+			Enable only the options you use. Enabled options appear in the menu. Stored on this device.
+		{/snippet}
+
+		{#each syncOptionRows as row (row.option)}
+			<div class="flex items-center gap-3">
+				<input
+					id="sync-{row.option}"
+					class="toggle toggle-success shrink-0 bg-transparent bg-none"
+					type="checkbox"
+					checked={syncOptions[row.option]}
+					onchange={(e) => syncOptions.set(row.option, e.currentTarget.checked)}
+				/>
+				<label for="sync-{row.option}" class="flex-1 text-sm font-medium">{row.label}</label>
+				<a
+					href={row.configHref}
+					class="btn btn-ghost btn-xs rounded {syncOptions[row.option] ? '' : 'invisible'}"
+					aria-label="{row.label} settings"
+					tabindex={syncOptions[row.option] ? 0 : -1}
+				>
+					Configure <ChevronRight size={14} />
+				</a>
+			</div>
+		{/each}
 	</CashierCardTemplate>
 
 	<!-- ── Demo Data ───────────────────────────────────────── -->
