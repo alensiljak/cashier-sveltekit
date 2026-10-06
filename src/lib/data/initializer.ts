@@ -32,6 +32,9 @@ export async function ensureInitialized(): Promise<{ needsOnboarding: boolean }>
 	if (await (await getXactStore()).isInitialized()) return { needsOnboarding: false };
 
 	if (await isCleanSlate()) {
+		// The user may have already chosen an onboarding option while the (async)
+		// check above was running; don't send them back to /onboarding in that case.
+		if (await (await getXactStore()).isInitialized()) return { needsOnboarding: false };
 		return { needsOnboarding: true };
 	}
 
