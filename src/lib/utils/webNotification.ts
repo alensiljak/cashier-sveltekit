@@ -59,6 +59,32 @@ export async function showBackupNotification(): Promise<void> {
 }
 
 /**
+ * Show a system notification that an automatic backup failed. Stays until dismissed, so a
+ * failure is not missed. Silently no-ops if permission is not granted.
+ */
+export async function showBackupFailureNotification(
+	target: 'WebDAV' | 'S3',
+	message: string
+): Promise<void> {
+	if (typeof window === 'undefined' || !('Notification' in window)) return;
+	if (Notification.permission !== 'granted') return;
+
+	const title = `${target} backup failed`;
+	const options = { body: message, icon: '/icon-192.png', tag: `cashier-backup-failed-${target}` };
+
+	try {
+		if ('serviceWorker' in navigator) {
+			const reg = await navigator.serviceWorker.ready;
+			await reg.showNotification(title, options);
+		} else {
+			new Notification(title, options);
+		}
+	} catch (err) {
+		console.warn('[auto-backup] Could not show system notification:', err);
+	}
+}
+
+/**
  * Show a system notification listing the scheduled transactions due today.
  * Silently no-ops if permission is not granted.
  */

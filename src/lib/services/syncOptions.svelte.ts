@@ -24,6 +24,12 @@ async function isConfigured(option: SyncOption): Promise<boolean> {
 	}
 }
 
+/** Whether the option is enabled on this device, read from storage (usable outside components). */
+export async function isSyncOptionEnabled(option: SyncOption): Promise<boolean> {
+	const stored = await deviceSettings.get<boolean>(enabledKeys[option]);
+	return stored ?? (await isConfigured(option));
+}
+
 class SyncOptions {
 	webdav = $state(false);
 	s3 = $state(false);
@@ -32,8 +38,7 @@ class SyncOptions {
 
 	async load() {
 		for (const option of Object.keys(enabledKeys) as SyncOption[]) {
-			const stored = await deviceSettings.get<boolean>(enabledKeys[option]);
-			this[option] = stored ?? (await isConfigured(option));
+			this[option] = await isSyncOptionEnabled(option);
 		}
 		this.loaded = true;
 	}

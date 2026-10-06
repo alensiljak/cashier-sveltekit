@@ -19,6 +19,7 @@ import { CASHIER_DATA_DIR } from '$lib/constants';
 import { deviceSettings, DeviceSettingKeys } from '$lib/settings';
 import { exportSettingsJson, importSettingsJson } from '$lib/services/backupService';
 import { getDeviceId } from '$lib/sync/ydocDevices';
+import { hasNewOps } from '$lib/sync/ydocCompare';
 import { getXactStore } from '$lib/storage/xactStoreRegistry';
 import { getScxStore } from '$lib/storage/scxStoreRegistry';
 import { collectExportableFiles } from '$lib/utils/opfsExport';
@@ -281,7 +282,7 @@ interface CrdtStoreLike {
 }
 
 async function syncCrdt(
-	s: S3Session,
+	s: Pick<S3Session, 'cfg' | 'key' | 'deviceId'>,
 	direction: SyncDirection,
 	item: 'xacts' | 'scheduled'
 ): Promise<SyncLine[]> {
@@ -378,6 +379,76 @@ export async function runSync(
 
 	await persist(s);
 	return lines;
+}
+
+/**
+ * Uploads this device's CRDT state (transactions, scheduled transactions) for the automatic
+ * backup. Needs only the key, not the manifests, and never conflicts: each device owns its file.
+ * Resolves to the lines that failed (empty on success).
+ */
+export async function backupCrdtStores(cfg: S3Config): Promise<SyncLine[]> {
+	const session = await crdtSession(cfg);
+	const lines = [
+		...(await syncCrdt(session, 'upload', 'xacts')),
+		...(await syncCrdt(session, 'upload', 'scheduled'))
+	];
+	return lines.filter((l) => l.outcome === 'error');
+}
+
+type CrdtSession = Pick<S3Session, 'cfg' | 'key' | 'deviceId'>;
+
+/**
+ * True when the bucket and this device differ in a CRDT store: another device has records not
+ * merged here, or this device has records its own bucket file lacks.
+ */
+async function crdtDiffers(s: CrdtSession, item: 'xacts' | 'scheduled'): Promise<boolean> {
+	const kind = item === 'xacts' ? 'xacts' : 'scx';
+	const prefix = `crdt/${kind}/`;
+	const ownKey = `${prefix}${s.deviceId}.ydoc`;
+	const store: CrdtStoreLike = item === 'xacts' ? await getXactStore() : await getScxStore();
+	if (item === 'scheduled' && !(await store.isInitialized())) return false;
+
+	const local = await store.exportState();
+	let ownSeen = false;
+	for (const key of await listObjects(s.cfg, prefix)) {
+		const raw = await getObject(s.cfg, key);
+		if (!raw) continue;
+		const remote = await decrypt(s.key, raw);
+		if (key === ownKey) {
+			ownSeen = true;
+			if (hasNewOps(local, remote)) return true;
+		} else if (hasNewOps(remote, local)) {
+			return true;
+		}
+	}
+	// Never uploaded: differs if there is anything to upload.
+	return !ownSeen && hasNewOps(local);
+}
+
+async function crdtSession(cfg: S3Config): Promise<CrdtSession> {
+	return { cfg, key: await getSyncKey(cfg), deviceId: await getDeviceId() };
+}
+
+/** Compares the CRDT stores with the bucket without changing anything. True = they differ. */
+export async function checkCrdtStores(cfg: S3Config): Promise<boolean> {
+	const s = await crdtSession(cfg);
+	return (await crdtDiffers(s, 'xacts')) || (await crdtDiffers(s, 'scheduled'));
+}
+
+/**
+ * Full sync of the CRDT stores: merges the other devices' state, then uploads this device's.
+ * Returns the failed lines and whether records were merged in (the ledger then needs a reload).
+ */
+export async function syncCrdtStores(
+	cfg: S3Config
+): Promise<{ errors: SyncLine[]; merged: boolean }> {
+	const s = await crdtSession(cfg);
+	const down = [...(await syncCrdt(s, 'download', 'xacts')), ...(await syncCrdt(s, 'download', 'scheduled'))];
+	const up = [...(await syncCrdt(s, 'upload', 'xacts')), ...(await syncCrdt(s, 'upload', 'scheduled'))];
+	return {
+		errors: [...down, ...up].filter((l) => l.outcome === 'error'),
+		merged: down.some((l) => l.outcome === 'downloaded' && l.item === 'xacts')
+	};
 }
 
 /** Settles a conflict: `local` overwrites the bucket's version, `remote` overwrites this device's. */

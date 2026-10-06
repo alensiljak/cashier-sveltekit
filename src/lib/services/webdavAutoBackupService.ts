@@ -1,5 +1,6 @@
 /**
- * Automatic WebDAV backup of the working set and the scheduled transactions\n * (the CRDT stores' Yjs state, one file each).
+ * Automatic backup of the working set and the scheduled transactions (the CRDT stores' Yjs
+ * state, one file each) to WebDAV and, when the S3 option is enabled, to the S3 bucket.
  *
  * Call `scheduleBackup()` after any write to the store. The upload is
  * debounced so rapid successive writes (e.g. sort + save) coalesce into one
@@ -14,7 +15,7 @@ import { getXactStore } from '$lib/storage/xactStoreRegistry';
 import { getScxStore } from '$lib/storage/scxStoreRegistry';
 import { getDeviceId, ydocFilename, type DocKind } from '$lib/sync/ydocDevices';
 import { writable } from 'svelte/store';
-import { showBackupNotification } from '$lib/utils/webNotification';
+import { showBackupFailureNotification, showBackupNotification } from '$lib/utils/webNotification';
 
 /** Shape of the webdavSettings user setting. */
 export interface WebDavSettings {
@@ -44,29 +45,49 @@ const DEBOUNCE_MS = 2000;
 let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
 async function doBackup(): Promise<void> {
-	const enabled = await deviceSettings.get<boolean>(DeviceSettingKeys.webdavAutoBackup);
-	if (!enabled) return;
+	await Promise.all([doWebDavBackup(), doS3Backup()]);
+}
 
-	const cfg = await settings.get<WebDavSettings>(SettingKeys.webdavSettings);
-	if (!cfg?.url) return;
+/**
+ * Back up to S3 when the S3 option is enabled in the settings and the bucket is configured.
+ * Imported on demand: s3Sync pulls in the store registries, which import this module.
+ */
+async function doS3Backup(): Promise<void> {
+	try {
+		const { isSyncOptionEnabled } = await import('$lib/services/syncOptions.svelte');
+		if (!(await isSyncOptionEnabled('s3'))) return;
 
-	if (!navigator.onLine) return;
+		const { loadS3Config, isS3Configured } = await import('$lib/services/s3Config');
+		const cfg = await loadS3Config();
+		if (!isS3Configured(cfg) || !cfg.passphrase) return;
 
-	const client = new WebDavClient(cfg.url, cfg.username, cfg.password);
+		if (!navigator.onLine) return;
 
-	// Back up the Yjs document state to this device's own file.
+		const { backupCrdtStores } = await import('$lib/services/s3Sync');
+		const failed = await backupCrdtStores(cfg);
+		if (failed.length) throw new Error(failed.map((l) => l.message).join('; '));
+	} catch (err) {
+		console.warn('[s3-auto-backup] error:', err);
+		void showBackupFailureNotification('S3', err instanceof Error ? err.message : String(err));
+	}
+}
+
+/**
+ * Uploads this device's Yjs state files to WebDAV. Resolves to the error messages (empty on
+ * success). Shared by the automatic backup and the home-screen sync.
+ */
+export async function uploadCrdtState(client: WebDavClient): Promise<string[]> {
+	const errors: string[] = [];
+
+	// The working set.
 	try {
 		const store = await getXactStore();
 		const filename = await crdtBackupFilename();
 		const res = await client.put(filename, await store.exportState(), 'application/octet-stream');
-		if (res.ok) {
-			lastBackupTime.set(new Date());
-			void showBackupNotification();
-		} else {
-			console.warn(`[webdav-auto-backup] PUT failed: ${res.status} ${res.statusText}`);
-		}
+		if (res.ok) lastBackupTime.set(new Date());
+		else errors.push(`${filename}: ${res.status} ${res.statusText}`);
 	} catch (err) {
-		console.warn('[webdav-auto-backup] Yjs upload error:', err);
+		errors.push(err instanceof Error ? err.message : String(err));
 	}
 
 	// The scheduled transactions, once their store exists. A device that hasn't been
@@ -75,20 +96,42 @@ async function doBackup(): Promise<void> {
 	try {
 		const scxStore = await getScxStore();
 		if (await scxStore.isInitialized()) {
+			const filename = await crdtBackupFilename('scx');
 			const res = await client.put(
-				await crdtBackupFilename('scx'),
+				filename,
 				await scxStore.exportState(),
 				'application/octet-stream'
 			);
-			if (!res.ok) {
-				console.warn(`[webdav-auto-backup] scx PUT failed: ${res.status} ${res.statusText}`);
-			}
+			if (!res.ok) errors.push(`${filename}: ${res.status} ${res.statusText}`);
 		}
 	} catch (err) {
-		console.warn('[webdav-auto-backup] scx upload error:', err);
+		errors.push(err instanceof Error ? err.message : String(err));
 	}
+	return errors;
 }
 
+async function doWebDavBackup(): Promise<void> {
+	const enabled = await deviceSettings.get<boolean>(DeviceSettingKeys.webdavAutoBackup);
+	if (!enabled) return;
+
+	// The option must also be switched on in the sync settings.
+	const { isSyncOptionEnabled } = await import('$lib/services/syncOptions.svelte');
+	if (!(await isSyncOptionEnabled('webdav'))) return;
+
+	const cfg = await settings.get<WebDavSettings>(SettingKeys.webdavSettings);
+	if (!cfg?.url) return;
+
+	if (!navigator.onLine) return;
+
+	const client = new WebDavClient(cfg.url, cfg.username, cfg.password);
+	const errors = await uploadCrdtState(client);
+	if (errors.length) {
+		console.warn('[webdav-auto-backup] upload failed:', errors);
+		void showBackupFailureNotification('WebDAV', errors.join('; '));
+	} else {
+		void showBackupNotification();
+	}
+}
 /**
  * Schedule a background upload of the working set to WebDAV.
  * Debounced — multiple calls within 2 s coalesce into one upload.
