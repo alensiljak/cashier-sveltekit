@@ -443,8 +443,14 @@ export async function syncCrdtStores(
 	cfg: S3Config
 ): Promise<{ errors: SyncLine[]; merged: boolean }> {
 	const s = await crdtSession(cfg);
-	const down = [...(await syncCrdt(s, 'download', 'xacts')), ...(await syncCrdt(s, 'download', 'scheduled'))];
-	const up = [...(await syncCrdt(s, 'upload', 'xacts')), ...(await syncCrdt(s, 'upload', 'scheduled'))];
+	const down = [
+		...(await syncCrdt(s, 'download', 'xacts')),
+		...(await syncCrdt(s, 'download', 'scheduled'))
+	];
+	const up = [
+		...(await syncCrdt(s, 'upload', 'xacts')),
+		...(await syncCrdt(s, 'upload', 'scheduled'))
+	];
 	return {
 		errors: [...down, ...up].filter((l) => l.outcome === 'error'),
 		merged: down.some((l) => l.outcome === 'downloaded' && l.item === 'xacts')
