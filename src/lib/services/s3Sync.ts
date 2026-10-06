@@ -417,7 +417,9 @@ export async function resolveConflict(
 }
 
 async function sharedFileFor(line: SyncLine): Promise<SharedFile> {
-	return line.item === 'settings' ? settingsFile() : beancountFile(line.path, await listLocalFiles());
+	return line.item === 'settings'
+		? settingsFile()
+		: beancountFile(line.path, await listLocalFiles());
 }
 
 /** Applies a `pending-delete` line the user has confirmed. */
