@@ -68,8 +68,12 @@ beforeEach(async () => {
 	await configure();
 	vi.spyOn(console, 'warn').mockImplementation(() => {});
 });
-afterEach(() => {
+afterEach(async () => {
+	// A fired backup may still be awaiting its lazy imports; let it settle (and hit its guards)
+	// under this test's settings and mocks rather than the next test's.
+	await vi.advanceTimersByTimeAsync(2000);
 	vi.useRealTimers();
+	await new Promise((resolve) => setTimeout(resolve, 50));
 	vi.restoreAllMocks();
 });
 
@@ -88,6 +92,8 @@ describe('scheduleBackup', () => {
 
 		await vi.advanceTimersByTimeAsync(1);
 		await vi.waitFor(() => expect(mocks.put).toHaveBeenCalled());
+		// Let the upload finish so it can't touch shared state during a later test.
+		await vi.waitFor(() => expect(mocks.notify).toHaveBeenCalled());
 	});
 
 	it('coalesces rapid calls into one upload', async () => {
@@ -98,6 +104,8 @@ describe('scheduleBackup', () => {
 		scheduleBackup();
 		await vi.advanceTimersByTimeAsync(2000);
 		await vi.waitFor(() => expect(mocks.put).toHaveBeenCalled());
+
+		await vi.waitFor(() => expect(mocks.notify).toHaveBeenCalled());
 
 		expect(mocks.put).toHaveBeenCalledTimes(1);
 	});
