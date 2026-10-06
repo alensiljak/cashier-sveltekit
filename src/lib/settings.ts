@@ -144,7 +144,10 @@ export const DeviceSettingKeys = {
 	crdtMergeState: 'crdt-merge-state',
 	// S3 sync bucket connection. Device-only: holds credentials.
 	// Shape: { endpoint, region, bucket, prefix, accessKeyId, secretAccessKey }
-	s3Settings: 's3-settings'
+	s3Settings: 's3-settings',
+	// Content hash of each shared S3 object (settings, Beancount files) at the last sync, as the
+	// common ancestor for conflict detection. Shape: Record<path, hash>
+	s3SyncBase: 's3-sync-base'
 };
 
 class UserSettings {

@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { goto } from '$app/navigation';
 	import Fab from '$lib/components/FAB.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { CheckIcon } from '@lucide/svelte';
@@ -44,7 +43,7 @@
 		}
 		await saveS3Config({ ...cfg, prefix: cfg.prefix.replace(/^\/+|\/+$/g, '') });
 		Notifier.success('S3 configuration saved');
-		await goto('/backup/s3');
+		history.back();
 	}
 </script>
 
@@ -141,6 +140,21 @@
 						/>
 					</div>
 
+					<h2 class="card-title mt-4 text-lg">Encryption</h2>
+
+					<div class="form-control md:flex-row md:items-center md:gap-3">
+						<label class="label md:w-40 md:flex-shrink-0" for="s3-passphrase">
+							<span class="label-text">Passphrase</span>
+						</label>
+						<input
+							id="s3-passphrase"
+							type="password"
+							autocomplete="off"
+							bind:value={cfg.passphrase}
+							class="input input-bordered md:flex-1"
+						/>
+					</div>
+
 					{#if testSteps.length}
 							<ul class="mt-2 space-y-1 text-sm">
 								{#each testSteps as step (step.name)}
@@ -174,8 +188,12 @@
 							only and are not part of settings backups.
 						</li>
 						<li>
-							The bucket needs a CORS policy that allows this app's origin, otherwise the browser
-							will block requests.
+							The bucket needs a CORS policy, otherwise the browser will block requests. The policy should
+							allow this app's origin, and headers.
+						</li>
+						<li>
+							Everything uploaded is encrypted on this device with the passphrase. Use the same
+							passphrase on every device. If it is lost, the data in the bucket cannot be recovered.
 						</li>
 					</ul>
 				</div>

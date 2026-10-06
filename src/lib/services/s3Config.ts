@@ -9,6 +9,8 @@ export interface S3Config {
 	prefix: string;
 	accessKeyId: string;
 	secretAccessKey: string;
+	/** Encryption passphrase. Kept on this device with the credentials; must match on all devices. */
+	passphrase: string;
 }
 
 export const emptyS3Config = (): S3Config => ({
@@ -17,7 +19,8 @@ export const emptyS3Config = (): S3Config => ({
 	bucket: '',
 	prefix: '',
 	accessKeyId: '',
-	secretAccessKey: ''
+	secretAccessKey: '',
+	passphrase: ''
 });
 
 export function isS3Configured(cfg: S3Config | null): cfg is S3Config {

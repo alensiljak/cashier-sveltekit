@@ -362,6 +362,53 @@
 						</li> -->
 						<li>
 							<a
+								href="/importers"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/importers'
+									? 'active bg-secondary text-secondary-content'
+									: ''}"
+								onclick={closeDrawer}
+							>
+								<FileSpreadsheetIcon />
+								<span>Importers</span>
+							</a>
+						</li>
+						<li>
+							<a
+								href="/opfs"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/opfs'
+									? 'active bg-secondary text-secondary-content'
+									: ''}"
+								onclick={closeDrawer}
+							>
+								<FolderOpenIcon />
+								<span>File Storage</span>
+							</a>
+						</li>
+						<!-- <li>
+							<a
+								href="/sync/beancount"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/sync/beancount'
+									? 'active bg-secondary text-secondary-content'
+									: ''}"
+								onclick={closeDrawer}
+							>
+								<ArrowLeftRightIcon />
+								<span>Beancount Sync</span>
+							</a>
+						</li> -->
+					</ul>
+				</details>
+			</li>
+			<li>
+				<details>
+					<summary class="flex w-full items-center gap-2 py-2 text-lg font-medium">
+						<CloudUploadIcon size={22} />
+						<span>Backup &amp; Sync</span>
+						<span class="flex-1"></span>
+					</summary>
+					<ul>
+						<li>
+							<a
 								href="/backup"
 								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/backup'
 									? 'active bg-secondary text-secondary-content'
@@ -398,30 +445,6 @@
 						</li>
 						<li>
 							<a
-								href="/importers"
-								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/importers'
-									? 'active bg-secondary text-secondary-content'
-									: ''}"
-								onclick={closeDrawer}
-							>
-								<FileSpreadsheetIcon />
-								<span>Importers</span>
-							</a>
-						</li>
-						<li>
-							<a
-								href="/opfs"
-								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/opfs'
-									? 'active bg-secondary text-secondary-content'
-									: ''}"
-								onclick={closeDrawer}
-							>
-								<FolderOpenIcon />
-								<span>File Storage</span>
-							</a>
-						</li>
-						<li>
-							<a
 								href="/peer-sync"
 								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/peer-sync'
 									? 'active bg-secondary text-secondary-content'
@@ -432,18 +455,6 @@
 								<span>Peer Sync</span>
 							</a>
 						</li>
-						<!-- <li>
-							<a
-								href="/sync/beancount"
-								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/sync/beancount'
-									? 'active bg-secondary text-secondary-content'
-									: ''}"
-								onclick={closeDrawer}
-							>
-								<ArrowLeftRightIcon />
-								<span>Beancount Sync</span>
-							</a>
-						</li> -->
 					</ul>
 				</details>
 			</li>
@@ -478,6 +489,18 @@
 							>
 								<CloudIcon />
 								<span>WebDAV Explorer</span>
+							</a>
+						</li>
+						<li>
+							<a
+								href="/util/s3-explorer"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/util/s3-explorer'
+									? 'active bg-secondary text-secondary-content'
+									: ''}"
+								onclick={closeDrawer}
+							>
+								<CloudIcon />
+								<span>S3 Explorer</span>
 							</a>
 						</li>
 						<li>

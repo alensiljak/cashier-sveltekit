@@ -144,13 +144,35 @@ function parseBackup(content: string): Backup {
 export async function restoreBackup(content: string) {
 	const backup = parseBackup(content);
 
+	await replaceSettings(backup.settings);
+	await replaceAllScx(backup.scx);
+}
+
+async function replaceSettings(restored: StoredSetting[]) {
 	await db.transaction('rw', db.settings, async () => {
-		const restoredSettings = keepExistingPassword(
-			backup.settings,
+		const merged = keepExistingPassword(
+			restored,
 			await db.settings.get(SettingKeys.webdavSettings)
 		);
 		await db.settings.clear();
-		await db.settings.bulkAdd(restoredSettings);
+		await db.settings.bulkAdd(merged);
 	});
-	await replaceAllScx(backup.scx);
+}
+
+/** The shared settings as JSON, without credentials. Sorted, so equal settings give equal text. */
+export async function exportSettingsJson(): Promise<string> {
+	const all = withoutPassword(await settings.getAll());
+	return JSON.stringify(all.sort((a, b) => a.key.localeCompare(b.key)));
+}
+
+/** Replaces the shared settings with those from `exportSettingsJson`. Validated before any write. */
+export async function importSettingsJson(content: string) {
+	let parsed: unknown;
+	try {
+		parsed = JSON.parse(content);
+	} catch {
+		throw new Error('The settings data is not valid JSON');
+	}
+	if (!Array.isArray(parsed)) throw new Error('The settings data is not a list of settings');
+	await replaceSettings(parsed as StoredSetting[]);
 }
