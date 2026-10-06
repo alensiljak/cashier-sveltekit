@@ -44,6 +44,7 @@
 		devices.filter(
 			(d) =>
 				d.status === 'trusted' &&
+				!d.readOnly &&
 				(needsMerge(d, mergeState[d.deviceId]) || needsMerge(d, mergeState[d.deviceId], 'scx'))
 		)
 	);
@@ -202,6 +203,9 @@
 							<span class="font-medium truncate">{label(d)}</span>
 							{#if d.status === 'trusted'}
 								<span class="badge badge-success badge-sm">trusted</span>
+								{#if d.readOnly}
+									<span class="badge badge-neutral badge-sm">read-only</span>
+								{/if}
 							{:else if d.status === 'untrusted'}
 								<span class="badge badge-warning badge-sm">not trusted</span>
 							{/if}

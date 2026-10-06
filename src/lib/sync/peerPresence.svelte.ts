@@ -354,6 +354,20 @@ export class PeerPresence {
 		this.peersMap = updated;
 	}
 
+	/** Whether the peer behind this trystero ID is a read-only peer: its data is never merged here. */
+	isReadOnly(trysteroId: string): boolean {
+		const persistentId = this.peersMap[trysteroId]?.persistentId;
+		return this.trustedPeers.some((p) => p.id === persistentId && p.readOnly);
+	}
+
+	async setReadOnly(persistentId: string, readOnly: boolean): Promise<void> {
+		const tp = await db.peers.get(persistentId);
+		if (!tp) return;
+		tp.readOnly = readOnly || undefined;
+		await db.peers.put(tp);
+		this.trustedPeers = await db.peers.toArray();
+	}
+
 	/** trysteroId of a trusted peer currently visible in the room, or null if offline. */
 	onlineTrysteroId(persistentId: string): string | null {
 		const found = this.activePeerList.find((p) => p.persistentId === persistentId && p.isTrusted);

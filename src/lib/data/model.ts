@@ -168,6 +168,8 @@ export class TrustedPeer {
 	name: string = '';
 	trustedAt: string = '';
 	lastSeen?: string;
+	/** The peer may pull our data, but nothing it sends (live updates, sync pushes, its WebDAV file) is merged here. */
+	readOnly?: boolean;
 }
 
 /**

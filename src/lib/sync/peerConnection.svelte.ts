@@ -164,6 +164,9 @@ class PeerConnection {
 			'ydoc-sync',
 			async (remoteState, { peerId: fromId }) => {
 				if (!this.presence.peersMap[fromId]?.isTrusted) return new Uint8Array(0);
+				if (this.presence.isReadOnly(fromId)) {
+					return (await getXactStore()).diffOnly(remoteState);
+				}
 				const diff = await (await getXactStore()).mergeAndDiff(remoteState);
 				void this.reloadAfterMerge();
 				return diff;
@@ -175,6 +178,7 @@ class PeerConnection {
 		this.ydocUpdateAction = this.presence.makeAction<Uint8Array>('ydoc-update');
 		this.ydocUpdateAction.onMessage = async (update, { peerId: fromId }) => {
 			if (!this.presence.peersMap[fromId]?.isTrusted) return;
+			if (this.presence.isReadOnly(fromId)) return;
 			await (await getXactStore()).importState(update);
 			void this.reloadAfterMerge();
 		};
@@ -193,12 +197,16 @@ class PeerConnection {
 			async (remoteState, { peerId: fromId }) => {
 				if (!this.presence.peersMap[fromId]?.isTrusted) return new Uint8Array(0);
 				const store = await existingScxStore();
-				return store ? store.mergeAndDiff(remoteState) : new Uint8Array(0);
+				if (!store) return new Uint8Array(0);
+				return this.presence.isReadOnly(fromId)
+					? store.diffOnly(remoteState)
+					: store.mergeAndDiff(remoteState);
 			}
 		);
 		this.scxUpdateAction = this.presence.makeAction<Uint8Array>('scx-update');
 		this.scxUpdateAction.onMessage = async (update, { peerId: fromId }) => {
 			if (!this.presence.peersMap[fromId]?.isTrusted) return;
+			if (this.presence.isReadOnly(fromId)) return;
 			await (await existingScxStore())?.importState(update);
 		};
 		void this.startLiveSync();

@@ -27,6 +27,8 @@ export interface RemoteDevice {
 	status: RemoteDeviceStatus;
 	/** Name from the Trusted Peers list, when trusted. */
 	name?: string;
+	/** Trusted but read-only: its file is never merged here. */
+	readOnly?: boolean;
 	/** The device's scheduled-transactions file, if it has uploaded one. */
 	scx?: { filename: string; lastModified: Date | null };
 }
@@ -83,6 +85,7 @@ export async function listRemoteDevices(client: WebDavClient): Promise<RemoteDev
 			lastModified: e.lastModified,
 			status: deviceId === selfId ? 'self' : peer ? 'trusted' : 'untrusted',
 			name: peer?.name,
+			readOnly: peer?.readOnly,
 			scx: scxFiles.get(deviceId)
 		});
 	}

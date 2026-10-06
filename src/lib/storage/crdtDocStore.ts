@@ -185,6 +185,12 @@ export abstract class CrdtDocStore<R> {
 		return Y.encodeStateAsUpdate(this.doc, remoteVector);
 	}
 
+	/** The updates a peer is missing, given its full state, without merging that state in. */
+	async diffOnly(remoteState: Uint8Array): Promise<Uint8Array> {
+		await this.ready();
+		return Y.encodeStateAsUpdate(this.doc, Y.encodeStateVectorFromUpdate(remoteState));
+	}
+
 	/**
 	 * Calls `callback` whenever the set of records changes, whatever the
 	 * cause (local edit, merge from another device, clear). Returns the unsubscribe function.
