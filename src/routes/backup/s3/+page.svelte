@@ -75,6 +75,32 @@
 		}
 	}
 
+	/** True when the bucket holds newer data for this item that an upload could overwrite. */
+	function hasNewerRemote(key: keyof RemoteOverview): boolean {
+		if (key === 'settings' || key === 'beancount') {
+			const s = fileStatus?.[key];
+			return !!s && (s.download > 0 || s.conflict > 0);
+		}
+		const other = overview?.[key].otherDeviceModified;
+		return !!other && (!lastSync || other > lastSync);
+	}
+
+	let overwriteDialog = $state<HTMLDialogElement>();
+	let overwriteLabels = $state<string[]>([]);
+
+	/** Asks for confirmation when uploading would overwrite newer data in the bucket. */
+	function requestUpload() {
+		const stale = statusRows.filter(
+			(r) => selectedItems().includes(r.key as SyncItem) && hasNewerRemote(r.key)
+		);
+		if (stale.length === 0) {
+			void run('upload');
+			return;
+		}
+		overwriteLabels = stale.map((r) => r.label);
+		overwriteDialog?.showModal();
+	}
+
 	/** What a sync of this item would do, or null when it is in sync or unknown. */
 	function badgeFor(key: keyof RemoteOverview): { text: string; cls: string } | null {
 		if (key === 'settings' || key === 'beancount') {
@@ -364,7 +390,7 @@
 					<button
 						class="btn btn-primary"
 						disabled={!someSelected || busy}
-						onclick={() => run('upload')}
+						onclick={requestUpload}
 					>
 						{#if busy}<span class="loading loading-spinner loading-sm"></span>{/if}
 						Upload
@@ -465,4 +491,26 @@
 			</div>
 		</section>
 	{/if}
+
+	<dialog bind:this={overwriteDialog} class="modal">
+		<div class="modal-box">
+			<h3 class="text-lg font-bold">Overwrite newer data?</h3>
+			<p class="py-3 text-sm">
+				The bucket has newer data that this device has not downloaded:
+			</p>
+			<ul class="list-inside list-disc text-sm">
+				{#each overwriteLabels as label (label)}<li>{label}</li>{/each}
+			</ul>
+			<p class="py-3 text-sm text-base-content/70">
+				Uploading may overwrite it. Download first to avoid losing changes.
+			</p>
+			<div class="modal-action">
+				<form method="dialog" class="flex gap-2">
+					<button class="btn btn-ghost">Cancel</button>
+					<button class="btn btn-error" onclick={() => run('upload')}>Upload anyway</button>
+				</form>
+			</div>
+		</div>
+		<form method="dialog" class="modal-backdrop"><button aria-label="Close">close</button></form>
+	</dialog>
 </main>
