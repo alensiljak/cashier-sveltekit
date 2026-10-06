@@ -21,6 +21,7 @@ import { exportSettingsJson, importSettingsJson } from '$lib/services/backupServ
 import db from '$lib/data/db';
 import { getDeviceId } from '$lib/sync/ydocDevices';
 import { hasNewOps } from '$lib/sync/ydocCompare';
+import { normalizeEol } from '$lib/sync/SyncSource';
 import { getXactStore } from '$lib/storage/xactStoreRegistry';
 import { getScxStore } from '$lib/storage/scxStoreRegistry';
 import { collectExportableFiles } from '$lib/utils/opfsExport';
@@ -229,6 +230,17 @@ async function getShared(s: S3Session, file: SharedFile): Promise<void> {
 	s.basesDirty = true;
 }
 
+/**
+ * True when the bucket's copy of a text file equals the local one apart from line endings and the
+ * final newline, which differ between Windows, Android and editors. Costs one download.
+ */
+async function sameText(s: S3Session, file: SharedFile, local: Uint8Array): Promise<boolean> {
+	const raw = await getObject(s.cfg, dataKey(file.path));
+	if (!raw) return false;
+	const remote = await decrypt(s.key, raw);
+	const text = (b: Uint8Array) => normalizeEol(new TextDecoder().decode(b));
+	return text(remote) === text(local);
+}
 async function syncShared(
 	s: S3Session,
 	direction: SyncDirection,
@@ -239,7 +251,12 @@ async function syncShared(
 		const bytes = await file.read();
 		const local = bytes ? await sha256Hex(bytes) : null;
 		const remote = latestRemote(s.manifests).get(path)?.hash ?? null;
-		const d = decide(direction, local, remote, s.bases[path] ?? null);
+		let d = decide(direction, local, remote, s.bases[path] ?? null);
+
+		if (d.action === 'conflict' && item === 'beancount' && bytes && (await sameText(s, file, bytes))) {
+			// Only line endings differ: not a real conflict. Make both sides hold the same bytes.
+			d = { action: direction };
+		}
 
 		switch (d.action) {
 			case 'upload':

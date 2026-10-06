@@ -167,11 +167,31 @@
 				})
 			);
 
+			const identical: ImportedFileMeta[] = [];
+
 			for (const { path, fsEntry, meta, opfsMeta } of scanResults) {
 				const fsChanged = !meta || fsEntry.lastModified !== meta.lastModified || fsEntry.size !== meta.size;
 				const opfsChanged = opfsMeta && meta ? opfsMeta.lastModified > meta.importedAt : false;
 
 				if (!fsChanged && !opfsChanged) continue;
+
+				// Timestamps are only a hint: a copy or an editor can touch a file without changing
+				// it. Identical content on both sides is no difference; record it as synced.
+				if (opfsMeta && opfsMeta.size === fsEntry.size) {
+					const [fsText, opfsText] = await Promise.all([
+						scannedFsHandles.get(path)!.getFile().then((f) => f.text()),
+						OpfsLib.readFile(path)
+					]);
+					if (fsText === opfsText) {
+						identical.push({
+							path,
+							size: fsEntry.size,
+							lastModified: fsEntry.lastModified,
+							importedAt: Date.now()
+						});
+						continue;
+					}
+				}
 
 				const defaultAction: SyncAction =
 					fsChanged && opfsChanged ? 'conflict' : fsChanged ? 'fs-to-opfs' : 'opfs-to-fs';
@@ -184,6 +204,7 @@
 				});
 			}
 
+			if (identical.length) await putManifestEntries(identical);
 			result.sort((a, b) => a.path.localeCompare(b.path));
 			syncEntries = result;
 			phase = 'idle';
