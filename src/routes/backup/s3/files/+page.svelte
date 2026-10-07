@@ -435,15 +435,15 @@
 						<div class="alert alert-info text-sm">
 							<span>Not in the bucket (or deleted there). This device's version is shown below.</span>
 						</div>
-					{:else if comparison.identical}
-						<div class="alert alert-success text-sm">
-							<span>The two versions are identical.</span>
-						</div>
 					{:else if comparison.sameText}
 						<div class="alert alert-success text-sm">
 							<span>
-								The text is the same: only line endings or the final newline differ. This is not a
-								real conflict.
+								{#if comparison.identical}
+									The two versions are identical.
+								{:else}
+									The text is the same: only line endings or the final newline differ. This is not a
+									real conflict.
+								{/if}
 							</span>
 						</div>
 						<button class="btn btn-success btn-sm" disabled={working} onclick={markInSync}>

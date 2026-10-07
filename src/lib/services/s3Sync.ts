@@ -892,11 +892,17 @@ export async function markSameContent(s: S3Session, cmp: FileComparison): Promis
 	}
 	const path = FILES_PREFIX + cmp.path;
 	const manifestHash = latestRemote(s.manifests).get(path)?.hash;
-	if (manifestHash !== cmp.remoteHash) {
+	// Byte-identical copies are safe to mark even when the manifest records another hash: that
+	// stale hash is what shows the file as changed, so it counts as the same version too.
+	if (manifestHash !== cmp.remoteHash && !cmp.identical) {
 		throw new Error('The bucket copy no longer matches its manifest. Refresh and compare again.');
 	}
+	const hashes = [cmp.remoteHash];
+	if (manifestHash && manifestHash !== TOMBSTONE && !hashes.includes(manifestHash)) {
+		hashes.push(manifestHash);
+	}
 	s.bases[path] = cmp.localHash;
-	s.equiv[path] = { base: cmp.localHash, hashes: [cmp.remoteHash] };
+	s.equiv[path] = { base: cmp.localHash, hashes };
 	s.basesDirty = s.equivDirty = true;
 	await persist(s);
 }
