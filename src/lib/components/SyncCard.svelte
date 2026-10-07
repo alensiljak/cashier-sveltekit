@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, untrack, type Component } from 'svelte';
+	import { onMount, untrack, type Component, type Snippet } from 'svelte';
 	import { goto } from '$app/navigation';
 	import {
 		ArrowLeftRightIcon,
@@ -209,6 +209,20 @@
 	};
 </script>
 
+{#snippet peerSwitch()}
+	{#if connecting}
+		<span class="loading loading-spinner loading-sm"></span>
+	{:else}
+		<input
+			type="checkbox"
+			class="toggle toggle-success toggle-sm bg-transparent bg-none"
+			checked={presence.isInRoom}
+			aria-label={presence.isInRoom ? 'Disconnect peer sync' : 'Connect peer sync'}
+			onchange={toggleConnection}
+		/>
+	{/if}
+{/snippet}
+
 {#snippet targetRow(
 	Icon: Component<{ size?: number }>,
 	label: string,
@@ -217,27 +231,30 @@
 	busy: boolean,
 	onCheck: () => void,
 	onSync: () => void,
-	canAct: boolean = true
+	canAct: boolean = true,
+	afterLabel?: Snippet
 )}
 	<div class="flex items-center gap-3">
 		<button
 			type="button"
-			class="flex min-w-0 grow items-center gap-2 text-left"
+			class="flex min-w-0 items-center gap-2 text-left"
 			onclick={() => goto(href)}
 		>
 			<Icon size={20} />
 			<span class="truncate text-base">{label}</span>
-			{#if status === 'checking'}
-				<span class="loading loading-spinner loading-xs" title={dotTitle.checking}></span>
-			{:else}
-				<span
-					class="inline-block h-3 w-3 shrink-0 rounded-full {dotClass[status]}"
-					title={dotTitle[status]}
-					role="img"
-					aria-label={dotTitle[status]}
-				></span>
-			{/if}
 		</button>
+		{@render afterLabel?.()}
+		{#if status === 'checking'}
+			<span class="loading loading-spinner loading-xs" title={dotTitle.checking}></span>
+		{:else}
+			<span
+				class="inline-block h-3 w-3 shrink-0 rounded-full {dotClass[status]}"
+				title={dotTitle[status]}
+				role="img"
+				aria-label={dotTitle[status]}
+			></span>
+		{/if}
+		<span class="grow"></span>
 		<button
 			type="button"
 			class="btn btn-circle btn-neutral"
@@ -304,32 +321,18 @@
 				{/if}
 				{#if syncOptions.peer}
 					<div>
-						<div class="flex items-center gap-2">
-							{#if connecting}
-								<span class="loading loading-spinner loading-sm"></span>
-							{:else}
-								<input
-									type="checkbox"
-									class="toggle toggle-success toggle-sm bg-transparent bg-none"
-									checked={presence.isInRoom}
-									aria-label={presence.isInRoom ? 'Disconnect peer sync' : 'Connect peer sync'}
-									onchange={toggleConnection}
-								/>
-							{/if}
-							<div class="grow">
-								{@render targetRow(
-									UsersIcon,
-									'Peers',
-									'/peer-sync',
-									peerStatus,
-									syncing,
-									checkPeers,
-									syncPeers,
-									presence.isInRoom && trustedPeers.length > 0
-								)}
-							</div>
-						</div>
-						<div class="pl-12 text-sm opacity-70">
+						{@render targetRow(
+							UsersIcon,
+							'P2P',
+							'/peer-sync',
+							peerStatus,
+							syncing,
+							checkPeers,
+							syncPeers,
+							presence.isInRoom && trustedPeers.length > 0,
+							peerSwitch
+						)}
+						<div class="pl-8 text-sm opacity-70">
 							{#if !presence.isInRoom}
 								Peer sync is off.
 							{:else if presence.activePeerList.length === 0}
