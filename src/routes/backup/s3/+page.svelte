@@ -7,6 +7,7 @@
 	import type { SyncDirection } from '$lib/services/s3SyncPlan';
 	import {
 		applyDeletion,
+		fetchCrdtSyncStatus,
 		fetchFileSyncStatus,
 		fetchRemoteOverview,
 		getLastSync,
@@ -40,6 +41,7 @@
 	let lastSync = $state<Date | null>(null);
 	let checkingRemote = $state(false);
 	let fileStatus = $state<FileSyncOverview | null>(null);
+	let crdtStatus = $state<Awaited<ReturnType<typeof fetchCrdtSyncStatus>> | null>(null);
 	let devices = $state<BucketDevice[]>([]);
 
 	let trusting = $state<BucketDevice | null>(null);
@@ -76,11 +78,15 @@
 				getLastSync(),
 				listBucketDevices(cfg)
 			]);
-			// The comparison decrypts the manifests, so it needs the passphrase.
+			// The comparison decrypts the bucket's data, so it needs the passphrase.
 			fileStatus = null;
+			crdtStatus = null;
 			if (cfg.passphrase) {
 				try {
-					fileStatus = await fetchFileSyncStatus(cfg);
+					[fileStatus, crdtStatus] = await Promise.all([
+						fetchFileSyncStatus(cfg),
+						fetchCrdtSyncStatus(cfg)
+					]);
 				} catch (e) {
 					console.warn('[s3-sync] Could not compare with the bucket', e);
 				}
@@ -98,8 +104,8 @@
 			const s = fileStatus?.[key];
 			return !!s && (s.download > 0 || s.conflict > 0);
 		}
-		const other = overview?.[key].otherDeviceModified;
-		return !!other && (!lastSync || other > lastSync);
+		// CRDT stores merge on download and each device uploads only its own file: nothing to overwrite.
+		return false;
 	}
 
 	let overwriteDialog = $state<HTMLDialogElement>();
@@ -132,12 +138,13 @@
 			if (s.download) return { text: 'Download available' + n(s.download), cls: 'badge-warning' };
 			return { text: 'In sync', cls: 'badge-success' };
 		}
-		// CRDT stores: only another device's upload since our last sync is detectable.
-		const other = overview?.[key].otherDeviceModified;
-		if (other && (!lastSync || other > lastSync)) {
-			return { text: 'Download available', cls: 'badge-warning' };
-		}
-		return null;
+		// CRDT stores: compared by their Yjs state, so each item is judged on its own.
+		const s = crdtStatus?.[key as 'scheduled' | 'xacts'];
+		if (!s) return null;
+		if (s.upload && s.download) return { text: 'Upload / Download', cls: 'badge-warning' };
+		if (s.upload) return { text: 'Upload needed', cls: 'badge-info' };
+		if (s.download) return { text: 'Download available', cls: 'badge-warning' };
+		return { text: 'In sync', cls: 'badge-success' };
 	}
 
 	function describeItem(item: RemoteItemStatus, key: keyof RemoteOverview): string {

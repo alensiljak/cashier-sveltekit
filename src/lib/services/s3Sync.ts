@@ -446,14 +446,31 @@ type CrdtSession = Pick<S3Session, 'cfg' | 'key' | 'deviceId'>;
  * merged here, or this device has records its own bucket file lacks.
  */
 async function crdtDiffers(s: CrdtSession, item: 'xacts' | 'scheduled'): Promise<boolean> {
+	const { upload, download } = await crdtStatus(s, item);
+	return upload || download;
+}
+
+/**
+ * Compares a CRDT store with the bucket by Yjs state vectors, independent of any sync time:
+ * `upload` = this device has records its own bucket file lacks; `download` = a trusted device's
+ * file has records not merged here.
+ */
+async function crdtStatus(
+	s: CrdtSession,
+	item: 'xacts' | 'scheduled'
+): Promise<{ upload: boolean; download: boolean }> {
 	const kind = item === 'xacts' ? 'xacts' : 'scx';
 	const prefix = `crdt/${kind}/`;
 	const ownKey = `${prefix}${s.deviceId}.ydoc`;
 	const store: CrdtStoreLike = item === 'xacts' ? await getXactStore() : await getScxStore();
-	if (item === 'scheduled' && !(await store.isInitialized())) return false;
+	if (item === 'scheduled' && !(await store.isInitialized())) {
+		return { upload: false, download: false };
+	}
 
 	const local = await store.exportState();
 	let ownSeen = false;
+	let upload = false;
+	let download = false;
 	const ignoreReason = await loadIgnoreReasons();
 	for (const key of await listObjects(s.cfg, prefix)) {
 		if (key !== ownKey && ignoreReason(deviceIdOfKey(key))) continue;
@@ -462,13 +479,30 @@ async function crdtDiffers(s: CrdtSession, item: 'xacts' | 'scheduled'): Promise
 		const remote = await decrypt(s.key, raw);
 		if (key === ownKey) {
 			ownSeen = true;
-			if (hasNewOps(local, remote)) return true;
+			if (hasNewOps(local, remote)) upload = true;
 		} else if (hasNewOps(remote, local)) {
-			return true;
+			download = true;
 		}
 	}
-	// Never uploaded: differs if there is anything to upload.
-	return !ownSeen && hasNewOps(local);
+	// Never uploaded: there is something to upload if the store holds any records.
+	if (!ownSeen && hasNewOps(local)) upload = true;
+	return { upload, download };
+}
+
+export interface CrdtSyncStatus {
+	upload: boolean;
+	download: boolean;
+}
+
+/** Dry run for the CRDT stores, per item. Decrypts the state files, so it needs the passphrase. */
+export async function fetchCrdtSyncStatus(
+	cfg: S3Config
+): Promise<Record<'scheduled' | 'xacts', CrdtSyncStatus>> {
+	const s = await crdtSession(cfg);
+	return {
+		scheduled: await crdtStatus(s, 'scheduled'),
+		xacts: await crdtStatus(s, 'xacts')
+	};
 }
 
 async function crdtSession(cfg: S3Config): Promise<CrdtSession> {
