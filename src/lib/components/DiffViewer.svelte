@@ -191,7 +191,7 @@
 					>
 				</div>
 				{#if onApplyMerge}
-					<span>Dimmed lines are dropped by the picks below.</span>
+					<span>Green + will be added, red − deleted; struck-through lines are ignored.</span>
 				{/if}
 			</div>
 		{/if}
@@ -246,13 +246,19 @@
 						</button>
 					</div>
 				{/if}
-				<div id="diff-line-{uid}-{i}" class:opacity-30={onApplyMerge && !included}>
-					{#if line.type === 'removed'}
+				<div id="diff-line-{uid}-{i}" class:opacity-40={onApplyMerge && line.type === 'added' && !included}>
+					{#if line.type === 'removed' && onApplyMerge && !theirs}
+						<!-- "Mine" keeps this local line: the merge leaves it unchanged. -->
+						<div class="break-all whitespace-pre-wrap">&nbsp; {line.content}</div>
+					{:else if line.type === 'removed'}
 						<div class="bg-error/20 text-error-content break-all whitespace-pre-wrap">
 							- {line.content}
 						</div>
 					{:else if line.type === 'added'}
-						<div class="bg-success/20 text-success-content break-all whitespace-pre-wrap">
+						<div
+								class="bg-success/20 text-success-content break-all whitespace-pre-wrap"
+								class:line-through={onApplyMerge && !included}
+							>
 							+ {line.content}
 						</div>
 					{:else}

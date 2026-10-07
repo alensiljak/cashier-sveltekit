@@ -308,7 +308,7 @@
 {#snippet badge(key: keyof RemoteOverview)}
 	{@const b = badgeFor(key)}
 	{#if b}
-		<span class="badge badge-sm badge-soft {b.cls} ml-1 gap-0.5" title={b.text} aria-label={b.text}>
+		<span class="badge badge-sm {b.cls} ml-1 gap-0.5" title={b.text} aria-label={b.text}>
 			{#each b.kinds as kind}
 				{#if kind === 'up'}<ArrowUpIcon size={14} />
 				{:else if kind === 'down'}<ArrowDownIcon size={14} />
