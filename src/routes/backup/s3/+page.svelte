@@ -27,10 +27,14 @@
 	import { trustDevice } from '$lib/sync/ydocDevices';
 	import Notifier from '$lib/utils/notifier';
 	import {
+		ArrowDownIcon,
+		ArrowUpIcon,
+		CheckIcon,
 		CloudDownloadIcon,
 		CloudUploadIcon,
 		RefreshCwIcon,
 		SettingsIcon,
+		TriangleAlertIcon,
 		UserCheckIcon
 	} from '@lucide/svelte';
 
@@ -92,7 +96,9 @@
 				}
 			}
 		} catch (e) {
-			Notifier.error('Could not read the bucket: ' + (e instanceof Error ? e.message : describeS3Error(e)));
+			Notifier.error(
+				'Could not read the bucket: ' + (e instanceof Error ? e.message : describeS3Error(e))
+			);
 		} finally {
 			checkingRemote = false;
 		}
@@ -124,29 +130,57 @@
 		overwriteDialog?.showModal();
 	}
 
+	type BadgeKind = 'up' | 'down' | 'conflict' | 'ok';
+	type Badge = { text: string; cls: string; kinds: BadgeKind[]; count?: string };
+
 	/** What a sync of this item would do, or null when it is in sync or unknown. */
-	function badgeFor(key: keyof RemoteOverview): { text: string; cls: string } | null {
+	function badgeFor(key: keyof RemoteOverview): Badge | null {
 		if (key === 'settings' || key === 'beancount') {
 			const s = fileStatus?.[key];
 			if (!s) return null;
 			const n = (count: number) => (key === 'beancount' ? ' (' + count + ')' : '');
-			if (s.conflict) return { text: 'Conflict' + n(s.conflict), cls: 'badge-error' };
-			if (s.upload && s.download) {
-				return { text: 'Upload' + n(s.upload) + ' / Download' + n(s.download), cls: 'badge-warning' };
+			if (s.conflict) {
+				return {
+					text: 'Conflict' + n(s.conflict),
+					cls: 'badge-error',
+					kinds: ['conflict'],
+					count: n(s.conflict)
+				};
 			}
-			if (s.upload) return { text: 'Upload needed' + n(s.upload), cls: 'badge-info' };
-			if (s.download) return { text: 'Download available' + n(s.download), cls: 'badge-warning' };
-			return { text: 'In sync', cls: 'badge-success' };
+			if (s.upload && s.download) {
+				return {
+					text: 'Upload' + n(s.upload) + ' / Download' + n(s.download),
+					cls: 'badge-warning',
+					kinds: ['up', 'down']
+				};
+			}
+			if (s.upload) {
+				return {
+					text: 'Upload needed' + n(s.upload),
+					cls: 'badge-warning',
+					kinds: ['up'],
+					count: n(s.upload)
+				};
+			}
+			if (s.download) {
+				return {
+					text: 'Download available' + n(s.download),
+					cls: 'badge-warning',
+					kinds: ['down'],
+					count: n(s.download)
+				};
+			}
+			return { text: 'In sync', cls: 'badge-success', kinds: ['ok'] };
 		}
 		// CRDT stores: compared by their Yjs state, so each item is judged on its own.
 		const s = crdtStatus?.[key as 'scheduled' | 'xacts'];
 		if (!s) return null;
-		if (s.upload && s.download) return { text: 'Upload / Download', cls: 'badge-warning' };
-		if (s.upload) return { text: 'Upload needed', cls: 'badge-info' };
-		if (s.download) return { text: 'Download available', cls: 'badge-warning' };
-		return { text: 'In sync', cls: 'badge-success' };
+		if (s.upload && s.download)
+			return { text: 'Upload / Download', cls: 'badge-warning', kinds: ['up', 'down'] };
+		if (s.upload) return { text: 'Upload needed', cls: 'badge-warning', kinds: ['up'] };
+		if (s.download) return { text: 'Download available', cls: 'badge-warning', kinds: ['down'] };
+		return { text: 'In sync', cls: 'badge-success', kinds: ['ok'] };
 	}
-
 	function describeItem(item: RemoteItemStatus, key: keyof RemoteOverview): string {
 		if (!item.count) return 'Nothing in the bucket';
 		const parts = [item.lastModified ? item.lastModified.toLocaleString() : 'unknown time'];
@@ -273,7 +307,17 @@
 
 {#snippet badge(key: keyof RemoteOverview)}
 	{@const b = badgeFor(key)}
-	{#if b}<span class="badge badge-sm badge-soft {b.cls} ml-1">{b.text}</span>{/if}
+	{#if b}
+		<span class="badge badge-sm badge-soft {b.cls} ml-1 gap-0.5" title={b.text} aria-label={b.text}>
+			{#each b.kinds as kind}
+				{#if kind === 'up'}<ArrowUpIcon size={14} />
+				{:else if kind === 'down'}<ArrowDownIcon size={14} />
+				{:else if kind === 'conflict'}<TriangleAlertIcon size={14} />
+				{:else}<CheckIcon size={14} />{/if}
+			{/each}
+			{#if b.count}<span>{b.count.trim()}</span>{/if}
+		</span>
+	{/if}
 {/snippet}
 
 <main class="flex h-screen flex-col">
@@ -322,9 +366,9 @@
 							{#each statusRows as row (row.key)}
 								<div class="flex items-baseline justify-between gap-3">
 									<dt>
-									{row.label}:
-									{@render badge(row.key)}
-								</dt>
+										{row.label}:
+										{@render badge(row.key)}
+									</dt>
 									<dd class="text-right text-xs text-base-content/60">
 										{describeItem(overview[row.key], row.key)}
 									</dd>
@@ -392,33 +436,44 @@
 						</label>
 						<div class="divider my-0"></div>
 						<label class="flex cursor-pointer items-center gap-3">
-							<input type="checkbox" class="checkbox checkbox-primary" bind:checked={includeSettings} />
+							<input
+								type="checkbox"
+								class="checkbox checkbox-primary"
+								bind:checked={includeSettings}
+							/>
 							<span class="flex-1">Settings {@render badge('settings')}</span>
 						</label>
 						<label class="flex cursor-pointer items-center gap-3">
-							<input type="checkbox" class="checkbox checkbox-primary" bind:checked={includeScheduled} />
+							<input
+								type="checkbox"
+								class="checkbox checkbox-primary"
+								bind:checked={includeScheduled}
+							/>
 							<span class="flex-1">Scheduled Transactions {@render badge('scheduled')}</span>
 						</label>
 						<label class="flex cursor-pointer items-center gap-3">
-							<input type="checkbox" class="checkbox checkbox-primary" bind:checked={includeXacts} />
+							<input
+								type="checkbox"
+								class="checkbox checkbox-primary"
+								bind:checked={includeXacts}
+							/>
 							<span class="flex-1">Local Transactions {@render badge('xacts')}</span>
 						</label>
 						<label class="flex cursor-pointer items-center gap-3">
-							<input type="checkbox" class="checkbox checkbox-primary" bind:checked={includeBeancount} />
+							<input
+								type="checkbox"
+								class="checkbox checkbox-primary"
+								bind:checked={includeBeancount}
+							/>
 							<span class="flex-1">Beancount Files {@render badge('beancount')}</span>
 						</label>
 					</div>
 				</section>
 
 				<section class="mt-20 flex justify-center gap-3">
-					<button
-						class="btn btn-primary"
-						disabled={!someSelected || busy}
-						onclick={requestUpload}
-					>
-						{#if busy}<span class="loading loading-spinner loading-sm"></span>{:else}<CloudUploadIcon
-								class="size-5"
-							/>{/if}
+					<button class="btn btn-primary" disabled={!someSelected || busy} onclick={requestUpload}>
+						{#if busy}<span class="loading loading-spinner loading-sm"
+							></span>{:else}<CloudUploadIcon class="size-5" />{/if}
 						Upload
 					</button>
 					<button
@@ -449,15 +504,17 @@
 							<div class="card border border-error/40 bg-base-200 p-3">
 								<h3 class="font-semibold">Deletions to confirm</h3>
 								<p class="text-xs text-base-content/70">
-									Nothing has been deleted yet. Deleting a file removes it from the bucket or from this
-									device, and the other devices follow on their next sync.
+									Nothing has been deleted yet. Deleting a file removes it from the bucket or from
+									this device, and the other devices follow on their next sync.
 								</p>
 								<ul class="my-2 space-y-1 text-sm">
 									{#each pendingDeletes as line (line.path)}
 										<li>
 											<span class="font-mono text-xs break-all">{line.path}</span>
 											<span class="text-xs text-error">
-												{line.deletes === 'bucket' ? 'will be deleted from the bucket' : 'will be deleted from this device'}
+												{line.deletes === 'bucket'
+													? 'will be deleted from the bucket'
+													: 'will be deleted from this device'}
 											</span>
 										</li>
 									{/each}
@@ -474,7 +531,10 @@
 									<button
 										class="btn btn-sm btn-ghost"
 										disabled={busy}
-										onclick={() => (lines = lines.map((l) => (l.outcome === 'pending-delete' ? { ...l, outcome: 'skipped' } : l)))}
+										onclick={() =>
+											(lines = lines.map((l) =>
+												l.outcome === 'pending-delete' ? { ...l, outcome: 'skipped' } : l
+											))}
 									>
 										Keep them
 									</button>
@@ -527,7 +587,11 @@
 					Records from this device will be merged into your local transactions. ID:
 					<code class="break-all">{trusting.deviceId}</code>
 				</p>
-				<input class="input input-bordered w-full" bind:value={trustName} aria-label="Device name" />
+				<input
+					class="input input-bordered w-full"
+					bind:value={trustName}
+					aria-label="Device name"
+				/>
 				<div class="modal-action">
 					<button class="btn btn-ghost" onclick={() => (trusting = null)}>Cancel</button>
 					<button class="btn btn-primary" onclick={confirmTrust}>Trust</button>
@@ -540,9 +604,7 @@
 	<dialog bind:this={overwriteDialog} class="modal">
 		<div class="modal-box">
 			<h3 class="text-lg font-bold">Overwrite newer data?</h3>
-			<p class="py-3 text-sm">
-				The bucket has newer data that this device has not downloaded:
-			</p>
+			<p class="py-3 text-sm">The bucket has newer data that this device has not downloaded:</p>
 			<ul class="list-inside list-disc text-sm">
 				{#each overwriteLabels as label (label)}<li>{label}</li>{/each}
 			</ul>
