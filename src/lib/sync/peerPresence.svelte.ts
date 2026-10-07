@@ -173,6 +173,11 @@ export class PeerPresence {
 		this.trustedPeers = await db.peers.toArray();
 	}
 
+	/** Re-reads the trusted list; it can change outside this class (WebDAV/S3 pages trust devices directly in the DB). */
+	async reloadTrustedPeers(): Promise<void> {
+		this.trustedPeers = await db.peers.toArray();
+	}
+
 	/** Persists the TURN/ICE servers. Does NOT reconnect a live room — call `leave()` then `join()` to apply it. */
 	async setIceServers(servers: RTCIceServer[]): Promise<void> {
 		this.iceServers = servers;

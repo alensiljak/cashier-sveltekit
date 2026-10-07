@@ -42,8 +42,19 @@
 	let fileStatus = $state<FileSyncOverview | null>(null);
 	let devices = $state<BucketDevice[]>([]);
 
-	async function trust(d: BucketDevice) {
-		await trustDevice(d.deviceId);
+	let trusting = $state<BucketDevice | null>(null);
+	let trustName = $state('');
+
+	function startTrust(d: BucketDevice) {
+		trusting = d;
+		trustName = `Device ${d.deviceId.slice(0, 6)}`;
+	}
+
+	async function confirmTrust() {
+		if (!trusting) return;
+		const d = trusting;
+		trusting = null;
+		await trustDevice(d.deviceId, trustName);
 		Notifier.success('Device trusted');
 		await refreshStatus();
 	}
@@ -345,7 +356,7 @@
 										</div>
 									</div>
 									{#if !d.trusted}
-										<button class="btn btn-xs btn-outline" onclick={() => trust(d)}>
+										<button class="btn btn-xs btn-outline" onclick={() => startTrust(d)}>
 											<UserCheckIcon size={12} />
 											Trust
 										</button>
@@ -499,6 +510,24 @@
 				{/if}
 			</div>
 		</section>
+	{/if}
+
+	{#if trusting}
+		<div class="modal modal-open">
+			<div class="modal-box">
+				<h3 class="text-lg font-bold">Trust device</h3>
+				<p class="py-2 text-sm">
+					Records from this device will be merged into your local transactions. ID:
+					<code class="break-all">{trusting.deviceId}</code>
+				</p>
+				<input class="input input-bordered w-full" bind:value={trustName} aria-label="Device name" />
+				<div class="modal-action">
+					<button class="btn btn-ghost" onclick={() => (trusting = null)}>Cancel</button>
+					<button class="btn btn-primary" onclick={confirmTrust}>Trust</button>
+				</div>
+			</div>
+			<button class="modal-backdrop" aria-label="Close" onclick={() => (trusting = null)}></button>
+		</div>
 	{/if}
 
 	<dialog bind:this={overwriteDialog} class="modal">

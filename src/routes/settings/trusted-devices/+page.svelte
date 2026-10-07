@@ -8,7 +8,10 @@
 	// connect, so this works when Peer Sync is not in use.
 	const presence = peerConnection.presence;
 
-	onMount(() => peerConnection.ensureInit());
+	onMount(async () => {
+		await peerConnection.ensureInit();
+		await presence.reloadTrustedPeers();
+	});
 
 	function formatDate(iso: string | undefined = undefined): string {
 		if (!iso) return '—';
