@@ -7,7 +7,17 @@ command = "npm run build"
 #[context.production]
 
 [[headers]]
-for = "/service-worker.js"
+for = "/sw.js"
+[headers.values]
+Cache-Control = "no-cache"
+
+[[headers]]
+for = "/workbox-*.js"
+[headers.values]
+Cache-Control = "no-cache"
+
+[[headers]]
+for = "/build-info.json"
 [headers.values]
 Cache-Control = "no-cache"
 #X-Frame-Options = "DENY"
