@@ -191,17 +191,15 @@
 		return parts.join(' · ');
 	}
 
-	let includeSettings = $state(false);
-	let includeScheduled = $state(false);
-	let includeXacts = $state(false);
-	let includeBeancount = $state(false);
+	const include = $state<Record<SyncItem, boolean>>({
+		settings: false,
+		scheduled: false,
+		xacts: false,
+		beancount: false
+	});
 
-	const allSelected = $derived(
-		includeSettings && includeScheduled && includeXacts && includeBeancount
-	);
-	const someSelected = $derived(
-		includeSettings || includeScheduled || includeXacts || includeBeancount
-	);
+	const allSelected = $derived(Object.values(include).every(Boolean));
+	const someSelected = $derived(Object.values(include).some(Boolean));
 	let indeterminate = $state(false);
 	$effect(() => {
 		indeterminate = someSelected && !allSelected;
@@ -209,7 +207,7 @@
 
 	function toggleSelectAll() {
 		const next = !allSelected;
-		includeSettings = includeScheduled = includeXacts = includeBeancount = next;
+		for (const key of Object.keys(include) as SyncItem[]) include[key] = next;
 	}
 
 	let busy = $state(false);
@@ -226,12 +224,7 @@
 	);
 
 	function selectedItems(): SyncItem[] {
-		const items: SyncItem[] = [];
-		if (includeSettings) items.push('settings');
-		if (includeScheduled) items.push('scheduled');
-		if (includeXacts) items.push('xacts');
-		if (includeBeancount) items.push('beancount');
-		return items;
+		return statusRows.map((r) => r.key as SyncItem).filter((key) => include[key]);
 	}
 
 	/** Downloaded data reaches the ledger through the working set and the OPFS files. */
@@ -335,99 +328,75 @@
 	</Toolbar>
 	{#if ready && cfg}
 		<section class="flex-1 space-y-4 overflow-y-auto touch-pan-y p-4">
-			<div class="mx-auto max-w-2xl space-y-4">
-				<section class="text-sm">
-					<span class="font-mono text-xs text-base-content/60">
-						{cfg.bucket}{cfg.prefix ? '/' + cfg.prefix : ''}
-					</span>
-				</section>
-
-				<section class="my-4">
-					<div class="mb-3 flex items-center justify-between">
-						<h2 class="text-lg font-semibold">Bucket status</h2>
-						{#if checkingRemote}
-							<RefreshCwIcon size={14} class="animate-spin text-base-content/40" />
+			<div class="mx-auto max-w-2xl space-y-3">
+				<div class="card bg-base-200 shadow-sm">
+					<div class="card-body gap-3 p-4">
+						<div class="flex items-center justify-between gap-2">
+							<h2 class="card-title text-sm">Devices</h2>
+							<a href="/settings/trusted-devices" class="link text-xs">Manage trusted devices</a>
+						</div>
+						<span class="font-mono text-xs text-base-content/60">
+							{cfg.bucket}{cfg.prefix ? '/' + cfg.prefix : ''}
+						</span>
+						{#if devices.length === 0}
+							<p class="text-xs text-base-content/50">No other device has uploaded yet.</p>
 						{:else}
-							<button
-								class="flex cursor-pointer items-center gap-1 text-xs text-base-content/40 hover:text-base-content/70"
-								onclick={refreshStatus}
-							>
-								<RefreshCwIcon size={12} />
-								refresh
-							</button>
+							<ul class="space-y-2">
+								{#each devices as d (d.deviceId)}
+									<li class="bg-base-300 rounded-box flex items-center gap-2 p-3">
+										<div class="min-w-0 flex-1">
+											<div class="flex items-center gap-2 text-sm">
+												<span class="truncate font-medium">
+													{d.name ?? `Device ${d.deviceId.slice(0, 6)}`}
+												</span>
+												{#if !d.trusted}
+													<span class="badge badge-warning badge-sm">not trusted</span>
+												{:else if d.readOnly}
+													<span class="badge badge-neutral badge-sm">read-only</span>
+												{:else}
+													<span class="badge badge-success badge-sm">trusted</span>
+												{/if}
+											</div>
+											<div class="text-xs text-base-content/50">
+												{#if d.lastModified}Updated {d.lastModified.toLocaleString()}{/if}
+											</div>
+										</div>
+										{#if !d.trusted}
+											<button class="btn btn-xs btn-outline" onclick={() => startTrust(d)}>
+												<UserCheckIcon size={12} />
+												Trust
+											</button>
+										{/if}
+									</li>
+								{/each}
+							</ul>
+							<p class="text-xs text-base-content/50">
+								Transactions are merged only from trusted devices.
+							</p>
 						{/if}
 					</div>
-					<p class="mb-2 text-xs">
-						<a href="/backup/s3/files" class="link">Review Beancount files</a>
-						<span class="text-base-content/50"> — compare versions and clear false conflicts</span>
-					</p>
-					<p class="mb-2 flex items-baseline justify-between gap-3 text-sm text-base-content/70">
-						<span>Last sync on this device:</span>
-						<span class="text-right text-xs">{lastSync ? lastSync.toLocaleString() : 'never'}</span>
-					</p>
-					{#if overview}
-						<dl class="space-y-1 text-sm">
-							{#each statusRows as row (row.key)}
-								<div class="flex items-baseline justify-between gap-3">
-									<dt>
-										{row.label}:
-										{@render badge(row.key)}
-									</dt>
-									<dd class="text-right text-xs text-base-content/60">
-										{describeItem(overview[row.key], row.key)}
-									</dd>
-								</div>
-							{/each}
-						</dl>
-					{/if}
-				</section>
+				</div>
 
-				<section class="my-4">
-					<div class="mb-3 flex items-center justify-between">
-						<h2 class="text-lg font-semibold">Other devices</h2>
-						<a href="/settings/trusted-devices" class="link text-xs">Manage trusted devices</a>
-					</div>
-					{#if devices.length === 0}
-						<p class="text-xs text-base-content/50">No other device has uploaded yet.</p>
-					{:else}
-						<ul class="space-y-2">
-							{#each devices as d (d.deviceId)}
-								<li class="flex items-center gap-2">
-									<div class="min-w-0 flex-1">
-										<div class="flex items-center gap-2 text-sm">
-											<span class="truncate font-medium">
-												{d.name ?? `Device ${d.deviceId.slice(0, 6)}`}
-											</span>
-											{#if !d.trusted}
-												<span class="badge badge-warning badge-sm">not trusted</span>
-											{:else if d.readOnly}
-												<span class="badge badge-neutral badge-sm">read-only</span>
-											{:else}
-												<span class="badge badge-success badge-sm">trusted</span>
-											{/if}
-										</div>
-										<div class="text-xs text-base-content/50">
-											{#if d.lastModified}Updated {d.lastModified.toLocaleString()}{/if}
-										</div>
-									</div>
-									{#if !d.trusted}
-										<button class="btn btn-xs btn-outline" onclick={() => startTrust(d)}>
-											<UserCheckIcon size={12} />
-											Trust
-										</button>
-									{/if}
-								</li>
-							{/each}
-						</ul>
-						<p class="mt-2 text-xs text-base-content/50">
-							Transactions are merged only from trusted devices.
+				<div class="card bg-base-200 shadow-sm">
+					<div class="card-body gap-3 p-4">
+						<div class="flex items-center justify-between gap-2">
+							<h2 class="card-title text-sm">Items</h2>
+							{#if checkingRemote}
+								<RefreshCwIcon size={14} class="animate-spin text-base-content/40" />
+							{:else}
+								<button
+									class="flex cursor-pointer items-center gap-1 text-xs text-base-content/40 hover:text-base-content/70"
+									onclick={refreshStatus}
+								>
+									<RefreshCwIcon size={12} />
+									refresh
+								</button>
+							{/if}
+						</div>
+						<p class="flex items-baseline justify-between gap-3 text-xs text-base-content/70">
+							<span>Last sync on this device:</span>
+							<span class="text-right">{lastSync ? lastSync.toLocaleString() : 'never'}</span>
 						</p>
-					{/if}
-				</section>
-
-				<section class="my-4">
-					<h2 class="mb-3 text-lg font-semibold">Items</h2>
-					<div class="flex flex-col gap-3">
 						<label class="flex cursor-pointer items-center gap-3">
 							<input
 								type="checkbox"
@@ -439,145 +408,150 @@
 							<span class="flex-1 text-sm text-base-content/60">Select all</span>
 						</label>
 						<div class="divider my-0"></div>
-						<label class="flex cursor-pointer items-center gap-3">
-							<input
-								type="checkbox"
-								class="checkbox checkbox-primary"
-								bind:checked={includeSettings}
-							/>
-							<span class="flex-1">Settings {@render badge('settings')}</span>
-						</label>
-						<label class="flex cursor-pointer items-center gap-3">
-							<input
-								type="checkbox"
-								class="checkbox checkbox-primary"
-								bind:checked={includeScheduled}
-							/>
-							<span class="flex-1">Scheduled Transactions {@render badge('scheduled')}</span>
-						</label>
-						<label class="flex cursor-pointer items-center gap-3">
-							<input
-								type="checkbox"
-								class="checkbox checkbox-primary"
-								bind:checked={includeXacts}
-							/>
-							<span class="flex-1">Local Transactions {@render badge('xacts')}</span>
-						</label>
-						<label class="flex cursor-pointer items-center gap-3">
-							<input
-								type="checkbox"
-								class="checkbox checkbox-primary"
-								bind:checked={includeBeancount}
-							/>
-							<span class="flex-1">Beancount Files {@render badge('beancount')}</span>
-						</label>
-					</div>
-				</section>
-
-				<section class="mt-20 flex justify-center gap-3">
-					<button class="btn btn-primary" disabled={!someSelected || busy} onclick={requestUpload}>
-						{#if busy}<span class="loading loading-spinner loading-sm"
-							></span>{:else}<CloudUploadIcon class="size-5" />{/if}
-						Upload
-					</button>
-					<button
-						class="btn btn-outline btn-error"
-						disabled={!someSelected || busy}
-						onclick={() => run('download')}
-					>
-						<CloudDownloadIcon class="size-5" />
-						Download
-					</button>
-				</section>
-
-				{#if !cfg.passphrase}
-					<p class="text-center text-sm text-warning">
-						Set an encryption passphrase in the
-						<a href="/settings/s3-cfg" class="link">configuration</a> first.
-					</p>
-				{/if}
-
-				{#if lines.length}
-					<section class="space-y-2">
-						<h2 class="text-lg font-semibold">Result</h2>
-						<p class="text-sm text-base-content/70">
-							{changed.length} transferred, {conflicts.length} conflicts, {problems.length} errors.
-						</p>
-
-						{#if pendingDeletes.length}
-							<div class="card border border-error/40 bg-base-200 p-3">
-								<h3 class="font-semibold">Deletions to confirm</h3>
-								<p class="text-xs text-base-content/70">
-									Nothing has been deleted yet. Deleting a file removes it from the bucket or from
-									this device, and the other devices follow on their next sync.
-								</p>
-								<ul class="my-2 space-y-1 text-sm">
-									{#each pendingDeletes as line (line.path)}
-										<li>
-											<span class="font-mono text-xs break-all">{line.path}</span>
-											<span class="text-xs text-error">
-												{line.deletes === 'bucket'
-													? 'will be deleted from the bucket'
-													: 'will be deleted from this device'}
-											</span>
-										</li>
-									{/each}
-								</ul>
-								<div class="flex gap-2">
-									<button
-										class="btn btn-sm btn-error"
-										disabled={busy}
-										onclick={() => applyDeletions(pendingDeletes)}
-									>
-										Delete {pendingDeletes.length}
-										{pendingDeletes.length === 1 ? 'file' : 'files'}
-									</button>
-									<button
-										class="btn btn-sm btn-ghost"
-										disabled={busy}
-										onclick={() =>
-											(lines = lines.map((l) =>
-												l.outcome === 'pending-delete' ? { ...l, outcome: 'skipped' } : l
-											))}
-									>
-										Keep them
-									</button>
-								</div>
-							</div>
-						{/if}
-
-						{#each conflicts as line (line.path)}
-							<div class="card bg-base-200 p-3">
-								<div class="font-mono text-sm break-all">{line.path}</div>
-								<div class="text-xs text-warning">{line.message}</div>
-								<div class="mt-2 flex gap-2">
-									<button
-										class="btn btn-sm btn-outline"
-										disabled={busy}
-										onclick={() => resolve(line, 'local')}
-									>
-										Keep this device
-									</button>
-									<button
-										class="btn btn-sm btn-outline"
-										disabled={busy}
-										onclick={() => resolve(line, 'remote')}
-									>
-										Keep bucket
-									</button>
-								</div>
-							</div>
+						{#each statusRows as row (row.key)}
+							<label class="flex cursor-pointer items-start gap-3">
+								<input
+									type="checkbox"
+									class="checkbox checkbox-primary mt-0.5"
+									bind:checked={include[row.key as SyncItem]}
+								/>
+								<span class="flex-1">
+									<span class="block">{row.label} {@render badge(row.key)}</span>
+									{#if overview}
+										<span class="block text-xs text-base-content/60">
+											{describeItem(overview[row.key], row.key)}
+										</span>
+									{/if}
+									{#if row.key === 'beancount'}
+										<a href="/backup/s3/files" class="link text-xs">Review files</a>
+										<span class="text-xs text-base-content/50">
+											— compare versions, clear false conflicts
+										</span>
+									{/if}
+								</span>
+							</label>
 						{/each}
+					</div>
+				</div>
 
-						<ul class="space-y-1 text-sm">
-							{#each lines.filter((l) => l.outcome !== 'conflict' && l.outcome !== 'unchanged' && l.outcome !== 'pending-delete') as line (line.path)}
-								<li class={line.outcome === 'error' ? 'text-error' : ''}>
-									<span class="font-mono text-xs break-all">{line.path}</span>:
-									{line.outcome}{line.message ? ` (${line.message})` : ''}
-								</li>
+				<div class="card bg-base-200 shadow-sm">
+					<div class="card-body gap-3 p-4">
+						<h2 class="card-title text-sm">Actions</h2>
+						<div class="flex justify-center gap-3">
+							<button
+								class="btn btn-primary"
+								disabled={!someSelected || busy}
+								onclick={requestUpload}
+							>
+								{#if busy}<span class="loading loading-spinner loading-sm"
+									></span>{:else}<CloudUploadIcon class="size-5" />{/if}
+								Upload
+							</button>
+							<button
+								class="btn btn-outline btn-error"
+								disabled={!someSelected || busy}
+								onclick={() => run('download')}
+							>
+								<CloudDownloadIcon class="size-5" />
+								Download
+							</button>
+						</div>
+						{#if !cfg.passphrase}
+							<p class="text-center text-sm text-warning">
+								Set an encryption passphrase in the
+								<a href="/settings/s3-cfg" class="link">configuration</a> first.
+							</p>
+						{/if}
+					</div>
+				</div>
+
+				{#if lines.length || busy}
+					<div class="card bg-base-200 shadow-sm">
+						<div class="card-body gap-2 p-4">
+							<h2 class="card-title text-sm">
+								Progress
+								{#if busy}<span class="loading loading-spinner loading-xs"></span>{/if}
+							</h2>
+							<p class="text-sm text-base-content/70">
+								{busy ? 'Working… ' : ''}{changed.length} transferred, {conflicts.length} conflicts, {problems.length}
+								errors.
+							</p>
+
+							{#if pendingDeletes.length}
+								<div class="card border border-error/40 bg-base-200 p-3">
+									<h3 class="font-semibold">Deletions to confirm</h3>
+									<p class="text-xs text-base-content/70">
+										Nothing has been deleted yet. Deleting a file removes it from the bucket or from
+										this device, and the other devices follow on their next sync.
+									</p>
+									<ul class="my-2 space-y-1 text-sm">
+										{#each pendingDeletes as line (line.path)}
+											<li>
+												<span class="font-mono text-xs break-all">{line.path}</span>
+												<span class="text-xs text-error">
+													{line.deletes === 'bucket'
+														? 'will be deleted from the bucket'
+														: 'will be deleted from this device'}
+												</span>
+											</li>
+										{/each}
+									</ul>
+									<div class="flex gap-2">
+										<button
+											class="btn btn-sm btn-error"
+											disabled={busy}
+											onclick={() => applyDeletions(pendingDeletes)}
+										>
+											Delete {pendingDeletes.length}
+											{pendingDeletes.length === 1 ? 'file' : 'files'}
+										</button>
+										<button
+											class="btn btn-sm btn-ghost"
+											disabled={busy}
+											onclick={() =>
+												(lines = lines.map((l) =>
+													l.outcome === 'pending-delete' ? { ...l, outcome: 'skipped' } : l
+												))}
+										>
+											Keep them
+										</button>
+									</div>
+								</div>
+							{/if}
+
+							{#each conflicts as line (line.path)}
+								<div class="card bg-base-200 p-3">
+									<div class="font-mono text-sm break-all">{line.path}</div>
+									<div class="text-xs text-warning">{line.message}</div>
+									<div class="mt-2 flex gap-2">
+										<button
+											class="btn btn-sm btn-outline"
+											disabled={busy}
+											onclick={() => resolve(line, 'local')}
+										>
+											Keep this device
+										</button>
+										<button
+											class="btn btn-sm btn-outline"
+											disabled={busy}
+											onclick={() => resolve(line, 'remote')}
+										>
+											Keep bucket
+										</button>
+									</div>
+								</div>
 							{/each}
-						</ul>
-					</section>
+
+							<ul class="space-y-1 text-sm">
+								{#each lines.filter((l) => l.outcome !== 'conflict' && l.outcome !== 'unchanged' && l.outcome !== 'pending-delete') as line (line.path)}
+									<li class={line.outcome === 'error' ? 'text-error' : ''}>
+										<span class="font-mono text-xs break-all">{line.path}</span>:
+										{line.outcome}{line.message ? ` (${line.message})` : ''}
+									</li>
+								{/each}
+							</ul>
+						</div>
+					</div>
 				{/if}
 			</div>
 		</section>
