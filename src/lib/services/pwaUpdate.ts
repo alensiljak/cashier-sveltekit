@@ -29,9 +29,20 @@ export function initPwa(): Promise<void> {
 	return initPromise;
 }
 
-/** Activates the waiting service worker and reloads the page. */
+/**
+ * Activates the waiting service worker and reloads the page.
+ *
+ * vite-plugin-pwa only reloads from its own `controlling` listener, which is attached when the
+ * "waiting" event fires and ignores the event unless workbox flagged it as an update. When that
+ * is missed (e.g. the update was found by `checkForUpdate`, or the page was not controlled by a
+ * worker), the new worker activates but nothing reloads. So reload here as well.
+ */
 export async function updateApp(): Promise<void> {
 	await initPwa();
+	const reload = () => window.location.reload();
+	navigator.serviceWorker?.addEventListener('controllerchange', reload, { once: true });
+	// An uncontrolled page gets no controllerchange, so do not wait on it forever.
+	setTimeout(reload, 3000);
 	await applyUpdate?.(true);
 }
 
