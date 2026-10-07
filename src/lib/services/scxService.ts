@@ -1,13 +1,16 @@
 /**
  * Access to the scheduled transactions (SCX). Everything outside the storage
  * layer goes through here. Backed by the CRDT store; the first access on a
- * device creates it, offering to migrate the legacy Dexie records (see
- * `scxMigration.ts`).
+ * device creates it.
  */
 import type { ScheduledTransaction, ScxId } from '$lib/data/model';
 import type { CrdtScxStore } from '$lib/storage/crdtScxStore';
 import { getScxStore } from '$lib/storage/scxStoreRegistry';
-import { ensureScxStoreExists } from '$lib/services/scxMigration';
+
+/** Creates the store on this device if it does not exist yet. */
+async function ensureScxStoreExists(scxStore: CrdtScxStore): Promise<void> {
+	if (!(await scxStore.isInitialized())) await scxStore.initialize();
+}
 
 const prepared = new WeakMap<CrdtScxStore, Promise<void>>();
 
@@ -26,9 +29,9 @@ async function store(): Promise<CrdtScxStore> {
 }
 
 /**
- * The store itself, once it exists on this device (offering the legacy migration
- * first, if needed). For sync code that exchanges the document's state; background
- * work that mustn't raise that prompt checks `isInitialized()` on `getScxStore()` instead.
+ * The store itself, once it exists on this device (created if needed). For sync code
+ * that exchanges the document's state; background work that mustn't create it checks
+ * `isInitialized()` on `getScxStore()` instead.
  */
 export async function getReadyScxStore(): Promise<CrdtScxStore> {
 	return store();

@@ -7,7 +7,6 @@ import {
 	// Xact,
 	// Payee,
 	// Posting,
-	ScheduledTransaction,
 	Setting,
 	TrustedPeer,
 	PeerSyncBaseline
@@ -18,7 +17,6 @@ import {
 interface CashierDatabase extends Dexie {
 	// accounts: Table;
 	// payees: Table;
-	scheduled: Table;
 	settings: Table;
 	deviceSettings: Table;
 	peers: Table;
@@ -105,16 +103,19 @@ db.version(6).stores({
 	peerSyncBaseline: '[endpointId+path]'
 });
 
-// TODO: add a version that drops `scheduled` (`scheduled: null`) and remove the
-// legacy migration (`scxMigration.ts`, `ScxMigrationDialog.svelte`) with it. The
-// scheduled transactions now live in the CRDT store (`CrdtScxStore`); this table
-// is only read once, by that migration.
+// The scheduled transactions live in the CRDT store (`CrdtScxStore`); drop the legacy table.
+db.version(7).stores({
+	scheduled: null,
+	settings: 'key',
+	deviceSettings: 'key',
+	peers: 'id',
+	peerSyncBaseline: '[endpointId+path]'
+});
 
 // Mappings
 
 db.settings.mapToClass(Setting);
 db.deviceSettings.mapToClass(Setting);
-db.scheduled.mapToClass(ScheduledTransaction);
 db.peers.mapToClass(TrustedPeer);
 db.peerSyncBaseline.mapToClass(PeerSyncBaseline);
 
