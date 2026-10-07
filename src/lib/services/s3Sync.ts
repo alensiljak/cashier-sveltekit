@@ -44,6 +44,7 @@ export type SyncOutcome =
 	| 'uploaded'
 	| 'downloaded'
 	| 'deleted'
+	| 'merged'
 	| 'pending-delete'
 	| 'unchanged'
 	| 'skipped'
@@ -69,8 +70,16 @@ export interface S3Session {
 	own: Manifest;
 	/** path -> hash at the last sync. */
 	bases: Record<string, string>;
+	/** path -> hashes verified to hold the same text as `base`. Void once the base changes. */
+	equiv: Record<string, Equivalent>;
 	manifestDirty: boolean;
 	basesDirty: boolean;
+	equivDirty: boolean;
+}
+
+interface Equivalent {
+	base: string;
+	hashes: string[];
 }
 
 const TEXT = new TextEncoder();
@@ -135,7 +144,34 @@ export async function openSession(cfg: S3Config): Promise<S3Session> {
 	}
 	const bases =
 		(await deviceSettings.get<Record<string, string>>(DeviceSettingKeys.s3SyncBase)) ?? {};
-	return { cfg, key, deviceId, manifests, own, bases, manifestDirty: false, basesDirty: false };
+	const equiv =
+		(await deviceSettings.get<Record<string, Equivalent>>(DeviceSettingKeys.s3SyncEquiv)) ?? {};
+	return {
+		cfg,
+		key,
+		deviceId,
+		manifests,
+		own,
+		bases,
+		equiv,
+		manifestDirty: false,
+		basesDirty: false,
+		equivDirty: false
+	};
+}
+
+/**
+ * A hash verified to hold the same text as the last-synced version counts as that version, so
+ * that a copy differing only in line endings is not taken for a change.
+ */
+function canonical(
+	s: Pick<S3Session, 'bases' | 'equiv'>,
+	path: string,
+	hash: string | null
+): string | null {
+	const e = s.equiv[path];
+	const base = s.bases[path];
+	return hash !== null && e && base === e.base && e.hashes.includes(hash) ? base : hash;
 }
 
 /** Writes this device's manifest and the last-synced hashes, if they changed. */
@@ -149,6 +185,10 @@ async function persist(s: S3Session): Promise<void> {
 	if (s.basesDirty) {
 		await deviceSettings.set(DeviceSettingKeys.s3SyncBase, s.bases);
 		s.basesDirty = false;
+	}
+	if (s.equivDirty) {
+		await deviceSettings.set(DeviceSettingKeys.s3SyncEquiv, s.equiv);
+		s.equivDirty = false;
 	}
 }
 
@@ -249,8 +289,8 @@ async function syncShared(
 	const { item, path } = file;
 	try {
 		const bytes = await file.read();
-		const local = bytes ? await sha256Hex(bytes) : null;
-		const remote = latestRemote(s.manifests).get(path)?.hash ?? null;
+		const local = canonical(s, path, bytes ? await sha256Hex(bytes) : null);
+		const remote = canonical(s, path, latestRemote(s.manifests).get(path)?.hash ?? null);
 		let d = decide(direction, local, remote, s.bases[path] ?? null);
 
 		if (
@@ -575,6 +615,22 @@ export async function resolveConflict(
 	}
 }
 
+/**
+ * Writes a partial or full merge to this device only. Neither the bucket nor the last-synced
+ * hash is touched, so the file keeps its status: still a conflict while it differs from the
+ * bucket, and the remaining differences can be merged (or kept) later.
+ */
+export async function applyMerge(path: string, content: string): Promise<SyncLine> {
+	const line: SyncLine = { item: 'beancount', path: FILES_PREFIX + path, outcome: 'merged' };
+	try {
+		if (!isSafePath(path)) throw new Error('Unsafe file path');
+		await saveBinaryFile(path, TEXT.encode(content));
+		return line;
+	} catch (e) {
+		return { ...line, outcome: 'error', message: errorText(e) };
+	}
+}
+
 async function sharedFileFor(line: SyncLine): Promise<SharedFile> {
 	return line.item === 'settings'
 		? settingsFile()
@@ -709,14 +765,140 @@ export interface FileSyncStatus {
 export type FileSyncOverview = Record<'settings' | 'beancount', FileSyncStatus>;
 
 /** What an upload or download would do per path, in the same terms as `decide`. */
-function classify(local: string | null, remote: string | null, base: string | null) {
-	const up = decide('upload', local, remote, base).action;
-	const down = decide('download', local, remote, base).action;
-	if (up === 'unchanged') return null;
-	if (up === 'conflict' || down === 'conflict') return 'conflict' as const;
-	if (up === 'upload' || up === 'delete-remote') return 'upload' as const;
-	if (down === 'download' || down === 'delete-local') return 'download' as const;
+function classify(
+	local: string | null,
+	remote: string | null,
+	base: string | null
+): { kind: 'upload' | 'download' | 'conflict'; reason?: string } | null {
+	const up = decide('upload', local, remote, base);
+	const down = decide('download', local, remote, base);
+	if (up.action === 'unchanged') return null;
+	if (up.action === 'conflict') return { kind: 'conflict', reason: up.reason };
+	if (down.action === 'conflict') return { kind: 'conflict', reason: down.reason };
+	if (up.action === 'upload' || up.action === 'delete-remote') {
+		return { kind: 'upload', reason: up.reason };
+	}
+	if (down.action === 'download' || down.action === 'delete-local') {
+		return { kind: 'download', reason: down.reason };
+	}
 	return null;
+}
+
+export type FileState = 'unchanged' | 'upload' | 'download' | 'conflict';
+
+export interface FileStatusEntry {
+	/** OPFS path of the Beancount file. */
+	path: string;
+	state: FileState;
+	reason?: string;
+	/** Present on this device. */
+	local: boolean;
+	/** In the bucket, and not deleted there. */
+	remote: boolean;
+}
+
+const hashOf = async (bytes: Uint8Array<ArrayBuffer> | null) => (bytes ? sha256Hex(bytes) : null);
+
+/**
+ * Status of every Beancount file, local or in the bucket, in the terms of `decide`. Unlike
+ * `fetchFileSyncStatus` it lists the unchanged files too.
+ */
+export async function listFileStatuses(s: S3Session): Promise<FileStatusEntry[]> {
+	const remote = latestRemote(s.manifests);
+	const local = await listLocalFiles();
+	const paths = new Set([...local.keys()].map((p) => FILES_PREFIX + p));
+	for (const p of remote.keys()) if (p.startsWith(FILES_PREFIX)) paths.add(p);
+
+	const entries: FileStatusEntry[] = [];
+	for (const path of [...paths].sort()) {
+		const opfsPath = path.slice(FILES_PREFIX.length);
+		if (!isSafePath(opfsPath)) continue;
+		const bytes = await beancountFile(path, local).read();
+		const remoteHash = remote.get(path)?.hash ?? null;
+		const verdict = classify(
+			canonical(s, path, await hashOf(bytes)),
+			canonical(s, path, remoteHash),
+			s.bases[path] ?? null
+		);
+		const inBucket = remoteHash !== null && remoteHash !== TOMBSTONE;
+		// Gone from both sides: nothing to show.
+		if (!bytes && !inBucket) continue;
+		entries.push({
+			path: opfsPath,
+			state: verdict?.kind ?? 'unchanged',
+			reason: verdict?.reason,
+			local: !!bytes,
+			remote: inBucket
+		});
+	}
+	return entries;
+}
+
+export interface FileComparison {
+	path: string;
+	/** Null when the file does not exist on this device. */
+	localText: string | null;
+	/** Null when the file is absent from the bucket or deleted there. */
+	remoteText: string | null;
+	localHash: string | null;
+	remoteHash: string | null;
+	/** Byte for byte the same. */
+	identical: boolean;
+	/** The same text, ignoring line endings and the final newline. */
+	sameText: boolean;
+}
+
+/** Reads both versions of a Beancount file, to see whether they really differ. */
+export async function compareFile(s: S3Session, path: string): Promise<FileComparison> {
+	const full = FILES_PREFIX + path;
+	if (!isSafePath(path)) throw new Error('Unsafe file path');
+	const localBytes = await beancountFile(full, await listLocalFiles()).read();
+
+	const entry = latestRemote(s.manifests).get(full);
+	let remoteBytes: Uint8Array<ArrayBuffer> | null = null;
+	if (entry && entry.hash !== TOMBSTONE) {
+		const raw = await getObject(s.cfg, dataKey(full));
+		if (!raw) throw new Error('Listed in a manifest but missing from the bucket');
+		remoteBytes = await decrypt(s.key, raw);
+	}
+
+	const text = (b: Uint8Array | null) => (b ? new TextDecoder().decode(b) : null);
+	const localHash = await hashOf(localBytes);
+	const remoteHash = await hashOf(remoteBytes);
+	const localText = text(localBytes);
+	const remoteText = text(remoteBytes);
+	return {
+		path,
+		localText,
+		remoteText,
+		localHash,
+		remoteHash,
+		identical: localHash !== null && localHash === remoteHash,
+		sameText:
+			localText !== null &&
+			remoteText !== null &&
+			normalizeEol(localText) === normalizeEol(remoteText)
+	};
+}
+
+/**
+ * Records that this device's copy and the bucket's hold the same text, so the file stops showing
+ * as a conflict. Changes nothing in the bucket or in the files. A later change on either side is
+ * detected as usual.
+ */
+export async function markSameContent(s: S3Session, cmp: FileComparison): Promise<void> {
+	if (!cmp.sameText || !cmp.localHash || !cmp.remoteHash) {
+		throw new Error('The two versions differ');
+	}
+	const path = FILES_PREFIX + cmp.path;
+	const manifestHash = latestRemote(s.manifests).get(path)?.hash;
+	if (manifestHash !== cmp.remoteHash) {
+		throw new Error('The bucket copy no longer matches its manifest. Refresh and compare again.');
+	}
+	s.bases[path] = cmp.localHash;
+	s.equiv[path] = { base: cmp.localHash, hashes: [cmp.remoteHash] };
+	s.basesDirty = s.equivDirty = true;
+	await persist(s);
 }
 
 /**
@@ -731,21 +913,16 @@ export async function fetchFileSyncStatus(cfg: S3Config): Promise<FileSyncOvervi
 		settings: { upload: 0, download: 0, conflict: 0 },
 		beancount: { upload: 0, download: 0, conflict: 0 }
 	};
-	const tally = (item: 'settings' | 'beancount', path: string, local: string | null) => {
-		const kind = classify(local, remote.get(path)?.hash ?? null, s.bases[path] ?? null);
-		if (kind) result[item][kind]++;
-	};
-
 	const settings = await settingsFile().read();
-	tally('settings', SETTINGS_PATH, settings ? await sha256Hex(settings) : null);
+	const verdict = classify(
+		canonical(s, SETTINGS_PATH, await hashOf(settings)),
+		canonical(s, SETTINGS_PATH, remote.get(SETTINGS_PATH)?.hash ?? null),
+		s.bases[SETTINGS_PATH] ?? null
+	);
+	if (verdict) result.settings[verdict.kind]++;
 
-	const local = await listLocalFiles();
-	const paths = new Set([...local.keys()].map((p) => FILES_PREFIX + p));
-	for (const p of remote.keys()) if (p.startsWith(FILES_PREFIX)) paths.add(p);
-	for (const path of paths) {
-		if (!isSafePath(path.slice(FILES_PREFIX.length))) continue;
-		const bytes = await beancountFile(path, local).read();
-		tally('beancount', path, bytes ? await sha256Hex(bytes) : null);
+	for (const f of await listFileStatuses(s)) {
+		if (f.state !== 'unchanged') result.beancount[f.state]++;
 	}
 	return result;
 }

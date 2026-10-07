@@ -357,6 +357,10 @@
 							</button>
 						{/if}
 					</div>
+					<p class="mb-2 text-xs">
+						<a href="/backup/s3/files" class="link">Review Beancount files</a>
+						<span class="text-base-content/50"> — compare versions and clear false conflicts</span>
+					</p>
 					<p class="mb-2 flex items-baseline justify-between gap-3 text-sm text-base-content/70">
 						<span>Last sync on this device:</span>
 						<span class="text-right text-xs">{lastSync ? lastSync.toLocaleString() : 'never'}</span>

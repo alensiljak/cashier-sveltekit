@@ -148,6 +148,10 @@ export const DeviceSettingKeys = {
 	// Content hash of each shared S3 object (settings, Beancount files) at the last sync, as the
 	// common ancestor for conflict detection. Shape: Record<path, hash>
 	s3SyncBase: 's3-sync-base',
+	// Hashes verified (by comparing the text) to be the same content as the base hash, e.g. a copy
+	// that differs only in line endings. Counted as the base when classifying, so they are not
+	// conflicts. Shape: Record<path, { base: hash, hashes: hash[] }>; void once the base changes.
+	s3SyncEquiv: 's3-sync-equiv',
 	// When this device last completed an S3 upload or download. Shape: ISO string
 	s3LastSync: 's3-last-sync',
 	// Which backup/sync options are enabled on this device (shown in the menu). Shape: boolean.

@@ -30,6 +30,8 @@
 		/** Enables the per-hunk Theirs/Mine picker and an "Apply merge" action. */
 		onApplyMerge?: (mergedContent: string) => void | Promise<void>;
 		applyingMerge?: boolean;
+		/** Merge only: every hunk starts as "Mine" (unchanged), so only explicit "Theirs" picks are applied. */
+		defaultMine?: boolean;
 	}
 
 	let {
@@ -41,7 +43,8 @@
 		onMarkIdentical,
 		markingIdentical = false,
 		onApplyMerge,
-		applyingMerge = false
+		applyingMerge = false,
+		defaultMine = false
 	}: Props = $props();
 
 	/** Unique per-instance id prefix — multiple viewers can be mounted at once (e.g. peer-sync's 3-file diff). */
@@ -140,7 +143,7 @@
 	$effect(() => {
 		void diffLines;
 		currentHunk = -1;
-		rejectedHunks = new Set();
+		rejectedHunks = new Set(defaultMine ? hunkRanges.map((_, i) => i) : []);
 	});
 </script>
 
