@@ -290,7 +290,7 @@
 </script>
 
 {#snippet stateBadge(state: FileState)}
-	<span class="badge badge-sm badge-outline {STATE_BADGE[state]}">{STATE_LABEL[state]}</span>
+	<span class="badge badge-sm {STATE_BADGE[state]}">{STATE_LABEL[state]}</span>
 {/snippet}
 
 <main class="flex h-screen flex-col">

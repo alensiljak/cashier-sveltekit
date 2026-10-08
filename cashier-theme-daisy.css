@@ -16,8 +16,8 @@
 	--color-accent-content: #000000;
 	--color-neutral: #1d1f20;
 	--color-neutral-content: var(--color-accent-300);
-	--color-info: var(--color-neutral);
-	--color-info-content: var(--color-neutral-content);
+	--color-info: oklch(0.72 0.11 240);
+	--color-info-content: #000000;
 	--color-success: var(--color-primary-400);
 	--color-success-content: var(--color-primary-content);
 	--color-warning: var(--color-accent-400);
