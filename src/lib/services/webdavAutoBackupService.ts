@@ -54,6 +54,8 @@ async function doBackup(): Promise<void> {
  */
 async function doS3Backup(): Promise<void> {
 	try {
+		if (!(await deviceSettings.get<boolean>(DeviceSettingKeys.s3AutoBackup))) return;
+
 		const { isSyncOptionEnabled } = await import('$lib/services/syncOptions.svelte');
 		if (!(await isSyncOptionEnabled('s3'))) return;
 
@@ -66,6 +68,7 @@ async function doS3Backup(): Promise<void> {
 		const { backupCrdtStores } = await import('$lib/services/s3Sync');
 		const failed = await backupCrdtStores(cfg);
 		if (failed.length) throw new Error(failed.map((l) => l.message).join('; '));
+		lastBackupTime.set(new Date());
 	} catch (err) {
 		console.warn('[s3-auto-backup] error:', err);
 		void showBackupFailureNotification('S3', err instanceof Error ? err.message : String(err));

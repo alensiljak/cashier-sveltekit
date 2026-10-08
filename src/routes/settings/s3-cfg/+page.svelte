@@ -12,6 +12,10 @@
 		type S3Config
 	} from '$lib/services/s3Config';
 	import { testConnection, type S3TestStep } from '$lib/services/s3Client';
+	import { deviceSettings, DeviceSettingKeys } from '$lib/settings';
+	import { lastBackupTime } from '$lib/services/webdavAutoBackupService';
+	import { requestNotificationPermission } from '$lib/utils/webNotification';
+	import { CloudIcon } from '@lucide/svelte';
 
 	let cfg = $state<S3Config>(emptyS3Config());
 	let testing = $state(false);
@@ -31,10 +35,19 @@
 		}
 	}
 
+	let autoBackupEnabled = $state(false);
+
 	onMount(async () => {
+		autoBackupEnabled = (await deviceSettings.get<boolean>(DeviceSettingKeys.s3AutoBackup)) ?? false;
 		const saved = await loadS3Config();
 		if (saved) cfg = saved;
 	});
+
+	async function toggleAutoBackup() {
+		autoBackupEnabled = !autoBackupEnabled;
+		await deviceSettings.set(DeviceSettingKeys.s3AutoBackup, autoBackupEnabled);
+		if (autoBackupEnabled) await requestNotificationPermission();
+	}
 
 	async function save() {
 		if (!isS3Configured(cfg)) {
@@ -172,6 +185,33 @@
 								Test connection
 							</button>					</div>
 				</form>
+			</div>
+
+			<!-- Auto-backup -->
+			<div class="card bg-base-200 shadow-xl">
+				<div class="card-body p-4">
+					<label class="flex items-center gap-3 cursor-pointer">
+						<span class="flex-1">
+							<span class="font-medium">Auto-backup local transactions</span>
+							<span class="block text-xs text-base-content/50">
+								Upload to the S3 bucket automatically after each change
+							</span>
+						</span>
+						<input
+							type="checkbox"
+							class="toggle toggle-primary bg-transparent bg-none"
+							checked={autoBackupEnabled}
+							disabled={!isS3Configured(cfg) || !cfg.passphrase}
+							onclick={toggleAutoBackup}
+						/>
+					</label>
+					{#if $lastBackupTime}
+						<p class="text-xs text-base-content/50 flex items-center gap-1">
+							<CloudIcon size={12} />
+							Last auto-backup: {$lastBackupTime.toLocaleString()}
+						</p>
+					{/if}
+				</div>
 			</div>
 
 			<div class="card bg-base-200 shadow-xl">

@@ -154,6 +154,8 @@ export const DeviceSettingKeys = {
 	s3SyncEquiv: 's3-sync-equiv',
 	// When this device last completed an S3 upload or download. Shape: ISO string
 	s3LastSync: 's3-last-sync',
+	// Auto-upload the working set (Yjs state) to the S3 bucket after each write. Shape: boolean
+	s3AutoBackup: 's3-auto-backup',
 	// Which backup/sync options are enabled on this device (shown in the menu). Shape: boolean.
 	// When unset, an option counts as enabled if it was already configured (see syncOptions.svelte.ts)
 	syncWebdavEnabled: 'sync.webdav.enabled',
