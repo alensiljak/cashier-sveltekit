@@ -4,8 +4,7 @@
  *
  * Call `scheduleBackup()` after any write to the store. The upload is
  * debounced so rapid successive writes (e.g. sort + save) coalesce into one
- * PUT. The backup runs silently in the background — no toast on success, a
- * console warning on failure. The /backup/webdav/ page shows the last-backup
+ * PUT. The backup runs in the background and reports the result with an app message. The /backup/webdav/ page shows the last-backup
  * timestamp via the exported `lastBackupTime` store.
  */
 
@@ -15,7 +14,7 @@ import { getXactStore } from '$lib/storage/xactStoreRegistry';
 import { getScxStore } from '$lib/storage/scxStoreRegistry';
 import { getDeviceId, ydocFilename, type DocKind } from '$lib/sync/ydocDevices';
 import { writable } from 'svelte/store';
-import { showBackupFailureNotification, showBackupNotification } from '$lib/utils/webNotification';
+import Notifier from '$lib/utils/notifier';
 
 /** Shape of the webdavSettings user setting. */
 export interface WebDavSettings {
@@ -54,6 +53,8 @@ async function doBackup(): Promise<void> {
  */
 async function doS3Backup(): Promise<void> {
 	try {
+		if (!(await deviceSettings.get<boolean>(DeviceSettingKeys.s3AutoBackup))) return;
+
 		const { isSyncOptionEnabled } = await import('$lib/services/syncOptions.svelte');
 		if (!(await isSyncOptionEnabled('s3'))) return;
 
@@ -66,9 +67,11 @@ async function doS3Backup(): Promise<void> {
 		const { backupCrdtStores } = await import('$lib/services/s3Sync');
 		const failed = await backupCrdtStores(cfg);
 		if (failed.length) throw new Error(failed.map((l) => l.message).join('; '));
+		lastBackupTime.set(new Date());
+		Notifier.success('Journal backed up to S3');
 	} catch (err) {
 		console.warn('[s3-auto-backup] error:', err);
-		void showBackupFailureNotification('S3', err instanceof Error ? err.message : String(err));
+		Notifier.error(`S3 backup failed: ${err instanceof Error ? err.message : String(err)}`);
 	}
 }
 
@@ -127,9 +130,9 @@ async function doWebDavBackup(): Promise<void> {
 	const errors = await uploadCrdtState(client);
 	if (errors.length) {
 		console.warn('[webdav-auto-backup] upload failed:', errors);
-		void showBackupFailureNotification('WebDAV', errors.join('; '));
+		Notifier.error(`WebDAV backup failed: ${errors.join('; ')}`);
 	} else {
-		void showBackupNotification();
+		Notifier.success('Journal backed up to WebDAV');
 	}
 }
 /**

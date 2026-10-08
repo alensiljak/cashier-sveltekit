@@ -5,7 +5,6 @@
 	import { settings, deviceSettings, SettingKeys, DeviceSettingKeys } from '$lib/settings';
 	import { lastBackupTime } from '$lib/services/webdavAutoBackupService';
 	import { CloudIcon } from '@lucide/svelte';
-	import { requestNotificationPermission } from '$lib/utils/webNotification';
 	import { WebDavClient, type WebDavEntry } from '$lib/utils/webdav';
 	import { ChevronRight, ChevronUp } from '@lucide/svelte';
 
@@ -66,7 +65,6 @@
 	async function toggleAutoBackup() {
 		autoBackupEnabled = !autoBackupEnabled;
 		await deviceSettings.set(DeviceSettingKeys.webdavAutoBackup, autoBackupEnabled);
-		if (autoBackupEnabled) await requestNotificationPermission();
 	}
 
 	async function saveSettings() {
