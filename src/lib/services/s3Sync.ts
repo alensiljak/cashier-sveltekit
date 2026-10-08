@@ -355,7 +355,7 @@ async function loadIgnoreReasons(): Promise<(deviceId: string | null) => string 
 interface CrdtStoreLike {
 	isInitialized(): Promise<boolean>;
 	exportState(): Promise<Uint8Array>;
-	importState(update: Uint8Array): Promise<unknown[]>;
+	importState(update: Uint8Array, opts?: { backup?: boolean }): Promise<unknown[]>;
 }
 
 async function syncCrdt(
@@ -398,7 +398,8 @@ async function syncCrdt(
 			try {
 				const raw = await getObject(s.cfg, key);
 				if (!raw) continue;
-				const changes = await store.importState(await decrypt(s.key, raw));
+				// The bucket already holds what it returns: no need to re-upload it as our own.
+				const changes = await store.importState(await decrypt(s.key, raw), { backup: false });
 				lines.push({
 					item,
 					path: key,
@@ -508,8 +509,8 @@ async function crdtStatus(
 	}
 
 	const local = await store.exportState();
-	let ownSeen = false;
-	let upload = false;
+	let own: Uint8Array | undefined;
+	const others: Uint8Array[] = [];
 	let download = false;
 	const ignoreReason = await loadIgnoreReasons();
 	for (const key of await listObjects(s.cfg, prefix)) {
@@ -518,14 +519,16 @@ async function crdtStatus(
 		if (!raw) continue;
 		const remote = await decrypt(s.key, raw);
 		if (key === ownKey) {
-			ownSeen = true;
-			if (hasNewOps(local, remote)) upload = true;
-		} else if (hasNewOps(remote, local)) {
-			download = true;
+			own = remote;
+		} else {
+			others.push(remote);
+			if (hasNewOps(remote, local)) download = true;
 		}
 	}
-	// Never uploaded: there is something to upload if the store holds any records.
-	if (!ownSeen && hasNewOps(local)) upload = true;
+	// Records merged from other devices are already in the bucket, in their files, so only
+	// operations found in no bucket file count as something to upload.
+	const files = own ? [own, ...others] : others;
+	const upload = hasNewOps(local, files.length ? Y.mergeUpdates(files) : undefined);
 	return { upload, download };
 }
 

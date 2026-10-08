@@ -186,7 +186,10 @@ export abstract class CrdtDocStore<R> {
 	 * Idempotent. Returns what the merge changed, for a one-off report; nothing
 	 * is kept, so a later call can't tell what an earlier one did.
 	 */
-	async importState(update: Uint8Array): Promise<RecordChange<R>[]> {
+	async importState(
+		update: Uint8Array,
+		{ backup = true }: { backup?: boolean } = {}
+	): Promise<RecordChange<R>[]> {
 		await this.ready();
 		return this.serial(async () => {
 			const local = readMeta(this._doc);
@@ -195,11 +198,15 @@ export abstract class CrdtDocStore<R> {
 			if (remote.resetId > local.resetId) return this.adopt(update, remote);
 			// Operations from before our own reset would bring back what was deleted; ignore them.
 			if (hasRetiredOps(update, local.retired)) return [];
-			return this.merge(update);
+			return this.merge(update, backup);
 		});
 	}
 
-	private async merge(update: Uint8Array): Promise<RecordChange<R>[]> {
+	/**
+	 * @param backup Re-upload this device's file after a merge. Peers relay what they merge;
+	 *   a central store (S3) already holds the merged records, so it passes `false`.
+	 */
+	private async merge(update: Uint8Array, backup: boolean): Promise<RecordChange<R>[]> {
 		let changed = false;
 		const onUpdate = () => {
 			changed = true;
@@ -226,7 +233,7 @@ export abstract class CrdtDocStore<R> {
 		// Merged records reach other devices through this device's own file too,
 		// but a no-op merge leaves nothing new to upload.
 		if (changed) {
-			scheduleBackup();
+			if (backup) scheduleBackup();
 			await this.flush();
 		}
 		return changes;
