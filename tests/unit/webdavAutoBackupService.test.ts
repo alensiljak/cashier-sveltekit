@@ -22,9 +22,8 @@ vi.mock('$lib/utils/webdav', () => ({
 	}
 }));
 vi.mock('$lib/storage/xactStoreRegistry', () => ({ getXactStore: mocks.getXactStore }));
-vi.mock('$lib/utils/webNotification', () => ({
-	showBackupNotification: mocks.notify,
-	showBackupFailureNotification: mocks.notifyFailure
+vi.mock('$lib/utils/notifier', () => ({
+	default: { success: mocks.notify, error: mocks.notifyFailure }
 }));
 
 import { DeviceSettingKeys, SettingKeys, deviceSettings, settings } from '$lib/settings';
@@ -43,7 +42,7 @@ async function configure({ enabled = true, cfg = CFG as unknown } = {}) {
 	await settings.set(SettingKeys.webdavSettings, cfg);
 }
 
-/** Runs the debounce timer and waits until the scheduled upload has finished. The service is fire-and-forget, so completion is the success/failure notification. */
+/** Runs the debounce timer and waits until the scheduled upload has finished. The service is fire-and-forget, so completion is the success/failure message. */
 async function runBackup() {
 	scheduleBackup();
 	await vi.advanceTimersByTimeAsync(2000);
@@ -172,7 +171,9 @@ describe('upload', () => {
 		);
 		expect(get(lastBackupTime)).toBeNull();
 		expect(mocks.notify).not.toHaveBeenCalled();
-		expect(mocks.notifyFailure).toHaveBeenCalledWith('WebDAV', expect.stringContaining('507'));
+		expect(mocks.notifyFailure).toHaveBeenCalledWith(
+			expect.stringMatching(/^WebDAV backup failed: .*507/)
+		);
 	});
 
 	it('warns when exporting or uploading fails', async () => {
@@ -190,6 +191,6 @@ describe('upload', () => {
 				expect.arrayContaining(['export failed'])
 			)
 		);
-		expect(mocks.notifyFailure).toHaveBeenCalledWith('WebDAV', 'export failed');
+		expect(mocks.notifyFailure).toHaveBeenCalledWith('WebDAV backup failed: export failed');
 	});
 });
