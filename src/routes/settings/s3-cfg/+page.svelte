@@ -14,7 +14,6 @@
 	import { testConnection, type S3TestStep } from '$lib/services/s3Client';
 	import { deviceSettings, DeviceSettingKeys } from '$lib/settings';
 	import { lastBackupTime } from '$lib/services/webdavAutoBackupService';
-	import { requestNotificationPermission } from '$lib/utils/webNotification';
 	import { CloudIcon } from '@lucide/svelte';
 
 	let cfg = $state<S3Config>(emptyS3Config());
@@ -46,7 +45,6 @@
 	async function toggleAutoBackup() {
 		autoBackupEnabled = !autoBackupEnabled;
 		await deviceSettings.set(DeviceSettingKeys.s3AutoBackup, autoBackupEnabled);
-		if (autoBackupEnabled) await requestNotificationPermission();
 	}
 
 	async function save() {
