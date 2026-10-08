@@ -30,7 +30,7 @@ import { normalizeEol } from './SyncSource';
 import { getXactStore } from '$lib/storage/xactStoreRegistry';
 import { getScxStore } from '$lib/storage/scxStoreRegistry';
 import type { CrdtScxStore } from '$lib/storage/crdtScxStore';
-import type { Doc } from 'yjs';
+import type { CrdtDocStore } from '$lib/storage/crdtDocStore';
 import type { MessageAction, RequestAction } from '@trystero-p2p/core';
 
 const REQUEST_TIMEOUT_MS = 30_000;
@@ -246,15 +246,18 @@ class PeerConnection {
 		if (!this.ydocUpdateAction || !this.scxUpdateAction) return;
 		this.stopLiveSync();
 		this.stopLiveSyncFns = [
-			this.pushLocalUpdates(xactStore.doc, () => this.ydocUpdateAction),
+			this.pushLocalUpdates(xactStore, () => this.ydocUpdateAction),
 			// Listening on a store that isn't open yet is harmless: nothing is
 			// written to it until it exists.
-			this.pushLocalUpdates(scxStore.doc, () => this.scxUpdateAction)
+			this.pushLocalUpdates(scxStore, () => this.scxUpdateAction)
 		];
 	}
 
 	/** Sends `doc`'s local (non-remote) updates to every online trusted peer. Returns the unsubscribe function. */
-	private pushLocalUpdates(doc: Doc, action: () => MessageAction<Uint8Array> | null): () => void {
+	private pushLocalUpdates(
+		store: Pick<CrdtDocStore<unknown>, 'onUpdate'>,
+		action: () => MessageAction<Uint8Array> | null
+	): () => void {
 		const handler = (update: Uint8Array, origin: unknown) => {
 			// Local edits have no origin; remote merges and IndexedDB loads carry one.
 			if (origin !== null && origin !== undefined) return;
@@ -263,8 +266,7 @@ class PeerConnection {
 				void action()?.send(update, { target: peer.trysteroId });
 			}
 		};
-		doc.on('update', handler);
-		return () => doc.off('update', handler);
+		return store.onUpdate(handler);
 	}
 
 	private stopLiveSync(): void {

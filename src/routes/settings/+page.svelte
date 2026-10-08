@@ -45,6 +45,8 @@
 	import { saveFile, fileExists } from '$lib/utils/opfslib';
 	import HelpButton from '$lib/help/HelpButton.svelte';
 	import demoDataService from '$lib/services/demoDataService';
+	import { getXactStore } from '$lib/storage/xactStoreRegistry';
+	import { getScxStore } from '$lib/storage/scxStoreRegistry';
 	import {
 		NOTIFICATION_TIME_DEFAULT,
 		scheduleNotificationCheck
@@ -92,6 +94,80 @@
 	let showDemoLoadConfirm = $state(false);
 	let showDemoRemoveConfirm = $state(false);
 	let demoBusy = $state(false);
+	let resetTarget = $state<'xacts' | 'scx' | null>(null);
+	let resetBusy = $state(false);
+
+	const RESET_LABELS = { xacts: 'transaction', scx: 'scheduled transaction' } as const;
+
+	// Live records and encoded state size per store; the gap between a large size and few
+	// records is what a reset reclaims.
+	let storeStats = $state<Record<'xacts' | 'scx', { records: number; bytes: number } | null>>({
+		xacts: null,
+		scx: null
+	});
+
+	async function loadStoreStats(target: 'xacts' | 'scx') {
+		const store = target === 'xacts' ? await getXactStore() : await getScxStore();
+		if (!(await store.isInitialized())) {
+			storeStats[target] = null;
+			return;
+		}
+		storeStats[target] = {
+			records: (await store.list()).length,
+			bytes: (await store.exportState()).length
+		};
+	}
+
+	const formatBytes = (n: number) => (n < 1024 ? `${n} B` : `${(n / 1024).toFixed(1)} KB`);
+
+	$effect(() => {
+		const unsubscribe: (() => void)[] = [];
+		let cancelled = false;
+		for (const target of ['xacts', 'scx'] as const) {
+			void loadStoreStats(target);
+			void (target === 'xacts' ? getXactStore() : getScxStore()).then((store) => {
+				if (cancelled) return;
+				unsubscribe.push(store.subscribe(() => void loadStoreStats(target)));
+			});
+		}
+		return () => {
+			cancelled = true;
+			unsubscribe.forEach((u) => u());
+		};
+	});
+
+	// A reset throws away the store's whole history, so it is only offered for an empty store.
+	async function onResetClick(target: 'xacts' | 'scx') {
+		const store = target === 'xacts' ? await getXactStore() : await getScxStore();
+		if (!(await store.isInitialized())) {
+			Notifier.info(`There is no ${RESET_LABELS[target]} store on this device yet.`);
+			return;
+		}
+		if ((await store.list()).length > 0) {
+			Notifier.error(
+				target === 'xacts'
+					? 'Delete all local transactions first (Journal → Delete All).'
+					: 'Delete all scheduled transactions first.'
+			);
+			return;
+		}
+		resetTarget = target;
+	}
+
+	async function resetStore() {
+		const target = resetTarget;
+		if (!target) return;
+		resetBusy = true;
+		try {
+			await (target === 'xacts' ? await getXactStore() : await getScxStore()).reset();
+			Notifier.success(`The ${RESET_LABELS[target]} store was reset.`);
+			resetTarget = null;
+		} catch (e) {
+			Notifier.error(e instanceof Error ? e.message : String(e));
+		} finally {
+			resetBusy = false;
+		}
+	}
 
 	// Saved (DB) values for revert comparison
 	let savedCurrency = $state<string | undefined>(undefined);
@@ -618,7 +694,59 @@
 		</div>
 	</CashierCardTemplate>
 
+	<!-- ── Reset stores ────────────────────────────────────── -->
+	<CashierCardTemplate heading="Reset Stores" Icon={RotateCcw} bodyClass="space-y-3 px-3">
+		{#snippet description()}
+			Deleted records leave small traces in the store, which sync to other devices. Once a store is
+			empty (after archiving its records), reset it to start clean. Other devices follow the next
+			time they sync; records they created in the meantime are kept.
+		{/snippet}
+
+		{#each [{ target: 'xacts', label: 'Device transactions' }, { target: 'scx', label: 'Scheduled transactions' }] as const as row (row.target)}
+			<div class="flex items-center gap-3">
+				<div class="min-w-0 flex-1">
+					<p class="text-sm font-medium">{row.label}</p>
+					<p class="text-xs opacity-60">
+						{#if storeStats[row.target]}
+							{storeStats[row.target]!.records} records · {formatBytes(storeStats[row.target]!.bytes)}
+						{:else}
+							Not set up on this device
+						{/if}
+					</p>
+				</div>
+				<button
+					class="btn btn-error btn-xs shrink-0 rounded"
+					type="button"
+					onclick={() => onResetClick(row.target)}
+				>
+					Reset
+				</button>
+			</div>
+		{/each}
+	</CashierCardTemplate>
+
 	<Fab Icon={Check} onclick={saveSettings} />
+
+	<!-- Reset Store Confirmation Modal -->
+	{#if resetTarget}
+		<div class="modal modal-open">
+			<div class="modal-box">
+				<h3 class="font-bold text-lg">Reset the {RESET_LABELS[resetTarget]} store?</h3>
+				<p>
+					The store is empty. Resetting it discards its history on this device and, when the other
+					devices sync, on theirs too. Make sure the devices have synced first.
+				</p>
+				<div class="modal-action">
+					<button class="btn" onclick={() => (resetTarget = null)} disabled={resetBusy}>
+						Cancel
+					</button>
+					<button class="btn btn-error" onclick={resetStore} disabled={resetBusy}>
+						{resetBusy ? 'Resetting...' : 'Reset'}
+					</button>
+				</div>
+			</div>
+		</div>
+	{/if}
 
 	<!-- Load Demo Data Confirmation Modal -->
 	{#if showDemoLoadConfirm}
