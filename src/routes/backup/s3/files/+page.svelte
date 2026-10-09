@@ -74,7 +74,7 @@
 	onMount(async () => {
 		const saved = await loadS3Config();
 		if (!isS3Configured(saved)) {
-			await goto('/settings/s3-cfg', { replaceState: true });
+			await goto('/settings/s3-cfg', { replace: true });
 			return;
 		}
 		cfg = saved;

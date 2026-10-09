@@ -78,7 +78,7 @@
 			(!hasRow && !editing && !isNew)
 		) {
 			// Nothing to edit, e.g. the review was already accepted or cancelled.
-			await goto('/importers', { replaceState: true });
+			await goto('/importers', { replace: true });
 			return;
 		}
 

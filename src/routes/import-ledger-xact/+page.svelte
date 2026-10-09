@@ -62,7 +62,7 @@
 		// set to store
 		xact.set(x);
 		// show the editor for any modifications
-		goto('/tx', { replaceState: true });
+		goto('/tx', { replace: true });
 	}
 </script>
 

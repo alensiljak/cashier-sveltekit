@@ -147,7 +147,7 @@ export function buildHighlightParams(xact: Xact, posting: Posting): URLSearchPar
  */
 export function findHighlightedRow(
 	rows: UnifiedXact[],
-	searchParams: URLSearchParams
+	searchParams: Pick<URLSearchParams, 'get'>
 ): UnifiedXact | undefined {
 	const idParam = searchParams.get('highlightId');
 	if (idParam !== null) {

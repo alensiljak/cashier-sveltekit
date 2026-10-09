@@ -84,16 +84,15 @@
 		activePeerId = id;
 		resetSyncState();
 		goto(`${page.url.pathname}?peer=${id}`, {
-			replaceState: true,
-			keepFocus: true,
-			noScroll: true
+			replace: true,
+			reset: false
 		});
 	}
 
 	function changePeer() {
 		activePeerId = null;
 		resetSyncState();
-		goto(page.url.pathname, { replaceState: true, keepFocus: true, noScroll: true });
+		goto(page.url.pathname, { replace: true, reset: false });
 	}
 
 	onMount(async () => {

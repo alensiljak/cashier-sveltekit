@@ -67,7 +67,7 @@
 		// load Scheduled Transaction into state.
 		await appService.loadScheduledXact(id);
 		// show details page
-		await goto(resolve(`/scx-actions/${id}`));
+		await goto(resolve('/scx-actions/[id]', { id }));
 	}
 
 	async function onSearch(value: string) {

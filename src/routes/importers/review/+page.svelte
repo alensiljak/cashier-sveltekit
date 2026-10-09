@@ -23,7 +23,7 @@
 		const config = importer ? await loadImporterConfig<unknown>(importer.id) : null;
 		if (!pending || !importer || !config) {
 			// Nothing to review, e.g. it was already accepted or cancelled.
-			await goto('/importers', { replaceState: true });
+			await goto('/importers', { replace: true });
 			return;
 		}
 		session = { importer, config, fileName: pending.fileName, text: pending.text };

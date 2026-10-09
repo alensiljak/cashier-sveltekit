@@ -105,7 +105,7 @@
 		xact.set(location.xact);
 		xactId.set(location.id);
 
-		goto('/tx', { replaceState: true });
+		goto('/tx', { replace: true });
 	}
 
 	async function onEditClicked() {

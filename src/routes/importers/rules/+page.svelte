@@ -21,7 +21,7 @@
 	onMount(async () => {
 		config = importer ? await loadImporterConfig<RuleConfig>(importer.id) : null;
 		if (!importer || !config) {
-			await goto('/importers', { replaceState: true });
+			await goto('/importers', { replace: true });
 			return;
 		}
 		rules = allRules(config);

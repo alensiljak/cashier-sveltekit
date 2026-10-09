@@ -112,7 +112,7 @@
 			xactId.set(undefined);
 			// Replace quick-entry in history so a later history.back() from /tx
 			// (after save) skips it and lands on whatever came before.
-			goto('/tx', { replaceState: true });
+			goto('/tx', { replace: true });
 		} finally {
 			isSelecting = false;
 		}
@@ -369,7 +369,7 @@
 			xactId.set(undefined);
 			// Replace quick-entry in history so a later history.back() from /tx
 			// (after save) skips it and lands on whatever came before.
-			goto('/tx', { replaceState: true });
+			goto('/tx', { replace: true });
 		} finally {
 			isSelecting = false;
 		}

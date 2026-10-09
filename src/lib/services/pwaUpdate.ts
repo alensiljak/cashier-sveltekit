@@ -3,7 +3,7 @@
  * The layout initializes it; ReloadPrompt (toast) and the About page share its state.
  */
 import { get, writable } from 'svelte/store';
-import { dev } from '$app/environment';
+import { dev } from '$app/env';
 import type { Workbox } from 'workbox-window';
 
 export type UpdateCheckResult = 'available' | 'latest' | 'unavailable' | 'error';

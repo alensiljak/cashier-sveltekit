@@ -164,7 +164,7 @@
 	}
 
 	async function onClick() {
-		await goto('/accounts/groups', { replaceState: false });
+		await goto('/accounts/groups', { replace: false });
 	}
 
 	function onToggleExpand(e: MouseEvent) {

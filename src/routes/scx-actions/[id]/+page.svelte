@@ -84,7 +84,7 @@
 		xactId.set(stored.id);
 
 		// open the transaction. Maintain page navigation history.
-		await goto('/tx', { replaceState: true });
+		await goto('/tx', { replace: true });
 	}
 
 	async function onEnterConfirmed() {

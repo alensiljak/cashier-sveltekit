@@ -17,6 +17,6 @@ export function trackOrigin(): (target: string) => Promise<void> {
 
 	return async (target) => {
 		if (cameFrom === target.split('?')[0]) history.back();
-		else await goto(target, { replaceState: true });
+		else await goto(target, { replace: true });
 	};
 }
