@@ -4,7 +4,6 @@ import { defineConfig } from 'vite';
 import adapter from '@sveltejs/adapter-static';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 import tailwindcss from '@tailwindcss/vite';
-//import mkcert from 'vite-plugin-mkcert';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
@@ -99,7 +98,6 @@ const config: UserConfig = defineConfig({
 			// registered manually in #lib/services/pwaUpdate (prompt-style updates)
 			serviceWorker: { register: false }
 		})
-		// mkcert()
 	]
 });
 
