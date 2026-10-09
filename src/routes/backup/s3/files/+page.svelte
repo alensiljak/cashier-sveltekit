@@ -442,6 +442,7 @@
 										{/if}
 									</button>
 								{:else if row.entry}
+									{@const auto = autoStatus[row.path]}
 									<div
 										class="flex items-center gap-2 py-2"
 										style="padding-left: {row.depth * 1.25 + 0.5}rem"
@@ -468,7 +469,6 @@
 												Compare
 											</button>
 										{/if}
-										{@const auto = autoStatus[row.path]}
 										<span class="flex h-5 w-5 shrink-0 items-center justify-center">
 											{#if auto?.kind === 'comparing'}
 												<span class="loading loading-spinner loading-xs" title="Comparing…"></span>
