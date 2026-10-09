@@ -12,6 +12,7 @@
 		]
 	},
 	"scripts": {
+		"prepare": "git config core.hooksPath .githooks",
 		"dev": "vite dev",
 		"build": "vite build",
 		"preview": "vite preview",

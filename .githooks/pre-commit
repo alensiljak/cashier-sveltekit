@@ -1,0 +1,26 @@
+#!/bin/sh
+# Format staged files with oxfmt and re-stage them, so formatting fixes never need a separate commit.
+# Files are piped through stdin (not passed as paths) because routes like `[[id]]` would be read as globs.
+# Enabled by the `prepare` script (git config core.hooksPath .githooks).
+
+oxfmt=node_modules/.bin/oxfmt
+[ -x "$oxfmt" ] || exit 0
+
+unstaged=$(git diff --name-only)
+tmp=$(mktemp)
+
+git diff --cached --name-only --diff-filter=ACMR | while IFS= read -r f; do
+	if printf '%s\n' "$unstaged" | grep -Fxq -- "$f"; then
+		echo "pre-commit: $f has unstaged changes, not formatting it" >&2
+		continue
+	fi
+	# Unsupported file types fail or come back unchanged; either way nothing is rewritten.
+	if "$oxfmt" --stdin-filepath "$f" <"$f" >"$tmp" 2>/dev/null && ! cmp -s "$f" "$tmp"; then
+		cat "$tmp" >"$f"
+		git add -- "$f"
+		echo "pre-commit: formatted $f"
+	fi
+done
+
+rm -f "$tmp"
+exit 0
