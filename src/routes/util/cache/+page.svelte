@@ -16,15 +16,15 @@
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import HelpButton from '#lib/help/HelpButton.svelte';
 
-	let status = '';
-	let isLoaded = false;
-	let loading = false;
-	let loadError: string | null = null;
-	let cacheSize: number | null = null;
-	let currentHash = '';
-	let cachedHash = '';
-	let directiveCount = 0;
-	let isWorking = false;
+	let status = $state('');
+	let isLoaded = $state(false);
+	let loading = $state(false);
+	let loadError: string | null = $state(null);
+	let cacheSize: number | null = $state(null);
+	let currentHash = $state('');
+	let cachedHash = $state('');
+	let directiveCount = $state(0);
+	let isWorking = $state(false);
 
 	onMount(async () => {
 		await refreshStatus();
@@ -183,20 +183,20 @@
 					Ledger not loaded
 				{/if}
 			</span>
-			<button class="btn btn-sm" on:click={handleLoad} disabled={loading}>
+			<button class="btn btn-sm" onclick={handleLoad} disabled={loading}>
 				{loading ? 'Loading…' : 'Load'}
 			</button>
 		</div>
 
 		<!-- Instance actions -->
 		<div class="flex flex-wrap gap-2">
-			<button class="btn btn-primary btn-sm" on:click={handleSerialize} disabled={isWorking}>
+			<button class="btn btn-primary btn-sm" onclick={handleSerialize} disabled={isWorking}>
 				Serialize → OPFS
 			</button>
-			<button class="btn btn-secondary btn-sm" on:click={handleDeserialize} disabled={isWorking || cacheSize === null}>
+			<button class="btn btn-secondary btn-sm" onclick={handleDeserialize} disabled={isWorking || cacheSize === null}>
 				Deserialize ← OPFS
 			</button>
-			<button class="btn btn-outline btn-sm" on:click={handleReset} disabled={isWorking}>
+			<button class="btn btn-outline btn-sm" onclick={handleReset} disabled={isWorking}>
 				Reset instance
 			</button>
 		</div>
@@ -237,10 +237,10 @@
 
 		<!-- OPFS actions -->
 		<div class="flex flex-wrap gap-2">
-			<button class="btn btn-outline btn-sm" on:click={handleCalculateHash} disabled={isWorking} title="Hash all .bean source files currently in OPFS">
+			<button class="btn btn-outline btn-sm" onclick={handleCalculateHash} disabled={isWorking} title="Hash all .bean source files currently in OPFS">
 				Hash source files
 			</button>
-			<button class="btn btn-outline btn-error btn-sm" on:click={handleDeleteCache} disabled={isWorking}>
+			<button class="btn btn-outline btn-error btn-sm" onclick={handleDeleteCache} disabled={isWorking}>
 				Delete cache
 			</button>
 		</div>

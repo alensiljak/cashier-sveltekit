@@ -6,7 +6,7 @@
 		needRefresh.set(false);
 	}
 
-	$: toast = $offlineReady || $needRefresh;
+	const toast = $derived($offlineReady || $needRefresh);
 </script>
 
 {#if toast}
