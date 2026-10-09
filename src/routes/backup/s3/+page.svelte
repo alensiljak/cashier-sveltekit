@@ -257,7 +257,10 @@
 		lines = [];
 		try {
 			session = await openSession(cfg);
-			lines = await runSync(session, direction, selectedItems());
+			lines = [];
+			await runSync(session, direction, selectedItems(), (line) => {
+				lines = [...lines, line];
+			});
 			reloadIfNeeded(lines);
 			void refreshStatus();
 			if (

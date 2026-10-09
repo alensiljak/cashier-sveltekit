@@ -308,28 +308,22 @@
 		}
 		autoRunning = true;
 		autoProgress = { done: 0, total: targets.length };
-		let marked = 0;
-		let differ = 0;
-		let failed = 0;
 		try {
 			for (const entry of targets) {
 				try {
 					const cmp = await compareFile(session, entry.path);
 					if (cmp.sameText) {
 						await markSameContent(session, cmp, { persist: false });
-						marked++;
+						Notifier.success(`${entry.path}: marked as in sync.`);
 					} else {
-						differ++;
+						Notifier.info(`${entry.path}: content really differs.`);
 					}
-				} catch {
-					failed++;
+				} catch (e) {
+					Notifier.error(`${entry.path}: ${e instanceof Error ? e.message : describeS3Error(e)}`);
 				}
 				autoProgress.done++;
 			}
 			await persistSession(session);
-			const parts = [`${marked} marked as in sync`, `${differ} really differ`];
-			if (failed) parts.push(`${failed} failed`);
-			Notifier.success(parts.join(', ') + '.');
 		} catch (e) {
 			Notifier.error(e instanceof Error ? e.message : describeS3Error(e));
 		} finally {

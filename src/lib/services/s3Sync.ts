@@ -467,18 +467,26 @@ const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 export async function runSync(
 	s: S3Session,
 	direction: SyncDirection,
-	items: SyncItem[]
+	items: SyncItem[],
+	/** Called with each line as soon as it is known, so callers can show progress live. */
+	onLine?: (line: SyncLine) => void
 ): Promise<SyncLine[]> {
 	const lines: SyncLine[] = [];
+	const add = (...added: SyncLine[]) => {
+		for (const l of added) {
+			lines.push(l);
+			onLine?.(l);
+		}
+	};
 
 	for (const item of items) {
 		if (item === 'xacts' || item === 'scheduled') {
-			lines.push(...(await syncCrdt(s, direction, item)));
+			add(...(await syncCrdt(s, direction, item)));
 		}
 	}
 
 	if (items.includes('settings')) {
-		lines.push(await syncShared(s, direction, settingsFile()));
+		add(await syncShared(s, direction, settingsFile()));
 	}
 
 	if (items.includes('beancount')) {
@@ -489,7 +497,7 @@ export async function runSync(
 		}
 		for (const path of [...paths].sort()) {
 			if (!isSafePath(path.slice(FILES_PREFIX.length))) {
-				lines.push({
+				add({
 					item: 'beancount',
 					path,
 					outcome: 'error',
@@ -497,7 +505,7 @@ export async function runSync(
 				});
 				continue;
 			}
-			lines.push(await syncShared(s, direction, beancountFile(path, local)));
+			add(await syncShared(s, direction, beancountFile(path, local)));
 		}
 	}
 
