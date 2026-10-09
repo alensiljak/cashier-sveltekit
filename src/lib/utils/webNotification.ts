@@ -29,7 +29,11 @@ export async function showDueTransactionsNotification(lines: string[]): Promise<
 
 	const title =
 		lines.length === 1 ? '1 transaction due today' : `${lines.length} transactions due today`;
-	const options = { body: lines.join('\n'), icon: '/icon-192.png', tag: 'cashier-scheduled-due' };
+	const options = {
+		body: lines.join('\n'),
+		icon: '/icons/icon-192.png',
+		tag: 'cashier-scheduled-due'
+	};
 
 	try {
 		if ('serviceWorker' in navigator) {

@@ -5,8 +5,6 @@
 	import { useSwipe, type SwipeCustomEvent } from 'svelte-gestures';
 	// import Navigation from '$lib/components/navigation.svelte';
 	// PWA
-	import { pwaInfo } from 'virtual:pwa-info';
-	import { pwaAssetsHead } from 'virtual:pwa-assets/head';
 	import { onMount } from 'svelte';
 	import { desktopNavVisible, drawerState } from '$lib/data/mainStore';
 	import NavigationV3 from '$lib/components/navigation.svelte';
@@ -49,10 +47,8 @@
 		const { initNotifications } = await import('$lib/services/notificationService');
 		initNotifications();
 
-		if (pwaInfo) {
-			const { initPwa } = await import('$lib/services/pwaUpdate');
-			await initPwa();
-		}
+		const { initPwa } = await import('$lib/services/pwaUpdate');
+		await initPwa();
 	});
 
 	async function initializeApp(): Promise<boolean> {
@@ -98,9 +94,6 @@
 
 	<!-- PWA -->
 	<base href="/" />
-	{#each pwaAssetsHead.links as link (link)}
-		<link {...link} />
-	{/each}
 </svelte:head>
 
 <div class="drawer h-screen {$desktopNavVisible ? 'lg:drawer-open' : ''}">

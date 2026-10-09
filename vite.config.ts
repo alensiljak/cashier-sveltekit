@@ -1,7 +1,5 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import type { UserConfig } from 'vite';
-//import { VitePWA } from 'vite-plugin-pwa'
-import { SvelteKitPWA } from '@vite-pwa/sveltekit';
 import { defineConfig } from 'vite';
 //import { svelte } from '@sveltejs/vite-plugin-svelte';
 import tailwindcss from '@tailwindcss/vite';
@@ -52,46 +50,8 @@ const config: UserConfig = defineConfig({
 		tailwindcss(),
 		buildInfo(),
 		// svelte(),
-		sveltekit(),
-		SvelteKitPWA({
-			strategies: 'generateSW',
-			// registerType: 'prompt',  // this is the default.
-			//mode: 'development',
-			mode: 'production',
-			injectRegister: false,
-			scope: '/',
-			base: '/',
-			//selfDestroying: process.env.SELF_DESTROYING_SW === 'true',
-			selfDestroying: false,
-			pwaAssets: {
-				config: true
-			},
-			injectManifest: {
-				globPatterns: ['client/**/*.{js,css,ico,png,svg,webp,woff,woff2,wasm}']
-			},
-			workbox: {
-				globPatterns: [
-					'client/**/*.{js,css,ico,png,svg,txt,webp,webmanifest,wasm,json}',
-					// Only the root shell. Every prerendered page embeds the hashed app.*.js, so
-					// precaching all of them re-downloads every page on each update. The app is
-					// ssr=false, so any route can be served by the root shell.
-					'prerendered/pages/index.html'
-				],
-				navigateFallback: '/',
-				maximumFileSizeToCacheInBytes: 10 * 1024 * 1024 // 10 MB (adjust as needed)
-			},
-			devOptions: {
-				enabled: process.env.SW_DEV === 'true',
-				suppressWarnings: process.env.SUPPRESS_WARNING === 'true',
-				type: 'module',
-				navigateFallback: '/index.html'
-			},
-			kit: {
-				includeVersionFile: true
-			}
-		})
+		sveltekit()
 		// mkcert()
-		//VitePWA({ registerType: 'autoUpdate' })
 	]
 });
 

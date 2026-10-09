@@ -4,7 +4,8 @@ import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 // SvelteKit's default version is Date.now(). Any per-build value (timestamp, commit SHA) is
 // inlined into a shared chunk and into the `__sveltekit_<hash>` global of every prerendered
 // page, so each build renames nearly every file and the service worker re-downloads all of
-// them. The app never reads the version and updates are detected via sw.js, so keep it constant.
+// them. The app never reads the version and updates are detected via service-worker.js, which
+// derives its own precache revision from the hashed build file list, so keep it constant.
 const APP_VERSION = 'static';
 
 /** @type {import('@sveltejs/kit').Config} */
@@ -29,7 +30,9 @@ const config = {
 			assets: 'build'
 		}),
 		prerender: { entries: ['*'] },
-		version: { name: APP_VERSION }
+		version: { name: APP_VERSION },
+		// registered manually in $lib/services/pwaUpdate (prompt-style updates)
+		serviceWorker: { register: false }
 	},
 	runes: true,
 	// plugin options

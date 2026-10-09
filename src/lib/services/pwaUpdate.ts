@@ -3,6 +3,8 @@
  * The layout initializes it; ReloadPrompt (toast) and the About page share its state.
  */
 import { get, writable } from 'svelte/store';
+import { dev } from '$app/environment';
+import type { Workbox } from 'workbox-window';
 
 export type UpdateCheckResult = 'available' | 'latest' | 'unavailable' | 'error';
 
@@ -10,21 +12,28 @@ export const needRefresh = writable(false);
 export const offlineReady = writable(false);
 
 let registration: ServiceWorkerRegistration | undefined;
-let applyUpdate: ((reloadPage?: boolean) => Promise<void>) | undefined;
+let workbox: Workbox | undefined;
 let initPromise: Promise<void> | undefined;
 
 export function initPwa(): Promise<void> {
 	initPromise ??= (async () => {
-		const { registerSW } = await import('virtual:pwa-register');
-		applyUpdate = registerSW({
-			immediate: true,
-			onNeedRefresh: () => needRefresh.set(true),
-			onOfflineReady: () => offlineReady.set(true),
-			onRegisteredSW: (_url, r) => {
-				registration = r;
-			},
-			onRegisterError: (error) => console.log('SW registration error', error)
+		// The service worker is only built for production; there is nothing to register in dev.
+		if (dev || !('serviceWorker' in navigator)) return;
+
+		const { Workbox } = await import('workbox-window');
+		const wb = new Workbox('/service-worker.js');
+		workbox = wb;
+		// A new worker finished installing while an older one is in control.
+		wb.addEventListener('waiting', () => needRefresh.set(true));
+		// First activation (not an update): the app is now cached for offline use.
+		wb.addEventListener('activated', (event) => {
+			if (!event.isUpdate) offlineReady.set(true);
 		});
+		try {
+			registration = await wb.register();
+		} catch (error) {
+			console.log('SW registration error', error);
+		}
 	})();
 	return initPromise;
 }
@@ -32,10 +41,8 @@ export function initPwa(): Promise<void> {
 /**
  * Activates the waiting service worker and reloads the page.
  *
- * vite-plugin-pwa only reloads from its own `controlling` listener, which is attached when the
- * "waiting" event fires and ignores the event unless workbox flagged it as an update. When that
- * is missed (e.g. the update was found by `checkForUpdate`, or the page was not controlled by a
- * worker), the new worker activates but nothing reloads. So reload here as well.
+ * The reload happens here, not on the `waiting` event, so it also covers updates found by
+ * `checkForUpdate`.
  */
 export async function updateApp(): Promise<void> {
 	await initPwa();
@@ -43,7 +50,7 @@ export async function updateApp(): Promise<void> {
 	navigator.serviceWorker?.addEventListener('controllerchange', reload, { once: true });
 	// An uncontrolled page gets no controllerchange, so do not wait on it forever.
 	setTimeout(reload, 3000);
-	await applyUpdate?.(true);
+	workbox?.messageSkipWaiting();
 }
 
 /**
