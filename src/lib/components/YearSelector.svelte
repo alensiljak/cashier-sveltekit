@@ -5,7 +5,7 @@
   the call site.
 -->
 <script lang="ts">
-	import moment from 'moment';
+	import { addYears, endOfYear, formatDate, startOfYear } from '#lib/utils/dates';
 	import { ISODATEFORMAT } from '#lib/constants';
 	import { ChevronLeftIcon, ChevronRightIcon } from '@lucide/svelte';
 
@@ -28,15 +28,16 @@
 	let { onselect, yearsBack = 5, initialKey }: Props = $props();
 
 	function buildYears(): YearOption[] {
-		const now = moment().startOf('year');
+		const now = startOfYear(new Date());
 		const years: YearOption[] = [];
 		for (let i = 0; i <= yearsBack; i++) {
-			const yearStart = now.clone().subtract(i, 'years');
+			const yearStart = addYears(now, -i);
+			const year = formatDate(yearStart, 'YYYY');
 			years.push({
-				label: i === 0 ? `${yearStart.format('YYYY')} (current)` : yearStart.format('YYYY'),
-				key: yearStart.format('YYYY'),
-				dateFrom: yearStart.clone().startOf('year').format(ISODATEFORMAT),
-				dateTo: yearStart.clone().endOf('year').format(ISODATEFORMAT)
+				label: i === 0 ? `${year} (current)` : year,
+				key: year,
+				dateFrom: formatDate(yearStart, ISODATEFORMAT),
+				dateTo: formatDate(endOfYear(yearStart), ISODATEFORMAT)
 			});
 		}
 		return years;

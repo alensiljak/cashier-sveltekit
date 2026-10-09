@@ -3,7 +3,7 @@
   Calls onselect with the resolved date range on mount and on change.
 -->
 <script lang="ts">
-	import moment from 'moment';
+	import { addMonths, endOfMonth, formatDate, startOfMonth } from '#lib/utils/dates';
 	import { ISODATEFORMAT } from '#lib/constants';
 	import { ChevronLeftIcon, ChevronRightIcon } from '@lucide/svelte';
 
@@ -21,31 +21,33 @@
 	let { onselect }: Props = $props();
 
 	function buildPeriods(): Period[] {
-		const now = moment();
+		const now = new Date();
+		const iso = (d: Date) => formatDate(d, ISODATEFORMAT);
+		const monthStartBack = (months: number) => iso(startOfMonth(addMonths(now, -months)));
 		return [
 			{
 				label: 'This Month',
 				key: 'this_month',
-				dateFrom: now.clone().startOf('month').format(ISODATEFORMAT),
-				dateTo: now.clone().endOf('month').format(ISODATEFORMAT)
+				dateFrom: monthStartBack(0),
+				dateTo: iso(endOfMonth(now))
 			},
 			{
 				label: 'Last Month',
 				key: 'last_month',
-				dateFrom: now.clone().subtract(1, 'month').startOf('month').format(ISODATEFORMAT),
-				dateTo: now.clone().subtract(1, 'month').endOf('month').format(ISODATEFORMAT)
+				dateFrom: monthStartBack(1),
+				dateTo: iso(endOfMonth(addMonths(now, -1)))
 			},
 			{
 				label: 'Last 3 Months',
 				key: 'last_3_months',
-				dateFrom: now.clone().subtract(3, 'months').startOf('month').format(ISODATEFORMAT),
-				dateTo: now.clone().endOf('month').format(ISODATEFORMAT)
+				dateFrom: monthStartBack(3),
+				dateTo: iso(endOfMonth(now))
 			},
 			{
 				label: 'Last 12 Months',
 				key: 'last_12_months',
-				dateFrom: now.clone().subtract(12, 'months').startOf('month').format(ISODATEFORMAT),
-				dateTo: now.clone().endOf('month').format(ISODATEFORMAT)
+				dateFrom: monthStartBack(12),
+				dateTo: iso(endOfMonth(now))
 			}
 		];
 	}

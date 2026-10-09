@@ -8,7 +8,7 @@ import db from '#lib/data/db';
 import { listScx, replaceAllScx } from '#lib/services/scxService';
 import type { ScheduledTransaction } from '#lib/data/model';
 import { SettingKeys, settings } from '#lib/settings';
-import moment from 'moment';
+import { formatDate } from '#lib/utils/dates';
 
 interface StoredSetting {
 	key: string;
@@ -67,9 +67,9 @@ function keepExistingPassword(
 
 export function getBackupFilename(): string {
 	// filename
-	const now = moment();
-	const date = now.format(ISODATEFORMAT);
-	const time = now.format(LONGTIMEFORMAT);
+	const now = new Date();
+	const date = formatDate(now, ISODATEFORMAT);
+	const time = formatDate(now, LONGTIMEFORMAT);
 	const filename = `cashier-backup_${date}_${time}.json`;
 
 	return filename;

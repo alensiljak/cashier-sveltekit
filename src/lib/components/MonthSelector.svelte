@@ -3,7 +3,7 @@
   previous one). Calls onselect with the resolved month on mount and on change.
 -->
 <script lang="ts">
-	import moment from 'moment';
+	import { addMonths, endOfMonth, formatDate, startOfMonth } from '#lib/utils/dates';
 	import { ISODATEFORMAT } from '#lib/constants';
 	import { ChevronLeftIcon, ChevronRightIcon } from '@lucide/svelte';
 
@@ -26,15 +26,16 @@
 	let { onselect, monthsBack = 12, initialKey }: Props = $props();
 
 	function buildMonths(): MonthOption[] {
-		const now = moment().startOf('month');
+		const now = startOfMonth(new Date());
 		const months: MonthOption[] = [];
 		for (let i = 0; i <= monthsBack; i++) {
-			const monthStart = now.clone().subtract(i, 'months');
+			const monthStart = addMonths(now, -i);
+			const label = formatDate(monthStart, 'MMMM YYYY');
 			months.push({
-				label: i === 0 ? `${monthStart.format('MMMM YYYY')} (current)` : monthStart.format('MMMM YYYY'),
-				key: monthStart.format('YYYY-MM'),
-				dateFrom: monthStart.clone().startOf('month').format(ISODATEFORMAT),
-				dateTo: monthStart.clone().endOf('month').format(ISODATEFORMAT)
+				label: i === 0 ? `${label} (current)` : label,
+				key: formatDate(monthStart, 'YYYY-MM'),
+				dateFrom: formatDate(monthStart, ISODATEFORMAT),
+				dateTo: formatDate(endOfMonth(monthStart), ISODATEFORMAT)
 			});
 		}
 		return months;

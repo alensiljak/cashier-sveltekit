@@ -2,7 +2,7 @@
     Cloud backup
 */
 
-import moment from 'moment';
+import { formatDate } from '#lib/utils/dates';
 import appService from './appService';
 import { BackupType, PtaSystems } from '#lib/enums';
 import { ISODATEFORMAT, LONGTIMEFORMAT } from '#lib/constants';
@@ -89,9 +89,9 @@ export function getFilenameForBackup(backupType: string) {
 	const prefix = backupType.toLowerCase();
 
 	// date/time
-	const now = moment();
-	const date = now.format(ISODATEFORMAT);
-	const time = now.format(LONGTIMEFORMAT);
+	const now = new Date();
+	const date = formatDate(now, ISODATEFORMAT);
+	const time = formatDate(now, LONGTIMEFORMAT);
 
 	// file extension
 	let extension;

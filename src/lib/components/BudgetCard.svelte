@@ -3,7 +3,7 @@
 	import CashierCardTemplate from './CashierCardTemplate.svelte';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import moment from 'moment';
+	import { formatDate, startOfMonth } from '#lib/utils/dates';
 	import { ISODATEFORMAT, NUMBER_FORMAT } from '#lib/constants';
 	import { type BudgetCategory, SettingKeys, settings } from '#lib/settings';
 	import fullLedgerService from '#lib/services/ledgerWorkerClient';
@@ -62,9 +62,8 @@
 			}
 
 			const currency = (await settings.get<string>(SettingKeys.currency)) ?? '';
-			const monthStart = moment().startOf('month');
-			const dateFrom = monthStart.format(ISODATEFORMAT);
-			const dateTo = moment().format(ISODATEFORMAT);
+			const dateFrom = formatDate(startOfMonth(new Date()), ISODATEFORMAT);
+			const dateTo = formatDate(new Date(), ISODATEFORMAT);
 
 			await fullLedgerService.ensureLoaded();
 

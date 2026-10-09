@@ -2,7 +2,14 @@
 /*
   Scheduled Transactions functionality
 */
-import moment from 'moment';
+import {
+	add,
+	endOfMonth,
+	formatDate,
+	parseDate,
+	startOfMonth,
+	type DateUnit
+} from '#lib/utils/dates';
 import type { ScheduledTransaction } from './data/model';
 
 /**
@@ -62,6 +69,13 @@ export class Projector {
 	}
 }
 
+/** Maps a recurrence period ('days', 'weeks', ...) to a date unit. */
+function toUnit(period: string): DateUnit {
+	const unit = period.replace(/s$/, '');
+	if (unit === 'day' || unit === 'week' || unit === 'month' || unit === 'year') return unit;
+	throw new Error(`unknown recurrence period: ${period}`);
+}
+
 /**
  * Calculate the schedule based on the given parameters.
  */
@@ -72,30 +86,24 @@ export function calculateNextIteration(startDate: any, count: number, period: an
 		throw new Error(`missing input parameter(s), received: ${startDate} ${count} ${period}`);
 	}
 
-	const isoDateFormat = 'YYYY-MM-DD';
-
 	// Get the start point.
-	const start = moment(startDate);
-	//console.debug('now:', start.format(isoDateFormat))
+	const start = parseDate(startDate);
 
 	// add the given period
-	let next = null;
-	let output = null;
+	let next: Date;
 
 	switch (period) {
 		case 'start of month':
-			next = start.add(count, 'month');
-			next.startOf('month');
+			next = startOfMonth(add(start, count, 'month'));
 			break;
 		case 'end of month':
-			next = start.add(count, 'month');
 			// move to the end of the month
-			next.endOf('month');
+			next = endOfMonth(add(start, count, 'month'));
 			break;
 		default:
-			next = start.add(count, period);
+			next = add(start, count, toUnit(period));
 	}
-	output = next.format(isoDateFormat);
+	const output = formatDate(next);
 
 	// handle end date, if any.
 	if (endDate) {

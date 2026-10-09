@@ -6,13 +6,18 @@
  * is only best-effort, ~12h granularity). So the reminder fires while the app is
  * open (or resumed) once the configured time of day has passed, at most once a day.
  */
-import moment from 'moment';
+import { addDays, formatDate } from '#lib/utils/dates';
 import { listScxDueOn } from '#lib/services/scxService';
 import { DeviceSettingKeys, deviceSettings } from '#lib/settings';
 import { showDueTransactionsNotification } from '#lib/utils/webNotification';
 
 export const NOTIFICATION_TIME_DEFAULT = '08:00';
-const DATE_FORMAT = 'YYYY-MM-DD';
+
+/** The given day at the 'HH:mm' wall-clock time. */
+function atTime(day: Date, time: string): Date {
+	const [hours, minutes] = time.split(':').map(Number);
+	return new Date(day.getFullYear(), day.getMonth(), day.getDate(), hours, minutes);
+}
 
 let timer: ReturnType<typeof setTimeout> | undefined;
 
@@ -23,9 +28,9 @@ export async function checkDueNotification(): Promise<void> {
 	const time =
 		(await deviceSettings.get<string>(DeviceSettingKeys.notificationTime)) ??
 		NOTIFICATION_TIME_DEFAULT;
-	const now = moment();
-	const today = now.format(DATE_FORMAT);
-	if (now.isBefore(moment(`${today} ${time}`, `${DATE_FORMAT} HH:mm`))) return;
+	const now = new Date();
+	const today = formatDate(now);
+	if (now < atTime(now, time)) return;
 	if ((await deviceSettings.get<string>(DeviceSettingKeys.notificationLastShown)) === today) return;
 
 	const due = await listScxDueOn(today);
@@ -48,9 +53,10 @@ export async function scheduleNotificationCheck(): Promise<void> {
 	const time =
 		(await deviceSettings.get<string>(DeviceSettingKeys.notificationTime)) ??
 		NOTIFICATION_TIME_DEFAULT;
-	let target = moment(`${moment().format(DATE_FORMAT)} ${time}`, `${DATE_FORMAT} HH:mm`);
-	if (!target.isAfter(moment())) target = target.add(1, 'day');
-	timer = setTimeout(scheduleNotificationCheck, target.diff(moment()) + 1000);
+	const now = new Date();
+	let target = atTime(now, time);
+	if (target <= now) target = addDays(target, 1);
+	timer = setTimeout(scheduleNotificationCheck, target.getTime() - now.getTime() + 1000);
 }
 
 /** Starts the reminders and re-checks when the app returns to the foreground. */

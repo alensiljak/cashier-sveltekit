@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import moment from 'moment';
+	import { addMonths, formatDate, parseDate, startOfYear } from '#lib/utils/dates';
 	import { ISODATEFORMAT } from '#lib/constants';
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
@@ -215,10 +215,10 @@
 	 */
 	async function loadRollovers(month: MonthOption) {
 		const enabled = categories.filter((c) => c.rollover && c.since);
-		const monthStart = moment(month.key, 'YYYY-MM');
-		const yearStart = monthStart.clone().startOf('year');
+		const monthStart = parseDate(month.key);
+		const yearStart = startOfYear(monthStart);
 
-		if (enabled.length === 0 || !monthStart.isAfter(yearStart, 'month')) {
+		if (enabled.length === 0 || monthStart <= yearStart) {
 			rollovers = new Map();
 			return;
 		}
@@ -226,8 +226,8 @@
 		try {
 			await fullLedgerService.ensureLoaded();
 
-			const dateFrom = yearStart.format(ISODATEFORMAT);
-			const dateTo = monthStart.format(ISODATEFORMAT); // exclusive: first day of the selected month
+			const dateFrom = formatDate(yearStart, ISODATEFORMAT);
+			const dateTo = formatDate(monthStart, ISODATEFORMAT); // exclusive: first day of the selected month
 			const bql = `SELECT account, year(date) AS y, month(date) AS mo, number(value(sum(position), "${currency}")) AS number WHERE account ~ "^${CATEGORY_PREFIX}" AND date >= ${dateFrom} AND date < ${dateTo} GROUP BY account, year(date), month(date)`;
 			const result = await fullLedgerService.query(bql);
 
@@ -269,9 +269,10 @@
 
 			const carried = new Map<string, number>();
 			for (const cat of enabled) {
-				const start = moment.max(moment(cat.since, 'YYYY-MM'), yearStart);
-				for (const cursor = start.clone(); cursor.isBefore(monthStart, 'month'); cursor.add(1, 'month')) {
-					const actualForMonth = monthly.get(cat.account)?.get(cursor.format('YYYY-MM')) ?? 0;
+				const since = parseDate(cat.since!);
+				const start = since > yearStart ? since : yearStart;
+				for (let cursor = start; cursor < monthStart; cursor = addMonths(cursor, 1)) {
+					const actualForMonth = monthly.get(cat.account)?.get(formatDate(cursor, 'YYYY-MM')) ?? 0;
 					carried.set(cat.account, (carried.get(cat.account) ?? 0) + Math.max(0, cat.amount - actualForMonth));
 				}
 			}

@@ -15,7 +15,18 @@
   offset that silently points somewhere else once "today" has moved on.
 -->
 <script lang="ts">
-	import moment from 'moment';
+	import {
+		add,
+		diffMonths,
+		diffYears,
+		endOfMonth,
+		endOfYear,
+		formatDate,
+		isSameUnit,
+		parseDate,
+		startOfMonth,
+		startOfYear
+	} from '#lib/utils/dates';
 	import { untrack } from 'svelte';
 	import { ISODATEFORMAT } from '#lib/constants';
 	import { ChevronLeftIcon, ChevronRightIcon, RotateCcwIcon } from '@lucide/svelte';
@@ -73,7 +84,7 @@
 		initialCustomTo
 	}: Props = $props();
 
-	const today = () => moment().format(ISODATEFORMAT);
+	const today = () => formatDate(new Date(), ISODATEFORMAT);
 
 	// Props are seeds for one-time initialization only (see `initial`/`initialAnchor` docs
 	// above), not meant to stay in sync with the parent — untrack silences Svelte's
@@ -81,20 +92,19 @@
 	let selectedChip = $state(untrack(() => initial));
 	let anchor = $state(untrack(() => initialAnchor ?? today())); // the period currently shown, as an absolute date
 	let customFrom = $state(
-		untrack(() => initialCustomFrom ?? moment().startOf('month').format(ISODATEFORMAT))
+		untrack(() => initialCustomFrom ?? formatDate(startOfMonth(new Date()), ISODATEFORMAT))
 	);
 	let customTo = $state(
-		untrack(() => initialCustomTo ?? moment().endOf('month').format(ISODATEFORMAT))
+		untrack(() => initialCustomTo ?? formatDate(endOfMonth(new Date()), ISODATEFORMAT))
 	);
 
 	const isCustom = $derived(selectedChip === 'custom');
 	const activePreset = $derived(PRESETS.find((p) => p.key === selectedChip) ?? PRESETS[0]);
-	const stepUnit = $derived(activePreset.shape === 'calendar-year' ? 'years' : 'months');
-	const granularity = $derived(activePreset.shape === 'calendar-year' ? 'year' : 'month');
+	const unit = $derived(activePreset.shape === 'calendar-year' ? 'year' : 'month');
 
 	// "Later" is disabled, and stepping/jumping forward is clamped, once the anchor is
 	// already in the same unit as today — periods can't run into the future.
-	const isAtNewest = $derived(moment(anchor).isSame(moment(), granularity));
+	const isAtNewest = $derived(isSameUnit(parseDate(anchor), new Date(), unit));
 
 	function selectChip(key: string) {
 		// Deliberately keep `anchor` as-is: switching shape should re-frame the SAME period
@@ -105,7 +115,7 @@
 	function step(delta: number) {
 		if (isCustom) return;
 		if (delta > 0 && isAtNewest) return;
-		anchor = moment(anchor).add(delta, stepUnit).format(ISODATEFORMAT);
+		anchor = formatDate(add(parseDate(anchor), delta, unit), ISODATEFORMAT);
 	}
 
 	function resetToToday() {
@@ -115,31 +125,31 @@
 
 	function resolveAt(a: string): TimeRange {
 		const preset = activePreset;
-		const m = moment(a);
+		const m = parseDate(a);
 
 		if (preset.shape === 'calendar-month') {
 			return {
-				label: m.format('MMM YYYY'),
-				dateFrom: m.clone().startOf('month').format(ISODATEFORMAT),
-				dateTo: m.clone().endOf('month').format(ISODATEFORMAT)
+				label: formatDate(m, 'MMM YYYY'),
+				dateFrom: formatDate(startOfMonth(m), ISODATEFORMAT),
+				dateTo: formatDate(endOfMonth(m), ISODATEFORMAT)
 			};
 		}
 
 		if (preset.shape === 'calendar-year') {
 			return {
-				label: m.format('YYYY'),
-				dateFrom: m.clone().startOf('year').format(ISODATEFORMAT),
-				dateTo: m.clone().endOf('year').format(ISODATEFORMAT)
+				label: formatDate(m, 'YYYY'),
+				dateFrom: formatDate(startOfYear(m), ISODATEFORMAT),
+				dateTo: formatDate(endOfYear(m), ISODATEFORMAT)
 			};
 		}
 
 		// Rolling: trailing `months`-month window ending in the anchor's month.
-		const end = m.clone().endOf('month');
-		const start = end.clone().subtract(preset.months - 1, 'months').startOf('month');
+		const end = endOfMonth(m);
+		const start = startOfMonth(add(end, -(preset.months - 1), 'month'));
 		return {
-			label: `${start.format('MMM YYYY')} – ${end.format('MMM YYYY')}`,
-			dateFrom: start.format(ISODATEFORMAT),
-			dateTo: end.format(ISODATEFORMAT)
+			label: `${formatDate(start, 'MMM YYYY')} – ${formatDate(end, 'MMM YYYY')}`,
+			dateFrom: formatDate(start, ISODATEFORMAT),
+			dateTo: formatDate(end, ISODATEFORMAT)
 		};
 	}
 
@@ -156,10 +166,11 @@
 	const JUMP_WINDOW = 6;
 	const jumpAnchors = $derived.by(() => {
 		if (isCustom) return [];
-		const base = moment(anchor);
-		const forwardCount = Math.min(JUMP_WINDOW, moment().diff(base, stepUnit));
+		const base = parseDate(anchor);
+		const unitsToToday = (unit === 'year' ? diffYears : diffMonths)(new Date(), base);
+		const forwardCount = Math.min(JUMP_WINDOW, unitsToToday);
 		return Array.from({ length: JUMP_WINDOW + forwardCount + 1 }, (_, i) =>
-			base.clone().add(i - JUMP_WINDOW, stepUnit).format(ISODATEFORMAT)
+			formatDate(add(base, i - JUMP_WINDOW, unit), ISODATEFORMAT)
 		);
 	});
 

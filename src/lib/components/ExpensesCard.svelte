@@ -3,7 +3,7 @@
 	import CashierCardTemplate from './CashierCardTemplate.svelte';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import moment from 'moment';
+	import { addDays, addMonths, endOfMonth, formatDate, startOfMonth } from '#lib/utils/dates';
 	import { ISODATEFORMAT, DEFAULT_EXPENSES_CARD_ROLLING_DAYS, NUMBER_FORMAT } from '#lib/constants';
 	import { SettingKeys, settings } from '#lib/settings';
 	import fullLedgerService from '#lib/services/ledgerWorkerClient';
@@ -50,26 +50,24 @@
 
 	/** Resolve the current and comparison (prior, same-length) date ranges. */
 	function resolvePeriods(periodType: string, rollingDays: number): { current: DateRange; previous: DateRange } {
-		const today = moment();
+		const today = new Date();
+		const iso = (d: Date) => formatDate(d, ISODATEFORMAT);
 
 		if (periodType === 'rolling-days') {
-			const currentFrom = today.clone().subtract(rollingDays - 1, 'days');
-			const previousTo = currentFrom.clone().subtract(1, 'day');
-			const previousFrom = previousTo.clone().subtract(rollingDays - 1, 'days');
+			const currentFrom = addDays(today, -(rollingDays - 1));
+			const previousTo = addDays(currentFrom, -1);
+			const previousFrom = addDays(previousTo, -(rollingDays - 1));
 			return {
-				current: { dateFrom: currentFrom.format(ISODATEFORMAT), dateTo: today.format(ISODATEFORMAT) },
-				previous: { dateFrom: previousFrom.format(ISODATEFORMAT), dateTo: previousTo.format(ISODATEFORMAT) }
+				current: { dateFrom: iso(currentFrom), dateTo: iso(today) },
+				previous: { dateFrom: iso(previousFrom), dateTo: iso(previousTo) }
 			};
 		}
 
 		// Calendar month: month-to-date vs the entirety of the prior month.
-		const previousMonth = today.clone().subtract(1, 'month');
+		const previousMonth = addMonths(today, -1);
 		return {
-			current: { dateFrom: today.clone().startOf('month').format(ISODATEFORMAT), dateTo: today.format(ISODATEFORMAT) },
-			previous: {
-				dateFrom: previousMonth.clone().startOf('month').format(ISODATEFORMAT),
-				dateTo: previousMonth.clone().endOf('month').format(ISODATEFORMAT)
-			}
+			current: { dateFrom: iso(startOfMonth(today)), dateTo: iso(today) },
+			previous: { dateFrom: iso(startOfMonth(previousMonth)), dateTo: iso(endOfMonth(previousMonth)) }
 		};
 	}
 

@@ -43,7 +43,7 @@
  * has no `isin`/`ticker` meta at all, so this is adoptable incrementally,
  * one commodity — and one transaction — at a time.
  */
-import moment from 'moment';
+import { addYears, formatDate, today } from '#lib/utils/dates';
 import * as BeancountParser from '#lib/utils/beancountParser';
 import { UserError } from '#lib/utils/errors';
 
@@ -169,7 +169,7 @@ export async function computeCommodityYield(
 		target,
 		allCommodities
 	);
-	const yieldFrom = moment().subtract(1, 'year').format(DATE_FORMAT);
+	const yieldFrom = formatDate(addYears(today(), -1), DATE_FORMAT);
 	const currencyList = currencies.map((c) => `'${escapeBqlString(c)}'`).join(', ');
 
 	const valueBql = `SELECT str(CONVERT(value(sum(position)), '${escapeBqlString(reportCurrency)}')) as value

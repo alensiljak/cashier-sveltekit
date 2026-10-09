@@ -28,7 +28,7 @@
 	import appService from '#lib/services/appService';
 	import fullLedgerService from '#lib/services/ledgerWorkerClient';
 	import { updateRepaymentAmounts } from '#lib/services/repaymentService';
-	import moment from 'moment';
+	import { addDays, diffDays, formatDate, parseDate, today as startOfToday } from '#lib/utils/dates';
 	import { XactAugmenter } from '#lib/utils/xactAugmenter';
 	import { ISODATEFORMAT } from '#lib/constants';
 	import Notifier from '#lib/utils/notifier';
@@ -42,7 +42,7 @@
 	Notifier.init();
 
 	let defaultCurrency: string;
-	let maxDate: moment.Moment;
+	let maxDate: Date;
 	let chartDiv: HTMLCanvasElement | null = null;
 	let chart: Chart<'bar'> | null = null;
 	let renderedFromCache = false;
@@ -76,7 +76,7 @@
 		if (!cachedBalances) return;
 
 		// maxDate is needed by loadScxsFor inside createDatasetFor.
-		maxDate = moment().add(daysCount, 'days');
+		maxDate = addDays(new Date(), daysCount);
 
 		const datasets = [];
 		for (const accountName of accountNames) {
@@ -93,7 +93,7 @@
 
 	async function loadAndRenderChart() {
 		defaultCurrency = await appService.getDefaultCurrency();
-		maxDate = moment().add(daysCount, 'days');
+		maxDate = addDays(new Date(), daysCount);
 
 		try {
 			await updateRepaymentAmounts();
@@ -146,9 +146,9 @@
 		xacts = XactAugmenter.calculateEmptyPostingAmounts(xacts);
 
 		// start from today
-		const today = moment().startOf('day');
+		const today = startOfToday();
 		for (let scx of scxs) {
-			let diff = moment(scx.nextDate).diff(today, 'days');
+			let diff = diffDays(parseDate(scx.nextDate), today);
 			// Handle overdue payments (negative days).
 			if (diff < 0) diff = 0;
 
@@ -256,7 +256,7 @@
 			(scx) =>
 				scx?.transaction?.postings?.filter((scx) => scx.account == accountName).length &&
 				scx.transaction.date &&
-				scx.transaction.date <= maxDate.format(ISODATEFORMAT).toString()
+				scx.transaction.date <= formatDate(maxDate, ISODATEFORMAT)
 		);
 		return scxsForAccount;
 	}

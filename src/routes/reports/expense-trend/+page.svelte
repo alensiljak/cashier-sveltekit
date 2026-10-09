@@ -2,7 +2,7 @@
 	import { tick } from 'svelte';
 	import { goto, replaceState } from '$app/navigation';
 	import { page } from '$app/state';
-	import moment from 'moment';
+	import { addMonths, endOfMonth, formatDate, parseDate, startOfMonth } from '#lib/utils/dates';
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import StackedExpenseChart from '#lib/components/StackedExpenseChart.svelte';
 	import TimeRangeSelector, {
@@ -41,22 +41,21 @@
 	// Whole calendar months overlapping [dateFrom, dateTo], clipped to that range at the edges
 	// (a custom or "This Month" range can start/end mid-month).
 	function monthsBetween(dateFrom: string, dateTo: string) {
-		const rangeStart = moment(dateFrom);
-		const rangeEnd = moment(dateTo);
+		const rangeStart = parseDate(dateFrom);
+		const rangeEnd = parseDate(dateTo);
 		const result: { key: string; label: string; dateFrom: string; dateTo: string }[] = [];
-		let cur = rangeStart.clone().startOf('month');
-		while (cur.isSameOrBefore(rangeEnd)) {
-			const monthStart = cur.clone();
-			const monthEnd = cur.clone().endOf('month');
-			const clippedFrom = moment.max(monthStart, rangeStart);
-			const clippedTo = moment.min(monthEnd, rangeEnd);
+		let cur = startOfMonth(rangeStart);
+		while (cur <= rangeEnd) {
+			const monthEnd = endOfMonth(cur);
+			const clippedFrom = cur > rangeStart ? cur : rangeStart;
+			const clippedTo = monthEnd < rangeEnd ? monthEnd : rangeEnd;
 			result.push({
-				key: cur.format('YYYY-MM'),
-				label: cur.format('MMM YY'),
-				dateFrom: clippedFrom.format(ISODATEFORMAT),
-				dateTo: clippedTo.format(ISODATEFORMAT)
+				key: formatDate(cur, 'YYYY-MM'),
+				label: formatDate(cur, 'MMM YY'),
+				dateFrom: formatDate(clippedFrom, ISODATEFORMAT),
+				dateTo: formatDate(clippedTo, ISODATEFORMAT)
 			});
-			cur = cur.add(1, 'month');
+			cur = addMonths(cur, 1);
 		}
 		return result;
 	}

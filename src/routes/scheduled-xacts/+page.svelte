@@ -25,7 +25,6 @@
 	import { onMount } from 'svelte';
 	import type { PageData } from './$types';
 
-	// const today = moment().format(ISODATEFORMAT);
 	let { data }: { data: PageData } = $props();
 
 	Notifier.init();

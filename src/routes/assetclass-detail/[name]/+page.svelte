@@ -24,7 +24,7 @@
 	import { xirr, XirrNoSolutionError, holdingPeriodDays } from '#lib/utils/xirr';
 	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
-	import moment from 'moment';
+	import { addYears, formatDate, today } from '#lib/utils/dates';
 
 	const name = page.params.name;
 	let data = $state(page.data);
@@ -267,7 +267,7 @@
 		const queryFn = data.wasmQuery as WasmQueryFn;
 		const currency = data.currency as string;
 		const queries = getQueries(PtaSystems.rledger);
-		const yieldFrom = moment().subtract(1, 'year').format('YYYY-MM-DD');
+		const yieldFrom = formatDate(addYears(today(), -1));
 
 		symbolDebug[symbol] = {
 			income: null,

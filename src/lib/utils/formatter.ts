@@ -1,5 +1,5 @@
 import type { Money, Posting, Xact } from '#lib/data/model';
-import moment from 'moment';
+import { formatDate, parseDate, today } from '#lib/utils/dates';
 
 const RED = 'text-red-400';
 const YELLOW = 'text-yellow-200';
@@ -53,19 +53,19 @@ export function getAmountColour(amount: number): string {
  * @param dateString the DaisyUI text colour name
  */
 export function getDateColour(dateString: string): string | undefined {
-	const date = moment(dateString).toDate();
-	const today = moment().startOf('day').toDate();
+	const date = parseDate(dateString);
+	const todayDate = today();
 
-	if (date < today) {
+	if (date < todayDate) {
 		// red
 		return 'text-secondary-400';
 	}
 	// Compare by value: two Date objects are never `===`.
-	if (date.getTime() === today.getTime()) {
+	if (date.getTime() === todayDate.getTime()) {
 		// yellow
 		return 'text-warning';
 	}
-	if (date > today) {
+	if (date > todayDate) {
 		// green
 		return 'text-primary-400';
 	}
@@ -74,11 +74,10 @@ export function getDateColour(dateString: string): string | undefined {
 /**
  * Converts the ISO date to a readable date, only shorter
  * @param dateString ISO date string, '2025-12-07'
- * @param format moment.js format string; defaults to 'MMM DD'
+ * @param format format string (see formatDate); defaults to 'MMM DD'
  */
 export function getReadableDate(dateString: string, format = 'MMM DD'): string {
-	const date = moment(dateString);
-	return date.format(format);
+	return formatDate(parseDate(dateString), format);
 }
 
 /**

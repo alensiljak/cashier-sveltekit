@@ -89,7 +89,7 @@ export const SettingKeys = {
 	accountGroups: 'accountGroups',
 	// WebDAV backup configuration
 	webdavSettings: 'webdav-settings',
-	// Date display format (moment.js format string)
+	// Date display format (format string, see formatDate in utils/dates)
 	dateFormat: 'dateFormat',
 	// Short date display format — day and month only
 	shortDateFormat: 'shortDateFormat',

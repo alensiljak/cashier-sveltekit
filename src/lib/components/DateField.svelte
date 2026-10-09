@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon } from '@lucide/svelte';
-	import moment from 'moment';
+	import { addDays, formatDate, parseDate } from '#lib/utils/dates';
 	import { SettingKeys, settings } from '#lib/settings';
 
 	type Props = {
@@ -17,14 +17,12 @@
 
 	let formattedDate = $derived.by(() => {
 		if (!value) return label;
-		return moment(value).format(dateFormatValue);
+		return formatDate(parseDate(value), dateFormatValue);
 	});
 
 	function shiftDate(days: number) {
 		if (!value) return;
-		const d = new Date(value);
-		d.setDate(d.getDate() + days);
-		value = d.toISOString().slice(0, 10);
+		value = formatDate(addDays(parseDate(value), days));
 	}
 
 	onMount(async () => {
