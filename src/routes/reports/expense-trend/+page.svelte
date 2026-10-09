@@ -13,7 +13,8 @@
 	import { SettingKeys, settings } from '#lib/settings';
 	import { ISODATEFORMAT } from '#lib/constants';
 	import HelpButton from '#lib/help/HelpButton.svelte';
-	import { ReceiptIcon } from '@lucide/svelte';
+	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
+	import { Funnel, FunnelX, ListFilter, ReceiptIcon } from '@lucide/svelte';
 
 	// The URL is the source of truth for which period is showing (see reports/expenses for
 	// the same pattern): ?period=&anchor= (or ?dateFrom=&dateTo= for the Custom chip),
@@ -37,6 +38,12 @@
 	let monthRanges = $state<{ key: string; dateFrom: string; dateTo: string }[]>([]);
 	let currentRange = $state<TimeRange | null>(null);
 	let currentRangeState = $state<TimeRangeState | null>(null);
+
+	// Filter: hidden accounts are persisted; filterEnabled is session-only and defaults
+	// to on whenever there is something to hide (same as the Expense Categories report).
+	let hiddenAccounts = $state<string[]>([]);
+	let filterEnabled = $state(false);
+	let filterInitialized = false;
 
 	// Whole calendar months overlapping [dateFrom, dateTo], clipped to that range at the edges
 	// (a custom or "This Month" range can start/end mid-month).
@@ -112,6 +119,11 @@
 		goto(txSearchUrl(`^${category}`, range.dateFrom, range.dateTo));
 	}
 
+	function toggleFilter() {
+		filterEnabled = !filterEnabled;
+		if (currentRange && currentRangeState) loadData(currentRange, currentRangeState);
+	}
+
 	async function loadData(range: TimeRange, state: TimeRangeState) {
 		isLoading = true;
 		error = null;
@@ -129,6 +141,13 @@
 		try {
 			const currency = await settings.get<string>(SettingKeys.currency);
 			await fullLedgerService.ensureLoaded();
+
+			hiddenAccounts = (await settings.get<string[]>(SettingKeys.expenseTrendHiddenAccounts)) ?? [];
+			if (!filterInitialized) {
+				filterInitialized = true;
+				filterEnabled = hiddenAccounts.length > 0;
+			}
+			const hidden = filterEnabled ? new Set(hiddenAccounts) : new Set<string>();
 
 			const monthList = monthsBetween(range.dateFrom, range.dateTo);
 			monthRanges = monthList.map(({ key, dateFrom, dateTo }) => ({ key, dateFrom, dateTo }));
@@ -169,6 +188,7 @@
 				if (!totals.has(monthKey)) continue;
 
 				const account = String(row[accountIdx] ?? '');
+				if (hidden.has(account)) continue;
 				const category = mainCategory(account);
 				const amount = parseFloat(String(row[numberIdx] ?? '0')) || 0;
 
@@ -221,6 +241,18 @@
 				<ReceiptIcon size={18} />
 			</button>
 			<HelpButton topic="report-expense-trend" />
+		{/snippet}
+		{#snippet menuItems()}
+			<ToolbarMenuItem
+				text={filterEnabled ? 'Disable filter' : 'Enable filter'}
+				Icon={filterEnabled ? FunnelX : Funnel}
+				onclick={toggleFilter}
+			/>
+			<ToolbarMenuItem
+				text="Edit filter"
+				Icon={ListFilter}
+				onclick={() => goto('/reports/expenses/filter?target=trend')}
+			/>
 		{/snippet}
 	</Toolbar>
 

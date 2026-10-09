@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { page } from '$app/state';
 	import { Trash2 } from '@lucide/svelte';
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
@@ -8,6 +9,13 @@
 	import fullLedgerService from '#lib/services/ledgerWorkerClient';
 	import { SettingKeys, settings } from '#lib/settings';
 	import { ListSearch } from '#lib/utils/ListSearch';
+
+	// ?target=trend edits the Expense Trend report's filter; otherwise the Expenses one.
+	const isTrend = page.url.searchParams.get('target') === 'trend';
+	const settingKey = isTrend
+		? SettingKeys.expenseTrendHiddenAccounts
+		: SettingKeys.expensesHiddenAccounts;
+	const reportName = isTrend ? 'Expense Trend' : 'Expenses';
 
 	let allAccounts: string[] = $state([]);
 	let hiddenAccounts: Set<string> = $state(new Set());
@@ -37,7 +45,7 @@
 				.filter((name) => name.startsWith('Expenses:'))
 				.sort();
 
-			const saved = await settings.get<string[]>(SettingKeys.expensesHiddenAccounts);
+			const saved = await settings.get<string[]>(settingKey);
 			hiddenAccounts = new Set(saved ?? []);
 		} finally {
 			isLoading = false;
@@ -59,7 +67,7 @@
 	}
 
 	async function saveAndGoBack() {
-		await settings.set(SettingKeys.expensesHiddenAccounts, [...hiddenAccounts]);
+		await settings.set(settingKey,[...hiddenAccounts]);
 		history.back();
 	}
 
@@ -80,9 +88,9 @@
 	<!-- Hint -->
 	<div class="px-4 py-2 text-xs text-base-content/50 border-b border-base-200">
 		{#if hiddenCount > 0}
-			{hiddenCount} account{hiddenCount === 1 ? '' : 's'} hidden from the Expenses report.
+			{hiddenCount} account{hiddenCount === 1 ? '' : 's'} hidden from the {reportName} report.
 		{:else}
-			Checked accounts are hidden from the Expenses report.
+			Checked accounts are hidden from the {reportName} report.
 		{/if}
 	</div>
 

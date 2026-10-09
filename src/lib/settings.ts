@@ -97,6 +97,8 @@ export const SettingKeys = {
 	importBookFileSpec: 'importBookFileSpec',
 	// Expenses report filter
 	expensesHiddenAccounts: 'expenses.hiddenAccounts',
+	// Expense Trend report filter (separate from the Expenses one)
+	expenseTrendHiddenAccounts: 'expenseTrend.hiddenAccounts',
 	// Budget category definitions (monthly targets)
 	budgetDefinition: 'budget.definition',
 	// Tax summary report definition (year start + account categories)
