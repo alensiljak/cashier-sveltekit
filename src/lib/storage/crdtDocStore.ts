@@ -3,6 +3,7 @@ import { IndexeddbPersistence } from 'y-indexeddb';
 import { ulid } from 'ulid';
 import notifier from '$lib/utils/notifier';
 import { scheduleBackup } from '$lib/services/webdavAutoBackupService';
+import type { DocKind } from '$lib/sync/ydocDevices';
 
 /** Transaction origin of updates merged in from another device, so live sync doesn't echo them back. */
 export const REMOTE_ORIGIN = 'remote';
@@ -102,6 +103,8 @@ export abstract class CrdtDocStore<R> {
 	private readonly recordListeners = new Set<() => void>();
 	private readonly updateListeners = new Set<UpdateHandler>();
 
+	/** Which document this is; scopes the automatic backup to this store's own file. */
+	protected abstract readonly kind: DocKind;
 	protected readonly dbName: string;
 	private readonly recordsKey: string;
 
@@ -233,7 +236,7 @@ export abstract class CrdtDocStore<R> {
 		// Merged records reach other devices through this device's own file too,
 		// but a no-op merge leaves nothing new to upload.
 		if (changed) {
-			if (backup) scheduleBackup();
+			if (backup) scheduleBackup(this.kind);
 			await this.flush();
 		}
 		return changes;
@@ -337,7 +340,7 @@ export abstract class CrdtDocStore<R> {
 					nextMeta.set('retired', Object.fromEntries(retired));
 				});
 			});
-			scheduleBackup();
+			scheduleBackup(this.kind);
 		});
 	}
 
@@ -365,7 +368,7 @@ export abstract class CrdtDocStore<R> {
 				`The working set was reset on another device. ${unseen.size} record(s) on this device that it had not seen were kept.`
 			);
 		}
-		scheduleBackup();
+		scheduleBackup(this.kind);
 
 		const changes: RecordChange<R>[] = [];
 		for (const [id, after] of this._records) {
@@ -421,7 +424,7 @@ export abstract class CrdtDocStore<R> {
 	async clear(): Promise<void> {
 		await this.ready();
 		this.doc.transact(() => this.records.clear());
-		scheduleBackup();
+		scheduleBackup(this.kind);
 		await this.flush();
 	}
 }

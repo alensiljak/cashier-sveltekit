@@ -19,7 +19,7 @@ import { CASHIER_DATA_DIR } from '$lib/constants';
 import { deviceSettings, DeviceSettingKeys } from '$lib/settings';
 import { exportSettingsJson, importSettingsJson } from '$lib/services/backupService';
 import db from '$lib/data/db';
-import { getDeviceId } from '$lib/sync/ydocDevices';
+import { getDeviceId, type DocKind } from '$lib/sync/ydocDevices';
 import { hasNewOps } from '$lib/sync/ydocCompare';
 import { normalizeEol } from '$lib/sync/SyncSource';
 import { getXactStore } from '$lib/storage/xactStoreRegistry';
@@ -331,7 +331,12 @@ async function syncShared(
 					s.basesDirty = true;
 					return { item, path, outcome: 'unchanged' };
 				}
-				if (d.action === 'conflict' && item === 'beancount' && bytes && sameTextBytes(object, bytes)) {
+				if (
+					d.action === 'conflict' &&
+					item === 'beancount' &&
+					bytes &&
+					sameTextBytes(object, bytes)
+				) {
 					// Only line endings differ: not a real conflict. Make both sides hold the same bytes.
 					d = { action: direction };
 				}
@@ -506,12 +511,14 @@ export async function runSync(
  * backup. Needs only the key, not the manifests, and never conflicts: each device owns its file.
  * Resolves to the lines that failed (empty on success).
  */
-export async function backupCrdtStores(cfg: S3Config): Promise<SyncLine[]> {
+export async function backupCrdtStores(
+	cfg: S3Config,
+	kinds: DocKind[] = ['xacts', 'scx']
+): Promise<SyncLine[]> {
 	const session = await crdtSession(cfg);
-	const lines = [
-		...(await syncCrdt(session, 'upload', 'xacts')),
-		...(await syncCrdt(session, 'upload', 'scheduled'))
-	];
+	const lines: SyncLine[] = [];
+	if (kinds.includes('xacts')) lines.push(...(await syncCrdt(session, 'upload', 'xacts')));
+	if (kinds.includes('scx')) lines.push(...(await syncCrdt(session, 'upload', 'scheduled')));
 	return lines.filter((l) => l.outcome === 'error');
 }
 

@@ -185,7 +185,12 @@ describe('nextEntry', () => {
 
 	it('starts over after the maximum and still supersedes it', () => {
 		const top = { hash: 'x', at: '2026-01-01T00:00:00Z', seq: MAX_SEQ };
-		const next = nextEntry([{ deviceId: 'd1', updated: '', files: { 'a.bean': top } }], 'a.bean', 'h', now);
+		const next = nextEntry(
+			[{ deviceId: 'd1', updated: '', files: { 'a.bean': top } }],
+			'a.bean',
+			'h',
+			now
+		);
 		expect(next.seq).toBe(1);
 		expect(isNewer(next, top)).toBe(true);
 		expect(isNewer(top, next)).toBe(false);

@@ -41,17 +41,21 @@ export const lastBackupTime = writable<Date | null>(null);
 
 const DEBOUNCE_MS = 2000;
 
-let debounceTimer: ReturnType<typeof setTimeout> | undefined;
+const ALL_KINDS: DocKind[] = ['xacts', 'scx'];
 
-async function doBackup(): Promise<void> {
-	await Promise.all([doWebDavBackup(), doS3Backup()]);
+let debounceTimer: ReturnType<typeof setTimeout> | undefined;
+/** Stores written since the last backup; only these are uploaded. */
+const pendingKinds = new Set<DocKind>();
+
+async function doBackup(kinds: DocKind[]): Promise<void> {
+	await Promise.all([doWebDavBackup(kinds), doS3Backup(kinds)]);
 }
 
 /**
  * Back up to S3 when the S3 option is enabled in the settings and the bucket is configured.
  * Imported on demand: s3Sync pulls in the store registries, which import this module.
  */
-async function doS3Backup(): Promise<void> {
+async function doS3Backup(kinds: DocKind[]): Promise<void> {
 	try {
 		if (!(await deviceSettings.get<boolean>(DeviceSettingKeys.s3AutoBackup))) return;
 
@@ -65,10 +69,10 @@ async function doS3Backup(): Promise<void> {
 		if (!navigator.onLine) return;
 
 		const { backupCrdtStores } = await import('$lib/services/s3Sync');
-		const failed = await backupCrdtStores(cfg);
+		const failed = await backupCrdtStores(cfg, kinds);
 		if (failed.length) throw new Error(failed.map((l) => l.message).join('; '));
 		lastBackupTime.set(new Date());
-		Notifier.success('Journal backed up to S3');
+		Notifier.success(`${kindsLabel(kinds)} backed up to S3`);
 	} catch (err) {
 		console.warn('[s3-auto-backup] error:', err);
 		Notifier.error(`S3 backup failed: ${err instanceof Error ? err.message : String(err)}`);
@@ -79,41 +83,57 @@ async function doS3Backup(): Promise<void> {
  * Uploads this device's Yjs state files to WebDAV. Resolves to the error messages (empty on
  * success). Shared by the automatic backup and the home-screen sync.
  */
-export async function uploadCrdtState(client: WebDavClient): Promise<string[]> {
+export async function uploadCrdtState(
+	client: WebDavClient,
+	kinds: DocKind[] = ALL_KINDS
+): Promise<string[]> {
 	const errors: string[] = [];
 
 	// The working set.
-	try {
-		const store = await getXactStore();
-		const filename = await crdtBackupFilename();
-		const res = await client.put(filename, await store.exportState(), 'application/octet-stream');
-		if (res.ok) lastBackupTime.set(new Date());
-		else errors.push(`${filename}: ${res.status} ${res.statusText}`);
-	} catch (err) {
-		errors.push(err instanceof Error ? err.message : String(err));
+	if (kinds.includes('xacts')) {
+		try {
+			const store = await getXactStore();
+			const filename = await crdtBackupFilename();
+			const res = await client.put(filename, await store.exportState(), 'application/octet-stream');
+			if (res.ok) lastBackupTime.set(new Date());
+			else errors.push(`${filename}: ${res.status} ${res.statusText}`);
+		} catch (err) {
+			errors.push(err instanceof Error ? err.message : String(err));
+		}
 	}
 
 	// The scheduled transactions, once their store exists. A device that hasn't been
 	// through the first-launch migration prompt yet is skipped: a background timer
 	// must not create the store (that would pre-empt the prompt).
-	try {
-		const scxStore = await getScxStore();
-		if (await scxStore.isInitialized()) {
-			const filename = await crdtBackupFilename('scx');
-			const res = await client.put(
-				filename,
-				await scxStore.exportState(),
-				'application/octet-stream'
-			);
-			if (!res.ok) errors.push(`${filename}: ${res.status} ${res.statusText}`);
+	if (kinds.includes('scx')) {
+		try {
+			const scxStore = await getScxStore();
+			if (await scxStore.isInitialized()) {
+				const filename = await crdtBackupFilename('scx');
+				const res = await client.put(
+					filename,
+					await scxStore.exportState(),
+					'application/octet-stream'
+				);
+				if (res.ok) lastBackupTime.set(new Date());
+				else errors.push(`${filename}: ${res.status} ${res.statusText}`);
+			}
+		} catch (err) {
+			errors.push(err instanceof Error ? err.message : String(err));
 		}
-	} catch (err) {
-		errors.push(err instanceof Error ? err.message : String(err));
 	}
 	return errors;
 }
 
-async function doWebDavBackup(): Promise<void> {
+function kindsLabel(kinds: DocKind[]): string {
+	return kinds.length === ALL_KINDS.length
+		? 'Working set and scheduled transactions'
+		: kinds[0] === 'scx'
+			? 'Scheduled transactions'
+			: 'Working set';
+}
+
+async function doWebDavBackup(kinds: DocKind[]): Promise<void> {
 	const enabled = await deviceSettings.get<boolean>(DeviceSettingKeys.webdavAutoBackup);
 	if (!enabled) return;
 
@@ -127,22 +147,26 @@ async function doWebDavBackup(): Promise<void> {
 	if (!navigator.onLine) return;
 
 	const client = new WebDavClient(cfg.url, cfg.username, cfg.password);
-	const errors = await uploadCrdtState(client);
+	const errors = await uploadCrdtState(client, kinds);
 	if (errors.length) {
 		console.warn('[webdav-auto-backup] upload failed:', errors);
 		Notifier.error(`WebDAV backup failed: ${errors.join('; ')}`);
 	} else {
-		Notifier.success('Journal backed up to WebDAV');
+		Notifier.success(`${kindsLabel(kinds)} backed up to WebDAV`);
 	}
 }
+
 /**
- * Schedule a background upload of the working set to WebDAV.
- * Debounced — multiple calls within 2 s coalesce into one upload.
+ * Schedule a background upload of the given store (the one just written) to WebDAV and S3.
+ * Debounced — multiple calls within 2 s coalesce into one upload of the stores written.
  * Fire-and-forget: never throws, never blocks the caller.
  */
-export function scheduleBackup(): void {
+export function scheduleBackup(kind: DocKind): void {
+	pendingKinds.add(kind);
 	clearTimeout(debounceTimer);
 	debounceTimer = setTimeout(() => {
-		void doBackup();
+		const kinds = [...pendingKinds];
+		pendingKinds.clear();
+		void doBackup(kinds);
 	}, DEBOUNCE_MS);
 }

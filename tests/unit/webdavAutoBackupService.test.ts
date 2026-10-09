@@ -44,7 +44,7 @@ async function configure({ enabled = true, cfg = CFG as unknown } = {}) {
 
 /** Runs the debounce timer and waits until the scheduled upload has finished. The service is fire-and-forget, so completion is the success/failure message. */
 async function runBackup() {
-	scheduleBackup();
+	scheduleBackup('xacts');
 	await vi.advanceTimersByTimeAsync(2000);
 	// The upload continues asynchronously after the timer fires.
 	await vi.waitFor(() =>
@@ -84,7 +84,7 @@ describe('crdtBackupFilename', () => {
 
 describe('scheduleBackup', () => {
 	it('waits for the debounce period before uploading', async () => {
-		scheduleBackup();
+		scheduleBackup('xacts');
 		await vi.advanceTimersByTimeAsync(1999);
 
 		expect(mocks.put).not.toHaveBeenCalled();
@@ -96,11 +96,11 @@ describe('scheduleBackup', () => {
 	});
 
 	it('coalesces rapid calls into one upload', async () => {
-		scheduleBackup();
+		scheduleBackup('xacts');
 		await vi.advanceTimersByTimeAsync(1000);
-		scheduleBackup();
+		scheduleBackup('xacts');
 		await vi.advanceTimersByTimeAsync(1000);
-		scheduleBackup();
+		scheduleBackup('xacts');
 		await vi.advanceTimersByTimeAsync(2000);
 		await vi.waitFor(() => expect(mocks.put).toHaveBeenCalled());
 
@@ -114,7 +114,7 @@ describe('guards', () => {
 	it('does nothing when auto-backup is off', async () => {
 		await configure({ enabled: false });
 
-		scheduleBackup();
+		scheduleBackup('xacts');
 		await vi.advanceTimersByTimeAsync(2000);
 		await vi.advanceTimersByTimeAsync(50);
 
@@ -124,7 +124,7 @@ describe('guards', () => {
 	it('does nothing without a configured server URL', async () => {
 		await configure({ cfg: { url: '', username: '', password: '' } });
 
-		scheduleBackup();
+		scheduleBackup('xacts');
 		await vi.advanceTimersByTimeAsync(2000);
 		await vi.advanceTimersByTimeAsync(50);
 
@@ -134,7 +134,7 @@ describe('guards', () => {
 	it('does nothing while offline', async () => {
 		vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
 
-		scheduleBackup();
+		scheduleBackup('xacts');
 		await vi.advanceTimersByTimeAsync(2000);
 		await vi.advanceTimersByTimeAsync(50);
 

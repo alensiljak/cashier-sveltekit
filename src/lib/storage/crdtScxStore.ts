@@ -26,6 +26,8 @@ const newId = monotonicFactory();
  * subscription come from `CrdtDocStore`.
  */
 export class CrdtScxStore extends CrdtDocStore<ScxRecord> {
+	protected readonly kind = 'scx';
+
 	constructor(dbName: string = DB_NAME) {
 		super(dbName, RECORDS_KEY);
 	}
@@ -87,7 +89,7 @@ export class CrdtScxStore extends CrdtDocStore<ScxRecord> {
 	async save(scx: Omit<ScheduledTransaction, 'id'> & { id?: unknown }): Promise<CrdtScxId> {
 		await this.ready();
 		const id = this.put(scx, this.idFor(scx));
-		scheduleBackup();
+		scheduleBackup(this.kind);
 		await this.flush();
 		return id;
 	}
@@ -104,7 +106,7 @@ export class CrdtScxStore extends CrdtDocStore<ScxRecord> {
 		this.doc.transact(() => {
 			for (const scx of list) ids.push(this.put(scx, this.idFor(scx)));
 		});
-		if (ids.length > 0) scheduleBackup();
+		if (ids.length > 0) scheduleBackup(this.kind);
 		await this.flush();
 		return ids;
 	}
@@ -119,7 +121,7 @@ export class CrdtScxStore extends CrdtDocStore<ScxRecord> {
 			this.records.clear();
 			for (const scx of list) ids.push(this.put(scx, this.idFor(scx)));
 		});
-		scheduleBackup();
+		scheduleBackup(this.kind);
 		await this.flush();
 		return ids;
 	}
@@ -133,7 +135,7 @@ export class CrdtScxStore extends CrdtDocStore<ScxRecord> {
 		this.doc.transact(() => {
 			for (const id of ids) this.records.delete(id);
 		});
-		if (ids.length > 0) scheduleBackup();
+		if (ids.length > 0) scheduleBackup(this.kind);
 		await this.flush();
 	}
 }

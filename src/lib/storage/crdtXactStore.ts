@@ -40,6 +40,7 @@ const newId = monotonicFactory();
  * `CrdtDocStore`.
  */
 export class CrdtXactStore extends CrdtDocStore<XactRecord> {
+	protected readonly kind = 'xacts';
 	private readonly getOrigin: () => Promise<string>;
 
 	constructor(dbName: string = DB_NAME, getOrigin: () => Promise<string> = getDeviceId) {
@@ -74,7 +75,7 @@ export class CrdtXactStore extends CrdtDocStore<XactRecord> {
 	/** Writes the record and resolves once it is committed to IndexedDB. */
 	private async put(id: XactId, record: XactRecord): Promise<StoredXact> {
 		this.records.set(id, record);
-		scheduleBackup();
+		scheduleBackup(this.kind);
 		await this.flush();
 		return { xact: fromRecord(record), id, origin: record.origin };
 	}
@@ -101,7 +102,7 @@ export class CrdtXactStore extends CrdtDocStore<XactRecord> {
 				ids.push(id);
 			}
 		});
-		if (ids.length > 0) scheduleBackup();
+		if (ids.length > 0) scheduleBackup(this.kind);
 		await this.flush();
 		return ids;
 	}
@@ -124,7 +125,7 @@ export class CrdtXactStore extends CrdtDocStore<XactRecord> {
 	async remove(id: XactId): Promise<void> {
 		await this.ready();
 		this.records.delete(id);
-		scheduleBackup();
+		scheduleBackup(this.kind);
 		await this.flush();
 	}
 
