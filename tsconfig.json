@@ -12,10 +12,10 @@
 		"moduleResolution": "bundler",
 		"lib": ["esnext", "DOM", "DOM.Iterable", "DOM.AsyncIterable"]
 	},
-	// Path aliases are handled by https://svelte.dev/docs/kit/configuration#alias
-	// and `#lib` by the `imports` field in package.json.
+	// The `#lib/*` alias is resolved from the `imports` field in package.json (no `paths` needed);
+	// SvelteKit has no aliases configured.
 	//
-	// SvelteKit 3's generated config no longer supplies includes/excludes, so list them here.
+	// SvelteKit 3's generated config no longer supplies include/exclude, so list them here.
 	"include": ["src", "tests", "vite.config.ts", "vitest.config.ts", "playwright.config.ts"],
 	"exclude": ["src/service-worker.ts", "src/service-worker", "node_modules/**/*"]
 }
