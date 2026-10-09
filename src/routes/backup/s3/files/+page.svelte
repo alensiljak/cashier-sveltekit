@@ -2,6 +2,8 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import {
+		CheckIcon,
+		XIcon,
 		ChevronDownIcon,
 		ChevronRightIcon,
 		FileIcon,
@@ -293,6 +295,13 @@
 
 	let autoRunning = $state(false);
 	let autoProgress = $state({ done: 0, total: 0 });
+	type AutoStatus =
+		| { kind: 'comparing' }
+		| { kind: 'same' }
+		| { kind: 'differs' }
+		| { kind: 'error'; message: string };
+	// Per-file result of the last auto-compare, shown as an indicator beside the file.
+	let autoStatus = $state<Record<string, AutoStatus>>({});
 
 	/**
 	 * Runs the manual Compare on every file that is not in sync, and marks those whose text is the
@@ -308,18 +317,23 @@
 		}
 		autoRunning = true;
 		autoProgress = { done: 0, total: targets.length };
+		autoStatus = {};
 		try {
 			for (const entry of targets) {
+				autoStatus[entry.path] = { kind: 'comparing' };
 				try {
 					const cmp = await compareFile(session, entry.path);
 					if (cmp.sameText) {
 						await markSameContent(session, cmp, { persist: false });
-						Notifier.success(`${entry.path}: marked as in sync.`);
+						autoStatus[entry.path] = { kind: 'same' };
 					} else {
-						Notifier.info(`${entry.path}: content really differs.`);
+						autoStatus[entry.path] = { kind: 'differs' };
 					}
 				} catch (e) {
-					Notifier.error(`${entry.path}: ${e instanceof Error ? e.message : describeS3Error(e)}`);
+					autoStatus[entry.path] = {
+						kind: 'error',
+						message: e instanceof Error ? e.message : describeS3Error(e)
+					};
 				}
 				autoProgress.done++;
 			}
@@ -454,6 +468,18 @@
 												Compare
 											</button>
 										{/if}
+										{@const auto = autoStatus[row.path]}
+										<span class="flex h-5 w-5 shrink-0 items-center justify-center">
+											{#if auto?.kind === 'comparing'}
+												<span class="loading loading-spinner loading-xs" title="Comparing…"></span>
+											{:else if auto?.kind === 'same'}
+												<CheckIcon class="text-success h-4 w-4" aria-label="Marked as in sync" />
+											{:else if auto?.kind === 'differs'}
+												<XIcon class="text-warning h-4 w-4" aria-label="Content really differs" />
+											{:else if auto?.kind === 'error'}
+												<XIcon class="text-error h-4 w-4" aria-label={auto.message} />
+											{/if}
+										</span>
 									</div>
 								{/if}
 							</li>
