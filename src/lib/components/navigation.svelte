@@ -438,6 +438,19 @@
 									<span>WebDAV Backup</span>
 								</a>
 							</li>
+							<li>
+								<a
+									href="/util/webdav-explorer"
+									class="flex w-full items-center gap-2 py-2 {page.url.pathname ===
+									'/util/webdav-explorer'
+										? 'active bg-secondary text-secondary-content'
+										: ''}"
+									onclick={closeDrawer}
+								>
+									<CloudIcon />
+									<span>WebDAV Explorer</span>
+								</a>
+							</li>
 						{/if}
 						{#if syncOptions.s3}
 							<li>
@@ -450,6 +463,19 @@
 								>
 									<CloudIcon />
 									<span>S3 Sync</span>
+								</a>
+							</li>
+							<li>
+								<a
+									href="/util/s3-explorer"
+									class="flex w-full items-center gap-2 py-2 {page.url.pathname ===
+									'/util/s3-explorer'
+										? 'active bg-secondary text-secondary-content'
+										: ''}"
+									onclick={closeDrawer}
+								>
+									<CloudIcon />
+									<span>S3 Explorer</span>
 								</a>
 							</li>
 						{/if}
@@ -490,36 +516,6 @@
 								<span>Cache</span>
 							</a>
 						</li>
-						{#if syncOptions.webdav}
-							<li>
-								<a
-									href="/util/webdav-explorer"
-									class="flex w-full items-center gap-2 py-2 {page.url.pathname ===
-									'/util/webdav-explorer'
-										? 'active bg-secondary text-secondary-content'
-										: ''}"
-									onclick={closeDrawer}
-								>
-									<CloudIcon />
-									<span>WebDAV Explorer</span>
-								</a>
-							</li>
-						{/if}
-						{#if syncOptions.s3}
-							<li>
-								<a
-									href="/util/s3-explorer"
-									class="flex w-full items-center gap-2 py-2 {page.url.pathname ===
-									'/util/s3-explorer'
-										? 'active bg-secondary text-secondary-content'
-										: ''}"
-									onclick={closeDrawer}
-								>
-									<CloudIcon />
-									<span>S3 Explorer</span>
-								</a>
-							</li>
-						{/if}
 						<li>
 							<a
 								href="/calculator"
