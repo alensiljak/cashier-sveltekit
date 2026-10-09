@@ -2,7 +2,6 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import type { UserConfig } from 'vite';
 import { defineConfig } from 'vite';
 import adapter from '@sveltejs/adapter-static';
-import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
 import fs from 'fs';
@@ -68,7 +67,6 @@ const config: UserConfig = defineConfig({
 		// Ensure WASM files are served correctly in dev mode
 		fs: {
 			allow: ['..', path.resolve(import.meta.dirname, '..', '..', '..', 'node_modules')]
-			//strict: false,
 		}
 		// Needed when running in a container and using source files on the host.
 		// Or, use CHOKIDAR_USEPOLLING env var in devcontainer.json.
@@ -78,22 +76,13 @@ const config: UserConfig = defineConfig({
 		// }
 	},
 	build: {
-		//sourcemap: process.env.SOURCE_MAP === 'true',
 		sourcemap: false
 	},
 	plugins: [
 		tailwindcss(),
 		buildInfo(),
 		sveltekit({
-			extensions: ['.svelte'],
-			compilerOptions: {},
-			preprocess: vitePreprocess(),
-			adapter: adapter({
-				fallback: 'index.html',
-				pages: 'build',
-				assets: 'build'
-			}),
-			prerender: { entries: ['*'] },
+			adapter: adapter({ fallback: 'index.html' }),
 			version: { name: APP_VERSION },
 			// registered manually in #lib/services/pwaUpdate (prompt-style updates)
 			serviceWorker: { register: false }
