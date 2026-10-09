@@ -21,6 +21,7 @@
 		compareFile,
 		listFileStatuses,
 		markSameContent,
+		persistSession,
 		openSession,
 		resolveConflict,
 		applyMerge,
@@ -287,6 +288,55 @@
 	}
 
 	const isConflict = $derived(comparing?.state === 'conflict');
+
+	// --- auto-compare ---
+
+	let autoRunning = $state(false);
+	let autoProgress = $state({ done: 0, total: 0 });
+
+	/**
+	 * Runs the manual Compare on every file that is not in sync, and marks those whose text is the
+	 * same as in sync (correcting a stale manifest where needed). Files that really differ are left
+	 * for manual review. The manifest and bases are written once at the end.
+	 */
+	async function autoCompare() {
+		if (!session || autoRunning) return;
+		const targets = entries.filter((e) => e.state !== 'unchanged');
+		if (targets.length === 0) {
+			Notifier.info('Everything is already in sync.');
+			return;
+		}
+		autoRunning = true;
+		autoProgress = { done: 0, total: targets.length };
+		let marked = 0;
+		let differ = 0;
+		let failed = 0;
+		try {
+			for (const entry of targets) {
+				try {
+					const cmp = await compareFile(session, entry.path);
+					if (cmp.sameText) {
+						await markSameContent(session, cmp, { persist: false });
+						marked++;
+					} else {
+						differ++;
+					}
+				} catch {
+					failed++;
+				}
+				autoProgress.done++;
+			}
+			await persistSession(session);
+			const parts = [`${marked} marked as in sync`, `${differ} really differ`];
+			if (failed) parts.push(`${failed} failed`);
+			Notifier.success(parts.join(', ') + '.');
+		} catch (e) {
+			Notifier.error(e instanceof Error ? e.message : describeS3Error(e));
+		} finally {
+			autoRunning = false;
+			await refresh();
+		}
+	}
 </script>
 
 {#snippet stateBadge(state: FileState)}
@@ -306,6 +356,14 @@
 				<RefreshCwIcon size={20} class={loading ? 'animate-spin' : ''} />
 			</button>
 		{/snippet}
+		{#snippet menuItems()}
+			<li>
+				<button disabled={autoRunning || loading || changeCount === 0} onclick={autoCompare}>
+					<GitCompareArrowsIcon size={18} />
+					Auto-compare
+				</button>
+			</li>
+		{/snippet}
 	</Toolbar>
 
 	<section class="flex-1 space-y-3 overflow-y-auto touch-pan-y p-4">
@@ -317,6 +375,12 @@
 			{#if loading && entries.length === 0}
 				<div class="flex justify-center p-8"><span class="loading loading-spinner"></span></div>
 			{:else if session}
+				{#if autoRunning}
+					<div class="alert alert-info text-sm">
+						<span class="loading loading-spinner loading-xs"></span>
+						<span>Comparing files… {autoProgress.done} / {autoProgress.total}</span>
+					</div>
+				{/if}
 				<div class="join w-full">
 					<button
 						class="btn btn-xs join-item flex-1 {filter === 'conflicts' ? 'btn-primary' : 'btn-outline'}"

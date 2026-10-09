@@ -940,7 +940,11 @@ export async function compareFile(s: S3Session, path: string): Promise<FileCompa
  * it. This device then publishes a newer entry with the object's real hash, which every device
  * picks up as the newest.
  */
-export async function markSameContent(s: S3Session, cmp: FileComparison): Promise<void> {
+export async function markSameContent(
+	s: S3Session,
+	cmp: FileComparison,
+	opts: { persist?: boolean } = {}
+): Promise<void> {
 	if (!cmp.sameText || !cmp.localHash || !cmp.remoteHash) {
 		throw new Error('The two versions differ');
 	}
@@ -949,6 +953,11 @@ export async function markSameContent(s: S3Session, cmp: FileComparison): Promis
 	s.bases[path] = cmp.localHash;
 	s.equiv[path] = { base: cmp.localHash, hashes: [cmp.remoteHash] };
 	s.basesDirty = s.equivDirty = true;
+	if (opts.persist !== false) await persist(s);
+}
+
+/** Writes the changes that `markSameContent(..., { persist: false })` collected. */
+export async function persistSession(s: S3Session): Promise<void> {
 	await persist(s);
 }
 
