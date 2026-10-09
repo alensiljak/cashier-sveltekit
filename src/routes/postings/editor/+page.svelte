@@ -237,7 +237,7 @@
 			<!-- Cost annotation: {amount currency[, date]} -->
 			<div class="form-control">
 				<label class="label flex w-full items-center justify-between">
-					<span class="label-text font-semibold">Cost <span class="font-mono text-xs opacity-60">{'{'}amount CCY[, date]{'}'}</span></span>
+					<span class="label-text font-semibold">Cost <span class="font-mono text-xs opacity-60">&#123;amount CCY[, date]&#125;</span></span>
 					{#if $xact.postings[index]?.costAmount != null}
 						<button type="button" class="label-text-alt btn btn-sm btn-error" onclick={clearCost}>
 							<XIcon class="h-4 w-4" />

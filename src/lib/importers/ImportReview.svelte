@@ -12,7 +12,7 @@
 	import type { Xact } from '#lib/data/model';
 
 	interface Props {
-		importer: Importer<any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+		importer: Importer<any>;
 		config: unknown;
 		fileName: string;
 		text: string;

@@ -64,10 +64,7 @@
 	const noneViewable = $derived(!includeSettings);
 	const allSelected = $derived(includeSettings && includeXacts && includeScheduled);
 	const someSelected = $derived(includeSettings || includeXacts || includeScheduled);
-	let indeterminate = $state(false);
-	$effect(() => {
-		indeterminate = someSelected && !allSelected;
-	});
+	let indeterminate = $derived(someSelected && !allSelected);
 
 	function toggleSelectAll() {
 		const next = !allSelected;

@@ -23,7 +23,7 @@
 		"test:e2e": "playwright test",
 		"test": "npm run test:unit && npm run test:e2e",
 		"verify": "npm run lint && npm run check && npm run test:unit && npm run test:e2e",
-		"lint": "oxfmt --check && oxlint .",
+		"lint": "oxfmt --check && oxlint . && eslint .",
 		"format": "oxfmt",
 		"deploy": "netlify deploy --prod",
 		"publish": "npm run lint && npm run check && npm run test:unit && npm run deploy"
@@ -74,6 +74,7 @@
 		"agent-browser": "^0.38.2",
 		"autoprefixer": "^10.4.20",
 		"esbuild-wasm": "^0.28.0",
+		"eslint": "^10.12.0",
 		"eslint-plugin-svelte": "^3.1.0",
 		"fake-indexeddb": "^6.2.5",
 		"fflate": "^0.8.3",

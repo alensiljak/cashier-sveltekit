@@ -26,24 +26,20 @@
 
     // --- Web Speech API ---
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let recognition: any = null
 
     function initRecognition() {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const SR = (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition
         if (!SR) {
             supported = false
             return null
         }
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const r: any = new SR()
         r.continuous = false
         r.interimResults = true
         r.lang = 'en-US'
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         r.onresult = (event: any) => {
             let interim = ''
             let final = ''
@@ -56,7 +52,6 @@
             if (final) handleTranscript(final)
         }
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         r.onerror = (event: any) => {
             if (event.error === 'network') {
                 errorMsg =

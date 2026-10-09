@@ -37,7 +37,7 @@
 	const ruleIndex = ruleParam === null ? null : Number(ruleParam);
 	const editing = ruleIndex !== null;
 
-	let importer = $state<Importer<any> | null>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
+	let importer = $state<Importer<any> | null>(null);
 	let config = $state<RuleConfig | null>(null);
 	let imported = $state<ImportedXact[]>([]);
 	let form = $state({ match: '', payee: '', account: '', disabled: false });

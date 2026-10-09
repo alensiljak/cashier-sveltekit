@@ -200,10 +200,7 @@
 
 	const allSelected = $derived(Object.values(include).every(Boolean));
 	const someSelected = $derived(Object.values(include).some(Boolean));
-	let indeterminate = $state(false);
-	$effect(() => {
-		indeterminate = someSelected && !allSelected;
-	});
+	let indeterminate = $derived(someSelected && !allSelected);
 
 	function toggleSelectAll() {
 		const next = !allSelected;

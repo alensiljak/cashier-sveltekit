@@ -26,7 +26,6 @@
 	});
 </script>
 
-<!-- svelte-ignore a11y_interactive_supports_focus -->
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <div
 	class={`border-base-content/15 flex w-full flex-row items-start border-b py-0.5 text-base ${isGrayed ? 'text-base-content/50' : ''} ${onclick ? 'cursor-pointer' : ''}`}
