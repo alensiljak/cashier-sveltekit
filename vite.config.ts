@@ -5,6 +5,8 @@ import { defineConfig } from 'vite';
 import tailwindcss from '@tailwindcss/vite';
 //import mkcert from 'vite-plugin-mkcert';
 import path from 'path';
+import fs from 'fs';
+import crypto from 'crypto';
 import type { Plugin } from 'vite';
 
 // Emits build-info.json (unhashed name) with the real build time. It is kept out of the JS
@@ -27,7 +29,33 @@ function buildInfo(): Plugin {
 	};
 }
 
+// Content hash of every file in static/, keyed by its URL path. The service worker uses these as
+// precache revisions, so a static file is re-downloaded only when its own content changes.
+function staticRevisions(): Record<string, string> {
+	const root = path.resolve(import.meta.dirname, 'static');
+	const result: Record<string, string> = {};
+	const walk = (dir: string) => {
+		for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+			const full = path.join(dir, entry.name);
+			if (entry.isDirectory()) walk(full);
+			else {
+				const url = '/' + path.relative(root, full).split(path.sep).join('/');
+				result[url] = crypto
+					.createHash('sha1')
+					.update(fs.readFileSync(full))
+					.digest('hex')
+					.slice(0, 12);
+			}
+		}
+	};
+	if (fs.existsSync(root)) walk(root);
+	return result;
+}
+
 const config: UserConfig = defineConfig({
+	define: {
+		__STATIC_REVISIONS__: JSON.stringify(staticRevisions())
+	},
 	server: {
 		host: '0.0.0.0',
 		// Ensure WASM files are served correctly in dev mode

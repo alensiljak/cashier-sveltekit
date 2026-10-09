@@ -19,11 +19,19 @@ function hash(input: string): string {
 }
 const revision = hash(build.join('|'));
 
-// Hashed build files are immutable (revision null); static files and the root shell are not.
+// Per-file content hashes of static/ (computed in vite.config.ts), so unchanged icons etc. are
+// not re-downloaded when only the app bundle changes.
+declare const __STATIC_REVISIONS__: Record<string, string>;
+
+// Hashed build files are immutable (revision null); unhashed build output (e.g. build-info.json)
+// and the root shell change with the build; static files use their own content hash.
 // Only the root shell is precached: the app is ssr=false, so it serves every route.
 precacheAndRoute([
-	...build.map((url) => ({ url, revision: null })),
-	...files.map((url) => ({ url, revision })),
+	...build.map((url) => ({
+		url,
+		revision: url.includes('/immutable/') ? null : revision
+	})),
+	...files.map((url) => ({ url, revision: __STATIC_REVISIONS__[url] ?? revision })),
 	{ url: '/', revision }
 ]);
 cleanupOutdatedCaches();
