@@ -82,7 +82,7 @@ const config: UserConfig = defineConfig({
 		tailwindcss(),
 		buildInfo(),
 		sveltekit({
-			adapter: adapter({ fallback: 'index.html' }),
+			adapter: adapter({ fallback: '200.html' }),
 			version: { name: APP_VERSION },
 			// registered manually in #lib/services/pwaUpdate (prompt-style updates)
 			serviceWorker: { register: false }

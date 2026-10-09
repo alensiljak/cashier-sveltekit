@@ -17,3 +17,9 @@ for = "/build-info.json"
 Cache-Control = "no-cache"
 #X-Frame-Options = "DENY"
 #X-XSS-Protection = "1; mode=block"
+
+# SPA fallback: unknown paths (e.g. parameterised routes that are not prerendered) get the app shell.
+[[redirects]]
+from = "/*"
+to = "/200.html"
+status = 200
