@@ -89,7 +89,6 @@ const config: UserConfig = defineConfig({
 			extensions: ['.svelte'],
 			compilerOptions: {},
 			preprocess: vitePreprocess(),
-			runes: true,
 			adapter: adapter({
 				fallback: 'index.html',
 				pages: 'build',
