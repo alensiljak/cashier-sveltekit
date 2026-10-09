@@ -4,8 +4,12 @@
 import { describe, expect, it } from 'vitest';
 import {
 	decide,
+	isNewer,
 	isSafePath,
 	latestRemote,
+	MAX_SEQ,
+	nextEntry,
+	seqOf,
 	TOMBSTONE,
 	type Manifest
 } from '$lib/services/s3SyncPlan';
@@ -130,6 +134,61 @@ describe('latestRemote', () => {
 
 	it('is empty without manifests', () => {
 		expect(latestRemote([]).size).toBe(0);
+	});
+
+	it('orders by counter before time, so a fast clock cannot win', () => {
+		const latest = latestRemote([
+			manifest('d1', { 'a.bean': { hash: 'stale', at: '2030-01-01T00:00:00Z', seq: 1 } }),
+			manifest('d2', { 'a.bean': { hash: 'new', at: '2026-01-01T00:00:00Z', seq: 2 } })
+		]);
+		expect(latest.get('a.bean')?.hash).toBe('new');
+	});
+
+	it('ranks entries without a counter below any counted one', () => {
+		const latest = latestRemote([
+			manifest('d1', { 'a.bean': { hash: 'old', at: '2030-01-01T00:00:00Z' } }),
+			manifest('d2', { 'a.bean': { hash: 'new', at: '2026-01-01T00:00:00Z', seq: 1 } })
+		]);
+		expect(latest.get('a.bean')?.hash).toBe('new');
+	});
+
+	it('ignores a counter outside the valid range', () => {
+		expect(seqOf({ hash: 'h', at: '', seq: Number.MAX_SAFE_INTEGER })).toBe(0);
+		expect(seqOf({ hash: 'h', at: '', seq: -3 })).toBe(0);
+		expect(seqOf({ hash: 'h', at: '', seq: 1.5 })).toBe(0);
+	});
+});
+
+describe('nextEntry', () => {
+	const now = new Date('2026-05-01T00:00:00Z');
+
+	it('starts at 1 for a new path', () => {
+		expect(nextEntry([], 'a.bean', 'h', now)).toEqual({
+			hash: 'h',
+			at: now.toISOString(),
+			seq: 1
+		});
+	});
+
+	it('supersedes the newest entry, even one from a device with a later clock', () => {
+		const manifests: Manifest[] = [
+			{
+				deviceId: 'd1',
+				updated: '',
+				files: { 'a.bean': { hash: 'x', at: '2030-01-01T00:00:00Z', seq: 4 } }
+			}
+		];
+		const next = nextEntry(manifests, 'a.bean', 'h', now);
+		expect(next.seq).toBe(5);
+		expect(isNewer(next, manifests[0].files['a.bean'])).toBe(true);
+	});
+
+	it('starts over after the maximum and still supersedes it', () => {
+		const top = { hash: 'x', at: '2026-01-01T00:00:00Z', seq: MAX_SEQ };
+		const next = nextEntry([{ deviceId: 'd1', updated: '', files: { 'a.bean': top } }], 'a.bean', 'h', now);
+		expect(next.seq).toBe(1);
+		expect(isNewer(next, top)).toBe(true);
+		expect(isNewer(top, next)).toBe(false);
 	});
 });
 

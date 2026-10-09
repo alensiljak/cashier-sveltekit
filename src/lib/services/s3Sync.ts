@@ -33,6 +33,7 @@ import {
 	decide,
 	isSafePath,
 	latestRemote,
+	nextEntry,
 	TOMBSTONE,
 	type Manifest,
 	type SyncDirection
@@ -240,7 +241,7 @@ function beancountFile(path: string, local: LocalFiles): SharedFile {
 /** Removes the file from the bucket and records a tombstone, so other devices learn of it. */
 async function deleteShared(s: S3Session, file: SharedFile): Promise<void> {
 	await deleteObject(s.cfg, dataKey(file.path));
-	s.own.files[file.path] = { hash: TOMBSTONE, at: new Date().toISOString() };
+	s.own.files[file.path] = nextEntry(s.manifests, file.path, TOMBSTONE);
 	delete s.bases[file.path];
 	s.manifestDirty = s.basesDirty = true;
 }
@@ -256,9 +257,19 @@ async function removeLocal(s: S3Session, file: SharedFile): Promise<void> {
 async function putShared(s: S3Session, file: SharedFile, bytes: Uint8Array<ArrayBuffer>) {
 	await putObject(s.cfg, dataKey(file.path), await encrypt(s.key, bytes));
 	const hash = await sha256Hex(bytes);
-	s.own.files[file.path] = { hash, at: new Date().toISOString() };
+	s.own.files[file.path] = nextEntry(s.manifests, file.path, hash);
 	s.bases[file.path] = hash;
 	s.manifestDirty = s.basesDirty = true;
+}
+
+/**
+ * Makes the manifest say what the bucket holds. The manifest only indexes the objects, so when
+ * the two disagree the object is right. Changes no file and no object.
+ */
+function repairManifest(s: S3Session, path: string, objectHash: string): void {
+	if (latestRemote(s.manifests).get(path)?.hash === objectHash) return;
+	s.own.files[path] = nextEntry(s.manifests, path, objectHash);
+	s.manifestDirty = true;
 }
 
 async function getShared(s: S3Session, file: SharedFile): Promise<void> {
@@ -266,21 +277,23 @@ async function getShared(s: S3Session, file: SharedFile): Promise<void> {
 	if (!raw) throw new Error('Listed in a manifest but missing from the bucket');
 	const bytes = await decrypt(s.key, raw);
 	await file.write(bytes);
-	s.bases[file.path] = await sha256Hex(bytes);
+	const hash = await sha256Hex(bytes);
+	s.bases[file.path] = hash;
 	s.basesDirty = true;
+	// What was just written is the object, whatever the manifest says. Without this, a stale entry
+	// would show the file as changed, and downloading it again would not clear that.
+	repairManifest(s, file.path, hash);
 }
 
 /**
- * True when the bucket's copy of a text file equals the local one apart from line endings and the
- * final newline, which differ between Windows, Android and editors. Costs one download.
+ * True when two copies of a text file are equal apart from line endings and the final newline,
+ * which differ between Windows, Android and editors.
  */
-async function sameText(s: S3Session, file: SharedFile, local: Uint8Array): Promise<boolean> {
-	const raw = await getObject(s.cfg, dataKey(file.path));
-	if (!raw) return false;
-	const remote = await decrypt(s.key, raw);
-	const text = (b: Uint8Array) => normalizeEol(new TextDecoder().decode(b));
-	return text(remote) === text(local);
+function sameTextBytes(a: Uint8Array, b: Uint8Array): boolean {
+	const text = (x: Uint8Array) => normalizeEol(new TextDecoder().decode(x));
+	return text(a) === text(b);
 }
+
 async function syncShared(
 	s: S3Session,
 	direction: SyncDirection,
@@ -289,18 +302,40 @@ async function syncShared(
 	const { item, path } = file;
 	try {
 		const bytes = await file.read();
-		const local = canonical(s, path, bytes ? await sha256Hex(bytes) : null);
-		const remote = canonical(s, path, latestRemote(s.manifests).get(path)?.hash ?? null);
+		const rawLocal = bytes ? await sha256Hex(bytes) : null;
+		const entry = latestRemote(s.manifests).get(path);
+		const local = canonical(s, path, rawLocal);
+		const remote = canonical(s, path, entry?.hash ?? null);
 		let d = decide(direction, local, remote, s.bases[path] ?? null);
 
-		if (
-			d.action === 'conflict' &&
-			item === 'beancount' &&
-			bytes &&
-			(await sameText(s, file, bytes))
-		) {
-			// Only line endings differ: not a real conflict. Make both sides hold the same bytes.
-			d = { action: direction };
+		// About to overwrite the bucket, or to call a conflict: check the object itself, not what
+		// the manifest says about it. The manifest is only an index and may be out of date.
+		if ((d.action === 'upload' || d.action === 'conflict') && entry && entry.hash !== TOMBSTONE) {
+			const raw = await getObject(s.cfg, dataKey(path));
+			const object = raw ? await decrypt(s.key, raw) : null;
+			if (object) {
+				const objectHash = await sha256Hex(object);
+				if (objectHash !== entry.hash) {
+					if (objectHash !== rawLocal) {
+						// The bucket holds something this device has not seen: never overwrite it.
+						return {
+							item,
+							path,
+							outcome: 'conflict',
+							message: 'The bucket copy differs from its manifest and from this device. Compare it.'
+						};
+					}
+					// The bucket already holds this device's bytes: only the manifest is wrong.
+					repairManifest(s, path, objectHash);
+					s.bases[path] = objectHash;
+					s.basesDirty = true;
+					return { item, path, outcome: 'unchanged' };
+				}
+				if (d.action === 'conflict' && item === 'beancount' && bytes && sameTextBytes(object, bytes)) {
+					// Only line endings differ: not a real conflict. Make both sides hold the same bytes.
+					d = { action: direction };
+				}
+			}
 		}
 
 		switch (d.action) {
@@ -845,6 +880,8 @@ export interface FileComparison {
 	remoteText: string | null;
 	localHash: string | null;
 	remoteHash: string | null;
+	/** The newest manifest entry records another hash than the object in the bucket holds. */
+	manifestStale: boolean;
 	/** Byte for byte the same. */
 	identical: boolean;
 	/** The same text, ignoring line endings and the final newline. */
@@ -876,6 +913,7 @@ export async function compareFile(s: S3Session, path: string): Promise<FileCompa
 		remoteText,
 		localHash,
 		remoteHash,
+		manifestStale: remoteHash !== null && !!entry && entry.hash !== remoteHash,
 		identical: localHash !== null && localHash === remoteHash,
 		sameText:
 			localText !== null &&
@@ -886,26 +924,23 @@ export async function compareFile(s: S3Session, path: string): Promise<FileCompa
 
 /**
  * Records that this device's copy and the bucket's hold the same text, so the file stops showing
- * as a conflict. Changes nothing in the bucket or in the files. A later change on either side is
- * detected as usual.
+ * as a conflict. Changes no file and no bucket object. A later change on either side is detected
+ * as usual.
+ *
+ * The comparison read the object that a download would fetch, so its hash is the truth about the
+ * bucket. If the newest manifest entry says otherwise (an interrupted upload, or a device whose
+ * manifest was written for other content), the manifest is what is wrong, and no refresh can fix
+ * it. This device then publishes a newer entry with the object's real hash, which every device
+ * picks up as the newest.
  */
 export async function markSameContent(s: S3Session, cmp: FileComparison): Promise<void> {
 	if (!cmp.sameText || !cmp.localHash || !cmp.remoteHash) {
 		throw new Error('The two versions differ');
 	}
 	const path = FILES_PREFIX + cmp.path;
-	const manifestHash = latestRemote(s.manifests).get(path)?.hash;
-	// Byte-identical copies are safe to mark even when the manifest records another hash: that
-	// stale hash is what shows the file as changed, so it counts as the same version too.
-	if (manifestHash !== cmp.remoteHash && !cmp.identical) {
-		throw new Error('The bucket copy no longer matches its manifest. Refresh and compare again.');
-	}
-	const hashes = [cmp.remoteHash];
-	if (manifestHash && manifestHash !== TOMBSTONE && !hashes.includes(manifestHash)) {
-		hashes.push(manifestHash);
-	}
+	repairManifest(s, path, cmp.remoteHash);
 	s.bases[path] = cmp.localHash;
-	s.equiv[path] = { base: cmp.localHash, hashes };
+	s.equiv[path] = { base: cmp.localHash, hashes: [cmp.remoteHash] };
 	s.basesDirty = s.equivDirty = true;
 	await persist(s);
 }

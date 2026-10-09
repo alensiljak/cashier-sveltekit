@@ -38,8 +38,33 @@ export interface SyncDecision {
 export interface ManifestEntry {
 	/** Content hash, or `TOMBSTONE` for a deleted file. */
 	hash: string;
-	/** ISO time of the upload. */
+	/** ISO time of the upload. Informational, and the tie-break between equal `seq`. */
 	at: string;
+	/**
+	 * Orders entries for one path across devices, in place of the clocks, which may differ. Each
+	 * new entry is one more than the newest it replaces. Absent in entries from older versions.
+	 */
+	seq?: number;
+}
+
+/** Upper bound for `seq`. A larger value can only come from a damaged manifest. */
+export const MAX_SEQ = 1_000_000_000;
+
+/** The ordering counter of an entry. Absent or out-of-range values count as 0. */
+export function seqOf(entry: ManifestEntry): number {
+	const n = entry.seq;
+	return typeof n === 'number' && Number.isSafeInteger(n) && n > 0 && n <= MAX_SEQ ? n : 0;
+}
+
+/**
+ * Whether `a` supersedes `b`: the higher counter wins, the later time breaks a tie. The counter
+ * wraps from `MAX_SEQ` to 1, so a difference of more than half the range means `a` wrapped.
+ */
+export function isNewer(a: ManifestEntry, b: ManifestEntry): boolean {
+	let diff = seqOf(a) - seqOf(b);
+	if (diff > MAX_SEQ / 2) diff -= MAX_SEQ;
+	else if (diff < -MAX_SEQ / 2) diff += MAX_SEQ;
+	return diff !== 0 ? diff > 0 : a.at > b.at;
 }
 
 export interface Manifest {
@@ -103,10 +128,23 @@ export function latestRemote(manifests: Manifest[]): Map<string, ManifestEntry> 
 	for (const m of manifests) {
 		for (const [path, entry] of Object.entries(m.files)) {
 			const current = latest.get(path);
-			if (!current || entry.at > current.at) latest.set(path, entry);
+			if (!current || isNewer(entry, current)) latest.set(path, entry);
 		}
 	}
 	return latest;
+}
+
+/** The entry that a device writes for `path`, superseding the newest one in `manifests`. */
+export function nextEntry(
+	manifests: Manifest[],
+	path: string,
+	hash: string,
+	now: Date = new Date()
+): ManifestEntry {
+	const current = latestRemote(manifests).get(path);
+	const last = current ? seqOf(current) : 0;
+	const seq = last >= MAX_SEQ ? 1 : last + 1;
+	return { hash, at: now.toISOString(), seq };
 }
 
 /**

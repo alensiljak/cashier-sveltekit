@@ -446,7 +446,15 @@
 								{/if}
 							</span>
 						</div>
-						<button class="btn btn-success btn-sm" disabled={working} onclick={markInSync}>
+						{#if comparison.manifestStale}
+								<div class="alert alert-info text-sm">
+									<span>
+										The bucket's manifest is out of date for this file. Marking it as in sync also
+										corrects the manifest. No file is changed.
+									</span>
+								</div>
+							{/if}
+							<button class="btn btn-success btn-sm" disabled={working} onclick={markInSync}>
 							{#if working}
 								<span class="loading loading-spinner loading-xs"></span>
 							{:else}
