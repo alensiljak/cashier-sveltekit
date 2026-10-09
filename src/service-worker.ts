@@ -1,5 +1,5 @@
 /// <reference lib="webworker" />
-import { build, files } from '$service-worker';
+import { assets, immutable } from '$app/manifest';
 import {
 	cleanupOutdatedCaches,
 	createHandlerBoundToURL,
@@ -9,7 +9,12 @@ import { NavigationRoute, registerRoute } from 'workbox-routing';
 
 declare const self: ServiceWorkerGlobalScope;
 
-// The kit version is pinned (see svelte.config.js), so derive a revision from the hashed build
+// Manifest paths are relative to the base path (none is configured), so make them root-absolute.
+const toUrl = ({ path }: { path: string }) => (path.startsWith('/') ? path : `/${path}`);
+const build = immutable.map(toUrl);
+const files = assets.map(toUrl);
+
+// The kit version is pinned (see vite.config.ts), so derive a revision from the hashed build
 // file list instead. It changes exactly when the root shell (which embeds the hashed app.*.js)
 // or any other precached file may have changed.
 function hash(input: string): string {

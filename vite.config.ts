@@ -1,13 +1,21 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import type { UserConfig } from 'vite';
 import { defineConfig } from 'vite';
-//import { svelte } from '@sveltejs/vite-plugin-svelte';
+import adapter from '@sveltejs/adapter-static';
+import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 import tailwindcss from '@tailwindcss/vite';
 //import mkcert from 'vite-plugin-mkcert';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 import type { Plugin } from 'vite';
+
+// SvelteKit's default version is Date.now(). Any per-build value (timestamp, commit SHA) is
+// inlined into a shared chunk and into the `__sveltekit_<hash>` global of every prerendered
+// page, so each build renames nearly every file and the service worker re-downloads all of
+// them. The app never reads the version and updates are detected via service-worker.js, which
+// derives its own precache revision from the hashed build file list, so keep it constant.
+const APP_VERSION = 'static';
 
 // Emits build-info.json (unhashed name) with the real build time. It is kept out of the JS
 // bundle on purpose: a timestamp inside a hashed chunk would rename that chunk, app.*.js and
@@ -77,8 +85,23 @@ const config: UserConfig = defineConfig({
 	plugins: [
 		tailwindcss(),
 		buildInfo(),
-		// svelte(),
-		sveltekit()
+		sveltekit({
+			extensions: ['.svelte'],
+			compilerOptions: {},
+			preprocess: vitePreprocess(),
+			runes: true,
+			// `$lib` was removed in v3 (use `#lib` subpath imports); kept as an alias until migrated
+			alias: { $lib: 'src/lib' },
+			adapter: adapter({
+				fallback: 'index.html',
+				pages: 'build',
+				assets: 'build'
+			}),
+			prerender: { entries: ['*'] },
+			version: { name: APP_VERSION },
+			// registered manually in $lib/services/pwaUpdate (prompt-style updates)
+			serviceWorker: { register: false }
+		})
 		// mkcert()
 	]
 });

@@ -13,7 +13,6 @@
 	import fullLedgerService from '$lib/services/ledgerWorkerClient';
 	import { reloadLedgerFromOpfs } from '$lib/services/ledgerReload';
 	import { xactToBeancountText } from '$lib/utils/xactUtils';
-	import { base } from '$app/paths';
 	import TransactionEditor from '$lib/components/XactEditor.svelte';
 	import { Xact } from '$lib/data/model';
 	import type { StoredXact } from '$lib/storage/crdtXactStore';
