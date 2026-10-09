@@ -117,12 +117,12 @@
 		<p>
 			RustLedger WASM: <code>{wasmVersion || 'loading…'}</code>
 		</p>
-		<p>
-			<button class="link link-primary inline-flex items-center gap-1" onclick={checkForUpdates} disabled={checking}>
+		<div class="flex justify-center">
+			<button class="btn btn-outline btn-primary" onclick={checkForUpdates} disabled={checking}>
 				<RefreshCw size={14} class={checking ? 'animate-spin' : ''} />
 				{checking ? 'Checking…' : 'Check for updates'}
 			</button>
-		</p>
+		</div>
 
 		<h3 class="text-3xl font-semibold">Experiments</h3>
 
