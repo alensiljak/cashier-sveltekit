@@ -17,7 +17,7 @@ Never use `ledgerService` for financial queries — it does not load the full bo
 ## fullLedgerService — load sequence
 
 ```ts
-import fullLedgerService from '$lib/services/ledgerWorkerClient';
+import fullLedgerService from '#lib/services/ledgerWorkerClient';
 
 await fullLedgerService.ensureLoaded(); // tries OPFS cache first, then full parse
 const result = await fullLedgerService.query('SELECT account, sum(position) GROUP BY account');
@@ -32,7 +32,7 @@ const result = await fullLedgerService.query('SELECT account, sum(position) GROU
 ## Reactive stores
 
 ```ts
-import fullLedgerService from '$lib/services/ledgerWorkerClient';
+import fullLedgerService from '#lib/services/ledgerWorkerClient';
 import { derived } from 'svelte/store';
 
 // Re-query when the ledger reloads
@@ -94,7 +94,7 @@ await fullLedgerService.getErrors(); // parse/validation errors
 Use `src/lib/services/rustledger.ts` only for single-file or utility operations:
 
 ```ts
-import rustledger from '$lib/services/rustledger';
+import rustledger from '#lib/services/rustledger';
 
 await rustledger.ensureInitialized(); // always call first
 rustledger.parseSource(source); // ParseResult
