@@ -18,8 +18,8 @@
  * two coincide; multi-currency cost baselines would need a converted-cost
  * column that `buildLotsQuery` does not currently emit.
  */
-import * as BeancountParser from '$lib/utils/beancountParser';
-import { buildLotsQuery } from '$lib/services/quickQueryBuilder';
+import * as BeancountParser from '#lib/utils/beancountParser';
+import { buildLotsQuery } from '#lib/services/quickQueryBuilder';
 import type { CommodityDirective, QueryFn } from './commodityYield';
 
 export interface SecurityListItem {

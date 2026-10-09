@@ -3,8 +3,8 @@
  * transactions changed. Built from the changes `importState` returns; nothing is
  * stored, so it is only available to the caller that did the merge.
  */
-import type { RecordChange } from '$lib/storage/crdtDocStore';
-import type { ScxRecord } from '$lib/storage/crdtScxRecord';
+import type { RecordChange } from '#lib/storage/crdtDocStore';
+import type { ScxRecord } from '#lib/storage/crdtScxRecord';
 
 export interface ScxMergeReport {
 	added: number;

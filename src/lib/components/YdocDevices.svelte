@@ -1,15 +1,15 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { RefreshCwIcon, Trash2Icon, UserCheckIcon } from '@lucide/svelte';
-	import Notifier from '$lib/utils/notifier';
-	import { WebDavClient } from '$lib/utils/webdav';
-	import { getXactStore } from '$lib/storage/xactStoreRegistry';
-	import { getReadyScxStore } from '$lib/services/scxService';
+	import Notifier from '#lib/utils/notifier';
+	import { WebDavClient } from '#lib/utils/webdav';
+	import { getXactStore } from '#lib/storage/xactStoreRegistry';
+	import { getReadyScxStore } from '#lib/services/scxService';
 	import {
 		describeScxChanges,
 		summarizeScxReport,
 		type ScxMergeReport
-	} from '$lib/services/scxMergeReport';
+	} from '#lib/services/scxMergeReport';
 	import {
 		listRemoteDevices,
 		trustDevice,
@@ -19,7 +19,7 @@
 		type DocKind,
 		type MergeState,
 		type RemoteDevice
-	} from '$lib/sync/ydocDevices';
+	} from '#lib/sync/ydocDevices';
 
 	interface Props {
 		url: string;

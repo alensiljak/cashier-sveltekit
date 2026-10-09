@@ -3,7 +3,7 @@
     PROPFIND parsing, with fetch replaced by a spy.
 */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { WebDavClient } from '$lib/utils/webdav';
+import { WebDavClient } from '#lib/utils/webdav';
 
 const fetchMock = vi.fn();
 const client = new WebDavClient('https://dav.example.com/backups', 'alice', 's3cret');

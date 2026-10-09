@@ -16,13 +16,13 @@ import {
 	DEMO_DIR,
 	SHORT_DATE_FORMAT_DEFAULT,
 	USER_BOOK_FILENAME
-} from '$lib/constants';
-import { SettingKeys, settings } from '$lib/settings';
-import appService from '$lib/services/appService';
-import fullLedgerService from '$lib/services/ledgerWorkerClient';
-import { DateFormatStore, ShortDateFormatStore } from '$lib/data/mainStore';
-import * as OpfsLib from '$lib/utils/opfslib';
-import { getXactStore } from '$lib/storage/xactStoreRegistry';
+} from '#lib/constants';
+import { SettingKeys, settings } from '#lib/settings';
+import appService from '#lib/services/appService';
+import fullLedgerService from '#lib/services/ledgerWorkerClient';
+import { DateFormatStore, ShortDateFormatStore } from '#lib/data/mainStore';
+import * as OpfsLib from '#lib/utils/opfslib';
+import { getXactStore } from '#lib/storage/xactStoreRegistry';
 
 /**
  * Initialize the application. Returns whether onboarding should run instead

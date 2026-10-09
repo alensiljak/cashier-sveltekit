@@ -1,4 +1,4 @@
-import { Posting, ScheduledTransaction, Xact } from '$lib/data/model';
+import { Posting, ScheduledTransaction, Xact } from '#lib/data/model';
 
 /** Bump when the record shape changes; readers must refuse newer versions. */
 export const SCX_SCHEMA_VERSION = 1;
@@ -55,7 +55,7 @@ export function fromRecord(record: ScxRecord): StoredScx {
 		);
 		// Imported lazily: the toaster touches `document` on load, which is absent in workers/tests.
 		if (typeof document !== 'undefined') {
-			void import('$lib/utils/notifier').then(({ default: notifier }) =>
+			void import('#lib/utils/notifier').then(({ default: notifier }) =>
 				notifier.warning(
 					'Some scheduled transactions were saved by a newer version of the app and may be incomplete. Please update the app.'
 				)

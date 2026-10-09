@@ -1,7 +1,7 @@
-import { AssetClass } from '$lib/assetAllocation/AssetClass';
-import { Account } from '$lib/data/model';
+import { AssetClass } from '#lib/assetAllocation/AssetClass';
+import { Account } from '#lib/data/model';
 import { makeAccount } from '../helpers/factories';
-import { deriveInvestmentGroups } from '$lib/portfolioReturns/investmentGroups';
+import { deriveInvestmentGroups } from '#lib/portfolioReturns/investmentGroups';
 import { describe, expect, it } from 'vitest';
 
 function assetClass(fullname: string, symbols: string[]): AssetClass {

@@ -1,13 +1,13 @@
 <script lang="ts">
-	import Fab from '$lib/components/FAB.svelte';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import { xact, selectionMetadata, postingEditorIndex } from '$lib/data/mainStore';
+	import Fab from '#lib/components/FAB.svelte';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import { xact, selectionMetadata, postingEditorIndex } from '#lib/data/mainStore';
 	import { CalculatorIcon, CheckIcon, DiffIcon, ListIcon, TrashIcon, XIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { SelectionModeMetadata } from '$lib/settings';
-	import { getAccountBalance, loadAccount } from '$lib/services/accountsService';
-	import appService from '$lib/services/appService';
+	import { SelectionModeMetadata } from '#lib/settings';
+	import { getAccountBalance, loadAccount } from '#lib/services/accountsService';
+	import appService from '#lib/services/appService';
 
 	onMount(async () => {
 		if (!$xact) {

@@ -2,14 +2,14 @@
 	import { FileUpIcon, PlusIcon, ScrollIcon, TriangleAlertIcon } from '@lucide/svelte';
 	import CashierCardTemplate from './CashierCardTemplate.svelte';
 	import { goto } from '$app/navigation';
-	import { xact } from '$lib/data/mainStore';
-	import { Money, Posting, Xact } from '$lib/data/model';
-	import { XactAugmenter } from '$lib/utils/xactAugmenter';
-	import Notifier from '$lib/utils/notifier';
-	import { formatAmount, getReadableDate, getXactAmountColour } from '$lib/utils/formatter';
-	import { getXactStore, subscribeXactStore } from '$lib/storage/xactStoreRegistry';
-	import { homeCache } from '$lib/services/homeCache';
-	import { ShortDateFormatStore } from '$lib/data/mainStore';
+	import { xact } from '#lib/data/mainStore';
+	import { Money, Posting, Xact } from '#lib/data/model';
+	import { XactAugmenter } from '#lib/utils/xactAugmenter';
+	import Notifier from '#lib/utils/notifier';
+	import { formatAmount, getReadableDate, getXactAmountColour } from '#lib/utils/formatter';
+	import { getXactStore, subscribeXactStore } from '#lib/storage/xactStoreRegistry';
+	import { homeCache } from '#lib/services/homeCache';
+	import { ShortDateFormatStore } from '#lib/data/mainStore';
 
 	Notifier.init();
 

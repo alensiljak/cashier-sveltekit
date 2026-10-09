@@ -1,16 +1,16 @@
 <script lang="ts">
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import HelpButton from '$lib/help/HelpButton.svelte';
-	import AccordionSection from '$lib/components/AccordionSection.svelte';
-	import QuickQueryResults from '$lib/components/QuickQueryResults.svelte';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import HelpButton from '#lib/help/HelpButton.svelte';
+	import AccordionSection from '#lib/components/AccordionSection.svelte';
+	import QuickQueryResults from '#lib/components/QuickQueryResults.svelte';
 	import { CopyIcon } from '@lucide/svelte';
-	import fullLedgerService from '$lib/services/ledgerWorkerClient';
+	import fullLedgerService from '#lib/services/ledgerWorkerClient';
 	import {
 		buildQuery,
 		type Command,
 		type CommonOptions,
 		type LotsOptions
-	} from '$lib/services/quickQueryBuilder';
+	} from '#lib/services/quickQueryBuilder';
 
 	// --- Command ---
 	let command = $state<Command>('balance')

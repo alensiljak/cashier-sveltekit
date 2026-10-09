@@ -4,10 +4,10 @@
 	it again. Demo content is read-only reference data — new transactions go
 	only to the CRDT store, never into these files.
 */
-import * as OpfsLib from '$lib/utils/opfslib';
-import { Posting, ScheduledTransaction, Xact, type ScxId } from '$lib/data/model';
-import { addScx, countScx, removeScx } from '$lib/services/scxService';
-import { RecurrencePeriods } from '$lib/enums';
+import * as OpfsLib from '#lib/utils/opfslib';
+import { Posting, ScheduledTransaction, Xact, type ScxId } from '#lib/data/model';
+import { addScx, countScx, removeScx } from '#lib/services/scxService';
+import { RecurrencePeriods } from '#lib/enums';
 import {
 	settings,
 	deviceSettings,
@@ -15,8 +15,8 @@ import {
 	DeviceSettingKeys,
 	defaultAccountGroups,
 	type AccountGroup
-} from '$lib/settings';
-import { getXactStore } from '$lib/storage/xactStoreRegistry';
+} from '#lib/settings';
+import { getXactStore } from '#lib/storage/xactStoreRegistry';
 import {
 	USER_BOOK_FILENAME,
 	DEMO_DIR,
@@ -26,12 +26,12 @@ import {
 	DEMO_PRICES_FILE,
 	DEMO_AA_FILE,
 	DEMO_ROOT_INVESTMENT_ACCOUNT
-} from '$lib/constants';
+} from '#lib/constants';
 import { reloadLedgerFromOpfs } from './ledgerReload';
 
 // Vite glob-imports the fixtures as raw strings, resolved at build time —
-// works offline, no runtime fetch. Same pattern as $lib/help/helpContent.ts.
-const fixtures = import.meta.glob('$lib/demo/fixtures/*', {
+// works offline, no runtime fetch. Same pattern as #lib/help/helpContent.ts.
+const fixtures = import.meta.glob('#lib/demo/fixtures/*', {
 	query: '?raw',
 	import: 'default',
 	eager: true

@@ -1,5 +1,5 @@
-import { Posting, Xact } from '$lib/data/model';
-import { PLACEHOLDER_ACCOUNT } from '$lib/utils/xactUtils';
+import { Posting, Xact } from '#lib/data/model';
+import { PLACEHOLDER_ACCOUNT } from '#lib/utils/xactUtils';
 import { parseCsv } from './csv';
 import { allRules, compileRules, describeRule, evaluateRules, type RuleConfig } from './rules';
 import type { ImportedXact, Importer } from './types';

@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import rustledger from '$lib/services/rustledger';
-	import { checkForUpdate } from '$lib/services/pwaUpdate';
-	import Notifier from '$lib/utils/notifier';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import rustledger from '#lib/services/rustledger';
+	import { checkForUpdate } from '#lib/services/pwaUpdate';
+	import Notifier from '#lib/utils/notifier';
 	import { MicIcon, RefreshCw } from '@lucide/svelte';
 
 	let wasmVersion = $state('');

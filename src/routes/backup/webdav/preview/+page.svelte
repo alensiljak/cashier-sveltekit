@@ -1,9 +1,9 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import { page } from '$app/state';
-    import Toolbar from '$lib/components/Toolbar.svelte';
-    import { settings, SettingKeys } from '$lib/settings';
-    import { WebDavClient } from '$lib/utils/webdav';
+    import Toolbar from '#lib/components/Toolbar.svelte';
+    import { settings, SettingKeys } from '#lib/settings';
+    import { WebDavClient } from '#lib/utils/webdav';
     import { CheckIcon, CopyIcon } from '@lucide/svelte';
 
     type PreviewSection = { filename: string; content: string };

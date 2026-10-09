@@ -10,7 +10,7 @@ import {
 	putManifestEntries,
 	putManifestEntry,
 	type ImportedFileMeta
-} from '$lib/utils/importManifest';
+} from '#lib/utils/importManifest';
 
 const meta = (path: string, size = 10, lastModified = 1000): ImportedFileMeta => ({
 	path,

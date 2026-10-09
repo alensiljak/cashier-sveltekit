@@ -1,14 +1,14 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import HelpButton from '$lib/help/HelpButton.svelte';
-	import { settings, deviceSettings, SettingKeys, DeviceSettingKeys } from '$lib/settings';
-	import { Setting } from '$lib/data/model';
-	import db from '$lib/data/db';
-	import { getReadyScxStore } from '$lib/services/scxService';
-	import { describeScxChanges, summarizeScxReport } from '$lib/services/scxMergeReport';
-	import Notifier from '$lib/utils/notifier';
-	import { WebDavClient } from '$lib/utils/webdav';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import HelpButton from '#lib/help/HelpButton.svelte';
+	import { settings, deviceSettings, SettingKeys, DeviceSettingKeys } from '#lib/settings';
+	import { Setting } from '#lib/data/model';
+	import db from '#lib/data/db';
+	import { getReadyScxStore } from '#lib/services/scxService';
+	import { describeScxChanges, summarizeScxReport } from '#lib/services/scxMergeReport';
+	import Notifier from '#lib/utils/notifier';
+	import { WebDavClient } from '#lib/utils/webdav';
 	import {
 		SettingsIcon,
 		RefreshCwIcon,
@@ -21,14 +21,14 @@
 		ChevronDownIcon,
 		XIcon
 	} from '@lucide/svelte';
-	import YdocDevices from '$lib/components/YdocDevices.svelte';
+	import YdocDevices from '#lib/components/YdocDevices.svelte';
 	import { goto } from '$app/navigation';
 	import {
 		crdtBackupFilename,
 		type WebDavLastSyncTs as LastSyncTs
-	} from '$lib/services/webdavAutoBackupService';
-	import { reloadLedgerFromOpfs } from '$lib/services/ledgerReload';
-	import { getXactStore } from '$lib/storage/xactStoreRegistry';
+	} from '#lib/services/webdavAutoBackupService';
+	import { reloadLedgerFromOpfs } from '#lib/services/ledgerReload';
+	import { getXactStore } from '#lib/storage/xactStoreRegistry';
 
 	type SyncDirection = 'up' | 'down' | 'conflict' | null;
 

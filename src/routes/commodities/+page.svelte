@@ -1,11 +1,11 @@
 <script lang="ts">
-	import SearchToolbar from '$lib/components/SearchToolbar.svelte';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import { ListSearch } from '$lib/utils/ListSearch';
+	import SearchToolbar from '#lib/components/SearchToolbar.svelte';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import { ListSearch } from '#lib/utils/ListSearch';
 	import { onMount } from 'svelte';
-	import fullLedgerService from '$lib/services/ledgerWorkerClient';
+	import fullLedgerService from '#lib/services/ledgerWorkerClient';
 	import { goto } from '$app/navigation';
-	import HelpButton from '$lib/help/HelpButton.svelte';
+	import HelpButton from '#lib/help/HelpButton.svelte';
 
 	type CommodityRow = { currency: string; date: string; meta: Record<string, unknown> };
 

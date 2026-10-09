@@ -13,7 +13,7 @@ const mocks = vi.hoisted(() => ({
 	notify: vi.fn(),
 	notifyFailure: vi.fn()
 }));
-vi.mock('$lib/utils/webdav', () => ({
+vi.mock('#lib/utils/webdav', () => ({
 	WebDavClient: class {
 		constructor(...args: unknown[]) {
 			mocks.clientArgs.push(args);
@@ -21,18 +21,18 @@ vi.mock('$lib/utils/webdav', () => ({
 		put = mocks.put;
 	}
 }));
-vi.mock('$lib/storage/xactStoreRegistry', () => ({ getXactStore: mocks.getXactStore }));
-vi.mock('$lib/utils/notifier', () => ({
+vi.mock('#lib/storage/xactStoreRegistry', () => ({ getXactStore: mocks.getXactStore }));
+vi.mock('#lib/utils/notifier', () => ({
 	default: { success: mocks.notify, error: mocks.notifyFailure }
 }));
 
-import { DeviceSettingKeys, SettingKeys, deviceSettings, settings } from '$lib/settings';
+import { DeviceSettingKeys, SettingKeys, deviceSettings, settings } from '#lib/settings';
 import {
 	crdtBackupFilename,
 	lastBackupTime,
 	scheduleBackup
-} from '$lib/services/webdavAutoBackupService';
-import { getDeviceId, ydocFilename } from '$lib/sync/ydocDevices';
+} from '#lib/services/webdavAutoBackupService';
+import { getDeviceId, ydocFilename } from '#lib/sync/ydocDevices';
 
 const STATE = new Uint8Array([1, 2, 3]);
 const CFG = { url: 'https://dav.example.com/', username: 'alice', password: 'pw' };

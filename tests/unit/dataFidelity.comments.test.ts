@@ -10,9 +10,9 @@
 */
 
 import { describe, it, expect, beforeAll } from 'vitest';
-import { ensureInitialized, parseSource } from '$lib/services/rustledger';
-import { directiveToXact } from '$lib/utils/transactionParser';
-import { xactToBeancountText } from '$lib/utils/xactUtils';
+import { ensureInitialized, parseSource } from '#lib/services/rustledger';
+import { directiveToXact } from '#lib/utils/transactionParser';
+import { xactToBeancountText } from '#lib/utils/xactUtils';
 
 const SOURCE = `2026-09-28 * "Employer" "salary"
   Income:Salary:Gross     -10000 EUR ; Gross Salary

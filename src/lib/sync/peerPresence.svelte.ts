@@ -21,9 +21,9 @@ import type {
 	JoinRoom,
 	JoinRoomConfig
 } from '@trystero-p2p/core';
-import { settings, SettingKeys, deviceSettings, DeviceSettingKeys } from '$lib/settings';
-import db from '$lib/data/db';
-import { TrustedPeer } from '$lib/data/model';
+import { settings, SettingKeys, deviceSettings, DeviceSettingKeys } from '#lib/settings';
+import db from '#lib/data/db';
+import { TrustedPeer } from '#lib/data/model';
 
 const APP_ID = 'cashier-peer-sync';
 

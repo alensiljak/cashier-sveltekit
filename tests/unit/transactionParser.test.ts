@@ -4,8 +4,8 @@
     of directiveToXact is covered in xactParser.test.ts.)
 */
 import { beforeAll, describe, expect, it } from 'vitest';
-import { TransactionParser, directiveToXact, parseXact } from '$lib/utils/transactionParser';
-import { ensureInitialized } from '$lib/services/rustledger';
+import { TransactionParser, directiveToXact, parseXact } from '#lib/utils/transactionParser';
+import { ensureInitialized } from '#lib/services/rustledger';
 import { makeXact } from '../helpers/factories';
 
 beforeAll(async () => {

@@ -1,19 +1,19 @@
 <script lang="ts">
-	import SearchToolbar from '$lib/components/SearchToolbar.svelte';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import HelpButton from '$lib/help/HelpButton.svelte';
+	import SearchToolbar from '#lib/components/SearchToolbar.svelte';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import HelpButton from '#lib/help/HelpButton.svelte';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { SearchTermStore } from '$lib/data/mainStore';
-	import fullLedgerService from '$lib/services/ledgerWorkerClient';
-	import { locateXactsInSource, findXactAtLine, type XactLocation } from '$lib/utils/xactLocator';
+	import { SearchTermStore } from '#lib/data/mainStore';
+	import fullLedgerService from '#lib/services/ledgerWorkerClient';
+	import { locateXactsInSource, findXactAtLine, type XactLocation } from '#lib/utils/xactLocator';
 	import {
 		loadSearchableFiles,
 		searchInFiles,
 		parseSearchTerms,
 		type SearchFile,
 		type SearchMatch
-	} from '$lib/utils/fullTextSearch';
+	} from '#lib/utils/fullTextSearch';
 
 	/** Caps the result list so a broad one-letter query stays fast to render. */
 	const MAX_RESULTS = 300;

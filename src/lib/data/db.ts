@@ -10,7 +10,7 @@ import {
 	Setting,
 	TrustedPeer,
 	PeerSyncBaseline
-} from '$lib/data/model';
+} from '#lib/data/model';
 
 // Define the schema
 

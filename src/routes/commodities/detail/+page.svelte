@@ -2,21 +2,21 @@
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
-	import PriceHistoryChart from '$lib/components/PriceHistoryChart.svelte';
-	import type { PricePoint } from '$lib/components/PriceHistoryChart.svelte';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
+	import PriceHistoryChart from '#lib/components/PriceHistoryChart.svelte';
+	import type { PricePoint } from '#lib/components/PriceHistoryChart.svelte';
 	import { ArrowLeftRightIcon, ChevronDownIcon, ChevronRightIcon } from '@lucide/svelte';
-	import fullLedgerService from '$lib/services/ledgerWorkerClient';
-	import HelpButton from '$lib/help/HelpButton.svelte';
-	import appService from '$lib/services/appService';
-	import { buildLotsQuery } from '$lib/services/quickQueryBuilder';
-	import { formatAmount } from '$lib/utils/formatter';
+	import fullLedgerService from '#lib/services/ledgerWorkerClient';
+	import HelpButton from '#lib/help/HelpButton.svelte';
+	import appService from '#lib/services/appService';
+	import { buildLotsQuery } from '#lib/services/quickQueryBuilder';
+	import { formatAmount } from '#lib/utils/formatter';
 	import {
 		computeCommodityYield,
 		commoditiesFromDirectives,
 		type CommodityYieldResult
-	} from '$lib/assetAllocation/commodityYield';
+	} from '#lib/assetAllocation/commodityYield';
 
 	type CommodityDirective = {
 		currency: string;

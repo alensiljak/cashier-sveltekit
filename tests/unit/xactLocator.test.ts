@@ -4,7 +4,7 @@
 	posting's account name.
 */
 import { describe, it, expect } from 'vitest';
-import { locateXactsInSource } from '$lib/utils/xactLocator';
+import { locateXactsInSource } from '#lib/utils/xactLocator';
 
 describe('locateXactsInSource', () => {
 	it('attributes distinct @@ prices to each transaction sharing an account', async () => {

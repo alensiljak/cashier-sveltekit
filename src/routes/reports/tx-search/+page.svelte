@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { tick, onMount, untrack } from 'svelte';
 	import { page } from '$app/state';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import AccordionSection from '$lib/components/AccordionSection.svelte';
-	import { openXactDetails } from '$lib/utils/unifiedXacts';
-	import JournalXactRow from '$lib/components/JournalXactRow.svelte';
-	import fullLedgerService from '$lib/services/ledgerWorkerClient';
-	import HelpButton from '$lib/help/HelpButton.svelte';
-	import { Xact, Posting } from '$lib/data/model';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import AccordionSection from '#lib/components/AccordionSection.svelte';
+	import { openXactDetails } from '#lib/utils/unifiedXacts';
+	import JournalXactRow from '#lib/components/JournalXactRow.svelte';
+	import fullLedgerService from '#lib/services/ledgerWorkerClient';
+	import HelpButton from '#lib/help/HelpButton.svelte';
+	import { Xact, Posting } from '#lib/data/model';
 
 	// State
 	let isLoading = $state(false);

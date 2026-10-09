@@ -1,6 +1,6 @@
-import appService from '$lib/services/appService';
+import appService from '#lib/services/appService';
 import { get } from 'svelte/store';
-import { ScheduledXact } from '$lib/data/mainStore';
+import { ScheduledXact } from '#lib/data/mainStore';
 import type { PageLoad } from './$types';
 
 /**

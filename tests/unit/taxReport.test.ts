@@ -4,10 +4,10 @@ import {
 	currentFinancialYearStart,
 	financialYearRange,
 	validateTaxReportConfig
-} from '$lib/taxReport/engine';
-import { detectCurrencies, findUnconvertedCurrencies } from '$lib/taxReport/currencies';
-import { auIndividual } from '$lib/taxReport/templates/auIndividual';
-import type { TaxReportConfig } from '$lib/taxReport/types';
+} from '#lib/taxReport/engine';
+import { detectCurrencies, findUnconvertedCurrencies } from '#lib/taxReport/currencies';
+import { auIndividual } from '#lib/taxReport/templates/auIndividual';
+import type { TaxReportConfig } from '#lib/taxReport/types';
 
 const config: TaxReportConfig = {
 	version: 1,

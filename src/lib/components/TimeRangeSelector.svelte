@@ -17,7 +17,7 @@
 <script lang="ts">
 	import moment from 'moment';
 	import { untrack } from 'svelte';
-	import { ISODATEFORMAT } from '$lib/constants';
+	import { ISODATEFORMAT } from '#lib/constants';
 	import { ChevronLeftIcon, ChevronRightIcon, RotateCcwIcon } from '@lucide/svelte';
 
 	export interface TimeRange {

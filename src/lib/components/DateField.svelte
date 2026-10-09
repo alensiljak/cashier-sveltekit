@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon } from '@lucide/svelte';
 	import moment from 'moment';
-	import { SettingKeys, settings } from '$lib/settings';
+	import { SettingKeys, settings } from '#lib/settings';
 
 	type Props = {
 		/** Bindable ISO date (YYYY-MM-DD). */

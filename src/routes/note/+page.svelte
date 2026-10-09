@@ -1,13 +1,13 @@
 <script lang="ts">
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import Fab from '$lib/components/FAB.svelte';
-	import DateField from '$lib/components/DateField.svelte';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import Fab from '#lib/components/FAB.svelte';
+	import DateField from '#lib/components/DateField.svelte';
 	import { CheckIcon } from '@lucide/svelte';
-	import { Xact, Posting } from '$lib/data/model';
-	import appService from '$lib/services/appService';
-	import { getXactStore } from '$lib/storage/xactStoreRegistry';
-	import { xactToBeancountText } from '$lib/utils/xactUtils';
-	import Notifier from '$lib/utils/notifier';
+	import { Xact, Posting } from '#lib/data/model';
+	import appService from '#lib/services/appService';
+	import { getXactStore } from '#lib/storage/xactStoreRegistry';
+	import { xactToBeancountText } from '#lib/utils/xactUtils';
+	import Notifier from '#lib/utils/notifier';
 
 	Notifier.init();
 

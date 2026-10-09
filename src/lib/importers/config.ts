@@ -1,4 +1,4 @@
-import { settings } from '$lib/settings';
+import { settings } from '#lib/settings';
 
 /**
  * Importer configs live in the user `settings` table, so they are included in

@@ -1,6 +1,6 @@
 <script lang="ts">
-	import OpfsFilePicker from '$lib/components/OpfsFilePicker.svelte';
-	import FAB from '$lib/components/FAB.svelte';
+	import OpfsFilePicker from '#lib/components/OpfsFilePicker.svelte';
+	import FAB from '#lib/components/FAB.svelte';
 	import { Check } from '@lucide/svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';

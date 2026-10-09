@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { formatAmount, getAmountColour } from '$lib/utils/formatter';
+	import { formatAmount, getAmountColour } from '#lib/utils/formatter';
 
 	type Props = {
 		balances: Record<string, number> | undefined;

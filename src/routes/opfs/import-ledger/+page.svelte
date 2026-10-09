@@ -1,33 +1,33 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import HelpButton from '$lib/help/HelpButton.svelte';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import HelpButton from '#lib/help/HelpButton.svelte';
 	import { FolderOpenIcon, RefreshCcwIcon, ChevronUpIcon, ChevronDownIcon, EraserIcon } from '@lucide/svelte';
-	import { settings, SettingKeys, deviceSettings, DeviceSettingKeys } from '$lib/settings';
-	import fullLedgerService from '$lib/services/ledgerWorkerClient';
-	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
+	import { settings, SettingKeys, deviceSettings, DeviceSettingKeys } from '#lib/settings';
+	import fullLedgerService from '#lib/services/ledgerWorkerClient';
+	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
 	import {
 		loadPersistedHandle,
 		persistHandle,
 		requestReadPermission
-	} from '$lib/utils/fsHandleStore';
+	} from '#lib/utils/fsHandleStore';
 	import {
 		getManifest,
 		putManifestEntries,
 		deleteManifestEntries,
 		type ImportedFileMeta
-	} from '$lib/utils/importManifest';
-	import { processWithConcurrencyLimit } from '$lib/utils/concurrency';
-	import { parseSpecs, matchesAny, collectFsFileHandles } from '$lib/utils/fsScan';
+	} from '#lib/utils/importManifest';
+	import { processWithConcurrencyLimit } from '#lib/utils/concurrency';
+	import { parseSpecs, matchesAny, collectFsFileHandles } from '#lib/utils/fsScan';
 	import {
 		readFile,
 		writeFileObject,
 		deleteFile as deleteOpfsFile,
 		listFileTree
-	} from '$lib/utils/opfslib';
-	import { reloadLedgerFromOpfs } from '$lib/services/ledgerReload';
-	import { buildDiffLines, type DiffLine } from '$lib/utils/diffText';
-	import { CASHIER_DATA_DIR } from '$lib/constants';
+	} from '#lib/utils/opfslib';
+	import { reloadLedgerFromOpfs } from '#lib/services/ledgerReload';
+	import { buildDiffLines, type DiffLine } from '#lib/utils/diffText';
+	import { CASHIER_DATA_DIR } from '#lib/constants';
 
 	const CACHE_DIR_PREFIX = `${CASHIER_DATA_DIR}/`;
 

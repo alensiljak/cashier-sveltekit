@@ -90,8 +90,6 @@ const config: UserConfig = defineConfig({
 			compilerOptions: {},
 			preprocess: vitePreprocess(),
 			runes: true,
-			// `$lib` was removed in v3 (use `#lib` subpath imports); kept as an alias until migrated
-			alias: { $lib: 'src/lib' },
 			adapter: adapter({
 				fallback: 'index.html',
 				pages: 'build',
@@ -99,7 +97,7 @@ const config: UserConfig = defineConfig({
 			}),
 			prerender: { entries: ['*'] },
 			version: { name: APP_VERSION },
-			// registered manually in $lib/services/pwaUpdate (prompt-style updates)
+			// registered manually in #lib/services/pwaUpdate (prompt-style updates)
 			serviceWorker: { register: false }
 		})
 		// mkcert()

@@ -5,7 +5,7 @@
 	src/lib/utils/keyedMerge.ts.
 */
 
-import { diffKeyed, resolveKeyedMerge, type KeyedDiffEntry } from '$lib/utils/keyedMerge';
+import { diffKeyed, resolveKeyedMerge, type KeyedDiffEntry } from '#lib/utils/keyedMerge';
 import { assert, test } from 'vitest';
 
 /** A plain record item keyed by `id`, with a `value` payload that participates

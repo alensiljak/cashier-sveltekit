@@ -1,4 +1,4 @@
-import { Xact, Posting } from '$lib/data/model';
+import { Xact, Posting } from '#lib/data/model';
 
 export interface ParseResult {
 	payee?: string;

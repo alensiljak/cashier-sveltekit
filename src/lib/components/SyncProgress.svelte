@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { syncProgress } from '$lib/stores/syncProgressStore';
+	import { syncProgress } from '#lib/stores/syncProgressStore';
 </script>
 
 {#if $syncProgress.length > 0}

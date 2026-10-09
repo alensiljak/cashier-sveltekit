@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Folder, FolderOpen, File, ChevronRight, ChevronDown } from '@lucide/svelte';
 
-	import type { OpfsTreeNode } from '$lib/data/opfsTypes';
+	import type { OpfsTreeNode } from '#lib/data/opfsTypes';
 	import Self from './OpfsTreeNode.svelte';
 
 	let { node }: { node: OpfsTreeNode } = $props();

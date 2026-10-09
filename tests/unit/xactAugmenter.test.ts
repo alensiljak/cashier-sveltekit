@@ -4,15 +4,15 @@
 */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('$lib/utils/notifier', () => ({ default: { warning: vi.fn(), error: vi.fn() } }));
+vi.mock('#lib/utils/notifier', () => ({ default: { warning: vi.fn(), error: vi.fn() } }));
 const appServiceMock = vi.hoisted(() => ({
 	getDefaultCurrency: vi.fn(async () => 'EUR'),
 	loadAccountTransactionsFor: vi.fn(async (): Promise<unknown[]> => [])
 }));
-vi.mock('$lib/services/appService', () => ({ default: appServiceMock }));
+vi.mock('#lib/services/appService', () => ({ default: appServiceMock }));
 
-import Notifier from '$lib/utils/notifier';
-import { XactAugmenter } from '$lib/utils/xactAugmenter';
+import Notifier from '#lib/utils/notifier';
+import { XactAugmenter } from '#lib/utils/xactAugmenter';
 import { makeAccount, makeXact } from '../helpers/factories';
 
 let warn: ReturnType<typeof vi.spyOn>;

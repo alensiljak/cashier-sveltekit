@@ -8,8 +8,8 @@
  * The root-level `CASHIER_DATA_DIR` (`.cashier/`) is always excluded: it holds
  * Cashier's internal cache & hash, not source data.
  */
-import { CASHIER_DATA_DIR } from '$lib/constants';
-import { createZipArchive } from '$lib/utils/zip';
+import { CASHIER_DATA_DIR } from '#lib/constants';
+import { createZipArchive } from '#lib/utils/zip';
 
 const EXCLUDED_ROOT_ENTRIES: Record<string, true> = {
 	[CASHIER_DATA_DIR]: true

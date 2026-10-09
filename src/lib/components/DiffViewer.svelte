@@ -14,8 +14,8 @@
 		diff with the same navigation.
 	*/
 	import { ChevronUpIcon, ChevronDownIcon, ShieldCheckIcon } from '@lucide/svelte';
-	import { buildDiffLines } from '$lib/utils/diffText';
-	import { normalizeEol } from '$lib/sync/SyncSource';
+	import { buildDiffLines } from '#lib/utils/diffText';
+	import { normalizeEol } from '#lib/sync/SyncSource';
 
 	interface Props {
 		oldText: string;

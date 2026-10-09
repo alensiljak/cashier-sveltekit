@@ -1,17 +1,17 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import Fab from '$lib/components/FAB.svelte';
-	import SearchToolbar from '$lib/components/SearchToolbar.svelte';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
-	import { ScheduledXact, xact } from '$lib/data/mainStore';
-	import { ScheduledTransaction, Xact, type Money, type ScxId } from '$lib/data/model';
-	import appService from '$lib/services/appService';
-	import { getDateColour, getMoneyColour } from '$lib/utils/formatter';
-	import { ListSearch } from '$lib/utils/ListSearch';
-	import Notifier from '$lib/utils/notifier';
-	import { XactAugmenter } from '$lib/utils/xactAugmenter';
+	import Fab from '#lib/components/FAB.svelte';
+	import SearchToolbar from '#lib/components/SearchToolbar.svelte';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
+	import { ScheduledXact, xact } from '#lib/data/mainStore';
+	import { ScheduledTransaction, Xact, type Money, type ScxId } from '#lib/data/model';
+	import appService from '#lib/services/appService';
+	import { getDateColour, getMoneyColour } from '#lib/utils/formatter';
+	import { ListSearch } from '#lib/utils/ListSearch';
+	import Notifier from '#lib/utils/notifier';
+	import { XactAugmenter } from '#lib/utils/xactAugmenter';
 	import {
 		CalendarIcon,
 		CircleQuestionMarkIcon,
@@ -21,7 +21,7 @@
 		SearchIcon
 	} from '@lucide/svelte';
 	import { slide } from 'svelte/transition';
-	import HelpDialog from '$lib/help/HelpDialog.svelte';
+	import HelpDialog from '#lib/help/HelpDialog.svelte';
 	import { onMount } from 'svelte';
 	import type { PageData } from './$types';
 

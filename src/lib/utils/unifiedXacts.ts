@@ -7,12 +7,12 @@
 */
 
 import { goto } from '$app/navigation';
-import { xact, xactId } from '$lib/data/mainStore';
-import { Xact, Posting } from '$lib/data/model';
-import type { XactId } from '$lib/storage/crdtXactStore';
-import fullLedgerService from '$lib/services/ledgerWorkerClient';
-import Notifier from '$lib/utils/notifier';
-import { metaFromBqlEntry } from '$lib/utils/transactionParser';
+import { xact, xactId } from '#lib/data/mainStore';
+import { Xact, Posting } from '#lib/data/model';
+import type { XactId } from '#lib/storage/crdtXactStore';
+import fullLedgerService from '#lib/services/ledgerWorkerClient';
+import Notifier from '#lib/utils/notifier';
+import { metaFromBqlEntry } from '#lib/utils/transactionParser';
 
 export type UnifiedXact = {
 	date: string;

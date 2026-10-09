@@ -3,11 +3,11 @@
  */
 import { writable, type Writable } from 'svelte/store';
 import { ScheduledTransaction, Xact } from './model';
-import type { SelectionModeMetadata } from '$lib/settings';
-import type { AssetClass, StockCache } from '$lib/assetAllocation/AssetClass';
-import type { XactId } from '$lib/storage/crdtXactStore';
-import { DATE_FORMAT_DEFAULT, SHORT_DATE_FORMAT_DEFAULT } from '$lib/constants';
-import type { GroupRow, SecurityIrrEntry } from '$lib/portfolioReturns/types';
+import type { SelectionModeMetadata } from '#lib/settings';
+import type { AssetClass, StockCache } from '#lib/assetAllocation/AssetClass';
+import type { XactId } from '#lib/storage/crdtXactStore';
+import { DATE_FORMAT_DEFAULT, SHORT_DATE_FORMAT_DEFAULT } from '#lib/constants';
+import type { GroupRow, SecurityIrrEntry } from '#lib/portfolioReturns/types';
 
 interface MainStore {
 	name: string;

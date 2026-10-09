@@ -3,7 +3,7 @@
     floating-point drift.
 */
 import { describe, expect, it } from 'vitest';
-import { addDecimalStrings } from '$lib/utils/numberUtils';
+import { addDecimalStrings } from '#lib/utils/numberUtils';
 
 describe('addDecimalStrings', () => {
 	it('avoids the classic floating-point error', () => {

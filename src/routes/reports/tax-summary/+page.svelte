@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import { ChevronLeftIcon, ChevronRightIcon } from '@lucide/svelte';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import fullLedgerService from '$lib/services/ledgerWorkerClient';
-	import { SettingKeys, settings } from '$lib/settings';
-	import { getAccountColour } from '$lib/utils/formatter';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import fullLedgerService from '#lib/services/ledgerWorkerClient';
+	import { SettingKeys, settings } from '#lib/settings';
+	import { getAccountColour } from '#lib/utils/formatter';
 	import {
 		accountExcluder,
 		buildTaxReport,
@@ -12,14 +12,14 @@
 		financialYearLabel,
 		financialYearRange,
 		validateTaxReportConfig
-	} from '$lib/taxReport/engine';
+	} from '#lib/taxReport/engine';
 	import {
 		detectCurrencies,
 		findUnconvertedCurrencies,
 		type ConvertedAmount
-	} from '$lib/taxReport/currencies';
-	import { defaultTaxReportConfig } from '$lib/taxReport/templates';
-	import type { CategoryResult, TaxReportConfig, TaxReportResult } from '$lib/taxReport/types';
+	} from '#lib/taxReport/currencies';
+	import { defaultTaxReportConfig } from '#lib/taxReport/templates';
+	import type { CategoryResult, TaxReportConfig, TaxReportResult } from '#lib/taxReport/types';
 
 	let config = $state<TaxReportConfig>(defaultTaxReportConfig);
 	let startYear = $state(currentFinancialYearStart(defaultTaxReportConfig.yearStart));

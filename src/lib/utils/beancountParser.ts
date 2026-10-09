@@ -1,8 +1,8 @@
 /**
  * Parses Beancount output
  */
-import { Account, Money } from '$lib/data/model';
-import type { CurrentValuesDict } from '$lib/data/viewModels';
+import { Account, Money } from '#lib/data/model';
+import type { CurrentValuesDict } from '#lib/data/viewModels';
 
 /**
  * Creates an Account object from a Beancount balance sheet record.

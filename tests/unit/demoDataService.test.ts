@@ -4,14 +4,14 @@
 */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('$lib/utils/opfslib', () => ({
+vi.mock('#lib/utils/opfslib', () => ({
 	saveFile: vi.fn(async () => {}),
 	deleteDirectory: vi.fn(async () => {})
 }));
-vi.mock('$lib/services/ledgerReload', () => ({ reloadLedgerFromOpfs: vi.fn(async () => {}) }));
-vi.mock('$lib/services/webdavAutoBackupService', () => ({ scheduleBackup: vi.fn() }));
+vi.mock('#lib/services/ledgerReload', () => ({ reloadLedgerFromOpfs: vi.fn(async () => {}) }));
+vi.mock('#lib/services/webdavAutoBackupService', () => ({ scheduleBackup: vi.fn() }));
 
-import demoDataService from '$lib/services/demoDataService';
+import demoDataService from '#lib/services/demoDataService';
 import {
 	DeviceSettingKeys,
 	SettingKeys,
@@ -19,11 +19,11 @@ import {
 	deviceSettings,
 	settings,
 	type AccountGroup
-} from '$lib/settings';
-import { setXactStore } from '$lib/storage/xactStoreRegistry';
-import { CrdtXactStore } from '$lib/storage/crdtXactStore';
-import { CrdtScxStore } from '$lib/storage/crdtScxStore';
-import { setScxStore } from '$lib/storage/scxStoreRegistry';
+} from '#lib/settings';
+import { setXactStore } from '#lib/storage/xactStoreRegistry';
+import { CrdtXactStore } from '#lib/storage/crdtXactStore';
+import { CrdtScxStore } from '#lib/storage/crdtScxStore';
+import { setScxStore } from '#lib/storage/scxStoreRegistry';
 
 const INVESTMENTS_CASH = [
 	'Assets:Investments:Brokerage:Cash-EUR',

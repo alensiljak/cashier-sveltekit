@@ -1,5 +1,5 @@
-import { Posting, type Xact } from '$lib/data/model';
-import { DirectiveFormatter } from '$lib/rledger/directiveFormatter';
+import { Posting, type Xact } from '#lib/data/model';
+import { DirectiveFormatter } from '#lib/rledger/directiveFormatter';
 
 export const PLACEHOLDER_ACCOUNT = 'Expenses:Uncategorized';
 

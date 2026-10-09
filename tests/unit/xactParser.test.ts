@@ -3,7 +3,7 @@
     directiveToXact maps a raw WASM directive object to an Xact view model.
 */
 import { expect, test } from 'vitest';
-import { directiveToXact } from '$lib/utils/transactionParser';
+import { directiveToXact } from '#lib/utils/transactionParser';
 
 function makeDirective(overrides: any = {}) {
 	return {

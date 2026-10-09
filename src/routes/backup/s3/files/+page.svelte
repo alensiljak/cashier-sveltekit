@@ -13,12 +13,12 @@
 		RefreshCwIcon,
 		ShieldCheckIcon
 	} from '@lucide/svelte';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import DiffViewer from '$lib/components/DiffViewer.svelte';
-	import Notifier from '$lib/utils/notifier';
-	import { isS3Configured, loadS3Config, type S3Config } from '$lib/services/s3Config';
-	import { describeS3Error } from '$lib/services/s3Client';
-	import { reloadLedgerFromOpfs } from '$lib/services/ledgerReload';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import DiffViewer from '#lib/components/DiffViewer.svelte';
+	import Notifier from '#lib/utils/notifier';
+	import { isS3Configured, loadS3Config, type S3Config } from '#lib/services/s3Config';
+	import { describeS3Error } from '#lib/services/s3Client';
+	import { reloadLedgerFromOpfs } from '#lib/services/ledgerReload';
 	import {
 		compareFile,
 		listFileStatuses,
@@ -31,7 +31,7 @@
 		type FileState,
 		type FileStatusEntry,
 		type S3Session
-	} from '$lib/services/s3Sync';
+	} from '#lib/services/s3Sync';
 
 	let cfg = $state<S3Config | null>(null);
 	// Raw: the session is mutated by the sync service, which must not go through a proxy.

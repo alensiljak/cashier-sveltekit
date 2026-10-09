@@ -2,13 +2,13 @@
 	import { onMount } from 'svelte';
 	import { tick } from 'svelte';
 	import { goto } from '$app/navigation';
-	import DateNavigator from '$lib/components/DateNavigator.svelte';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import fullLedgerService from '$lib/services/ledgerWorkerClient';
-	import { SettingKeys, settings } from '$lib/settings';
-	import { formatAmount } from '$lib/utils/formatter';
-	import PillToggle from '$lib/components/PillToggle.svelte';
-	import MultiCurrencyBalance from '$lib/components/MultiCurrencyBalance.svelte';
+	import DateNavigator from '#lib/components/DateNavigator.svelte';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import fullLedgerService from '#lib/services/ledgerWorkerClient';
+	import { SettingKeys, settings } from '#lib/settings';
+	import { formatAmount } from '#lib/utils/formatter';
+	import PillToggle from '#lib/components/PillToggle.svelte';
+	import MultiCurrencyBalance from '#lib/components/MultiCurrencyBalance.svelte';
 
 	interface BalanceNode {
 		name: string;

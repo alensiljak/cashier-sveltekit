@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import type { UnifiedXact } from '$lib/utils/unifiedXacts';
-	import * as Formatter from '$lib/utils/formatter';
+	import type { UnifiedXact } from '#lib/utils/unifiedXacts';
+	import * as Formatter from '#lib/utils/formatter';
 
 	interface Props {
 		rows: UnifiedXact[];

@@ -3,7 +3,7 @@
 	accounts, narration, and commodities). Distinct from `fullTextSearch.ts`,
 	which does plain-text grepping over OPFS files for /search/full-text.
 */
-import type { EntitySearchScope } from '$lib/data/mainStore';
+import type { EntitySearchScope } from '#lib/data/mainStore';
 
 /** A single search category a term can be pinned to. 'any' means "let the radio scope decide". */
 export type EntityCategory = 'payee' | 'account' | 'narration' | 'commodity' | 'any';

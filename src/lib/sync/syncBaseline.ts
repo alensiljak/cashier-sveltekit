@@ -6,8 +6,8 @@
 	Keyed per endpoint (not a singleton) since a device may sync with
 	multiple peers. See doc/projects/2026-07-02_beancount-peer-sync.md.
 */
-import db from '$lib/data/db';
-import { PeerSyncBaseline } from '$lib/data/model';
+import db from '#lib/data/db';
+import { PeerSyncBaseline } from '#lib/data/model';
 import type { SyncEntry } from './SyncSource';
 
 /** All baseline rows for one endpoint, keyed by path. */

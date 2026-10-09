@@ -5,7 +5,7 @@ import {
 	parseTranscript,
 	pickBestMatch,
 	refineFromMatches
-} from '$lib/utils/nlpEntry';
+} from '#lib/utils/nlpEntry';
 import { makeXact as buildXact } from '../helpers/factories';
 
 const makeXact = (payee: string, accounts: string[]) => buildXact({ payee, postings: accounts });

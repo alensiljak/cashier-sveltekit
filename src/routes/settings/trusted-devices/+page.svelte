@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import Notifier from '$lib/utils/notifier';
-	import { peerConnection } from '$lib/sync/peerConnection.svelte';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import Notifier from '#lib/utils/notifier';
+	import { peerConnection } from '#lib/sync/peerConnection.svelte';
 
 	// Shared singleton. Only its stored identity and trusted list are loaded here; it does not
 	// connect, so this works when Peer Sync is not in use.

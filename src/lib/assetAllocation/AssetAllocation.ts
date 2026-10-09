@@ -1,16 +1,16 @@
 /*
     Asset Allocation
 */
-import appService from '$lib/services/appService';
+import appService from '#lib/services/appService';
 import { AssetClass, type AssetClassDefinition } from './AssetClass';
 import numeral from 'numeral';
 import toml from 'toml';
-import { getAccountBalance, loadInvestmentAccounts } from '$lib/services/accountsService';
+import { getAccountBalance, loadInvestmentAccounts } from '#lib/services/accountsService';
 import Big from 'big.js';
 import { Money } from '../data/model';
 import { NUMBER_FORMAT } from '../constants';
-import { UserError, ValidationError } from '$lib/utils/errors';
-import fullLedgerService from '$lib/services/ledgerWorkerClient';
+import { UserError, ValidationError } from '#lib/utils/errors';
+import fullLedgerService from '#lib/services/ledgerWorkerClient';
 
 /**
  * loadDefinition = loads the pre-set definition

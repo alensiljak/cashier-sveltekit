@@ -1,9 +1,9 @@
 <script lang="ts">
-	import Fab from '$lib/components/FAB.svelte';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import { type BudgetCategory, SettingKeys, settings } from '$lib/settings';
-	import { formatAmount } from '$lib/utils/formatter';
-	import Notifier from '$lib/utils/notifier';
+	import Fab from '#lib/components/FAB.svelte';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import { type BudgetCategory, SettingKeys, settings } from '#lib/settings';
+	import { formatAmount } from '#lib/utils/formatter';
+	import Notifier from '#lib/utils/notifier';
 	import { CheckIcon, TrashIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 

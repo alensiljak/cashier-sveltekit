@@ -1,5 +1,5 @@
 /** In-memory StorageBackend for testing stores without OPFS. */
-import type { StorageBackend } from '$lib/storage/storageBackend';
+import type { StorageBackend } from '#lib/storage/storageBackend';
 
 export class MemoryBackend implements StorageBackend {
 	files = new Map<string, { content: string; modified: number }>();

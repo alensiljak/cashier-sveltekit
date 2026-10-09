@@ -2,14 +2,14 @@
     Tests for the CRDT record <-> Xact conversion.
 */
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { Posting, Xact } from '$lib/data/model';
+import { Posting, Xact } from '#lib/data/model';
 import {
 	XACT_SCHEMA_VERSION,
 	fromRecord,
 	isNewerSchema,
 	toRecord,
 	type XactRecord
-} from '$lib/storage/crdtXactRecord';
+} from '#lib/storage/crdtXactRecord';
 import { makeXact } from '../helpers/factories';
 
 const sample = () =>
@@ -25,7 +25,7 @@ const sample = () =>
 	});
 
 // The newer-schema warning also raises a toast; the real toaster needs a live document.
-vi.mock('$lib/utils/notifier', () => ({ default: { warning: vi.fn() } }));
+vi.mock('#lib/utils/notifier', () => ({ default: { warning: vi.fn() } }));
 
 afterEach(() => vi.restoreAllMocks());
 

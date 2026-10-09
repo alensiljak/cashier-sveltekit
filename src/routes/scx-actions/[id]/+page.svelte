@@ -1,19 +1,19 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import JournalXactRow from '$lib/components/JournalXactRow.svelte';
-	import SquareButton from '$lib/components/SquareButton.svelte';
-	import SquareButtonGroup from '$lib/components/SquareButtonGroup.svelte';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import { ScheduledXact, xact, xactId } from '$lib/data/mainStore';
-	import type { ScheduledTransaction, ScxId, Xact } from '$lib/data/model';
-	import appService from '$lib/services/appService';
-	import { getXactStore } from '$lib/storage/xactStoreRegistry';
-	import { reloadLedgerFromOpfs } from '$lib/services/ledgerReload';
-	import { xactToBeancountText } from '$lib/utils/xactUtils';
-	import Notifier from '$lib/utils/notifier';
-	import { calculateNextIteration } from '$lib/scheduledTransactions';
-	import { removeScx, saveScx } from '$lib/services/scxService';
+	import JournalXactRow from '#lib/components/JournalXactRow.svelte';
+	import SquareButton from '#lib/components/SquareButton.svelte';
+	import SquareButtonGroup from '#lib/components/SquareButtonGroup.svelte';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import { ScheduledXact, xact, xactId } from '#lib/data/mainStore';
+	import type { ScheduledTransaction, ScxId, Xact } from '#lib/data/model';
+	import appService from '#lib/services/appService';
+	import { getXactStore } from '#lib/storage/xactStoreRegistry';
+	import { reloadLedgerFromOpfs } from '#lib/services/ledgerReload';
+	import { xactToBeancountText } from '#lib/utils/xactUtils';
+	import Notifier from '#lib/utils/notifier';
+	import { calculateNextIteration } from '#lib/scheduledTransactions';
+	import { removeScx, saveScx } from '#lib/services/scxService';
 	import {
 		ChevronsRightIcon,
 		SquarePenIcon,
@@ -21,7 +21,7 @@
 		TrashIcon
 	} from '@lucide/svelte';
 	import { onMount } from 'svelte';
-	import HelpButton from '$lib/help/HelpButton.svelte';
+	import HelpButton from '#lib/help/HelpButton.svelte';
 
 	Notifier.init();
 

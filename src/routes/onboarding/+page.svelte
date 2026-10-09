@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import appService from '$lib/services/appService';
-	import demoDataService from '$lib/services/demoDataService';
-	import { finishInitialization } from '$lib/data/initializer';
-	import Notifier from '$lib/utils/notifier';
+	import appService from '#lib/services/appService';
+	import demoDataService from '#lib/services/demoDataService';
+	import { finishInitialization } from '#lib/data/initializer';
+	import Notifier from '#lib/utils/notifier';
 
 	let busy = $state(false);
 

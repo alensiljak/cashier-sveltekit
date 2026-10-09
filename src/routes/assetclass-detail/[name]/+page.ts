@@ -1,12 +1,12 @@
 import { goto } from '$app/navigation';
-import type { AssetClass, StockSymbol } from '$lib/assetAllocation/AssetClass';
-import { commoditiesFromDirectives } from '$lib/assetAllocation/commodityYield';
-import { AaStocksStore, AssetAllocationStore } from '$lib/data/mainStore';
-import type { Account } from '$lib/data/model.js';
-import * as AccountService from '$lib/services/accountsService';
-import appService from '$lib/services/appService';
-import fullLedgerService from '$lib/services/ledgerWorkerClient';
-import rustledger, { version as getWasmVersion } from '$lib/services/rustledger';
+import type { AssetClass, StockSymbol } from '#lib/assetAllocation/AssetClass';
+import { commoditiesFromDirectives } from '#lib/assetAllocation/commodityYield';
+import { AaStocksStore, AssetAllocationStore } from '#lib/data/mainStore';
+import type { Account } from '#lib/data/model.js';
+import * as AccountService from '#lib/services/accountsService';
+import appService from '#lib/services/appService';
+import fullLedgerService from '#lib/services/ledgerWorkerClient';
+import rustledger, { version as getWasmVersion } from '#lib/services/rustledger';
 import { get } from 'svelte/store';
 import type { PageLoad } from './$types';
 

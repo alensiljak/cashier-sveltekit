@@ -2,15 +2,15 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import JournalXactRow from '$lib/components/JournalXactRow.svelte';
-	import HelpButton from '$lib/help/HelpButton.svelte';
-	import { xact, xactId } from '$lib/data/mainStore';
-	import { getXactStore } from '$lib/storage/xactStoreRegistry';
-	import { readFile } from '$lib/utils/opfslib';
-	import { locateXactsInSource, findXactAtLine } from '$lib/utils/xactLocator';
-	import type { XactId } from '$lib/storage/crdtXactStore';
-	import type { Xact } from '$lib/data/model';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import JournalXactRow from '#lib/components/JournalXactRow.svelte';
+	import HelpButton from '#lib/help/HelpButton.svelte';
+	import { xact, xactId } from '#lib/data/mainStore';
+	import { getXactStore } from '#lib/storage/xactStoreRegistry';
+	import { readFile } from '#lib/utils/opfslib';
+	import { locateXactsInSource, findXactAtLine } from '#lib/utils/xactLocator';
+	import type { XactId } from '#lib/storage/crdtXactStore';
+	import type { Xact } from '#lib/data/model';
 	import { SquarePenIcon } from '@lucide/svelte';
 
 	// Two ways in:

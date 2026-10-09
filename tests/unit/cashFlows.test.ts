@@ -1,12 +1,12 @@
-import { Account } from '$lib/data/model';
+import { Account } from '#lib/data/model';
 import {
 	buildFullFlowSeries,
 	extractAllGroupFlows,
 	extractGroupFlows,
 	marketValuesForGroups,
 	transactionFlowsForGroups
-} from '$lib/portfolioReturns/cashFlows';
-import type { InvestmentGroup } from '$lib/portfolioReturns/investmentGroups';
+} from '#lib/portfolioReturns/cashFlows';
+import type { InvestmentGroup } from '#lib/portfolioReturns/investmentGroups';
 import { describe, expect, it } from 'vitest';
 import { mockQueryFn, type QueryResult } from '../helpers/queryMock';
 

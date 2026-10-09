@@ -9,8 +9,8 @@ import {
 	collectExportableFiles,
 	exportEntriesToDirectory,
 	exportEntriesToZip
-} from '$lib/utils/opfsExport';
-import { createZipArchive } from '$lib/utils/zip';
+} from '#lib/utils/opfsExport';
+import { createZipArchive } from '#lib/utils/zip';
 
 // --- fake File System Access handles ---
 

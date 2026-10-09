@@ -1,10 +1,10 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import { page } from '$app/state';
-    import Toolbar from '$lib/components/Toolbar.svelte';
-    import { settings, SettingKeys } from '$lib/settings';
-    import { WebDavClient } from '$lib/utils/webdav';
-    import { buildDiffLines, type DiffSection } from '$lib/utils/diffText';
+    import Toolbar from '#lib/components/Toolbar.svelte';
+    import { settings, SettingKeys } from '#lib/settings';
+    import { WebDavClient } from '#lib/utils/webdav';
+    import { buildDiffLines, type DiffSection } from '#lib/utils/diffText';
 
     let sections = $state<DiffSection[]>([]);
     let loading = $state(true);

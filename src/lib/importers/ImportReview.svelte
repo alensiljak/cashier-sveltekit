@@ -2,14 +2,14 @@
 	import { onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { ChevronRightIcon } from '@lucide/svelte';
-	import JournalXactRow from '$lib/components/JournalXactRow.svelte';
-	import Notifier from '$lib/utils/notifier';
+	import JournalXactRow from '#lib/components/JournalXactRow.svelte';
+	import Notifier from '#lib/utils/notifier';
 	import { DEFAULT_DATE_WINDOW_DAYS, findDuplicates } from './dedup';
 	import { loadExistingBankXacts, loadFullXact, loadIsinSymbols } from './existing';
 	import { clearPendingImport, loadPendingImport, saveSelection, saveView } from './pendingImport';
-	import { getXactStore } from '$lib/storage/xactStoreRegistry';
+	import { getXactStore } from '#lib/storage/xactStoreRegistry';
 	import type { Importer } from './types';
-	import type { Xact } from '$lib/data/model';
+	import type { Xact } from '#lib/data/model';
 
 	interface Props {
 		importer: Importer<any>; // eslint-disable-line @typescript-eslint/no-explicit-any

@@ -3,6 +3,14 @@
 	"version": "1.0.0",
 	"private": true,
 	"type": "module",
+	"imports": {
+		"#lib/*": [
+			"./src/lib/*",
+			"./src/lib/*.ts",
+			"./src/lib/*.svelte.ts",
+			"./src/lib/*/index.ts"
+		]
+	},
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",

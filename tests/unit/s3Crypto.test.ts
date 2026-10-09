@@ -11,7 +11,7 @@ import {
 	sha256Hex,
 	toBase64,
 	WrongPassphraseError
-} from '$lib/services/s3Crypto';
+} from '#lib/services/s3Crypto';
 
 const bytes = (text: string) => new TextEncoder().encode(text);
 

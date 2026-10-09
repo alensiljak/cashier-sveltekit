@@ -1,4 +1,4 @@
-import { xirr, XirrNoSolutionError, type CashFlow } from '$lib/utils/xirr';
+import { xirr, XirrNoSolutionError, type CashFlow } from '#lib/utils/xirr';
 import { describe, expect, it } from 'vitest';
 
 /** Present value of `flows` at `rate`, used to assert the solver actually zeroes the NPV. */

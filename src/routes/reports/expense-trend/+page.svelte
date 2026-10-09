@@ -3,16 +3,16 @@
 	import { goto, replaceState } from '$app/navigation';
 	import { page } from '$app/state';
 	import moment from 'moment';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import StackedExpenseChart from '$lib/components/StackedExpenseChart.svelte';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import StackedExpenseChart from '#lib/components/StackedExpenseChart.svelte';
 	import TimeRangeSelector, {
 		type TimeRange,
 		type TimeRangeState
-	} from '$lib/components/TimeRangeSelector.svelte';
-	import fullLedgerService from '$lib/services/ledgerWorkerClient';
-	import { SettingKeys, settings } from '$lib/settings';
-	import { ISODATEFORMAT } from '$lib/constants';
-	import HelpButton from '$lib/help/HelpButton.svelte';
+	} from '#lib/components/TimeRangeSelector.svelte';
+	import fullLedgerService from '#lib/services/ledgerWorkerClient';
+	import { SettingKeys, settings } from '#lib/settings';
+	import { ISODATEFORMAT } from '#lib/constants';
+	import HelpButton from '#lib/help/HelpButton.svelte';
 	import { ReceiptIcon } from '@lucide/svelte';
 
 	// The URL is the source of truth for which period is showing (see reports/expenses for

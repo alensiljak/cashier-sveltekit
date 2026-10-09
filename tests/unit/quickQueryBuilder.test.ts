@@ -13,7 +13,7 @@ import {
 	buildRegisterQuery,
 	type CommonOptions,
 	type LotsOptions
-} from '$lib/services/quickQueryBuilder';
+} from '#lib/services/quickQueryBuilder';
 
 const common = (overrides: Partial<CommonOptions> = {}): CommonOptions => ({
 	account: [],

@@ -5,14 +5,14 @@
 	file.
 */
 import type { DirectiveJson } from '@rustledger/wasm';
-import { Xact } from '$lib/data/model';
-import { createParsedLedger, ensureInitialized } from '$lib/services/rustledger';
-import { directiveToXact } from '$lib/utils/transactionParser';
+import { Xact } from '#lib/data/model';
+import { createParsedLedger, ensureInitialized } from '#lib/services/rustledger';
+import { directiveToXact } from '#lib/utils/transactionParser';
 import {
 	mapDirectiveSpans,
 	findSpanForDirective,
 	type DirectiveSpan
-} from '$lib/rledger/sourceEditor';
+} from '#lib/rledger/sourceEditor';
 
 export interface XactLocation {
 	xact: Xact;

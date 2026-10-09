@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import CostVsMarketChart from '$lib/components/CostVsMarketChart.svelte';
-	import YearPeriodSelector from '$lib/components/YearPeriodSelector.svelte';
-	import fullLedgerService from '$lib/services/ledgerWorkerClient';
-	import { SettingKeys, settings } from '$lib/settings';
-	import * as BeancountParser from '$lib/utils/beancountParser';
-	import { formatAmount } from '$lib/utils/formatter';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import CostVsMarketChart from '#lib/components/CostVsMarketChart.svelte';
+	import YearPeriodSelector from '#lib/components/YearPeriodSelector.svelte';
+	import fullLedgerService from '#lib/services/ledgerWorkerClient';
+	import { SettingKeys, settings } from '#lib/settings';
+	import * as BeancountParser from '#lib/utils/beancountParser';
+	import { formatAmount } from '#lib/utils/formatter';
 
 	interface MonthEntry {
 		key: string;

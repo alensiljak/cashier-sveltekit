@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import fullLedgerService from '$lib/services/ledgerWorkerClient';
-	import HelpButton from '$lib/help/HelpButton.svelte';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import fullLedgerService from '#lib/services/ledgerWorkerClient';
+	import HelpButton from '#lib/help/HelpButton.svelte';
 
 	type ErrorItem = { severity: string; line: number; column: number; message: string };
 	type Status = 'idle' | 'loading' | 'done' | 'error';

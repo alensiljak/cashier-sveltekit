@@ -2,18 +2,18 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import HelpButton from '$lib/help/HelpButton.svelte';
-	import JournalXactRow from '$lib/components/JournalXactRow.svelte';
-	import SearchableSelect from '$lib/components/SearchableSelect.svelte';
-	import fullLedgerService from '$lib/services/ledgerWorkerClient';
-	import Notifier from '$lib/utils/notifier';
-	import { PLACEHOLDER_ACCOUNT } from '$lib/utils/xactUtils';
-	import { getImporter } from '$lib/importers';
-	import { trackOrigin } from '$lib/importers/navigation';
-	import { loadImporterConfig, saveImporterConfig } from '$lib/importers/config';
-	import { loadPendingImport } from '$lib/importers/pendingImport';
+	import ConfirmDialog from '#lib/components/ConfirmDialog.svelte';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import HelpButton from '#lib/help/HelpButton.svelte';
+	import JournalXactRow from '#lib/components/JournalXactRow.svelte';
+	import SearchableSelect from '#lib/components/SearchableSelect.svelte';
+	import fullLedgerService from '#lib/services/ledgerWorkerClient';
+	import Notifier from '#lib/utils/notifier';
+	import { PLACEHOLDER_ACCOUNT } from '#lib/utils/xactUtils';
+	import { getImporter } from '#lib/importers';
+	import { trackOrigin } from '#lib/importers/navigation';
+	import { loadImporterConfig, saveImporterConfig } from '#lib/importers/config';
+	import { loadPendingImport } from '#lib/importers/pendingImport';
 	import {
 		allRules,
 		countMatches,
@@ -23,8 +23,8 @@
 		withRule,
 		type Rule,
 		type RuleConfig
-	} from '$lib/importers/rules';
-	import type { ImportedXact, Importer } from '$lib/importers/types';
+	} from '#lib/importers/rules';
+	import type { ImportedXact, Importer } from '#lib/importers/types';
 
 	/** Opened from the import review (with a row to show) or from the rules list (edit only, no row). */
 	const hasRow = page.url.searchParams.has('row');

@@ -3,15 +3,15 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { PlusIcon, Trash2Icon } from '@lucide/svelte';
-	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
-	import Fab from '$lib/components/FAB.svelte';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import HelpButton from '$lib/help/HelpButton.svelte';
-	import DragReorderList from '$lib/components/DragReorderList.svelte';
-	import Notifier from '$lib/utils/notifier';
-	import { getImporter } from '$lib/importers';
-	import { loadImporterConfig, saveImporterConfig } from '$lib/importers/config';
-	import { allRules, withRules, type Rule, type RuleConfig } from '$lib/importers/rules';
+	import ConfirmDialog from '#lib/components/ConfirmDialog.svelte';
+	import Fab from '#lib/components/FAB.svelte';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import HelpButton from '#lib/help/HelpButton.svelte';
+	import DragReorderList from '#lib/components/DragReorderList.svelte';
+	import Notifier from '#lib/utils/notifier';
+	import { getImporter } from '#lib/importers';
+	import { loadImporterConfig, saveImporterConfig } from '#lib/importers/config';
+	import { allRules, withRules, type Rule, type RuleConfig } from '#lib/importers/rules';
 
 	const importer = getImporter(page.url.searchParams.get('importer') ?? '');
 

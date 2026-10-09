@@ -1,12 +1,12 @@
 <script lang="ts">
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import HelpButton from '$lib/help/HelpButton.svelte';
-	import AccordionSection from '$lib/components/AccordionSection.svelte';
-	import QuickQueryResults from '$lib/components/QuickQueryResults.svelte';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import HelpButton from '#lib/help/HelpButton.svelte';
+	import AccordionSection from '#lib/components/AccordionSection.svelte';
+	import QuickQueryResults from '#lib/components/QuickQueryResults.svelte';
 	import { CopyIcon } from '@lucide/svelte';
-	import fullLedgerService from '$lib/services/ledgerWorkerClient';
-	import { buildQuery, type CommonOptions, type LotsOptions } from '$lib/services/quickQueryBuilder';
-	import { parseQqrlCommand } from '$lib/services/quickQueryCliParser';
+	import fullLedgerService from '#lib/services/ledgerWorkerClient';
+	import { buildQuery, type CommonOptions, type LotsOptions } from '#lib/services/quickQueryBuilder';
+	import { parseQqrlCommand } from '#lib/services/quickQueryCliParser';
 
 	const DEBOUNCE_MS = 400;
 

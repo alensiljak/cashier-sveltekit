@@ -4,11 +4,11 @@
 */
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('$lib/utils/notifier', () => ({ default: { warning: vi.fn() } }));
-vi.mock('$lib/services/webdavAutoBackupService', () => ({ scheduleBackup: vi.fn() }));
+vi.mock('#lib/utils/notifier', () => ({ default: { warning: vi.fn() } }));
+vi.mock('#lib/services/webdavAutoBackupService', () => ({ scheduleBackup: vi.fn() }));
 
-import notifier from '$lib/utils/notifier';
-import { CrdtXactStore } from '$lib/storage/crdtXactStore';
+import notifier from '#lib/utils/notifier';
+import { CrdtXactStore } from '#lib/storage/crdtXactStore';
 
 let counter = 0;
 const newStore = (origin: string) =>

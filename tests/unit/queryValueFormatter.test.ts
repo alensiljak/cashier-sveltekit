@@ -6,7 +6,7 @@ import {
 	formatCellValue,
 	formatFinancialValue,
 	formatNumber
-} from '$lib/utils/queryValueFormatter';
+} from '#lib/utils/queryValueFormatter';
 
 describe('formatNumber', () => {
 	it('formats like the rest of the app', () => {

@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import appService from '$lib/services/appService';
-	import Notifier from '$lib/utils/notifier';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import appService from '#lib/services/appService';
+	import Notifier from '#lib/utils/notifier';
 	// import type { FileChangeDetails } from '@zag-js/file-upload';
 
 	type FileChangeDetails = {

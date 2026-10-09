@@ -4,9 +4,9 @@
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import moment from 'moment';
-	import { ISODATEFORMAT, DEFAULT_EXPENSES_CARD_ROLLING_DAYS, NUMBER_FORMAT } from '$lib/constants';
-	import { SettingKeys, settings } from '$lib/settings';
-	import fullLedgerService from '$lib/services/ledgerWorkerClient';
+	import { ISODATEFORMAT, DEFAULT_EXPENSES_CARD_ROLLING_DAYS, NUMBER_FORMAT } from '#lib/constants';
+	import { SettingKeys, settings } from '#lib/settings';
+	import fullLedgerService from '#lib/services/ledgerWorkerClient';
 	import numeral from 'numeral';
 
 	const TOP_CATEGORY_COUNT = 5;

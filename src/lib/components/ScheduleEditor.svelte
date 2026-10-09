@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { ScheduledXact } from '$lib/data/mainStore';
-	import { RecurrencePeriods } from '$lib/enums';
-	import Notifier from '$lib/utils/notifier';
+	import { ScheduledXact } from '#lib/data/mainStore';
+	import { RecurrencePeriods } from '#lib/enums';
+	import Notifier from '#lib/utils/notifier';
 	import { onMount } from 'svelte';
 
 	Notifier.init();

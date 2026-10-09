@@ -8,9 +8,9 @@ import {
 	readFile as opfsReadFile,
 	saveFile as opfsSaveFile,
 	deleteFile as opfsDeleteFile
-} from '$lib/utils/opfslib';
-import { parseSpecs, matchesAny } from '$lib/utils/fsScan';
-import { settings, SettingKeys } from '$lib/settings';
+} from '#lib/utils/opfslib';
+import { parseSpecs, matchesAny } from '#lib/utils/fsScan';
+import { settings, SettingKeys } from '#lib/settings';
 import { normalizeEol, type SyncEntry, type SyncSource } from './SyncSource';
 
 const DEFAULT_FILE_SPEC = '*.bean, *.toml';

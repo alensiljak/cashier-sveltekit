@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
-	import Notifier from '$lib/utils/notifier';
-	import { isS3Configured, loadS3Config, type S3Config } from '$lib/services/s3Config';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
+	import Notifier from '#lib/utils/notifier';
+	import { isS3Configured, loadS3Config, type S3Config } from '#lib/services/s3Config';
 	import {
 		deleteObject,
 		describeS3Error,
@@ -12,8 +12,8 @@
 		listObjects,
 		putObject,
 		type S3Directory
-	} from '$lib/services/s3Client';
-	import { getSyncKey, previewObject } from '$lib/services/s3Sync';
+	} from '#lib/services/s3Client';
+	import { getSyncKey, previewObject } from '#lib/services/s3Sync';
 	import {
 		EyeIcon,
 		SettingsIcon,

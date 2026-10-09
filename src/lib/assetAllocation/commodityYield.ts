@@ -44,8 +44,8 @@
  * one commodity — and one transaction — at a time.
  */
 import moment from 'moment';
-import * as BeancountParser from '$lib/utils/beancountParser';
-import { UserError } from '$lib/utils/errors';
+import * as BeancountParser from '#lib/utils/beancountParser';
+import { UserError } from '#lib/utils/errors';
 
 const DATE_FORMAT = 'YYYY-MM-DD';
 

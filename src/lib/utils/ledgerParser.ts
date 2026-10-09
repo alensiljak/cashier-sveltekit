@@ -2,9 +2,9 @@
  * Parses Ledger output
  */
 
-import { LedgerOutputParser } from '$lib/assetAllocation/ledgerOutputParser';
-import { Account } from '$lib/data/model';
-import type { CurrentValuesDict } from '$lib/data/viewModels';
+import { LedgerOutputParser } from '#lib/assetAllocation/ledgerOutputParser';
+import { Account } from '#lib/data/model';
+import type { CurrentValuesDict } from '#lib/data/viewModels';
 
 function parseBalanceSheetRow(line: string): Account | null {
 	const account = new Account('');

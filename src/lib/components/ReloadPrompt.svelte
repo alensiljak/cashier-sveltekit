@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { needRefresh, offlineReady, updateApp } from '$lib/services/pwaUpdate';
+	import { needRefresh, offlineReady, updateApp } from '#lib/services/pwaUpdate';
 
 	function close() {
 		offlineReady.set(false);

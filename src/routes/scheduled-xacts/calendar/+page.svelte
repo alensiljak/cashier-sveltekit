@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import { listScx } from '$lib/services/scxService';
-	import type { ScheduledTransaction, ScxId } from '$lib/data/model';
-	import appService from '$lib/services/appService';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import { listScx } from '#lib/services/scxService';
+	import type { ScheduledTransaction, ScxId } from '#lib/data/model';
+	import appService from '#lib/services/appService';
 	import { ChevronLeftIcon, ChevronRightIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
-	import HelpButton from '$lib/help/HelpButton.svelte';
+	import HelpButton from '#lib/help/HelpButton.svelte';
 
 	const today = new Date();
 	today.setHours(0, 0, 0, 0);

@@ -7,9 +7,9 @@
  * open (or resumed) once the configured time of day has passed, at most once a day.
  */
 import moment from 'moment';
-import { listScxDueOn } from '$lib/services/scxService';
-import { DeviceSettingKeys, deviceSettings } from '$lib/settings';
-import { showDueTransactionsNotification } from '$lib/utils/webNotification';
+import { listScxDueOn } from '#lib/services/scxService';
+import { DeviceSettingKeys, deviceSettings } from '#lib/settings';
+import { showDueTransactionsNotification } from '#lib/utils/webNotification';
 
 export const NOTIFICATION_TIME_DEFAULT = '08:00';
 const DATE_FORMAT = 'YYYY-MM-DD';

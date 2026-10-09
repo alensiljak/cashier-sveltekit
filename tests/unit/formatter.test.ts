@@ -12,8 +12,8 @@ import {
 	getMoneyColour,
 	getReadableDate,
 	getXactAmountColour
-} from '$lib/utils/formatter';
-import { Money } from '$lib/data/model';
+} from '#lib/utils/formatter';
+import { Money } from '#lib/data/model';
 import { makeXact } from '../helpers/factories';
 
 const RED = 'text-red-400';

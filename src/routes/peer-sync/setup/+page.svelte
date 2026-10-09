@@ -1,16 +1,16 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import HelpButton from '$lib/help/HelpButton.svelte';
-	import Notifier from '$lib/utils/notifier';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import HelpButton from '#lib/help/HelpButton.svelte';
+	import Notifier from '#lib/utils/notifier';
 	import { ArrowLeftIcon } from '@lucide/svelte';
-	import { settings, SettingKeys, deviceSettings, DeviceSettingKeys } from '$lib/settings';
+	import { settings, SettingKeys, deviceSettings, DeviceSettingKeys } from '#lib/settings';
 	import {
 		RELAY_STRATEGIES,
 		parseIceServers,
 		type RelayStrategy
-	} from '$lib/sync/peerPresence.svelte';
-	import { peerConnection } from '$lib/sync/peerConnection.svelte';
+	} from '#lib/sync/peerPresence.svelte';
+	import { peerConnection } from '#lib/sync/peerConnection.svelte';
 
 	// Shared singleton — changes here apply to the live connection.
 	const presence = peerConnection.presence;

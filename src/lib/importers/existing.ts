@@ -1,7 +1,7 @@
-import { Posting, Xact } from '$lib/data/model';
-import fullLedgerService from '$lib/services/ledgerWorkerClient';
-import { metaFromBqlEntry } from '$lib/utils/transactionParser';
-import { commoditiesFromDirectives } from '$lib/assetAllocation/commodityYield';
+import { Posting, Xact } from '#lib/data/model';
+import fullLedgerService from '#lib/services/ledgerWorkerClient';
+import { metaFromBqlEntry } from '#lib/utils/transactionParser';
+import { commoditiesFromDirectives } from '#lib/assetAllocation/commodityYield';
 
 /**
  * The full journal already contains both the archived books and the working set,

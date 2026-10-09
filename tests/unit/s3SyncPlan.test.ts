@@ -12,7 +12,7 @@ import {
 	seqOf,
 	TOMBSTONE,
 	type Manifest
-} from '$lib/services/s3SyncPlan';
+} from '#lib/services/s3SyncPlan';
 
 describe('decide: upload', () => {
 	it('is unchanged when both sides are equal', () => {

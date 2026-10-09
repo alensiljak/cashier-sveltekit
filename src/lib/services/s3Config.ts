@@ -1,4 +1,4 @@
-import { deviceSettings, DeviceSettingKeys } from '$lib/settings';
+import { deviceSettings, DeviceSettingKeys } from '#lib/settings';
 
 export interface S3Config {
 	/** S3-compatible endpoint, e.g. https://<account>.r2.cloudflarestorage.com */

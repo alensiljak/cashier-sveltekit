@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { EllipsisVertical, Menu } from '@lucide/svelte';
 	import type { Snippet } from 'svelte';
-	import { desktopNavVisible, drawerState } from '$lib/data/mainStore';
+	import { desktopNavVisible, drawerState } from '#lib/data/mainStore';
 
 	// Props
 	type Props = {

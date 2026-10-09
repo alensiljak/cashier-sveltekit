@@ -5,7 +5,7 @@
 */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('$lib/services/appService', () => ({
+vi.mock('#lib/services/appService', () => ({
 	default: { getDefaultCurrency: vi.fn(async () => 'EUR') }
 }));
 
@@ -15,9 +15,9 @@ import {
 	computeCommodityYield,
 	resolveLinkedCurrencies,
 	type CommodityDirective
-} from '$lib/assetAllocation/commodityYield';
-import { SecurityAnalyser } from '$lib/assetAllocation/securityAnalysis';
-import { UserError } from '$lib/utils/errors';
+} from '#lib/assetAllocation/commodityYield';
+import { SecurityAnalyser } from '#lib/assetAllocation/securityAnalysis';
+import { UserError } from '#lib/utils/errors';
 import { mockQueryFn, queryResult } from '../helpers/queryMock';
 
 const commodity = (currency: string, meta: Record<string, unknown> = {}): CommodityDirective => ({

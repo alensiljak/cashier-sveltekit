@@ -3,13 +3,13 @@
 	import '../app.css';
 	// libs
 	import { useSwipe, type SwipeCustomEvent } from 'svelte-gestures';
-	// import Navigation from '$lib/components/navigation.svelte';
+	// import Navigation from '#lib/components/navigation.svelte';
 	// PWA
 	import { onMount } from 'svelte';
-	import { desktopNavVisible, drawerState } from '$lib/data/mainStore';
-	import NavigationV3 from '$lib/components/navigation.svelte';
-	import Notifier from '$lib/utils/notifier';
-	import { ensureInitialized, finishInitialization } from '$lib/data/initializer';
+	import { desktopNavVisible, drawerState } from '#lib/data/mainStore';
+	import NavigationV3 from '#lib/components/navigation.svelte';
+	import Notifier from '#lib/utils/notifier';
+	import { ensureInitialized, finishInitialization } from '#lib/data/initializer';
 	import { goto } from '$app/navigation';
 	import { navigating } from '$app/state';
 
@@ -44,10 +44,10 @@
 			return;
 		}
 
-		const { initNotifications } = await import('$lib/services/notificationService');
+		const { initNotifications } = await import('#lib/services/notificationService');
 		initNotifications();
 
-		const { initPwa } = await import('$lib/services/pwaUpdate');
+		const { initPwa } = await import('#lib/services/pwaUpdate');
 		await initPwa();
 	});
 
@@ -127,7 +127,7 @@
 </div>
 
 
-{#await import('$lib/components/ReloadPrompt.svelte') then { default: ReloadPrompt }}
+{#await import('#lib/components/ReloadPrompt.svelte') then { default: ReloadPrompt }}
 	<ReloadPrompt />
 {/await}
 

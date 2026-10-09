@@ -1,7 +1,7 @@
-import { Account, Money, Posting, Xact } from '$lib/data/model';
-import appService from '$lib/services/appService';
-import { TransactionParser } from '$lib/utils/transactionParser';
-import { getAccountBalance } from '$lib/services/accountsService';
+import { Account, Money, Posting, Xact } from '#lib/data/model';
+import appService from '#lib/services/appService';
+import { TransactionParser } from '#lib/utils/transactionParser';
+import { getAccountBalance } from '#lib/services/accountsService';
 import Notifier from './notifier';
 
 /**

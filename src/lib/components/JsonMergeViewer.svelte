@@ -14,7 +14,7 @@
 		have that failure mode. See keyedMerge.ts's header comment.
 	*/
 	import { ChevronUpIcon, ChevronDownIcon, ShieldCheckIcon } from '@lucide/svelte';
-	import { diffKeyed, resolveKeyedMerge, type KeyedDiffEntry } from '$lib/utils/keyedMerge';
+	import { diffKeyed, resolveKeyedMerge, type KeyedDiffEntry } from '#lib/utils/keyedMerge';
 
 	interface Props {
 		local: T[];

@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { Xact } from '$lib/data/model';
-	import { formatPostingCost, formatPostingPrice, getAmountColour } from '$lib/utils/formatter';
+	import type { Xact } from '#lib/data/model';
+	import { formatPostingCost, formatPostingPrice, getAmountColour } from '#lib/utils/formatter';
 	import WarningTriangleIcon from './WarningTriangleIcon.svelte';
 
 	interface Props {

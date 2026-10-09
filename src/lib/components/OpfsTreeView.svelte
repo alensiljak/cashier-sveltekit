@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { RefreshCw } from '@lucide/svelte';
 	import OpfsTreeNode from './OpfsTreeNode.svelte';
-	import type { OpfsTreeNode as TreeNodeType } from '$lib/data/opfsTypes';
+	import type { OpfsTreeNode as TreeNodeType } from '#lib/data/opfsTypes';
 
 	let tree = $state<TreeNodeType[]>([]);
 	let loading = $state(true);

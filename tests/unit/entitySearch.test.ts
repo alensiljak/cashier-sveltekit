@@ -2,7 +2,7 @@
     Tests for the /search page's term parsing and scope resolution.
 */
 import { describe, expect, it } from 'vitest';
-import { parseEntitySearchTerms, resolveTermCategories } from '$lib/utils/entitySearch';
+import { parseEntitySearchTerms, resolveTermCategories } from '#lib/utils/entitySearch';
 
 describe('parseEntitySearchTerms', () => {
 	it.each([

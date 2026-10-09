@@ -11,7 +11,7 @@ import {
 	getBaseline,
 	removeBaselineEntries,
 	updateBaseline
-} from '$lib/sync/syncBaseline';
+} from '#lib/sync/syncBaseline';
 import { assert, test } from 'vitest';
 
 test('updateBaseline upserts rows readable back via getBaseline', async () => {

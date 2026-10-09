@@ -2,7 +2,7 @@
  * Contains queries for the sync, PTA system.
  */
 
-import { PtaSystems } from '$lib/enums';
+import { PtaSystems } from '#lib/enums';
 
 export interface Queries {
 	accounts(): string;

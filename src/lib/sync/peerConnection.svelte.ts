@@ -20,17 +20,17 @@
 	singleton instead of owning their own `PeerPresence`, so switching pages
 	never drops the room or re-triggers the `hello` handshake.
 */
-import { settings, deviceSettings, DeviceSettingKeys } from '$lib/settings';
-import { getReadyScxStore } from '$lib/services/scxService';
-import { describeScxChanges, type ScxMergeReport } from '$lib/services/scxMergeReport';
+import { settings, deviceSettings, DeviceSettingKeys } from '#lib/settings';
+import { getReadyScxStore } from '#lib/services/scxService';
+import { describeScxChanges, type ScxMergeReport } from '#lib/services/scxMergeReport';
 import { PeerPresence, type RelayStrategy } from './peerPresence.svelte';
 import { PeerProtocol } from './PeerSource';
 import { OpfsSource } from './OpfsSource';
 import { normalizeEol } from './SyncSource';
-import { getXactStore } from '$lib/storage/xactStoreRegistry';
-import { getScxStore } from '$lib/storage/scxStoreRegistry';
-import type { CrdtScxStore } from '$lib/storage/crdtScxStore';
-import type { CrdtDocStore } from '$lib/storage/crdtDocStore';
+import { getXactStore } from '#lib/storage/xactStoreRegistry';
+import { getScxStore } from '#lib/storage/scxStoreRegistry';
+import type { CrdtScxStore } from '#lib/storage/crdtScxStore';
+import type { CrdtDocStore } from '#lib/storage/crdtDocStore';
 import type { MessageAction, RequestAction } from '@trystero-p2p/core';
 
 const REQUEST_TIMEOUT_MS = 30_000;
@@ -233,7 +233,7 @@ class PeerConnection {
 			const autoReload =
 				(await deviceSettings.get<boolean>(DeviceSettingKeys.peerAutoReload)) ?? true;
 			if (!autoReload) return;
-			const { reloadLedgerFromOpfs } = await import('$lib/services/ledgerReload');
+			const { reloadLedgerFromOpfs } = await import('#lib/services/ledgerReload');
 			await reloadLedgerFromOpfs();
 		} catch (e) {
 			console.error('Reload after peer merge failed', e);

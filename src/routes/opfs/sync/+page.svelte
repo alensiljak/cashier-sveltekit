@@ -1,23 +1,23 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import HelpButton from '$lib/help/HelpButton.svelte';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import HelpButton from '#lib/help/HelpButton.svelte';
 	import { FolderOpenIcon, RefreshCcwIcon, ArrowLeftIcon, ArrowRightIcon, PlayIcon, MinusIcon } from '@lucide/svelte';
-	import { settings, SettingKeys, deviceSettings, DeviceSettingKeys } from '$lib/settings';
-	import fullLedgerService from '$lib/services/ledgerWorkerClient';
+	import { settings, SettingKeys, deviceSettings, DeviceSettingKeys } from '#lib/settings';
+	import fullLedgerService from '#lib/services/ledgerWorkerClient';
 	import {
 		loadPersistedHandle,
 		persistHandle,
 		requestReadPermission,
 		requestWritePermission
-	} from '$lib/utils/fsHandleStore';
-	import { getManifest, putManifestEntries, type ImportedFileMeta } from '$lib/utils/importManifest';
-	import * as OpfsLib from '$lib/utils/opfslib.js';
-	import { parseSpecs, collectFsFileHandles } from '$lib/utils/fsScan';
-	import { reloadLedgerFromOpfs } from '$lib/services/ledgerReload';
+	} from '#lib/utils/fsHandleStore';
+	import { getManifest, putManifestEntries, type ImportedFileMeta } from '#lib/utils/importManifest';
+	import * as OpfsLib from '#lib/utils/opfslib.js';
+	import { parseSpecs, collectFsFileHandles } from '#lib/utils/fsScan';
+	import { reloadLedgerFromOpfs } from '#lib/services/ledgerReload';
 
 	let scannedFsHandles = $state(new Map<string, FileSystemFileHandle>());
-	import { processWithConcurrencyLimit } from '$lib/utils/concurrency';
+	import { processWithConcurrencyLimit } from '#lib/utils/concurrency';
 
 	const HANDLE_KEY = 'importLedgerDirectoryHandle';
 	const CONCURRENCY = 4;

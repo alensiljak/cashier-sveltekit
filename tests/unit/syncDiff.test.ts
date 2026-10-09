@@ -4,9 +4,9 @@
 	these are plain synchronous unit tests. See src/lib/sync/syncDiff.ts.
 */
 
-import type { PeerSyncBaseline } from '$lib/data/model';
-import { diffAgainstBaseline } from '$lib/sync/syncDiff';
-import type { SyncEntry } from '$lib/sync/SyncSource';
+import type { PeerSyncBaseline } from '#lib/data/model';
+import { diffAgainstBaseline } from '#lib/sync/syncDiff';
+import type { SyncEntry } from '#lib/sync/SyncSource';
 import { assert, test } from 'vitest';
 
 /** Builds a SyncEntry literal. size/lastModified no longer drive any diff

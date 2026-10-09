@@ -2,13 +2,13 @@
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import { tick } from 'svelte';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import YearPeriodSelector from '$lib/components/YearPeriodSelector.svelte';
-	import SearchableSelect from '$lib/components/SearchableSelect.svelte';
-	import RunningBalanceChart from '$lib/components/RunningBalanceChart.svelte';
-	import fullLedgerService from '$lib/services/ledgerWorkerClient';
-	import { SettingKeys, settings } from '$lib/settings';
-	import { formatAmount } from '$lib/utils/formatter';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import YearPeriodSelector from '#lib/components/YearPeriodSelector.svelte';
+	import SearchableSelect from '#lib/components/SearchableSelect.svelte';
+	import RunningBalanceChart from '#lib/components/RunningBalanceChart.svelte';
+	import fullLedgerService from '#lib/services/ledgerWorkerClient';
+	import { SettingKeys, settings } from '#lib/settings';
+	import { formatAmount } from '#lib/utils/formatter';
 
 	interface MonthEntry {
 		key: string;

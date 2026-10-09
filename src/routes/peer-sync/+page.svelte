@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import JsonMergeViewer from '$lib/components/JsonMergeViewer.svelte';
-	import db from '$lib/data/db';
-	import { summarizeScxReport, type ScxMergeReport } from '$lib/services/scxMergeReport';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import HelpButton from '$lib/help/HelpButton.svelte';
-	import { Setting } from '$lib/data/model';
-	import Notifier from '$lib/utils/notifier';
+	import JsonMergeViewer from '#lib/components/JsonMergeViewer.svelte';
+	import db from '#lib/data/db';
+	import { summarizeScxReport, type ScxMergeReport } from '#lib/services/scxMergeReport';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import HelpButton from '#lib/help/HelpButton.svelte';
+	import { Setting } from '#lib/data/model';
+	import Notifier from '#lib/utils/notifier';
 	import {
 		GitCompareArrowsIcon,
 		DownloadIcon,
@@ -19,19 +19,19 @@
 		Unplug,
 		SettingsIcon
 	} from '@lucide/svelte';
-	import { reloadLedgerFromOpfs } from '$lib/services/ledgerReload';
-	import { OpfsSource } from '$lib/sync/OpfsSource';
-	import { PeerSource } from '$lib/sync/PeerSource';
-	import { diffAgainstBaseline, type DiffEntry } from '$lib/sync/syncDiff';
-	import { getBaseline } from '$lib/sync/syncBaseline';
-	import { pullFiles } from '$lib/sync/pullFiles';
-	import type { ActivePeer } from '$lib/sync/peerPresence.svelte';
+	import { reloadLedgerFromOpfs } from '#lib/services/ledgerReload';
+	import { OpfsSource } from '#lib/sync/OpfsSource';
+	import { PeerSource } from '#lib/sync/PeerSource';
+	import { diffAgainstBaseline, type DiffEntry } from '#lib/sync/syncDiff';
+	import { getBaseline } from '#lib/sync/syncBaseline';
+	import { pullFiles } from '#lib/sync/pullFiles';
+	import type { ActivePeer } from '#lib/sync/peerPresence.svelte';
 	import {
 		peerConnection,
 		getLocalData,
 		getLocalHashes,
 		type RemoteData
-	} from '$lib/sync/peerConnection.svelte';
+	} from '#lib/sync/peerConnection.svelte';
 
 	// ─── Types ───────────────────────────────────────────────────────────────────
 	/**

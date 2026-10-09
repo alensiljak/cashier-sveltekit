@@ -2,7 +2,7 @@
     validation
 */
 
-import Notifier from '$lib/utils/notifier';
+import Notifier from '#lib/utils/notifier';
 import { AssetAllocationEngine } from './AssetAllocation';
 import type { AssetClass } from './AssetClass';
 

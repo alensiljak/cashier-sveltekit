@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { ensureInitialized, createParsedLedger } from '$lib/services/rustledger';
-import { xactToBeancountText } from '$lib/utils/xactUtils';
-import { Xact, Posting } from '$lib/data/model';
+import { ensureInitialized, createParsedLedger } from '#lib/services/rustledger';
+import { xactToBeancountText } from '#lib/utils/xactUtils';
+import { Xact, Posting } from '#lib/data/model';
 
 describe('quick-entry note round-trip', () => {
 	beforeAll(async () => {

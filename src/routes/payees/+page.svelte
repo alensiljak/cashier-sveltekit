@@ -1,15 +1,15 @@
 <script lang="ts">
-	import Toolbar from '$lib/components/Toolbar.svelte';
+	import Toolbar from '#lib/components/Toolbar.svelte';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import { selectionMetadata } from '$lib/data/mainStore';
-	import Fab from '$lib/components/FAB.svelte';
+	import { selectionMetadata } from '#lib/data/mainStore';
+	import Fab from '#lib/components/FAB.svelte';
 	import { CheckIcon } from '@lucide/svelte';
-	import SearchToolbar from '$lib/components/SearchToolbar.svelte';
-	import { ListSearch } from '$lib/utils/ListSearch';
-	import Notifier from '$lib/utils/notifier';
-	import fullLedgerService from '$lib/services/ledgerWorkerClient';
-	import HelpButton from '$lib/help/HelpButton.svelte';
+	import SearchToolbar from '#lib/components/SearchToolbar.svelte';
+	import { ListSearch } from '#lib/utils/ListSearch';
+	import Notifier from '#lib/utils/notifier';
+	import fullLedgerService from '#lib/services/ledgerWorkerClient';
+	import HelpButton from '#lib/help/HelpButton.svelte';
 
 	Notifier.init();
 

@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import Fab from '$lib/components/FAB.svelte';
-	import { xact, selectionMetadata } from '$lib/data/mainStore';
-	import { Posting, Xact } from '$lib/data/model';
-	import { SelectionModeMetadata } from '$lib/settings';
-	import fullLedgerService from '$lib/services/ledgerWorkerClient';
-	import appService from '$lib/services/appService';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import Fab from '#lib/components/FAB.svelte';
+	import { xact, selectionMetadata } from '#lib/data/mainStore';
+	import { Posting, Xact } from '#lib/data/model';
+	import { SelectionModeMetadata } from '#lib/settings';
+	import fullLedgerService from '#lib/services/ledgerWorkerClient';
+	import appService from '#lib/services/appService';
 	import { CheckIcon, CalculatorIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 

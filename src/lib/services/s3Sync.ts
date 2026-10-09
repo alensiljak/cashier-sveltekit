@@ -15,17 +15,17 @@
  * resolved by the user, never overwritten silently.
  */
 import * as Y from 'yjs';
-import { CASHIER_DATA_DIR } from '$lib/constants';
-import { deviceSettings, DeviceSettingKeys } from '$lib/settings';
-import { exportSettingsJson, importSettingsJson } from '$lib/services/backupService';
-import db from '$lib/data/db';
-import { getDeviceId, type DocKind } from '$lib/sync/ydocDevices';
-import { hasNewOps } from '$lib/sync/ydocCompare';
-import { normalizeEol } from '$lib/sync/SyncSource';
-import { getXactStore } from '$lib/storage/xactStoreRegistry';
-import { getScxStore } from '$lib/storage/scxStoreRegistry';
-import { collectExportableFiles } from '$lib/utils/opfsExport';
-import { deleteFile, saveBinaryFile } from '$lib/utils/opfslib';
+import { CASHIER_DATA_DIR } from '#lib/constants';
+import { deviceSettings, DeviceSettingKeys } from '#lib/settings';
+import { exportSettingsJson, importSettingsJson } from '#lib/services/backupService';
+import db from '#lib/data/db';
+import { getDeviceId, type DocKind } from '#lib/sync/ydocDevices';
+import { hasNewOps } from '#lib/sync/ydocCompare';
+import { normalizeEol } from '#lib/sync/SyncSource';
+import { getXactStore } from '#lib/storage/xactStoreRegistry';
+import { getScxStore } from '#lib/storage/scxStoreRegistry';
+import { collectExportableFiles } from '#lib/utils/opfsExport';
+import { deleteFile, saveBinaryFile } from '#lib/utils/opfslib';
 import type { S3Config } from './s3Config';
 import { deleteObject, getObject, listObjectInfos, listObjects, putObject } from './s3Client';
 import { createKeyParams, decrypt, encrypt, openKey, sha256Hex, type KeyParams } from './s3Crypto';

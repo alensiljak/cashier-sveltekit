@@ -8,13 +8,13 @@ const client = vi.hoisted(() => ({
 	getDirectoryContents: vi.fn()
 }));
 vi.mock('webdav', () => ({ createClient: vi.fn(() => client) }));
-vi.mock('$lib/services/appService', () => ({
+vi.mock('#lib/services/appService', () => ({
 	default: { getScheduledXactsForExport: vi.fn(async () => '[{"id":1}]') }
 }));
 
-import appService from '$lib/services/appService';
-import { CloudBackupService, getFilenameForBackup } from '$lib/services/cloudBackupService';
-import { BackupType } from '$lib/enums';
+import appService from '#lib/services/appService';
+import { CloudBackupService, getFilenameForBackup } from '#lib/services/cloudBackupService';
+import { BackupType } from '#lib/enums';
 
 describe('getFilenameForBackup', () => {
 	beforeEach(() => {

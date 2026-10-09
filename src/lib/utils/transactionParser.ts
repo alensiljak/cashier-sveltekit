@@ -2,8 +2,8 @@
  * Xact parser
  * Used for calculation of the empty postings
  */
-import { Posting, Xact } from '$lib/data/model';
-import rustledger from '$lib/services/rustledger';
+import { Posting, Xact } from '#lib/data/model';
+import rustledger from '#lib/services/rustledger';
 
 export class TransactionParser {
 	/**

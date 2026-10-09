@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import HelpButton from '$lib/help/HelpButton.svelte';
-	import { getImporter } from '$lib/importers';
-	import { trackOrigin } from '$lib/importers/navigation';
-	import { loadImporterConfig } from '$lib/importers/config';
-	import { clearPendingImport, loadPendingImport } from '$lib/importers/pendingImport';
-	import ImportReview from '$lib/importers/ImportReview.svelte';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import HelpButton from '#lib/help/HelpButton.svelte';
+	import { getImporter } from '#lib/importers';
+	import { trackOrigin } from '#lib/importers/navigation';
+	import { loadImporterConfig } from '#lib/importers/config';
+	import { clearPendingImport, loadPendingImport } from '#lib/importers/pendingImport';
+	import ImportReview from '#lib/importers/ImportReview.svelte';
 
 	type Session = {
 		importer: NonNullable<ReturnType<typeof getImporter>>;

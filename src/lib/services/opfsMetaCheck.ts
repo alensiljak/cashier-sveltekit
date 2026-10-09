@@ -1,5 +1,5 @@
-import { listFileTree } from '$lib/utils/opfslib';
-import { deviceSettings, DeviceSettingKeys } from '$lib/settings';
+import { listFileTree } from '#lib/utils/opfslib';
+import { deviceSettings, DeviceSettingKeys } from '#lib/settings';
 
 type MetaMap = Record<string, string>;
 

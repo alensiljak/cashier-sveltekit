@@ -1,25 +1,25 @@
 <script lang="ts">
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import SearchToolbar from '$lib/components/SearchToolbar.svelte';
-	import PillToggle from '$lib/components/PillToggle.svelte';
-	import JournalXactRow from '$lib/components/JournalXactRow.svelte';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import SearchToolbar from '#lib/components/SearchToolbar.svelte';
+	import PillToggle from '#lib/components/PillToggle.svelte';
+	import JournalXactRow from '#lib/components/JournalXactRow.svelte';
 	import { onMount } from 'svelte';
-	import HelpButton from '$lib/help/HelpButton.svelte';
+	import HelpButton from '#lib/help/HelpButton.svelte';
 	import { goto } from '$app/navigation';
-	import fullLedgerService from '$lib/services/ledgerWorkerClient';
+	import fullLedgerService from '#lib/services/ledgerWorkerClient';
 	import {
 		EntitySearchTermStore,
 		EntitySearchScopeStore,
 		xact as xactStore,
 		xactId,
 		type EntitySearchScope
-	} from '$lib/data/mainStore';
+	} from '#lib/data/mainStore';
 	import {
 		parseEntitySearchTerms,
 		resolveTermCategories,
 		type EntityCategory,
 		type EntitySearchTerm
-	} from '$lib/utils/entitySearch';
+	} from '#lib/utils/entitySearch';
 	import {
 		buildConditions,
 		searchPayees,
@@ -27,8 +27,8 @@
 		searchCommodities,
 		searchTransactions,
 		type TransactionResult
-	} from '$lib/services/entitySearchService';
-	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
+	} from '#lib/services/entitySearchService';
+	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
 	import { UserIcon, LandmarkIcon, CoinsIcon, ReceiptIcon, FileSearchIcon } from '@lucide/svelte';
 
 	const SCOPE_OPTIONS: { value: EntitySearchScope; label: string }[] = [

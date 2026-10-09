@@ -1,17 +1,17 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import SquareButton from '$lib/components/SquareButton.svelte';
-	import SquareButtonGroup from '$lib/components/SquareButtonGroup.svelte';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import XactDetailHero from '$lib/components/XactDetailHero.svelte';
-	import { ScheduledXact, xact, xactId } from '$lib/data/mainStore';
-	import { Posting, ScheduledTransaction, Xact } from '$lib/data/model';
-	import appService from '$lib/services/appService';
-	import { getXactStore } from '$lib/storage/xactStoreRegistry';
-	import { reloadLedgerFromOpfs } from '$lib/services/ledgerReload';
-	import { xactToBeancountText } from '$lib/utils/xactUtils';
-	import { buildHighlightParams } from '$lib/utils/unifiedXacts';
-	import Notifier from '$lib/utils/notifier';
+	import SquareButton from '#lib/components/SquareButton.svelte';
+	import SquareButtonGroup from '#lib/components/SquareButtonGroup.svelte';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import XactDetailHero from '#lib/components/XactDetailHero.svelte';
+	import { ScheduledXact, xact, xactId } from '#lib/data/mainStore';
+	import { Posting, ScheduledTransaction, Xact } from '#lib/data/model';
+	import appService from '#lib/services/appService';
+	import { getXactStore } from '#lib/storage/xactStoreRegistry';
+	import { reloadLedgerFromOpfs } from '#lib/services/ledgerReload';
+	import { xactToBeancountText } from '#lib/utils/xactUtils';
+	import { buildHighlightParams } from '#lib/utils/unifiedXacts';
+	import Notifier from '#lib/utils/notifier';
 	import {
 		CalendarClockIcon,
 		CopyIcon,
@@ -20,7 +20,7 @@
 		TrashIcon
 	} from '@lucide/svelte';
 	import { onMount } from 'svelte';
-	import HelpButton from '$lib/help/HelpButton.svelte';
+	import HelpButton from '#lib/help/HelpButton.svelte';
 
 	Notifier.init();
 

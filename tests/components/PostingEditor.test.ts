@@ -10,9 +10,9 @@
 import { render, fireEvent, cleanup } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { get } from 'svelte/store';
-import PostingEditor from '$lib/components/PostingEditor.svelte';
-import { xact, postingEditorIndex } from '$lib/data/mainStore';
-import type { Posting, Xact } from '$lib/data/model';
+import PostingEditor from '#lib/components/PostingEditor.svelte';
+import { xact, postingEditorIndex } from '#lib/data/mainStore';
+import type { Posting, Xact } from '#lib/data/model';
 import { makeXact as buildXact } from '../helpers/factories';
 
 const { gotoMock } = vi.hoisted(() => ({ gotoMock: vi.fn() }));

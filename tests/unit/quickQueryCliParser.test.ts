@@ -2,7 +2,7 @@
     Tests for the qqrl-style command-line parser used by the Quick Query page.
 */
 import { describe, expect, it } from 'vitest';
-import { parseQqrlCommand } from '$lib/services/quickQueryCliParser';
+import { parseQqrlCommand } from '#lib/services/quickQueryCliParser';
 
 describe('commands', () => {
 	it.each([

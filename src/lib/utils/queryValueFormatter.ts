@@ -3,7 +3,7 @@
 	inventories (e.g. from `sum(position)`) come back as objects and are shown as
 	readable amounts, not JSON. Shared by the Query report and the Quick Query results.
 */
-import { formatAmount } from '$lib/utils/formatter';
+import { formatAmount } from '#lib/utils/formatter';
 
 /** Formats a decimal string like the rest of the app; returns it unchanged if it isn't a number. */
 export function formatNumber(numStr: string): string {

@@ -4,10 +4,10 @@
  * `cashier-xacts-<deviceId>.ydoc` (working set) and `cashier-scx-<deviceId>.ydoc`
  * (scheduled transactions); the device ID is the persistent peer ID.
  */
-import db from '$lib/data/db';
-import { TrustedPeer } from '$lib/data/model';
-import { deviceSettings, DeviceSettingKeys } from '$lib/settings';
-import type { WebDavClient } from '$lib/utils/webdav';
+import db from '#lib/data/db';
+import { TrustedPeer } from '#lib/data/model';
+import { deviceSettings, DeviceSettingKeys } from '#lib/settings';
+import type { WebDavClient } from '#lib/utils/webdav';
 
 /** The documents synced as per-device state files. */
 export type DocKind = 'xacts' | 'scx';

@@ -1,20 +1,20 @@
 <script lang="ts">
-	import { selectionMetadata, xact } from '$lib/data/mainStore';
+	import { selectionMetadata, xact } from '#lib/data/mainStore';
 	import { onMount } from 'svelte';
 	import PostingEditor from './PostingEditor.svelte';
 	import MetadataEditor from './MetadataEditor.svelte';
 	import SectionTitle from './SectionTitle.svelte';
 	import DateField from './DateField.svelte';
 	import { goto } from '$app/navigation';
-	import Notifier from '$lib/utils/notifier';
-	import appService from '$lib/services/appService';
-	import { ensureInitialized, validateSource } from '$lib/services/rustledger';
-	import { getAccountBalance, loadAccount } from '$lib/services/accountsService';
-	import { SelectionModeMetadata } from '$lib/settings';
-	import { getEmptyPostingIndex, xactToBeancountText } from '$lib/utils/xactUtils';
-	import { debounce } from '$lib/utils/debounce';
-	import { Posting } from '$lib/data/model';
-	import type { ValidationIssue } from '$lib/data/validation';
+	import Notifier from '#lib/utils/notifier';
+	import appService from '#lib/services/appService';
+	import { ensureInitialized, validateSource } from '#lib/services/rustledger';
+	import { getAccountBalance, loadAccount } from '#lib/services/accountsService';
+	import { SelectionModeMetadata } from '#lib/settings';
+	import { getEmptyPostingIndex, xactToBeancountText } from '#lib/utils/xactUtils';
+	import { debounce } from '#lib/utils/debounce';
+	import { Posting } from '#lib/data/model';
+	import type { ValidationIssue } from '#lib/data/validation';
 	import {
 		SigmaIcon,
 		UserIcon,

@@ -1,14 +1,14 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { AssetAllocationEngine } from '$lib/assetAllocation/AssetAllocation.js';
-	import { buildChildrenIndex } from '$lib/assetAllocation/assetAllocationUtils.js';
-	import { serializeToToml } from '$lib/assetAllocation/assetAllocationSerializer.js';
-	import { AssetClass } from '$lib/assetAllocation/AssetClass.js';
-	import AaEditorNode from '$lib/components/AaEditorNode.svelte';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
-	import * as OpfsLib from '$lib/utils/opfslib.js';
-	import Notifier from '$lib/utils/notifier.js';
+	import { AssetAllocationEngine } from '#lib/assetAllocation/AssetAllocation.js';
+	import { buildChildrenIndex } from '#lib/assetAllocation/assetAllocationUtils.js';
+	import { serializeToToml } from '#lib/assetAllocation/assetAllocationSerializer.js';
+	import { AssetClass } from '#lib/assetAllocation/AssetClass.js';
+	import AaEditorNode from '#lib/components/AaEditorNode.svelte';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
+	import * as OpfsLib from '#lib/utils/opfslib.js';
+	import Notifier from '#lib/utils/notifier.js';
 	import { SaveIcon, XIcon } from '@lucide/svelte';
 
 	Notifier.init();

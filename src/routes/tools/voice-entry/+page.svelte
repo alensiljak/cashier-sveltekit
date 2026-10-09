@@ -1,10 +1,10 @@
 <script lang="ts">
     import { goto } from '$app/navigation'
-    import Toolbar from '$lib/components/Toolbar.svelte'
-    import { Xact } from '$lib/data/model'
-    import { xact as xactStore, xactId } from '$lib/data/mainStore'
-    import { type ParseResult, parseTranscript, buildTransaction, formatBeancount } from '$lib/utils/nlpEntry'
-    import fullLedgerService from '$lib/services/ledgerWorkerClient'
+    import Toolbar from '#lib/components/Toolbar.svelte'
+    import { Xact } from '#lib/data/model'
+    import { xact as xactStore, xactId } from '#lib/data/mainStore'
+    import { type ParseResult, parseTranscript, buildTransaction, formatBeancount } from '#lib/utils/nlpEntry'
+    import fullLedgerService from '#lib/services/ledgerWorkerClient'
 
     // --- State ---
 

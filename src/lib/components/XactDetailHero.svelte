@@ -1,13 +1,13 @@
 <script lang="ts">
-	import type { Posting, Xact } from '$lib/data/model';
+	import type { Posting, Xact } from '#lib/data/model';
 	import {
 		formatPostingCost,
 		formatPostingPrice,
 		getAccountColour,
 		getAmountColour,
 		getReadableDate
-	} from '$lib/utils/formatter';
-	import { DateFormatStore } from '$lib/data/mainStore';
+	} from '#lib/utils/formatter';
+	import { DateFormatStore } from '#lib/data/mainStore';
 	import WarningTriangleIcon from './WarningTriangleIcon.svelte';
 
 	interface Props {

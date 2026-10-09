@@ -3,10 +3,10 @@
 	import CashierCardTemplate from './CashierCardTemplate.svelte';
 	import AccountRow from './AccountRow.svelte';
 	import { goto } from '$app/navigation';
-	import { Account, Money } from '$lib/data/model';
-	import type { AccountGroup } from '$lib/settings';
-	import appService from '$lib/services/appService';
-	import fullLedgerService from '$lib/services/ledgerWorkerClient';
+	import { Account, Money } from '#lib/data/model';
+	import type { AccountGroup } from '#lib/settings';
+	import appService from '#lib/services/appService';
+	import fullLedgerService from '#lib/services/ledgerWorkerClient';
 
 	type Props = {
 		group: AccountGroup;

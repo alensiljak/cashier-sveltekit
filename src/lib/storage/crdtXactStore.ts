@@ -1,13 +1,13 @@
 import { monotonicFactory } from 'ulid';
-import { scheduleBackup } from '$lib/services/webdavAutoBackupService';
+import { scheduleBackup } from '#lib/services/webdavAutoBackupService';
 import type { DirectiveJson } from '@rustledger/wasm';
-import { createParsedLedger, ensureInitialized } from '$lib/services/rustledger';
-import { directiveToXact } from '$lib/utils/transactionParser';
-import { xactToBeancountText } from '$lib/utils/xactUtils';
+import { createParsedLedger, ensureInitialized } from '#lib/services/rustledger';
+import { directiveToXact } from '#lib/utils/transactionParser';
+import { xactToBeancountText } from '#lib/utils/xactUtils';
 import { fromRecord, isNewerSchema, toRecord, type XactRecord } from './crdtXactRecord';
-import { getDeviceId } from '$lib/sync/ydocDevices';
+import { getDeviceId } from '#lib/sync/ydocDevices';
 import { CrdtDocStore } from './crdtDocStore';
-import type { Xact } from '$lib/data/model';
+import type { Xact } from '#lib/data/model';
 
 /**
  * Stable record ID of a transaction in the working set (a ULID). Opaque to

@@ -5,13 +5,13 @@
 */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('$lib/utils/notifier', () => ({ default: { warning: vi.fn() } }));
-vi.mock('$lib/services/webdavAutoBackupService', () => ({ scheduleBackup: vi.fn() }));
+vi.mock('#lib/utils/notifier', () => ({ default: { warning: vi.fn() } }));
+vi.mock('#lib/services/webdavAutoBackupService', () => ({ scheduleBackup: vi.fn() }));
 
-import { scheduleBackup } from '$lib/services/webdavAutoBackupService';
-import { CrdtScxStore } from '$lib/storage/crdtScxStore';
-import { SCX_SCHEMA_VERSION, type ScxRecord } from '$lib/storage/crdtScxRecord';
-import { Posting, ScheduledTransaction, Xact } from '$lib/data/model';
+import { scheduleBackup } from '#lib/services/webdavAutoBackupService';
+import { CrdtScxStore } from '#lib/storage/crdtScxStore';
+import { SCX_SCHEMA_VERSION, type ScxRecord } from '#lib/storage/crdtScxRecord';
+import { Posting, ScheduledTransaction, Xact } from '#lib/data/model';
 
 let counter = 0;
 const newStore = (dbName = `test-scx-${++counter}`) => new CrdtScxStore(dbName);

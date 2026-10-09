@@ -16,8 +16,8 @@
  * flow.
  */
 
-import type { Account } from '$lib/data/model';
-import type { AssetClass } from '$lib/assetAllocation/AssetClass';
+import type { Account } from '#lib/data/model';
+import type { AssetClass } from '#lib/assetAllocation/AssetClass';
 
 export interface InvestmentGroup {
 	/** The asset class fullname, e.g. "Allocation:Equity:US". */

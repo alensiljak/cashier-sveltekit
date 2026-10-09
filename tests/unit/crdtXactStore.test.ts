@@ -6,12 +6,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Reading a newer-schema record raises a toast; the real toaster needs a live document.
-vi.mock('$lib/utils/notifier', () => ({ default: { warning: vi.fn() } }));
-vi.mock('$lib/services/webdavAutoBackupService', () => ({ scheduleBackup: vi.fn() }));
+vi.mock('#lib/utils/notifier', () => ({ default: { warning: vi.fn() } }));
+vi.mock('#lib/services/webdavAutoBackupService', () => ({ scheduleBackup: vi.fn() }));
 
-import { scheduleBackup } from '$lib/services/webdavAutoBackupService';
-import { CrdtXactStore } from '$lib/storage/crdtXactStore';
-import { XACT_SCHEMA_VERSION } from '$lib/storage/crdtXactRecord';
+import { scheduleBackup } from '#lib/services/webdavAutoBackupService';
+import { CrdtXactStore } from '#lib/storage/crdtXactStore';
+import { XACT_SCHEMA_VERSION } from '#lib/storage/crdtXactRecord';
 
 let counter = 0;
 function newStore(origin = 'device-A', dbName = `test-xacts-${++counter}`) {

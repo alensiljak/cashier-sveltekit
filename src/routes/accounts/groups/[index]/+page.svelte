@@ -1,15 +1,15 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import ColorPicker from '$lib/components/ColorPicker.svelte';
-	import Fab from '$lib/components/FAB.svelte';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
-	import { selectionMetadata } from '$lib/data/mainStore';
-	import { SelectionType } from '$lib/enums';
-	import { SelectionModeMetadata, SettingKeys, settings, type AccountGroup } from '$lib/settings';
-	import Notifier from '$lib/utils/notifier';
-	import DragReorderList from '$lib/components/DragReorderList.svelte';
+	import ColorPicker from '#lib/components/ColorPicker.svelte';
+	import Fab from '#lib/components/FAB.svelte';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
+	import { selectionMetadata } from '#lib/data/mainStore';
+	import { SelectionType } from '#lib/enums';
+	import { SelectionModeMetadata, SettingKeys, settings, type AccountGroup } from '#lib/settings';
+	import Notifier from '#lib/utils/notifier';
+	import DragReorderList from '#lib/components/DragReorderList.svelte';
 	import {
 		CheckIcon,
 		PencilIcon,

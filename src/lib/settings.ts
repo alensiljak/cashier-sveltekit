@@ -1,8 +1,8 @@
 /*
     Various configuration-related things
 */
-import db from '$lib/data/db';
-import { Setting } from '$lib/data/model';
+import db from '#lib/data/db';
+import { Setting } from '#lib/data/model';
 
 /**
  * Contains all the values required for the selection mode to function.

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { describeScxChanges, summarizeScxReport } from '$lib/services/scxMergeReport';
-import type { RecordChange } from '$lib/storage/crdtDocStore';
-import type { ScxRecord } from '$lib/storage/crdtScxRecord';
+import { describeScxChanges, summarizeScxReport } from '#lib/services/scxMergeReport';
+import type { RecordChange } from '#lib/storage/crdtDocStore';
+import type { ScxRecord } from '#lib/storage/crdtScxRecord';
 
 const rec = (id: string, payee: string, nextDate = '2026-01-01'): ScxRecord =>
 	({

@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import Notifier from '$lib/utils/notifier';
-	import { settings, deviceSettings, SettingKeys, DeviceSettingKeys } from '$lib/settings';
-	import { lastBackupTime } from '$lib/services/webdavAutoBackupService';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import Notifier from '#lib/utils/notifier';
+	import { settings, deviceSettings, SettingKeys, DeviceSettingKeys } from '#lib/settings';
+	import { lastBackupTime } from '#lib/services/webdavAutoBackupService';
 	import { CloudIcon } from '@lucide/svelte';
-	import { WebDavClient, type WebDavEntry } from '$lib/utils/webdav';
+	import { WebDavClient, type WebDavEntry } from '#lib/utils/webdav';
 	import { ChevronRight, ChevronUp } from '@lucide/svelte';
 
 	let url = '';

@@ -4,7 +4,7 @@
  * Owns a persistent Ledger WASM instance across messages so that file I/O and
  * CPU-intensive parsing/querying never block the main thread.
  *
- * No SvelteKit / $lib imports — only bare npm packages and relative paths.
+ * No SvelteKit / #lib imports — only bare npm packages and relative paths.
  */
 
 import wasmUrl from '@rustledger/wasm/rustledger_wasm_bg.wasm?url';

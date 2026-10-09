@@ -2,9 +2,9 @@
     Tests for the posting cost/price display helpers used by the journal rows.
 */
 import { expect, test } from 'vitest';
-import type { Posting } from '$lib/data/model';
+import type { Posting } from '#lib/data/model';
 import { makePosting } from '../helpers/factories';
-import { formatPostingCost, formatPostingPrice } from '$lib/utils/formatter';
+import { formatPostingCost, formatPostingPrice } from '#lib/utils/formatter';
 
 function makePostingDefaults(overrides: Partial<Posting> = {}): Posting {
 	return makePosting({ account: 'Assets:Portfolio', amount: 1, currency: 'VWCE', ...overrides });

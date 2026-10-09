@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { xact, postingEditorIndex } from '$lib/data/mainStore';
+	import { xact, postingEditorIndex } from '#lib/data/mainStore';
 	import { DiffIcon, PencilLineIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import type { EventHandler } from 'svelte/elements';

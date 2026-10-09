@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { AssetClass } from '$lib/assetAllocation/AssetClass.js';
+	import type { AssetClass } from '#lib/assetAllocation/AssetClass.js';
 	import AaEditorNode from './AaEditorNode.svelte';
 
 	function focusOnMount(node: HTMLElement) {

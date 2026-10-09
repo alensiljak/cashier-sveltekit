@@ -2,7 +2,7 @@
     Tests for scheduled-transaction date calculation and projection.
 */
 import { describe, expect, it } from 'vitest';
-import { Projector, calculateNextIteration } from '$lib/scheduledTransactions';
+import { Projector, calculateNextIteration } from '#lib/scheduledTransactions';
 
 describe('calculateNextIteration', () => {
 	it.each([

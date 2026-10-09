@@ -2,12 +2,12 @@
 	import { CalendarClockIcon, CalendarDaysIcon } from '@lucide/svelte';
 	import CashierCardTemplate from './CashierCardTemplate.svelte';
 	import { goto } from '$app/navigation';
-	import type { Money, ScheduledTransaction, Xact } from '$lib/data/model';
+	import type { Money, ScheduledTransaction, Xact } from '#lib/data/model';
 	import { onMount } from 'svelte';
-	import { listScx } from '$lib/services/scxService';
-	import { XactAugmenter } from '$lib/utils/xactAugmenter';
-	import { formatAmount, getXactAmountColour, getDateColour, getReadableDate } from '$lib/utils/formatter';
-	import { ShortDateFormatStore } from '$lib/data/mainStore';
+	import { listScx } from '#lib/services/scxService';
+	import { XactAugmenter } from '#lib/utils/xactAugmenter';
+	import { formatAmount, getXactAmountColour, getDateColour, getReadableDate } from '#lib/utils/formatter';
+	import { ShortDateFormatStore } from '#lib/data/mainStore';
 
 	let scxs: ScheduledTransaction[] = $state([]);
 	let amounts: Money[] = $state([]);

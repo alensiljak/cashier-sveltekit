@@ -1,4 +1,4 @@
-import type { Xact } from '$lib/data/model';
+import type { Xact } from '#lib/data/model';
 import type { DedupResult } from './types';
 
 /** Bank booking dates lag the actual transaction date; allow this many days of slack. */

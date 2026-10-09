@@ -5,12 +5,12 @@
 	payee-xacts page also does, so search results and their tap destination stay
 	consistent with the rest of the app.
 */
-import fullLedgerService from '$lib/services/ledgerWorkerClient';
-import { STOP_WORDS } from '$lib/utils/nlpEntry';
-import { getXactStore } from '$lib/storage/xactStoreRegistry';
-import { Xact, Posting } from '$lib/data/model';
-import type { XactId } from '$lib/storage/crdtXactStore';
-import type { EntityCategory, EntitySearchTerm } from '$lib/utils/entitySearch';
+import fullLedgerService from '#lib/services/ledgerWorkerClient';
+import { STOP_WORDS } from '#lib/utils/nlpEntry';
+import { getXactStore } from '#lib/storage/xactStoreRegistry';
+import { Xact, Posting } from '#lib/data/model';
+import type { XactId } from '#lib/storage/crdtXactStore';
+import type { EntityCategory, EntitySearchTerm } from '#lib/utils/entitySearch';
 
 const FIELD_FOR_CATEGORY: Record<Exclude<EntityCategory, 'any'>, string> = {
 	payee: 'payee',

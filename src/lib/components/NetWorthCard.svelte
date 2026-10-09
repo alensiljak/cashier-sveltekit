@@ -8,9 +8,9 @@
 	import CashierCardTemplate from './CashierCardTemplate.svelte';
 	import NetWorthMountainChart from './NetWorthMountainChart.svelte';
 	import { type Period } from './PeriodPicker.svelte';
-	import fullLedgerService from '$lib/services/ledgerWorkerClient';
-	import { SettingKeys, settings } from '$lib/settings';
-	import { formatAmount } from '$lib/utils/formatter';
+	import fullLedgerService from '#lib/services/ledgerWorkerClient';
+	import { SettingKeys, settings } from '#lib/settings';
+	import { formatAmount } from '#lib/utils/formatter';
 	import { goto } from '$app/navigation';
 
 	interface MonthEntry {

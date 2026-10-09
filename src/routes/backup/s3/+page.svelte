@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import { isS3Configured, loadS3Config, type S3Config } from '$lib/services/s3Config';
-	import { describeS3Error } from '$lib/services/s3Client';
-	import type { SyncDirection } from '$lib/services/s3SyncPlan';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import { isS3Configured, loadS3Config, type S3Config } from '#lib/services/s3Config';
+	import { describeS3Error } from '#lib/services/s3Client';
+	import type { SyncDirection } from '#lib/services/s3SyncPlan';
 	import {
 		applyDeletion,
 		fetchCrdtSyncStatus,
@@ -22,10 +22,10 @@
 		type S3Session,
 		type SyncItem,
 		type SyncLine
-	} from '$lib/services/s3Sync';
-	import { reloadLedgerFromOpfs } from '$lib/services/ledgerReload';
-	import { trustDevice } from '$lib/sync/ydocDevices';
-	import Notifier from '$lib/utils/notifier';
+	} from '#lib/services/s3Sync';
+	import { reloadLedgerFromOpfs } from '#lib/services/ledgerReload';
+	import { trustDevice } from '#lib/sync/ydocDevices';
+	import Notifier from '#lib/utils/notifier';
 	import {
 		ArrowDownIcon,
 		ArrowUpIcon,

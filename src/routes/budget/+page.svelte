@@ -2,27 +2,27 @@
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import moment from 'moment';
-	import { ISODATEFORMAT } from '$lib/constants';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
-	import MonthSelector, { type MonthOption } from '$lib/components/MonthSelector.svelte';
-	import YearSelector, { type YearOption } from '$lib/components/YearSelector.svelte';
-	import BudgetCategoryRow from '$lib/components/BudgetCategoryRow.svelte';
+	import { ISODATEFORMAT } from '#lib/constants';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
+	import MonthSelector, { type MonthOption } from '#lib/components/MonthSelector.svelte';
+	import YearSelector, { type YearOption } from '#lib/components/YearSelector.svelte';
+	import BudgetCategoryRow from '#lib/components/BudgetCategoryRow.svelte';
 	import {
 		selectionMetadata,
 		BudgetSelectedMonthStore,
 		BudgetSelectedYearStore,
 		BudgetViewModeStore,
 		type BudgetViewMode
-	} from '$lib/data/mainStore';
-	import { type BudgetCategory, SelectionModeMetadata, SettingKeys, settings } from '$lib/settings';
-	import { SelectionType } from '$lib/enums';
-	import appService from '$lib/services/appService';
-	import fullLedgerService from '$lib/services/ledgerWorkerClient';
-	import Notifier from '$lib/utils/notifier';
-	import { formatAmount } from '$lib/utils/formatter';
+	} from '#lib/data/mainStore';
+	import { type BudgetCategory, SelectionModeMetadata, SettingKeys, settings } from '#lib/settings';
+	import { SelectionType } from '#lib/enums';
+	import appService from '#lib/services/appService';
+	import fullLedgerService from '#lib/services/ledgerWorkerClient';
+	import Notifier from '#lib/utils/notifier';
+	import { formatAmount } from '#lib/utils/formatter';
 	import { ArrowUpDownIcon, PlusCircleIcon, TrashIcon } from '@lucide/svelte';
-	import HelpButton from '$lib/help/HelpButton.svelte';
+	import HelpButton from '#lib/help/HelpButton.svelte';
 
 	Notifier.init();
 

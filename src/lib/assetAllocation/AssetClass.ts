@@ -1,4 +1,4 @@
-import { Account } from '$lib/data/model';
+import { Account } from '#lib/data/model';
 import Big from 'big.js';
 import type { SecurityAnalysis } from './securityAnalysis';
 

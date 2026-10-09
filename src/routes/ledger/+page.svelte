@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import AccordionSection from '$lib/components/AccordionSection.svelte';
-	import { createParsedLedger, ensureInitialized } from '$lib/services/rustledger';
-	import { getXactStore } from '$lib/storage/xactStoreRegistry';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import AccordionSection from '#lib/components/AccordionSection.svelte';
+	import { createParsedLedger, ensureInitialized } from '#lib/services/rustledger';
+	import { getXactStore } from '#lib/storage/xactStoreRegistry';
 	import JsonTreeNode from './JsonTreeNode.svelte';
 
 	let isLoading = $state(false);

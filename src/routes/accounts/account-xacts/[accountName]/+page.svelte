@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
-	import HelpButton from '$lib/help/HelpButton.svelte';
-	import TransactionList from '$lib/components/TransactionList.svelte';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
+	import HelpButton from '#lib/help/HelpButton.svelte';
+	import TransactionList from '#lib/components/TransactionList.svelte';
 	import type { AccountMeta } from './+page.js';
 	import type { MetaValueJson } from '@rustledger/wasm';
 
@@ -14,15 +14,15 @@
 		if (typeof value === 'boolean') return value ? 'true' : 'false';
 		return `${value.number} ${value.currency}`;
 	}
-	import * as Formatter from '$lib/utils/formatter';
+	import * as Formatter from '#lib/utils/formatter';
 	import { ScaleIcon, CopyIcon, ActivityIcon } from '@lucide/svelte';
 
 	function copyToClipboard(text: string) {
 		navigator.clipboard.writeText(text);
 		Notifier.success('Copied to clipboard');
 	}
-	import Notifier from '$lib/utils/notifier';
-	import { findHighlightedRow, openXactDetails } from '$lib/utils/unifiedXacts';
+	import Notifier from '#lib/utils/notifier';
+	import { findHighlightedRow, openXactDetails } from '#lib/utils/unifiedXacts';
 
 	const highlightRow = $derived(
 		findHighlightedRow(page.data.unifiedRows, page.url.searchParams)

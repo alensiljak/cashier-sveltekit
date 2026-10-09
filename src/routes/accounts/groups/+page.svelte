@@ -1,12 +1,12 @@
 <script lang="ts">
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import AccountGroupCard from '$lib/components/AccountGroupCard.svelte';
-	import { defaultAccountGroups, SettingKeys, settings, type AccountGroup } from '$lib/settings';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import AccountGroupCard from '#lib/components/AccountGroupCard.svelte';
+	import { defaultAccountGroups, SettingKeys, settings, type AccountGroup } from '#lib/settings';
 	import { onMount } from 'svelte';
-	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
+	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
 	import { ArrowUpDownIcon, CirclePlusIcon } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
-	import HelpButton from '$lib/help/HelpButton.svelte';
+	import HelpButton from '#lib/help/HelpButton.svelte';
 
 	let groups: AccountGroup[] = $state([]);
 	let isAddGroupModalOpen = $state(false);

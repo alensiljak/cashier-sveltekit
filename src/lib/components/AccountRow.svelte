@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { Account } from '$lib/data/model';
-	import { getBarWidth } from '$lib/utils/barWidthCalculator';
+	import { Account } from '#lib/data/model';
+	import { getBarWidth } from '#lib/utils/barWidthCalculator';
 	import MultiCurrencyBalance from './MultiCurrencyBalance.svelte';
 
 	type Props = {

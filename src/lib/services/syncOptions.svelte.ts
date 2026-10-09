@@ -2,7 +2,7 @@
 	Which backup/sync options the user has enabled on this device.
 	Drives the menu entries and the Backup & Sync card in Settings.
 */
-import { DeviceSettingKeys, SettingKeys, deviceSettings, settings } from '$lib/settings';
+import { DeviceSettingKeys, SettingKeys, deviceSettings, settings } from '#lib/settings';
 
 export type SyncOption = 'webdav' | 's3' | 'peer';
 

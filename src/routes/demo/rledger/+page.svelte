@@ -1,29 +1,29 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import Toolbar from "$lib/components/Toolbar.svelte";
-	import AccordionSection from '$lib/components/AccordionSection.svelte';
+	import Toolbar from "#lib/components/Toolbar.svelte";
+	import AccordionSection from '#lib/components/AccordionSection.svelte';
 	import {
 		ensureInitialized,
 		createParsedLedger,
 		format as formatSource,
 		getAccountsFromTransactions,
 		version as getWasmVersion
-	} from '$lib/services/rustledger';
+	} from '#lib/services/rustledger';
 	import type { BeancountError, DirectiveJson as Directive, ParsedLedger } from '@rustledger/wasm';
-	import { DirectiveFormatter } from '$lib/rledger/directiveFormatter';
-	import { Account } from '$lib/data/model';
-	import rustledger from '$lib/services/rustledger';
+	import { DirectiveFormatter } from '#lib/rledger/directiveFormatter';
+	import { Account } from '#lib/data/model';
+	import rustledger from '#lib/services/rustledger';
 	import {
 		findLastTransactionDirective,
 		extractPayees,
 		createDemoSource
-	} from '$lib/rledger/rledgerPageService';
+	} from '#lib/rledger/rledgerPageService';
 	import {
 		mapDirectiveSpans,
 		replaceDirectiveBySpan,
 		findSpanForDirective,
 		type DirectiveSpan
-	} from '$lib/rledger/sourceEditor';
+	} from '#lib/rledger/sourceEditor';
 
 	import SourceViewer from './SourceViewer.svelte';
 	import ValidationResults from './ValidationResults.svelte';

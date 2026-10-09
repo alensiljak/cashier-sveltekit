@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { afterNavigate, goto } from '$app/navigation';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import { xact } from '$lib/data/mainStore';
-	import Notifier from '$lib/utils/notifier';
-	import { parseXact } from '$lib/utils/transactionParser';
-	import { getXactStore } from '$lib/storage/xactStoreRegistry';
-	import { locateXactsInSource } from '$lib/utils/xactLocator';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import { xact } from '#lib/data/mainStore';
+	import Notifier from '#lib/utils/notifier';
+	import { parseXact } from '#lib/utils/transactionParser';
+	import { getXactStore } from '#lib/storage/xactStoreRegistry';
+	import { locateXactsInSource } from '#lib/utils/xactLocator';
 	import { DatabaseIcon, ImportIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 

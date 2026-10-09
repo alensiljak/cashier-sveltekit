@@ -7,18 +7,18 @@ import { get } from 'svelte/store';
 
 const { gotoMock, queryMock } = vi.hoisted(() => ({ gotoMock: vi.fn(), queryMock: vi.fn() }));
 vi.mock('$app/navigation', () => ({ goto: gotoMock }));
-vi.mock('$lib/services/ledgerWorkerClient', () => ({ default: { query: queryMock } }));
-vi.mock('$lib/utils/notifier', () => ({ default: { error: vi.fn(), warning: vi.fn() } }));
+vi.mock('#lib/services/ledgerWorkerClient', () => ({ default: { query: queryMock } }));
+vi.mock('#lib/utils/notifier', () => ({ default: { error: vi.fn(), warning: vi.fn() } }));
 
-import Notifier from '$lib/utils/notifier';
-import { xact, xactId } from '$lib/data/mainStore';
+import Notifier from '#lib/utils/notifier';
+import { xact, xactId } from '#lib/data/mainStore';
 import {
 	buildHighlightParams,
 	findHighlightedRow,
 	mergeUnifiedRows,
 	openXactDetails,
 	type UnifiedXact
-} from '$lib/utils/unifiedXacts';
+} from '#lib/utils/unifiedXacts';
 import { makeXact } from '../helpers/factories';
 
 const row = (overrides: Partial<UnifiedXact> = {}): UnifiedXact => ({

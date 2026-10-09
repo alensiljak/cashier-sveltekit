@@ -1,6 +1,6 @@
-import type { Posting } from '$lib/data/model';
-import { listScx, saveScx } from '$lib/services/scxService';
-import fullLedgerService from '$lib/services/ledgerWorkerClient';
+import type { Posting } from '#lib/data/model';
+import { listScx, saveScx } from '#lib/services/scxService';
+import fullLedgerService from '#lib/services/ledgerWorkerClient';
 
 /**
  * For every scheduled transaction marked as repayment=true, queries the current

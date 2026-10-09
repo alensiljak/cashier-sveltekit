@@ -10,7 +10,7 @@
 	outcome from the project doc's Future section doesn't exist yet.
 	See doc/projects/2026-07-02_beancount-peer-sync.md.
 */
-import type { PeerSyncBaseline } from '$lib/data/model';
+import type { PeerSyncBaseline } from '#lib/data/model';
 import type { SyncEntry } from './SyncSource';
 
 export type SyncStatus = 'unchanged' | 'local-newer' | 'remote-newer' | 'conflict';

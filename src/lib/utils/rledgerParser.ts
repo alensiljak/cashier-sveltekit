@@ -1,9 +1,9 @@
 /**
  * Parses Rust Ledger output
  */
-//import { Account } from '$lib/data/model';
-import { Account, Money } from '$lib/data/model';
-import type { CurrentValuesDict } from '$lib/data/viewModels';
+//import { Account } from '#lib/data/model';
+import { Account, Money } from '#lib/data/model';
+import type { CurrentValuesDict } from '#lib/data/viewModels';
 
 function parseBalanceSheetRow(record: Record<string, string>): Account {
 	const account = new Account('');

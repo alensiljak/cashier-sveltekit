@@ -5,8 +5,8 @@
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
 	import {
 		RefreshCcwIcon,
 		FolderOpenIcon,
@@ -16,14 +16,14 @@
 		XIcon,
 		TriangleAlertIcon
 	} from '@lucide/svelte';
-	import Notifier from '$lib/utils/notifier';
-	import { settings, SettingKeys } from '$lib/settings';
-	import Fab from '$lib/components/FAB.svelte';
+	import Notifier from '#lib/utils/notifier';
+	import { settings, SettingKeys } from '#lib/settings';
+	import Fab from '#lib/components/FAB.svelte';
 	import {
 		loadPersistedHandle,
 		persistHandle,
 		requestReadPermission
-	} from '$lib/utils/fsHandleStore';
+	} from '#lib/utils/fsHandleStore';
 
 	Notifier.init();
 

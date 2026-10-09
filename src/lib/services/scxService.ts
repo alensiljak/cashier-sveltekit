@@ -3,9 +3,9 @@
  * layer goes through here. Backed by the CRDT store; the first access on a
  * device creates it.
  */
-import type { ScheduledTransaction, ScxId } from '$lib/data/model';
-import type { CrdtScxStore } from '$lib/storage/crdtScxStore';
-import { getScxStore } from '$lib/storage/scxStoreRegistry';
+import type { ScheduledTransaction, ScxId } from '#lib/data/model';
+import type { CrdtScxStore } from '#lib/storage/crdtScxStore';
+import { getScxStore } from '#lib/storage/scxStoreRegistry';
 
 /** Creates the store on this device if it does not exist yet. */
 async function ensureScxStoreExists(scxStore: CrdtScxStore): Promise<void> {

@@ -1,4 +1,4 @@
-import appService from '$lib/services/appService';
+import appService from '#lib/services/appService';
 import {
 	computeCommodityGainLoss,
 	computeCommodityYield,

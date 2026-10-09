@@ -1,4 +1,4 @@
-import { Posting, Xact } from '$lib/data/model';
+import { Posting, Xact } from '#lib/data/model';
 import type { XactId } from './crdtXactStore';
 
 /** Bump when the record shape changes; readers must refuse newer versions. */
@@ -48,7 +48,7 @@ export function fromRecord(record: XactRecord): Xact {
 		);
 		// Imported lazily: the toaster touches `document` on load, which is absent in workers/tests.
 		if (typeof document !== 'undefined') {
-			void import('$lib/utils/notifier').then(({ default: notifier }) =>
+			void import('#lib/utils/notifier').then(({ default: notifier }) =>
 				notifier.warning(
 					'Some transactions were saved by a newer version of the app and may be incomplete. Please update the app.'
 				)

@@ -2,8 +2,8 @@
     appService tests
 */
 
-import { Posting, Xact } from '$lib/data/model';
-import appService from '$lib/services/appService';
+import { Posting, Xact } from '#lib/data/model';
+import appService from '#lib/services/appService';
 import { assert, test } from 'vitest';
 
 test('duplicating xact', () => {

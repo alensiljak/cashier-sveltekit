@@ -1,7 +1,7 @@
 /*
     Scheduled Transactions list
 */
-import { listScx } from '$lib/services/scxService';
+import { listScx } from '#lib/services/scxService';
 import type { PageLoad } from './$types';
 
 export const load: PageLoad = async () => {

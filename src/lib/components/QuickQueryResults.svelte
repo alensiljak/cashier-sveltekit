@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { CopyIcon } from '@lucide/svelte';
-	import { formatCellValue as formatCell, formatNumber } from '$lib/utils/queryValueFormatter';
+	import { formatCellValue as formatCell, formatNumber } from '#lib/utils/queryValueFormatter';
 
 	interface QueryError {
 		message: string

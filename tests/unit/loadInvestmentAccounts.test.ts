@@ -5,11 +5,11 @@
 */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('$lib/services/ledgerWorkerClient', () => ({ default: { query: vi.fn() } }));
+vi.mock('#lib/services/ledgerWorkerClient', () => ({ default: { query: vi.fn() } }));
 
-import { loadInvestmentAccounts } from '$lib/services/accountsService';
-import { DefaultCurrencyStore } from '$lib/data/mainStore';
-import { SettingKeys, settings } from '$lib/settings';
+import { loadInvestmentAccounts } from '#lib/services/accountsService';
+import { DefaultCurrencyStore } from '#lib/data/mainStore';
+import { SettingKeys, settings } from '#lib/settings';
 
 const positions = (...units: [string, string][]) => ({
 	positions: units.map(([number, currency]) => ({ units: { number, currency } }))

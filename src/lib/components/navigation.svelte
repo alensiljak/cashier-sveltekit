@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { desktopNavVisible, drawerState } from '$lib/data/mainStore';
+	import { desktopNavVisible, drawerState } from '#lib/data/mainStore';
 	import { page } from '$app/state';
-	import { peerConnection } from '$lib/sync/peerConnection.svelte';
-	import SectionTitle from '$lib/components/SectionTitle.svelte';
-	import { syncOptions } from '$lib/services/syncOptions.svelte';
+	import { peerConnection } from '#lib/sync/peerConnection.svelte';
+	import SectionTitle from '#lib/components/SectionTitle.svelte';
+	import { syncOptions } from '#lib/services/syncOptions.svelte';
 	import { onMount } from 'svelte';
 
 	onMount(() => {

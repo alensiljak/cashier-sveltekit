@@ -10,15 +10,15 @@
  */
 
 import { writable, derived, get, type Readable } from 'svelte/store';
-import { Account } from '$lib/data/model';
-import { settings, deviceSettings, DeviceSettingKeys } from '$lib/settings';
+import { Account } from '#lib/data/model';
+import { settings, deviceSettings, DeviceSettingKeys } from '#lib/settings';
 import type {
 	WorkerRequestPayload,
 	WorkerResponse,
 	WorkerResponsePayload
-} from '$lib/workers/ledger.worker';
-import { DEVICE_XACTS_FILE, USER_BOOK_FILENAME } from '$lib/constants';
-import { getXactStore } from '$lib/storage/xactStoreRegistry';
+} from '#lib/workers/ledger.worker';
+import { DEVICE_XACTS_FILE, USER_BOOK_FILENAME } from '#lib/constants';
+import { getXactStore } from '#lib/storage/xactStoreRegistry';
 
 // Extract the response shape for a given `type` discriminant.
 type ResponseOf<T extends WorkerResponsePayload['type']> = Extract<
@@ -54,7 +54,7 @@ class LedgerWorkerClient {
 		// Spawn the worker eagerly so the OS can schedule it and the WASM binary
 		// download begins immediately, rather than waiting for the first page that
 		// needs ledger data.
-		this._worker = new Worker(new URL('$lib/workers/ledger.worker.ts', import.meta.url), {
+		this._worker = new Worker(new URL('../workers/ledger.worker.ts', import.meta.url), {
 			type: 'module'
 		});
 		this._worker.onmessage = (e: MessageEvent<WorkerResponse>) => {

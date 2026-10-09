@@ -1,4 +1,4 @@
-import type { Xact } from '$lib/data/model';
+import type { Xact } from '#lib/data/model';
 
 /**
  * A bank-statement importer: turns the text of an exported file into

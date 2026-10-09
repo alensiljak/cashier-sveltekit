@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import { getHelpHtml } from '$lib/help/helpContent';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import { getHelpHtml } from '#lib/help/helpContent';
 	import { ArrowLeftIcon } from '@lucide/svelte';
 
 	const topic = page.params.topic ?? '';

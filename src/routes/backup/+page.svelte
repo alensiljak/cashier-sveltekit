@@ -1,8 +1,8 @@
 <script lang="ts">
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import HelpButton from '$lib/help/HelpButton.svelte';
-	import * as BackupService from '$lib/services/backupService';
-	import Notifier from '$lib/utils/notifier';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import HelpButton from '#lib/help/HelpButton.svelte';
+	import * as BackupService from '#lib/services/backupService';
+	import Notifier from '#lib/utils/notifier';
 	import { FileDownIcon, Share2Icon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 

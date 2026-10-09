@@ -3,10 +3,10 @@
  * WebDAV folder, for the home-screen Sync card. The /backup/webdav page does the same with more
  * options and reporting.
  */
-import { settings, SettingKeys } from '$lib/settings';
-import { WebDavClient } from '$lib/utils/webdav';
-import { getXactStore } from '$lib/storage/xactStoreRegistry';
-import { getScxStore } from '$lib/storage/scxStoreRegistry';
+import { settings, SettingKeys } from '#lib/settings';
+import { WebDavClient } from '#lib/utils/webdav';
+import { getXactStore } from '#lib/storage/xactStoreRegistry';
+import { getScxStore } from '#lib/storage/scxStoreRegistry';
 import {
 	getDeviceId,
 	getMergeState,
@@ -14,8 +14,8 @@ import {
 	needsMerge,
 	setMergeState,
 	type DocKind
-} from '$lib/sync/ydocDevices';
-import { hasNewOps } from '$lib/sync/ydocCompare';
+} from '#lib/sync/ydocDevices';
+import { hasNewOps } from '#lib/sync/ydocCompare';
 import { uploadCrdtState, type WebDavSettings } from './webdavAutoBackupService';
 
 export async function loadWebDavClient(): Promise<WebDavClient | null> {

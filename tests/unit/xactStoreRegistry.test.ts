@@ -5,18 +5,18 @@
 */
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('$lib/services/webdavAutoBackupService', () => ({ scheduleBackup: vi.fn() }));
+vi.mock('#lib/services/webdavAutoBackupService', () => ({ scheduleBackup: vi.fn() }));
 
 async function load() {
 	vi.resetModules();
-	const registry = await import('$lib/storage/xactStoreRegistry');
+	const registry = await import('#lib/storage/xactStoreRegistry');
 	return { registry };
 }
 
 describe('getXactStore', () => {
 	it('returns the CRDT store', async () => {
 		const { registry } = await load();
-		const { CrdtXactStore } = await import('$lib/storage/crdtXactStore');
+		const { CrdtXactStore } = await import('#lib/storage/crdtXactStore');
 
 		expect(await registry.getXactStore()).toBeInstanceOf(CrdtXactStore);
 	});

@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import SearchableSelect from '$lib/components/SearchableSelect.svelte';
-	import { getCurrencies, convert, type ConversionResult } from '$lib/services/currencyConverter';
-	import fullLedgerService from '$lib/services/ledgerWorkerClient';
-	import { settings, SettingKeys } from '$lib/settings';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import SearchableSelect from '#lib/components/SearchableSelect.svelte';
+	import { getCurrencies, convert, type ConversionResult } from '#lib/services/currencyConverter';
+	import fullLedgerService from '#lib/services/ledgerWorkerClient';
+	import { settings, SettingKeys } from '#lib/settings';
 	import { ArrowUpDownIcon, XIcon, CopyIcon } from '@lucide/svelte';
-	import HelpButton from '$lib/help/HelpButton.svelte';
+	import HelpButton from '#lib/help/HelpButton.svelte';
 
 	// Pre-seed from URL params: ?from=EUR&to=USD
 	const urlFrom = page.url.searchParams.get('from') ?? '';

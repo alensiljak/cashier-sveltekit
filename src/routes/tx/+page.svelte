@@ -1,23 +1,23 @@
 <script lang="ts">
-	import Fab from '$lib/components/FAB.svelte';
-	import Toolbar from '$lib/components/Toolbar.svelte';
+	import Fab from '#lib/components/FAB.svelte';
+	import Toolbar from '#lib/components/Toolbar.svelte';
 	import { Check, ShieldCheck, TriangleAlertIcon } from '@lucide/svelte';
-	import { xact, xactId } from '$lib/data/mainStore';
+	import { xact, xactId } from '#lib/data/mainStore';
 	import { get } from 'svelte/store';
-	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
+	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
 	import { afterNavigate, goto } from '$app/navigation';
-	import Notifier from '$lib/utils/notifier';
-	import { createParsedLedger, ensureInitialized } from '$lib/services/rustledger';
-	import { getXactStore } from '$lib/storage/xactStoreRegistry';
-	import appService from '$lib/services/appService';
-	import fullLedgerService from '$lib/services/ledgerWorkerClient';
-	import { reloadLedgerFromOpfs } from '$lib/services/ledgerReload';
-	import { xactToBeancountText } from '$lib/utils/xactUtils';
-	import TransactionEditor from '$lib/components/XactEditor.svelte';
-	import { Xact } from '$lib/data/model';
-	import type { StoredXact } from '$lib/storage/crdtXactStore';
-	import HelpButton from '$lib/help/HelpButton.svelte';
-	import type { ValidationIssue } from '$lib/data/validation';
+	import Notifier from '#lib/utils/notifier';
+	import { createParsedLedger, ensureInitialized } from '#lib/services/rustledger';
+	import { getXactStore } from '#lib/storage/xactStoreRegistry';
+	import appService from '#lib/services/appService';
+	import fullLedgerService from '#lib/services/ledgerWorkerClient';
+	import { reloadLedgerFromOpfs } from '#lib/services/ledgerReload';
+	import { xactToBeancountText } from '#lib/utils/xactUtils';
+	import TransactionEditor from '#lib/components/XactEditor.svelte';
+	import { Xact } from '#lib/data/model';
+	import type { StoredXact } from '#lib/storage/crdtXactStore';
+	import HelpButton from '#lib/help/HelpButton.svelte';
+	import type { ValidationIssue } from '#lib/data/validation';
 
 	Notifier.init();
 

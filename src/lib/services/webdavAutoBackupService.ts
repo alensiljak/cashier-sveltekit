@@ -8,13 +8,13 @@
  * timestamp via the exported `lastBackupTime` store.
  */
 
-import { WebDavClient } from '$lib/utils/webdav';
-import { settings, deviceSettings, SettingKeys, DeviceSettingKeys } from '$lib/settings';
-import { getXactStore } from '$lib/storage/xactStoreRegistry';
-import { getScxStore } from '$lib/storage/scxStoreRegistry';
-import { getDeviceId, ydocFilename, type DocKind } from '$lib/sync/ydocDevices';
+import { WebDavClient } from '#lib/utils/webdav';
+import { settings, deviceSettings, SettingKeys, DeviceSettingKeys } from '#lib/settings';
+import { getXactStore } from '#lib/storage/xactStoreRegistry';
+import { getScxStore } from '#lib/storage/scxStoreRegistry';
+import { getDeviceId, ydocFilename, type DocKind } from '#lib/sync/ydocDevices';
 import { writable } from 'svelte/store';
-import Notifier from '$lib/utils/notifier';
+import Notifier from '#lib/utils/notifier';
 
 /** Shape of the webdavSettings user setting. */
 export interface WebDavSettings {
@@ -59,16 +59,16 @@ async function doS3Backup(kinds: DocKind[]): Promise<void> {
 	try {
 		if (!(await deviceSettings.get<boolean>(DeviceSettingKeys.s3AutoBackup))) return;
 
-		const { isSyncOptionEnabled } = await import('$lib/services/syncOptions.svelte');
+		const { isSyncOptionEnabled } = await import('#lib/services/syncOptions.svelte');
 		if (!(await isSyncOptionEnabled('s3'))) return;
 
-		const { loadS3Config, isS3Configured } = await import('$lib/services/s3Config');
+		const { loadS3Config, isS3Configured } = await import('#lib/services/s3Config');
 		const cfg = await loadS3Config();
 		if (!isS3Configured(cfg) || !cfg.passphrase) return;
 
 		if (!navigator.onLine) return;
 
-		const { backupCrdtStores } = await import('$lib/services/s3Sync');
+		const { backupCrdtStores } = await import('#lib/services/s3Sync');
 		const failed = await backupCrdtStores(cfg, kinds);
 		if (failed.length) throw new Error(failed.map((l) => l.message).join('; '));
 		lastBackupTime.set(new Date());
@@ -138,7 +138,7 @@ async function doWebDavBackup(kinds: DocKind[]): Promise<void> {
 	if (!enabled) return;
 
 	// The option must also be switched on in the sync settings.
-	const { isSyncOptionEnabled } = await import('$lib/services/syncOptions.svelte');
+	const { isSyncOptionEnabled } = await import('#lib/services/syncOptions.svelte');
 	if (!(await isSyncOptionEnabled('webdav'))) return;
 
 	const cfg = await settings.get<WebDavSettings>(SettingKeys.webdavSettings);

@@ -1,14 +1,14 @@
 <script lang="ts">
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import HelpButton from '$lib/help/HelpButton.svelte';
-	import OpfsFilePicker from '$lib/components/OpfsFilePicker.svelte';
-	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import HelpButton from '#lib/help/HelpButton.svelte';
+	import OpfsFilePicker from '#lib/components/OpfsFilePicker.svelte';
+	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
 	import { FilePlusIcon, UploadIcon, Trash2Icon } from '@lucide/svelte';
 	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
-	import * as OpfsLib from '$lib/utils/opfslib.js';
-	import type { FileTreeEntry } from '$lib/utils/opfslib.js';
-	import Notifier from '$lib/utils/notifier';
+	import * as OpfsLib from '#lib/utils/opfslib.js';
+	import type { FileTreeEntry } from '#lib/utils/opfslib.js';
+	import Notifier from '#lib/utils/notifier';
 
 	Notifier.init();
 

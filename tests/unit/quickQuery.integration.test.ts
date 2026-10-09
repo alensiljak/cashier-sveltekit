@@ -4,9 +4,9 @@
     text; these prove the queries are valid and return sensible data.
 */
 import { beforeAll, describe, expect, it } from 'vitest';
-import { ensureInitialized, queryMultiFile } from '$lib/services/rustledger';
-import { buildQuery } from '$lib/services/quickQueryBuilder';
-import { parseQqrlCommand } from '$lib/services/quickQueryCliParser';
+import { ensureInitialized, queryMultiFile } from '#lib/services/rustledger';
+import { buildQuery } from '#lib/services/quickQueryBuilder';
+import { parseQqrlCommand } from '#lib/services/quickQueryCliParser';
 import { demoFixtures } from '../helpers/demoFixtures';
 
 function run(commandLine: string) {

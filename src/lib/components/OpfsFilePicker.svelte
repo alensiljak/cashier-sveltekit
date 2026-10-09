@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { FolderIcon, FolderOpenIcon, FileIcon, TrashIcon, RefreshCcwIcon } from '@lucide/svelte';
-	import * as OpfsLib from '$lib/utils/opfslib.js';
-	import type { FileTreeEntry } from '$lib/utils/opfslib.js';
-	import { getManifest } from '$lib/utils/importManifest';
+	import * as OpfsLib from '#lib/utils/opfslib.js';
+	import type { FileTreeEntry } from '#lib/utils/opfslib.js';
+	import { getManifest } from '#lib/utils/importManifest';
 
 	type Props = {
 		selectedFile?: string | null;

@@ -1,24 +1,24 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { tick } from 'svelte';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
-	import AccordionSection from '$lib/components/AccordionSection.svelte';
-	import JournalXactRow from '$lib/components/JournalXactRow.svelte';
-	import Fab from '$lib/components/FAB.svelte';
-	import { Xact, Posting } from '$lib/data/model';
-	import { xact as xactStore, xactId } from '$lib/data/mainStore';
-	import fullLedgerService from '$lib/services/ledgerWorkerClient';
-	import { parseEntitySearchTerms } from '$lib/utils/entitySearch';
-	import { buildLooseTransactionConditions } from '$lib/services/entitySearchService';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
+	import AccordionSection from '#lib/components/AccordionSection.svelte';
+	import JournalXactRow from '#lib/components/JournalXactRow.svelte';
+	import Fab from '#lib/components/FAB.svelte';
+	import { Xact, Posting } from '#lib/data/model';
+	import { xact as xactStore, xactId } from '#lib/data/mainStore';
+	import fullLedgerService from '#lib/services/ledgerWorkerClient';
+	import { parseEntitySearchTerms } from '#lib/utils/entitySearch';
+	import { buildLooseTransactionConditions } from '#lib/services/entitySearchService';
 	import {
 		type ParseResult,
 		parseTranscript,
 		buildTransaction,
 		refineFromMatches
-	} from '$lib/utils/nlpEntry';
+	} from '#lib/utils/nlpEntry';
 	import { CodeIcon, FilePlusIcon, TriangleAlertIcon } from '@lucide/svelte';
-	import HelpButton from '$lib/help/HelpButton.svelte';
+	import HelpButton from '#lib/help/HelpButton.svelte';
 
 	function focusOnMount(el: HTMLElement) {
 		el.focus();

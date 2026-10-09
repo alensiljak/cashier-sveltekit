@@ -1,6 +1,6 @@
-import { SettingKeys, settings } from '$lib/settings.js';
-import * as OpfsLib from '$lib/utils/opfslib.js';
-import fullLedgerService from '$lib/services/ledgerWorkerClient.js';
+import { SettingKeys, settings } from '#lib/settings.js';
+import * as OpfsLib from '#lib/utils/opfslib.js';
+import fullLedgerService from '#lib/services/ledgerWorkerClient.js';
 
 export async function load() {
 	const path = (await settings.get<string>(SettingKeys.assetAllocationDefinition)) ?? '';

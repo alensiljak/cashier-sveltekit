@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { ChartLineIcon, Settings2Icon } from '@lucide/svelte';
 	import CashierCardTemplate from './CashierCardTemplate.svelte';
-	import { Constants, SettingKeys, settings } from '$lib/settings';
+	import { Constants, SettingKeys, settings } from '#lib/settings';
 	import { onMount } from 'svelte';
 	import DailyForecastChart from './DailyForecastChart.svelte';
 

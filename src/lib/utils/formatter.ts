@@ -1,4 +1,4 @@
-import type { Money, Posting, Xact } from '$lib/data/model';
+import type { Money, Posting, Xact } from '#lib/data/model';
 import moment from 'moment';
 
 const RED = 'text-red-400';

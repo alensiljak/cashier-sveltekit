@@ -3,7 +3,7 @@
  * Provides Beancount parsing functionality using @rustledger/wasm
  */
 
-import { Account } from '$lib/data/model';
+import { Account } from '#lib/data/model';
 import type {
 	ParsedLedger,
 	ParseResult,

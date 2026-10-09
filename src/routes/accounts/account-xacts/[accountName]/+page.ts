@@ -2,10 +2,10 @@
     Account Transactions
 */
 
-import { Account, Money } from '$lib/data/model.js';
-import { getXactStore } from '$lib/storage/xactStoreRegistry';
-import fullLedgerService from '$lib/services/ledgerWorkerClient';
-import { mergeUnifiedRows, type UnifiedXact } from '$lib/utils/unifiedXacts';
+import { Account, Money } from '#lib/data/model.js';
+import { getXactStore } from '#lib/storage/xactStoreRegistry';
+import fullLedgerService from '#lib/services/ledgerWorkerClient';
+import { mergeUnifiedRows, type UnifiedXact } from '#lib/utils/unifiedXacts';
 import type { MetaValueJson } from '@rustledger/wasm';
 import type { PageLoad } from './$types';
 

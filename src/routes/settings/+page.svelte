@@ -2,20 +2,20 @@
 	import { onMount } from 'svelte';
 	import { beforeNavigate } from '$app/navigation';
 	import { get } from 'svelte/store';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import { SettingKeys, settings, DeviceSettingKeys, deviceSettings } from '$lib/settings';
-	import { DATE_FORMAT_DEFAULT, SHORT_DATE_FORMAT_DEFAULT } from '$lib/constants';
-	import Notifier from '$lib/utils/notifier';
-	import appService from '$lib/services/appService';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import { SettingKeys, settings, DeviceSettingKeys, deviceSettings } from '#lib/settings';
+	import { DATE_FORMAT_DEFAULT, SHORT_DATE_FORMAT_DEFAULT } from '#lib/constants';
+	import Notifier from '#lib/utils/notifier';
+	import appService from '#lib/services/appService';
 	import { goto, replaceState } from '$app/navigation';
 	import {
 		DateFormatStore,
 		DefaultCurrencyStore,
 		PendingSettingsStore,
 		ShortDateFormatStore
-	} from '$lib/data/mainStore.js';
-	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
-	import CashierCardTemplate from '$lib/components/CashierCardTemplate.svelte';
+	} from '#lib/data/mainStore.js';
+	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
+	import CashierCardTemplate from '#lib/components/CashierCardTemplate.svelte';
 	import {
 		BellIcon,
 		BookOpenIcon,
@@ -30,10 +30,10 @@
 		SlidersHorizontalIcon,
 		SmartphoneIcon
 	} from '@lucide/svelte';
-	import { syncOptions, type SyncOption } from '$lib/services/syncOptions.svelte';
-	import Fab from '$lib/components/FAB.svelte';
+	import { syncOptions, type SyncOption } from '#lib/services/syncOptions.svelte';
+	import Fab from '#lib/components/FAB.svelte';
 	import { page } from '$app/state';
-	import fullLedgerService from '$lib/services/ledgerWorkerClient';
+	import fullLedgerService from '#lib/services/ledgerWorkerClient';
 	import {
 		AA_DEFINITION_FILE,
 		DEMO_AA_FILE,
@@ -41,17 +41,17 @@
 		DEMO_DIR,
 		DEMO_ROOT_INVESTMENT_ACCOUNT,
 		USER_BOOK_FILENAME
-	} from '$lib/constants';
-	import { saveFile, fileExists } from '$lib/utils/opfslib';
-	import HelpButton from '$lib/help/HelpButton.svelte';
-	import demoDataService from '$lib/services/demoDataService';
-	import { getXactStore } from '$lib/storage/xactStoreRegistry';
-	import { getScxStore } from '$lib/storage/scxStoreRegistry';
+	} from '#lib/constants';
+	import { saveFile, fileExists } from '#lib/utils/opfslib';
+	import HelpButton from '#lib/help/HelpButton.svelte';
+	import demoDataService from '#lib/services/demoDataService';
+	import { getXactStore } from '#lib/storage/xactStoreRegistry';
+	import { getScxStore } from '#lib/storage/scxStoreRegistry';
 	import {
 		NOTIFICATION_TIME_DEFAULT,
 		scheduleNotificationCheck
-	} from '$lib/services/notificationService';
-	import { requestNotificationPermission } from '$lib/utils/webNotification';
+	} from '#lib/services/notificationService';
+	import { requestNotificationPermission } from '#lib/utils/webNotification';
 
 	Notifier.init();
 

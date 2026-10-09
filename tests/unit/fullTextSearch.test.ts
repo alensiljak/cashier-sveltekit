@@ -8,7 +8,7 @@ import {
 	parseSearchTerms,
 	searchInFiles,
 	type SearchFile
-} from '$lib/utils/fullTextSearch';
+} from '#lib/utils/fullTextSearch';
 
 const file = (path: string, ...lines: string[]): SearchFile => ({ path, lines });
 

@@ -5,7 +5,7 @@
     is the realistic input.
 */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { Account } from '$lib/data/model';
+import { Account } from '#lib/data/model';
 
 const mocks = vi.hoisted(() => ({
 	getDefaultCurrency: vi.fn(async () => 'EUR'),
@@ -13,23 +13,23 @@ const mocks = vi.hoisted(() => ({
 	query: vi.fn(),
 	loadInvestmentAccounts: vi.fn(async (): Promise<unknown[]> => [])
 }));
-vi.mock('$lib/services/appService', () => ({
+vi.mock('#lib/services/appService', () => ({
 	default: { getDefaultCurrency: mocks.getDefaultCurrency }
 }));
-vi.mock('$lib/services/ledgerWorkerClient', () => ({
+vi.mock('#lib/services/ledgerWorkerClient', () => ({
 	default: { ensureLoaded: mocks.ensureLoaded, query: mocks.query }
 }));
-vi.mock('$lib/services/accountsService', async (importOriginal) => ({
-	...(await importOriginal<typeof import('$lib/services/accountsService')>()),
+vi.mock('#lib/services/accountsService', async (importOriginal) => ({
+	...(await importOriginal<typeof import('#lib/services/accountsService')>()),
 	loadInvestmentAccounts: mocks.loadInvestmentAccounts
 }));
-vi.mock('$lib/utils/notifier', () => ({ default: { warning: vi.fn(), error: vi.fn() } }));
+vi.mock('#lib/utils/notifier', () => ({ default: { warning: vi.fn(), error: vi.fn() } }));
 
-import Notifier from '$lib/utils/notifier';
-import { AssetAllocationEngine } from '$lib/assetAllocation/AssetAllocation';
-import { serializeToToml } from '$lib/assetAllocation/assetAllocationSerializer';
-import { validate } from '$lib/assetAllocation/assetAllocationValidation';
-import { UserError, ValidationError } from '$lib/utils/errors';
+import Notifier from '#lib/utils/notifier';
+import { AssetAllocationEngine } from '#lib/assetAllocation/AssetAllocation';
+import { serializeToToml } from '#lib/assetAllocation/assetAllocationSerializer';
+import { validate } from '#lib/assetAllocation/assetAllocationValidation';
+import { UserError, ValidationError } from '#lib/utils/errors';
 import { demoFixtures } from '../helpers/demoFixtures';
 
 const demoToml = demoFixtures['asset-allocation.toml'];

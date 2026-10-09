@@ -35,9 +35,9 @@
  * (single group) are convenience wrappers for callers that don't need to stream.
  */
 
-import type { Money } from '$lib/data/model';
-import * as BeancountParser from '$lib/utils/beancountParser';
-import type { CashFlow } from '$lib/utils/xirr';
+import type { Money } from '#lib/data/model';
+import * as BeancountParser from '#lib/utils/beancountParser';
+import type { CashFlow } from '#lib/utils/xirr';
 import type { InvestmentGroup } from './investmentGroups';
 
 export type QueryFn = (

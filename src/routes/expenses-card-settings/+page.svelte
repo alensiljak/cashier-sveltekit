@@ -1,8 +1,8 @@
 <script lang="ts">
-	import Fab from '$lib/components/FAB.svelte';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import { DEFAULT_EXPENSES_CARD_ROLLING_DAYS } from '$lib/constants';
-	import { SettingKeys, settings } from '$lib/settings';
+	import Fab from '#lib/components/FAB.svelte';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import { DEFAULT_EXPENSES_CARD_ROLLING_DAYS } from '#lib/constants';
+	import { SettingKeys, settings } from '#lib/settings';
 	import { CheckIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 

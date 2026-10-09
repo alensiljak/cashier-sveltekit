@@ -1,6 +1,6 @@
 import { monotonicFactory } from 'ulid';
-import { scheduleBackup } from '$lib/services/webdavAutoBackupService';
-import type { ScheduledTransaction } from '$lib/data/model';
+import { scheduleBackup } from '#lib/services/webdavAutoBackupService';
+import type { ScheduledTransaction } from '#lib/data/model';
 import { CrdtDocStore } from './crdtDocStore';
 import {
 	fromRecord,

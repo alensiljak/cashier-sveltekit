@@ -7,12 +7,12 @@
  * Use as:
  * import * as AccountService from 'accountService'
  */
-import { Account, Money } from '$lib/data/model';
-// import db from '$lib/data/db';
-import { SettingKeys, settings } from '$lib/settings';
+import { Account, Money } from '#lib/data/model';
+// import db from '#lib/data/db';
+import { SettingKeys, settings } from '#lib/settings';
 import appService from './appService';
 import fullLedgerService from './ledgerWorkerClient';
-import { addDecimalStrings } from '$lib/utils/numberUtils';
+import { addDecimalStrings } from '#lib/utils/numberUtils';
 
 type QueryFn = (bql: string) => Promise<{ columns: string[]; rows: any[]; errors: any[] }>;
 

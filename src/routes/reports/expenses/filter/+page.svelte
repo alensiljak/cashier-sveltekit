@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { Trash2 } from '@lucide/svelte';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
-	import SearchToolbar from '$lib/components/SearchToolbar.svelte';
-	import Fab from '$lib/components/FAB.svelte';
-	import fullLedgerService from '$lib/services/ledgerWorkerClient';
-	import { SettingKeys, settings } from '$lib/settings';
-	import { ListSearch } from '$lib/utils/ListSearch';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
+	import SearchToolbar from '#lib/components/SearchToolbar.svelte';
+	import Fab from '#lib/components/FAB.svelte';
+	import fullLedgerService from '#lib/services/ledgerWorkerClient';
+	import { SettingKeys, settings } from '#lib/settings';
+	import { ListSearch } from '#lib/utils/ListSearch';
 
 	let allAccounts: string[] = $state([]);
 	let hiddenAccounts: Set<string> = $state(new Set());

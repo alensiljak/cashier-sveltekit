@@ -3,16 +3,16 @@
 	import { goto, replaceState } from '$app/navigation';
 	import { page } from '$app/state';
 	import { ChartBar, ChartPie, Funnel, FunnelX, ListFilter } from '@lucide/svelte';
-	import Toolbar from '$lib/components/Toolbar.svelte';
+	import Toolbar from '#lib/components/Toolbar.svelte';
 	import TimeRangeSelector, {
 		type TimeRange,
 		type TimeRangeState
-	} from '$lib/components/TimeRangeSelector.svelte';
-	import ExpensesBarChart from '$lib/components/ExpensesBarChart.svelte';
-	import ExpensesDonutChart from '$lib/components/ExpensesDonutChart.svelte';
-	import fullLedgerService from '$lib/services/ledgerWorkerClient';
-	import { SettingKeys, settings } from '$lib/settings';
-	import HelpButton from '$lib/help/HelpButton.svelte';
+	} from '#lib/components/TimeRangeSelector.svelte';
+	import ExpensesBarChart from '#lib/components/ExpensesBarChart.svelte';
+	import ExpensesDonutChart from '#lib/components/ExpensesDonutChart.svelte';
+	import fullLedgerService from '#lib/services/ledgerWorkerClient';
+	import { SettingKeys, settings } from '#lib/settings';
+	import HelpButton from '#lib/help/HelpButton.svelte';
 
 	type ChartType = 'bar' | 'donut';
 	let chartType = $state<ChartType>('bar');

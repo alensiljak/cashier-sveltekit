@@ -5,8 +5,8 @@
  * "modified" indicator is never left out of sync after a manual reload.
  */
 
-import fullLedgerService from '$lib/services/ledgerWorkerClient';
-import { saveOpfsMetaSnapshot } from '$lib/services/opfsMetaCheck';
+import fullLedgerService from '#lib/services/ledgerWorkerClient';
+import { saveOpfsMetaSnapshot } from '#lib/services/opfsMetaCheck';
 
 /** Free and re-parse the ledger from OPFS, then rebase the staleness snapshot. */
 export async function reloadLedgerFromOpfs(): Promise<void> {

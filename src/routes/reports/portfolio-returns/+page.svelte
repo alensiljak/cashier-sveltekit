@@ -2,34 +2,34 @@
 	import { onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { get } from 'svelte/store';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import YearPeriodSelector from '$lib/components/YearPeriodSelector.svelte';
-	import { AssetAllocationEngine } from '$lib/assetAllocation/AssetAllocation';
-	import type { AssetClass } from '$lib/assetAllocation/AssetClass';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import YearPeriodSelector from '#lib/components/YearPeriodSelector.svelte';
+	import { AssetAllocationEngine } from '#lib/assetAllocation/AssetAllocation';
+	import type { AssetClass } from '#lib/assetAllocation/AssetClass';
 	import {
 		AssetAllocationStore,
 		AssetAllocationLoadedAtStore,
 		PortfolioReturnsCacheStore
-	} from '$lib/data/mainStore';
-	import * as AccountService from '$lib/services/accountsService';
-	import appService from '$lib/services/appService';
-	import fullLedgerService from '$lib/services/ledgerWorkerClient';
-	import * as OpfsLib from '$lib/utils/opfslib';
-	import { SettingKeys, settings } from '$lib/settings';
+	} from '#lib/data/mainStore';
+	import * as AccountService from '#lib/services/accountsService';
+	import appService from '#lib/services/appService';
+	import fullLedgerService from '#lib/services/ledgerWorkerClient';
+	import * as OpfsLib from '#lib/utils/opfslib';
+	import { SettingKeys, settings } from '#lib/settings';
 	import {
 		deriveInvestmentGroups,
 		type InvestmentGroup
-	} from '$lib/portfolioReturns/investmentGroups';
+	} from '#lib/portfolioReturns/investmentGroups';
 	import {
 		marketValuesForGroups,
 		transactionFlowsForGroups,
 		buildFullFlowSeries,
 		type QueryFn
-	} from '$lib/portfolioReturns/cashFlows';
-	import { xirr, XirrNoSolutionError, holdingPeriodDays, type CashFlow } from '$lib/utils/xirr';
-	import { formatAmount } from '$lib/utils/formatter';
+	} from '#lib/portfolioReturns/cashFlows';
+	import { xirr, XirrNoSolutionError, holdingPeriodDays, type CashFlow } from '#lib/utils/xirr';
+	import { formatAmount } from '#lib/utils/formatter';
 	import { CircleAlertIcon, RefreshCwIcon } from '@lucide/svelte';
-	import type { GroupRow } from '$lib/portfolioReturns/types';
+	import type { GroupRow } from '#lib/portfolioReturns/types';
 
 	interface TreeNode {
 		/** This node's own segment, e.g. "Aus" for "Allocation:Equity:Aus". */

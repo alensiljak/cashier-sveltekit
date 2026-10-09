@@ -1,20 +1,20 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { tick } from 'svelte';
-	import Fab from '$lib/components/FAB.svelte';
-	import JournalXactRow from '$lib/components/JournalXactRow.svelte';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
-	import { Xact } from '$lib/data/model';
-	import db from '$lib/data/db';
-	import { getDeviceId } from '$lib/sync/ydocDevices';
-	import { xact, xactId } from '$lib/data/mainStore';
-	import type { StoredXact, XactId } from '$lib/storage/crdtXactStore';
-	import { getXactStore, subscribeXactStore } from '$lib/storage/xactStoreRegistry';
-	import Notifier from '$lib/utils/notifier';
+	import Fab from '#lib/components/FAB.svelte';
+	import JournalXactRow from '#lib/components/JournalXactRow.svelte';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
+	import { Xact } from '#lib/data/model';
+	import db from '#lib/data/db';
+	import { getDeviceId } from '#lib/sync/ydocDevices';
+	import { xact, xactId } from '#lib/data/mainStore';
+	import type { StoredXact, XactId } from '#lib/storage/crdtXactStore';
+	import { getXactStore, subscribeXactStore } from '#lib/storage/xactStoreRegistry';
+	import Notifier from '#lib/utils/notifier';
 	import { FileDownIcon, ImportIcon, PlusIcon, TrashIcon } from '@lucide/svelte';
-	import HelpButton from '$lib/help/HelpButton.svelte';
-	import { reloadLedgerFromOpfs } from '$lib/services/ledgerReload';
+	import HelpButton from '#lib/help/HelpButton.svelte';
+	import { reloadLedgerFromOpfs } from '#lib/services/ledgerReload';
 
 	Notifier.init();
 

@@ -2,14 +2,14 @@
 	import { onMount } from 'svelte';
 	import { ChevronDown, ChevronRight, CoinsIcon } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
-	import SearchToolbar from '$lib/components/SearchToolbar.svelte';
-	import MultiCurrencyBalance from '$lib/components/MultiCurrencyBalance.svelte';
-	import fullLedgerService from '$lib/services/ledgerWorkerClient';
-	import appService from '$lib/services/appService';
-	import HelpButton from '$lib/help/HelpButton.svelte';
-	import { ListSearch } from '$lib/utils/ListSearch';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
+	import SearchToolbar from '#lib/components/SearchToolbar.svelte';
+	import MultiCurrencyBalance from '#lib/components/MultiCurrencyBalance.svelte';
+	import fullLedgerService from '#lib/services/ledgerWorkerClient';
+	import appService from '#lib/services/appService';
+	import HelpButton from '#lib/help/HelpButton.svelte';
+	import { ListSearch } from '#lib/utils/ListSearch';
 
 	interface TreeNode {
 		name: string;

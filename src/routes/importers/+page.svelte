@@ -1,17 +1,17 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import HelpButton from '$lib/help/HelpButton.svelte';
+	import ConfirmDialog from '#lib/components/ConfirmDialog.svelte';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import HelpButton from '#lib/help/HelpButton.svelte';
 	import { goto } from '$app/navigation';
-	import { allRules, type RuleConfig } from '$lib/importers/rules';
-	import { listImporters } from '$lib/importers';
-	import { savePendingImport } from '$lib/importers/pendingImport';
+	import { allRules, type RuleConfig } from '#lib/importers/rules';
+	import { listImporters } from '#lib/importers';
+	import { savePendingImport } from '#lib/importers/pendingImport';
 	import {
 		loadImporterConfig,
 		resetImporterConfig,
 		saveImporterConfig
-	} from '$lib/importers/config';
+	} from '#lib/importers/config';
 
 	const importers = listImporters();
 

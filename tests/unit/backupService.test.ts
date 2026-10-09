@@ -5,20 +5,20 @@
 */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('$lib/services/webdavAutoBackupService', () => ({ scheduleBackup: vi.fn() }));
+vi.mock('#lib/services/webdavAutoBackupService', () => ({ scheduleBackup: vi.fn() }));
 
-import db from '$lib/data/db';
-import { Setting } from '$lib/data/model';
-import { SettingKeys } from '$lib/settings';
-import appService from '$lib/services/appService';
-import { CrdtScxStore } from '$lib/storage/crdtScxStore';
-import { setScxStore } from '$lib/storage/scxStoreRegistry';
+import db from '#lib/data/db';
+import { Setting } from '#lib/data/model';
+import { SettingKeys } from '#lib/settings';
+import appService from '#lib/services/appService';
+import { CrdtScxStore } from '#lib/storage/crdtScxStore';
+import { setScxStore } from '#lib/storage/scxStoreRegistry';
 import {
 	createBackup,
 	createBackupFile,
 	getBackupFilename,
 	restoreBackup
-} from '$lib/services/backupService';
+} from '#lib/services/backupService';
 
 const scx = (payee: string, nextDate = '2026-01-01') => ({
 	nextDate,

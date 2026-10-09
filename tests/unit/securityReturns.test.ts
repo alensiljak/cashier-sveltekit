@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { getSecuritiesList, type SecurityListItem } from '$lib/assetAllocation/securityReturns';
-import type { CommodityDirective, QueryFn } from '$lib/assetAllocation/commodityYield';
+import { getSecuritiesList, type SecurityListItem } from '#lib/assetAllocation/securityReturns';
+import type { CommodityDirective, QueryFn } from '#lib/assetAllocation/commodityYield';
 
 const directives: CommodityDirective[] = [
 	{ currency: 'VTI', meta: { name: 'Vanguard Total Stock Market ETF' } },

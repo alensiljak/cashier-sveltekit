@@ -9,7 +9,7 @@ import {
 	ydocFilename,
 	type MergeState,
 	type RemoteDevice
-} from '$lib/sync/ydocDevices';
+} from '#lib/sync/ydocDevices';
 
 const device = (over: Partial<RemoteDevice> = {}): RemoteDevice => ({
 	deviceId: 'dev1',

@@ -11,12 +11,12 @@
 		UsersIcon
 	} from '@lucide/svelte';
 	import CashierCardTemplate from './CashierCardTemplate.svelte';
-	import { peerConnection } from '$lib/sync/peerConnection.svelte';
-	import { reloadLedgerFromOpfs } from '$lib/services/ledgerReload';
-	import Notifier from '$lib/utils/notifier';
-	import { syncOptions } from '$lib/services/syncOptions.svelte';
-	import { isS3Configured, loadS3Config } from '$lib/services/s3Config';
-	import { describeS3Error } from '$lib/services/s3Client';
+	import { peerConnection } from '#lib/sync/peerConnection.svelte';
+	import { reloadLedgerFromOpfs } from '#lib/services/ledgerReload';
+	import Notifier from '#lib/utils/notifier';
+	import { syncOptions } from '#lib/services/syncOptions.svelte';
+	import { isS3Configured, loadS3Config } from '#lib/services/s3Config';
+	import { describeS3Error } from '#lib/services/s3Client';
 
 	const presence = peerConnection.presence;
 
@@ -122,7 +122,7 @@
 	async function checkWebDavTarget() {
 		webdavStatus = 'checking';
 		try {
-			const { loadWebDavClient, checkWebDav } = await import('$lib/services/webdavSync');
+			const { loadWebDavClient, checkWebDav } = await import('#lib/services/webdavSync');
 			const client = await loadWebDavClient();
 			if (!client) throw new Error('WebDAV is not configured');
 			webdavStatus = (await checkWebDav(client)) ? 'differs' : 'same';
@@ -135,7 +135,7 @@
 	async function syncWebDavTarget() {
 		webdavBusy = true;
 		try {
-			const { loadWebDavClient, syncWebDav } = await import('$lib/services/webdavSync');
+			const { loadWebDavClient, syncWebDav } = await import('#lib/services/webdavSync');
 			const client = await loadWebDavClient();
 			if (!client) throw new Error('WebDAV is not configured');
 			const { errors, merged } = await syncWebDav(client);
@@ -164,7 +164,7 @@
 	async function checkS3Target() {
 		s3Status = 'checking';
 		try {
-			const { checkCrdtStores } = await import('$lib/services/s3Sync');
+			const { checkCrdtStores } = await import('#lib/services/s3Sync');
 			s3Status = (await checkCrdtStores(await loadS3())) ? 'differs' : 'same';
 		} catch (e) {
 			s3Status = 'error';
@@ -175,7 +175,7 @@
 	async function syncS3Target() {
 		s3Busy = true;
 		try {
-			const { syncCrdtStores } = await import('$lib/services/s3Sync');
+			const { syncCrdtStores } = await import('#lib/services/s3Sync');
 			const { errors, merged } = await syncCrdtStores(await loadS3());
 			if (merged) await reloadLedgerFromOpfs();
 			if (errors.length) {

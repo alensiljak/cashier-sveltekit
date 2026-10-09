@@ -3,11 +3,11 @@
 	Backup and restore custom data using a JSON file.
 */
 
-import { ISODATEFORMAT, LONGTIMEFORMAT } from '$lib/constants';
-import db from '$lib/data/db';
-import { listScx, replaceAllScx } from '$lib/services/scxService';
-import type { ScheduledTransaction } from '$lib/data/model';
-import { SettingKeys, settings } from '$lib/settings';
+import { ISODATEFORMAT, LONGTIMEFORMAT } from '#lib/constants';
+import db from '#lib/data/db';
+import { listScx, replaceAllScx } from '#lib/services/scxService';
+import type { ScheduledTransaction } from '#lib/data/model';
+import { SettingKeys, settings } from '#lib/settings';
 import moment from 'moment';
 
 interface StoredSetting {

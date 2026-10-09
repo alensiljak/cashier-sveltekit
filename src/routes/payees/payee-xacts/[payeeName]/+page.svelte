@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import HelpButton from '$lib/help/HelpButton.svelte';
-	import JournalXactRow from '$lib/components/JournalXactRow.svelte';
-	import { xact as xactStore, xactId } from '$lib/data/mainStore';
-	import type { Xact } from '$lib/data/model';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import HelpButton from '#lib/help/HelpButton.svelte';
+	import JournalXactRow from '#lib/components/JournalXactRow.svelte';
+	import { xact as xactStore, xactId } from '#lib/data/mainStore';
+	import type { Xact } from '#lib/data/model';
 	import type { PayeeXactRow } from './+page.ts';
 
 	async function onRowClick(row: PayeeXactRow) {

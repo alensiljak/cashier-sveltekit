@@ -1,7 +1,7 @@
 <script lang="ts">
-	import Toolbar from '$lib/components/Toolbar.svelte';
+	import Toolbar from '#lib/components/Toolbar.svelte';
 	import { ChevronRightIcon, SearchIcon, XIcon } from '@lucide/svelte';
-	import { listHelpTopics } from '$lib/help/helpContent';
+	import { listHelpTopics } from '#lib/help/helpContent';
 
 	let query = $state('');
 	const topics = $derived(listHelpTopics(query));

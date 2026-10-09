@@ -1,19 +1,19 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import Fab from '$lib/components/FAB.svelte';
-	import Toolbar from '$lib/components/Toolbar.svelte';
+	import Fab from '#lib/components/FAB.svelte';
+	import Toolbar from '#lib/components/Toolbar.svelte';
 	import { CheckIcon } from '@lucide/svelte';
-	import Notifier from '$lib/utils/notifier';
+	import Notifier from '#lib/utils/notifier';
 	import {
 		emptyS3Config,
 		isS3Configured,
 		loadS3Config,
 		saveS3Config,
 		type S3Config
-	} from '$lib/services/s3Config';
-	import { testConnection, type S3TestStep } from '$lib/services/s3Client';
-	import { deviceSettings, DeviceSettingKeys } from '$lib/settings';
-	import { lastBackupTime } from '$lib/services/webdavAutoBackupService';
+	} from '#lib/services/s3Config';
+	import { testConnection, type S3TestStep } from '#lib/services/s3Client';
+	import { deviceSettings, DeviceSettingKeys } from '#lib/settings';
+	import { lastBackupTime } from '#lib/services/webdavAutoBackupService';
 	import { CloudIcon } from '@lucide/svelte';
 
 	let cfg = $state<S3Config>(emptyS3Config());

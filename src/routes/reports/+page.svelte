@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import HelpButton from '$lib/help/HelpButton.svelte';
-	import SquareButton from '$lib/components/SquareButton.svelte';
-	import SquareButtonGroup from '$lib/components/SquareButtonGroup.svelte';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import HelpButton from '#lib/help/HelpButton.svelte';
+	import SquareButton from '#lib/components/SquareButton.svelte';
+	import SquareButtonGroup from '#lib/components/SquareButtonGroup.svelte';
 	import {
 		TerminalIcon,
 		LandmarkIcon,

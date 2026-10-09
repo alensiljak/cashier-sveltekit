@@ -3,14 +3,14 @@
     (row/offset colours, children index, TOML serializer, ledger output parser).
 */
 import { describe, expect, it } from 'vitest';
-import { AssetClass } from '$lib/assetAllocation/AssetClass';
+import { AssetClass } from '#lib/assetAllocation/AssetClass';
 import {
 	buildChildrenIndex,
 	getOffsetColor,
 	getRowColor
-} from '$lib/assetAllocation/assetAllocationUtils';
-import { serializeToToml } from '$lib/assetAllocation/assetAllocationSerializer';
-import { LedgerOutputParser } from '$lib/assetAllocation/ledgerOutputParser';
+} from '#lib/assetAllocation/assetAllocationUtils';
+import { serializeToToml } from '#lib/assetAllocation/assetAllocationSerializer';
+import { LedgerOutputParser } from '#lib/assetAllocation/ledgerOutputParser';
 
 function assetClass(fullname: string, allocation = 0, symbols?: string[]): AssetClass {
 	const ac = new AssetClass();

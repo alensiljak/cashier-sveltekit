@@ -2,7 +2,7 @@
  * Model factories for unit/component tests. Model classes initialise
  * themselves with empty defaults, so tests only state what they care about.
  */
-import { Account, Money, Posting, Xact } from '$lib/data/model';
+import { Account, Money, Posting, Xact } from '#lib/data/model';
 
 export function makePosting(overrides: Partial<Posting> = {}): Posting {
 	return Object.assign(new Posting(), overrides);

@@ -1,19 +1,19 @@
 /*
 	Provide service layer for the application.
 */
-import db from '$lib/data/db';
-import { ScheduledTransaction, Xact, type ScxId } from '$lib/data/model';
-import { getScx, listScx, replaceAllScx } from '$lib/services/scxService';
-import { settings, SettingKeys } from '$lib/settings';
-import { HomeCardNames } from '$lib/enums';
-import { DefaultCurrencyStore, ScheduledXact, xact } from '$lib/data/mainStore';
+import db from '#lib/data/db';
+import { ScheduledTransaction, Xact, type ScxId } from '#lib/data/model';
+import { getScx, listScx, replaceAllScx } from '#lib/services/scxService';
+import { settings, SettingKeys } from '#lib/settings';
+import { HomeCardNames } from '#lib/enums';
+import { DefaultCurrencyStore, ScheduledXact, xact } from '#lib/data/mainStore';
 import { loadInvestmentAccounts } from './accountsService';
 import { get } from 'svelte/store';
-import { formatAmount } from '$lib/utils/formatter';
-import { USER_BOOK_FILENAME } from '$lib/constants';
+import { formatAmount } from '#lib/utils/formatter';
+import { USER_BOOK_FILENAME } from '#lib/constants';
 import { ensureInitialized, createParsedLedger } from './rustledger';
-import { mapDirectiveSpans } from '$lib/rledger/sourceEditor';
-import { getXactStore } from '$lib/storage/xactStoreRegistry';
+import { mapDirectiveSpans } from '#lib/rledger/sourceEditor';
+import { getXactStore } from '#lib/storage/xactStoreRegistry';
 
 // interface AccountIndex {
 // 	[key: string]: Account;

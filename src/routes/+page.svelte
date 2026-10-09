@@ -1,5 +1,5 @@
 <script lang="ts">
-	import JournalCard from '$lib/components/JournalCard.svelte';
+	import JournalCard from '#lib/components/JournalCard.svelte';
 	import {
 		CircleAlert,
 		FilePlusIcon,
@@ -12,25 +12,25 @@
 	} from '@lucide/svelte';
 	import Toolbar from '../lib/components/Toolbar.svelte';
 	import { goto } from '$app/navigation';
-	import { xact } from '$lib/data/mainStore';
-	import { Xact } from '$lib/data/model';
-	import FavouritesCard from '$lib/components/FavouritesCard.svelte';
-	import SyncCard from '$lib/components/SyncCard.svelte';
-	import ForecastCard from '$lib/components/ForecastCard.svelte';
-	import ScheduledXactsCard from '$lib/components/ScheduledXactsCard.svelte';
-	import ExpensesCard from '$lib/components/ExpensesCard.svelte';
-	import BudgetCard from '$lib/components/BudgetCard.svelte';
-	import NetWorthCard from '$lib/components/NetWorthCard.svelte';
+	import { xact } from '#lib/data/mainStore';
+	import { Xact } from '#lib/data/model';
+	import FavouritesCard from '#lib/components/FavouritesCard.svelte';
+	import SyncCard from '#lib/components/SyncCard.svelte';
+	import ForecastCard from '#lib/components/ForecastCard.svelte';
+	import ScheduledXactsCard from '#lib/components/ScheduledXactsCard.svelte';
+	import ExpensesCard from '#lib/components/ExpensesCard.svelte';
+	import BudgetCard from '#lib/components/BudgetCard.svelte';
+	import NetWorthCard from '#lib/components/NetWorthCard.svelte';
 	import { onMount, type Component } from 'svelte';
-	import HomeSpeedDialFab from '$lib/components/HomeSpeedDialFab.svelte';
-	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
-	import { HomeCardNames } from '$lib/enums';
-	import appService from '$lib/services/appService';
-	import fullLedgerService from '$lib/services/ledgerWorkerClient';
-	import { recheckOpfsStale } from '$lib/services/opfsMetaCheck';
-	import { reloadLedgerFromOpfs } from '$lib/services/ledgerReload';
-	import LedgerStatusIndicator from '$lib/components/LedgerStatusIndicator.svelte';
-	import HelpButton from '$lib/help/HelpButton.svelte';
+	import HomeSpeedDialFab from '#lib/components/HomeSpeedDialFab.svelte';
+	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
+	import { HomeCardNames } from '#lib/enums';
+	import appService from '#lib/services/appService';
+	import fullLedgerService from '#lib/services/ledgerWorkerClient';
+	import { recheckOpfsStale } from '#lib/services/opfsMetaCheck';
+	import { reloadLedgerFromOpfs } from '#lib/services/ledgerReload';
+	import LedgerStatusIndicator from '#lib/components/LedgerStatusIndicator.svelte';
+	import HelpButton from '#lib/help/HelpButton.svelte';
 
 	let cards: Array<Component> = $state([]);
 	let hasErrors = $state(false);

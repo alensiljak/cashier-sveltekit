@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { AssetClass } from '$lib/assetAllocation/AssetClass.js';
-	import { getOffsetColor, getRowColor } from '$lib/assetAllocation/assetAllocationUtils.js';
-	import { NUMBER_FORMAT } from '$lib/constants.js';
+	import { AssetClass } from '#lib/assetAllocation/AssetClass.js';
+	import { getOffsetColor, getRowColor } from '#lib/assetAllocation/assetAllocationUtils.js';
+	import { NUMBER_FORMAT } from '#lib/constants.js';
 	import numeral from 'numeral';
 	import { ChevronDown, ChevronRight } from '@lucide/svelte';
 	import AssetClassRow from './AssetClassRow.svelte';

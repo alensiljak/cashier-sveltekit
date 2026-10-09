@@ -3,9 +3,9 @@
 */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { ensureInitialized } from '$lib/services/rustledger';
-import { Account } from '$lib/data/model';
-import { parseCurrentValues, parseBalanceSheetRow } from '$lib/utils/beancountParser';
+import { ensureInitialized } from '#lib/services/rustledger';
+import { Account } from '#lib/data/model';
+import { parseCurrentValues, parseBalanceSheetRow } from '#lib/utils/beancountParser';
 
 describe('RustLedger Service', () => {
 	beforeEach(async () => {
@@ -14,7 +14,7 @@ describe('RustLedger Service', () => {
 		// Dynamic import is required here: vi.resetModules() just cleared the
 		// module cache, so a static import wouldn't observe the reset — this
 		// test intentionally exercises module-reload behavior.
-		await import('$lib/services/rustledger').then((module) => {
+		await import('#lib/services/rustledger').then((module) => {
 			module.default.ensureInitialized();
 		});
 	});

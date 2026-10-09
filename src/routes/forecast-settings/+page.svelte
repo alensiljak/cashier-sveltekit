@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import DragReorderList from '$lib/components/DragReorderList.svelte';
-	import Fab from '$lib/components/FAB.svelte';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import ToolbarMenuItem from '$lib/components/ToolbarMenuItem.svelte';
-	import { DEFAULT_FORECAST_DAYS } from '$lib/constants';
-	import { selectionMetadata } from '$lib/data/mainStore';
-	import { SelectionType } from '$lib/enums';
-	import { SelectionModeMetadata, SettingKeys, settings } from '$lib/settings';
+	import DragReorderList from '#lib/components/DragReorderList.svelte';
+	import Fab from '#lib/components/FAB.svelte';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
+	import { DEFAULT_FORECAST_DAYS } from '#lib/constants';
+	import { selectionMetadata } from '#lib/data/mainStore';
+	import { SelectionType } from '#lib/enums';
+	import { SelectionModeMetadata, SettingKeys, settings } from '#lib/settings';
 	import { CheckIcon, PlusIcon, TrashIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 

@@ -1,11 +1,11 @@
-import { AssetAllocationEngine } from '$lib/assetAllocation/AssetAllocation';
-import type { AssetClass } from '$lib/assetAllocation/AssetClass';
-import { AssetAllocationStore, AssetAllocationLoadedAtStore } from '$lib/data/mainStore';
-import Notifier from '$lib/utils/notifier';
-import * as OpfsLib from '$lib/utils/opfslib.js';
+import { AssetAllocationEngine } from '#lib/assetAllocation/AssetAllocation';
+import type { AssetClass } from '#lib/assetAllocation/AssetClass';
+import { AssetAllocationStore, AssetAllocationLoadedAtStore } from '#lib/data/mainStore';
+import Notifier from '#lib/utils/notifier';
+import * as OpfsLib from '#lib/utils/opfslib.js';
 import { get } from 'svelte/store';
-import { formatErrorForDisplay, AppError } from '$lib/utils/errors';
-import { SettingKeys, settings } from '$lib/settings';
+import { formatErrorForDisplay, AppError } from '#lib/utils/errors';
+import { SettingKeys, settings } from '#lib/settings';
 
 const aa = new AssetAllocationEngine();
 

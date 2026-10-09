@@ -1,21 +1,21 @@
 <script lang="ts">
-	import SearchToolbar from '$lib/components/SearchToolbar.svelte';
+	import SearchToolbar from '#lib/components/SearchToolbar.svelte';
 	import { SearchIcon } from '@lucide/svelte';
 	import { slide } from 'svelte/transition';
-	import ExpensesDonutChart from '$lib/components/ExpensesDonutChart.svelte';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import { ListSearch } from '$lib/utils/ListSearch';
+	import ExpensesDonutChart from '#lib/components/ExpensesDonutChart.svelte';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import { ListSearch } from '#lib/utils/ListSearch';
 	import { onMount } from 'svelte';
-	import fullLedgerService from '$lib/services/ledgerWorkerClient';
+	import fullLedgerService from '#lib/services/ledgerWorkerClient';
 	import { goto } from '$app/navigation';
-	import HelpButton from '$lib/help/HelpButton.svelte';
-	import appService from '$lib/services/appService';
-	import { formatAmount } from '$lib/utils/formatter';
+	import HelpButton from '#lib/help/HelpButton.svelte';
+	import appService from '#lib/services/appService';
+	import { formatAmount } from '#lib/utils/formatter';
 	import {
 		commoditiesFromDirectives,
 		type CommodityDirective
-	} from '$lib/assetAllocation/commodityYield';
-	import { getSecuritiesList, type SecurityListItem } from '$lib/assetAllocation/securityReturns';
+	} from '#lib/assetAllocation/commodityYield';
+	import { getSecuritiesList, type SecurityListItem } from '#lib/assetAllocation/securityReturns';
 
 	let searchTerm = $state('');
 	let searchOpen = $state(false);

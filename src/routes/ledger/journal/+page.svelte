@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import { page } from '$app/state';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import JournalXactRow from '$lib/components/JournalXactRow.svelte';
-	import fullLedgerService from '$lib/services/ledgerWorkerClient';
-	import { openXactDetails } from '$lib/utils/unifiedXacts';
-	import { Xact, Posting } from '$lib/data/model';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import JournalXactRow from '#lib/components/JournalXactRow.svelte';
+	import fullLedgerService from '#lib/services/ledgerWorkerClient';
+	import { openXactDetails } from '#lib/utils/unifiedXacts';
+	import { Xact, Posting } from '#lib/data/model';
 
 	/** Rows link to Transaction Actions by default; ?readonly=1 disables that for a plain read-only view. */
 	const linksEnabled = page.url.searchParams.get('readonly') !== '1';

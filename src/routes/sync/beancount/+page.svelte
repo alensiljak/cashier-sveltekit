@@ -15,23 +15,23 @@
 		FunnelIcon,
 		SettingsIcon
 	} from '@lucide/svelte';
-	import { PeerSource } from '$lib/sync/PeerSource';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import HelpButton from '$lib/help/HelpButton.svelte';
-	import Notifier from '$lib/utils/notifier';
-	import { peerConnection } from '$lib/sync/peerConnection.svelte';
-	import { OpfsSource } from '$lib/sync/OpfsSource';
-	import { normalizeEol, type SyncEntry } from '$lib/sync/SyncSource';
+	import { PeerSource } from '#lib/sync/PeerSource';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import HelpButton from '#lib/help/HelpButton.svelte';
+	import Notifier from '#lib/utils/notifier';
+	import { peerConnection } from '#lib/sync/peerConnection.svelte';
+	import { OpfsSource } from '#lib/sync/OpfsSource';
+	import { normalizeEol, type SyncEntry } from '#lib/sync/SyncSource';
 	import {
 		diffAgainstBaseline,
 		type DiffEntry,
 		type SyncStatus,
 		type SyncAction
-	} from '$lib/sync/syncDiff';
-	import { getBaseline, updateBaseline } from '$lib/sync/syncBaseline';
-	import { pullFiles } from '$lib/sync/pullFiles';
-	import DiffViewer from '$lib/components/DiffViewer.svelte';
-	import type { PeerSyncBaseline } from '$lib/data/model';
+	} from '#lib/sync/syncDiff';
+	import { getBaseline, updateBaseline } from '#lib/sync/syncBaseline';
+	import { pullFiles } from '#lib/sync/pullFiles';
+	import DiffViewer from '#lib/components/DiffViewer.svelte';
+	import type { PeerSyncBaseline } from '#lib/data/model';
 
 	// ─── Peer selection & connection state ──────────────────────────────────────
 

@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { Account } from '$lib/data/model';
-	import { formatAmount } from '$lib/utils/formatter';
+	import { Account } from '#lib/data/model';
+	import { formatAmount } from '#lib/utils/formatter';
 	import { RepeatIcon } from '@lucide/svelte';
 
 	type Props = {

@@ -1,9 +1,9 @@
 import * as Y from 'yjs';
 import { IndexeddbPersistence } from 'y-indexeddb';
 import { ulid } from 'ulid';
-import notifier from '$lib/utils/notifier';
-import { scheduleBackup } from '$lib/services/webdavAutoBackupService';
-import type { DocKind } from '$lib/sync/ydocDevices';
+import notifier from '#lib/utils/notifier';
+import { scheduleBackup } from '#lib/services/webdavAutoBackupService';
+import type { DocKind } from '#lib/sync/ydocDevices';
 
 /** Transaction origin of updates merged in from another device, so live sync doesn't echo them back. */
 export const REMOTE_ORIGIN = 'remote';

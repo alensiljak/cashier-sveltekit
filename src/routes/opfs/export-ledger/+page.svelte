@@ -1,20 +1,20 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import HelpButton from '$lib/help/HelpButton.svelte';
+	import Toolbar from '#lib/components/Toolbar.svelte';
+	import HelpButton from '#lib/help/HelpButton.svelte';
 	import { FolderOutputIcon, RefreshCcwIcon, DownloadIcon } from '@lucide/svelte';
-	import { deviceSettings, DeviceSettingKeys } from '$lib/settings';
+	import { deviceSettings, DeviceSettingKeys } from '#lib/settings';
 	import {
 		loadPersistedHandle,
 		persistHandle,
 		requestWritePermission
-	} from '$lib/utils/fsHandleStore';
+	} from '#lib/utils/fsHandleStore';
 	import {
 		collectExportableFiles,
 		exportEntriesToDirectory,
 		exportEntriesToZip,
 		type ExportFileEntry
-	} from '$lib/utils/opfsExport';
+	} from '#lib/utils/opfsExport';
 
 	const HANDLE_KEY = 'exportLedgerDirectoryHandle';
 
