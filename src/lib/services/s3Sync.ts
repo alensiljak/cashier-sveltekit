@@ -199,7 +199,8 @@ interface SharedFile {
 	item: SyncItem;
 	path: string;
 	read(): Promise<Uint8Array<ArrayBuffer> | null>;
-	write(bytes: Uint8Array<ArrayBuffer>): Promise<void>;
+	/** Returns the bytes actually stored, which may be a canonicalized form of `bytes`. */
+	write(bytes: Uint8Array<ArrayBuffer>): Promise<Uint8Array>;
 	/** Deletes the local file. Absent for files that are never deleted (settings). */
 	remove?(): Promise<void>;
 }
@@ -219,7 +220,10 @@ const settingsFile = (): SharedFile => ({
 	item: 'settings',
 	path: SETTINGS_PATH,
 	read: async () => TEXT.encode(await exportSettingsJson()),
-	write: async (bytes) => importSettingsJson(new TextDecoder().decode(bytes))
+	write: async (bytes) => {
+		await importSettingsJson(new TextDecoder().decode(bytes));
+		return bytes;
+	}
 });
 
 function beancountFile(path: string, local: LocalFiles): SharedFile {
@@ -276,13 +280,20 @@ async function getShared(s: S3Session, file: SharedFile): Promise<void> {
 	const raw = await getObject(s.cfg, dataKey(file.path));
 	if (!raw) throw new Error('Listed in a manifest but missing from the bucket');
 	const bytes = await decrypt(s.key, raw);
-	await file.write(bytes);
-	const hash = await sha256Hex(bytes);
+	const written = await file.write(bytes);
+	// The base is what is now on disk, which may differ from the object in line endings.
+	const hash = await sha256Hex(written as Uint8Array<ArrayBuffer>);
 	s.bases[file.path] = hash;
 	s.basesDirty = true;
 	// What was just written is the object, whatever the manifest says. Without this, a stale entry
 	// would show the file as changed, and downloading it again would not clear that.
-	repairManifest(s, file.path, hash);
+	const objectHash = await sha256Hex(bytes);
+	repairManifest(s, file.path, objectHash);
+	if (objectHash !== hash) {
+		// The object holds the same text with other line endings: treat it as the base.
+		s.equiv[file.path] = { base: hash, hashes: [objectHash] };
+		s.equivDirty = true;
+	}
 }
 
 /**

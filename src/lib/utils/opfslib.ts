@@ -268,10 +268,24 @@ export async function writeFileObject(path: string, file: File): Promise<void> {
 	await stream?.close();
 }
 
-export async function saveBinaryFile(filename: string, data: Uint8Array): Promise<void> {
+/**
+ * Canonical form of the bytes `saveBinaryFile` stores: Beancount and TOML files get the same
+ * line-ending treatment as `saveFile`, anything else is untouched.
+ */
+export function canonicalBytes(filename: string, data: Uint8Array): Uint8Array {
+	if (!/\.(bean|toml)$/.test(filename)) return data;
+	const text = new TextDecoder().decode(data);
+	const canonical = canonicalizeEol(filename, text);
+	return canonical === text ? data : new TextEncoder().encode(canonical);
+}
+
+/** Stores the bytes (canonicalized for text ledger files) and returns what was written. */
+export async function saveBinaryFile(filename: string, data: Uint8Array): Promise<Uint8Array> {
+	const bytes = canonicalBytes(filename, data);
 	const stream = await openWrite(filename);
-	await stream?.write(data.buffer as ArrayBuffer);
+	await stream?.write(bytes.buffer as ArrayBuffer);
 	await stream?.close();
+	return bytes;
 }
 
 export async function readBinaryFile(filename: string): Promise<Uint8Array | undefined> {

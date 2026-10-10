@@ -234,16 +234,9 @@
 					const handle = fsFiles.get(entry.path);
 					if (!handle) return;
 					const file = await handle.getFile();
-					const root = await navigator.storage.getDirectory();
-					const parts = entry.path.split('/');
-					let dir: FileSystemDirectoryHandle = root;
-					for (const part of parts.slice(0, -1)) {
-						dir = await dir.getDirectoryHandle(part, { create: true });
-					}
-					const fh = await dir.getFileHandle(parts[parts.length - 1], { create: true });
-					const writable = await fh.createWritable();
-					await writable.write(file);
-					await writable.close();
+					// Same canonical line endings as every other write into OPFS, so sync
+					// compares equal across devices.
+					await OpfsLib.saveBinaryFile(entry.path, new Uint8Array(await file.arrayBuffer()));
 					manifestEntries.push({
 						path: entry.path,
 						size: file.size,
