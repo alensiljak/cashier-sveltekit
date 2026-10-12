@@ -142,12 +142,8 @@
 		{:else}
 			<div class="container text-base">
 				{#each xacts as xact, index (index)}
-					<div class="border-base-content/15 flow-root border-b py-1">
-						<div class={`float-right ml-2 shrink-0 text-right tabular-nums ${getXactColour(index)}`}>
-							{formatAmount(xactBalances[index].quantity, 2)}
-							<span class="font-mono">{xactBalances[index].currency}</span>
-						</div>
-						<div class="pl-6" style="text-indent: -1.5rem">
+					<div class="border-base-content/15 flex items-end justify-between gap-2 border-b py-1">
+						<div class="min-w-0 pl-6" style="text-indent: -1.5rem">
 							<time class="opacity-60">
 								{getReadableDate(xact.date ?? '', $ShortDateFormatStore)}
 							</time>
@@ -155,6 +151,12 @@
 								<TriangleAlertIcon class="text-warning size-4 inline-block align-text-bottom" />
 							{/if}
 							{xact.payee}{#if xact.payee && xact.note}<span class="opacity-50"> · {xact.note}</span>{:else if xact.note}{xact.note}{/if}
+						</div>
+						<div
+							class={`shrink-0 text-right whitespace-nowrap tabular-nums ${getXactColour(index)}`}
+						>
+							{formatAmount(xactBalances[index].quantity, 2)}
+							<span class="font-mono">{xactBalances[index].currency}</span>
 						</div>
 					</div>
 				{/each}
