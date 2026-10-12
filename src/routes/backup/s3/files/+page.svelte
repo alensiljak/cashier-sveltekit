@@ -303,16 +303,21 @@
 	// Per-file result of the last auto-compare, shown as an indicator beside the file.
 	let autoStatus = $state<Record<string, AutoStatus>>({});
 
+	// Only files shown by the current filter that are not in sync are compared.
+	const autoTargets = $derived(
+		entries.filter((e) => e.state !== 'unchanged' && matches(e, filter))
+	);
+
 	/**
-	 * Runs the manual Compare on every file that is not in sync, and marks those whose text is the
+	 * Runs the manual Compare on every visible file that is not in sync, and marks those whose text is the
 	 * same as in sync (correcting a stale manifest where needed). Files that really differ are left
 	 * for manual review. The manifest and bases are written once at the end.
 	 */
 	async function autoCompare() {
 		if (!session || autoRunning) return;
-		const targets = entries.filter((e) => e.state !== 'unchanged');
+		const targets = autoTargets;
 		if (targets.length === 0) {
-			Notifier.info('Everything is already in sync.');
+			Notifier.info('Nothing to compare in the current view.');
 			return;
 		}
 		autoRunning = true;
@@ -366,7 +371,7 @@
 		{/snippet}
 		{#snippet menuItems()}
 			<li>
-				<button disabled={autoRunning || loading || changeCount === 0} onclick={autoCompare}>
+				<button disabled={autoRunning || loading || autoTargets.length === 0} onclick={autoCompare}>
 					<GitCompareArrowsIcon size={18} />
 					Auto-compare
 				</button>
