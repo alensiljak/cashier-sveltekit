@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import HelpButton from '#lib/help/HelpButton.svelte';
-	import { FolderOpenIcon, RefreshCcwIcon, ChevronUpIcon, ChevronDownIcon, EraserIcon } from '@lucide/svelte';
+	import { FolderOpenIcon, RefreshCcwIcon, ChevronUpIcon, ChevronDownIcon, EraserIcon, CopyCheckIcon } from '@lucide/svelte';
 	import { settings, SettingKeys, deviceSettings, DeviceSettingKeys } from '#lib/settings';
 	import fullLedgerService from '#lib/services/ledgerWorkerClient';
 	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
@@ -387,6 +387,57 @@
 		await deviceSettings.set(DeviceSettingKeys.importAutoReload, autoReload);
 	}
 
+	// ── Drop identical files (compare new/modified entries by content) ───────────
+	// Files that arrived in OPFS by other means (e.g. peer sync) show up as "new"
+	// because the manifest has no record of them. Compare content (ignoring line
+	// endings, like the diff view) and, for matches, record them in the manifest
+	// so they are treated as identical from now on.
+	let comparing = $state(false);
+
+	async function removeIdenticalFiles() {
+		comparing = true;
+		errorMsg = '';
+		try {
+			const norm = (s: string) => s.replace(/\r\n/g, '\n');
+			const candidates = scannedFiles.filter(
+				(f) => (f.status === 'new' || f.status === 'modified') && f.getFile
+			);
+			const identicalPaths = new Set<string>();
+			const entries: ImportedFileMeta[] = [];
+
+			await processWithConcurrencyLimit(candidates, CONCURRENCY, async (entry) => {
+				const [local, file] = await Promise.all([readFile(entry.path), entry.getFile!()]);
+				if (local == null) return;
+				if (norm(local) !== norm(await file.text())) return;
+				identicalPaths.add(entry.path);
+				entries.push({
+					path: entry.path,
+					size: file.size,
+					lastModified: file.lastModified,
+					importedAt: Date.now()
+				});
+			});
+
+			await putManifestEntries(entries);
+
+			if (diffPath && identicalPaths.has(diffPath)) {
+				diffPath = null;
+				diffLines = [];
+			}
+			scannedFiles = scannedFiles.map((f) =>
+				identicalPaths.has(f.path) ? { ...f, status: 'identical' as const } : f
+			);
+			const stats = { new: 0, modified: 0, identical: 0, deleted: 0 };
+			for (const f of scannedFiles) stats[f.status]++;
+			scanStats = stats;
+		} catch (e) {
+			const err = e as { message?: string };
+			errorMsg = err?.message ?? String(e);
+		} finally {
+			comparing = false;
+		}
+	}
+
 	// ── Re-read files (rebuild manifest from actual OPFS contents) ───────────────
 	// The manifest can drift from reality — e.g. files removed directly on the
 	// OPFS page rather than through this import flow. Reconcile it against what
@@ -438,6 +489,12 @@
 </script>
 
 {#snippet menuItems()}
+	<ToolbarMenuItem
+		text="Remove Identical Files"
+		Icon={CopyCheckIcon}
+		disabled={phase === 'scanning' || phase === 'copying' || comparing || scanStats === null}
+		onclick={removeIdenticalFiles}
+	/>
 	<ToolbarMenuItem
 		text="Re-read Files"
 		Icon={EraserIcon}
