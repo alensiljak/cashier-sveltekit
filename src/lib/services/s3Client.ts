@@ -58,7 +58,11 @@ export async function getObject(
 	cfg: S3Config,
 	key: string
 ): Promise<Uint8Array<ArrayBuffer> | null> {
-	const res = await createClient(cfg).fetch(objectUrl(cfg, key), { method: 'GET' });
+	// Sync data changes under a fixed URL: a cached copy would hide other devices' uploads.
+	const res = await createClient(cfg).fetch(objectUrl(cfg, key), {
+		method: 'GET',
+		cache: 'no-store'
+	});
 	if (res.status === 404) return null;
 	if (!res.ok) throw new S3HttpError(res.status, describeStatus(res));
 	return new Uint8Array(await res.arrayBuffer());
@@ -76,7 +80,7 @@ export async function listObjects(cfg: S3Config, keyPrefix: string): Promise<str
 		const params = new URLSearchParams({ 'list-type': '2', prefix: fullPrefix });
 		if (token) params.set('continuation-token', token);
 		const url = `${cfg.endpoint.replace(/\/+$/, '')}/${encodeURIComponent(cfg.bucket)}?${params}`;
-		const res = await client.fetch(url, { method: 'GET' });
+		const res = await client.fetch(url, { method: 'GET', cache: 'no-store' });
 		if (!res.ok) throw new S3HttpError(res.status, describeStatus(res));
 		const page = parseListResponse(await res.text());
 		for (const key of page.keys) keys.push(base ? key.slice(base.length + 1) : key);
