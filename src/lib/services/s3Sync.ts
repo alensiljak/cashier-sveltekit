@@ -689,6 +689,8 @@ export interface CrdtDiagnosticFile {
 	ahead: { client: number; theirs: number; ours: number }[];
 	/** The file holds operations from before this device's last reset, which a merge skips. */
 	retiredOps: boolean;
+	/** The structs that make it `retiredOps`: this device's retired clock for the client is above theirs. */
+	retiredHits: { client: number; clock: number; limit: number; kind: string }[];
 	resetId: string;
 	/** Clients with operations in this file, and how many of those structs a merge would apply. */
 	structCount: number;
@@ -736,6 +738,14 @@ export async function diagnoseCrdt(
 				.filter(([client, clock]) => clock > (ours.get(client) ?? 0))
 				.map(([client, clock]) => ({ client, theirs: clock, ours: ours.get(client) ?? 0 })),
 			retiredOps: hasRetiredOps(state, localMeta.retired),
+			retiredHits: Y.decodeUpdate(state)
+				.structs.flatMap((st) => {
+					const limit = localMeta.retired[st.id.client];
+					return limit !== undefined && st.id.clock < limit
+						? [{ client: st.id.client, clock: st.id.clock, limit, kind: st.constructor.name }]
+						: [];
+				})
+				.slice(0, 20),
 			resetId: readUpdateMeta(state).resetId,
 			structCount: Y.decodeUpdate(state).structs.length
 		});

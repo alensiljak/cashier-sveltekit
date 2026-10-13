@@ -185,6 +185,13 @@
 									<div class="text-base-content/60">
 										reset id {f.resetId || 'none'} · {f.structCount} structs
 									</div>
+									{#if f.retiredHits.length}
+										<ul class="font-mono text-warning">
+											{#each f.retiredHits as h (h.client + ':' + h.clock)}
+												<li>retired: client {h.client} clock {h.clock} &lt; {h.limit} ({h.kind})</li>
+											{/each}
+										</ul>
+									{/if}
 									{#if f.ahead.length}
 										<ul class="font-mono">
 											{#each f.ahead as a (a.client)}
