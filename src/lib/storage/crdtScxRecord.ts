@@ -26,8 +26,17 @@ function clean<T extends object>(obj: T): T {
 	return JSON.parse(JSON.stringify(obj)) as T;
 }
 
+/** The recurrence count as a number; stored or imported data may hold it as a string like "3". */
+function normalizeCount<T extends { count?: unknown }>(scx: T): T {
+	if (typeof scx.count === 'string') {
+		const n = Number(scx.count);
+		return { ...scx, count: Number.isFinite(n) && scx.count.trim() !== '' ? n : undefined };
+	}
+	return scx;
+}
+
 export function toRecord(scx: Omit<ScheduledTransaction, 'id'>, id: CrdtScxId): ScxRecord {
-	const { id: _oldId, ...rest } = scx as ScheduledTransaction;
+	const { id: _oldId, ...rest } = normalizeCount(scx) as ScheduledTransaction;
 	const record = clean({ ...rest, id, schemaVersion: SCX_SCHEMA_VERSION });
 	// The template's own id would only be meaningful for a stored transaction.
 	if (record.transaction) delete record.transaction.id;
@@ -64,7 +73,10 @@ export function fromRecord(record: ScxRecord): StoredScx {
 	}
 	const { schemaVersion: _v, transaction, ...rest } = record;
 	// Built on the model class for its defaults; its `id?: number` is overwritten by the string id.
-	const scx = Object.assign(new ScheduledTransaction(), rest) as unknown as StoredScx;
+	const scx = Object.assign(
+		new ScheduledTransaction(),
+		normalizeCount(rest)
+	) as unknown as StoredScx;
 	if (transaction) {
 		const xact = Object.assign(new Xact(), transaction);
 		xact.postings = transaction.postings.map((p) => Object.assign(new Posting(), p));

@@ -86,6 +86,13 @@ export function calculateNextIteration(startDate: any, count: number, period: an
 		throw new Error(`missing input parameter(s), received: ${startDate} ${count} ${period}`);
 	}
 
+	// The count may arrive as a string (e.g. "3") from stored or imported data. Date
+	// arithmetic would then concatenate instead of add: month 9 + "3" = "93".
+	count = Number(count);
+	if (!Number.isInteger(count) || count < 1) {
+		throw new Error(`invalid recurrence count: ${count}`);
+	}
+
 	// Get the start point.
 	const start = parseDate(startDate);
 
