@@ -422,6 +422,10 @@
 											{describeItem(overview[row.key], row.key)}
 										</span>
 									{/if}
+									{#if row.key === 'xacts' || row.key === 'scheduled'}
+										<a href="/backup/s3/records" class="link text-xs">Review records</a>
+										<span class="text-xs text-base-content/50">— preview what a sync would change</span>
+									{/if}
 									{#if row.key === 'beancount'}
 										<a href="/backup/s3/files" class="link text-xs">Review files</a>
 										<span class="text-xs text-base-content/50">

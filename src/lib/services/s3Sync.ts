@@ -24,6 +24,9 @@ import { hasNewOps } from '#lib/sync/ydocCompare';
 import { normalizeEol } from '#lib/sync/SyncSource';
 import { getXactStore } from '#lib/storage/xactStoreRegistry';
 import { getScxStore } from '#lib/storage/scxStoreRegistry';
+import type { RecordChange } from '#lib/storage/crdtDocStore';
+import type { XactRecord } from '#lib/storage/crdtXactRecord';
+import type { ScxRecord } from '#lib/storage/crdtScxRecord';
 import { collectExportableFiles } from '#lib/utils/opfsExport';
 import { deleteFile, saveBinaryFile } from '#lib/utils/opfslib';
 import type { S3Config } from './s3Config';
@@ -607,6 +610,74 @@ export async function fetchCrdtSyncStatus(
 		scheduled: await crdtStatus(s, 'scheduled'),
 		xacts: await crdtStatus(s, 'xacts')
 	};
+}
+
+export type CrdtRecord = XactRecord | ScxRecord;
+
+export interface CrdtDownloadPreview {
+	deviceId: string | null;
+	/** Name from the Trusted Devices list. */
+	name?: string;
+	key: string;
+	/** What merging this device's file would change here, on top of the devices listed before it. */
+	changes: RecordChange<CrdtRecord>[];
+	/** Why the file would not be merged: the device is not trusted, or is read-only. */
+	ignored?: string;
+}
+
+export interface CrdtChangePreview {
+	/** Records a download would add, change or delete on this device. */
+	download: CrdtDownloadPreview[];
+	/** Records an upload would add, change or delete for the other devices' merged view. */
+	upload: RecordChange<CrdtRecord>[];
+}
+
+/**
+ * Dry run of a CRDT store sync, down to the single records, so the user can see what a merge
+ * would do before accepting either direction. Reads the bucket, writes nothing anywhere.
+ * Needs the passphrase.
+ */
+export async function previewCrdtChanges(
+	cfg: S3Config,
+	item: 'xacts' | 'scheduled'
+): Promise<CrdtChangePreview> {
+	const s = await crdtSession(cfg);
+	const prefix = `crdt/${item === 'xacts' ? 'xacts' : 'scx'}/`;
+	const ownKey = `${prefix}${s.deviceId}.ydoc`;
+	const store = item === 'xacts' ? await getXactStore() : await getScxStore();
+	if (item === 'scheduled' && !(await store.isInitialized())) return { download: [], upload: [] };
+
+	const [ignoreReason, peers] = await Promise.all([loadIgnoreReasons(), db.peers.toArray()]);
+	const files: CrdtDownloadPreview[] = [];
+	const toMerge: Uint8Array[] = [];
+	const bucketStates: Uint8Array[] = [];
+	for (const key of (await listObjects(s.cfg, prefix)).sort()) {
+		const deviceId = deviceIdOfKey(key);
+		const ignored = key === ownKey ? null : ignoreReason(deviceId);
+		if (ignored) {
+			files.push({ deviceId, key, changes: [], ignored });
+			continue;
+		}
+		const raw = await getObject(s.cfg, key);
+		if (!raw) continue;
+		const state = await decrypt(s.key, raw);
+		if (key !== ownKey) {
+			files.push({
+				deviceId,
+				name: peers.find((p) => p.id === deviceId)?.name,
+				key,
+				changes: []
+			});
+			toMerge.push(state);
+		}
+		bucketStates.push(state);
+	}
+
+	const mergeable = files.filter((f) => !f.ignored);
+	const results = await store.previewImport(toMerge);
+	mergeable.forEach((f, i) => (f.changes = results[i]));
+
+	return { download: files, upload: await store.previewExportOnto(bucketStates) };
 }
 
 async function crdtSession(cfg: S3Config): Promise<CrdtSession> {

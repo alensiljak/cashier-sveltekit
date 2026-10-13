@@ -76,6 +76,42 @@ export interface RecordChange<R> {
 	after?: R;
 }
 
+/** Applies `update` to `doc` and reports the changes to its records. Identical rewrites are left out. */
+function applyObserved<R>(doc: Y.Doc, recordsKey: string, update: Uint8Array): RecordChange<R>[] {
+	const records = doc.getMap<R>(recordsKey);
+	const changes: RecordChange<R>[] = [];
+	const onRecords = (event: Y.YMapEvent<R>) => {
+		for (const [id, change] of event.changes.keys) {
+			const before = change.oldValue as R | undefined;
+			const after = records.get(id);
+			if (change.action === 'update' && JSON.stringify(before) === JSON.stringify(after)) continue;
+			changes.push({ id, action: change.action, before, after });
+		}
+	};
+	records.observe(onRecords);
+	try {
+		Y.applyUpdate(doc, update, REMOTE_ORIGIN);
+	} finally {
+		records.unobserve(onRecords);
+	}
+	return changes;
+}
+
+/** The changes that turn the records `before` into `after`. */
+function diffRecords<R>(before: Y.Map<R>, after: Y.Map<R>): RecordChange<R>[] {
+	const changes: RecordChange<R>[] = [];
+	for (const [id, a] of after) {
+		const b = before.get(id);
+		if (!b) changes.push({ id, action: 'add', after: a });
+		else if (JSON.stringify(b) !== JSON.stringify(a))
+			changes.push({ id, action: 'update', before: b, after: a });
+	}
+	for (const [id, b] of before) {
+		if (!after.has(id)) changes.push({ id, action: 'delete', before: b });
+	}
+	return changes;
+}
+
 /**
  * A keyed collection of plain JSON records, kept in a Yjs document and
  * persisted to its own IndexedDB database via y-indexeddb. Holds everything
@@ -240,6 +276,53 @@ export abstract class CrdtDocStore<R> {
 			await this.flush();
 		}
 		return changes;
+	}
+
+	/**
+	 * Dry run of `importState` for several updates in turn, each on top of the ones before it:
+	 * what each would change. Works on a copy, so nothing is written.
+	 */
+	async previewImport(updates: Uint8Array[]): Promise<RecordChange<R>[][]> {
+		await this.ready();
+		let doc = new Y.Doc();
+		Y.applyUpdate(doc, Y.encodeStateAsUpdate(this._doc));
+		try {
+			const result: RecordChange<R>[][] = [];
+			for (const update of updates) {
+				const local = readMeta(doc);
+				const remote = readUpdateMeta(update);
+				if (remote.resetId > local.resetId) {
+					// The sender reset its document: ours would be replaced by theirs.
+					const next = new Y.Doc();
+					Y.applyUpdate(next, update);
+					result.push(diffRecords(doc.getMap<R>(this.recordsKey), next.getMap<R>(this.recordsKey)));
+					doc.destroy();
+					doc = next;
+				} else if (hasRetiredOps(update, local.retired)) {
+					result.push([]);
+				} else {
+					result.push(applyObserved(doc, this.recordsKey, update));
+				}
+			}
+			return result;
+		} finally {
+			doc.destroy();
+		}
+	}
+
+	/**
+	 * Dry run of an upload: what this device's state would change in the documents other devices
+	 * build from `bucketStates` (the files already in the bucket). Nothing is written.
+	 */
+	async previewExportOnto(bucketStates: Uint8Array[]): Promise<RecordChange<R>[]> {
+		await this.ready();
+		const doc = new Y.Doc();
+		try {
+			for (const state of bucketStates) Y.applyUpdate(doc, state);
+			return applyObserved(doc, this.recordsKey, Y.encodeStateAsUpdate(this._doc));
+		} finally {
+			doc.destroy();
+		}
 	}
 
 	/** State vector, describing which updates this document already has. */
