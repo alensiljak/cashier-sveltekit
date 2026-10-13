@@ -47,6 +47,8 @@
 			return;
 		}
 		cfg = saved;
+		const requested = new URL(location.href).searchParams.get('item');
+		if (items.some((i) => i.key === requested)) item = requested as Item;
 		if (!saved.passphrase) {
 			loadError = 'Set an encryption passphrase in the S3 configuration first.';
 			return;

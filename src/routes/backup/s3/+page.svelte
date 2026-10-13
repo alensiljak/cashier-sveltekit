@@ -423,7 +423,7 @@
 										</span>
 									{/if}
 									{#if row.key === 'xacts' || row.key === 'scheduled'}
-										<a href="/backup/s3/records" class="link text-xs">Review records</a>
+										<a href="/backup/s3/records?item={row.key}" class="link text-xs">Review records</a>
 										<span class="text-xs text-base-content/50">— preview what a sync would change</span>
 									{/if}
 									{#if row.key === 'beancount'}
