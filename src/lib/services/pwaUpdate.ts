@@ -39,6 +39,27 @@ export function initPwa(): Promise<void> {
 }
 
 /**
+ * Build time of the service worker that controls this page, i.e. the version actually
+ * installed, not the newest one on the server. Undefined if there is no controlling worker
+ * (dev, first visit before activation) or it does not answer.
+ */
+export async function getInstalledBuildTimestamp(): Promise<string | undefined> {
+	await initPwa();
+	const worker = navigator.serviceWorker?.controller;
+	if (!worker) return undefined;
+
+	return new Promise((resolve) => {
+		const channel = new MessageChannel();
+		const timer = setTimeout(() => resolve(undefined), 2000);
+		channel.port1.onmessage = (event) => {
+			clearTimeout(timer);
+			resolve(event.data);
+		};
+		worker.postMessage({ type: 'GET_BUILD_TIMESTAMP' }, [channel.port2]);
+	});
+}
+
+/**
  * Activates the waiting service worker and reloads the page.
  *
  * The reload happens here, not on the `waiting` event, so it also covers updates found by

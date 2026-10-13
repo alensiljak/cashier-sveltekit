@@ -45,7 +45,12 @@ precacheAndRoute([
 cleanupOutdatedCaches();
 registerRoute(new NavigationRoute(createHandlerBoundToURL(SHELL)));
 
+// Build time of this worker (see vite.config.ts), reported to the About page.
+declare const __BUILD_TIMESTAMP__: string;
+
 // Prompt-style update: the new worker waits until the page asks it to take over.
 self.addEventListener('message', (event) => {
 	if (event.data?.type === 'SKIP_WAITING') void self.skipWaiting();
+	// Reply only to the page that asked, via the port it supplied.
+	if (event.data?.type === 'GET_BUILD_TIMESTAMP') event.ports[0]?.postMessage(__BUILD_TIMESTAMP__);
 });

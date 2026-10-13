@@ -6,7 +6,6 @@ import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
-import type { Plugin } from 'vite';
 
 // SvelteKit's default version is Date.now(). Any per-build value (timestamp, commit SHA) is
 // inlined into a shared chunk and into the `__sveltekit_<hash>` global of every prerendered
@@ -15,25 +14,12 @@ import type { Plugin } from 'vite';
 // derives its own precache revision from the hashed build file list, so keep it constant.
 const APP_VERSION = 'static';
 
-// Emits build-info.json (unhashed name) with the real build time. It is kept out of the JS
-// bundle on purpose: a timestamp inside a hashed chunk would rename that chunk, app.*.js and
-// every prerendered page on each build. As a separate precached file, only it (and sw.js,
-// which triggers the update prompt) change.
-function buildInfo(): Plugin {
-	return {
-		name: 'build-info',
-		applyToEnvironment: (env) => env.name === 'client',
-		generateBundle() {
-			// ISO 8601 in UTC (CI runs in UTC); the about page renders it in the viewer's timezone.
-			const timestamp = new Date().toISOString();
-			this.emitFile({
-				type: 'asset',
-				fileName: 'build-info.json',
-				source: JSON.stringify({ buildTimestamp: timestamp })
-			});
-		}
-	};
-}
+// The real build time (ISO 8601, UTC; the about page renders it in the viewer's timezone).
+// It is referenced only by the service worker, which reports it to the page, so the page shows
+// the version of the worker that is actually running. Putting it in the app bundle would rename
+// that chunk, app.*.js and every prerendered page on each build. Fetching it from a file at
+// runtime would return the newest deployed build instead of the installed one.
+const BUILD_TIMESTAMP = new Date().toISOString();
 
 // Content hash of every file in static/, keyed by its URL path. The service worker uses these as
 // precache revisions, so a static file is re-downloaded only when its own content changes.
@@ -60,7 +46,8 @@ function staticRevisions(): Record<string, string> {
 
 const config: UserConfig = defineConfig({
 	define: {
-		__STATIC_REVISIONS__: JSON.stringify(staticRevisions())
+		__STATIC_REVISIONS__: JSON.stringify(staticRevisions()),
+		__BUILD_TIMESTAMP__: JSON.stringify(BUILD_TIMESTAMP)
 	},
 	server: {
 		host: '0.0.0.0',
@@ -80,7 +67,6 @@ const config: UserConfig = defineConfig({
 	},
 	plugins: [
 		tailwindcss(),
-		buildInfo(),
 		sveltekit({
 			adapter: adapter({ fallback: '200.html' }),
 			version: { name: APP_VERSION },

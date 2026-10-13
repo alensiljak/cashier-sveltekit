@@ -11,10 +11,6 @@ for = "/service-worker.js"
 [headers.values]
 Cache-Control = "no-cache"
 
-[[headers]]
-for = "/build-info.json"
-[headers.values]
-Cache-Control = "no-cache"
 #X-Frame-Options = "DENY"
 #X-XSS-Protection = "1; mode=block"
 

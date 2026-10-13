@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import rustledger from '#lib/services/rustledger';
-	import { checkForUpdate } from '#lib/services/pwaUpdate';
+	import { checkForUpdate, getInstalledBuildTimestamp } from '#lib/services/pwaUpdate';
 	import Notifier from '#lib/utils/notifier';
 	import { MicIcon, RefreshCw } from '@lucide/svelte';
 
@@ -20,14 +20,10 @@
 		}
 	});
 
-	// build-info.json is emitted at build time (see vite.config.ts) and precached by the service worker.
+	// Asked of the running service worker, so it is the installed build, not the newest deployed one.
 	async function loadBuildTimestamp() {
-		try {
-			const response = await fetch('/build-info.json');
-			buildTimestamp = formatTimestamp((await response.json()).buildTimestamp);
-		} catch {
-			buildTimestamp = 'unavailable';
-		}
+		const timestamp = await getInstalledBuildTimestamp();
+		buildTimestamp = timestamp ? formatTimestamp(timestamp) : 'unavailable';
 	}
 
 	// Formats an ISO timestamp as local "YYYY-MM-DD HH:mm TZ". Falls back to the raw value if unparsable.
