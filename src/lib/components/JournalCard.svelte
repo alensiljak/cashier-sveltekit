@@ -1,6 +1,7 @@
 <script lang="ts">
-	import { FileUpIcon, PlusIcon, ScrollIcon, TriangleAlertIcon } from '@lucide/svelte';
+	import { FileUpIcon, PlusIcon, ScrollIcon } from '@lucide/svelte';
 	import CashierCardTemplate from './CashierCardTemplate.svelte';
+	import XactSummaryLine from './XactSummaryLine.svelte';
 	import { goto } from '$app/navigation';
 	import { xact } from '#lib/data/mainStore';
 	import { Money, Posting, Xact } from '#lib/data/model';
@@ -142,22 +143,16 @@
 		{:else}
 			<div class="container text-base">
 				{#each xacts as xact, index (index)}
-					<div class="border-base-content/15 flex items-end justify-between gap-2 border-b py-1">
-						<div class="min-w-0 pl-6" style="text-indent: -1.5rem">
-							<time class="opacity-60">
-								{getReadableDate(xact.date ?? '', $ShortDateFormatStore)}
-							</time>
-							{#if xact.flag === '!'}
-								<TriangleAlertIcon class="text-warning size-4 inline-block align-text-bottom" />
-							{/if}
-							{xact.payee}{#if xact.payee && xact.note}<span class="opacity-50"> · {xact.note}</span>{:else if xact.note}{xact.note}{/if}
-						</div>
-						<div
-							class={`shrink-0 text-right whitespace-nowrap tabular-nums ${getXactColour(index)}`}
-						>
-							{formatAmount(xactBalances[index].quantity, 2)}
-							<span class="font-mono">{xactBalances[index].currency}</span>
-						</div>
+					<div class="border-base-content/15 flex border-b py-1">
+						<XactSummaryLine
+							date={getReadableDate(xact.date ?? '', $ShortDateFormatStore)}
+							payee={xact.payee}
+							note={xact.note}
+							flag={xact.flag}
+							amount={formatAmount(xactBalances[index].quantity, 2)}
+							currency={xactBalances[index].currency}
+							amountClass={getXactColour(index)}
+						/>
 					</div>
 				{/each}
 			</div>
