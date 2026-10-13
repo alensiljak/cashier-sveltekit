@@ -45,7 +45,7 @@ function readMeta(doc: Y.Doc): ResetMeta {
 }
 
 /** The reset marker carried by a Yjs update; empty when the update has none (e.g. an incremental one). */
-function readUpdateMeta(update: Uint8Array): ResetMeta {
+export function readUpdateMeta(update: Uint8Array): ResetMeta {
 	const scratch = new Y.Doc();
 	try {
 		Y.applyUpdate(scratch, update);
@@ -56,7 +56,7 @@ function readUpdateMeta(update: Uint8Array): ResetMeta {
 }
 
 /** Whether the update carries operations that predate a reset, i.e. come from a retired generation. */
-function hasRetiredOps(update: Uint8Array, retired: Record<string, number>): boolean {
+export function hasRetiredOps(update: Uint8Array, retired: Record<string, number>): boolean {
 	return Y.decodeUpdate(update).structs.some((s) => {
 		const limit = retired[s.id.client];
 		return limit !== undefined && s.id.clock < limit;

@@ -6,7 +6,13 @@
 	import { isS3Configured, loadS3Config, type S3Config } from '#lib/services/s3Config';
 	import { describeS3Error } from '#lib/services/s3Client';
 	import { describeRecord, fieldDiffs } from '#lib/services/crdtRecordDiff';
-	import { previewCrdtChanges, type CrdtChangePreview, type CrdtRecord } from '#lib/services/s3Sync';
+	import {
+		diagnoseCrdt,
+		previewCrdtChanges,
+		type CrdtChangePreview,
+		type CrdtDiagnostics,
+		type CrdtRecord
+	} from '#lib/services/s3Sync';
 	import type { RecordChange } from '#lib/storage/crdtDocStore';
 
 	type Item = 'xacts' | 'scheduled';
@@ -18,6 +24,7 @@
 	let cfg = $state<S3Config | null>(null);
 	let item = $state<Item>('xacts');
 	let preview = $state<CrdtChangePreview | null>(null);
+	let diagnostics = $state<CrdtDiagnostics | null>(null);
 	let loading = $state(false);
 	let loadError = $state<string | null>(null);
 
@@ -26,8 +33,12 @@
 		loading = true;
 		loadError = null;
 		preview = null;
+		diagnostics = null;
 		try {
-			preview = await previewCrdtChanges(cfg, item);
+			[preview, diagnostics] = await Promise.all([
+				previewCrdtChanges(cfg, item),
+				diagnoseCrdt(cfg, item)
+			]);
 		} catch (e) {
 			loadError = e instanceof Error ? e.message : describeS3Error(e);
 		} finally {
@@ -154,6 +165,48 @@
 						{/if}
 					</div>
 				</div>
+				{#if diagnostics}
+					<div class="card bg-base-200 shadow-sm">
+						<div class="card-body gap-2 p-4">
+							<h2 class="card-title text-sm">Why the sync arrows show</h2>
+							<p class="text-xs text-base-content/60">
+								The arrows compare Yjs clocks per client, not records. This device: {diagnostics.localClients}
+								clients, reset id {diagnostics.localResetId || 'none'}.
+							</p>
+							{#each diagnostics.files as f (f.key)}
+								<div class="text-xs">
+									<div class="font-semibold break-all">
+										{f.own ? 'This device' : (f.name ?? f.key)}
+										{#if f.ignored}<span class="badge badge-neutral badge-sm">{f.ignored}</span>{/if}
+										{#if f.retiredOps}<span class="badge badge-warning badge-sm"
+												>pre-reset operations: skipped by merge</span
+											>{/if}
+									</div>
+									<div class="text-base-content/60">
+										reset id {f.resetId || 'none'} · {f.structCount} structs
+									</div>
+									{#if f.ahead.length}
+										<ul class="font-mono">
+											{#each f.ahead as a (a.client)}
+												<li>client {a.client}: file {a.theirs}, here {a.ours}</li>
+											{/each}
+										</ul>
+									{:else}
+										<div class="text-base-content/60">Nothing ahead of this device.</div>
+									{/if}
+								</div>
+							{/each}
+							{#if diagnostics.uploadAhead.length}
+								<div class="text-xs font-semibold">Ahead of the bucket (upload):</div>
+								<ul class="font-mono text-xs">
+									{#each diagnostics.uploadAhead as a (a.client)}
+										<li>client {a.client}: here {a.ours}, bucket {a.bucket}</li>
+									{/each}
+								</ul>
+							{/if}
+						</div>
+					</div>
+				{/if}
 			{/if}
 		</div>
 	</section>

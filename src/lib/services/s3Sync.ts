@@ -24,7 +24,7 @@ import { hasNewOps } from '#lib/sync/ydocCompare';
 import { normalizeEol } from '#lib/sync/SyncSource';
 import { getXactStore } from '#lib/storage/xactStoreRegistry';
 import { getScxStore } from '#lib/storage/scxStoreRegistry';
-import type { RecordChange } from '#lib/storage/crdtDocStore';
+import { hasRetiredOps, readUpdateMeta, type RecordChange } from '#lib/storage/crdtDocStore';
 import type { XactRecord } from '#lib/storage/crdtXactRecord';
 import type { ScxRecord } from '#lib/storage/crdtScxRecord';
 import { collectExportableFiles } from '#lib/utils/opfsExport';
@@ -678,6 +678,80 @@ export async function previewCrdtChanges(
 	mergeable.forEach((f, i) => (f.changes = results[i]));
 
 	return { download: files, upload: await store.previewExportOnto(bucketStates) };
+}
+
+export interface CrdtDiagnosticFile {
+	key: string;
+	own: boolean;
+	name?: string;
+	ignored?: string;
+	/** Clients whose clock in this file is ahead of this device's: what makes the check say "download". */
+	ahead: { client: number; theirs: number; ours: number }[];
+	/** The file holds operations from before this device's last reset, which a merge skips. */
+	retiredOps: boolean;
+	resetId: string;
+	/** Clients with operations in this file, and how many of those structs a merge would apply. */
+	structCount: number;
+}
+
+export interface CrdtDiagnostics {
+	localResetId: string;
+	localClients: number;
+	files: CrdtDiagnosticFile[];
+	/** Clients whose local clock is ahead of everything in the bucket: what makes the check say "upload". */
+	uploadAhead: { client: number; ours: number; bucket: number }[];
+}
+
+/** Explains the "download" / "upload" verdict of the state-vector check, file by file. */
+export async function diagnoseCrdt(
+	cfg: S3Config,
+	item: 'xacts' | 'scheduled'
+): Promise<CrdtDiagnostics> {
+	const s = await crdtSession(cfg);
+	const prefix = `crdt/${item === 'xacts' ? 'xacts' : 'scx'}/`;
+	const ownKey = `${prefix}${s.deviceId}.ydoc`;
+	const store = item === 'xacts' ? await getXactStore() : await getScxStore();
+	const local = await store.exportState();
+	const ours = Y.decodeStateVector(Y.encodeStateVectorFromUpdate(local));
+	const localMeta = readUpdateMeta(local);
+
+	const [ignoreReason, peers] = await Promise.all([loadIgnoreReasons(), db.peers.toArray()]);
+	const files: CrdtDiagnosticFile[] = [];
+	const bucketStates: Uint8Array[] = [];
+	for (const key of (await listObjects(cfg, prefix)).sort()) {
+		const deviceId = deviceIdOfKey(key);
+		const own = key === ownKey;
+		const ignored = own ? null : ignoreReason(deviceId);
+		const raw = await getObject(cfg, key);
+		if (!raw) continue;
+		const state = await decrypt(s.key, raw);
+		if (!ignored) bucketStates.push(state);
+		const theirs = Y.decodeStateVector(Y.encodeStateVectorFromUpdate(state));
+		files.push({
+			key,
+			own,
+			name: peers.find((p) => p.id === deviceId)?.name,
+			ignored: ignored ?? undefined,
+			ahead: [...theirs]
+				.filter(([client, clock]) => clock > (ours.get(client) ?? 0))
+				.map(([client, clock]) => ({ client, theirs: clock, ours: ours.get(client) ?? 0 })),
+			retiredOps: hasRetiredOps(state, localMeta.retired),
+			resetId: readUpdateMeta(state).resetId,
+			structCount: Y.decodeUpdate(state).structs.length
+		});
+	}
+
+	const bucket = bucketStates.length
+		? Y.decodeStateVector(Y.encodeStateVectorFromUpdate(Y.mergeUpdates(bucketStates)))
+		: new Map<number, number>();
+	return {
+		localResetId: localMeta.resetId,
+		localClients: ours.size,
+		files,
+		uploadAhead: [...ours]
+			.filter(([client, clock]) => clock > (bucket.get(client) ?? 0))
+			.map(([client, clock]) => ({ client, ours: clock, bucket: bucket.get(client) ?? 0 }))
+	};
 }
 
 async function crdtSession(cfg: S3Config): Promise<CrdtSession> {
