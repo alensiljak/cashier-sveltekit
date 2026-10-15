@@ -422,6 +422,12 @@
 											{describeItem(overview[row.key], row.key)}
 										</span>
 									{/if}
+									{#if row.key === 'settings'}
+										<a href="/backup/s3/settings" class="link text-xs">Review diff</a>
+										<span class="text-xs text-base-content/50">
+											— compare settings.json with the bucket
+										</span>
+									{/if}
 									{#if row.key === 'xacts' || row.key === 'scheduled'}
 										<a href="/backup/s3/records?item={row.key}" class="link text-xs">Review records</a>
 										<span class="text-xs text-base-content/50">— preview what a sync would change</span>

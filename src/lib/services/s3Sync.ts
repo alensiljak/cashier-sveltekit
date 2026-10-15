@@ -1103,6 +1103,38 @@ export async function compareFile(s: S3Session, path: string): Promise<FileCompa
 	};
 }
 
+/** Reads both versions of settings.json. `path` is the bucket path, without the files/ prefix. */
+export async function compareSettings(s: S3Session): Promise<FileComparison> {
+	const localBytes = await settingsFile().read();
+
+	const entry = latestRemote(s.manifests).get(SETTINGS_PATH);
+	let remoteBytes: Uint8Array<ArrayBuffer> | null = null;
+	if (entry && entry.hash !== TOMBSTONE) {
+		const raw = await getObject(s.cfg, dataKey(SETTINGS_PATH));
+		if (!raw) throw new Error('Listed in a manifest but missing from the bucket');
+		remoteBytes = await decrypt(s.key, raw);
+	}
+
+	const text = (b: Uint8Array | null) => (b ? new TextDecoder().decode(b) : null);
+	const localHash = await hashOf(localBytes);
+	const remoteHash = await hashOf(remoteBytes);
+	const localText = text(localBytes);
+	const remoteText = text(remoteBytes);
+	return {
+		path: SETTINGS_PATH,
+		localText,
+		remoteText,
+		localHash,
+		remoteHash,
+		manifestStale: remoteHash !== null && !!entry && entry.hash !== remoteHash,
+		identical: localHash !== null && localHash === remoteHash,
+		sameText:
+			localText !== null &&
+			remoteText !== null &&
+			normalizeEol(localText) === normalizeEol(remoteText)
+	};
+}
+
 /**
  * Records that this device's copy and the bucket's hold the same text, so the file stops showing
  * as a conflict. Changes no file and no bucket object. A later change on either side is detected
