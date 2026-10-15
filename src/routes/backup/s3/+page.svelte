@@ -260,6 +260,8 @@
 			});
 			reloadIfNeeded(lines);
 			void refreshStatus();
+			// Conflicts ask before the losing side is overwritten: the bucket on upload, this device on download.
+			if (lines.some((l) => l.outcome === 'conflict')) overwriteDirection = direction;
 			if (
 				!lines.some(
 					(l) => l.outcome === 'conflict' || l.outcome === 'error' || l.outcome === 'pending-delete'
@@ -284,6 +286,17 @@
 		} finally {
 			busy = false;
 		}
+	}
+
+	/** Set while asking whether to overwrite the conflicted files; the direction of the run. */
+	let overwriteDirection = $state<SyncDirection | null>(null);
+
+	/** Overwrites the bucket's versions (upload) or this device's (download) with the winning side. */
+	async function confirmOverwrite() {
+		const keep = overwriteDirection === 'upload' ? 'local' : 'remote';
+		overwriteDirection = null;
+		for (const line of conflicts) await resolve(line, keep);
+		void refreshStatus();
 	}
 
 	onMount(async () => {
@@ -565,6 +578,45 @@
 				{/if}
 			</div>
 		</section>
+	{/if}
+
+	{#if overwriteDirection && conflicts.length}
+		{@const toBucket = overwriteDirection === 'upload'}
+		{@const many = conflicts.length > 1}
+		<div class="modal modal-open">
+			<div class="modal-box">
+				<h3 class="text-lg font-bold">
+					{toBucket ? 'Overwrite the bucket?' : 'Overwrite this device?'}
+				</h3>
+				<p class="py-2 text-sm">
+					{many ? 'These files were' : 'This file was'} changed on this device and in the bucket.
+					{#if toBucket}
+						Continuing replaces the bucket's {many ? 'versions' : 'version'} with this device's. Other
+						devices will take {many ? 'them' : 'it'} on their next sync.
+					{:else}
+						Continuing replaces this device's {many ? 'versions' : 'version'} with the bucket's.
+						The local changes are lost.
+					{/if}
+				</p>
+				<ul class="space-y-1 text-sm">
+					{#each conflicts as line (line.path)}
+						<li class="font-mono text-xs break-all">{line.path}</li>
+					{/each}
+				</ul>
+				<p class="text-base-content/70 py-2 text-xs">
+					To see the differences first, cancel and open the diff view:
+					<a class="link" href="/backup/s3/settings">Settings</a> or
+					<a class="link" href="/backup/s3/files">Beancount files</a>. The conflict can be resolved there
+					too.
+				</p>
+				<div class="modal-action">
+					<button class="btn btn-ghost" onclick={() => (overwriteDirection = null)}>Cancel</button>
+					<button class="btn btn-warning" disabled={busy} onclick={confirmOverwrite}>
+						{toBucket ? 'Overwrite bucket' : 'Overwrite this device'}
+					</button>
+				</div>
+			</div>
+		</div>
 	{/if}
 
 	{#if trusting}
