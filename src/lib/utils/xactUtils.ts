@@ -10,6 +10,16 @@ export const PLACEHOLDER_ACCOUNT = 'Expenses:Uncategorized';
  * zero amount (see below) but have none of their own set.
  */
 export function xactToBeancountText(tx: Xact, defaultCurrency?: string): string {
+	if (tx.balanceAssertion) {
+		const { account, amount, currency } = tx.balanceAssertion;
+		return DirectiveFormatter.toString({
+			type: 'balance',
+			date: tx.date ?? '',
+			account,
+			amount: { number: String(amount), currency: currency || defaultCurrency || '' },
+			meta: tx.meta ?? {}
+		} as any);
+	}
 	// Keep all postings; never drop rows the user added.
 	// Force ! flag whenever any posting lacks an explicit account.
 	const hasPlaceholder = tx.postings.some((p) => !p.account);

@@ -11,3 +11,4 @@ Tap a transaction to open [Transaction Actions](/help/xact-actions), where you c
 Use the toolbar menu (⋮) for:
 
 - **Balance Adjustment** — record a transaction that brings this account's balance to a target amount.
+- **Balance Assertion** — enter the balance the account should have on a date. It is saved as a Beancount `balance` assertion in the working set. The assertion is checked against the balance at the **start** of that date (before any transactions dated that day), and applies to every transaction dated earlier. If the ledger disagrees, validation reports a failed assertion.

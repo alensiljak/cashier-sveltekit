@@ -127,6 +127,11 @@ export class Xact {
 	postings: Posting[];
 	/** Transaction-level Beancount metadata (`key: value` lines). String values only. */
 	meta: Record<string, string>;
+	/**
+	 * Set when this working-set record is a Beancount `balance` assertion instead of a
+	 * transaction. Such a record has no postings; it is written as a `balance` directive.
+	 */
+	balanceAssertion?: { account: string; amount: number; currency: string };
 	//
 	//amount: any
 	//currency: any
