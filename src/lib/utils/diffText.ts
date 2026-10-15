@@ -3,6 +3,31 @@ import { diffLines } from 'diff';
 export type DiffLine = { type: 'added' | 'removed' | 'context'; content: string };
 export type DiffSection = { filename: string; lines: DiffLine[]; identical: boolean };
 
+function sortKeys(value: unknown): unknown {
+	if (Array.isArray(value)) return value.map(sortKeys);
+	if (value && typeof value === 'object') {
+		const out: Record<string, unknown> = {};
+		for (const key of Object.keys(value).sort()) {
+			out[key] = sortKeys((value as Record<string, unknown>)[key]);
+		}
+		return out;
+	}
+	return value;
+}
+
+/**
+ * Re-serializes JSON text in a canonical form (2-space indent, object keys sorted
+ * recursively, array order kept) so a line diff shows only the values that differ,
+ * not formatting or key-order noise. Returns null when the text is not valid JSON.
+ */
+export function canonicalizeJson(text: string): string | null {
+	try {
+		return JSON.stringify(sortKeys(JSON.parse(text)), null, 2);
+	} catch {
+		return null;
+	}
+}
+
 /**
  * Builds a line-level diff between two texts.
  *

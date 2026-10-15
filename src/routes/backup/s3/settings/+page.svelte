@@ -5,6 +5,7 @@
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import DiffViewer from '#lib/components/DiffViewer.svelte';
 	import Notifier from '#lib/utils/notifier';
+	import { canonicalizeJson } from '#lib/utils/diffText';
 	import { isS3Configured, loadS3Config, type S3Config } from '#lib/services/s3Config';
 	import { describeS3Error } from '#lib/services/s3Client';
 	import {
@@ -22,6 +23,16 @@
 	let loading = $state(false);
 	let error = $state<string | null>(null);
 	let working = $state(false);
+
+	// Compare as JSON, not text: formatting and key order are not changes. Falls back to the raw text.
+	const shown = $derived.by(() => {
+		const local = comparison?.localText ?? null;
+		const remote = comparison?.remoteText ?? null;
+		const canon = (t: string | null) => (t === null ? null : (canonicalizeJson(t) ?? t));
+		const l = canon(local);
+		const r = canon(remote);
+		return { local: l, remote: r, sameContent: l !== null && r !== null && l === r };
+	});
 
 	async function load() {
 		if (!cfg) return;
@@ -104,29 +115,29 @@
 					<div class="alert alert-info text-sm">
 						<span>Not in the bucket (or deleted there). This device's version is shown below.</span>
 					</div>
-				{:else if comparison.sameText}
+				{:else if shown.sameContent}
 					<div class="alert alert-success text-sm">
 						<span>
 							{comparison.identical
 								? 'The two versions are identical.'
-								: 'The text is the same: only line endings or the final newline differ.'}
+								: 'The settings are the same: only formatting, key order or line endings differ.'}
 						</span>
 					</div>
 				{/if}
 
-				{#if comparison.localText !== null && comparison.remoteText !== null && !comparison.sameText}
+				{#if shown.local !== null && shown.remote !== null && !shown.sameContent}
 					<DiffViewer
-						oldText={comparison.localText}
-						newText={comparison.remoteText}
+						oldText={shown.local}
+						newText={shown.remote}
 						banner={{
 							text: 'Red lines (-) are only on this device. Green lines (+) are only in the bucket.',
 							alertClass: 'alert-info'
 						}}
 					/>
-				{:else if comparison.localText !== null && comparison.remoteText === null}
-					<pre class="bg-base-200 overflow-x-auto rounded p-2 text-xs">{comparison.localText}</pre>
-				{:else if comparison.localText === null && comparison.remoteText !== null}
-					<pre class="bg-base-200 overflow-x-auto rounded p-2 text-xs">{comparison.remoteText}</pre>
+				{:else if shown.local !== null && shown.remote === null}
+					<pre class="bg-base-200 overflow-x-auto rounded p-2 text-xs">{shown.local}</pre>
+				{:else if shown.local === null && shown.remote !== null}
+					<pre class="bg-base-200 overflow-x-auto rounded p-2 text-xs">{shown.remote}</pre>
 				{/if}
 
 				{#if !comparison.sameText}
