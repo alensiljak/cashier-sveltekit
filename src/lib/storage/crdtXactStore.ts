@@ -122,6 +122,22 @@ export class CrdtXactStore extends CrdtDocStore<XactRecord> {
 		return this.put(id, toRecord(xact, id, existing.origin));
 	}
 
+	/**
+	 * Replaces a record with an already-built `Xact`. For records that are not plain
+	 * transactions (balance assertions), which cannot be round-tripped through Beancount text.
+	 */
+	async updateXact(id: XactId, xact: Xact): Promise<StoredXact> {
+		await this.ready();
+		const existing = this.records.get(id);
+		if (!existing) throw new Error(`Transaction ${id} not found`);
+		if (isNewerSchema(existing)) {
+			throw new Error(
+				`Transaction ${id} was written by a newer app version (schema ${existing.schemaVersion}) and cannot be edited here. Update the app.`
+			);
+		}
+		return this.put(id, toRecord(xact, id, existing.origin));
+	}
+
 	async remove(id: XactId): Promise<void> {
 		await this.ready();
 		this.records.delete(id);

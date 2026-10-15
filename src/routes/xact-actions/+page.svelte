@@ -109,6 +109,12 @@
 	}
 
 	async function onEditClicked() {
+		if ($xact?.balanceAssertion) {
+			await goto(
+				`/accounts/assert-balance?account=${encodeURIComponent($xact.balanceAssertion.account)}&edit=1`
+			);
+			return;
+		}
 		await goto('/tx');
 	}
 
@@ -160,12 +166,18 @@
 		>
 			Edit
 		</SquareButton>
-		<SquareButton Icon={ClipboardIcon} classes="bg-primary text-accent" onclick={onDuplicateClick}>
+		<SquareButton
+			Icon={ClipboardIcon}
+			classes="bg-primary text-accent"
+			disabled={!!$xact?.balanceAssertion}
+			onclick={onDuplicateClick}
+		>
 			Duplicate
 		</SquareButton>
 		<SquareButton
 			Icon={CalendarClockIcon}
 			classes="bg-primary text-accent"
+			disabled={!!$xact?.balanceAssertion}
 			onclick={onScheduleClick}
 		>
 			Schedule

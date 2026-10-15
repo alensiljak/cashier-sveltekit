@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import Fab from '#lib/components/FAB.svelte';
+	import { xact as xactStore, xactId } from '#lib/data/mainStore';
 	import { Xact } from '#lib/data/model';
 	import appService from '#lib/services/appService';
 	import fullLedgerService from '#lib/services/ledgerWorkerClient';
@@ -17,7 +18,19 @@
 	let amount = $state('');
 	let currency = $state('');
 
+	const isEdit = $derived(page.url.searchParams.get('edit') === '1');
+	/** The record being edited, if any. */
+	let editing: { id: string; xact: Xact } | undefined;
+
 	onMount(async () => {
+		const existing = $xactStore?.balanceAssertion;
+		if (isEdit && existing && $xactId !== undefined) {
+			editing = { id: $xactId, xact: $xactStore };
+			date = $xactStore.date ?? date;
+			amount = String(existing.amount);
+			currency = existing.currency;
+			return;
+		}
 		currency = await appService.getDefaultCurrency();
 		if (!accountName) return;
 		await fullLedgerService.ensureLoaded();
@@ -36,7 +49,7 @@
 			Notifier.error('Enter a currency');
 			return;
 		}
-		const tx = new Xact();
+		const tx = editing ? editing.xact : new Xact();
 		tx.date = date;
 		tx.payee = 'Balance assertion';
 		tx.note = `${accountName} = ${value} ${currency.trim().toUpperCase()}`;
@@ -46,14 +59,21 @@
 			amount: value,
 			currency: currency.trim().toUpperCase()
 		};
-		await (await getXactStore()).appendMany([tx]);
+		const store = await getXactStore();
+		if (editing) await store.updateXact(editing.id, tx);
+		else await store.appendMany([tx]);
 		Notifier.success('Balance assertion saved');
+		if (editing) {
+			xactStore.set(tx);
+			history.back();
+			return;
+		}
 		await goto(`/accounts/account-xacts/${encodeURIComponent(accountName)}`);
 	}
 </script>
 
 <main class="flex h-screen flex-col">
-	<Toolbar title="Balance Assertion" />
+	<Toolbar title={isEdit ? 'Edit Balance Assertion' : 'Balance Assertion'} />
 
 	<section class="container mx-auto flex-1 space-y-4 overflow-y-auto p-4 lg:max-w-screen-sm">
 		<Fab Icon={CheckIcon} onclick={onFab} />
