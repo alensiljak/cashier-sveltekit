@@ -128,9 +128,10 @@ describe('scheduleBackup', () => {
 		expect(mocks.puts).toEqual([]);
 
 		await vi.advanceTimersByTimeAsync(1);
-		await vi.waitFor(() => expect(deltaPuts()).toHaveLength(1));
+		// The first backup in the file lazily imports the sync modules, which is slow on a cold, loaded run.
+		await vi.waitFor(() => expect(deltaPuts()).toHaveLength(1), { timeout: 10_000 });
 		// Let the upload finish so it can't touch shared state during a later test.
-		await vi.waitFor(() => expect(mocks.notify).toHaveBeenCalled());
+		await vi.waitFor(() => expect(mocks.notify).toHaveBeenCalled(), { timeout: 10_000 });
 	});
 
 	it('coalesces rapid calls into one upload', async () => {
