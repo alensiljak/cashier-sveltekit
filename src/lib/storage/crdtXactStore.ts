@@ -88,6 +88,17 @@ export class CrdtXactStore extends CrdtDocStore<XactRecord> {
 	}
 
 	/**
+	 * Adds a transaction as-is, without a parse round trip. Unlike `append`, nothing is
+	 * booked or interpolated, so elided posting amounts stay elided. The caller is
+	 * responsible for validating the transaction.
+	 */
+	async appendXact(xact: Xact): Promise<StoredXact> {
+		await this.ready();
+		const id = newId();
+		return this.put(id, toRecord(xact, id, await this.getOrigin()));
+	}
+
+	/**
 	 * Adds many transactions in one Yjs transaction, so they persist and sync as a
 	 * single update and observers are notified once.
 	 */

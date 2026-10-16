@@ -7,10 +7,8 @@
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import { ScheduledXact, xact, xactId } from '#lib/data/mainStore';
 	import type { ScheduledTransaction, ScxId, Xact } from '#lib/data/model';
-	import appService from '#lib/services/appService';
 	import { getXactStore } from '#lib/storage/xactStoreRegistry';
 	import { reloadLedgerFromOpfs } from '#lib/services/ledgerReload';
-	import { xactToBeancountText } from '#lib/utils/xactUtils';
 	import Notifier from '#lib/utils/notifier';
 	import { calculateNextIteration } from '#lib/scheduledTransactions';
 	import { removeScx, saveScx } from '#lib/services/scxService';
@@ -66,10 +64,10 @@
 		const newTx: Xact = JSON.parse(JSON.stringify($xact));
 		// clear the id field, if any, to get a new one on save.
 		newTx.id = undefined;
-		const defaultCurrency = await appService.getDefaultCurrency();
-		const stored = await (
-			await getXactStore()
-		).append(xactToBeancountText(newTx, defaultCurrency));
+		// Store the template as-is rather than via Beancount text: parsing would book the
+		// transaction and fill in the elided amount, which the user would have to clear
+		// again when editing. The editor validates the transaction on every change.
+		const stored = await (await getXactStore()).appendXact(newTx);
 		// Re-parse the full book in the background.
 		void reloadLedgerFromOpfs();
 
