@@ -70,6 +70,11 @@ export async function deriveKey(
 	);
 }
 
+/** `additionalData` is left out, not set to undefined, when there is no `aad`. */
+function gcmParams(iv: Uint8Array<ArrayBuffer>, aad?: Uint8Array<ArrayBuffer>): AesGcmParams {
+	return aad ? { name: 'AES-GCM', iv, additionalData: aad } : { name: 'AES-GCM', iv };
+}
+
 /** Objects bound to their name (see `encrypt`'s `aad`). */
 const BOUND_FORMAT_VERSION = 2;
 
@@ -84,9 +89,7 @@ export async function encrypt(
 	aad?: Uint8Array<ArrayBuffer>
 ): Promise<Uint8Array<ArrayBuffer>> {
 	const iv = crypto.getRandomValues(new Uint8Array(IV_BYTES));
-	const cipher = new Uint8Array(
-		await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: aad }, key, plain)
-	);
+	const cipher = new Uint8Array(await crypto.subtle.encrypt(gcmParams(iv, aad), key, plain));
 	const out = new Uint8Array(1 + IV_BYTES + cipher.length);
 	out[0] = aad ? BOUND_FORMAT_VERSION : FORMAT_VERSION;
 	out.set(iv, 1);
@@ -110,9 +113,7 @@ export async function decrypt(
 	}
 	const iv = data.slice(1, 1 + IV_BYTES);
 	const cipher = data.slice(1 + IV_BYTES);
-	return new Uint8Array(
-		await crypto.subtle.decrypt({ name: 'AES-GCM', iv, additionalData: aad }, key, cipher)
-	);
+	return new Uint8Array(await crypto.subtle.decrypt(gcmParams(iv, aad), key, cipher));
 }
 
 /** New key parameters for a bucket that has none yet. */
@@ -142,6 +143,7 @@ export async function openKey(passphrase: string, params: KeyParams): Promise<Cr
 		if (new TextDecoder().decode(plain) !== CHECK_TEXT) throw new WrongPassphraseError();
 	} catch (e) {
 		if (e instanceof WrongPassphraseError) throw e;
+		console.warn('[s3-crypto] key check failed', e);
 		throw new WrongPassphraseError();
 	}
 	return key;
