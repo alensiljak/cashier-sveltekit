@@ -43,12 +43,14 @@ One shared snapshot per store, plus per-device delta files. Assumes a single use
 
 ```text
 crdt/<kind>/snap-<ulid>.ydoc          full state of the doc + coverage map {deviceId: seq, ...}
-crdt/<kind>/<deviceId>/d-<seq>.upd    delta; seq = 000001, 000002, ... (zero-padded, per device)
+crdt/<kind>/<deviceId>.<seq>.upd      delta; seq = 000001, 000002, ... (zero-padded, per device)
 ```
+
+The names are flat: one folder per kind, no folder per device. A device's objects are found by the prefix `<deviceId>.`, and a device ID (UUID) contains no dot.
 
 The coverage map is stored inside the (encrypted) snapshot object. Readers fetch the snapshot anyway when it is newer than theirs, so the key needs nothing but the ULID.
 
-WebDAV: same names flattened (`cashier-<kind>-snap-<ulid>.ydoc`, `cashier-<kind>-<deviceId>-d-<seq>.upd`) to avoid MKCOL and per-folder PROPFIND.
+WebDAV (Phase 4): the same flat names inside one folder, with `crdt/<kind>/` mapped to `cashier-<kind>-` (today's file name pattern), so the adapter only renames and the protocol is shared. No MKCOL or per-folder PROPFIND needed.
 
 The legacy `<deviceId>.ydoc` files are read as snapshots with empty coverage, so migration needs no conversion step.
 
@@ -129,15 +131,18 @@ S3 and WebDAV currently duplicate the CRDT logic (`s3Sync.syncCrdt` vs `webdavSy
 - [x] `s3Sync.ts` switched: `syncCrdt`, `crdtStatus` (now listing only), `previewCrdtChanges`, `diagnoseCrdt`, `fetchRemoteOverview`, `listBucketDevices` (device id from the delta folder), S3 explorer preview of `.upd` and snapshots
 - [x] AES-GCM additional data: delta and snapshot objects are bound to their key (format version 2); legacy state files and everything else stay version 1
 - [x] trust filter applies to delta folders and legacy files
-- [ ] Trusted Devices removal prompt with bucket clean-up (after Phase 3, needs compaction)
+- [x] flat object names (`crdt/<kind>/<deviceId>.<seq>.upd`), see Layout
 - [ ] attach the outbox capture when a store opens, not on the first S3 use. Until then the first upload of a session also sends the changes made before it was attached, as one larger delta (correct, but with the whole delete set).
-- [ ] delete this device's own legacy `.ydoc` after its first delta upload (Phase 3 clean-up)
 - [ ] try against a real bucket with two devices, one of them still on the old version
 
 ### Phase 3: compaction and reset
 
-- [ ] compaction with coverage, thresholds, 404 fallback, concurrent-compaction tests
-- [ ] reset writes a new-generation snapshot; tests listed above
+- [x] acknowledgements: each device records what it applied in its own manifest (`Manifest.crdt`), written only when that changed (`publishAck`)
+- [x] compaction (`DeltaSync.compact`, `needsCompaction`): 30 deltas or a week; deletes deltas that every active device acknowledged, the own legacy `.ydoc`, and all but the newest two snapshots. Active = trusted, manifest younger than 30 days, has an acknowledgement. Runs after an upload, from the listing, and never fails the sync.
+- [x] reset (`CrdtDocStore.onReplaced`): our own reset publishes the new generation as a snapshot and removes our old deltas and older snapshots; adopting another device's reset empties the outbox and the known bucket state
+- [x] Trusted Devices removal prompt (`forgetBucketDevice`, `DeltaSync.forget`): merges, snapshots, deletes the device's objects and manifest; "Remove anyway" when that fails
+- [x] tests in `tests/unit/deltaSync.test.ts`: compaction (acknowledged, partly acknowledged, nothing to delete, snapshot retention, legacy file, damaged object), acknowledgements, reset, forgetting a device
+- Not done: a manual "Compact now" in the S3 explorer
 
 ### Phase 4: WebDAV adapter
 

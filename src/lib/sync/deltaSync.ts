@@ -4,13 +4,16 @@
  *
  * Bucket layout, per store kind:
  * - `crdt/<kind>/snap-<ulid>.ydoc`        full state plus what it covers: the last delta of each device
- * - `crdt/<kind>/<deviceId>/d-<seq>.upd`  changes of one device, numbered without gaps
+ * - `crdt/<kind>/<deviceId>.<seq>.upd`    changes of one device, numbered without gaps
+ *
+ * The names are flat (no folder per device), so any store that lists a folder can hold them.
  *
  * A device writes only its own deltas and never overwrites an object. Updates are idempotent and
  * commutative, so applying one twice or out of order is harmless.
  */
 import * as Y from 'yjs';
-import { BUCKET_ORIGIN, REMOTE_ORIGIN } from '#lib/storage/crdtDocStore';
+import { ulid } from 'ulid';
+import { BUCKET_ORIGIN, REMOTE_ORIGIN, type ReplaceReason } from '#lib/storage/crdtDocStore';
 import type { DocKind } from '#lib/sync/ydocDevices';
 import type { RemoteStore } from './remoteStore';
 
@@ -31,7 +34,21 @@ export interface DeltaState {
 	outbox: string | null;
 	/** Legacy per-device state files already merged: device -> `size|modified` at that time. */
 	legacy?: Record<string, string>;
+	/** The acknowledgement last published (JSON), to publish only when it changed. */
+	acked?: string;
+	/** This device reset its document: the bucket still needs the new generation's snapshot. */
+	pendingSnapshot?: boolean;
 }
+
+/** What this device tells the others it has applied, so they can compact. Own deltas not included. */
+export interface DeltaAck {
+	snapId: string | null;
+	applied: Record<string, number>;
+}
+
+/** Compact when this many delta objects have piled up, or the newest snapshot is this old. */
+export const COMPACT_MIN_DELTAS = 30;
+export const COMPACT_MAX_AGE_MS = 7 * 24 * 3600 * 1000;
 
 export interface DeltaStateStorage {
 	load(): Promise<DeltaState | null>;
@@ -41,7 +58,10 @@ export interface DeltaStateStorage {
 /** The part of a CRDT store that delta sync needs (see `CrdtDocStore`). */
 export interface DeltaDoc {
 	stateVector(): Promise<Uint8Array>;
+	exportState(): Promise<Uint8Array>;
 	exportDelta(since: Map<number, number>): Promise<Uint8Array>;
+	/** Called when the document is replaced by a new generation (reset, or adopting another's). */
+	onReplaced?(handler: (reason: ReplaceReason) => void): () => void;
 	importState(
 		update: Uint8Array,
 		opts: { backup?: boolean; origin?: unknown }
@@ -55,10 +75,12 @@ const pad = (seq: number) => String(seq).padStart(6, '0');
 
 export const kindPrefix = (kind: DocKind) => `crdt/${kind}/`;
 export const snapshotKey = (kind: DocKind, id: string) => `${kindPrefix(kind)}snap-${id}.ydoc`;
+/** Start of every object a device wrote: its deltas, and its legacy state file. */
 export const deviceDeltaPrefix = (kind: DocKind, deviceId: string) =>
-	`${kindPrefix(kind)}${deviceId}/`;
+	`${kindPrefix(kind)}${deviceId}.`;
 export const deltaKey = (kind: DocKind, deviceId: string, seq: number) =>
-	`${deviceDeltaPrefix(kind, deviceId)}d-${pad(seq)}.upd`;
+	`${deviceDeltaPrefix(kind, deviceId)}${pad(seq)}.upd`;
+export const legacyKey = (kind: DocKind, deviceId: string) => `${kindPrefix(kind)}${deviceId}.ydoc`;
 
 export type ParsedKey =
 	| { type: 'snapshot'; id: string }
@@ -72,9 +94,9 @@ export function parseKey(kind: DocKind, key: string): ParsedKey | null {
 	if (rest === null) return null;
 	const snap = /^snap-([0-9A-Za-z]+)\.ydoc$/.exec(rest);
 	if (snap) return { type: 'snapshot', id: snap[1] };
-	const delta = /^([^/]+)\/d-(\d+)\.upd$/.exec(rest);
+	const delta = /^([^/.]+)\.(\d+)\.upd$/.exec(rest);
 	if (delta) return { type: 'delta', deviceId: delta[1], seq: Number(delta[2]) };
-	const legacy = /^([^/]+)\.ydoc$/.exec(rest);
+	const legacy = /^([^/.]+)\.ydoc$/.exec(rest);
 	if (legacy) return { type: 'legacy', deviceId: legacy[1] };
 	return null;
 }
@@ -192,6 +214,30 @@ export interface DownloadResult {
 	errors: { key: string; message: string }[];
 }
 
+export interface CompactResult {
+	/** Id of the snapshot written, or null when there was nothing to compact. */
+	snapshot: string | null;
+	deleted: number;
+	/** Why nothing was done, when that is not simply "nothing to do". */
+	skipped?: string;
+}
+
+/**
+ * Whether it is time to compact, from a listing alone: enough deltas have piled up, or some have
+ * waited longer than a week for a snapshot.
+ */
+export function needsCompaction(objects: BucketObject[], now = Date.now()): boolean {
+	const deltas = objects.filter((o) => o.type === 'delta');
+	if (!deltas.length) return false;
+	if (deltas.length >= COMPACT_MIN_DELTAS) return true;
+	const times = (type: BucketObject['type']) =>
+		objects.filter((o) => o.type === type && o.lastModified).map((o) => o.lastModified!.getTime());
+	const snapshots = times('snapshot');
+	// Without a snapshot, the oldest delta is what has been waiting.
+	const since = snapshots.length ? Math.max(...snapshots) : Math.min(...times('delta'));
+	return Number.isFinite(since) && now - since > COMPACT_MAX_AGE_MS;
+}
+
 export interface DeltaSyncOptions {
 	kind: DocKind;
 	deviceId: string;
@@ -212,6 +258,7 @@ export class DeltaSync {
 	private pending: Uint8Array[] = [];
 	private loaded?: Promise<void>;
 	private detach?: () => void;
+	private detachReplaced?: () => void;
 	private queue: Promise<unknown> = Promise.resolve();
 
 	constructor(options: DeltaSyncOptions) {
@@ -233,11 +280,26 @@ export class DeltaSync {
 			this.pending.push(update);
 			void this.serial(() => this.persist());
 		});
+		this.detachReplaced = this.o.doc.onReplaced?.((reason) => this.replaced(reason));
 	}
 
 	dispose(): void {
 		this.detach?.();
 		this.detach = undefined;
+		this.detachReplaced?.();
+		this.detachReplaced = undefined;
+	}
+
+	/**
+	 * A new generation of the document: what was captured, and what we knew of the bucket, belongs
+	 * to the old one. After our own reset the bucket also needs the new generation's snapshot,
+	 * which the next upload writes.
+	 */
+	private replaced(reason: ReplaceReason): void {
+		this.pending = [];
+		this.state.bucketSV = {};
+		if (reason === 'reset') this.state.pendingSnapshot = true;
+		void this.serial(() => this.persist());
 	}
 
 	/** Replaces the transport or the ignore list, e.g. when the bucket settings or trust list changed. */
@@ -264,10 +326,30 @@ export class DeltaSync {
 		await this.o.storage.save(this.state);
 	}
 
-	/** The last delta of each device that this device holds, itself included. For acknowledgements. */
+	/** The last delta of each device that this device holds, itself included. */
 	async coverage(): Promise<Record<string, number>> {
 		await this.load();
+		return this.coverageNow();
+	}
+
+	private coverageNow(): Record<string, number> {
 		return { ...this.state.applied, [this.o.deviceId]: this.state.nextSeq - 1 };
+	}
+
+	/** What to tell the others this device has applied, or null when it already has. */
+	async ack(): Promise<DeltaAck | null> {
+		await this.load();
+		const applied = { ...this.state.applied };
+		delete applied[this.o.deviceId];
+		const ack: DeltaAck = { snapId: this.state.snapId, applied };
+		return JSON.stringify(ack) === this.state.acked ? null : ack;
+	}
+
+	/** Records that `ack` was published. */
+	async markAcked(ack: DeltaAck): Promise<void> {
+		await this.load();
+		this.state.acked = JSON.stringify(ack);
+		await this.serial(() => this.persist());
 	}
 
 	// --- upload ---
@@ -294,6 +376,7 @@ export class DeltaSync {
 	async hasUpload(): Promise<boolean> {
 		await this.load();
 		return this.serial(async () => {
+			if (this.state.pendingSnapshot) return true;
 			const before = this.pending.length;
 			await this.healOutbox();
 			const needed = this.pending.length > 0;
@@ -306,39 +389,165 @@ export class DeltaSync {
 	/** Uploads the changes made since the last upload as one delta. `seq` is null when there are none. */
 	async upload(): Promise<{ seq: number | null; bytes: number }> {
 		await this.load();
-		return this.serial(async () => {
-			await this.healOutbox();
-			if (!this.pending.length) return { seq: null, bytes: 0 };
+		return this.serial(() => this.uploadLocked());
+	}
 
-			const sent = Y.mergeUpdates(this.pending);
-			const held = this.pending;
-			this.pending = [];
-			try {
-				const { kind, deviceId, remote } = this.o;
-				// The counter is local state; the bucket is the truth when that was lost.
-				let seq = this.state.nextSeq;
-				for (const info of await remote.list(deviceDeltaPrefix(kind, deviceId))) {
-					const parsed = parseKey(kind, info.key);
-					if (parsed?.type === 'delta' && parsed.deviceId === deviceId) {
-						seq = Math.max(seq, parsed.seq + 1);
-					}
+	private async uploadLocked(): Promise<{ seq: number | null; bytes: number }> {
+		if (this.state.pendingSnapshot) await this.publishReset();
+		await this.healOutbox();
+		if (!this.pending.length) return { seq: null, bytes: 0 };
+
+		const sent = Y.mergeUpdates(this.pending);
+		const held = this.pending;
+		this.pending = [];
+		try {
+			const { kind, deviceId, remote } = this.o;
+			// The counter is local state; the bucket is the truth when that was lost.
+			let seq = this.state.nextSeq;
+			for (const info of await remote.list(deviceDeltaPrefix(kind, deviceId))) {
+				const parsed = parseKey(kind, info.key);
+				if (parsed?.type === 'delta' && parsed.deviceId === deviceId) {
+					seq = Math.max(seq, parsed.seq + 1);
 				}
-				// An object under this number already holds something else: take the next number.
-				for (let attempt = 0; ; attempt++) {
-					if (await remote.put(deltaKey(kind, deviceId, seq), sent, { onlyIfAbsent: true })) break;
-					if (attempt >= 10) throw new Error(`Could not claim a delta number near ${seq}`);
-					seq++;
-				}
-				this.state.nextSeq = seq + 1;
-				raise(this.state.bucketSV, vectorOf(sent));
-				await this.persist();
-				return { seq, bytes: sent.length };
-			} catch (e) {
-				// Nothing was stored, or we cannot tell: keep the changes for the next try.
-				this.pending = [...held, ...this.pending];
-				await this.persist();
-				throw e;
 			}
+			// An object under this number already holds something else: take the next number.
+			for (let attempt = 0; ; attempt++) {
+				if (await remote.put(deltaKey(kind, deviceId, seq), sent, { onlyIfAbsent: true })) break;
+				if (attempt >= 10) throw new Error(`Could not claim a delta number near ${seq}`);
+				seq++;
+			}
+			this.state.nextSeq = seq + 1;
+			raise(this.state.bucketSV, vectorOf(sent));
+			await this.persist();
+			return { seq, bytes: sent.length };
+		} catch (e) {
+			// Nothing was stored, or we cannot tell: keep the changes for the next try.
+			this.pending = [...held, ...this.pending];
+			await this.persist();
+			throw e;
+		}
+	}
+
+	// --- snapshots and compaction ---
+
+	/**
+	 * Writes the whole document as a new snapshot that covers `coverage`. Everything captured so
+	 * far is in it, so the outbox is emptied (and restored if the write fails).
+	 */
+	private async writeSnapshot(coverage: Record<string, number>): Promise<string> {
+		const { kind, doc, remote } = this.o;
+		const held = this.pending;
+		this.pending = [];
+		try {
+			const update = await doc.exportState();
+			const body = encodeSnapshot({ coverage, update });
+			let id = ulid();
+			for (
+				let attempt = 0;
+				!(await remote.put(snapshotKey(kind, id), body, { onlyIfAbsent: true }));
+			) {
+				if (++attempt >= 5) throw new Error('Could not name the snapshot');
+				id = ulid();
+			}
+			this.state.snapId = id;
+			raise(this.state.bucketSV, vectorOf(update));
+			await this.persist();
+			return id;
+		} catch (e) {
+			this.pending = [...held, ...this.pending];
+			throw e;
+		}
+	}
+
+	/**
+	 * After this device reset its document: publishes the new generation as a snapshot, and removes
+	 * what belongs to the old one, which is this device's deltas and the older snapshots. Other
+	 * devices' deltas stay: they are applied or refused as retired when read, like any other.
+	 */
+	private async publishReset(): Promise<void> {
+		const { kind, deviceId, remote } = this.o;
+		const id = await this.writeSnapshot(this.coverageNow());
+		for (const o of await this.objects()) {
+			const parsed = parseKey(kind, o.key);
+			const older = parsed?.type === 'snapshot' && parsed.id < id;
+			if (o.deviceId === deviceId || older) await remote.delete(o.key);
+		}
+		this.state.pendingSnapshot = false;
+		await this.persist();
+	}
+
+	/**
+	 * Folds what has piled up into a snapshot and deletes what it makes unnecessary: the deltas
+	 * that every device in `acks` has applied, this device's legacy state file, and all but the
+	 * newest two snapshots. `acks` maps each active device to what it has applied (`DeltaAck.applied`).
+	 *
+	 * Deleting is never a risk to data: a snapshot holds everything it covers, so a device that
+	 * has not applied a deleted delta takes the snapshot. The acknowledgements only keep that from
+	 * happening to devices that sync regularly.
+	 */
+	async compact(acks: Record<string, Record<string, number>>): Promise<CompactResult> {
+		await this.load();
+		return this.serial(async () => {
+			const { kind, deviceId, remote } = this.o;
+			const down = await this.downloadRetry();
+			if (down.errors.length || down.gaps.length) {
+				return {
+					snapshot: null,
+					deleted: 0,
+					skipped: 'Not everything in the bucket could be merged'
+				};
+			}
+			await this.uploadLocked();
+
+			const coverage = this.coverageNow();
+			const objects = await this.objects();
+			const deletable = objects.filter((o) => {
+				const parsed = parseKey(kind, o.key);
+				if (parsed?.type === 'delta') {
+					if (parsed.seq > (coverage[parsed.deviceId] ?? 0)) return false;
+					return Object.entries(acks).every(
+						([device, applied]) =>
+							device === parsed.deviceId || (applied[parsed.deviceId] ?? 0) >= parsed.seq
+					);
+				}
+				return parsed?.type === 'legacy' && parsed.deviceId === deviceId;
+			});
+			if (!deletable.length) return { snapshot: null, deleted: 0 };
+
+			const snapshot = await this.writeSnapshot(coverage);
+			for (const o of deletable) await remote.delete(o.key);
+			const snapshots = (await this.objects())
+				.filter((o) => o.type === 'snapshot')
+				.sort((a, b) => b.key.localeCompare(a.key));
+			for (const o of snapshots.slice(2)) await remote.delete(o.key);
+			return { snapshot, deleted: deletable.length + Math.max(0, snapshots.length - 2) };
+		});
+	}
+
+	/**
+	 * Removes everything a device wrote from the bucket. First merges what it wrote (it must still
+	 * be trusted) and publishes it in a snapshot, so nobody loses a change that only its deltas held.
+	 */
+	async forget(device: string): Promise<{ deleted: number }> {
+		await this.load();
+		return this.serial(async () => {
+			const down = await this.downloadRetry();
+			if (down.errors.length) {
+				throw new Error(`Could not merge everything first: ${down.errors[0].message}`);
+			}
+			await this.uploadLocked();
+			await this.writeSnapshot(this.coverageNow());
+
+			let deleted = 0;
+			for (const o of await this.objects()) {
+				if (o.deviceId !== device) continue;
+				await this.o.remote.delete(o.key);
+				deleted++;
+			}
+			delete this.state.applied[device];
+			delete this.state.legacy?.[device];
+			await this.persist();
+			return { deleted };
 		});
 	}
 
@@ -351,16 +560,18 @@ export class DeltaSync {
 	 */
 	async download(): Promise<DownloadResult> {
 		await this.load();
-		return this.serial(async () => {
-			// A listed object can be compacted away before it is read; the listing is then stale.
-			for (let attempt = 0; ; attempt++) {
-				try {
-					return await this.downloadOnce();
-				} catch (e) {
-					if (!(e instanceof Vanished) || attempt >= 3) throw e;
-				}
+		return this.serial(() => this.downloadRetry());
+	}
+
+	private async downloadRetry(): Promise<DownloadResult> {
+		// A listed object can be compacted away before it is read; the listing is then stale.
+		for (let attempt = 0; ; attempt++) {
+			try {
+				return await this.downloadOnce();
+			} catch (e) {
+				if (!(e instanceof Vanished) || attempt >= 3) throw e;
 			}
-		});
+		}
 	}
 
 	private async downloadOnce(): Promise<DownloadResult> {

@@ -43,6 +43,9 @@ interface ResetMeta {
 
 type UpdateHandler = (update: Uint8Array, origin: unknown) => void;
 
+/** Why the document was replaced: `reset` on this device, or `adopt` of another device's reset. */
+export type ReplaceReason = 'reset' | 'adopt';
+
 function readMeta(doc: Y.Doc): ResetMeta {
 	const meta = doc.getMap<unknown>(META_KEY);
 	return {
@@ -145,6 +148,7 @@ export abstract class CrdtDocStore<R> {
 	private queue: Promise<unknown> = Promise.resolve();
 	private readonly recordListeners = new Set<() => void>();
 	private readonly updateListeners = new Set<UpdateHandler>();
+	private readonly replaceListeners = new Set<(reason: ReplaceReason) => void>();
 
 	/** Which document this is; scopes the automatic backup to this store's own file. */
 	protected abstract readonly kind: DocKind;
@@ -405,6 +409,22 @@ export abstract class CrdtDocStore<R> {
 		};
 	}
 
+	/**
+	 * Calls `handler` after the document was replaced by a new generation: `reset` here, or `adopt`
+	 * of another device's reset. What was captured from the old document no longer applies.
+	 * Returns the unsubscribe function.
+	 */
+	onReplaced(handler: (reason: ReplaceReason) => void): () => void {
+		this.replaceListeners.add(handler);
+		return () => {
+			this.replaceListeners.delete(handler);
+		};
+	}
+
+	private notifyReplaced(reason: ReplaceReason): void {
+		for (const handler of this.replaceListeners) handler(reason);
+	}
+
 	/** Runs `task` after every earlier one has finished, so documents are never swapped under a merge. */
 	private serial<T>(task: () => Promise<T>): Promise<T> {
 		const run = this.queue.then(task);
@@ -441,6 +461,7 @@ export abstract class CrdtDocStore<R> {
 					nextMeta.set('retired', Object.fromEntries(retired));
 				});
 			});
+			this.notifyReplaced('reset');
 			scheduleBackup(this.kind);
 		});
 	}
@@ -468,6 +489,7 @@ export abstract class CrdtDocStore<R> {
 				});
 			}
 		});
+		this.notifyReplaced('adopt');
 		if (unseen.size > 0) {
 			notifier.warning(
 				`The working set was reset on another device. ${unseen.size} record(s) on this device that it had not seen were kept.`

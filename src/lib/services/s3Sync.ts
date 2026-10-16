@@ -6,7 +6,7 @@
  * - manifests/<deviceId>.json what each device last uploaded (path -> hash, time)
  * - data/settings.json        shared settings
  * - data/files/<path>         Beancount files, by their OPFS path
- * - crdt/<xacts|scx>/snap-<ulid>.ydoc, crdt/<xacts|scx>/<deviceId>/d-<seq>.upd
+ * - crdt/<xacts|scx>/snap-<ulid>.ydoc, crdt/<xacts|scx>/<deviceId>.<seq>.upd
  *                             the CRDT stores as a snapshot plus per-device deltas (see
  *                             sync/deltaSync.ts). Merged on download, so they never conflict.
  *                             The older crdt/<kind>/<deviceId>.ydoc files are still read.
@@ -28,6 +28,7 @@ import {
 	deviceDeltaPrefix,
 	deviceOfKey,
 	kindPrefix,
+	needsCompaction,
 	vectorOf
 } from '#lib/sync/deltaSync';
 import { deviceSettingsStateStorage } from '#lib/sync/deltaStateStorage';
@@ -404,7 +405,7 @@ async function syncShared(
 // --- CRDT stores (transactions, scheduled transactions) ---
 
 /**
- * The device that wrote a CRDT object (`crdt/<kind>/<deviceId>/d-<seq>.upd`, or the legacy
+ * The device that wrote a CRDT object (`crdt/<kind>/<deviceId>.<seq>.upd`, or the legacy
  * `crdt/<kind>/<deviceId>.ydoc`), or null for a snapshot and anything else.
  */
 const deviceIdOfKey = (objectKey: string): string | null => {
@@ -424,7 +425,11 @@ async function loadIgnoreReasons(): Promise<(deviceId: string | null) => string 
 
 const kindOf = (item: 'xacts' | 'scheduled'): DocKind => (item === 'xacts' ? 'xacts' : 'scx');
 
-type CrdtSession = Pick<S3Session, 'cfg' | 'key' | 'deviceId'>;
+/** `own` is the open session's manifest, when there is one: acknowledgements are kept in line with it. */
+type CrdtSession = Pick<S3Session, 'cfg' | 'key' | 'deviceId'> & { own?: Manifest };
+
+/** A device counts for compaction when its manifest was written within this time. */
+const ACTIVE_WINDOW_MS = 30 * 24 * 3600 * 1000;
 
 const storeOf = (item: 'xacts' | 'scheduled') =>
 	item === 'xacts' ? getXactStore() : getScxStore();
@@ -469,6 +474,61 @@ async function deltaSyncFor(s: CrdtSession, item: 'xacts' | 'scheduled'): Promis
 	return entry.sync;
 }
 
+/** This device's manifest as the bucket holds it, or an empty one. */
+async function readOwnManifest(s: CrdtSession): Promise<Manifest> {
+	const raw = await getObject(s.cfg, manifestKey(s.deviceId));
+	if (!raw) return { deviceId: s.deviceId, updated: '', files: {} };
+	return JSON.parse(new TextDecoder().decode(await decrypt(s.key, raw))) as Manifest;
+}
+
+/**
+ * Tells the other devices, in this device's manifest, what it has applied of the store, so they
+ * know which deltas they may delete. Writes only when that changed.
+ */
+async function publishAck(s: CrdtSession, kind: DocKind, sync: DeltaSync): Promise<void> {
+	const ack = await sync.ack();
+	if (!ack) return;
+	const manifest = await readOwnManifest(s);
+	manifest.crdt = { ...manifest.crdt, [kind]: ack };
+	manifest.updated = new Date().toISOString();
+	await putObject(
+		s.cfg,
+		manifestKey(s.deviceId),
+		await encrypt(s.key, TEXT.encode(JSON.stringify(manifest)))
+	);
+	// An open session writes its manifest again later: it must not take the acknowledgement back.
+	if (s.own) s.own.crdt = manifest.crdt;
+	await sync.markAcked(ack);
+}
+
+/**
+ * What each active device has applied of the store: trusted devices whose manifest was written
+ * recently and carries an acknowledgement. Others (old app versions, long absent) do not hold
+ * back clean-up; a device that lags takes the snapshot instead.
+ */
+async function activeAcks(
+	s: CrdtSession,
+	kind: DocKind
+): Promise<Record<string, Record<string, number>>> {
+	const [manifests, peers] = await Promise.all([loadManifests(s.cfg, s.key), db.peers.toArray()]);
+	const trusted = new Set(peers.map((p) => p.id));
+	const acks: Record<string, Record<string, number>> = {};
+	for (const m of manifests) {
+		const ack = m.crdt?.[kind];
+		if (m.deviceId === s.deviceId || !trusted.has(m.deviceId) || !ack) continue;
+		if (!(Date.now() - Date.parse(m.updated) <= ACTIVE_WINDOW_MS)) continue;
+		acks[m.deviceId] = ack.applied;
+	}
+	return acks;
+}
+
+/** Compacts the store's objects when enough have piled up. Never fails the sync it follows. */
+async function compactIfDue(s: CrdtSession, kind: DocKind, sync: DeltaSync): Promise<void> {
+	if (!needsCompaction(await sync.objects())) return;
+	const result = await sync.compact(await activeAcks(s, kind));
+	if (result.skipped) console.warn('[s3-sync] Compaction skipped:', kind, result.skipped);
+}
+
 async function syncCrdt(
 	s: CrdtSession,
 	direction: SyncDirection,
@@ -485,7 +545,14 @@ async function syncCrdt(
 			if (item === 'scheduled' && !(await (await storeOf(item)).isInitialized())) {
 				return [{ item, path: prefix, outcome: 'skipped', message: 'Not set up on this device' }];
 			}
-			const { seq } = await (await deltaSyncFor(s, item)).upload();
+			const sync = await deltaSyncFor(s, item);
+			const { seq } = await sync.upload();
+			try {
+				await publishAck(s, kind, sync);
+				await compactIfDue(s, kind, sync);
+			} catch (e) {
+				console.warn('[s3-sync] Clean-up failed:', kind, e);
+			}
 			return [
 				seq === null
 					? { item, path: prefix, outcome: 'unchanged' }
@@ -493,7 +560,13 @@ async function syncCrdt(
 			];
 		}
 
-		const r = await (await deltaSyncFor(s, item)).download();
+		const sync = await deltaSyncFor(s, item);
+		const r = await sync.download();
+		try {
+			await publishAck(s, kind, sync);
+		} catch (e) {
+			console.warn('[s3-sync] Could not publish the acknowledgement:', kind, e);
+		}
 		if (!r.foreign) {
 			return [
 				{ item, path: prefix, outcome: 'skipped', message: 'No other device has uploaded yet' }
@@ -830,6 +903,27 @@ export async function syncCrdtStores(
 		errors,
 		merged: down.some((l) => l.outcome === 'downloaded' && l.item === 'xacts')
 	};
+}
+
+/**
+ * Removes everything a device wrote to the bucket: its deltas, its legacy state files and its
+ * manifest. Call it while the device is still trusted. What it wrote is merged here first and
+ * published in a snapshot, so no other device loses a change that only its deltas held. Stops
+ * with an error, deleting nothing for that store, when something could not be merged.
+ */
+export async function forgetBucketDevice(
+	cfg: S3Config,
+	deviceId: string
+): Promise<{ deleted: number }> {
+	const s = await crdtSession(cfg);
+	let deleted = 0;
+	for (const item of ['xacts', 'scheduled'] as const) {
+		// A store this device never set up has nothing here to merge the other device's data into.
+		if (item === 'scheduled' && !(await (await storeOf(item)).isInitialized())) continue;
+		deleted += (await (await deltaSyncFor(s, item)).forget(deviceId)).deleted;
+	}
+	await deleteObject(cfg, manifestKey(deviceId));
+	return { deleted };
 }
 
 /** Settles a conflict: `local` overwrites the bucket's version, `remote` overwrites this device's. */

@@ -14,6 +14,8 @@ import {
 	deltaKey,
 	deviceOfKey,
 	encodeSnapshot,
+	legacyKey,
+	needsCompaction,
 	parseKey,
 	snapshotKey,
 	type DeltaState,
@@ -545,6 +547,260 @@ describe('reading without applying', () => {
 		await remote.delete(deltaKey('xacts', 'A', 1));
 
 		expect(await b.sync.read({ unappliedOnly: true })).toEqual([]);
+	});
+});
+
+describe('compaction', () => {
+	const keysOf = (remote: MemoryRemoteStore) => [...remote.objects.keys()];
+	const snapshotsOf = (remote: MemoryRemoteStore) =>
+		keysOf(remote).filter((k) => parseKey('xacts', k)?.type === 'snapshot');
+	const deltasOf = (remote: MemoryRemoteStore) =>
+		keysOf(remote).filter((k) => parseKey('xacts', k)?.type === 'delta');
+
+	async function pileUp(remote: MemoryRemoteStore, a: Device, count: number) {
+		for (let i = 0; i < count; i++) {
+			await a.store.append(xact(`Item ${i}`));
+			await a.sync.upload();
+		}
+	}
+
+	it('folds the deltas into a snapshot and deletes those everybody has applied', async () => {
+		const remote = new MemoryRemoteStore();
+		const a = await device(remote, 'A');
+		const b = await device(remote, 'B');
+		await pileUp(remote, a, 3);
+		await b.sync.download();
+
+		const result = await a.sync.compact({ B: (await b.sync.ack())!.applied });
+		expect(result.snapshot).not.toBeNull();
+		expect(deltasOf(remote)).toEqual([]);
+		expect(snapshotsOf(remote)).toHaveLength(1);
+
+		const c = await device(remote, 'C');
+		await c.sync.download();
+		expect(await payees(c)).toHaveLength(3);
+	});
+
+	it('keeps the deltas a device has not applied yet, and that device still catches up', async () => {
+		const remote = new MemoryRemoteStore();
+		const a = await device(remote, 'A');
+		const b = await device(remote, 'B');
+		await pileUp(remote, a, 1);
+		await b.sync.download();
+		await pileUp(remote, a, 2);
+
+		await a.sync.compact({ B: (await b.sync.ack())!.applied });
+		expect(deltasOf(remote)).toEqual([deltaKey('xacts', 'A', 2), deltaKey('xacts', 'A', 3)]);
+
+		const result = await b.sync.download();
+		expect(result.snapshot).toBe(true);
+		expect(result.gaps).toEqual([]);
+		expect(await payees(b)).toHaveLength(3);
+	});
+
+	it('lets a device that never acknowledges be left out of the decision', async () => {
+		const remote = new MemoryRemoteStore();
+		const a = await device(remote, 'A');
+		await pileUp(remote, a, 2);
+
+		// Only the active devices are passed in; a dead one is not among them.
+		await a.sync.compact({});
+		expect(deltasOf(remote)).toEqual([]);
+	});
+
+	it('does nothing when there is nothing to delete', async () => {
+		const remote = new MemoryRemoteStore();
+		const a = await device(remote, 'A');
+		await a.store.append(xact('One'));
+		await a.sync.upload();
+
+		const result = await a.sync.compact({ B: {} });
+		expect(result).toEqual({ snapshot: null, deleted: 0 });
+		expect(snapshotsOf(remote)).toEqual([]);
+	});
+
+	it('keeps only the newest two snapshots', async () => {
+		const remote = new MemoryRemoteStore();
+		const a = await device(remote, 'A');
+		for (let i = 0; i < 4; i++) {
+			await a.store.append(xact(`Round ${i}`));
+			await a.sync.upload();
+			await a.sync.compact({});
+		}
+		expect(snapshotsOf(remote)).toHaveLength(2);
+	});
+
+	it('removes its own legacy state file', async () => {
+		const remote = new MemoryRemoteStore();
+		const a = await device(remote, 'A');
+		await a.store.append(xact('One'));
+		await remote.put(legacyKey('xacts', 'A'), await a.store.exportState());
+		await a.sync.upload();
+
+		await a.sync.compact({});
+		expect(keysOf(remote)).not.toContain(legacyKey('xacts', 'A'));
+	});
+
+	it('does not delete anything when it could not merge everything first', async () => {
+		const remote = new MemoryRemoteStore();
+		const a = await device(remote, 'A');
+		const b = await device(remote, 'B');
+		await pileUp(remote, a, 2);
+		await remote.put(deltaKey('xacts', 'A', 1), new Uint8Array([9, 9, 9]));
+
+		const result = await b.sync.compact({});
+		expect(result.snapshot).toBeNull();
+		expect(result.skipped).toBeDefined();
+		expect(deltasOf(remote)).toHaveLength(2);
+	});
+
+	it('decides from the listing when it is time', () => {
+		const delta = (n: number, ageDays: number) => ({
+			key: deltaKey('xacts', 'A', n),
+			type: 'delta' as const,
+			deviceId: 'A',
+			size: 10,
+			lastModified: new Date(Date.now() - ageDays * 86400_000)
+		});
+		const snapshot = (ageDays: number) => ({
+			key: snapshotKey('xacts', '01A'),
+			type: 'snapshot' as const,
+			deviceId: null,
+			size: 10,
+			lastModified: new Date(Date.now() - ageDays * 86400_000)
+		});
+		const many = Array.from({ length: 30 }, (_, i) => delta(i + 1, 0));
+
+		expect(needsCompaction([])).toBe(false);
+		expect(needsCompaction([snapshot(30)])).toBe(false);
+		expect(needsCompaction([delta(1, 0), snapshot(1)])).toBe(false);
+		expect(needsCompaction(many)).toBe(true);
+		expect(needsCompaction([delta(1, 0), snapshot(8)])).toBe(true);
+		expect(needsCompaction([delta(1, 9)])).toBe(true);
+	});
+});
+
+describe('acknowledgements', () => {
+	it('say what was applied, and only when that changed', async () => {
+		const remote = new MemoryRemoteStore();
+		const a = await device(remote, 'A');
+		const b = await device(remote, 'B');
+		await a.store.append(xact('One'));
+		await a.sync.upload();
+
+		const first = await b.sync.ack();
+		expect(first).toEqual({ snapId: null, applied: {} });
+		await b.sync.markAcked(first!);
+		expect(await b.sync.ack()).toBeNull();
+
+		await b.sync.download();
+		const second = await b.sync.ack();
+		expect(second).toEqual({ snapId: null, applied: { A: 1 } });
+		await b.sync.markAcked(second!);
+		// Uploading its own changes does not need telling.
+		await b.store.append(xact('Two'));
+		await b.sync.upload();
+		expect(await b.sync.ack()).toBeNull();
+	});
+});
+
+describe('reset', () => {
+	const emptied = async (d: Device) => {
+		for (const { id } of await d.store.list()) await d.store.remove(id);
+	};
+
+	it('publishes the new generation and the others follow without the old records', async () => {
+		const remote = new MemoryRemoteStore();
+		const a = await device(remote, 'A');
+		const b = await device(remote, 'B');
+		await a.store.append(xact('Old'));
+		await a.sync.upload();
+		await b.sync.download();
+		expect(await payees(b)).toEqual(['Old']);
+
+		await emptied(a);
+		await a.sync.upload();
+		await b.sync.download();
+		await a.store.reset();
+		await a.store.append(xact('After'));
+		await a.sync.upload();
+
+		const keys = [...remote.objects.keys()];
+		// The old generation's deltas of A are gone. The snapshot holds the new generation, the
+		// record added since included, so no delta is needed for it.
+		expect(keys.filter((k) => parseKey('xacts', k)?.type === 'snapshot')).toHaveLength(1);
+		expect(keys.filter((k) => parseKey('xacts', k)?.type === 'delta')).toHaveLength(0);
+
+		await b.sync.download();
+		expect(await payees(b)).toEqual(['After']);
+		expect((await b.sync.upload()).seq).toBeNull();
+
+		const c = await device(remote, 'C');
+		await c.sync.download();
+		expect(await payees(c)).toEqual(['After']);
+	});
+
+	it('remembers across a restart that the snapshot is still to be published', async () => {
+		const remote = new MemoryRemoteStore();
+		const a = await device(remote, 'A');
+		await a.store.append(xact('Old'));
+		await a.sync.upload();
+		await emptied(a);
+		await a.store.reset();
+		await vi.waitFor(() => expect(a.storage.saved?.pendingSnapshot).toBe(true));
+
+		const again = await restart(a, remote, a.storage.saved);
+		await again.sync.upload();
+		expect(
+			[...remote.objects.keys()].filter((k) => parseKey('xacts', k)?.type === 'snapshot')
+		).toHaveLength(1);
+	});
+
+	it('does not send the adopted generation back', async () => {
+		const remote = new MemoryRemoteStore();
+		const a = await device(remote, 'A');
+		const b = await device(remote, 'B');
+		await a.store.append(xact('Old'));
+		await a.sync.upload();
+		await b.sync.download();
+		await emptied(a);
+		await a.store.reset();
+		await a.sync.upload();
+
+		await b.sync.download();
+		expect((await b.sync.upload()).seq).toBeNull();
+	});
+});
+
+describe('forgetting a device', () => {
+	it('merges what it wrote, publishes that in a snapshot, then removes its objects', async () => {
+		const remote = new MemoryRemoteStore();
+		const a = await device(remote, 'A');
+		const gone = await device(remote, 'Gone');
+		const c = await device(remote, 'C');
+		await gone.store.append(xact('FromGone'));
+		await gone.sync.upload();
+		await remote.put(legacyKey('xacts', 'Gone'), await gone.store.exportState());
+
+		const result = await a.sync.forget('Gone');
+		expect(result.deleted).toBe(2);
+		expect([...remote.objects.keys()].some((k) => k.includes('Gone'))).toBe(false);
+
+		// C never saw the deltas, but gets their content from the snapshot.
+		await c.sync.download();
+		expect(await payees(c)).toEqual(['FromGone']);
+	});
+
+	it('stops when it cannot merge everything first', async () => {
+		const remote = new MemoryRemoteStore();
+		const a = await device(remote, 'A');
+		const gone = await device(remote, 'Gone');
+		await gone.store.append(xact('FromGone'));
+		await gone.sync.upload();
+		await remote.put(deltaKey('xacts', 'Gone', 1), new Uint8Array([9, 9, 9]));
+
+		await expect(a.sync.forget('Gone')).rejects.toThrow(/merge everything/);
+		expect(remote.objects.has(deltaKey('xacts', 'Gone', 1))).toBe(true);
 	});
 });
 
