@@ -46,6 +46,34 @@ type UpdateHandler = (update: Uint8Array, origin: unknown) => void;
 /** Why the document was replaced: `reset` on this device, or `adopt` of another device's reset. */
 export type ReplaceReason = 'reset' | 'adopt';
 
+/** What adopting another device's reset would do to this device's records. */
+export interface AdoptInfo {
+	kind: DocKind;
+	/** Records created here that the other device had not seen: they are kept. */
+	carried: number;
+	/** Records here that the other device had deleted before it reset: they are dropped, and so is any edit made to them here. */
+	dropped: number;
+}
+
+/** Thrown by an import that did not go ahead because the user chose to wait; nothing was changed. */
+export class AdoptDeclinedError extends Error {
+	constructor() {
+		super('Adopting the reset of another device was postponed');
+		this.name = 'AdoptDeclinedError';
+	}
+}
+
+type AdoptConfirm = (info: AdoptInfo) => boolean | Promise<boolean>;
+let adoptConfirm: AdoptConfirm | undefined;
+
+/**
+ * Sets what asks the user whether to adopt another device's reset when that would drop records
+ * that have unsent changes. Without one, the reset is adopted without asking.
+ */
+export function setAdoptConfirm(confirm: AdoptConfirm | undefined): void {
+	adoptConfirm = confirm;
+}
+
 function readMeta(doc: Y.Doc): ResetMeta {
 	const meta = doc.getMap<unknown>(META_KEY);
 	return {
@@ -149,6 +177,7 @@ export abstract class CrdtDocStore<R> {
 	private readonly recordListeners = new Set<() => void>();
 	private readonly updateListeners = new Set<UpdateHandler>();
 	private readonly replaceListeners = new Set<(reason: ReplaceReason) => void>();
+	private readonly adoptChecks = new Set<() => Promise<boolean>>();
 
 	/** Which document this is; scopes the automatic backup to this store's own file. */
 	protected abstract readonly kind: DocKind;
@@ -427,6 +456,17 @@ export abstract class CrdtDocStore<R> {
 		};
 	}
 
+	/**
+	 * Registers a check, asked before another device's reset is adopted, of whether this device
+	 * has changes it has not uploaded yet (resolves to true). Returns the unsubscribe function.
+	 */
+	onAdoptCheck(check: () => Promise<boolean>): () => void {
+		this.adoptChecks.add(check);
+		return () => {
+			this.adoptChecks.delete(check);
+		};
+	}
+
 	private notifyReplaced(reason: ReplaceReason): void {
 		for (const handler of this.replaceListeners) handler(reason);
 	}
@@ -485,6 +525,20 @@ export abstract class CrdtDocStore<R> {
 	): Promise<RecordChange<R>[]> {
 		const before = new Map(this._records.entries());
 		const unseen = this.recordsBeyond(toVector(remote.retired), before);
+
+		// Records here that the other device deleted are dropped. That is harmless when everything
+		// here was synced, but changes not uploaded yet (an edit to such a record) are lost with
+		// them, so the user is asked first. If they wait, nothing is changed.
+		const dropped = before.size - unseen.size;
+		if (dropped > 0 && adoptConfirm) {
+			const unsent = (await Promise.all([...this.adoptChecks].map((check) => check()))).some(
+				Boolean
+			);
+			if (unsent && !(await adoptConfirm({ kind: this.kind, carried: unseen.size, dropped }))) {
+				throw new AdoptDeclinedError();
+			}
+		}
+
 		const next = new Y.Doc();
 		await this.replaceDoc(next, () => {
 			Y.applyUpdate(next, update, origin);

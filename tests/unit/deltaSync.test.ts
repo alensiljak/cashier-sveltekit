@@ -2,11 +2,12 @@
     Delta sync through a remote object store: a device uploads only what changed since its last
     upload, others apply just the deltas they lack, and nothing is sent back or applied twice.
 */
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('#lib/utils/notifier', () => ({ default: { warning: vi.fn() } }));
 vi.mock('#lib/services/webdavAutoBackupService', () => ({ scheduleBackup: vi.fn() }));
 
+import { setAdoptConfirm } from '#lib/storage/crdtDocStore';
 import { CrdtXactStore } from '#lib/storage/crdtXactStore';
 import {
 	DeltaSync,
@@ -844,6 +845,72 @@ describe('reset', () => {
 		expect(
 			[...remote.objects.keys()].filter((k) => parseKey('xacts', k)?.type === 'snapshot')
 		).toHaveLength(1);
+	});
+
+	describe('when this device has unsent changes', () => {
+		afterEach(() => setAdoptConfirm(undefined));
+
+		/** A and B share a record; A deletes it and resets, and has uploaded that. */
+		async function resetByA(remote: MemoryRemoteStore) {
+			const a = await device(remote, 'A');
+			const b = await device(remote, 'B');
+			const shared = await a.store.append(xact('Shared'));
+			await a.sync.upload();
+			await b.sync.download();
+			await a.store.remove(shared.id);
+			await a.store.reset();
+			await a.sync.upload();
+			return { a, b, shared };
+		}
+
+		it('asks before dropping a record it edited, and leaves everything as it is if told to wait', async () => {
+			const remote = new MemoryRemoteStore();
+			const { b, shared } = await resetByA(remote);
+			await b.store.update(shared.id, xact('Edited')); // Not uploaded.
+			const confirm = vi.fn(async () => false);
+			setAdoptConfirm(confirm);
+
+			const result = await b.sync.download();
+
+			expect(confirm).toHaveBeenCalledWith({ kind: 'xacts', carried: 0, dropped: 1 });
+			expect(result.declined).toBe(true);
+			expect(result.errors).toEqual([]);
+			expect(await payees(b)).toEqual(['Edited']);
+
+			// Asked again at the next sync; this time the user agrees.
+			confirm.mockResolvedValue(true);
+			const again = await b.sync.download();
+			expect(confirm).toHaveBeenCalledTimes(2);
+			expect(again.declined).toBe(false);
+			expect(await payees(b)).toEqual([]);
+		});
+
+		it('does not ask when everything here was synced', async () => {
+			const remote = new MemoryRemoteStore();
+			const { b } = await resetByA(remote);
+			const confirm = vi.fn(async () => false);
+			setAdoptConfirm(confirm);
+
+			const result = await b.sync.download();
+
+			expect(confirm).not.toHaveBeenCalled();
+			expect(result.declined).toBe(false);
+			expect(await payees(b)).toEqual([]);
+		});
+
+		it('does not ask when the unsent changes are new records, which are kept', async () => {
+			const remote = new MemoryRemoteStore();
+			const { b } = await resetByA(remote);
+			await b.store.remove((await b.store.list())[0].id);
+			await b.store.append(xact('New'));
+			const confirm = vi.fn(async () => false);
+			setAdoptConfirm(confirm);
+
+			await b.sync.download();
+
+			expect(confirm).not.toHaveBeenCalled();
+			expect(await payees(b)).toEqual(['New']);
+		});
 	});
 
 	it('does not send the adopted generation back', async () => {

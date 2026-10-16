@@ -469,6 +469,17 @@ async function syncCrdt(
 		const sync = await deltaSyncFor(s, item);
 		const r = await sync.download();
 		await afterSync(sync, { compact: false });
+		if (r.declined) {
+			return [
+				{
+					item,
+					path: prefix,
+					outcome: 'skipped',
+					message:
+						'Another device reset the store; not applied, as you chose to wait. You will be asked again at the next sync.'
+				}
+			];
+		}
 		if (!r.foreign) {
 			return [
 				{ item, path: prefix, outcome: 'skipped', message: 'No other device has uploaded yet' }

@@ -67,6 +67,9 @@
 			const results = await mergeWebDav(client(), kinds);
 
 			for (const [kind, r] of Object.entries(results)) {
+				if (r.declined) {
+					Notifier.info(`Reset by another device not applied (${kind}); you will be asked again at the next sync`);
+				}
 				for (const e of r.errors) Notifier.error(`Merge failed for ${e.key}: ${e.message}`);
 				for (const bad of r.invalid.slice(0, 5)) {
 					Notifier.error(`Record ${bad.id} that came in is not valid (${bad.reason}) (${kind})`);

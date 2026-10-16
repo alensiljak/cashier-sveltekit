@@ -13,7 +13,12 @@
  */
 import * as Y from 'yjs';
 import { ulid } from 'ulid';
-import { BUCKET_ORIGIN, REMOTE_ORIGIN, type ReplaceReason } from '#lib/storage/crdtDocStore';
+import {
+	AdoptDeclinedError,
+	BUCKET_ORIGIN,
+	REMOTE_ORIGIN,
+	type ReplaceReason
+} from '#lib/storage/crdtDocStore';
 import type { DocKind } from '#lib/sync/ydocDevices';
 import type { RemoteStore } from './remoteStore';
 
@@ -71,6 +76,8 @@ export interface DeltaDoc {
 	exportDelta(since: Map<number, number>): Promise<Uint8Array>;
 	/** Called when the document is replaced by a new generation (reset, or adopting another's). */
 	onReplaced?(handler: (reason: ReplaceReason) => void): () => void;
+	/** Registers a check, asked before another device's reset is adopted, for changes not uploaded yet. */
+	onAdoptCheck?(check: () => Promise<boolean>): () => void;
 	/** How many records the document holds. Needed to reset it automatically. */
 	recordCount?(): Promise<number>;
 	/** Replaces the document by a fresh one, which only works while it holds no records. */
@@ -233,6 +240,11 @@ export interface DownloadResult {
 	/** Devices whose next delta is missing from the bucket; they are applied up to the gap only. */
 	gaps: { deviceId: string; expected: number; found: number }[];
 	errors: { key: string; message: string }[];
+	/**
+	 * Another device reset the store, which would have dropped records here that have unsent
+	 * changes, and the user chose to wait. Nothing was applied in this run.
+	 */
+	declined: boolean;
 	/** Records that came in but are not valid records of the store (see `DeltaSyncOptions.validate`). */
 	invalid: { id: string; reason: string }[];
 }
@@ -290,6 +302,7 @@ export class DeltaSync {
 	private loaded?: Promise<void>;
 	private detach?: () => void;
 	private detachReplaced?: () => void;
+	private detachAdoptCheck?: () => void;
 	private queue: Promise<unknown> = Promise.resolve();
 
 	constructor(options: DeltaSyncOptions) {
@@ -312,6 +325,7 @@ export class DeltaSync {
 			void this.serial(() => this.persist());
 		});
 		this.detachReplaced = this.o.doc.onReplaced?.((reason) => this.replaced(reason));
+		this.detachAdoptCheck = this.o.doc.onAdoptCheck?.(() => this.hasUnsent());
 	}
 
 	dispose(): void {
@@ -319,6 +333,8 @@ export class DeltaSync {
 		this.detach = undefined;
 		this.detachReplaced?.();
 		this.detachReplaced = undefined;
+		this.detachAdoptCheck?.();
+		this.detachAdoptCheck = undefined;
 	}
 
 	/**
@@ -538,15 +554,18 @@ export class DeltaSync {
 	/** Whether the document has changes the bucket lacks. Local only. */
 	async hasUpload(): Promise<boolean> {
 		await this.load();
-		return this.serial(async () => {
-			if (this.state.pendingSnapshot) return true;
-			const before = this.pending.length;
-			await this.healOutbox();
-			const needed = this.pending.length > 0;
-			// A dry run: drop what healing added.
-			this.pending.length = before;
-			return needed;
-		});
+		return this.serial(() => this.hasUnsent());
+	}
+
+	/** `hasUpload` without waiting in the queue, for use from inside a task that already holds it. */
+	private async hasUnsent(): Promise<boolean> {
+		if (this.state.pendingSnapshot) return true;
+		const before = this.pending.length;
+		await this.healOutbox();
+		const needed = this.pending.length > 0;
+		// A dry run: drop what healing added.
+		this.pending.length = before;
+		return needed;
 	}
 
 	/** Uploads the changes made since the last upload as one delta. `seq` is null when there are none. */
@@ -747,6 +766,7 @@ export class DeltaSync {
 			skipped: [],
 			gaps: [],
 			errors: [],
+			declined: false,
 			invalid: []
 		};
 
@@ -778,7 +798,8 @@ export class DeltaSync {
 				result.snapshot = true;
 			} catch (e) {
 				if (e instanceof Vanished) throw e;
-				result.errors.push({ key, message: errorText(e) });
+				if (e instanceof AdoptDeclinedError) result.declined = true;
+				else result.errors.push({ key, message: errorText(e) });
 				// Deltas that follow a snapshot we could not apply would not make sense: stop here.
 				await this.persist();
 				return result;
@@ -812,6 +833,12 @@ export class DeltaSync {
 					if (oversized) throw new Error(oversized);
 					this.apply(result, await doc.importState(raw, importOpts));
 				} catch (e) {
+					if (e instanceof AdoptDeclinedError) {
+						// The user chose to wait: leave everything as it is until the next run.
+						result.declined = true;
+						await this.persist();
+						return result;
+					}
 					result.errors.push({ key, message: errorText(e) });
 					break;
 				}
@@ -847,6 +874,11 @@ export class DeltaSync {
 				if (oversized) throw new Error(oversized);
 				this.apply(result, await doc.importState(raw, importOpts));
 			} catch (e) {
+				if (e instanceof AdoptDeclinedError) {
+					result.declined = true;
+					await this.persist();
+					return result;
+				}
 				result.errors.push({ key: file.key, message: errorText(e) });
 				continue;
 			}

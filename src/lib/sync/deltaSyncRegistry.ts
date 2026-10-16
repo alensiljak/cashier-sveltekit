@@ -4,6 +4,7 @@
  * capture a store's changes as soon as the store opens.
  */
 import db from '#lib/data/db';
+import { setAdoptConfirm } from '#lib/storage/crdtDocStore';
 import { validateRecord as validateXact } from '#lib/storage/crdtXactRecord';
 import { validateRecord as validateScx } from '#lib/storage/crdtScxRecord';
 import { DeltaSync, type DeltaDoc } from './deltaSync';
@@ -20,6 +21,25 @@ export async function loadIgnoreReasons(): Promise<(deviceId: string | null) => 
 		return peer.readOnly ? 'Device is read-only' : null;
 	};
 }
+
+/**
+ * Asked when another device reset a store and adopting that would drop records here that have
+ * changes not uploaded yet. Cancelling leaves everything as it is; the question comes again at
+ * the next sync.
+ */
+setAdoptConfirm(({ kind, carried, dropped }) => {
+	// No window (a worker, a test): nobody to ask.
+	if (typeof window === 'undefined' || typeof window.confirm !== 'function') return true;
+	const what = kind === 'xacts' ? 'working set' : 'scheduled transactions';
+	return window.confirm(
+		`Another device reset the ${what}.\n\n` +
+			`This device has changes that were not uploaded yet. If you continue:\n` +
+			`• ${dropped} record(s) here, which the other device had deleted, are dropped, ` +
+			`and so are your unsent edits to them.\n` +
+			(carried ? `• ${carried} record(s) you created since are kept.\n` : '') +
+			`\nCancel to leave everything as it is for now. You will be asked again at the next sync.`
+	);
+});
 
 /** The IDs of the devices on the Trusted Devices list. */
 export async function loadTrustedIds(): Promise<string[]> {
