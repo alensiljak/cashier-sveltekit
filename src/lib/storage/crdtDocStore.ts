@@ -8,6 +8,13 @@ import type { DocKind } from '#lib/sync/ydocDevices';
 /** Transaction origin of updates merged in from another device, so live sync doesn't echo them back. */
 export const REMOTE_ORIGIN = 'remote';
 
+/**
+ * Transaction origin of updates imported from the remote storage (S3, WebDAV). Like
+ * `REMOTE_ORIGIN` it marks a merge, but the delta-sync outbox uploads peer merges and skips
+ * these, as the bucket already holds them.
+ */
+export const BUCKET_ORIGIN = 'bucket';
+
 /** Whether an IndexedDB database of this name exists, without creating it. */
 async function databaseExists(name: string): Promise<boolean> {
 	if (!indexedDB.databases) return false;
@@ -227,25 +234,30 @@ export abstract class CrdtDocStore<R> {
 	 */
 	async importState(
 		update: Uint8Array,
-		{ backup = true }: { backup?: boolean } = {}
+		{ backup = true, origin = REMOTE_ORIGIN }: { backup?: boolean; origin?: unknown } = {}
 	): Promise<RecordChange<R>[]> {
 		await this.ready();
 		return this.serial(async () => {
 			const local = readMeta(this._doc);
 			const remote = readUpdateMeta(update);
 			// The sender reset its document after ours: this device's document is from a retired generation.
-			if (remote.resetId > local.resetId) return this.adopt(update, remote);
+			if (remote.resetId > local.resetId) return this.adopt(update, remote, origin);
 			// Operations from before our own reset would bring back what was deleted; ignore them.
 			if (hasRetiredOps(update, local.retired)) return [];
-			return this.merge(update, backup);
+			return this.merge(update, backup, origin);
 		});
 	}
 
 	/**
 	 * @param backup Re-upload this device's file after a merge. Peers relay what they merge;
 	 *   a central store (S3) already holds the merged records, so it passes `false`.
+	 * @param origin Transaction origin of the merge; `BUCKET_ORIGIN` for the remote storage.
 	 */
-	private async merge(update: Uint8Array, backup: boolean): Promise<RecordChange<R>[]> {
+	private async merge(
+		update: Uint8Array,
+		backup: boolean,
+		origin: unknown
+	): Promise<RecordChange<R>[]> {
 		let changed = false;
 		const onUpdate = () => {
 			changed = true;
@@ -264,7 +276,7 @@ export abstract class CrdtDocStore<R> {
 		this.doc.on('update', onUpdate);
 		this.records.observe(onRecords);
 		try {
-			Y.applyUpdate(this.doc, update, REMOTE_ORIGIN);
+			Y.applyUpdate(this.doc, update, origin);
 		} finally {
 			this.doc.off('update', onUpdate);
 			this.records.unobserve(onRecords);
@@ -323,6 +335,12 @@ export abstract class CrdtDocStore<R> {
 		} finally {
 			doc.destroy();
 		}
+	}
+
+	/** What this document holds beyond the state vector `since` (client -> clock), as a Yjs update. */
+	async exportDelta(since: Map<number, number>): Promise<Uint8Array> {
+		await this.ready();
+		return Y.encodeStateAsUpdate(this.doc, Y.encodeStateVector(since));
 	}
 
 	/** State vector, describing which updates this document already has. */
@@ -433,12 +451,16 @@ export abstract class CrdtDocStore<R> {
 	 * it reset (they lie beyond `remote.retired`) are carried over to the new document and
 	 * the user is told; everything else is dropped, as it was already archived.
 	 */
-	private async adopt(update: Uint8Array, remote: ResetMeta): Promise<RecordChange<R>[]> {
+	private async adopt(
+		update: Uint8Array,
+		remote: ResetMeta,
+		origin: unknown
+	): Promise<RecordChange<R>[]> {
 		const before = new Map(this._records.entries());
 		const unseen = this.recordsBeyond(toVector(remote.retired), before);
 		const next = new Y.Doc();
 		await this.replaceDoc(next, () => {
-			Y.applyUpdate(next, update, REMOTE_ORIGIN);
+			Y.applyUpdate(next, update, origin);
 			if (unseen.size > 0) {
 				next.transact(() => {
 					const nextRecords = next.getMap<R>(this.recordsKey);
