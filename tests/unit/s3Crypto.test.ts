@@ -1,7 +1,7 @@
 /*
     S3 sync encryption: per-object AES-GCM with a passphrase-derived key.
 */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
 	createKeyParams,
 	decrypt,
@@ -14,6 +14,37 @@ import {
 } from '#lib/services/s3Crypto';
 
 const bytes = (text: string) => new TextEncoder().encode(text);
+
+describe('AES-GCM parameters without additional data', () => {
+	// Node tolerates `additionalData: undefined`, some browsers fail to decrypt with it. Such a
+	// failure made every existing bucket report a wrong passphrase, so the key must be absent.
+	for (const op of ['encrypt', 'decrypt'] as const) {
+		it(`${op} does not pass additionalData when there is none`, async () => {
+			const { key } = await createKeyParams('secret');
+			const sealed = await encrypt(key, bytes('x'));
+			const spy = vi.spyOn(crypto.subtle, op);
+			try {
+				if (op === 'encrypt') await encrypt(key, bytes('x'));
+				else await decrypt(key, sealed);
+				const algorithm = spy.mock.calls[0][0] as AesGcmParams;
+				expect('additionalData' in algorithm).toBe(false);
+			} finally {
+				spy.mockRestore();
+			}
+		});
+	}
+
+	it('still passes additionalData when bound', async () => {
+		const { key } = await createKeyParams('secret');
+		const spy = vi.spyOn(crypto.subtle, 'encrypt');
+		try {
+			await encrypt(key, bytes('x'), bytes('name'));
+			expect('additionalData' in (spy.mock.calls[0][0] as AesGcmParams)).toBe(true);
+		} finally {
+			spy.mockRestore();
+		}
+	});
+});
 
 describe('objects bound to their name', () => {
 	it('round-trips with the same additional data', async () => {
