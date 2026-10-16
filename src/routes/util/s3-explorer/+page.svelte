@@ -13,8 +13,9 @@
 		putObject,
 		type S3Directory
 	} from '#lib/services/s3Client';
-	import { getSyncKey, previewObject } from '#lib/services/s3Sync';
+	import { compactBucketNow, getSyncKey, previewObject } from '#lib/services/s3Sync';
 	import {
+		PackageIcon,
 		EyeIcon,
 		SettingsIcon,
 		RefreshCwIcon,
@@ -135,6 +136,25 @@
 		}
 	}
 
+	/** Folds the uploaded changes of the CRDT stores into a snapshot and deletes what that makes unnecessary. */
+	async function compactNow() {
+		if (!cfg) return;
+		isBusy = true;
+		try {
+			const results = await compactBucketNow(cfg);
+			const done = Object.values(results);
+			const skipped = done.find((r) => r?.skipped)?.skipped;
+			const deleted = done.reduce((n, r) => n + (r?.deleted ?? 0), 0);
+			if (skipped) Notifier.error(`Not compacted: ${skipped}`);
+			else Notifier.success(deleted ? `Compacted: ${deleted} object(s) removed` : 'Nothing to compact');
+		} catch (err) {
+			Notifier.error('Compaction failed: ' + describeS3Error(err));
+		} finally {
+			isBusy = false;
+			await refresh();
+		}
+	}
+
 	async function copyPreview() {
 		if (!preview) return;
 		await navigator.clipboard.writeText(preview.text);
@@ -217,6 +237,12 @@
 				Icon={UploadIcon}
 				disabled={!cfg || isBusy}
 				onclick={() => fileInput?.click()}
+			/>
+			<ToolbarMenuItem
+				text="Compact sync data"
+				Icon={PackageIcon}
+				disabled={!cfg || isBusy}
+				onclick={compactNow}
 			/>
 		{/snippet}
 	</Toolbar>

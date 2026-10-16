@@ -6,7 +6,7 @@
 	import { Setting } from '#lib/data/model';
 	import db from '#lib/data/db';
 	import { getReadyScxStore } from '#lib/services/scxService';
-	import { describeScxChanges, summarizeScxReport } from '#lib/services/scxMergeReport';
+	import { uploadCrdtState, webDavModified } from '#lib/services/webdavDelta';
 	import Notifier from '#lib/utils/notifier';
 	import { WebDavClient } from '#lib/utils/webdav';
 	import {
@@ -23,12 +23,8 @@
 	} from '@lucide/svelte';
 	import YdocDevices from '#lib/components/YdocDevices.svelte';
 	import { goto } from '$app/navigation';
-	import {
-		crdtBackupFilename,
-		type WebDavLastSyncTs as LastSyncTs
-	} from '#lib/services/webdavAutoBackupService';
+	import type { WebDavLastSyncTs as LastSyncTs } from '#lib/services/webdavAutoBackupService';
 	import { reloadLedgerFromOpfs } from '#lib/services/ledgerReload';
-	import { getXactStore } from '#lib/storage/xactStoreRegistry';
 
 	type SyncDirection = 'up' | 'down' | 'conflict' | null;
 
@@ -47,8 +43,6 @@
 	let scheduledLastModified = $state<Date | null>(null);
 	let devicesOpen = $state(false);
 	let ydocDevices: YdocDevices | undefined = $state();
-	let ydocFile = $state('');
-	let scxFile = $state('');
 	let lastSyncTs = $state<LastSyncTs>({ settings: null });
 
 	// No local timestamp — only detect remote changed since last sync
@@ -82,8 +76,6 @@
 		webdavPassword = saved?.password ?? '';
 		const storedSyncTs = await deviceSettings.get<LastSyncTs>(DeviceSettingKeys.webdavLastSyncTs);
 		if (storedSyncTs) lastSyncTs = storedSyncTs;
-		ydocFile = await crdtBackupFilename();
-		scxFile = await crdtBackupFilename('scx');
 		fetchLastModified();
 	});
 
@@ -96,14 +88,15 @@
 		try {
 			if (!webdavUrl) return;
 			const dav = client();
-			const [sm, cm, scm] = await Promise.allSettled([
+			const [sm, crdt] = await Promise.allSettled([
 				dav.lastModifiedJson('settings.json'),
-				dav.lastModified(ydocFile),
-				dav.lastModified(scxFile)
+				webDavModified(dav)
 			]);
 			if (sm.status === 'fulfilled') settingsLastModified = sm.value;
-			if (cm.status === 'fulfilled') xactsLastModified = cm.value;
-			if (scm.status === 'fulfilled') scheduledLastModified = scm.value;
+			if (crdt.status === 'fulfilled') {
+				xactsLastModified = crdt.value.xacts;
+				scheduledLastModified = crdt.value.scx;
+			}
 		} finally {
 			isCheckingRemote = false;
 		}
@@ -140,16 +133,17 @@
 				else Notifier.error(`Upload failed for settings.json.gz: ${res.status} ${res.statusText}`);
 			}
 			if (includeXacts) {
-				const state = await (await getXactStore()).exportState();
-				const res = await dav.put(ydocFile, state, 'application/octet-stream');
-				if (res.ok) Notifier.success('Local transactions uploaded');
-				else Notifier.error(`Upload failed for ${ydocFile}: ${res.status} ${res.statusText}`);
+				const errors = await uploadCrdtState(dav, ['xacts']);
+				if (errors.length) Notifier.error(`Upload failed for local transactions: ${errors.join('; ')}`);
+				else Notifier.success('Local transactions uploaded');
 			}
 			if (includeScheduled) {
-				const state = await (await getReadyScxStore()).exportState();
-				const res = await dav.put(scxFile, state, 'application/octet-stream');
-				if (res.ok) Notifier.success('Scheduled transactions uploaded');
-				else Notifier.error(`Upload failed for ${scxFile}: ${res.status} ${res.statusText}`);
+				// Set up (and, on a first launch, migrate) the scheduled transactions first: the upload skips them otherwise.
+				await getReadyScxStore();
+				const errors = await uploadCrdtState(dav, ['scx']);
+				if (errors.length) {
+					Notifier.error(`Upload failed for scheduled transactions: ${errors.join('; ')}`);
+				} else Notifier.success('Scheduled transactions uploaded');
 			}
 		} catch (err) {
 			Notifier.error('Upload error: ' + (err as Error).message);
@@ -207,39 +201,13 @@
 					Notifier.error(`Download failed for settings.json: ${res.status} ${res.statusText}`);
 				}
 			}
+			// The working set and the scheduled transactions are merged, not overwritten: what the
+			// trusted devices uploaded is applied on top of what is here.
 			if (includeXacts) {
-				// A new device has no backup of its own yet; skip it rather than fail, so
-				// files from other (trusted) devices still get merged below.
-				if (await dav.exists(ydocFile)) {
-					const res = await dav.get(ydocFile);
-					if (res.ok) {
-						const update = new Uint8Array(await res.arrayBuffer());
-						await (await getXactStore()).importState(update);
-						Notifier.success('Local transactions merged from backup');
-					} else {
-						Notifier.error(`Download failed for ${ydocFile}: ${res.status} ${res.statusText}`);
-					}
-				}
 				await ydocDevices?.mergeTrusted(['xacts']);
 				needsReload = true;
 			}
-			if (includeScheduled) {
-				// Same as the working set: this device's own file (if it has one), then the
-				// trusted devices' files, all merged.
-				if (await dav.exists(scxFile)) {
-					const res = await dav.get(scxFile);
-					if (res.ok) {
-						const store = await getReadyScxStore();
-						const report = describeScxChanges(
-							await store.importState(new Uint8Array(await res.arrayBuffer()))
-						);
-						Notifier.success(`Scheduled transactions merged from backup: ${summarizeScxReport(report)}`);
-					} else {
-						Notifier.error(`Download failed for ${scxFile}: ${res.status} ${res.statusText}`);
-					}
-				}
-				await ydocDevices?.mergeTrusted(['scx']);
-			}
+			if (includeScheduled) await ydocDevices?.mergeTrusted(['scx']);
 		} catch (err) {
 			Notifier.error('Download error: ' + (err as Error).message);
 		} finally {

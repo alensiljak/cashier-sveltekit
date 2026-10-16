@@ -1,13 +1,16 @@
 /*
-    Automatic WebDAV backup: debouncing, the guard conditions, and what gets
-    uploaded. Settings run on fake IndexedDB; the WebDAV client and the store
-    registry are mocked.
+    Automatic WebDAV backup: debouncing, the guard conditions, and what gets uploaded. Settings run
+    on fake IndexedDB; the WebDAV client is an in-memory folder; the working set store is real.
 */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { get } from 'svelte/store';
 
 const mocks = vi.hoisted(() => ({
-	put: vi.fn(),
+	/** The WebDAV folder: file name -> content. */
+	files: new Map<string, Uint8Array>(),
+	/** Names of the files PUT, in order. */
+	puts: [] as string[],
+	putStatus: 201,
 	clientArgs: [] as unknown[][],
 	getXactStore: vi.fn(),
 	notify: vi.fn(),
@@ -18,29 +21,68 @@ vi.mock('#lib/utils/webdav', () => ({
 		constructor(...args: unknown[]) {
 			mocks.clientArgs.push(args);
 		}
-		put = mocks.put;
+		fileUrl = (name: string) => `https://dav.example.com/${name}`;
+		put = async (name: string, body: Uint8Array) => {
+			mocks.puts.push(name);
+			if (mocks.putStatus !== 201) {
+				return new Response('', { status: mocks.putStatus, statusText: 'Insufficient Storage' });
+			}
+			mocks.files.set(name, body);
+			return new Response('', { status: 201 });
+		};
+		get = async (name: string) => {
+			const body = mocks.files.get(name);
+			return body ? new Response(body as BlobPart) : new Response('', { status: 404 });
+		};
+		list = async () =>
+			[...mocks.files].map(([name, body]) => ({
+				name,
+				isDirectory: false,
+				size: body.length,
+				lastModified: new Date()
+			}));
+		exists = async (name: string) => mocks.files.has(name);
+		lastModified = async (name: string) => (mocks.files.has(name) ? new Date() : null);
+		delete = async (name: string) => {
+			mocks.files.delete(name);
+			return new Response('', { status: 204 });
+		};
 	}
 }));
 vi.mock('#lib/storage/xactStoreRegistry', () => ({ getXactStore: mocks.getXactStore }));
 vi.mock('#lib/utils/notifier', () => ({
-	default: { success: mocks.notify, error: mocks.notifyFailure }
+	default: { success: mocks.notify, error: mocks.notifyFailure, warning: vi.fn() }
 }));
 
+import db from '#lib/data/db';
 import { DeviceSettingKeys, SettingKeys, deviceSettings, settings } from '#lib/settings';
-import {
-	crdtBackupFilename,
-	lastBackupTime,
-	scheduleBackup
-} from '#lib/services/webdavAutoBackupService';
-import { getDeviceId, ydocFilename } from '#lib/sync/ydocDevices';
+import { lastBackupTime, scheduleBackup } from '#lib/services/webdavAutoBackupService';
+import { CrdtXactStore } from '#lib/storage/crdtXactStore';
+import { getDeviceId } from '#lib/sync/ydocDevices';
 
-const STATE = new Uint8Array([1, 2, 3]);
 const CFG = { url: 'https://dav.example.com/', username: 'alice', password: 'pw' };
+
+const xact = `2025-01-01 * "Shop" "Food"
+  Expenses:Groceries   10.00 EUR
+  Assets:Bank:Checking
+`;
+
+let dbCounter = 0;
 
 async function configure({ enabled = true, cfg = CFG as unknown } = {}) {
 	await deviceSettings.set(DeviceSettingKeys.webdavAutoBackup, enabled);
 	await settings.set(SettingKeys.webdavSettings, cfg);
 }
+
+/** A working set with one transaction in it, so that there is something to upload. */
+async function newStore() {
+	const store = new CrdtXactStore(`test-webdav-backup-${++dbCounter}`, async () => 'A');
+	await store.initialize();
+	await store.append(xact);
+	return store;
+}
+
+const deltaPuts = () => mocks.puts.filter((n) => n.endsWith('.upd'));
 
 /** Runs the debounce timer and waits until the scheduled upload has finished. The service is fire-and-forget, so completion is the success/failure message. */
 async function runBackup() {
@@ -56,14 +98,16 @@ async function runBackup() {
 
 beforeEach(async () => {
 	vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
-	mocks.put.mockReset().mockImplementation(async () => {
-		return new Response('', { status: 201 });
-	});
+	mocks.files.clear();
+	mocks.puts.length = 0;
+	mocks.putStatus = 201;
 	mocks.clientArgs.length = 0;
-	mocks.getXactStore.mockReset().mockResolvedValue({ exportState: async () => STATE });
+	mocks.getXactStore.mockReset().mockResolvedValue(await newStore());
 	mocks.notify.mockReset();
 	mocks.notifyFailure.mockReset();
 	lastBackupTime.set(null);
+	// What a previous test left as the delta-sync progress would say the folder holds more than it does.
+	await db.deviceSettings.clear();
 	await configure();
 	vi.spyOn(console, 'warn').mockImplementation(() => {});
 });
@@ -76,21 +120,15 @@ afterEach(async () => {
 	vi.restoreAllMocks();
 });
 
-describe('crdtBackupFilename', () => {
-	it('is this device’s own Yjs file', async () => {
-		expect(await crdtBackupFilename()).toBe(ydocFilename(await getDeviceId()));
-	});
-});
-
 describe('scheduleBackup', () => {
 	it('waits for the debounce period before uploading', async () => {
 		scheduleBackup('xacts');
 		await vi.advanceTimersByTimeAsync(1999);
 
-		expect(mocks.put).not.toHaveBeenCalled();
+		expect(mocks.puts).toEqual([]);
 
 		await vi.advanceTimersByTimeAsync(1);
-		await vi.waitFor(() => expect(mocks.put).toHaveBeenCalled());
+		await vi.waitFor(() => expect(deltaPuts()).toHaveLength(1));
 		// Let the upload finish so it can't touch shared state during a later test.
 		await vi.waitFor(() => expect(mocks.notify).toHaveBeenCalled());
 	});
@@ -102,11 +140,11 @@ describe('scheduleBackup', () => {
 		await vi.advanceTimersByTimeAsync(1000);
 		scheduleBackup('xacts');
 		await vi.advanceTimersByTimeAsync(2000);
-		await vi.waitFor(() => expect(mocks.put).toHaveBeenCalled());
+		await vi.waitFor(() => expect(deltaPuts()).toHaveLength(1));
 
 		await vi.waitFor(() => expect(mocks.notify).toHaveBeenCalled());
 
-		expect(mocks.put).toHaveBeenCalledTimes(1);
+		expect(deltaPuts()).toHaveLength(1);
 	});
 });
 
@@ -118,7 +156,7 @@ describe('guards', () => {
 		await vi.advanceTimersByTimeAsync(2000);
 		await vi.advanceTimersByTimeAsync(50);
 
-		expect(mocks.put).not.toHaveBeenCalled();
+		expect(mocks.puts).toEqual([]);
 	});
 
 	it('does nothing without a configured server URL', async () => {
@@ -128,7 +166,7 @@ describe('guards', () => {
 		await vi.advanceTimersByTimeAsync(2000);
 		await vi.advanceTimersByTimeAsync(50);
 
-		expect(mocks.put).not.toHaveBeenCalled();
+		expect(mocks.puts).toEqual([]);
 	});
 
 	it('does nothing while offline', async () => {
@@ -138,28 +176,37 @@ describe('guards', () => {
 		await vi.advanceTimersByTimeAsync(2000);
 		await vi.advanceTimersByTimeAsync(50);
 
-		expect(mocks.put).not.toHaveBeenCalled();
+		expect(mocks.puts).toEqual([]);
 	});
 });
 
 describe('upload', () => {
-	it('uploads the Yjs state to this device’s own file with the configured credentials', async () => {
+	it('uploads the changes as a numbered delta of this device, with the configured credentials', async () => {
 		await runBackup();
 
 		expect(mocks.clientArgs[0]).toEqual([CFG.url, CFG.username, CFG.password]);
-		expect(mocks.put).toHaveBeenCalledWith(
-			await crdtBackupFilename(),
-			STATE,
-			'application/octet-stream'
-		);
+		expect(deltaPuts()).toEqual([`cashier-xacts-${await getDeviceId()}.000001.upd`]);
 		expect(get(lastBackupTime)).toBeInstanceOf(Date);
 		expect(mocks.notify).toHaveBeenCalled();
 	});
 
+	it('uploads only what changed the next time', async () => {
+		const store = (await mocks.getXactStore()) as CrdtXactStore;
+		for (let i = 0; i < 4; i++) await store.append(xact);
+		await runBackup();
+		const first = mocks.files.get(deltaPuts()[0])!.length;
+		await store.append(xact);
+		mocks.notify.mockReset();
+
+		await runBackup();
+
+		const second = deltaPuts()[1];
+		expect(second).toMatch(/\.000002\.upd$/);
+		expect(mocks.files.get(second)!.length).toBeLessThan(first);
+	});
+
 	it('warns instead of throwing when the server rejects the upload', async () => {
-		mocks.put.mockImplementation(async () => {
-			return new Response('', { status: 507, statusText: 'Insufficient Storage' });
-		});
+		mocks.putStatus = 507;
 
 		await runBackup();
 
@@ -176,11 +223,15 @@ describe('upload', () => {
 		);
 	});
 
-	it('warns when exporting or uploading fails', async () => {
+	it('warns when reading the store fails', async () => {
 		mocks.getXactStore.mockResolvedValue({
-			exportState: async () => {
+			onUpdate: () => () => {},
+			stateVector: async () => {
 				throw new Error('export failed');
-			}
+			},
+			exportState: async () => new Uint8Array(),
+			exportDelta: async () => new Uint8Array(),
+			importState: async () => []
 		});
 
 		await runBackup();

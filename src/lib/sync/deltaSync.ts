@@ -49,6 +49,8 @@ export interface DeltaAck {
 /** Compact when this many delta objects have piled up, or the newest snapshot is this old. */
 export const COMPACT_MIN_DELTAS = 30;
 export const COMPACT_MAX_AGE_MS = 7 * 24 * 3600 * 1000;
+/** A device whose acknowledgement is older than this no longer holds back clean-up. */
+export const ACK_ACTIVE_WINDOW_MS = 30 * 24 * 3600 * 1000;
 
 export interface DeltaStateStorage {
 	load(): Promise<DeltaState | null>;
@@ -82,9 +84,13 @@ export const deltaKey = (kind: DocKind, deviceId: string, seq: number) =>
 	`${deviceDeltaPrefix(kind, deviceId)}${pad(seq)}.upd`;
 export const legacyKey = (kind: DocKind, deviceId: string) => `${kindPrefix(kind)}${deviceId}.ydoc`;
 
+/** What a device has applied, for the others to read before they compact. Rewritten when it changes. */
+export const ackKey = (kind: DocKind, deviceId: string) => `${kindPrefix(kind)}${deviceId}.ack`;
+
 export type ParsedKey =
 	| { type: 'snapshot'; id: string }
 	| { type: 'delta'; deviceId: string; seq: number }
+	| { type: 'ack'; deviceId: string }
 	/** `crdt/<kind>/<deviceId>.ydoc`: the whole state of one device, as the app wrote it before delta sync. */
 	| { type: 'legacy'; deviceId: string };
 
@@ -96,6 +102,8 @@ export function parseKey(kind: DocKind, key: string): ParsedKey | null {
 	if (snap) return { type: 'snapshot', id: snap[1] };
 	const delta = /^([^/.]+)\.(\d+)\.upd$/.exec(rest);
 	if (delta) return { type: 'delta', deviceId: delta[1], seq: Number(delta[2]) };
+	const ack = /^([^/.]+)\.ack$/.exec(rest);
+	if (ack) return { type: 'ack', deviceId: ack[1] };
 	const legacy = /^([^/.]+)\.ydoc$/.exec(rest);
 	if (legacy) return { type: 'legacy', deviceId: legacy[1] };
 	return null;
@@ -207,6 +215,8 @@ export interface DownloadResult {
 	legacy: number;
 	/** Records changed by what was applied. */
 	changes: number;
+	/** The changes themselves, as the store reported them. */
+	records: unknown[];
 	/** Devices whose deltas were not applied, with the reason (e.g. not trusted). */
 	skipped: { deviceId: string; reason: string }[];
 	/** Devices whose next delta is missing from the bucket; they are applied up to the gap only. */
@@ -336,20 +346,69 @@ export class DeltaSync {
 		return { ...this.state.applied, [this.o.deviceId]: this.state.nextSeq - 1 };
 	}
 
-	/** What to tell the others this device has applied, or null when it already has. */
-	async ack(): Promise<DeltaAck | null> {
+	/**
+	 * Tells the other devices what this device has applied, so they know which deltas they may
+	 * delete. One small object per device and store, written only when that changed. Returns
+	 * whether it wrote. This device's own uploads are not part of it, so frequent uploads leave
+	 * it alone.
+	 */
+	async publishAck(): Promise<boolean> {
 		await this.load();
-		const applied = { ...this.state.applied };
-		delete applied[this.o.deviceId];
-		const ack: DeltaAck = { snapId: this.state.snapId, applied };
-		return JSON.stringify(ack) === this.state.acked ? null : ack;
+		return this.serial(async () => {
+			const applied = { ...this.state.applied };
+			delete applied[this.o.deviceId];
+			const ack: DeltaAck = { snapId: this.state.snapId, applied };
+			const json = JSON.stringify(ack);
+			if (json === this.state.acked) return false;
+			await this.o.remote.put(ackKey(this.o.kind, this.o.deviceId), new TextEncoder().encode(json));
+			this.state.acked = json;
+			await this.persist();
+			return true;
+		});
 	}
 
-	/** Records that `ack` was published. */
-	async markAcked(ack: DeltaAck): Promise<void> {
+	/**
+	 * What each active device has applied. A device is active when `isActive` says so (it is
+	 * trusted) and its acknowledgement was written within `ACK_ACTIVE_WINDOW_MS`. A device without
+	 * an acknowledgement (an old app version, or never synced) does not hold anything back, and one
+	 * whose acknowledgement cannot be read holds everything back until it writes a new one.
+	 */
+	private async readAcks(
+		objects: BucketObject[],
+		isActive: (deviceId: string) => boolean,
+		now: number
+	): Promise<Record<string, Record<string, number>>> {
+		const acks: Record<string, Record<string, number>> = {};
+		for (const o of objects) {
+			if (o.type !== 'ack' || !o.deviceId || o.deviceId === this.o.deviceId) continue;
+			if (!isActive(o.deviceId)) continue;
+			if (o.lastModified && now - o.lastModified.getTime() > ACK_ACTIVE_WINDOW_MS) continue;
+			const raw = await this.o.remote.get(o.key);
+			if (!raw) continue;
+			try {
+				const parsed = JSON.parse(new TextDecoder().decode(raw));
+				acks[o.deviceId] = parsed && typeof parsed.applied === 'object' ? parsed.applied : {};
+			} catch {
+				acks[o.deviceId] = {};
+			}
+		}
+		return acks;
+	}
+
+	/**
+	 * Compacts when it is time (see `needsCompaction`), judging by the active devices'
+	 * acknowledgements. Returns null when it is not time. Pass `force` to compact regardless.
+	 */
+	async compactIfDue(opts: {
+		isActive: (deviceId: string) => boolean;
+		force?: boolean;
+		now?: number;
+	}): Promise<CompactResult | null> {
 		await this.load();
-		this.state.acked = JSON.stringify(ack);
-		await this.serial(() => this.persist());
+		const now = opts.now ?? Date.now();
+		const objects = await this.objects();
+		if (!opts.force && !needsCompaction(objects, now)) return null;
+		return this.compact(await this.readAcks(objects, opts.isActive, now));
 	}
 
 	// --- upload ---
@@ -582,6 +641,7 @@ export class DeltaSync {
 			deltas: 0,
 			legacy: 0,
 			changes: 0,
+			records: [],
 			skipped: [],
 			gaps: [],
 			errors: []
@@ -590,7 +650,7 @@ export class DeltaSync {
 		const objects = await this.objects();
 		const { snapshotId, deltas, legacy } = this.scan(objects);
 		const state = this.state;
-		result.foreign = objects.filter((o) => o.deviceId !== deviceId).length;
+		result.foreign = objects.filter((o) => o.type !== 'ack' && o.deviceId !== deviceId).length;
 
 		if (snapshotId && (!state.snapId || snapshotId > state.snapId)) {
 			const key = snapshotKey(kind, snapshotId);
@@ -598,7 +658,7 @@ export class DeltaSync {
 			if (!raw) throw new Vanished(key);
 			try {
 				const { coverage, update } = decodeSnapshot(raw);
-				result.changes += (await doc.importState(update, importOpts)).length;
+				await applyTo(result, await doc.importState(update, importOpts));
 				state.snapId = snapshotId;
 				for (const [device, seq] of Object.entries(coverage)) {
 					state.applied[device] = Math.max(state.applied[device] ?? 0, seq);
@@ -632,7 +692,7 @@ export class DeltaSync {
 				const raw = await remote.get(key);
 				if (!raw) throw new Vanished(key);
 				try {
-					result.changes += (await doc.importState(raw, importOpts)).length;
+					await applyTo(result, await doc.importState(raw, importOpts));
 				} catch (e) {
 					result.errors.push({ key, message: errorText(e) });
 					break;
@@ -660,7 +720,7 @@ export class DeltaSync {
 			const raw = await remote.get(file.key);
 			if (!raw) throw new Vanished(file.key);
 			try {
-				result.changes += (await doc.importState(raw, importOpts)).length;
+				await applyTo(result, await doc.importState(raw, importOpts));
 			} catch (e) {
 				result.errors.push({ key: file.key, message: errorText(e) });
 				continue;
@@ -733,12 +793,12 @@ export class DeltaSync {
 	}): Promise<BucketUpdate[]> {
 		await this.load();
 		const { deviceId, remote } = this.o;
-		const objects = await this.objects();
+		const objects = (await this.objects()).filter((o) => o.type !== 'ack');
 		const { snapshotId } = this.scan(objects);
 		const wanted: BucketObject[] = [];
 		const nextExpected = new Map<string, number>();
 		// Snapshots first, then legacy files, then each device's deltas in order: they build on them.
-		const order = { snapshot: 0, legacy: 1, delta: 2 } as const;
+		const order = { snapshot: 0, legacy: 1, delta: 2, ack: 3 } as const;
 		const seqOf = (o: BucketObject) => {
 			const p = parseKey(this.o.kind, o.key);
 			return p?.type === 'delta' ? p.seq : 0;
@@ -764,7 +824,7 @@ export class DeltaSync {
 				if (parsed.deviceId !== deviceId && this.state.legacy?.[parsed.deviceId] !== stampOf(o)) {
 					wanted.push(o);
 				}
-			} else if (parsed.deviceId !== deviceId) {
+			} else if (parsed.type === 'delta' && parsed.deviceId !== deviceId) {
 				const done = this.state.applied[parsed.deviceId] ?? 0;
 				const expected = nextExpected.get(parsed.deviceId) ?? done + 1;
 				if (parsed.seq < expected) continue;
@@ -812,5 +872,11 @@ export class DeltaSync {
 }
 
 const importOpts = { backup: false, origin: BUCKET_ORIGIN };
+
+/** Adds what an import changed to the result. */
+async function applyTo(result: DownloadResult, changes: readonly unknown[]): Promise<void> {
+	result.changes += changes.length;
+	result.records.push(...changes);
+}
 
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));

@@ -8,13 +8,15 @@ Before using it, open **WebDAV Config** from the toolbar menu (also under Settin
 
 Three items can be backed up independently:
 
-- **Local Transactions** — the transactions entered on this device. They are saved as a per-device file, so devices never overwrite each other.
+- **Local Transactions** — the transactions entered on this device. Only the changes since the last upload are sent, as small numbered files of this device, so devices never overwrite each other and little data is transferred.
 - **Settings**
 - **Scheduled Transactions**
 
 Check the ones you want, or use **Select all**. Each item shows the last-modified time on the remote, refreshed automatically or via the refresh icon.
 
-Tap the arrow next to **Local Transactions** to list the files of all devices in the folder. Files from trusted devices are merged into yours on **Download**. Tap **Trust** on an unknown device to add it, or open **Manage trusted devices** to mark a device read-only or remove its trust.
+Tap the arrow next to **Local Transactions** to list the devices that have uploaded to the folder. What trusted devices uploaded is merged into yours on **Download**. Tap **Trust** on an unknown device to add it, or open **Manage trusted devices** to mark a device read-only or remove its trust. The trash icon deletes a device's files from the folder; if the device is trusted, its changes are merged here and kept for the other devices first.
+
+The uploaded changes pile up in the folder. **Compact now** (next to the refresh link) folds them into one snapshot and deletes the files every device has already applied. This also happens automatically after enough uploads. A device that was away for a long time simply takes the snapshot.
 
 ## Actions
 

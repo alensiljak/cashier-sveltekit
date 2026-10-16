@@ -10,6 +10,7 @@ vi.mock('#lib/services/webdavAutoBackupService', () => ({ scheduleBackup: vi.fn(
 import { CrdtXactStore } from '#lib/storage/crdtXactStore';
 import {
 	DeltaSync,
+	ackKey,
 	decodeSnapshot,
 	deltaKey,
 	deviceOfKey,
@@ -571,7 +572,8 @@ describe('compaction', () => {
 		await pileUp(remote, a, 3);
 		await b.sync.download();
 
-		const result = await a.sync.compact({ B: (await b.sync.ack())!.applied });
+		await b.sync.publishAck();
+		const result = (await a.sync.compactIfDue({ isActive: () => true, force: true }))!;
 		expect(result.snapshot).not.toBeNull();
 		expect(deltasOf(remote)).toEqual([]);
 		expect(snapshotsOf(remote)).toHaveLength(1);
@@ -589,7 +591,8 @@ describe('compaction', () => {
 		await b.sync.download();
 		await pileUp(remote, a, 2);
 
-		await a.sync.compact({ B: (await b.sync.ack())!.applied });
+		await b.sync.publishAck();
+		await a.sync.compactIfDue({ isActive: () => true, force: true });
 		expect(deltasOf(remote)).toEqual([deltaKey('xacts', 'A', 2), deltaKey('xacts', 'A', 3)]);
 
 		const result = await b.sync.download();
@@ -681,6 +684,9 @@ describe('compaction', () => {
 });
 
 describe('acknowledgements', () => {
+	const ackOf = async (remote: MemoryRemoteStore, id: string) =>
+		JSON.parse(new TextDecoder().decode((await remote.get(ackKey('xacts', id)))!));
+
 	it('say what was applied, and only when that changed', async () => {
 		const remote = new MemoryRemoteStore();
 		const a = await device(remote, 'A');
@@ -688,19 +694,109 @@ describe('acknowledgements', () => {
 		await a.store.append(xact('One'));
 		await a.sync.upload();
 
-		const first = await b.sync.ack();
-		expect(first).toEqual({ snapId: null, applied: {} });
-		await b.sync.markAcked(first!);
-		expect(await b.sync.ack()).toBeNull();
+		expect(await b.sync.publishAck()).toBe(true);
+		expect(await ackOf(remote, 'B')).toEqual({ snapId: null, applied: {} });
+		expect(await b.sync.publishAck()).toBe(false);
 
 		await b.sync.download();
-		const second = await b.sync.ack();
-		expect(second).toEqual({ snapId: null, applied: { A: 1 } });
-		await b.sync.markAcked(second!);
+		expect(await b.sync.publishAck()).toBe(true);
+		expect(await ackOf(remote, 'B')).toEqual({ snapId: null, applied: { A: 1 } });
+
 		// Uploading its own changes does not need telling.
 		await b.store.append(xact('Two'));
 		await b.sync.upload();
-		expect(await b.sync.ack()).toBeNull();
+		expect(await b.sync.publishAck()).toBe(false);
+	});
+
+	it('are not mistaken for something to download', async () => {
+		const remote = new MemoryRemoteStore();
+		const a = await device(remote, 'A');
+		const b = await device(remote, 'B');
+		await a.sync.publishAck();
+
+		expect((await b.sync.download()).foreign).toBe(0);
+		expect(await b.sync.status()).toEqual({ upload: false, download: false });
+		expect(await b.sync.read({ unappliedOnly: false, includeIgnored: true })).toEqual([]);
+	});
+
+	describe('when compacting', () => {
+		async function pile(remote: MemoryRemoteStore) {
+			const a = await device(remote, 'A');
+			const b = await device(remote, 'B');
+			for (const p of ['One', 'Two']) {
+				await a.store.append(xact(p));
+				await a.sync.upload();
+			}
+			return { a, b };
+		}
+		const deltaCount = (remote: MemoryRemoteStore) =>
+			[...remote.objects.keys()].filter((k) => parseKey('xacts', k)?.type === 'delta').length;
+
+		it('waits for an active device that has not applied the deltas yet', async () => {
+			const remote = new MemoryRemoteStore();
+			const { a, b } = await pile(remote);
+			await b.sync.publishAck();
+
+			await a.sync.compactIfDue({ isActive: () => true, force: true });
+			expect(deltaCount(remote)).toBe(2);
+		});
+
+		it('ignores a device that is not active (not trusted)', async () => {
+			const remote = new MemoryRemoteStore();
+			const { a, b } = await pile(remote);
+			await b.sync.publishAck();
+
+			await a.sync.compactIfDue({ isActive: (id) => id !== 'B', force: true });
+			expect(deltaCount(remote)).toBe(0);
+		});
+
+		it('ignores a device that has not acknowledged for a long time', async () => {
+			const remote = new MemoryRemoteStore();
+			const { a, b } = await pile(remote);
+			await b.sync.publishAck();
+			remote.objects.get(ackKey('xacts', 'B'))!.lastModified = new Date(
+				Date.now() - 31 * 86400_000
+			);
+
+			await a.sync.compactIfDue({ isActive: () => true, force: true });
+			expect(deltaCount(remote)).toBe(0);
+		});
+
+		it('is not held back by a device without an acknowledgement', async () => {
+			const remote = new MemoryRemoteStore();
+			const { a } = await pile(remote);
+
+			await a.sync.compactIfDue({ isActive: () => true, force: true });
+			expect(deltaCount(remote)).toBe(0);
+		});
+
+		it('is held back by an acknowledgement it cannot read', async () => {
+			const remote = new MemoryRemoteStore();
+			const { a } = await pile(remote);
+			await remote.put(ackKey('xacts', 'B'), new Uint8Array([1, 2, 3]));
+
+			await a.sync.compactIfDue({ isActive: () => true, force: true });
+			expect(deltaCount(remote)).toBe(2);
+		});
+
+		it('does nothing before it is time, unless forced', async () => {
+			const remote = new MemoryRemoteStore();
+			const { a } = await pile(remote);
+
+			expect(await a.sync.compactIfDue({ isActive: () => true })).toBeNull();
+			expect(deltaCount(remote)).toBe(2);
+		});
+
+		it('is a reason to remove a forgotten device along with its acknowledgement', async () => {
+			const remote = new MemoryRemoteStore();
+			const { a, b } = await pile(remote);
+			await b.store.append(xact('FromB'));
+			await b.sync.upload();
+			await b.sync.publishAck();
+
+			await a.sync.forget('B');
+			expect([...remote.objects.keys()].some((k) => k.includes('B.'))).toBe(false);
+		});
 	});
 });
 

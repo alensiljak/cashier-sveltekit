@@ -141,9 +141,6 @@ export const DeviceSettingKeys = {
 	// Per-file remote timestamps at last successful WebDAV upload or download
 	// Shape: { settings: ISO | null, scheduled: ISO | null }
 	webdavLastSyncTs: 'webdav-last-sync-ts',
-	// Per-device state at the last merge of another device's Yjs file
-	// Shape: Record<deviceId, { remoteTs: ISO | null, mergedAt: ISO }>
-	crdtMergeState: 'crdt-merge-state',
 	// S3 sync bucket connection. Device-only: holds credentials.
 	// Shape: { endpoint, region, bucket, prefix, accessKeyId, secretAccessKey }
 	s3Settings: 's3-settings',

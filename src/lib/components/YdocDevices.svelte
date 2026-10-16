@@ -1,25 +1,21 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { RefreshCwIcon, Trash2Icon, UserCheckIcon } from '@lucide/svelte';
+	import { PackageIcon, RefreshCwIcon, Trash2Icon, UserCheckIcon } from '@lucide/svelte';
 	import Notifier from '#lib/utils/notifier';
 	import { WebDavClient } from '#lib/utils/webdav';
 	import { getXactStore } from '#lib/storage/xactStoreRegistry';
 	import { getReadyScxStore } from '#lib/services/scxService';
+	import { describeScxChanges, summarizeScxReport } from '#lib/services/scxMergeReport';
 	import {
-		describeScxChanges,
-		summarizeScxReport,
-		type ScxMergeReport
-	} from '#lib/services/scxMergeReport';
-	import {
-		listRemoteDevices,
-		trustDevice,
-		getMergeState,
-		setMergeState,
-		needsMerge,
-		type DocKind,
-		type MergeState,
-		type RemoteDevice
-	} from '#lib/sync/ydocDevices';
+		compactWebDavNow,
+		forgetWebDavDevice,
+		listWebDavDevices,
+		mergeWebDav,
+		type WebDavDevice
+	} from '#lib/services/webdavDelta';
+	import { trustDevice, type DocKind } from '#lib/sync/ydocDevices';
+	import type { RecordChange } from '#lib/storage/crdtDocStore';
+	import type { ScxRecord } from '#lib/storage/crdtScxRecord';
 
 	interface Props {
 		url: string;
@@ -31,23 +27,14 @@
 
 	let { url, username, password, onmerged }: Props = $props();
 
-	let devices = $state<RemoteDevice[]>([]);
-	let mergeState = $state<Record<string, MergeState>>({});
+	let devices = $state<WebDavDevice[]>([]);
 	let counts = $state<Record<string, number>>({});
 	let isLoading = $state(false);
+	let isCompacting = $state(false);
 	let error = $state('');
-	let deleting = $state<RemoteDevice | null>(null);
-	let trusting = $state<RemoteDevice | null>(null);
+	let deleting = $state<WebDavDevice | null>(null);
+	let trusting = $state<WebDavDevice | null>(null);
 	let trustName = $state('');
-
-	const mergeable = $derived(
-		devices.filter(
-			(d) =>
-				d.status === 'trusted' &&
-				!d.readOnly &&
-				(needsMerge(d, mergeState[d.deviceId]) || needsMerge(d, mergeState[d.deviceId], 'scx'))
-		)
-	);
 
 	function client() {
 		return new WebDavClient(url, username, password);
@@ -58,8 +45,7 @@
 		isLoading = true;
 		error = '';
 		try {
-			devices = await listRemoteDevices(client());
-			mergeState = await getMergeState();
+			devices = await listWebDavDevices(client());
 			counts = await (await getXactStore()).originCounts();
 		} catch (err) {
 			error = (err as Error).message;
@@ -71,71 +57,58 @@
 	onMount(refresh);
 
 	/**
-	 * Merge every trusted device's file of the given kinds that changed since the
-	 * last merge. The scheduled-transactions merge is reported once, in a message.
+	 * Merges what the trusted devices uploaded to the folder, for the given kinds. The
+	 * scheduled-transactions merge is reported once, in a message.
 	 */
 	export async function mergeTrusted(kinds: DocKind[] = ['xacts', 'scx']) {
-		const dav = client();
-		let xactDevices = 0;
-		let scxDevices = 0;
-		const scxReport: ScxMergeReport = { added: 0, changed: 0, deleted: 0, lines: [] };
 		try {
-			for (const d of mergeable) {
-				const who = d.name ?? d.deviceId;
-				try {
-					if (kinds.includes('xacts') && needsMerge(d, mergeState[d.deviceId])) {
-						const res = await dav.get(d.filename);
-						if (!res.ok) {
-							Notifier.error(`Download failed for ${d.filename}: ${res.status} ${res.statusText}`);
-						} else {
-							await (await getXactStore()).importState(new Uint8Array(await res.arrayBuffer()));
-							await setMergeState(d.deviceId, {
-								remoteTs: d.lastModified?.toISOString() ?? null,
-								mergedAt: new Date().toISOString()
-							});
-							xactDevices++;
-						}
-					}
-					if (kinds.includes('scx') && d.scx && needsMerge(d, mergeState[d.deviceId], 'scx')) {
-						const res = await dav.get(d.scx.filename);
-						if (!res.ok) {
-							Notifier.error(
-								`Download failed for ${d.scx.filename}: ${res.status} ${res.statusText}`
-							);
-						} else {
-							const store = await getReadyScxStore();
-							const part = describeScxChanges(
-								await store.importState(new Uint8Array(await res.arrayBuffer()))
-							);
-							scxReport.added += part.added;
-							scxReport.changed += part.changed;
-							scxReport.deleted += part.deleted;
-							scxReport.lines.push(...part.lines);
-							await setMergeState(d.deviceId, {
-								scxTs: d.scx.lastModified?.toISOString() ?? null,
-								mergedAt: new Date().toISOString()
-							});
-							scxDevices++;
-						}
-					}
-				} catch (err) {
-					Notifier.error(`Merge failed for ${who}: ${(err as Error).message}`);
+			// Set up (and, on a first launch, migrate) the scheduled transactions before merging into them.
+			if (kinds.includes('scx')) await getReadyScxStore();
+			const results = await mergeWebDav(client(), kinds);
+
+			for (const [kind, r] of Object.entries(results)) {
+				for (const e of r.errors) Notifier.error(`Merge failed for ${e.key}: ${e.message}`);
+				for (const g of r.gaps) {
+					Notifier.error(
+						`Delta ${g.expected} of ${g.deviceId} is missing from the folder; later changes are not merged yet (${kind})`
+					);
 				}
 			}
-			if (xactDevices > 0) {
-				Notifier.success(`Merged ${xactDevices} device${xactDevices === 1 ? '' : 's'}`);
+			const xacts = results.xacts;
+			if (xacts && (xacts.deltas || xacts.snapshot || xacts.legacy)) {
+				Notifier.success(`Merged ${xacts.changes} change${xacts.changes === 1 ? '' : 's'}`);
 				onmerged?.();
 			}
-			if (scxDevices > 0) {
-				Notifier.success(
-					`Scheduled transactions merged from ${scxDevices} device${scxDevices === 1 ? '' : 's'}: ${summarizeScxReport(scxReport)}`
-				);
+			const scx = results.scx;
+			if (scx && (scx.deltas || scx.snapshot || scx.legacy)) {
+				const report = describeScxChanges(scx.records as RecordChange<ScxRecord>[]);
+				Notifier.success(`Scheduled transactions merged: ${summarizeScxReport(report)}`);
 			}
+		} catch (err) {
+			Notifier.error(`Merge failed: ${(err as Error).message}`);
 		} finally {
 			await refresh();
 		}
 	}
-	function startTrust(d: RemoteDevice) {
+
+	/** Folds the deltas into a snapshot and deletes what that makes unnecessary. */
+	async function compactNow() {
+		isCompacting = true;
+		try {
+			const results = await compactWebDavNow(client());
+			const deleted = Object.values(results).reduce((n, r) => n + (r?.deleted ?? 0), 0);
+			const skipped = Object.values(results).find((r) => r?.skipped)?.skipped;
+			if (skipped) Notifier.error(`Not compacted: ${skipped}`);
+			else Notifier.success(deleted ? `Compacted: ${deleted} file(s) removed` : 'Nothing to compact');
+		} catch (err) {
+			Notifier.error('Compaction failed: ' + (err as Error).message);
+		} finally {
+			isCompacting = false;
+			await refresh();
+		}
+	}
+
+	function startTrust(d: WebDavDevice) {
 		trusting = d;
 		trustName = `Device ${d.deviceId.slice(0, 6)}`;
 	}
@@ -152,21 +125,20 @@
 		const d = deleting;
 		deleting = null;
 		try {
-			const res = await client().delete(d.filename);
-			if (res.ok || res.status === 404) Notifier.success(`${d.filename} deleted`);
-			else Notifier.error(`Delete failed: ${res.status} ${res.statusText}`);
+			const { deleted } = await forgetWebDavDevice(client(), d.deviceId);
+			Notifier.success(`${deleted} file(s) of ${label(d)} deleted`);
 		} catch (err) {
 			Notifier.error('Delete error: ' + (err as Error).message);
 		}
 		await refresh();
 	}
 
-	function label(d: RemoteDevice): string {
+	function label(d: WebDavDevice): string {
 		if (d.status === 'self') return 'This device';
 		return d.name ?? `Device ${d.deviceId.slice(0, 6)}`;
 	}
 
-	function recordCount(d: RemoteDevice): number {
+	function recordCount(d: WebDavDevice): number {
 		return counts[d.deviceId] ?? 0;
 	}
 </script>
@@ -177,14 +149,25 @@
 			{#if isLoading}
 				<RefreshCwIcon size={14} class="animate-spin text-base-content/40" />
 			{:else}
-				<button
-					class="text-xs text-base-content/40 hover:text-base-content/70 flex items-center gap-1 cursor-pointer"
-					disabled={!url}
-					onclick={refresh}
-				>
-					<RefreshCwIcon size={12} />
-					refresh
-				</button>
+				<div class="flex items-center gap-3">
+					<button
+						class="text-xs text-base-content/40 hover:text-base-content/70 flex items-center gap-1 cursor-pointer"
+						disabled={!url || isCompacting}
+						title="Fold the uploaded changes into a snapshot and delete those every device has"
+						onclick={compactNow}
+					>
+						<PackageIcon size={12} />
+						{isCompacting ? 'compacting…' : 'compact now'}
+					</button>
+					<button
+						class="text-xs text-base-content/40 hover:text-base-content/70 flex items-center gap-1 cursor-pointer"
+						disabled={!url}
+						onclick={refresh}
+					>
+						<RefreshCwIcon size={12} />
+						refresh
+					</button>
+				</div>
 			{/if}
 		</div>
 
@@ -196,7 +179,6 @@
 
 		<ul class="flex flex-col gap-3">
 			{#each devices as d (d.deviceId)}
-				{@const state = mergeState[d.deviceId]}
 				<li class="flex items-center gap-2">
 					<div class="flex-1 min-w-0">
 						<div class="flex items-center gap-2">
@@ -212,10 +194,10 @@
 						</div>
 						<div class="text-xs text-base-content/50">
 							{#if d.lastModified}Updated {d.lastModified.toLocaleString()}{/if}
+							· {d.objects} file{d.objects === 1 ? '' : 's'}
 							{#if d.status === 'self'}
 								· {recordCount(d)} own records
 							{:else if d.status === 'trusted'}
-								· {state ? `merged ${new Date(state.mergedAt).toLocaleString()}` : 'never merged'}
 								· {recordCount(d)} records here
 							{/if}
 						</div>
@@ -226,14 +208,16 @@
 							Trust
 						</button>
 					{/if}
-					<button
-						class="btn btn-xs btn-ghost text-error"
-						title="Delete file from WebDAV"
-						aria-label="Delete {d.filename}"
-						onclick={() => (deleting = d)}
-					>
-						<Trash2Icon size={14} />
-					</button>
+					{#if d.status !== 'self'}
+						<button
+							class="btn btn-xs btn-ghost text-error"
+							title="Delete this device's files from WebDAV"
+							aria-label="Delete the files of {label(d)}"
+							onclick={() => (deleting = d)}
+						>
+							<Trash2Icon size={14} />
+						</button>
+					{/if}
 				</li>
 			{/each}
 		</ul>
@@ -262,14 +246,16 @@
 {#if deleting}
 	<div class="modal modal-open">
 		<div class="modal-box">
-			<h3 class="font-bold text-lg">Delete file</h3>
+			<h3 class="font-bold text-lg">Delete device files</h3>
 			<p class="py-4 text-sm">
-				<strong>{deleting.filename}</strong> will be removed from WebDAV.
-				{#if deleting.status === 'self'}
-					This is <strong>this device's</strong> file; it is re-created on the next upload.
+				All <strong>{deleting.objects}</strong> file{deleting.objects === 1 ? '' : 's'} of
+				<strong>{label(deleting)}</strong> will be removed from WebDAV.
+				{#if deleting.status === 'trusted'}
+					What it uploaded is merged here first and kept for the other devices.
 				{:else}
-					Records already merged into this device stay here.
+					It is not trusted, so what it uploaded is not merged.
 				{/if}
+				Records already merged into this device stay here.
 			</p>
 			<div class="modal-action">
 				<button class="btn btn-ghost" onclick={() => (deleting = null)}>Cancel</button>

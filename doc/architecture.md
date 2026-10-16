@@ -120,9 +120,18 @@ tests. The store is imported on demand, which also avoids an import cycle
   between trusted devices directly, and pushes local edits live while
   connected. Updates merged in from another device carry the `remote` origin
   so they are not echoed back.
-- **WebDAV backup** (`webdavAutoBackupService.ts`) uploads the Yjs document
-  state to a per-device file, so devices never overwrite each other. Files of
-  other trusted devices are merged in on download (`ydocDevices.ts`).
+- **Delta sync through remote storage** (`src/lib/sync/deltaSync.ts`) is shared
+  by S3 and WebDAV, which only supply a small object-store adapter
+  (`s3RemoteStore.ts`, `webdavRemoteStore.ts`). A device uploads just the changes
+  made since its last upload, as numbered delta files of its own. Others apply
+  the deltas they lack, in order. A snapshot of the whole document plus a
+  per-device acknowledgement of what has been applied let any device compact:
+  fold the deltas into a snapshot and delete those everybody has. Only trusted
+  devices are merged. Updates merged in from the remote storage carry the
+  `bucket` origin, so they are not uploaded again. See
+  `doc/projects/2026-10-16_delta-sync.md` for the design.
+- **WebDAV backup** (`webdavAutoBackupService.ts`, `webdavDelta.ts`) uploads
+  after each write, debounced, using the delta sync.
 - Merging is idempotent and order-independent, so any sync path can be
   repeated safely.
 

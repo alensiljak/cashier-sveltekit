@@ -10,9 +10,7 @@
 
 import { WebDavClient } from '#lib/utils/webdav';
 import { settings, deviceSettings, SettingKeys, DeviceSettingKeys } from '#lib/settings';
-import { getXactStore } from '#lib/storage/xactStoreRegistry';
-import { getScxStore } from '#lib/storage/scxStoreRegistry';
-import { getDeviceId, ydocFilename, type DocKind } from '#lib/sync/ydocDevices';
+import type { DocKind } from '#lib/sync/ydocDevices';
 import { writable } from 'svelte/store';
 import Notifier from '#lib/utils/notifier';
 
@@ -26,14 +24,6 @@ export interface WebDavSettings {
 /** Remote timestamps (ISO) recorded in DeviceSettingKeys.webdavLastSyncTs at the last sync. */
 export interface WebDavLastSyncTs {
 	settings: string | null;
-}
-
-/**
- * Per-device file name for the Yjs state. Each device writes only its own file,
- * so concurrent devices never overwrite each other. Shares the device ID with peer sync.
- */
-export async function crdtBackupFilename(kind: DocKind = 'xacts'): Promise<string> {
-	return ydocFilename(await getDeviceId(), kind);
 }
 
 /** Reactive timestamp of the most recent successful auto-backup (null = never). */
@@ -80,48 +70,18 @@ async function doS3Backup(kinds: DocKind[]): Promise<void> {
 }
 
 /**
- * Uploads this device's Yjs state files to WebDAV. Resolves to the error messages (empty on
- * success). Shared by the automatic backup and the home-screen sync.
+ * Uploads what changed in this device's stores since the last upload to WebDAV, as deltas (see
+ * webdavDelta.ts). Resolves to the error messages (empty on success). Shared by the automatic
+ * backup and the home-screen sync. Imported on demand: it pulls in the store registries, which
+ * import this module.
  */
 export async function uploadCrdtState(
 	client: WebDavClient,
 	kinds: DocKind[] = ALL_KINDS
 ): Promise<string[]> {
-	const errors: string[] = [];
-
-	// The working set.
-	if (kinds.includes('xacts')) {
-		try {
-			const store = await getXactStore();
-			const filename = await crdtBackupFilename();
-			const res = await client.put(filename, await store.exportState(), 'application/octet-stream');
-			if (res.ok) lastBackupTime.set(new Date());
-			else errors.push(`${filename}: ${res.status} ${res.statusText}`);
-		} catch (err) {
-			errors.push(err instanceof Error ? err.message : String(err));
-		}
-	}
-
-	// The scheduled transactions, once their store exists. A device that hasn't been
-	// through the first-launch migration prompt yet is skipped: a background timer
-	// must not create the store (that would pre-empt the prompt).
-	if (kinds.includes('scx')) {
-		try {
-			const scxStore = await getScxStore();
-			if (await scxStore.isInitialized()) {
-				const filename = await crdtBackupFilename('scx');
-				const res = await client.put(
-					filename,
-					await scxStore.exportState(),
-					'application/octet-stream'
-				);
-				if (res.ok) lastBackupTime.set(new Date());
-				else errors.push(`${filename}: ${res.status} ${res.statusText}`);
-			}
-		} catch (err) {
-			errors.push(err instanceof Error ? err.message : String(err));
-		}
-	}
+	const { uploadCrdtState: upload } = await import('./webdavDelta');
+	const errors = await upload(client, kinds);
+	if (!errors.length) lastBackupTime.set(new Date());
 	return errors;
 }
 

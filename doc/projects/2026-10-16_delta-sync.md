@@ -75,7 +75,7 @@ The legacy `<deviceId>.ydoc` files are read as snapshots with empty coverage, so
 
 ### Compaction
 
-- **Acknowledgements**: after each sync, a device records what it has applied in its own `manifests/<deviceId>.json`: `crdt: { <kind>: { snapId, applied: {deviceId: seq} } }`. It is written only when `applied` changed, one small PUT of an object that exists already. The manifest stays conservative (it can only lag behind reality), which is the safe direction.
+- **Acknowledgements**: after each sync, a device writes what it has applied to its own small object `crdt/<kind>/<deviceId>.ack`: `{ snapId, applied: {deviceId: seq} }`. It is written only when `applied` changed (its own uploads are not part of it), and it can only lag behind reality, which is the safe direction. It is a plain object in the same flat folder, so S3 and WebDAV share the mechanism (the manifests are not involved), and removing a device deletes it with the rest of its objects.
 - **Trigger** (any device, from the listing alone, no decryption): after a sync in which this device has applied everything, when there are 30 or more delta objects, or the newest snapshot is older than a week and any delta exists. Also a manual "Compact now" in the S3 explorer. Thresholds are constants, to be tuned in practice.
 - **Deletable deltas**: a delta is deletable when every _active_ device's manifest shows it applied. Active = the device is on the Trusted Devices list and its manifest was updated within the last 30 days. A longer-absent device is ignored and gets the snapshot when it returns; a device removed from Trusted Devices is ignored at once (see Device trust). The manifests are read (N small GETs) only when the trigger fires, not on every sync.
 - **Steps**: sync first, read the manifests. If nothing is deletable, stop. Write `snap-<ulid>.ydoc` = `encodeStateAsUpdate(doc)` with coverage = `applied` plus this device's own `nextSeq - 1`. Then delete the deletable deltas and all but the newest two snapshots. (The snapshot may cover more than is deleted; that is fine, the delta files just wait for their acknowledgements.)
@@ -137,16 +137,20 @@ S3 and WebDAV currently duplicate the CRDT logic (`s3Sync.syncCrdt` vs `webdavSy
 
 ### Phase 3: compaction and reset
 
-- [x] acknowledgements: each device records what it applied in its own manifest (`Manifest.crdt`), written only when that changed (`publishAck`)
-- [x] compaction (`DeltaSync.compact`, `needsCompaction`): 30 deltas or a week; deletes deltas that every active device acknowledged, the own legacy `.ydoc`, and all but the newest two snapshots. Active = trusted, manifest younger than 30 days, has an acknowledgement. Runs after an upload, from the listing, and never fails the sync.
+- [x] acknowledgements: each device writes what it applied to its own `<deviceId>.ack` object, only when that changed (`DeltaSync.publishAck`); moved out of the S3 manifests in Phase 4 so that WebDAV shares it
+- [x] compaction (`DeltaSync.compact`, `needsCompaction`): 30 deltas or a week; deletes deltas that every active device acknowledged, the own legacy `.ydoc`, and all but the newest two snapshots. Active = trusted, `.ack` object younger than 30 days. A device without an acknowledgement (an old app version, or never synced) holds nothing back; one whose acknowledgement cannot be read holds everything back until it writes a new one. Runs after an upload, from the listing, and never fails the sync.
 - [x] reset (`CrdtDocStore.onReplaced`): our own reset publishes the new generation as a snapshot and removes our old deltas and older snapshots; adopting another device's reset empties the outbox and the known bucket state
 - [x] Trusted Devices removal prompt (`forgetBucketDevice`, `DeltaSync.forget`): merges, snapshots, deletes the device's objects and manifest; "Remove anyway" when that fails
 - [x] tests in `tests/unit/deltaSync.test.ts`: compaction (acknowledged, partly acknowledged, nothing to delete, snapshot retention, legacy file, damaged object), acknowledgements, reset, forgetting a device
-- Not done: a manual "Compact now" in the S3 explorer
+- [x] manual "Compact now": S3 explorer menu ("Compact sync data", `compactBucketNow`) and the WebDAV device list (`compactWebDavNow`)
 
 ### Phase 4: WebDAV adapter
 
-- [ ] flat-name adapter on `WebDavClient`; replace `needsMerge`/`crdtMergeState` for CRDT files; keep the UI on `/backup/webdav`
+- [x] `WebDavRemoteStore` (`webdavRemoteStore.ts`): protocol key `crdt/<kind>/<name>` is the flat file `cashier-<kind>-<name>`, so the older `cashier-<kind>-<deviceId>.ydoc` files are found as legacy files. No conditional PUT (it would need a CORS allowance); an existence check stands in. Content stays unencrypted, as before.
+- [x] shared `deltaSyncRegistry.ts` (one `DeltaSync` per store and remote, trust list, `afterSync`), used by S3 and WebDAV
+- [x] `webdavDelta.ts`: upload, check (listing only), merge, full sync, compact now, device list, forget device. `webdavSync.ts` and `webdavAutoBackupService.uploadCrdtState` delegate to it.
+- [x] UI on `/backup/webdav` and `YdocDevices.svelte` rewired; the per-file merge state (`needsMerge`, `crdtMergeState`) and file-name helpers are gone from `ydocDevices.ts`
+- [x] tests: `tests/unit/webdavRemoteStore.test.ts`, `tests/unit/webdavAutoBackupService.test.ts` (rewritten for deltas)
 
 ### Phase 5: hardening
 

@@ -71,13 +71,6 @@ export interface Manifest {
 	deviceId: string;
 	updated: string;
 	files: Record<string, ManifestEntry>;
-	/**
-	 * What this device has applied of each CRDT store (see `DeltaAck`): which snapshot, and the last
-	 * delta of every other device. Other devices read it to know which deltas they may delete.
-	 */
-	crdt?: Partial<
-		Record<'xacts' | 'scx', { snapId: string | null; applied: Record<string, number> }>
-	>;
 }
 
 /**

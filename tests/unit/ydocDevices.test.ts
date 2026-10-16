@@ -1,78 +1,30 @@
 /*
-    Per-device Yjs state files on WebDAV: the working set and the scheduled
-    transactions are separate files per device, each with its own merge state.
+    Device identity and the Trusted Devices list, shared by Peer Sync, WebDAV and S3.
 */
 import { describe, expect, it } from 'vitest';
-import {
-	needsMerge,
-	parseYdocFilename,
-	ydocFilename,
-	type MergeState,
-	type RemoteDevice
-} from '#lib/sync/ydocDevices';
+import db from '#lib/data/db';
+import { getDeviceId, trustDevice } from '#lib/sync/ydocDevices';
 
-const device = (over: Partial<RemoteDevice> = {}): RemoteDevice => ({
-	deviceId: 'dev1',
-	filename: 'cashier-xacts-dev1.ydoc',
-	size: 10,
-	lastModified: new Date('2026-01-02T00:00:00Z'),
-	status: 'trusted',
-	...over
-});
+describe('getDeviceId', () => {
+	it('is created once and then stays the same', async () => {
+		const id = await getDeviceId();
 
-describe('file names', () => {
-	it('builds and parses a name per kind', () => {
-		expect(ydocFilename('dev1')).toBe('cashier-xacts-dev1.ydoc');
-		expect(ydocFilename('dev1', 'scx')).toBe('cashier-scx-dev1.ydoc');
-		expect(parseYdocFilename('cashier-xacts-dev1.ydoc')).toBe('dev1');
-		expect(parseYdocFilename('cashier-scx-dev1.ydoc', 'scx')).toBe('dev1');
-	});
-
-	it('does not mistake one kind for the other', () => {
-		expect(parseYdocFilename('cashier-scx-dev1.ydoc')).toBeNull();
-		expect(parseYdocFilename('cashier-xacts-dev1.ydoc', 'scx')).toBeNull();
-		expect(parseYdocFilename('settings.json')).toBeNull();
+		expect(id).toMatch(/^[0-9a-f-]{36}$/);
+		expect(await getDeviceId()).toBe(id);
 	});
 });
 
-describe('needsMerge', () => {
-	const merged: MergeState = {
-		remoteTs: '2026-01-02T00:00:00.000Z',
-		mergedAt: '2026-01-03T00:00:00.000Z'
-	};
+describe('trustDevice', () => {
+	it('adds the device with the given name, trimmed', async () => {
+		const tp = await trustDevice('dev-trust-1', '  Phone  ');
 
-	it('working set: never merged, or changed since', () => {
-		expect(needsMerge(device(), undefined)).toBe(true);
-		expect(needsMerge(device(), merged)).toBe(false);
-		expect(needsMerge(device({ lastModified: new Date('2026-01-05T00:00:00Z') }), merged)).toBe(
-			true
-		);
+		expect(tp.name).toBe('Phone');
+		expect((await db.peers.get('dev-trust-1'))?.name).toBe('Phone');
 	});
 
-	it('scheduled transactions: nothing to merge without a file', () => {
-		expect(needsMerge(device(), undefined, 'scx')).toBe(false);
-	});
+	it('names an unnamed device after the start of its ID', async () => {
+		const tp = await trustDevice('abcdef123456', '  ');
 
-	it('scheduled transactions: never merged, or changed since', () => {
-		const withScx = device({
-			scx: { filename: 'cashier-scx-dev1.ydoc', lastModified: new Date('2026-01-02T00:00:00Z') }
-		});
-
-		// A state from before scheduled transactions were synced has no scx timestamp.
-		expect(needsMerge(withScx, merged, 'scx')).toBe(true);
-		expect(needsMerge(withScx, { ...merged, scxTs: '2026-01-02T00:00:00.000Z' }, 'scx')).toBe(
-			false
-		);
-		expect(needsMerge(withScx, { ...merged, scxTs: '2026-01-01T00:00:00.000Z' }, 'scx')).toBe(true);
-	});
-
-	it('the two kinds are tracked independently', () => {
-		const withScx = device({
-			scx: { filename: 'cashier-scx-dev1.ydoc', lastModified: new Date('2026-01-02T00:00:00Z') }
-		});
-		const state: MergeState = { ...merged, scxTs: '2026-01-01T00:00:00.000Z' };
-
-		expect(needsMerge(withScx, state)).toBe(false);
-		expect(needsMerge(withScx, state, 'scx')).toBe(true);
+		expect(tp.name).toBe('Device abcdef');
 	});
 });

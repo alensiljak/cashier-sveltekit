@@ -23,15 +23,20 @@ import db from '#lib/data/db';
 import { getDeviceId, type DocKind } from '#lib/sync/ydocDevices';
 import {
 	DeltaSync,
+	type CompactResult,
 	decodeSnapshot,
 	deltaKey,
 	deviceDeltaPrefix,
 	deviceOfKey,
 	kindPrefix,
-	needsCompaction,
 	vectorOf
 } from '#lib/sync/deltaSync';
-import { deviceSettingsStateStorage } from '#lib/sync/deltaStateStorage';
+import {
+	afterSync,
+	getDeltaSync,
+	loadIgnoreReasons,
+	loadTrusted
+} from '#lib/sync/deltaSyncRegistry';
 import { normalizeEol } from '#lib/sync/SyncSource';
 import { getXactStore } from '#lib/storage/xactStoreRegistry';
 import { getScxStore } from '#lib/storage/scxStoreRegistry';
@@ -413,120 +418,25 @@ const deviceIdOfKey = (objectKey: string): string | null => {
 	return kind === 'xacts' || kind === 'scx' ? deviceOfKey(kind, objectKey) : null;
 };
 
-/** Why another device's CRDT state is not merged here: not on the Trusted Devices list, or read-only. */
-async function loadIgnoreReasons(): Promise<(deviceId: string | null) => string | null> {
-	const peers = new Map((await db.peers.toArray()).map((p) => [p.id, p]));
-	return (deviceId) => {
-		const peer = deviceId ? peers.get(deviceId) : undefined;
-		if (!peer) return 'Device not trusted';
-		return peer.readOnly ? 'Device is read-only' : null;
-	};
-}
-
 const kindOf = (item: 'xacts' | 'scheduled'): DocKind => (item === 'xacts' ? 'xacts' : 'scx');
 
-/** `own` is the open session's manifest, when there is one: acknowledgements are kept in line with it. */
-type CrdtSession = Pick<S3Session, 'cfg' | 'key' | 'deviceId'> & { own?: Manifest };
-
-/** A device counts for compaction when its manifest was written within this time. */
-const ACTIVE_WINDOW_MS = 30 * 24 * 3600 * 1000;
+type CrdtSession = Pick<S3Session, 'cfg' | 'key' | 'deviceId'>;
 
 const storeOf = (item: 'xacts' | 'scheduled') =>
 	item === 'xacts' ? getXactStore() : getScxStore();
 
-/** One delta sync per store and bucket, so the changes made meanwhile are captured for upload. */
-const deltaSyncs = new Map<string, { store: object; sync: DeltaSync }>();
-
 /**
- * The delta sync of a store for this bucket, attached to the store's changes. Created on first
- * use; later calls only refresh the transport (the key is derived again) and the trust list.
+ * The delta sync of a store for this bucket, attached to the store's changes so that what is
+ * edited meanwhile is captured for upload.
  */
 async function deltaSyncFor(s: CrdtSession, item: 'xacts' | 'scheduled'): Promise<DeltaSync> {
-	const kind = kindOf(item);
-	const store = await storeOf(item);
-	const bucketId = `${s.cfg.endpoint}|${s.cfg.bucket}|${s.cfg.prefix}`;
-	const id = `${kind}|${bucketId}`;
-	const remote = new S3RemoteStore(s.cfg, s.key);
-	const ignore = await loadIgnoreReasons();
-
-	let entry = deltaSyncs.get(id);
-	if (entry && entry.store !== store) {
-		entry.sync.dispose();
-		entry = undefined;
-	}
-	if (!entry) {
-		entry = {
-			store,
-			sync: new DeltaSync({
-				kind,
-				deviceId: s.deviceId,
-				doc: store,
-				remote,
-				storage: deviceSettingsStateStorage(kind, bucketId),
-				ignore
-			})
-		};
-		deltaSyncs.set(id, entry);
-	} else {
-		entry.sync.configure({ remote, ignore });
-	}
-	await entry.sync.attach();
-	return entry.sync;
-}
-
-/** This device's manifest as the bucket holds it, or an empty one. */
-async function readOwnManifest(s: CrdtSession): Promise<Manifest> {
-	const raw = await getObject(s.cfg, manifestKey(s.deviceId));
-	if (!raw) return { deviceId: s.deviceId, updated: '', files: {} };
-	return JSON.parse(new TextDecoder().decode(await decrypt(s.key, raw))) as Manifest;
-}
-
-/**
- * Tells the other devices, in this device's manifest, what it has applied of the store, so they
- * know which deltas they may delete. Writes only when that changed.
- */
-async function publishAck(s: CrdtSession, kind: DocKind, sync: DeltaSync): Promise<void> {
-	const ack = await sync.ack();
-	if (!ack) return;
-	const manifest = await readOwnManifest(s);
-	manifest.crdt = { ...manifest.crdt, [kind]: ack };
-	manifest.updated = new Date().toISOString();
-	await putObject(
-		s.cfg,
-		manifestKey(s.deviceId),
-		await encrypt(s.key, TEXT.encode(JSON.stringify(manifest)))
-	);
-	// An open session writes its manifest again later: it must not take the acknowledgement back.
-	if (s.own) s.own.crdt = manifest.crdt;
-	await sync.markAcked(ack);
-}
-
-/**
- * What each active device has applied of the store: trusted devices whose manifest was written
- * recently and carries an acknowledgement. Others (old app versions, long absent) do not hold
- * back clean-up; a device that lags takes the snapshot instead.
- */
-async function activeAcks(
-	s: CrdtSession,
-	kind: DocKind
-): Promise<Record<string, Record<string, number>>> {
-	const [manifests, peers] = await Promise.all([loadManifests(s.cfg, s.key), db.peers.toArray()]);
-	const trusted = new Set(peers.map((p) => p.id));
-	const acks: Record<string, Record<string, number>> = {};
-	for (const m of manifests) {
-		const ack = m.crdt?.[kind];
-		if (m.deviceId === s.deviceId || !trusted.has(m.deviceId) || !ack) continue;
-		if (!(Date.now() - Date.parse(m.updated) <= ACTIVE_WINDOW_MS)) continue;
-		acks[m.deviceId] = ack.applied;
-	}
-	return acks;
-}
-
-/** Compacts the store's objects when enough have piled up. Never fails the sync it follows. */
-async function compactIfDue(s: CrdtSession, kind: DocKind, sync: DeltaSync): Promise<void> {
-	if (!needsCompaction(await sync.objects())) return;
-	const result = await sync.compact(await activeAcks(s, kind));
-	if (result.skipped) console.warn('[s3-sync] Compaction skipped:', kind, result.skipped);
+	return getDeltaSync({
+		kind: kindOf(item),
+		deviceId: s.deviceId,
+		store: await storeOf(item),
+		remote: new S3RemoteStore(s.cfg, s.key),
+		remoteId: `${s.cfg.endpoint}|${s.cfg.bucket}|${s.cfg.prefix}`
+	});
 }
 
 async function syncCrdt(
@@ -547,12 +457,7 @@ async function syncCrdt(
 			}
 			const sync = await deltaSyncFor(s, item);
 			const { seq } = await sync.upload();
-			try {
-				await publishAck(s, kind, sync);
-				await compactIfDue(s, kind, sync);
-			} catch (e) {
-				console.warn('[s3-sync] Clean-up failed:', kind, e);
-			}
+			await afterSync(sync, { compact: true });
 			return [
 				seq === null
 					? { item, path: prefix, outcome: 'unchanged' }
@@ -562,11 +467,7 @@ async function syncCrdt(
 
 		const sync = await deltaSyncFor(s, item);
 		const r = await sync.download();
-		try {
-			await publishAck(s, kind, sync);
-		} catch (e) {
-			console.warn('[s3-sync] Could not publish the acknowledgement:', kind, e);
-		}
+		await afterSync(sync, { compact: false });
 		if (!r.foreign) {
 			return [
 				{ item, path: prefix, outcome: 'skipped', message: 'No other device has uploaded yet' }
@@ -903,6 +804,29 @@ export async function syncCrdtStores(
 		errors,
 		merged: down.some((l) => l.outcome === 'downloaded' && l.item === 'xacts')
 	};
+}
+
+/**
+ * Compacts the CRDT stores now, whether or not it is time: folds the uploaded changes into a
+ * snapshot and deletes what that makes unnecessary. Resolves to what each store did; a store
+ * that was not set up here is left out.
+ */
+export async function compactBucketNow(
+	cfg: S3Config
+): Promise<Partial<Record<DocKind, CompactResult | null>>> {
+	const s = await crdtSession(cfg);
+	const isActive = await loadTrusted();
+	const results: Partial<Record<DocKind, CompactResult | null>> = {};
+	for (const item of ['xacts', 'scheduled'] as const) {
+		if (item === 'scheduled' && !(await (await storeOf(item)).isInitialized())) continue;
+		results[kindOf(item)] = await (
+			await deltaSyncFor(s, item)
+		).compactIfDue({
+			isActive,
+			force: true
+		});
+	}
+	return results;
 }
 
 /**
