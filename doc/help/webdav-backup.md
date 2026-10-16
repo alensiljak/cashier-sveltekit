@@ -18,6 +18,12 @@ Tap the arrow next to **Local Transactions** to list the devices that have uploa
 
 The uploaded changes pile up in the folder. **Compact now** (next to the refresh link) folds them into one snapshot and deletes the files every device has already applied. This also happens automatically after enough uploads. A device that was away for a long time simply takes the snapshot.
 
+## Encryption
+
+In **WebDAV Config** you can switch on **Encrypt synced transactions**. The files of the working set and the scheduled transactions are then encrypted with a passphrase before they leave the device (the settings backup is not). Use the same passphrase on every device; it is kept on the device only.
+
+If the folder already holds files when you switch encryption on, or is encrypted when you switch it off, Cashier offers to convert every file in the folder. Do this on one device while the others are not syncing; afterwards set the same on the others. A device whose setting does not match the folder refuses to sync and says so. Starting a conversion again after an interruption is safe.
+
 ## Actions
 
 - **Upload** — sends the checked items to the WebDAV folder, overwriting the remote copies.

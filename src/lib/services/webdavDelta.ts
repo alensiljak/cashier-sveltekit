@@ -17,8 +17,9 @@ import {
 	type DeltaSync,
 	type DownloadResult
 } from '#lib/sync/deltaSync';
-import { afterSync, getDeltaSync, loadTrusted } from '#lib/sync/deltaSyncRegistry';
+import { afterSync, getDeltaSync, loadTrusted, webDavRemoteId } from '#lib/sync/deltaSyncRegistry';
 import type { WebDavClient } from '#lib/utils/webdav';
+import { remoteFor } from './webdavEncryption';
 import { WebDavRemoteStore } from './webdavRemoteStore';
 
 export const ALL_KINDS: DocKind[] = ['xacts', 'scx'];
@@ -35,8 +36,9 @@ async function syncFor(client: WebDavClient, kind: DocKind): Promise<DeltaSync> 
 		kind,
 		deviceId: await getDeviceId(),
 		store: await storeOf(kind),
-		remote: new WebDavRemoteStore(client),
-		remoteId: `webdav|${client.fileUrl('')}`
+		// Encrypted as configured; refuses (EncryptionMismatchError) when the folder disagrees.
+		remote: await remoteFor(client),
+		remoteId: webDavRemoteId(client.fileUrl(''))
 	});
 }
 
@@ -46,6 +48,9 @@ const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 function problemsOf(kind: DocKind, r: DownloadResult): string[] {
 	return [
 		...r.errors.map((e) => `${e.key}: ${e.message}`),
+		...r.invalid
+			.slice(0, 5)
+			.map((bad) => `${kind}: record ${bad.id} that came in is not valid (${bad.reason})`),
 		...r.gaps.map(
 			(g) =>
 				`${kind}: delta ${g.expected} of ${g.deviceId} is missing; later changes are not merged yet`

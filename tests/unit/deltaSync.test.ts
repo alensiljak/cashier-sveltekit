@@ -52,7 +52,11 @@ interface Device {
 async function device(
 	remote: RemoteStore,
 	id: string,
-	opts: { ignore?: (deviceId: string) => string | null; attach?: boolean } = {}
+	opts: {
+		ignore?: (deviceId: string) => string | null;
+		validate?: (record: unknown) => string | null;
+		attach?: boolean;
+	} = {}
 ): Promise<Device> {
 	const store = new CrdtXactStore(`test-delta-${++counter}`, async () => id);
 	await store.initialize();
@@ -63,7 +67,8 @@ async function device(
 		doc: store,
 		remote,
 		storage,
-		ignore: opts.ignore
+		ignore: opts.ignore,
+		validate: opts.validate
 	});
 	if (opts.attach !== false) await sync.attach();
 	return { id, store, sync, storage };
@@ -633,17 +638,6 @@ describe('compaction', () => {
 		expect(snapshotsOf(remote)).toHaveLength(2);
 	});
 
-	it('removes its own legacy state file', async () => {
-		const remote = new MemoryRemoteStore();
-		const a = await device(remote, 'A');
-		await a.store.append(xact('One'));
-		await remote.put(legacyKey('xacts', 'A'), await a.store.exportState());
-		await a.sync.upload();
-
-		await a.sync.compact({});
-		expect(keysOf(remote)).not.toContain(legacyKey('xacts', 'A'));
-	});
-
 	it('does not delete anything when it could not merge everything first', async () => {
 		const remote = new MemoryRemoteStore();
 		const a = await device(remote, 'A');
@@ -897,6 +891,244 @@ describe('forgetting a device', () => {
 
 		await expect(a.sync.forget('Gone')).rejects.toThrow(/merge everything/);
 		expect(remote.objects.has(deltaKey('xacts', 'Gone', 1))).toBe(true);
+	});
+});
+
+describe('legacy files after the move to deltas', () => {
+	const legacy = (id: string) => legacyKey('xacts', id);
+
+	it('removes the legacy file of a device once its first delta is held here', async () => {
+		const remote = new MemoryRemoteStore();
+		const old = await device(remote, 'Old');
+		await old.store.append(xact('FromOld'));
+		await remote.put(legacy('Old'), await old.store.exportState());
+		const b = await device(remote, 'B');
+
+		// Not yet moved on: no delta of its own.
+		await b.sync.download();
+		expect(await b.sync.cleanLegacy()).toBe(0);
+		expect(remote.objects.has(legacy('Old'))).toBe(true);
+
+		// It upgrades: its first delta carries everything its legacy file held.
+		await old.sync.upload();
+		await b.sync.download();
+		expect(await b.sync.cleanLegacy()).toBe(1);
+		expect(remote.objects.has(legacy('Old'))).toBe(false);
+		expect(await payees(b)).toEqual(['FromOld']);
+	});
+
+	it('removes its own legacy file after its first upload', async () => {
+		const remote = new MemoryRemoteStore();
+		const a = await device(remote, 'A');
+		await a.store.append(xact('One'));
+		await remote.put(legacy('A'), await a.store.exportState());
+
+		expect(await a.sync.cleanLegacy()).toBe(0);
+		await a.sync.upload();
+		expect(await a.sync.cleanLegacy()).toBe(1);
+		expect(remote.objects.has(legacy('A'))).toBe(false);
+	});
+
+	it('keeps the legacy file of a device that is still on the old version', async () => {
+		const remote = new MemoryRemoteStore();
+		const old = await device(remote, 'Old');
+		await old.store.append(xact('FromOld'));
+		await remote.put(legacy('Old'), await old.store.exportState());
+		const a = await device(remote, 'A');
+		await a.sync.download();
+		await a.store.append(xact('Mine'));
+		await a.sync.upload();
+
+		expect(await a.sync.cleanLegacy()).toBe(0);
+		expect(remote.objects.has(legacy('Old'))).toBe(true);
+	});
+});
+
+describe('size limit and validation', () => {
+	it('does not read an object larger than the limit', async () => {
+		const remote = new MemoryRemoteStore();
+		const a = await device(remote, 'A');
+		const b = await device(remote, 'B');
+		await a.store.append(xact('One'));
+		await a.sync.upload();
+		const info = remote.objects.get(deltaKey('xacts', 'A', 1))!;
+		const real = remote.list.bind(remote);
+		vi.spyOn(remote, 'list').mockImplementation(async (prefix) =>
+			(await real(prefix)).map((o) => ({ ...o, size: info.body.length + 65 * 1024 * 1024 }))
+		);
+		const get = vi.spyOn(remote, 'get');
+
+		const result = await b.sync.download();
+		expect(result.errors[0].message).toMatch(/Larger than the limit/);
+		expect(get).not.toHaveBeenCalled();
+		expect(await payees(b)).toEqual([]);
+	});
+
+	it('reports records that came in but are not valid', async () => {
+		const remote = new MemoryRemoteStore();
+		const a = await device(remote, 'A');
+		const b = await device(remote, 'B', {
+			validate: (r) =>
+				(r as { payee?: string }).payee === 'Bad' ? 'The payee is not allowed' : null
+		});
+		await a.store.append(xact('Good'));
+		await a.store.append(xact('Bad'));
+		await a.sync.upload();
+
+		const result = await b.sync.download();
+		expect(result.invalid).toHaveLength(1);
+		expect(result.invalid[0].reason).toBe('The payee is not allowed');
+		expect(result.changes).toBe(2);
+	});
+
+	it('accepts what the app itself writes', async () => {
+		const { validateRecord } = await import('#lib/storage/crdtXactRecord');
+		const remote = new MemoryRemoteStore();
+		const a = await device(remote, 'A');
+		const b = await device(remote, 'B', { validate: validateRecord });
+		await a.store.append(xact('Fine'));
+		await a.sync.upload();
+
+		expect((await b.sync.download()).invalid).toEqual([]);
+	});
+
+	it('knows a record that is not shaped like a transaction', async () => {
+		const { validateRecord } = await import('#lib/storage/crdtXactRecord');
+		expect(validateRecord(null)).not.toBeNull();
+		expect(validateRecord({ id: 'x', schemaVersion: 1, postings: 'no' })).toMatch(/postings/);
+		expect(validateRecord({ id: 'x', schemaVersion: 1, postings: [{}] })).toMatch(/account/);
+		expect(validateRecord({ id: 'x', schemaVersion: 1, postings: [] })).toBeNull();
+	});
+});
+
+describe('automatic reset', () => {
+	/** Many records created and deleted: what is left is the ids of those that were deleted. */
+	async function churn(d: Device, count = 100) {
+		for (let i = 0; i < count; i++) await d.store.append(xact(`Churn ${i}`));
+		for (const { id } of await d.store.list()) await d.store.remove(id);
+	}
+	const reset = (d: Device, trusted: string[]) => d.sync.resetIfDue({ trusted });
+	const snapshots = (remote: MemoryRemoteStore) =>
+		[...remote.objects.keys()].filter((k) => parseKey('xacts', k)?.type === 'snapshot');
+
+	it('resets an emptied document once every trusted device has applied the deletions', async () => {
+		const remote = new MemoryRemoteStore();
+		const a = await device(remote, 'A');
+		const b = await device(remote, 'B');
+		await churn(a);
+		await a.sync.upload();
+		await b.sync.download();
+		await b.sync.publishAck();
+		const before = (await a.store.exportState()).length;
+
+		expect(await reset(a, ['B'])).toEqual({ reset: true });
+
+		expect((await a.store.exportState()).length).toBeLessThan(before / 4);
+		expect(snapshots(remote)).toHaveLength(1);
+		await b.sync.download();
+		expect((await b.store.exportState()).length).toBeLessThan(before / 4);
+		expect(await payees(b)).toEqual([]);
+	});
+
+	it('waits for a trusted device that has not applied the deletions', async () => {
+		const remote = new MemoryRemoteStore();
+		const a = await device(remote, 'A');
+		const b = await device(remote, 'B');
+		await b.sync.download();
+		await b.sync.publishAck();
+		await churn(a);
+		await a.sync.upload();
+
+		const result = await reset(a, ['B']);
+		expect(result.reset).toBe(false);
+		expect(result.reason).toMatch(/Waiting for B/);
+		expect(snapshots(remote)).toEqual([]);
+	});
+
+	it('waits for a trusted device that has synced but never acknowledged', async () => {
+		const remote = new MemoryRemoteStore();
+		const a = await device(remote, 'A');
+		const b = await device(remote, 'B');
+		await b.store.append(xact('FromB'));
+		await b.sync.upload();
+		await a.sync.download();
+		await churn(a);
+		await a.store.append(xact('Keep'));
+		for (const { id } of await a.store.list()) await a.store.remove(id);
+
+		expect((await reset(a, ['B'])).reason).toMatch(/Waiting for B/);
+	});
+
+	it('does not wait for a trusted device that has not acknowledged for a long time', async () => {
+		const remote = new MemoryRemoteStore();
+		const a = await device(remote, 'A');
+		const b = await device(remote, 'B');
+		await b.sync.publishAck();
+		remote.objects.get(ackKey('xacts', 'B'))!.lastModified = new Date(Date.now() - 31 * 86400_000);
+		await churn(a);
+		await a.sync.upload();
+
+		expect((await reset(a, ['B'])).reset).toBe(true);
+	});
+
+	it('ignores a trusted device that has never synced, and devices that are not trusted', async () => {
+		const remote = new MemoryRemoteStore();
+		const a = await device(remote, 'A', {
+			ignore: (id) => (id === 'Stranger' ? 'Device not trusted' : null)
+		});
+		const stranger = await device(remote, 'Stranger');
+		await stranger.store.append(xact('X'));
+		await stranger.sync.upload();
+		await churn(a);
+
+		expect((await reset(a, ['NeverSynced'])).reset).toBe(true);
+	});
+
+	it('does not reset while records remain', async () => {
+		const remote = new MemoryRemoteStore();
+		const a = await device(remote, 'A');
+		await churn(a);
+		await a.store.append(xact('Keep'));
+
+		expect(await reset(a, [])).toEqual({ reset: false, reason: 'Records remain' });
+	});
+
+	it('does not reset when there is little to clear', async () => {
+		const remote = new MemoryRemoteStore();
+		const a = await device(remote, 'A');
+		await a.store.append(xact('One'));
+		for (const { id } of await a.store.list()) await a.store.remove(id);
+
+		expect((await reset(a, [])).reason).toBe('Nothing worth clearing');
+	});
+
+	it('does not reset when what came in from the bucket brought records back', async () => {
+		const remote = new MemoryRemoteStore();
+		const a = await device(remote, 'A');
+		const b = await device(remote, 'B');
+		await b.store.append(xact('FromB'));
+		await b.sync.upload();
+		await churn(a);
+
+		expect(await reset(a, ['B'])).toEqual({ reset: false, reason: 'Records remain' });
+	});
+
+	it('keeps what another device created and had not uploaded', async () => {
+		const remote = new MemoryRemoteStore();
+		const a = await device(remote, 'A');
+		const b = await device(remote, 'B');
+		await churn(a);
+		await a.sync.upload();
+		await b.sync.download();
+		await b.sync.publishAck();
+		await b.store.append(xact('Offline')); // Made after the last sync, not uploaded.
+
+		expect((await reset(a, ['B'])).reset).toBe(true);
+		await b.sync.download();
+		expect(await payees(b)).toEqual(['Offline']);
+		await b.sync.upload();
+		await a.sync.download();
+		expect(await payees(a)).toEqual(['Offline']);
 	});
 });
 

@@ -141,6 +141,9 @@ export const DeviceSettingKeys = {
 	// Per-file remote timestamps at last successful WebDAV upload or download
 	// Shape: { settings: ISO | null, scheduled: ISO | null }
 	webdavLastSyncTs: 'webdav-last-sync-ts',
+	// Encryption of the sync files in the WebDAV folder. Device-only: holds the passphrase.
+	// Shape: { enabled: boolean, passphrase: string }
+	webdavEncryption: 'webdav-encryption',
 	// S3 sync bucket connection. Device-only: holds credentials.
 	// Shape: { endpoint, region, bucket, prefix, accessKeyId, secretAccessKey }
 	s3Settings: 's3-settings',

@@ -7,6 +7,13 @@
 	import { CloudIcon } from '@lucide/svelte';
 	import { WebDavClient, type WebDavEntry } from '#lib/utils/webdav';
 	import { ChevronRight, ChevronUp } from '@lucide/svelte';
+	import {
+		convertWebDavFolder,
+		loadWebDavEncryption,
+		saveWebDavEncryption,
+		webDavFolderState,
+		type WebDavFolderState
+	} from '#lib/services/webdavEncryption';
 
 	let url = '';
 	let username = '';
@@ -25,6 +32,17 @@
 	let testDone = false;
 	let autoBackupEnabled = false;
 
+	// Encryption of the sync files in the folder.
+	let encEnabled = false;
+	let encPassphrase = '';
+	let folderState: WebDavFolderState | null = null;
+	let folderStateError = '';
+	let convertDialog: HTMLDialogElement | undefined;
+	let converting: 'encrypt' | 'decrypt' | null = null;
+	let convertProgress = '';
+	let convertError = '';
+	let encBusy = false;
+
 	onMount(async () => {
 		autoBackupEnabled =
 			(await deviceSettings.get<boolean>(DeviceSettingKeys.webdavAutoBackup)) ?? false;
@@ -36,7 +54,84 @@
 			username = saved.username ?? '';
 			password = saved.password ?? '';
 		}
+		const enc = await loadWebDavEncryption();
+		encEnabled = enc.enabled;
+		encPassphrase = enc.passphrase;
+		if (url) void checkFolder();
 	});
+
+	/** Whether the folder is encrypted, to compare with the switch. */
+	async function checkFolder() {
+		folderStateError = '';
+		try {
+			folderState = await webDavFolderState(new WebDavClient(url, username, password));
+		} catch (err) {
+			folderState = null;
+			folderStateError = (err as Error).message;
+		}
+	}
+
+	async function savePassphrase() {
+		if (!encEnabled) await saveWebDavEncryption({ enabled: false, passphrase: encPassphrase });
+	}
+
+	/** Turns encryption on or off, converting the files in the folder first when it holds some in the other form. */
+	async function toggleEncryption() {
+		const next = !encEnabled;
+		if (!url) {
+			Notifier.error('Set the WebDAV folder URL first');
+			return;
+		}
+		if (next && !encPassphrase) {
+			Notifier.error('Enter a passphrase first');
+			return;
+		}
+		encBusy = true;
+		try {
+			await checkFolder();
+			if (folderStateError) throw new Error(folderStateError);
+			if (next && !folderState!.encrypted && folderState!.objects > 0) return openConvert('encrypt');
+			if (!next && folderState!.encrypted) return openConvert('decrypt');
+			encEnabled = next;
+			await saveWebDavEncryption({ enabled: next, passphrase: encPassphrase });
+		} catch (err) {
+			Notifier.error('Could not change encryption: ' + (err as Error).message);
+		} finally {
+			encBusy = false;
+		}
+	}
+
+	function openConvert(mode: 'encrypt' | 'decrypt') {
+		converting = mode;
+		convertError = '';
+		convertProgress = '';
+		convertDialog?.showModal();
+	}
+
+	async function confirmConvert() {
+		if (!converting) return;
+		const mode = converting;
+		encBusy = true;
+		convertError = '';
+		try {
+			const client = new WebDavClient(url, username, password);
+			const { converted } = await convertWebDavFolder(client, mode, encPassphrase, (done, total) => {
+				convertProgress = `${done} of ${total}`;
+			});
+			encEnabled = mode === 'encrypt';
+			await saveWebDavEncryption({ enabled: encEnabled, passphrase: encPassphrase });
+			Notifier.success(
+				`${converted} file(s) ${mode === 'encrypt' ? 'encrypted' : 'decrypted'}. Do the same on your other devices.`
+			);
+			convertDialog?.close();
+			await checkFolder();
+		} catch (err) {
+			// Safe to run again: what is already converted is skipped.
+			convertError = (err as Error).message;
+		} finally {
+			encBusy = false;
+		}
+	}
 
 	async function testSettings(): Promise<void> {
 		if (!url) {
@@ -200,6 +295,97 @@
 					{/if}
 				</div>
 			</div>
+
+			<!-- Encryption -->
+			<div class="card bg-base-200 shadow-xl">
+				<div class="card-body p-4">
+					<label class="flex items-center gap-3 cursor-pointer">
+						<span class="flex-1">
+							<span class="font-medium">Encrypt synced transactions</span>
+							<span class="block text-xs text-base-content/50">
+								The files of the working set and the scheduled transactions are encrypted with a
+								passphrase before they are uploaded. The settings backup is not.
+							</span>
+						</span>
+						<input
+							type="checkbox"
+							class="toggle toggle-primary bg-transparent bg-none"
+							checked={encEnabled}
+							disabled={!url || encBusy}
+							onclick={(e) => {
+								e.preventDefault();
+								void toggleEncryption();
+							}}
+						/>
+					</label>
+					<div class="form-control mt-2 md:flex-row md:items-center md:gap-3">
+						<label class="label md:w-40 md:flex-shrink-0" for="dav-enc-pass">
+							<span class="label-text">Passphrase</span>
+						</label>
+						<input
+							id="dav-enc-pass"
+							type="password"
+							bind:value={encPassphrase}
+							onchange={savePassphrase}
+							disabled={encEnabled}
+							autocomplete="off"
+							class="input input-bordered md:flex-1"
+						/>
+					</div>
+					<p class="text-xs text-base-content/50">
+						Every device needs the same passphrase. It is kept on this device only. To change it,
+						turn encryption off (the files are decrypted), change it, and turn it on again.
+					</p>
+					{#if folderStateError}
+						<p class="text-xs text-error">Could not check the folder: {folderStateError}</p>
+					{/if}
+					{#if encEnabled && folderState && !folderState.encrypted && folderState.objects > 0}
+						<div class="alert alert-warning text-sm">
+							<span>Encryption is on, but {folderState.objects} file(s) in the folder are not encrypted.</span>
+							<button class="btn btn-sm" onclick={() => openConvert('encrypt')}>Encrypt them</button>
+						</div>
+					{:else if !encEnabled && folderState && folderState.encrypted}
+						<div class="alert alert-warning text-sm">
+							<span>The folder holds encrypted files, but encryption is off here.</span>
+							<button class="btn btn-sm" onclick={() => openConvert('decrypt')}>Decrypt them</button>
+						</div>
+					{/if}
+				</div>
+			</div>
+
+			<dialog bind:this={convertDialog} class="modal" onclose={() => (converting = null)}>
+				<div class="modal-box">
+					<h3 class="text-lg font-bold">
+						{converting === 'decrypt' ? 'Decrypt the files in the folder?' : 'Encrypt the files in the folder?'}
+					</h3>
+					<p class="py-3 text-sm">
+						{#if converting === 'decrypt'}
+							The folder holds encrypted files. They are decrypted with the passphrase above and
+							stored as plain files; encryption is then off.
+						{:else}
+							The folder holds {folderState?.objects} file(s) that are not encrypted. They are
+							encrypted with the passphrase above and replaced in the folder; encryption is then on.
+						{/if}
+					</p>
+					<p class="text-sm">
+						Your other devices cannot sync with the folder while it is converted. Afterwards, set
+						the same on each of them (with the same passphrase if you encrypt). Starting again after
+						an interruption is safe.
+					</p>
+					{#if convertProgress}<p class="mt-2 text-sm opacity-70">{convertProgress}</p>{/if}
+					{#if convertError}<p class="mt-2 text-sm text-error">{convertError}</p>{/if}
+					<div class="modal-action">
+						<button class="btn btn-ghost" disabled={encBusy} onclick={() => convertDialog?.close()}>
+							Cancel
+						</button>
+						<button class="btn btn-primary" disabled={encBusy} onclick={confirmConvert}>
+							{#if encBusy}<span class="loading loading-spinner loading-sm"></span>{/if}
+							{converting === 'decrypt' ? 'Decrypt' : 'Encrypt'}
+						</button>
+					</div>
+				</div>
+				<form method="dialog" class="modal-backdrop"><button aria-label="Close">close</button></form>
+			</dialog>
 
 			<!-- Test Settings -->
 			<div class="card bg-base-200 shadow-xl">

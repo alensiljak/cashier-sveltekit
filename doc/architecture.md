@@ -126,8 +126,10 @@ tests. The store is imported on demand, which also avoids an import cycle
   made since its last upload, as numbered delta files of its own. Others apply
   the deltas they lack, in order. A snapshot of the whole document plus a
   per-device acknowledgement of what has been applied let any device compact:
-  fold the deltas into a snapshot and delete those everybody has. Only trusted
-  devices are merged. Updates merged in from the remote storage carry the
+  fold the deltas into a snapshot and delete those everybody has. When the
+  working set is emptied and every trusted device has applied the deletions,
+  the document is reset to drop its history. S3 is always encrypted; WebDAV
+  optionally (`webdavEncryption.ts`). Only trusted devices are merged. Updates merged in from the remote storage carry the
   `bucket` origin, so they are not uploaded again. See
   `doc/projects/2026-10-16_delta-sync.md` for the design.
 - **WebDAV backup** (`webdavAutoBackupService.ts`, `webdavDelta.ts`) uploads

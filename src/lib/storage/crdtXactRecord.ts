@@ -32,6 +32,30 @@ export function isNewerSchema(record: XactRecord): boolean {
 	return record.schemaVersion > XACT_SCHEMA_VERSION;
 }
 
+/**
+ * A reason why `value`, read from another device, is not a usable working-set record, or null.
+ * Only the shape is checked, as far as the app relies on it; a record from a newer schema passes.
+ */
+export function validateRecord(value: unknown): string | null {
+	if (typeof value !== 'object' || value === null) return 'Not an object';
+	const r = value as Record<string, unknown>;
+	if (typeof r.id !== 'string' || !r.id) return 'No id';
+	if (typeof r.schemaVersion !== 'number') return 'No schema version';
+	if (r.date !== undefined && typeof r.date !== 'string') return 'The date is not text';
+	if (r.payee !== undefined && typeof r.payee !== 'string') return 'The payee is not text';
+	if (!Array.isArray(r.postings)) return 'The postings are not a list';
+	for (const p of r.postings) {
+		if (
+			typeof p !== 'object' ||
+			p === null ||
+			typeof (p as { account?: unknown }).account !== 'string'
+		) {
+			return 'A posting has no account';
+		}
+	}
+	return null;
+}
+
 const warnedIds = new Set<XactId>();
 
 /**

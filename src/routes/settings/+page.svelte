@@ -734,7 +734,10 @@
 				<h3 class="font-bold text-lg">Reset the {RESET_LABELS[resetTarget]} store?</h3>
 				<p>
 					The store is empty. Resetting it discards its history on this device and, when the other
-					devices sync, on theirs too. Make sure the devices have synced first.
+					devices sync, on theirs too. Make sure all your devices have synced first: what another
+					device created and has not uploaded yet is kept, but an edit it made to a record that was
+					deleted here is lost. With S3 or WebDAV sync this also happens by itself, after a sync,
+					once every trusted device has applied the deletions.
 				</p>
 				<div class="modal-action">
 					<button class="btn" onclick={() => (resetTarget = null)} disabled={resetBusy}>

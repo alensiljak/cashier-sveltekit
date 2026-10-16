@@ -68,6 +68,9 @@
 
 			for (const [kind, r] of Object.entries(results)) {
 				for (const e of r.errors) Notifier.error(`Merge failed for ${e.key}: ${e.message}`);
+				for (const bad of r.invalid.slice(0, 5)) {
+					Notifier.error(`Record ${bad.id} that came in is not valid (${bad.reason}) (${kind})`);
+				}
 				for (const g of r.gaps) {
 					Notifier.error(
 						`Delta ${g.expected} of ${g.deviceId} is missing from the folder; later changes are not merged yet (${kind})`

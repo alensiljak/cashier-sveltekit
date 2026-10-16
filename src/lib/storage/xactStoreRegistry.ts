@@ -41,5 +41,8 @@ async function resolveStore(): Promise<CrdtXactStore> {
 	// Imported on demand: crdtXactStore imports webdavAutoBackupService, which
 	// imports this module, so a static import would be circular.
 	const { CrdtXactStore } = await import('./crdtXactStore');
-	return new CrdtXactStore();
+	const store = new CrdtXactStore();
+	// Start capturing changes for the remote storage right away; see attachConfiguredRemotes.
+	void import('#lib/sync/deltaSyncRegistry').then((m) => m.attachConfiguredRemotes('xacts', store));
+	return store;
 }

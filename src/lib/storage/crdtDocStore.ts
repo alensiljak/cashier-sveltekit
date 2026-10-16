@@ -347,6 +347,12 @@ export abstract class CrdtDocStore<R> {
 		return Y.encodeStateAsUpdate(this.doc, Y.encodeStateVector(since));
 	}
 
+	/** How many records the document holds now. */
+	async recordCount(): Promise<number> {
+		await this.ready();
+		return this._records.size;
+	}
+
 	/** State vector, describing which updates this document already has. */
 	async stateVector(): Promise<Uint8Array> {
 		await this.ready();

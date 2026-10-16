@@ -51,6 +51,13 @@ export const COMPACT_MIN_DELTAS = 30;
 export const COMPACT_MAX_AGE_MS = 7 * 24 * 3600 * 1000;
 /** A device whose acknowledgement is older than this no longer holds back clean-up. */
 export const ACK_ACTIVE_WINDOW_MS = 30 * 24 * 3600 * 1000;
+/** Nothing the app writes is this large; a larger object is not read. */
+export const MAX_OBJECT_BYTES = 64 * 1024 * 1024;
+/**
+ * An emptied document keeps the ids of everything that was in it. Resetting it is worth the
+ * trouble from this size on (a fresh one is about 100 bytes).
+ */
+export const RESET_MIN_STATE_BYTES = 2048;
 
 export interface DeltaStateStorage {
 	load(): Promise<DeltaState | null>;
@@ -64,6 +71,10 @@ export interface DeltaDoc {
 	exportDelta(since: Map<number, number>): Promise<Uint8Array>;
 	/** Called when the document is replaced by a new generation (reset, or adopting another's). */
 	onReplaced?(handler: (reason: ReplaceReason) => void): () => void;
+	/** How many records the document holds. Needed to reset it automatically. */
+	recordCount?(): Promise<number>;
+	/** Replaces the document by a fresh one, which only works while it holds no records. */
+	reset?(): Promise<void>;
 	importState(
 		update: Uint8Array,
 		opts: { backup?: boolean; origin?: unknown }
@@ -222,6 +233,14 @@ export interface DownloadResult {
 	/** Devices whose next delta is missing from the bucket; they are applied up to the gap only. */
 	gaps: { deviceId: string; expected: number; found: number }[];
 	errors: { key: string; message: string }[];
+	/** Records that came in but are not valid records of the store (see `DeltaSyncOptions.validate`). */
+	invalid: { id: string; reason: string }[];
+}
+
+export interface ResetResult {
+	reset: boolean;
+	/** Why it was not reset. */
+	reason?: string;
 }
 
 export interface CompactResult {
@@ -256,6 +275,8 @@ export interface DeltaSyncOptions {
 	storage: DeltaStateStorage;
 	/** Why a device's data is not applied here (not trusted, read-only), or null to apply it. */
 	ignore?: (deviceId: string) => string | null;
+	/** Checks a record that came in from another device: a reason when it is not valid, else null. */
+	validate?: (record: unknown) => string | null;
 }
 
 const stampOf = (o: { size: number; lastModified: Date | null }) =>
@@ -411,6 +432,89 @@ export class DeltaSync {
 		return this.compact(await this.readAcks(objects, opts.isActive, now));
 	}
 
+	/**
+	 * Deletes the legacy state files (`<deviceId>.ydoc`) of devices that have moved on to deltas.
+	 * A device's first delta carries everything its legacy file held, so once this device holds
+	 * that delta (directly or through a snapshot) the file adds nothing. A device on an old app
+	 * version keeps writing its legacy file and is left alone. Returns how many were deleted.
+	 */
+	async cleanLegacy(): Promise<number> {
+		await this.load();
+		return this.serial(async () => {
+			const coverage = this.coverageNow();
+			let deleted = 0;
+			for (const o of await this.objects()) {
+				if (o.type !== 'legacy' || !o.deviceId || (coverage[o.deviceId] ?? 0) < 1) continue;
+				await this.o.remote.delete(o.key);
+				deleted++;
+			}
+			return deleted;
+		});
+	}
+
+	/**
+	 * Resets the document, which throws away the ids of everything ever deleted from it, when that
+	 * is worth doing and safe: it holds no records (they were all sorted out), what is left of its
+	 * history is more than `RESET_MIN_STATE_BYTES`, and every active trusted device has applied
+	 * everything this device has, the deletions included. The new generation is published as a
+	 * snapshot at once; the other devices adopt it when they next sync.
+	 *
+	 * A device that has not synced for a long time (see `ACK_ACTIVE_WINDOW_MS`) is not waited for.
+	 * What it created and never uploaded is kept when it adopts the reset; only an edit to a record
+	 * that was deleted meanwhile is lost.
+	 */
+	async resetIfDue(opts: { trusted: string[]; now?: number }): Promise<ResetResult> {
+		await this.load();
+		const { doc, deviceId } = this.o;
+		if (!doc.recordCount || !doc.reset) return { reset: false, reason: 'Not supported' };
+		return this.serial(async () => {
+			if ((await doc.recordCount!()) > 0) return { reset: false, reason: 'Records remain' };
+			if ((await doc.exportState()).length < RESET_MIN_STATE_BYTES) {
+				return { reset: false, reason: 'Nothing worth clearing' };
+			}
+			const down = await this.downloadRetry();
+			if (down.errors.length || down.gaps.length) {
+				return { reset: false, reason: 'Not everything in the bucket could be merged' };
+			}
+			// What was just merged may have brought records back.
+			if ((await doc.recordCount!()) > 0) return { reset: false, reason: 'Records remain' };
+			await this.uploadLocked();
+
+			const now = opts.now ?? Date.now();
+			const objects = await this.objects();
+			const trusted = opts.trusted.filter((id) => id !== deviceId);
+			const acks = await this.readAcks(objects, (id) => trusted.includes(id), now);
+			const coverage = this.coverageNow();
+
+			for (const id of trusted) {
+				const theirs = objects.filter((o) => o.deviceId === id);
+				if (!theirs.length) continue; // Never synced: nothing to wait for.
+				const ack = acks[id];
+				if (!ack) {
+					const ackObject = theirs.find((o) => o.type === 'ack');
+					const stale =
+						ackObject?.lastModified &&
+						now - ackObject.lastModified.getTime() > ACK_ACTIVE_WINDOW_MS;
+					if (stale) continue;
+					return { reset: false, reason: `Waiting for ${id} to sync` };
+				}
+				for (const [device, seq] of Object.entries(coverage)) {
+					if (device !== id && (ack[device] ?? 0) < seq) {
+						return { reset: false, reason: `Waiting for ${id} to sync` };
+					}
+				}
+			}
+
+			try {
+				await doc.reset!();
+			} catch (e) {
+				return { reset: false, reason: errorText(e) };
+			}
+			await this.uploadLocked();
+			return { reset: true };
+		});
+	}
+
 	// --- upload ---
 
 	/**
@@ -537,8 +641,8 @@ export class DeltaSync {
 
 	/**
 	 * Folds what has piled up into a snapshot and deletes what it makes unnecessary: the deltas
-	 * that every device in `acks` has applied, this device's legacy state file, and all but the
-	 * newest two snapshots. `acks` maps each active device to what it has applied (`DeltaAck.applied`).
+	 * that every device in `acks` has applied, and all but the newest two snapshots. `acks` maps
+	 * each active device to what it has applied (`DeltaAck.applied`).
 	 *
 	 * Deleting is never a risk to data: a snapshot holds everything it covers, so a device that
 	 * has not applied a deleted delta takes the snapshot. The acknowledgements only keep that from
@@ -547,7 +651,7 @@ export class DeltaSync {
 	async compact(acks: Record<string, Record<string, number>>): Promise<CompactResult> {
 		await this.load();
 		return this.serial(async () => {
-			const { kind, deviceId, remote } = this.o;
+			const { kind, remote } = this.o;
 			const down = await this.downloadRetry();
 			if (down.errors.length || down.gaps.length) {
 				return {
@@ -562,14 +666,12 @@ export class DeltaSync {
 			const objects = await this.objects();
 			const deletable = objects.filter((o) => {
 				const parsed = parseKey(kind, o.key);
-				if (parsed?.type === 'delta') {
-					if (parsed.seq > (coverage[parsed.deviceId] ?? 0)) return false;
-					return Object.entries(acks).every(
-						([device, applied]) =>
-							device === parsed.deviceId || (applied[parsed.deviceId] ?? 0) >= parsed.seq
-					);
-				}
-				return parsed?.type === 'legacy' && parsed.deviceId === deviceId;
+				if (parsed?.type !== 'delta') return false;
+				if (parsed.seq > (coverage[parsed.deviceId] ?? 0)) return false;
+				return Object.entries(acks).every(
+					([device, applied]) =>
+						device === parsed.deviceId || (applied[parsed.deviceId] ?? 0) >= parsed.seq
+				);
 			});
 			if (!deletable.length) return { snapshot: null, deleted: 0 };
 
@@ -644,21 +746,30 @@ export class DeltaSync {
 			records: [],
 			skipped: [],
 			gaps: [],
-			errors: []
+			errors: [],
+			invalid: []
 		};
 
 		const objects = await this.objects();
 		const { snapshotId, deltas, legacy } = this.scan(objects);
 		const state = this.state;
 		result.foreign = objects.filter((o) => o.type !== 'ack' && o.deviceId !== deviceId).length;
+		const sizes = new Map(objects.map((o) => [o.key, o.size]));
 
 		if (snapshotId && (!state.snapId || snapshotId > state.snapId)) {
 			const key = snapshotKey(kind, snapshotId);
+			const tooBig = oversize(sizes.get(key));
+			if (tooBig) {
+				result.errors.push({ key, message: tooBig });
+				return result;
+			}
 			const raw = await remote.get(key);
 			if (!raw) throw new Vanished(key);
 			try {
+				const oversized = oversize(raw.length);
+				if (oversized) throw new Error(oversized);
 				const { coverage, update } = decodeSnapshot(raw);
-				await applyTo(result, await doc.importState(update, importOpts));
+				this.apply(result, await doc.importState(update, importOpts));
 				state.snapId = snapshotId;
 				for (const [device, seq] of Object.entries(coverage)) {
 					state.applied[device] = Math.max(state.applied[device] ?? 0, seq);
@@ -689,10 +800,17 @@ export class DeltaSync {
 					break;
 				}
 				const key = deltaKey(kind, device, seq);
+				const tooBig = oversize(sizes.get(key));
+				if (tooBig) {
+					result.errors.push({ key, message: tooBig });
+					break;
+				}
 				const raw = await remote.get(key);
 				if (!raw) throw new Vanished(key);
 				try {
-					await applyTo(result, await doc.importState(raw, importOpts));
+					const oversized = oversize(raw.length);
+					if (oversized) throw new Error(oversized);
+					this.apply(result, await doc.importState(raw, importOpts));
 				} catch (e) {
 					result.errors.push({ key, message: errorText(e) });
 					break;
@@ -717,10 +835,17 @@ export class DeltaSync {
 				continue;
 			}
 			if (stamps[device] === stampOf(file)) continue;
+			const tooBig = oversize(file.size);
+			if (tooBig) {
+				result.errors.push({ key: file.key, message: tooBig });
+				continue;
+			}
 			const raw = await remote.get(file.key);
 			if (!raw) throw new Vanished(file.key);
 			try {
-				await applyTo(result, await doc.importState(raw, importOpts));
+				const oversized = oversize(raw.length);
+				if (oversized) throw new Error(oversized);
+				this.apply(result, await doc.importState(raw, importOpts));
 			} catch (e) {
 				result.errors.push({ key: file.key, message: errorText(e) });
 				continue;
@@ -732,6 +857,19 @@ export class DeltaSync {
 
 		await this.persist();
 		return result;
+	}
+
+	/** Adds what an import changed to the result, and checks the records it brought in. */
+	private apply(result: DownloadResult, changes: readonly unknown[]): void {
+		result.changes += changes.length;
+		result.records.push(...changes);
+		const validate = this.o.validate;
+		if (!validate) return;
+		for (const change of changes as { id?: string; after?: unknown }[]) {
+			if (change.after === undefined) continue;
+			const reason = validate(change.after);
+			if (reason) result.invalid.push({ id: String(change.id ?? ''), reason });
+		}
 	}
 
 	/** The newest snapshot id, each device's delta numbers in ascending order, and the legacy files. */
@@ -873,10 +1011,11 @@ export class DeltaSync {
 
 const importOpts = { backup: false, origin: BUCKET_ORIGIN };
 
-/** Adds what an import changed to the result. */
-async function applyTo(result: DownloadResult, changes: readonly unknown[]): Promise<void> {
-	result.changes += changes.length;
-	result.records.push(...changes);
+/** A message when an object is larger than anything the app writes, which is a sign of damage or abuse. */
+function oversize(bytes: number | undefined): string | null {
+	return bytes !== undefined && bytes > MAX_OBJECT_BYTES
+		? `Larger than the limit of ${MAX_OBJECT_BYTES / 1024 / 1024} MB (${bytes} bytes); not read`
+		: null;
 }
 
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));

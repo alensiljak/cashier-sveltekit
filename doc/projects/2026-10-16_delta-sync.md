@@ -108,8 +108,8 @@ S3 and WebDAV currently duplicate the CRDT logic (`s3Sync.syncCrdt` vs `webdavSy
 
 ## Other Concerns
 
-- **Encrypt content**: per-object AES-GCM exists. Add the object key as AES-GCM additional data so an object cannot be replayed under another name or seq; this needs a format version byte in `s3Crypto`, with decrypt falling back to the old format for legacy objects.
-- **Validate on read**: size cap before decrypt; seq parsed from the key; catch decode errors per object and skip it with a warning (never abort the sync); after merge, validate record shape (`XactRecord` / `ScxRecord`) and report failing records instead of silently rendering them.
+- **Encrypt content** (done): per-object AES-GCM with the object key as additional data (format version 2) so an object cannot be replayed under another name or seq. S3 is always encrypted. WebDAV has a switch and a passphrase in the WebDAV configuration (device-only); the folder's `cashier-key.json` marks it as encrypted and holds the key-derivation parameters. When the folder and the switch disagree, syncing refuses (`EncryptionMismatchError`) and the configuration page offers to encrypt or decrypt every file in the folder (resumable). The settings backup (`settings.json.gz`) and the legacy state files stay plain.
+- **Validate on read** (done): objects larger than 64 MB are not read; the sequence number comes from the key and must follow without a gap; a damaged object is reported and skipped, never aborting the sync; records that come in are checked for shape (`validateRecord` of `crdtXactRecord` / `crdtScxRecord`) and the invalid ones are reported. They are not removed.
 - Many tiny objects: batching comes from the existing 2 s debounce plus the compaction thresholds. List pagination is already handled in `listObjects`.
 - Mixed versions: an old app version keeps reading and writing legacy `<deviceId>.ydoc`. New devices keep consuming it as a snapshot; they stop writing it once on the new layout. The PWA auto-updates, so the overlap is short, but note it in the release.
 - Server mtime is informational only; correctness rests on seq, coverage and state vectors.
@@ -132,7 +132,7 @@ S3 and WebDAV currently duplicate the CRDT logic (`s3Sync.syncCrdt` vs `webdavSy
 - [x] AES-GCM additional data: delta and snapshot objects are bound to their key (format version 2); legacy state files and everything else stay version 1
 - [x] trust filter applies to delta folders and legacy files
 - [x] flat object names (`crdt/<kind>/<deviceId>.<seq>.upd`), see Layout
-- [ ] attach the outbox capture when a store opens, not on the first S3 use. Until then the first upload of a session also sends the changes made before it was attached, as one larger delta (correct, but with the whole delete set).
+- [x] the outbox capture starts when a store opens (`attachConfiguredRemotes` in `deltaSyncRegistry.ts`, called from the store registries) for the remotes that are enabled and configured, without a passphrase or network
 - [ ] try against a real bucket with two devices, one of them still on the old version
 
 ### Phase 3: compaction and reset
@@ -154,11 +154,23 @@ S3 and WebDAV currently duplicate the CRDT logic (`s3Sync.syncCrdt` vs `webdavSy
 
 ### Phase 5: hardening
 
-- [ ] validate-on-read, size caps, two-device test against a real bucket (also open from the S3 project)
+- [x] validate on read: size limit (`MAX_OBJECT_BYTES`), shape check of incoming records (`DeltaSyncOptions.validate`, `DownloadResult.invalid`, reported by S3 sync lines, WebDAV messages and the merge notice)
+- [x] WebDAV encryption: `EncryptedRemoteStore` (any `RemoteStore`), `webdavEncryption.ts` (switch, key file, `remoteFor`, `convertWebDavFolder`), switch and conversion dialog on the WebDAV configuration page
+- [x] legacy files are removed once a device has moved on (`DeltaSync.cleanLegacy`, after every upload): a device's first delta carries everything its legacy file held, so the file goes as soon as this device holds that delta. A device still on the old version keeps its file.
+- [x] automatic reset of an emptied document (`DeltaSync.resetIfDue`, after every upload): no records left, at least `RESET_MIN_STATE_BYTES` of history, everything merged, and every trusted device with a recent acknowledgement has applied everything this device has, the deletions included. A trusted device that has synced but never acknowledged (an old app version) is waited for; one that has not acknowledged for 30 days, or never synced, is not. The new generation is published as a snapshot straight away; the others adopt it on their next sync and keep what they created and had not uploaded.
+- [ ] two-device test against a real bucket and a real WebDAV folder, one device on the old version
 
 Phases 1 and 2 (S3 only, deltas accumulating without compaction) already deliver the traffic reduction; compaction (Phase 3) is needed before the delta count grows.
 
+## Things to try on real devices
+
+1. Two devices on the new version, S3: enter a transaction on one, sync on the other; check in the S3 explorer that the new objects are small `.upd` files and that `.ack` files appear. Preview a `.upd` and a snapshot.
+2. After 30 uploads or a week, or with "Compact sync data": the deltas are replaced by a snapshot and the older ones are deleted.
+3. One device still on the old version: it keeps writing `<deviceId>.ydoc`; the new device merges it. After the old one is updated, its legacy file disappears.
+4. Sort all transactions out on one device (working set empty), sync both devices: after the second device has synced and acknowledged, the next sync on the first resets the store (state size drops, one new snapshot, old deltas of that device gone) and the other adopts it.
+5. Remove a trusted device on the Trusted Devices page with the bucket clean-up ticked: its objects and manifest disappear and nothing is lost on the others.
+6. WebDAV: the same as 1 and 2, then turn encryption on in the WebDAV configuration (with files already in the folder) and check that every `cashier-<kind>-...` file is encrypted and `cashier-key.json` appears. Try syncing from a second device with the switch off: it must refuse with the mismatch message until it is switched on with the same passphrase.
+
 ## Open questions
 
-- Does WebDAV need encryption as part of this, or stay as is?
-- Remove the legacy `<deviceId>.ydoc` objects automatically after migration, or leave them?
+- None at the moment. Not done on purpose: a rebase that keeps live records while clearing the tombstones (see the discussion of reset: edits to existing records made elsewhere would be lost), and encryption of the WebDAV settings backup.

@@ -48,6 +48,25 @@ export function isNewerSchema(record: ScxRecord): boolean {
 	return record.schemaVersion > SCX_SCHEMA_VERSION;
 }
 
+/**
+ * A reason why `value`, read from another device, is not a usable scheduled-transaction record, or
+ * null. Only the shape is checked, as far as the app relies on it; a newer schema passes.
+ */
+export function validateRecord(value: unknown): string | null {
+	if (typeof value !== 'object' || value === null) return 'Not an object';
+	const r = value as Record<string, unknown>;
+	if (typeof r.id !== 'string' || !r.id) return 'No id';
+	if (typeof r.schemaVersion !== 'number') return 'No schema version';
+	if (typeof r.nextDate !== 'string') return 'The next date is not text';
+	if (r.transaction !== undefined) {
+		const t = r.transaction as { postings?: unknown } | null;
+		if (typeof t !== 'object' || t === null || !Array.isArray(t.postings)) {
+			return 'The template has no postings list';
+		}
+	}
+	return null;
+}
+
 const warnedIds = new Set<CrdtScxId>();
 
 /**

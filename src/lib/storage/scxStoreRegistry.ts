@@ -38,5 +38,8 @@ export function setScxStore(store: CrdtScxStore): void {
 async function resolveStore(): Promise<CrdtScxStore> {
 	// Imported on demand: the store imports webdavAutoBackupService, which may import this module.
 	const { CrdtScxStore } = await import('./crdtScxStore');
-	return new CrdtScxStore();
+	const store = new CrdtScxStore();
+	// Start capturing changes for the remote storage right away; see attachConfiguredRemotes.
+	void import('#lib/sync/deltaSyncRegistry').then((m) => m.attachConfiguredRemotes('scx', store));
+	return store;
 }

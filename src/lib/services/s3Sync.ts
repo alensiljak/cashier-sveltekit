@@ -35,7 +35,8 @@ import {
 	afterSync,
 	getDeltaSync,
 	loadIgnoreReasons,
-	loadTrusted
+	loadTrusted,
+	s3RemoteId
 } from '#lib/sync/deltaSyncRegistry';
 import { normalizeEol } from '#lib/sync/SyncSource';
 import { getXactStore } from '#lib/storage/xactStoreRegistry';
@@ -435,7 +436,7 @@ async function deltaSyncFor(s: CrdtSession, item: 'xacts' | 'scheduled'): Promis
 		deviceId: s.deviceId,
 		store: await storeOf(item),
 		remote: new S3RemoteStore(s.cfg, s.key),
-		remoteId: `${s.cfg.endpoint}|${s.cfg.bucket}|${s.cfg.prefix}`
+		remoteId: s3RemoteId(s.cfg)
 	});
 }
 
@@ -491,6 +492,14 @@ async function syncCrdt(
 		}
 		for (const e of r.errors) {
 			lines.push({ item, path: e.key, outcome: 'error', message: e.message });
+		}
+		for (const bad of r.invalid.slice(0, 5)) {
+			lines.push({
+				item,
+				path: `${prefix}${bad.id}`,
+				outcome: 'error',
+				message: `A record that came in is not valid (${bad.reason}); check it in the journal`
+			});
 		}
 		// The bucket already holds what it returned: it is not uploaded again as our own.
 		const applied = r.snapshot || r.deltas > 0 || r.legacy > 0;
