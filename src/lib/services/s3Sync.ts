@@ -6,9 +6,10 @@
  * - manifests/<deviceId>.json what each device last uploaded (path -> hash, time)
  * - data/settings.json        shared settings
  * - data/files/<path>         Beancount files, by their OPFS path
- * - crdt/xacts/<deviceId>.ydoc, crdt/scx/<deviceId>.ydoc
- *                             per-device state of the CRDT stores. Merged on download, so
- *                             they never conflict.
+ * - crdt/<xacts|scx>/snap-<ulid>.ydoc, crdt/<xacts|scx>/<deviceId>/d-<seq>.upd
+ *                             the CRDT stores as a snapshot plus per-device deltas (see
+ *                             sync/deltaSync.ts). Merged on download, so they never conflict.
+ *                             The older crdt/<kind>/<deviceId>.ydoc files are still read.
  *
  * Settings and files can be changed on several devices. They are compared by content hash
  * against the last-synced hash, and a change on both sides is reported as a conflict to be
@@ -20,7 +21,16 @@ import { deviceSettings, DeviceSettingKeys } from '#lib/settings';
 import { exportSettingsJson, importSettingsJson } from '#lib/services/backupService';
 import db from '#lib/data/db';
 import { getDeviceId, type DocKind } from '#lib/sync/ydocDevices';
-import { hasNewOps } from '#lib/sync/ydocCompare';
+import {
+	DeltaSync,
+	decodeSnapshot,
+	deltaKey,
+	deviceDeltaPrefix,
+	deviceOfKey,
+	kindPrefix,
+	vectorOf
+} from '#lib/sync/deltaSync';
+import { deviceSettingsStateStorage } from '#lib/sync/deltaStateStorage';
 import { normalizeEol } from '#lib/sync/SyncSource';
 import { getXactStore } from '#lib/storage/xactStoreRegistry';
 import { getScxStore } from '#lib/storage/scxStoreRegistry';
@@ -31,6 +41,7 @@ import { collectExportableFiles } from '#lib/utils/opfsExport';
 import { deleteFile, saveBinaryFile } from '#lib/utils/opfslib';
 import type { S3Config } from './s3Config';
 import { deleteObject, getObject, listObjectInfos, listObjects, putObject } from './s3Client';
+import { decryptCrdtObject, S3RemoteStore } from './s3RemoteStore';
 import { createKeyParams, decrypt, encrypt, openKey, sha256Hex, type KeyParams } from './s3Crypto';
 import {
 	decide,
@@ -392,9 +403,14 @@ async function syncShared(
 
 // --- CRDT stores (transactions, scheduled transactions) ---
 
-/** Device ID in a `crdt/<kind>/<deviceId>.ydoc` object key, or null. */
-const deviceIdOfKey = (objectKey: string): string | null =>
-	/\/([^/]+)\.ydoc$/.exec(objectKey)?.[1] ?? null;
+/**
+ * The device that wrote a CRDT object (`crdt/<kind>/<deviceId>/d-<seq>.upd`, or the legacy
+ * `crdt/<kind>/<deviceId>.ydoc`), or null for a snapshot and anything else.
+ */
+const deviceIdOfKey = (objectKey: string): string | null => {
+	const kind = /^crdt\/([^/]+)\//.exec(objectKey)?.[1];
+	return kind === 'xacts' || kind === 'scx' ? deviceOfKey(kind, objectKey) : null;
+};
 
 /** Why another device's CRDT state is not merged here: not on the Trusted Devices list, or read-only. */
 async function loadIgnoreReasons(): Promise<(deviceId: string | null) => string | null> {
@@ -406,63 +422,111 @@ async function loadIgnoreReasons(): Promise<(deviceId: string | null) => string 
 	};
 }
 
-interface CrdtStoreLike {
-	isInitialized(): Promise<boolean>;
-	exportState(): Promise<Uint8Array>;
-	importState(update: Uint8Array, opts?: { backup?: boolean }): Promise<unknown[]>;
+const kindOf = (item: 'xacts' | 'scheduled'): DocKind => (item === 'xacts' ? 'xacts' : 'scx');
+
+type CrdtSession = Pick<S3Session, 'cfg' | 'key' | 'deviceId'>;
+
+const storeOf = (item: 'xacts' | 'scheduled') =>
+	item === 'xacts' ? getXactStore() : getScxStore();
+
+/** One delta sync per store and bucket, so the changes made meanwhile are captured for upload. */
+const deltaSyncs = new Map<string, { store: object; sync: DeltaSync }>();
+
+/**
+ * The delta sync of a store for this bucket, attached to the store's changes. Created on first
+ * use; later calls only refresh the transport (the key is derived again) and the trust list.
+ */
+async function deltaSyncFor(s: CrdtSession, item: 'xacts' | 'scheduled'): Promise<DeltaSync> {
+	const kind = kindOf(item);
+	const store = await storeOf(item);
+	const bucketId = `${s.cfg.endpoint}|${s.cfg.bucket}|${s.cfg.prefix}`;
+	const id = `${kind}|${bucketId}`;
+	const remote = new S3RemoteStore(s.cfg, s.key);
+	const ignore = await loadIgnoreReasons();
+
+	let entry = deltaSyncs.get(id);
+	if (entry && entry.store !== store) {
+		entry.sync.dispose();
+		entry = undefined;
+	}
+	if (!entry) {
+		entry = {
+			store,
+			sync: new DeltaSync({
+				kind,
+				deviceId: s.deviceId,
+				doc: store,
+				remote,
+				storage: deviceSettingsStateStorage(kind, bucketId),
+				ignore
+			})
+		};
+		deltaSyncs.set(id, entry);
+	} else {
+		entry.sync.configure({ remote, ignore });
+	}
+	await entry.sync.attach();
+	return entry.sync;
 }
 
 async function syncCrdt(
-	s: Pick<S3Session, 'cfg' | 'key' | 'deviceId'>,
+	s: CrdtSession,
 	direction: SyncDirection,
 	item: 'xacts' | 'scheduled'
 ): Promise<SyncLine[]> {
-	const kind = item === 'xacts' ? 'xacts' : 'scx';
-	const prefix = `crdt/${kind}/`;
-	const ownKey = `${prefix}${s.deviceId}.ydoc`;
+	const kind = kindOf(item);
+	const prefix = kindPrefix(kind);
 	const lines: SyncLine[] = [];
 
 	try {
-		const store: CrdtStoreLike = item === 'xacts' ? await getXactStore() : await getScxStore();
-
 		if (direction === 'upload') {
 			// A background action must not create the scheduled-transactions store: that would
 			// pre-empt its first-launch migration prompt (see webdavAutoBackupService).
-			if (item === 'scheduled' && !(await store.isInitialized())) {
-				return [{ item, path: ownKey, outcome: 'skipped', message: 'Not set up on this device' }];
+			if (item === 'scheduled' && !(await (await storeOf(item)).isInitialized())) {
+				return [{ item, path: prefix, outcome: 'skipped', message: 'Not set up on this device' }];
 			}
-			const state = (await store.exportState()) as Uint8Array<ArrayBuffer>;
-			await putObject(s.cfg, ownKey, await encrypt(s.key, state));
-			return [{ item, path: ownKey, outcome: 'uploaded' }];
+			const { seq } = await (await deltaSyncFor(s, item)).upload();
+			return [
+				seq === null
+					? { item, path: prefix, outcome: 'unchanged' }
+					: { item, path: deltaKey(kind, s.deviceId, seq), outcome: 'uploaded' }
+			];
 		}
 
-		const keys = (await listObjects(s.cfg, prefix)).filter((k) => k !== ownKey);
-		if (!keys.length) {
+		const r = await (await deltaSyncFor(s, item)).download();
+		if (!r.foreign) {
 			return [
 				{ item, path: prefix, outcome: 'skipped', message: 'No other device has uploaded yet' }
 			];
 		}
-		const ignoreReason = await loadIgnoreReasons();
-		for (const key of keys) {
-			const reason = ignoreReason(deviceIdOfKey(key));
-			if (reason) {
-				lines.push({ item, path: key, outcome: 'skipped', message: reason });
-				continue;
-			}
-			try {
-				const raw = await getObject(s.cfg, key);
-				if (!raw) continue;
-				// The bucket already holds what it returns: no need to re-upload it as our own.
-				const changes = await store.importState(await decrypt(s.key, raw), { backup: false });
-				lines.push({
-					item,
-					path: key,
-					outcome: changes.length ? 'downloaded' : 'unchanged',
-					message: changes.length ? `${changes.length} changes merged` : undefined
-				});
-			} catch (e) {
-				lines.push({ item, path: key, outcome: 'error', message: errorText(e) });
-			}
+		for (const { deviceId, reason } of r.skipped) {
+			lines.push({
+				item,
+				path: deviceDeltaPrefix(kind, deviceId),
+				outcome: 'skipped',
+				message: reason
+			});
+		}
+		for (const g of r.gaps) {
+			lines.push({
+				item,
+				path: deltaKey(kind, g.deviceId, g.expected),
+				outcome: 'error',
+				message: `Missing from the bucket (the next one found is ${g.found}); changes after it are not merged yet`
+			});
+		}
+		for (const e of r.errors) {
+			lines.push({ item, path: e.key, outcome: 'error', message: e.message });
+		}
+		// The bucket already holds what it returned: it is not uploaded again as our own.
+		const applied = r.snapshot || r.deltas > 0 || r.legacy > 0;
+		if (applied || !lines.length) {
+			lines.push({
+				item,
+				path: prefix,
+				outcome: r.changes ? 'downloaded' : 'unchanged',
+				message: r.changes ? `${r.changes} changes merged` : undefined
+			});
 		}
 	} catch (e) {
 		lines.push({ item, path: prefix, outcome: 'error', message: errorText(e) });
@@ -544,11 +608,9 @@ export async function backupCrdtStores(
 	return lines.filter((l) => l.outcome === 'error');
 }
 
-type CrdtSession = Pick<S3Session, 'cfg' | 'key' | 'deviceId'>;
-
 /**
- * True when the bucket and this device differ in a CRDT store: another device has records not
- * merged here, or this device has records its own bucket file lacks.
+ * True when the bucket and this device differ in a CRDT store: another device has changes not
+ * merged here, or this device has changes the bucket lacks.
  */
 async function crdtDiffers(s: CrdtSession, item: 'xacts' | 'scheduled'): Promise<boolean> {
 	const { upload, download } = await crdtStatus(s, item);
@@ -556,44 +618,18 @@ async function crdtDiffers(s: CrdtSession, item: 'xacts' | 'scheduled'): Promise
 }
 
 /**
- * Compares a CRDT store with the bucket by Yjs state vectors, independent of any sync time:
- * `upload` = this device has records its own bucket file lacks; `download` = a trusted device's
- * file has records not merged here.
+ * Compares a CRDT store with the bucket from one listing, without reading any object: `upload`
+ * = this device has changes the bucket lacks; `download` = a trusted device (or a snapshot)
+ * has changes not merged here.
  */
 async function crdtStatus(
 	s: CrdtSession,
 	item: 'xacts' | 'scheduled'
 ): Promise<{ upload: boolean; download: boolean }> {
-	const kind = item === 'xacts' ? 'xacts' : 'scx';
-	const prefix = `crdt/${kind}/`;
-	const ownKey = `${prefix}${s.deviceId}.ydoc`;
-	const store: CrdtStoreLike = item === 'xacts' ? await getXactStore() : await getScxStore();
-	if (item === 'scheduled' && !(await store.isInitialized())) {
+	if (item === 'scheduled' && !(await (await storeOf(item)).isInitialized())) {
 		return { upload: false, download: false };
 	}
-
-	const local = await store.exportState();
-	let own: Uint8Array | undefined;
-	const others: Uint8Array[] = [];
-	let download = false;
-	const ignoreReason = await loadIgnoreReasons();
-	for (const key of await listObjects(s.cfg, prefix)) {
-		if (key !== ownKey && ignoreReason(deviceIdOfKey(key))) continue;
-		const raw = await getObject(s.cfg, key);
-		if (!raw) continue;
-		const remote = await decrypt(s.key, raw);
-		if (key === ownKey) {
-			own = remote;
-		} else {
-			others.push(remote);
-			if (hasNewOps(remote, local)) download = true;
-		}
-	}
-	// Records merged from other devices are already in the bucket, in their files, so only
-	// operations found in no bucket file count as something to upload.
-	const files = own ? [own, ...others] : others;
-	const upload = hasNewOps(local, files.length ? Y.mergeUpdates(files) : undefined);
-	return { upload, download };
+	return (await deltaSyncFor(s, item)).status();
 }
 
 export interface CrdtSyncStatus {
@@ -601,7 +637,7 @@ export interface CrdtSyncStatus {
 	download: boolean;
 }
 
-/** Dry run for the CRDT stores, per item. Decrypts the state files, so it needs the passphrase. */
+/** Dry run for the CRDT stores, per item. Lists the bucket, but reads no object. */
 export async function fetchCrdtSyncStatus(
 	cfg: S3Config
 ): Promise<Record<'scheduled' | 'xacts', CrdtSyncStatus>> {
@@ -642,42 +678,41 @@ export async function previewCrdtChanges(
 	item: 'xacts' | 'scheduled'
 ): Promise<CrdtChangePreview> {
 	const s = await crdtSession(cfg);
-	const prefix = `crdt/${item === 'xacts' ? 'xacts' : 'scx'}/`;
-	const ownKey = `${prefix}${s.deviceId}.ydoc`;
-	const store = item === 'xacts' ? await getXactStore() : await getScxStore();
+	const store = await storeOf(item);
 	if (item === 'scheduled' && !(await store.isInitialized())) return { download: [], upload: [] };
 
+	const sync = await deltaSyncFor(s, item);
 	const [ignoreReason, peers] = await Promise.all([loadIgnoreReasons(), db.peers.toArray()]);
 	const files: CrdtDownloadPreview[] = [];
-	const toMerge: Uint8Array[] = [];
-	const bucketStates: Uint8Array[] = [];
-	for (const key of (await listObjects(s.cfg, prefix)).sort()) {
-		const deviceId = deviceIdOfKey(key);
-		const ignored = key === ownKey ? null : ignoreReason(deviceId);
-		if (ignored) {
-			files.push({ deviceId, key, changes: [], ignored });
-			continue;
+
+	// Devices whose data is not merged here: one line each.
+	const ignoredSeen = new Set<string>();
+	for (const o of await sync.objects()) {
+		const reason = o.deviceId && o.deviceId !== s.deviceId ? ignoreReason(o.deviceId) : null;
+		if (reason && !ignoredSeen.has(o.deviceId!)) {
+			ignoredSeen.add(o.deviceId!);
+			files.push({ deviceId: o.deviceId, key: o.key, changes: [], ignored: reason });
 		}
-		const raw = await getObject(s.cfg, key);
-		if (!raw) continue;
-		const state = await decrypt(s.key, raw);
-		if (key !== ownKey) {
-			files.push({
-				deviceId,
-				name: peers.find((p) => p.id === deviceId)?.name,
-				key,
-				changes: []
-			});
-			toMerge.push(state);
-		}
-		bucketStates.push(state);
 	}
 
-	const mergeable = files.filter((f) => !f.ignored);
-	const results = await store.previewImport(toMerge);
-	mergeable.forEach((f, i) => (f.changes = results[i]));
+	// What a download would apply, one object after the other.
+	const unapplied = await sync.read({ unappliedOnly: true });
+	const results = await store.previewImport(unapplied.map((u) => u.update));
+	unapplied.forEach(({ object }, i) =>
+		files.push({
+			deviceId: object.deviceId,
+			name: peers.find((p) => p.id === object.deviceId)?.name,
+			key: object.key,
+			changes: results[i]
+		})
+	);
 
-	return { download: files, upload: await store.previewExportOnto(bucketStates) };
+	// What an upload would change in the view the other devices build from the bucket.
+	const bucket = await sync.read({ unappliedOnly: false });
+	return {
+		download: files,
+		upload: await store.previewExportOnto(bucket.map((b) => b.update))
+	};
 }
 
 export interface CrdtDiagnosticFile {
@@ -710,35 +745,37 @@ export async function diagnoseCrdt(
 	item: 'xacts' | 'scheduled'
 ): Promise<CrdtDiagnostics> {
 	const s = await crdtSession(cfg);
-	const prefix = `crdt/${item === 'xacts' ? 'xacts' : 'scx'}/`;
-	const ownKey = `${prefix}${s.deviceId}.ydoc`;
-	const store = item === 'xacts' ? await getXactStore() : await getScxStore();
+	const store = await storeOf(item);
+	const sync = await deltaSyncFor(s, item);
 	const local = await store.exportState();
-	const ours = Y.decodeStateVector(Y.encodeStateVectorFromUpdate(local));
+	const ours = vectorOf(local);
 	const localMeta = readUpdateMeta(local);
 
 	const [ignoreReason, peers] = await Promise.all([loadIgnoreReasons(), db.peers.toArray()]);
 	const files: CrdtDiagnosticFile[] = [];
-	const bucketStates: Uint8Array[] = [];
-	for (const key of (await listObjects(cfg, prefix)).sort()) {
-		const deviceId = deviceIdOfKey(key);
-		const own = key === ownKey;
-		const ignored = own ? null : ignoreReason(deviceId);
-		const raw = await getObject(cfg, key);
-		if (!raw) continue;
-		const state = await decrypt(s.key, raw);
-		if (!ignored) bucketStates.push(state);
-		const theirs = Y.decodeStateVector(Y.encodeStateVectorFromUpdate(state));
+	const bucket = new Map<number, number>();
+	for (const { object, update } of await sync.read({
+		unappliedOnly: false,
+		includeIgnored: true
+	})) {
+		const own = object.deviceId === s.deviceId;
+		const ignored = !own && object.deviceId ? ignoreReason(object.deviceId) : null;
+		const theirs = vectorOf(update);
+		if (!ignored) {
+			for (const [client, clock] of theirs) {
+				bucket.set(client, Math.max(bucket.get(client) ?? 0, clock));
+			}
+		}
 		files.push({
-			key,
+			key: object.key,
 			own,
-			name: peers.find((p) => p.id === deviceId)?.name,
+			name: peers.find((p) => p.id === object.deviceId)?.name,
 			ignored: ignored ?? undefined,
 			ahead: [...theirs]
 				.filter(([client, clock]) => clock > (ours.get(client) ?? 0))
 				.map(([client, clock]) => ({ client, theirs: clock, ours: ours.get(client) ?? 0 })),
-			retiredOps: hasRetiredOps(state, localMeta.retired),
-			retiredHits: Y.decodeUpdate(state)
+			retiredOps: hasRetiredOps(update, localMeta.retired),
+			retiredHits: Y.decodeUpdate(update)
 				.structs.flatMap((st) => {
 					const limit = localMeta.retired[st.id.client];
 					return limit !== undefined && st.id.clock < limit
@@ -746,14 +783,11 @@ export async function diagnoseCrdt(
 						: [];
 				})
 				.slice(0, 20),
-			resetId: readUpdateMeta(state).resetId,
-			structCount: Y.decodeUpdate(state).structs.length
+			resetId: readUpdateMeta(update).resetId,
+			structCount: Y.decodeUpdate(update).structs.length
 		});
 	}
 
-	const bucket = bucketStates.length
-		? Y.decodeStateVector(Y.encodeStateVectorFromUpdate(Y.mergeUpdates(bucketStates)))
-		: new Map<number, number>();
 	return {
 		localResetId: localMeta.resetId,
 		localClients: ours.size,
@@ -910,7 +944,10 @@ export async function fetchRemoteOverview(cfg: S3Config): Promise<RemoteOverview
 		count: infos.length,
 		otherDeviceModified: newest(
 			infos
-				.filter((i) => !i.key.endsWith(`/${deviceId}.ydoc`) && !ignoreReason(deviceIdOfKey(i.key)))
+				.filter((i) => {
+					const writer = deviceIdOfKey(i.key);
+					return writer !== null && writer !== deviceId && !ignoreReason(writer);
+				})
 				.map((i) => i.lastModified)
 		)
 	});
@@ -1215,15 +1252,38 @@ export async function previewObject(
 	const raw = await getObject(cfg, objectKey);
 	if (!raw) throw new Error('The object no longer exists');
 	// key.json holds only key-derivation parameters and is not encrypted.
-	const bytes = objectKey === 'key.json' ? raw : await decrypt(key, raw);
+	let bytes: Uint8Array<ArrayBuffer>;
+	if (objectKey === 'key.json') bytes = raw;
+	else if (objectKey.startsWith('crdt/')) bytes = await decryptCrdtObject(key, objectKey, raw);
+	else bytes = await decrypt(key, raw);
 
-	if (objectKey.endsWith('.ydoc')) {
+	const records = (update: Uint8Array) => {
 		const doc = new Y.Doc();
-		Y.applyUpdate(doc, bytes);
+		Y.applyUpdate(doc, update);
 		const out: Record<string, unknown> = {};
 		for (const name of doc.share.keys()) out[name] = doc.getMap(name).toJSON();
-		return JSON.stringify(out, null, 2);
+		return out;
+	};
+
+	if (objectKey.endsWith('.upd')) {
+		// A delta holds changes, not records: show what it reaches, and what it carries.
+		const structs = Y.decodeUpdate(bytes).structs;
+		return JSON.stringify(
+			{
+				delta: true,
+				structs: structs.length,
+				reaches: Object.fromEntries(vectorOf(bytes)),
+				records: records(bytes)
+			},
+			null,
+			2
+		);
 	}
+	if (/\/snap-[^/]+\.ydoc$/.test(objectKey)) {
+		const { coverage, update } = decodeSnapshot(bytes);
+		return JSON.stringify({ coverage, ...records(update) }, null, 2);
+	}
+	if (objectKey.endsWith('.ydoc')) return JSON.stringify(records(bytes), null, 2);
 
 	let text: string;
 	try {

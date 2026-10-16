@@ -12,6 +12,7 @@ import {
 	DeltaSync,
 	decodeSnapshot,
 	deltaKey,
+	deviceOfKey,
 	encodeSnapshot,
 	parseKey,
 	snapshotKey,
@@ -19,6 +20,7 @@ import {
 	type DeltaStateStorage
 } from '#lib/sync/deltaSync';
 import { MemoryRemoteStore, type RemoteStore } from '#lib/sync/remoteStore';
+import { aadFor } from '#lib/services/s3RemoteStore';
 
 let counter = 0;
 
@@ -95,9 +97,18 @@ describe('object keys', () => {
 		});
 	});
 
-	it('ignores legacy state files and other kinds', () => {
-		expect(parseKey('xacts', 'crdt/xacts/dev-1.ydoc')).toBeNull();
+	it('recognises the legacy state file of a device, and ignores other kinds', () => {
+		expect(parseKey('xacts', 'crdt/xacts/dev-1.ydoc')).toEqual({
+			type: 'legacy',
+			deviceId: 'dev-1'
+		});
 		expect(parseKey('xacts', deltaKey('scx', 'dev-1', 1))).toBeNull();
+	});
+
+	it('names the device that wrote an object, but not for a snapshot', () => {
+		expect(deviceOfKey('xacts', deltaKey('xacts', 'dev-1', 3))).toBe('dev-1');
+		expect(deviceOfKey('xacts', 'crdt/xacts/dev-2.ydoc')).toBe('dev-2');
+		expect(deviceOfKey('xacts', snapshotKey('xacts', '01ABC'))).toBeNull();
 	});
 
 	it('round-trips a snapshot object', () => {
@@ -365,7 +376,7 @@ describe('snapshot', () => {
 			snapshotKey('xacts', id),
 			encodeSnapshot({ coverage, update: await a.store.exportState() })
 		);
-		for (const key of [...remote.objects.keys()]) {
+		for (const key of Array.from(remote.objects.keys())) {
 			const parsed = parseKey('xacts', key);
 			if (parsed?.type === 'delta' && parsed.seq <= (coverage[parsed.deviceId] ?? 0)) {
 				await remote.delete(key);
@@ -435,6 +446,113 @@ describe('snapshot', () => {
 		await b.sync.download();
 
 		expect((await b.sync.upload()).seq).toBeNull();
+	});
+});
+
+describe('legacy state files', () => {
+	const legacyKey = (id: string) => `crdt/xacts/${id}.ydoc`;
+
+	it('merges a device that still writes its whole state, once per change of the file', async () => {
+		const remote = new MemoryRemoteStore();
+		const old = await device(remote, 'Old');
+		await old.store.append(xact('FromOld'));
+		await remote.put(legacyKey('Old'), await old.store.exportState());
+		const b = await device(remote, 'B');
+
+		const first = await b.sync.download();
+		expect(first.legacy).toBe(1);
+		expect(await payees(b)).toEqual(['FromOld']);
+		expect((await b.sync.download()).legacy).toBe(0);
+		expect((await b.sync.status()).download).toBe(false);
+
+		await old.store.append(xact('MoreFromOld'));
+		await new Promise((r) => setTimeout(r, 5));
+		await remote.put(legacyKey('Old'), await old.store.exportState());
+		expect((await b.sync.status()).download).toBe(true);
+		expect((await b.sync.download()).legacy).toBe(1);
+		expect(await payees(b)).toEqual(['FromOld', 'MoreFromOld']);
+	});
+
+	it('does not send a legacy file back, nor read its own', async () => {
+		const remote = new MemoryRemoteStore();
+		const old = await device(remote, 'Old');
+		await old.store.append(xact('FromOld'));
+		await remote.put(legacyKey('Old'), await old.store.exportState());
+		const b = await device(remote, 'B');
+		await b.sync.download();
+		await remote.put(legacyKey('B'), await b.store.exportState());
+
+		expect((await b.sync.upload()).seq).toBeNull();
+		expect((await b.sync.download()).legacy).toBe(0);
+	});
+
+	it('skips a legacy file of an ignored device', async () => {
+		const remote = new MemoryRemoteStore();
+		const old = await device(remote, 'Old');
+		await old.store.append(xact('FromOld'));
+		await remote.put(legacyKey('Old'), await old.store.exportState());
+		const b = await device(remote, 'B', { ignore: () => 'Device not trusted' });
+
+		const result = await b.sync.download();
+		expect(result.skipped).toEqual([{ deviceId: 'Old', reason: 'Device not trusted' }]);
+		expect(await payees(b)).toEqual([]);
+	});
+});
+
+describe('reading without applying', () => {
+	it('returns what a download would apply, snapshot and legacy files first, deltas in order', async () => {
+		const remote = new MemoryRemoteStore();
+		const a = await device(remote, 'A');
+		const b = await device(remote, 'B');
+		await a.store.append(xact('One'));
+		await a.sync.upload();
+		await a.store.append(xact('Two'));
+		await a.sync.upload();
+
+		const unapplied = await b.sync.read({ unappliedOnly: true });
+		expect(unapplied.map((u) => u.object.key)).toEqual([
+			deltaKey('xacts', 'A', 1),
+			deltaKey('xacts', 'A', 2)
+		]);
+		// Nothing was applied.
+		expect(await payees(b)).toEqual([]);
+
+		await b.sync.download();
+		expect(await b.sync.read({ unappliedOnly: true })).toEqual([]);
+		// The full listing still has everything.
+		expect(await b.sync.read({ unappliedOnly: false })).toHaveLength(2);
+	});
+
+	it('leaves out ignored devices unless asked', async () => {
+		const remote = new MemoryRemoteStore();
+		const a = await device(remote, 'A');
+		const b = await device(remote, 'B', { ignore: () => 'Device not trusted' });
+		await a.store.append(xact('One'));
+		await a.sync.upload();
+
+		expect(await b.sync.read({ unappliedOnly: false })).toEqual([]);
+		expect(await b.sync.read({ unappliedOnly: false, includeIgnored: true })).toHaveLength(1);
+	});
+
+	it('stops at a gap, like a download does', async () => {
+		const remote = new MemoryRemoteStore();
+		const a = await device(remote, 'A');
+		const b = await device(remote, 'B');
+		await a.store.append(xact('One'));
+		await a.sync.upload();
+		await a.store.append(xact('Two'));
+		await a.sync.upload();
+		await remote.delete(deltaKey('xacts', 'A', 1));
+
+		expect(await b.sync.read({ unappliedOnly: true })).toEqual([]);
+	});
+});
+
+describe('S3 object binding', () => {
+	it('binds deltas and snapshots to their key, but not the legacy state files', () => {
+		expect(aadFor(deltaKey('xacts', 'A', 1))).toBeDefined();
+		expect(aadFor(snapshotKey('xacts', '01ABC'))).toBeDefined();
+		expect(aadFor('crdt/xacts/A.ydoc')).toBeUndefined();
 	});
 });
 

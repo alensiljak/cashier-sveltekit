@@ -97,7 +97,7 @@ Deltas are attributable by their folder name, so the existing Trusted Devices ch
 
 - It stops blocking compaction immediately, as it is no longer active.
 - Deleting its delta folder first needs a snapshot that covers those deltas, otherwise other devices that have not applied them would lose changes. So the prompt runs a sync and a compaction (snapshot, then delete the removed device's deltas and its legacy `<deviceId>.ydoc`).
-- Its `manifests/<deviceId>.json` is left alone: it also holds the Beancount file entries that file sync compares, and deleting it could resurface older hashes as the "newest".
+- Its `manifests/<deviceId>.json` is deleted too. It holds the Beancount file entries that file sync compares, but the source of truth for those is the git repository or the local storage folder, not the bucket; the remaining manifests and the `data/` objects stay authoritative (`repairManifest` already trusts the object over a manifest entry).
 - The option is skipped when offline or the bucket is not configured; the device is then just removed from the list, and the bucket data can be cleaned up from the S3 explorer.
 
 ### Transport abstraction
@@ -124,9 +124,15 @@ S3 and WebDAV currently duplicate the CRDT logic (`s3Sync.syncCrdt` vs `webdavSy
 
 ### Phase 2: S3 adapter and migration
 
-- [ ] S3 adapter, legacy `.ydoc` read as snapshot, switch `syncCrdt`, `crdtStatus`, `previewCrdtChanges`, `diagnoseCrdt`, `fetchRemoteOverview`, `listBucketDevices` (device id now comes from the folder), S3 explorer preview of `.upd` and snapshots
-- [ ] AES-GCM additional data + format version
-- [ ] trust filter on delta folders; Trusted Devices removal prompt with bucket clean-up (after Phase 3)
+- [x] S3 adapter (`s3RemoteStore.ts`); device state in device settings per store and bucket (`deltaStateStorage.ts`, key `delta-sync-state`)
+- [x] legacy `crdt/<kind>/<deviceId>.ydoc` files are still merged (once per change of the file, by size and modified time) and are never written any more
+- [x] `s3Sync.ts` switched: `syncCrdt`, `crdtStatus` (now listing only), `previewCrdtChanges`, `diagnoseCrdt`, `fetchRemoteOverview`, `listBucketDevices` (device id from the delta folder), S3 explorer preview of `.upd` and snapshots
+- [x] AES-GCM additional data: delta and snapshot objects are bound to their key (format version 2); legacy state files and everything else stay version 1
+- [x] trust filter applies to delta folders and legacy files
+- [ ] Trusted Devices removal prompt with bucket clean-up (after Phase 3, needs compaction)
+- [ ] attach the outbox capture when a store opens, not on the first S3 use. Until then the first upload of a session also sends the changes made before it was attached, as one larger delta (correct, but with the whole delete set).
+- [ ] delete this device's own legacy `.ydoc` after its first delta upload (Phase 3 clean-up)
+- [ ] try against a real bucket with two devices, one of them still on the old version
 
 ### Phase 3: compaction and reset
 

@@ -154,6 +154,9 @@ export const DeviceSettingKeys = {
 	// that differs only in line endings. Counted as the base when classifying, so they are not
 	// conflicts. Shape: Record<path, { base: hash, hashes: hash[] }>; void once the base changes.
 	s3SyncEquiv: 's3-sync-equiv',
+	// Delta sync progress per store and bucket, key prefix: `<this>:<kind>:<bucket id>`.
+	// Shape: DeltaState (see sync/deltaSync.ts). Device-only: it says what this device has applied.
+	deltaSyncState: 'delta-sync-state',
 	// When this device last completed an S3 upload or download. Shape: ISO string
 	s3LastSync: 's3-last-sync',
 	// Auto-upload the working set (Yjs state) to the S3 bucket after each write. Shape: boolean

@@ -15,6 +15,30 @@ import {
 
 const bytes = (text: string) => new TextEncoder().encode(text);
 
+describe('objects bound to their name', () => {
+	it('round-trips with the same additional data', async () => {
+		const { key } = await createKeyParams('secret');
+		const plain = bytes('delta');
+		const sealed = await encrypt(key, plain, bytes('crdt/xacts/A/d-000001.upd'));
+		const back = await decrypt(key, sealed, bytes('crdt/xacts/A/d-000001.upd'));
+		expect(Array.from(back)).toEqual(Array.from(plain));
+	});
+
+	it('refuses to open under another name', async () => {
+		const { key } = await createKeyParams('secret');
+		const sealed = await encrypt(key, bytes('delta'), bytes('crdt/xacts/A/d-000001.upd'));
+		await expect(decrypt(key, sealed, bytes('crdt/xacts/A/d-000002.upd'))).rejects.toThrow();
+	});
+
+	it('does not mix with objects that are not bound', async () => {
+		const { key } = await createKeyParams('secret');
+		const bound = await encrypt(key, bytes('x'), bytes('name'));
+		const plain = await encrypt(key, bytes('x'));
+		await expect(decrypt(key, bound)).rejects.toThrow();
+		await expect(decrypt(key, plain, bytes('name'))).rejects.toThrow();
+	});
+});
+
 describe('encrypt / decrypt', () => {
 	it('round-trips', async () => {
 		const { key } = await createKeyParams('secret');

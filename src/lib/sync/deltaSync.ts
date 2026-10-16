@@ -29,6 +29,8 @@ export interface DeltaState {
 	bucketSV: StateVectorJson;
 	/** Changes not yet uploaded, as one Yjs update in base64. */
 	outbox: string | null;
+	/** Legacy per-device state files already merged: device -> `size|modified` at that time. */
+	legacy?: Record<string, string>;
 }
 
 export interface DeltaStateStorage {
@@ -60,9 +62,11 @@ export const deltaKey = (kind: DocKind, deviceId: string, seq: number) =>
 
 export type ParsedKey =
 	| { type: 'snapshot'; id: string }
-	| { type: 'delta'; deviceId: string; seq: number };
+	| { type: 'delta'; deviceId: string; seq: number }
+	/** `crdt/<kind>/<deviceId>.ydoc`: the whole state of one device, as the app wrote it before delta sync. */
+	| { type: 'legacy'; deviceId: string };
 
-/** What an object under `crdt/<kind>/` is; null for anything else (legacy files, strangers). */
+/** What an object under `crdt/<kind>/` is; null for anything else (strangers). */
 export function parseKey(kind: DocKind, key: string): ParsedKey | null {
 	const rest = key.startsWith(kindPrefix(kind)) ? key.slice(kindPrefix(kind).length) : null;
 	if (rest === null) return null;
@@ -70,7 +74,15 @@ export function parseKey(kind: DocKind, key: string): ParsedKey | null {
 	if (snap) return { type: 'snapshot', id: snap[1] };
 	const delta = /^([^/]+)\/d-(\d+)\.upd$/.exec(rest);
 	if (delta) return { type: 'delta', deviceId: delta[1], seq: Number(delta[2]) };
+	const legacy = /^([^/]+)\.ydoc$/.exec(rest);
+	if (legacy) return { type: 'legacy', deviceId: legacy[1] };
 	return null;
+}
+
+/** The device that wrote an object, or null for a snapshot (written by whichever device compacted). */
+export function deviceOfKey(kind: DocKind, key: string): string | null {
+	const parsed = parseKey(kind, key);
+	return parsed && parsed.type !== 'snapshot' ? parsed.deviceId : null;
 }
 
 export interface SnapshotContent {
@@ -118,7 +130,7 @@ const fromBase64 = (text: string): Uint8Array =>
  * The clocks an update reaches, per client. Unlike `Y.encodeStateVectorFromUpdate`, which only
  * counts structs that start at clock 0, this works for a delta that begins later.
  */
-function vectorOf(update: Uint8Array): Map<number, number> {
+export function vectorOf(update: Uint8Array): Map<number, number> {
 	const reach = new Map<number, number>();
 	for (const s of Y.decodeUpdate(update).structs) {
 		if (s.constructor.name === 'Skip') continue;
@@ -147,11 +159,30 @@ const emptyState = (): DeltaState => ({
 /** True when the object an adapter returned is missing, e.g. compacted since it was listed. */
 class Vanished extends Error {}
 
+/** An object in the bucket that belongs to this store. */
+export interface BucketObject {
+	key: string;
+	type: ParsedKey['type'];
+	/** Null for a snapshot. */
+	deviceId: string | null;
+	size: number;
+	lastModified: Date | null;
+}
+
+export interface BucketUpdate {
+	object: BucketObject;
+	update: Uint8Array;
+}
+
 export interface DownloadResult {
+	/** Objects in the bucket written by other devices (or snapshots). Zero: nobody has uploaded yet. */
+	foreign: number;
 	/** A newer snapshot was applied. */
 	snapshot: boolean;
 	/** Deltas applied. */
 	deltas: number;
+	/** Legacy per-device state files merged. */
+	legacy: number;
 	/** Records changed by what was applied. */
 	changes: number;
 	/** Devices whose deltas were not applied, with the reason (e.g. not trusted). */
@@ -167,12 +198,15 @@ export interface DeltaSyncOptions {
 	doc: DeltaDoc;
 	remote: RemoteStore;
 	storage: DeltaStateStorage;
-	/** Why a device's deltas are not applied here (not trusted, read-only), or null to apply them. */
+	/** Why a device's data is not applied here (not trusted, read-only), or null to apply it. */
 	ignore?: (deviceId: string) => string | null;
 }
 
+const stampOf = (o: { size: number; lastModified: Date | null }) =>
+	`${o.size}|${o.lastModified?.toISOString() ?? ''}`;
+
 export class DeltaSync {
-	private readonly o: DeltaSyncOptions;
+	private o: DeltaSyncOptions;
 	private state: DeltaState = emptyState();
 	/** Changes captured since the last upload, oldest first. */
 	private pending: Uint8Array[] = [];
@@ -204,6 +238,11 @@ export class DeltaSync {
 	dispose(): void {
 		this.detach?.();
 		this.detach = undefined;
+	}
+
+	/** Replaces the transport or the ignore list, e.g. when the bucket settings or trust list changed. */
+	configure(changes: Partial<Pick<DeltaSyncOptions, 'remote' | 'ignore'>>): void {
+		this.o = { ...this.o, ...changes };
 	}
 
 	private load(): Promise<void> {
@@ -327,16 +366,20 @@ export class DeltaSync {
 	private async downloadOnce(): Promise<DownloadResult> {
 		const { kind, deviceId, doc, remote } = this.o;
 		const result: DownloadResult = {
+			foreign: 0,
 			snapshot: false,
 			deltas: 0,
+			legacy: 0,
 			changes: 0,
 			skipped: [],
 			gaps: [],
 			errors: []
 		};
 
-		const { snapshotId, deltas } = this.scan(await remote.list(kindPrefix(kind)));
+		const objects = await this.objects();
+		const { snapshotId, deltas, legacy } = this.scan(objects);
 		const state = this.state;
+		result.foreign = objects.filter((o) => o.deviceId !== deviceId).length;
 
 		if (snapshotId && (!state.snapId || snapshotId > state.snapId)) {
 			const key = snapshotKey(kind, snapshotId);
@@ -389,29 +432,148 @@ export class DeltaSync {
 			}
 		}
 
+		// State files of devices that have not been updated to delta sync: merged again whenever
+		// the file changed.
+		const stamps = (state.legacy ??= {});
+		for (const file of legacy) {
+			const device = file.deviceId!;
+			if (device === deviceId) continue;
+			const reason = this.o.ignore?.(device);
+			if (reason) {
+				if (!result.skipped.some((s) => s.deviceId === device)) {
+					result.skipped.push({ deviceId: device, reason });
+				}
+				continue;
+			}
+			if (stamps[device] === stampOf(file)) continue;
+			const raw = await remote.get(file.key);
+			if (!raw) throw new Vanished(file.key);
+			try {
+				result.changes += (await doc.importState(raw, importOpts)).length;
+			} catch (e) {
+				result.errors.push({ key: file.key, message: errorText(e) });
+				continue;
+			}
+			stamps[device] = stampOf(file);
+			raise(state.bucketSV, vectorOf(raw));
+			result.legacy++;
+		}
+
 		await this.persist();
 		return result;
 	}
 
-	/** Newest snapshot id, and each device's delta numbers in ascending order. */
-	private scan(infos: { key: string }[]): {
+	/** The newest snapshot id, each device's delta numbers in ascending order, and the legacy files. */
+	private scan(objects: BucketObject[]): {
 		snapshotId: string | null;
 		deltas: Map<string, number[]>;
+		legacy: BucketObject[];
 	} {
 		let snapshotId: string | null = null;
 		const deltas = new Map<string, number[]>();
-		for (const { key } of infos) {
-			const parsed = parseKey(this.o.kind, key);
+		const legacy: BucketObject[] = [];
+		for (const o of objects) {
+			const parsed = parseKey(this.o.kind, o.key);
 			if (parsed?.type === 'snapshot') {
 				if (!snapshotId || parsed.id > snapshotId) snapshotId = parsed.id;
 			} else if (parsed?.type === 'delta') {
 				const seqs = deltas.get(parsed.deviceId) ?? [];
 				seqs.push(parsed.seq);
 				deltas.set(parsed.deviceId, seqs);
+			} else if (parsed?.type === 'legacy') {
+				legacy.push(o);
 			}
 		}
 		for (const seqs of deltas.values()) seqs.sort((a, b) => a - b);
-		return { snapshotId, deltas };
+		return { snapshotId, deltas, legacy };
+	}
+
+	/** What the bucket holds for this store: one listing, nothing fetched or decrypted. */
+	async objects(): Promise<BucketObject[]> {
+		const { kind, remote } = this.o;
+		const objects: BucketObject[] = [];
+		for (const info of await remote.list(kindPrefix(kind))) {
+			const parsed = parseKey(kind, info.key);
+			if (!parsed) continue;
+			objects.push({
+				key: info.key,
+				type: parsed.type,
+				deviceId: parsed.type === 'snapshot' ? null : parsed.deviceId,
+				size: info.size,
+				lastModified: info.lastModified
+			});
+		}
+		return objects;
+	}
+
+	/**
+	 * Fetches objects without applying them, for previews and diagnostics. Objects of ignored
+	 * devices are left out. With `unappliedOnly`, only what a download would apply, in that order:
+	 * a newer snapshot, other devices' deltas beyond the applied ones (up to a gap), changed
+	 * legacy files. Without it, everything the bucket holds.
+	 */
+	async read({
+		unappliedOnly,
+		includeIgnored = false
+	}: {
+		unappliedOnly: boolean;
+		/** Also fetch the objects of devices on the ignore list. */
+		includeIgnored?: boolean;
+	}): Promise<BucketUpdate[]> {
+		await this.load();
+		const { deviceId, remote } = this.o;
+		const objects = await this.objects();
+		const { snapshotId } = this.scan(objects);
+		const wanted: BucketObject[] = [];
+		const nextExpected = new Map<string, number>();
+		// Snapshots first, then legacy files, then each device's deltas in order: they build on them.
+		const order = { snapshot: 0, legacy: 1, delta: 2 } as const;
+		const seqOf = (o: BucketObject) => {
+			const p = parseKey(this.o.kind, o.key);
+			return p?.type === 'delta' ? p.seq : 0;
+		};
+		const sorted = objects.sort(
+			(a, b) => order[a.type] - order[b.type] || a.key.localeCompare(b.key) || seqOf(a) - seqOf(b)
+		);
+
+		for (const o of sorted) {
+			if (!includeIgnored && o.deviceId && o.deviceId !== deviceId && this.o.ignore?.(o.deviceId)) {
+				continue;
+			}
+			if (!unappliedOnly) {
+				wanted.push(o);
+				continue;
+			}
+			const parsed = parseKey(this.o.kind, o.key)!;
+			if (parsed.type === 'snapshot') {
+				if (parsed.id === snapshotId && (!this.state.snapId || parsed.id > this.state.snapId)) {
+					wanted.push(o);
+				}
+			} else if (parsed.type === 'legacy') {
+				if (parsed.deviceId !== deviceId && this.state.legacy?.[parsed.deviceId] !== stampOf(o)) {
+					wanted.push(o);
+				}
+			} else if (parsed.deviceId !== deviceId) {
+				const done = this.state.applied[parsed.deviceId] ?? 0;
+				const expected = nextExpected.get(parsed.deviceId) ?? done + 1;
+				if (parsed.seq < expected) continue;
+				if (parsed.seq === expected) {
+					wanted.push(o);
+					nextExpected.set(parsed.deviceId, expected + 1);
+				}
+			}
+		}
+
+		const updates: BucketUpdate[] = [];
+		for (const object of wanted) {
+			const raw = await remote.get(object.key);
+			if (!raw) continue;
+			updates.push({
+				object,
+				update: object.type === 'snapshot' ? decodeSnapshot(raw).update : raw
+			});
+		}
+		return updates;
 	}
 
 	// --- status ---
@@ -423,11 +585,16 @@ export class DeltaSync {
 	 */
 	async status(): Promise<{ upload: boolean; download: boolean }> {
 		await this.load();
-		const { snapshotId, deltas } = this.scan(await this.o.remote.list(kindPrefix(this.o.kind)));
+		const { snapshotId, deltas, legacy } = this.scan(await this.objects());
 		let download = !!snapshotId && (!this.state.snapId || snapshotId > this.state.snapId);
 		for (const [device, seqs] of deltas) {
 			if (device === this.o.deviceId || this.o.ignore?.(device)) continue;
 			if (seqs.some((seq) => seq > (this.state.applied[device] ?? 0))) download = true;
+		}
+		for (const file of legacy) {
+			const device = file.deviceId!;
+			if (device === this.o.deviceId || this.o.ignore?.(device)) continue;
+			if (this.state.legacy?.[device] !== stampOf(file)) download = true;
 		}
 		return { upload: await this.hasUpload(), download };
 	}

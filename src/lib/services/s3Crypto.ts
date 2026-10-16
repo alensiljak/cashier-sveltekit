@@ -70,27 +70,49 @@ export async function deriveKey(
 	);
 }
 
+/** Objects bound to their name (see `encrypt`'s `aad`). */
+const BOUND_FORMAT_VERSION = 2;
+
+/**
+ * @param aad Additional authenticated data, e.g. the object's key. It is not stored: decrypting
+ *   needs the same value, so an object copied to another name fails to decrypt. Such objects
+ *   carry format version 2.
+ */
 export async function encrypt(
 	key: CryptoKey,
-	plain: Uint8Array<ArrayBuffer>
+	plain: Uint8Array<ArrayBuffer>,
+	aad?: Uint8Array<ArrayBuffer>
 ): Promise<Uint8Array<ArrayBuffer>> {
 	const iv = crypto.getRandomValues(new Uint8Array(IV_BYTES));
-	const cipher = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, plain));
+	const cipher = new Uint8Array(
+		await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: aad }, key, plain)
+	);
 	const out = new Uint8Array(1 + IV_BYTES + cipher.length);
-	out[0] = FORMAT_VERSION;
+	out[0] = aad ? BOUND_FORMAT_VERSION : FORMAT_VERSION;
 	out.set(iv, 1);
 	out.set(cipher, 1 + IV_BYTES);
 	return out;
 }
 
-/** Throws if the data is malformed, tampered with, or encrypted with another key. */
-export async function decrypt(key: CryptoKey, data: Uint8Array): Promise<Uint8Array<ArrayBuffer>> {
-	if (data.length < 1 + IV_BYTES + 16 || data[0] !== FORMAT_VERSION) {
+/**
+ * Throws if the data is malformed, tampered with, or encrypted with another key. Pass the same
+ * `aad` as when encrypting; an object that was encrypted with one cannot be read without it, and
+ * one without cannot be read with it.
+ */
+export async function decrypt(
+	key: CryptoKey,
+	data: Uint8Array,
+	aad?: Uint8Array<ArrayBuffer>
+): Promise<Uint8Array<ArrayBuffer>> {
+	const version = aad ? BOUND_FORMAT_VERSION : FORMAT_VERSION;
+	if (data.length < 1 + IV_BYTES + 16 || data[0] !== version) {
 		throw new Error('Not an encrypted Cashier object, or an unsupported version.');
 	}
 	const iv = data.slice(1, 1 + IV_BYTES);
 	const cipher = data.slice(1 + IV_BYTES);
-	return new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, cipher));
+	return new Uint8Array(
+		await crypto.subtle.decrypt({ name: 'AES-GCM', iv, additionalData: aad }, key, cipher)
+	);
 }
 
 /** New key parameters for a bucket that has none yet. */
