@@ -17,6 +17,7 @@ import type {
 	WorkerResponse,
 	WorkerResponsePayload
 } from '#lib/workers/ledger.worker';
+import wasmUrl from '@rustledger/wasm/rustledger_wasm_bg.wasm?url';
 import { DEVICE_XACTS_FILE, USER_BOOK_FILENAME } from '#lib/constants';
 import { getXactStore } from '#lib/storage/xactStoreRegistry';
 
@@ -78,7 +79,8 @@ class LedgerWorkerClient {
 		// By the time the user navigates to a report page and triggers ensureLoaded(),
 		// the WASM module will already be compiled and instantiated — removing that
 		// latency from the critical path of the first real operation.
-		this.send<'warmup-done'>({ type: 'warmup' }).catch(() => {
+		// Hand over the precached main-bundle WASM URL so the worker also works offline.
+		this.send<'warmup-done'>({ type: 'warmup', wasmUrl }).catch(() => {
 			// Non-fatal — if warmup fails the next real operation will retry initWasm().
 		});
 	}

@@ -37,8 +37,19 @@
 	});
 
 	onMount(async () => {
+		// Register the service worker first: it must not depend on the engine starting,
+		// otherwise a failed start (e.g. offline) would also prevent offline support/updates.
+		void import('#lib/services/pwaUpdate')
+			.then(({ initPwa }) => initPwa())
+			.catch((err) => console.error('PWA init failed:', err));
+
 		// Initialize the Ledger service.
-		const initialized = await initializeApp();
+		let initialized = false;
+		try {
+			initialized = await initializeApp();
+		} catch (err) {
+			console.error('App initialization failed:', err);
+		}
 		if (!initialized) {
 			Notifier.error('Failed to initialize the engine.');
 			return;
@@ -46,9 +57,6 @@
 
 		const { initNotifications } = await import('#lib/services/notificationService');
 		initNotifications();
-
-		const { initPwa } = await import('#lib/services/pwaUpdate');
-		await initPwa();
 	});
 
 	async function initializeApp(): Promise<boolean> {

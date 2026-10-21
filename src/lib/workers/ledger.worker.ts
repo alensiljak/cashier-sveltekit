@@ -23,10 +23,18 @@ let loadedWorkingSetHash: string | undefined;
 // WASM init
 // ---------------------------------------------------------------------------
 
+/**
+ * URL of the WASM binary supplied by the main thread (see the 'warmup' message).
+ * The copy bundled for this worker is emitted under /_app/immutable/workers/assets/, which the
+ * service worker's precache manifest does not list, so fetching it fails offline. The main
+ * thread's copy is precached.
+ */
+let wasmUrlOverride: string | undefined;
+
 async function initWasm() {
 	if (wasmModule) return;
 	const mod = await import('@rustledger/wasm');
-	await mod.default({ module_or_path: wasmUrl });
+	await mod.default({ module_or_path: wasmUrlOverride ?? wasmUrl });
 	wasmModule = mod;
 }
 
@@ -228,7 +236,7 @@ export type WorkerRequestPayload =
 	 * Send this immediately after spawning the worker so that the first real
 	 * operation (load / ensure-loaded) does not pay the WASM compile cost.
 	 */
-	| { type: 'warmup' }
+	| { type: 'warmup'; wasmUrl?: string }
 	// --- Persistent-ledger operations ---
 	| { type: 'load'; mainFileName: string; userBookFilename?: string; workingSetSource: string }
 	| {
@@ -357,6 +365,7 @@ async function handleMessage(e: MessageEvent<WorkerRequest>): Promise<void> {
 	};
 
 	try {
+		if (e.data.type === 'warmup' && e.data.wasmUrl) wasmUrlOverride = e.data.wasmUrl;
 		await initWasm();
 
 		switch (e.data.type) {
