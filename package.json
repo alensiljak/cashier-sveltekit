@@ -78,7 +78,7 @@
 		"marked": "^18.0.5",
 		"netlify-cli": "^27.0.0",
 		"numeral": "^2.0.6",
-		"oxfmt": "^0.73.0",
+		"oxfmt": "^0.74.0",
 		"oxlint": "^1.61.0",
 		"prettier": "^3.4.2",
 		"prettier-plugin-svelte": "^4.0.0",
@@ -97,7 +97,7 @@
 		"unix-dgram@2.0.7": true,
 		"esbuild@0.28.1": true,
 		"core-js@3.50.0": true,
-		"agent-browser@0.38.1": true,
-		"netlify-cli@27.10.2": true
+		"agent-browser@0.39.1": true,
+		"netlify-cli@27.14.1": true
 	}
 }
