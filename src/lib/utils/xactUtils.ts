@@ -119,3 +119,25 @@ export function getEmptyPostingIndex(tx: Xact) {
 	tx.postings.push(posting);
 	return tx.postings.length - 1;
 }
+
+/**
+ * For a simple two-posting transaction whose amounts mirror each other
+ * (e.g. 10 EUR / -10 EUR), drop the second amount so it auto-balances.
+ * That way the amount only has to be changed in one place when editing.
+ * Postings with a price or cost annotation are left alone, since their
+ * balancing weight isn't simply the negated amount.
+ *
+ * @returns true if the transaction was modified.
+ */
+export function elideMirroredAmount(tx: Xact): boolean {
+	if (tx.balanceAssertion || tx.postings.length !== 2) return false;
+
+	const [first, second] = tx.postings;
+	const isPlain = (p: Posting) => p.amount != null && p.priceAmount == null && p.costAmount == null;
+	if (!isPlain(first) || !isPlain(second)) return false;
+	if (first.currency !== second.currency) return false;
+	if (first.amount === 0 || first.amount !== -(second.amount as number)) return false;
+
+	second.amount = undefined;
+	return true;
+}

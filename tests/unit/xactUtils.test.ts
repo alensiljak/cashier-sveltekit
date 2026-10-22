@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { ensureInitialized, createParsedLedger } from '#lib/services/rustledger';
-import { xactToBeancountText } from '#lib/utils/xactUtils';
+import { elideMirroredAmount, xactToBeancountText } from '#lib/utils/xactUtils';
 import { Xact, Posting } from '#lib/data/model';
 
 describe('quick-entry note round-trip', () => {
@@ -78,5 +78,51 @@ describe('quick-entry note round-trip', () => {
 		// should be left alone rather than forced explicit.
 		expect(text).not.toContain('Assets:Bank-Accounts:N26  0 EUR');
 		expect(postingAccounts(text)).toEqual(['Expenses:Groceries', 'Assets:Bank-Accounts:N26']);
+	});
+});
+
+describe('elideMirroredAmount', () => {
+	function makeXact(...postings: Partial<Posting>[]): Xact {
+		const tx = new Xact();
+		tx.postings = postings.map((p) => Object.assign(new Posting(), p));
+		return tx;
+	}
+
+	it('drops the second amount when the two amounts mirror each other', () => {
+		const tx = makeXact(
+			{ account: 'Expenses:Food', amount: 10, currency: 'EUR' },
+			{ account: 'Assets:Cash', amount: -10, currency: 'EUR' }
+		);
+		expect(elideMirroredAmount(tx)).toBe(true);
+		expect(tx.postings[0].amount).toBe(10);
+		expect(tx.postings[1].amount).toBeUndefined();
+	});
+
+	it('leaves amounts that differ', () => {
+		const tx = makeXact(
+			{ account: 'Expenses:Food', amount: 10, currency: 'EUR' },
+			{ account: 'Assets:Cash', amount: -9, currency: 'EUR' }
+		);
+		expect(elideMirroredAmount(tx)).toBe(false);
+		expect(tx.postings[1].amount).toBe(-9);
+	});
+
+	it('leaves different currencies, priced postings and more than two postings', () => {
+		const currencies = makeXact(
+			{ account: 'A', amount: 10, currency: 'EUR' },
+			{ account: 'B', amount: -10, currency: 'USD' }
+		);
+		const priced = makeXact(
+			{ account: 'A', amount: 10, currency: 'EUR', priceAmount: 1.1, priceCurrency: 'USD' },
+			{ account: 'B', amount: -10, currency: 'EUR' }
+		);
+		const three = makeXact(
+			{ account: 'A', amount: 10, currency: 'EUR' },
+			{ account: 'B', amount: -10, currency: 'EUR' },
+			{ account: 'C', amount: 0, currency: 'EUR' }
+		);
+		for (const tx of [currencies, priced, three]) {
+			expect(elideMirroredAmount(tx)).toBe(false);
+		}
 	});
 });

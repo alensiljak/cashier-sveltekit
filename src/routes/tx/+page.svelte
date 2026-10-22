@@ -12,7 +12,7 @@
 	import appService from '#lib/services/appService';
 	import fullLedgerService from '#lib/services/ledgerWorkerClient';
 	import { reloadLedgerFromOpfs } from '#lib/services/ledgerReload';
-	import { xactToBeancountText } from '#lib/utils/xactUtils';
+	import { elideMirroredAmount, xactToBeancountText } from '#lib/utils/xactUtils';
 	import TransactionEditor from '#lib/components/XactEditor.svelte';
 	import { Xact } from '#lib/data/model';
 	import type { StoredXact } from '#lib/storage/crdtXactStore';
@@ -27,6 +27,13 @@
 		xact.set(Xact.create());
 		xactId.set(undefined);
 	}
+
+	// Two postings with mirrored amounts: keep only the first, so changing the
+	// amount means editing one number instead of two.
+	xact.update((tx) => {
+		if (tx) elideMirroredAmount(tx);
+		return tx;
+	});
 
 	let previousUrl: URL | null = null;
 	let isSaving = $state(false);
