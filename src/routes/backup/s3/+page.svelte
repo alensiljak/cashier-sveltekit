@@ -259,6 +259,7 @@
 				lines = [...lines, line];
 			});
 			reloadIfNeeded(lines);
+			for (const key of Object.keys(include) as SyncItem[]) include[key] = false;
 			void refreshStatus();
 			// Conflicts ask before the losing side is overwritten: the bucket on upload, this device on download.
 			if (lines.some((l) => l.outcome === 'conflict')) overwriteDirection = direction;
