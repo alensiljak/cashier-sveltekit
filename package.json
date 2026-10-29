@@ -98,6 +98,6 @@
 		"esbuild@0.28.1": true,
 		"core-js@3.50.0": true,
 		"agent-browser@0.39.4": true,
-		"netlify-cli@27.14.3": true
+		"netlify-cli@27.15.0": true
 	}
 }
