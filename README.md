@@ -42,13 +42,14 @@ npm run test
 ### CI/CD
 
 `.github/workflows/ci-deploy.yml` runs lint, type-check and unit tests on every PR and push to `main`.
-Deployment to Netlify production does **not** happen automatically — trigger it manually from the
-Actions tab (`CI & Deploy` workflow → "Run workflow"), which re-runs the tests first, then deploys.
-It authenticates via the `NETLIFY_AUTH_TOKEN` and `NETLIFY_SITE_ID` repository secrets (Settings →
-Secrets and variables → Actions) rather than a local Netlify login — get a token from Netlify (User
-settings → Applications → Personal access tokens) and the site ID from Site settings → General. The
-manual `npm run deploy` / `npm run publish` scripts still work locally with a `netlify login` session
-or a local `NETLIFY_AUTH_TOKEN`.
+Deployment to Cloudflare (Workers static assets, configured in `wrangler.jsonc`) does **not** happen
+automatically — trigger it manually from the Actions tab (`CI & Deploy` workflow → "Run workflow"),
+which re-runs the tests first, then deploys. It authenticates via the `CLOUDFLARE_API_TOKEN` and
+`CLOUDFLARE_ACCOUNT_ID` repository secrets (Settings → Secrets and variables → Actions) rather than a
+local login — create the token in the Cloudflare dashboard (My Profile → API Tokens → "Edit Cloudflare
+Workers" template); the account ID is shown on the Workers & Pages overview. The manual
+`npm run deploy` / `npm run publish` scripts still work locally with a `wrangler login` session or a
+local `CLOUDFLARE_API_TOKEN`. Run `npm run build` first — `deploy` only uploads `build/`.
 
 ## Development
 

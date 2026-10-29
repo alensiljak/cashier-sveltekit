@@ -16,8 +16,8 @@ Thumbs.db
 !.env.example
 !.env.test
 
-# Local Netlify folder
-.netlify
+# Local Wrangler folder
+.wrangler
 
 # Tests
 test-results

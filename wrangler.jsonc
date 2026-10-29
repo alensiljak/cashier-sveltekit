@@ -1,0 +1,10 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "cashier",
+	"compatibility_date": "2026-10-29",
+	"assets": {
+		"directory": "./build",
+		// Unknown paths (e.g. parameterised routes that are not prerendered) get the app shell.
+		"not_found_handling": "single-page-application"
+	}
+}

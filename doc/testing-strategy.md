@@ -122,7 +122,7 @@ Run: `npm run test:e2e`.
 - No CI yet. `npm run verify` chains `lint → check → test:unit → test:e2e`.
   `npm run publish` runs `verify` then `deploy` — that's now the actual
   gate: use `publish` to ship, not `deploy` directly. `deploy` remains the
-  raw Netlify push for cases where you deliberately want to skip the gate.
+  raw Cloudflare push for cases where you deliberately want to skip the gate.
 
 ## Deliberately out of scope (for now)
 

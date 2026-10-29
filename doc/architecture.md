@@ -7,7 +7,7 @@ The decisions made in the architecture of the app.
 - The app is a PWA with a single page application (SPA) architecture, using SvelteKit and DaisyUI frameworks.
 - Uses **Svelte 5** with runes syntax (`$state`, `$derived`, `$effect`) — do NOT use Svelte 4 store or `$:` reactive patterns.
 - Uses **TailwindCSS v4** and **DaisyUI v5** — class names and config differ from v3/v4 respectively.
-- It is deployed as a static website to Netlify (via `npm run deploy`).
+- It is deployed as a static website to Cloudflare Workers static assets (via `npm run deploy`).
 - The ledger files are stored in OPFS, in Beancount format. The app data is in IndexedDb (via **Dexie**).
 - The transactions entered on the device (the _working set_) are not a file: they live in a Yjs (CRDT) document, persisted in IndexedDb. See [Working Set Store](#working-set-store).
 - The configuration information is in Settings table in IndexedDb.

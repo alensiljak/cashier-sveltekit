@@ -26,7 +26,7 @@
 		"verify": "npm run lint && npm run check && npm run test:unit && npm run test:e2e",
 		"lint": "oxfmt --check && oxlint . && eslint .",
 		"format": "oxfmt",
-		"deploy": "netlify deploy --prod",
+		"deploy": "wrangler deploy",
 		"publish": "npm run lint && npm run check && npm run test:unit && npm run deploy"
 	},
 	"dependencies": {
@@ -76,7 +76,6 @@
 		"hw-chartjs-plugin-colorschemes": "^0.6.5",
 		"jsdom": "^30.0.0",
 		"marked": "^18.0.5",
-		"netlify-cli": "^27.0.0",
 		"numeral": "^2.0.6",
 		"oxfmt": "^0.75.0",
 		"oxlint": "^1.61.0",
@@ -88,7 +87,8 @@
 		"typescript-language-server": "^6.0.0",
 		"vite": "^8.0.0",
 		"vitest": "^5.0.0",
-		"workbox-window": "^7.4.0"
+		"workbox-window": "^7.4.0",
+		"wrangler": "^4.155.0"
 	},
 	"allowScripts": {
 		"@parcel/watcher@2.5.6": true,
@@ -98,6 +98,6 @@
 		"esbuild@0.28.1": true,
 		"core-js@3.50.0": true,
 		"agent-browser@0.39.4": true,
-		"netlify-cli@27.15.0": true
+		"workerd@1.20261023.1": true
 	}
 }
