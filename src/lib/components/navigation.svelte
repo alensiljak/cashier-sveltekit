@@ -45,7 +45,8 @@
 		PinIcon,
 		PinOffIcon,
 		FileChartColumnIcon,
-		CloudIcon
+		CloudIcon,
+		FileTextIcon
 	} from '@lucide/svelte';
 
 	function closeDrawer(): void {
@@ -563,6 +564,18 @@
 							>
 								<FolderInputIcon />
 								<span>Import Transactions</span>
+								</a>
+							</li>
+							<li>
+								<a
+									href="/share-target"
+									class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/share-target'
+										? 'active bg-secondary text-secondary-content'
+										: ''}"
+									onclick={closeDrawer}
+								>
+									<FileTextIcon />
+									<span>Distribution Statements</span>
 							</a>
 						</li>
 						<li>
