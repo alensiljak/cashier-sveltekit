@@ -6,6 +6,7 @@ import {
 	precacheAndRoute
 } from 'workbox-precaching';
 import { NavigationRoute, registerRoute } from 'workbox-routing';
+import { SHARE_FIELD, SHARE_TARGET_PATH, storeSharedFiles } from '#lib/services/sharedFiles';
 
 declare const self: ServiceWorkerGlobalScope;
 
@@ -44,6 +45,24 @@ precacheAndRoute([
 ]);
 cleanupOutdatedCaches();
 registerRoute(new NavigationRoute(createHandlerBoundToURL(SHELL)));
+
+// Web Share Target: the OS POSTs shared files (multipart/form-data) to /share-target. There is no
+// server, so stash the files and redirect (303 turns the POST into a GET) to the page that reads them.
+registerRoute(
+	({ url }) => url.pathname === SHARE_TARGET_PATH,
+	async ({ request }) => {
+		try {
+			const form = await request.formData();
+			const files = form.getAll(SHARE_FIELD).filter((v): v is File => v instanceof File);
+			await storeSharedFiles(files);
+			return Response.redirect(SHARE_TARGET_PATH, 303);
+		} catch (err) {
+			console.error('Share target failed:', err);
+			return Response.redirect(`${SHARE_TARGET_PATH}?error=1`, 303);
+		}
+	},
+	'POST'
+);
 
 // Build time of this worker (see vite.config.ts), reported to the About page.
 declare const __BUILD_TIMESTAMP__: string;
