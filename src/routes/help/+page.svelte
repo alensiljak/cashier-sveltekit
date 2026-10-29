@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Toolbar from '#lib/components/Toolbar.svelte';
-	import { ChevronRightIcon, SearchIcon, XIcon } from '@lucide/svelte';
+	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
+	import { ChevronRightIcon, RocketIcon, SearchIcon, XIcon } from '@lucide/svelte';
 	import { listHelpTopics } from '#lib/help/helpContent';
 
 	let query = $state('');
@@ -8,7 +9,11 @@
 </script>
 
 <main>
-	<Toolbar title="Help"></Toolbar>
+	<Toolbar title="Help">
+		{#snippet menuItems()}
+			<ToolbarMenuItem text="Onboarding" Icon={RocketIcon} targetNav="/onboarding" />
+		{/snippet}
+	</Toolbar>
 
 	<section class="p-3 pb-0 mx-auto max-w-2xl w-full">
 		<label class="input input-bordered flex w-full items-center gap-2">
