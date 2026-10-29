@@ -408,6 +408,12 @@
 </Toolbar>
 
 <main class="mx-auto max-w-2xl space-y-3 p-3 pb-20">
+	<!-- ══ App Settings (shared across devices) ═════════════════ -->
+	<section class="px-1 pt-1">
+		<h2 class="text-lg font-bold">App Settings</h2>
+		<p class="text-xs opacity-60">Shared across your devices. Included in exports.</p>
+	</section>
+
 	<!-- ── Ledger ──────────────────────────────────────────── -->
 	<CashierCardTemplate heading="Ledger" Icon={BookOpenIcon} bodyClass="space-y-3 px-3">
 		{#snippet description()}
@@ -577,6 +583,12 @@
 		</div>
 	</CashierCardTemplate>
 
+	<!-- ══ Device Settings (this device only) ═══════════════════ -->
+	<section id="device-settings" class="scroll-mt-16 px-1 pt-4">
+		<h2 class="text-lg font-bold">Device Settings</h2>
+		<p class="text-xs opacity-60">Apply only to this device. Not exported or synced.</p>
+	</section>
+
 	<!-- ── Notifications ───────────────────────────────────── -->
 	<CashierCardTemplate heading="Notifications" Icon={BellIcon} bodyClass="space-y-3 px-3">
 		{#snippet description()}
@@ -609,12 +621,8 @@
 		</div>
 	</CashierCardTemplate>
 
-	<!-- ── Device Settings ────────────────────────────────── -->
-	<CashierCardTemplate heading="Device Settings" Icon={SmartphoneIcon} bodyClass="space-y-3 px-3">
-		{#snippet description()}
-			These settings apply only to this device and are not exported.
-		{/snippet}
-
+	<!-- ── Ledger cache ───────────────────────────────────── -->
+	<CashierCardTemplate heading="Ledger Cache" Icon={SmartphoneIcon} bodyClass="space-y-3 px-3">
 		<div class="flex items-center gap-3">
 			<label for="ledger-cache-enabled" class="flex-1 text-sm font-medium">
 				Enable ledger cache
