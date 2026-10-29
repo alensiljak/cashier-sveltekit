@@ -2,6 +2,7 @@
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "cashier",
 	"compatibility_date": "2026-10-29",
+	"routes": [{ "pattern": "cashier.alensiljak.cc", "custom_domain": true }],
 	"assets": {
 		"directory": "./build",
 		// Unknown paths (e.g. parameterised routes that are not prerendered) get the app shell.
