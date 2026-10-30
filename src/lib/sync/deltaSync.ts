@@ -86,6 +86,11 @@ export interface DeltaDoc {
 		update: Uint8Array,
 		opts: { backup?: boolean; origin?: unknown }
 	): Promise<readonly unknown[]>;
+	/**
+	 * Dry run of `importState` for several updates in turn: the record changes each would make.
+	 * Needed by `DeltaSync.review`.
+	 */
+	previewImport?(updates: Uint8Array[]): Promise<readonly (readonly unknown[])[]>;
 	onUpdate(handler: (update: Uint8Array, origin: unknown) => void): () => void;
 }
 
@@ -249,6 +254,20 @@ export interface DownloadResult {
 	invalid: { id: string; reason: string }[];
 }
 
+/** A device whose next delta is missing from the bucket. */
+export type DeltaGap = DownloadResult['gaps'][number];
+
+/** What `DeltaSync.review` found, by record changes rather than by file listing. */
+export interface DeltaReview {
+	/** Another trusted device has changes that a download would bring in here. */
+	download: boolean;
+	/** This device has changes that the bucket lacks. */
+	upload: boolean;
+	gaps: DeltaGap[];
+	/** Objects applied silently because they changed no records here. */
+	settled: number;
+}
+
 export interface ResetResult {
 	reset: boolean;
 	/** Why it was not reset. */
@@ -304,6 +323,8 @@ export class DeltaSync {
 	private detachReplaced?: () => void;
 	private detachAdoptCheck?: () => void;
 	private queue: Promise<unknown> = Promise.resolve();
+	/** Objects fetched for a review, by key. They never change; dropped once applied. */
+	private fetched = new Map<string, Uint8Array>();
 
 	constructor(options: DeltaSyncOptions) {
 		this.o = options;
@@ -551,6 +572,91 @@ export class DeltaSync {
 		if (ahead) this.pending.push(await this.o.doc.exportDelta(covered));
 	}
 
+	/**
+	 * The outbox without what the bucket holds already, as one update; null when nothing is left.
+	 * Operations merged from a peer can be in the outbox although another device uploaded them
+	 * (it is in `bucketSV` once `learnBucket` read it). Sending them again makes the other devices
+	 * see a new delta that has nothing new. The delete set cannot be trimmed, so a deletion merged
+	 * from a peer is still sent.
+	 */
+	private outgoing(): Uint8Array | null {
+		if (!this.pending.length) return null;
+		const merged = Y.mergeUpdates(this.pending);
+		const trimmed = Y.diffUpdate(merged, Y.encodeStateVector(toMap(this.state.bucketSV)));
+		const { structs, ds } = Y.decodeUpdate(trimmed);
+		return structs.length || ds.clients.size ? trimmed : null;
+	}
+
+	/**
+	 * Notes in `bucketSV` what other devices' deltas that are not applied here already hold, so
+	 * `outgoing` does not send it again. Reads (and caches) those deltas; applies nothing.
+	 */
+	private async learnBucket(): Promise<void> {
+		const { snapshotId, deltas } = this.scan(await this.objects());
+		if (snapshotId && (!this.state.snapId || snapshotId > this.state.snapId)) {
+			const raw = await this.fetchObject(snapshotKey(this.o.kind, snapshotId));
+			if (raw) raise(this.state.bucketSV, vectorOf(decodeSnapshot(raw).update));
+		}
+		for (const run of this.unapplied(deltas)) {
+			for (const seq of run.seqs) {
+				const raw = await this.fetchObject(deltaKey(this.o.kind, run.device, seq));
+				if (!raw) break;
+				raise(this.state.bucketSV, vectorOf(raw));
+			}
+		}
+	}
+
+	/** An object of the bucket, fetched once: snapshots and deltas are never overwritten. */
+	private async fetchObject(key: string): Promise<Uint8Array | null> {
+		const cached = this.fetched.get(key);
+		if (cached) return cached;
+		const raw = await this.o.remote.get(key);
+		if (!raw || oversize(raw.length)) return null;
+		this.fetched.set(key, raw);
+		return raw;
+	}
+
+	/** Forgets cached objects that this device has applied. */
+	private pruneFetched(): void {
+		for (const key of [...this.fetched.keys()]) {
+			const parsed = parseKey(this.o.kind, key);
+			const done =
+				parsed?.type === 'delta'
+					? parsed.seq <= (this.state.applied[parsed.deviceId] ?? 0)
+					: parsed?.type === 'snapshot'
+						? !!this.state.snapId && parsed.id <= this.state.snapId
+						: true;
+			if (done) this.fetched.delete(key);
+		}
+	}
+
+	/**
+	 * Per other device that is not ignored: the deltas a download would apply next (up to the first
+	 * missing number), and the gap that stops it, if any.
+	 */
+	private unapplied(
+		deltas: Map<string, number[]>
+	): { device: string; seqs: number[]; gap?: DeltaGap }[] {
+		const runs: { device: string; seqs: number[]; gap?: DeltaGap }[] = [];
+		for (const [device, seqs] of deltas) {
+			if (device === this.o.deviceId || this.o.ignore?.(device)) continue;
+			let next = (this.state.applied[device] ?? 0) + 1;
+			const run: number[] = [];
+			let gap: DeltaGap | undefined;
+			for (const seq of seqs) {
+				if (seq < next) continue;
+				if (seq > next) {
+					gap = { deviceId: device, expected: next, found: seq };
+					break;
+				}
+				run.push(seq);
+				next++;
+			}
+			if (run.length || gap) runs.push({ device, seqs: run, gap });
+		}
+		return runs;
+	}
+
 	/** Whether the document has changes the bucket lacks. Local only. */
 	async hasUpload(): Promise<boolean> {
 		await this.load();
@@ -576,10 +682,18 @@ export class DeltaSync {
 
 	private async uploadLocked(): Promise<{ seq: number | null; bytes: number }> {
 		if (this.state.pendingSnapshot) await this.publishReset();
+		await this.learnBucket().catch(() => undefined);
 		await this.healOutbox();
-		if (!this.pending.length) return { seq: null, bytes: 0 };
-
-		const sent = Y.mergeUpdates(this.pending);
+		const sent = this.outgoing();
+		if (!sent) {
+			// Nothing, or only what the bucket holds already (operations merged from a peer that
+			// another device uploaded first).
+			if (this.pending.length) {
+				this.pending = [];
+				await this.persist();
+			}
+			return { seq: null, bytes: 0 };
+		}
 		const held = this.pending;
 		this.pending = [];
 		try {
@@ -1024,20 +1138,122 @@ export class DeltaSync {
 	 * anything: `download` = a newer snapshot or deltas not applied here; `upload` = changes the
 	 * bucket lacks.
 	 */
-	async status(): Promise<{ upload: boolean; download: boolean }> {
+	async status(): Promise<{ upload: boolean; download: boolean; gaps: DeltaGap[] }> {
 		await this.load();
 		const { snapshotId, deltas, legacy } = this.scan(await this.objects());
 		let download = !!snapshotId && (!this.state.snapId || snapshotId > this.state.snapId);
-		for (const [device, seqs] of deltas) {
-			if (device === this.o.deviceId || this.o.ignore?.(device)) continue;
-			if (seqs.some((seq) => seq > (this.state.applied[device] ?? 0))) download = true;
+		const gaps: DeltaGap[] = [];
+		// Like a download, count deltas only up to the first missing one: what lies beyond a gap
+		// cannot be applied, and a snapshot that covers it is counted above.
+		for (const run of this.unapplied(deltas)) {
+			if (run.seqs.length) download = true;
+			if (run.gap) gaps.push(run.gap);
 		}
-		for (const file of legacy) {
+		if (this.legacyChanged(legacy)) download = true;
+		return { upload: await this.hasUpload(), download, gaps };
+	}
+
+	private legacyChanged(legacy: BucketObject[]): boolean {
+		return legacy.some((file) => {
 			const device = file.deviceId!;
-			if (device === this.o.deviceId || this.o.ignore?.(device)) continue;
-			if (this.state.legacy?.[device] !== stampOf(file)) download = true;
+			if (device === this.o.deviceId || this.o.ignore?.(device)) return false;
+			return this.state.legacy?.[device] !== stampOf(file);
+		});
+	}
+
+	/**
+	 * Like `status`, but by what a download or an upload would change, not by which objects exist.
+	 * Reads the other devices' unapplied objects (each only once per session) and checks them
+	 * against the records here. What changes no record is applied on the spot: it only tells this
+	 * device that it has seen the other device's changes. What would change records is left for
+	 * the user to download. `upload` is true when the outbox holds operations the bucket lacks.
+	 *
+	 * Needs a store with `previewImport`; without it nothing is applied and every unapplied
+	 * object counts as a download.
+	 */
+	async review(): Promise<DeltaReview> {
+		await this.load();
+		return this.serial(async () => {
+			const objects = await this.objects();
+			const { snapshotId, deltas, legacy } = this.scan(objects);
+			const snapshotNew = () =>
+				!!snapshotId && (!this.state.snapId || snapshotId > this.state.snapId);
+			let settled = 0;
+
+			if (snapshotNew()) {
+				if (await this.settleSnapshot(snapshotId!).catch(() => false)) settled++;
+			}
+			if (!snapshotNew()) {
+				for (const run of this.unapplied(deltas)) {
+					settled += await this.settleRun(run.device, run.seqs).catch(() => 0);
+				}
+			}
+
+			let download = snapshotNew() || this.legacyChanged(legacy);
+			const gaps: DeltaGap[] = [];
+			for (const run of this.unapplied(deltas)) {
+				if (run.seqs.length) download = true;
+				if (run.gap) gaps.push(run.gap);
+			}
+
+			await this.learnBucket().catch(() => undefined);
+			const before = this.pending.length;
+			await this.healOutbox();
+			const upload = !!this.state.pendingSnapshot || this.outgoing() !== null;
+			// A dry run: drop what healing added.
+			this.pending.length = before;
+
+			this.pruneFetched();
+			await this.persist();
+			return { download, upload, gaps, settled };
+		});
+	}
+
+	/** Applies the newest snapshot when it changes no record here. False when it is left for a download. */
+	private async settleSnapshot(id: string): Promise<boolean> {
+		const { doc, kind } = this.o;
+		if (!doc.previewImport) return false;
+		const raw = await this.fetchObject(snapshotKey(kind, id));
+		if (!raw) return false;
+		const { coverage, update } = decodeSnapshot(raw);
+		raise(this.state.bucketSV, vectorOf(update));
+		const [changes] = await doc.previewImport([update]);
+		if (changes.length) return false;
+		try {
+			await doc.importState(update, importOpts);
+		} catch {
+			return false;
 		}
-		return { upload: await this.hasUpload(), download };
+		this.state.snapId = id;
+		for (const [device, seq] of Object.entries(coverage)) {
+			this.state.applied[device] = Math.max(this.state.applied[device] ?? 0, seq);
+		}
+		return true;
+	}
+
+	/** Applies the leading deltas of one device that change no record here. Returns how many. */
+	private async settleRun(device: string, seqs: number[]): Promise<number> {
+		const { doc, kind } = this.o;
+		if (!doc.previewImport || !seqs.length) return 0;
+		const raws: Uint8Array[] = [];
+		for (const seq of seqs) {
+			const raw = await this.fetchObject(deltaKey(kind, device, seq));
+			if (!raw) break;
+			raws.push(raw);
+		}
+		if (!raws.length) return 0;
+		const previews = await doc.previewImport(raws);
+		let n = 0;
+		for (; n < raws.length && previews[n].length === 0; n++) {
+			try {
+				await doc.importState(raws[n], importOpts);
+			} catch {
+				break;
+			}
+			this.state.applied[device] = seqs[n];
+			raise(this.state.bucketSV, vectorOf(raws[n]));
+		}
+		return n;
 	}
 }
 

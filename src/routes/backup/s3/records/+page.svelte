@@ -170,8 +170,9 @@
 						<div class="card-body gap-2 p-4">
 							<h2 class="card-title text-sm">Why the sync arrows show</h2>
 							<p class="text-xs text-base-content/60">
-								The arrows compare Yjs clocks per client, not records. This device: {diagnostics.localClients}
-								clients, reset id {diagnostics.localResetId || 'none'}.
+								The arrows show record changes. This is the lower level, the Yjs clocks per client, for
+								troubleshooting. This device: {diagnostics.localClients} clients, reset id {diagnostics.localResetId ||
+									'none'}.
 							</p>
 							{#each diagnostics.files as f (f.key)}
 								<div class="text-xs">

@@ -276,7 +276,7 @@ describe('download', () => {
 		await b.sync.download();
 
 		expect((await b.sync.upload()).seq).toBeNull();
-		expect(await b.sync.status()).toEqual({ upload: false, download: false });
+		expect(await b.sync.status()).toEqual({ upload: false, download: false, gaps: [] });
 	});
 
 	it('relays changes merged from a peer, which the bucket does not have yet', async () => {
@@ -312,7 +312,7 @@ describe('download', () => {
 		for (const d of [a, b, c]) await d.sync.download();
 
 		for (const d of [a, b, c]) expect(await payees(d)).toEqual(['OnlyB', 'OnlyC']);
-		expect(await a.sync.status()).toEqual({ upload: false, download: false });
+		expect(await a.sync.status()).toEqual({ upload: false, download: false, gaps: [] });
 	});
 
 	it('skips a device that is on the ignore list', async () => {
@@ -710,7 +710,7 @@ describe('acknowledgements', () => {
 		await a.sync.publishAck();
 
 		expect((await b.sync.download()).foreign).toBe(0);
-		expect(await b.sync.status()).toEqual({ upload: false, download: false });
+		expect(await b.sync.status()).toEqual({ upload: false, download: false, gaps: [] });
 		expect(await b.sync.read({ unappliedOnly: false, includeIgnored: true })).toEqual([]);
 	});
 
@@ -1212,14 +1212,118 @@ describe('status', () => {
 		const remote = new MemoryRemoteStore();
 		const a = await device(remote, 'A');
 		const b = await device(remote, 'B');
-		expect(await b.sync.status()).toEqual({ upload: false, download: false });
+		expect(await b.sync.status()).toEqual({ upload: false, download: false, gaps: [] });
 
 		await a.store.append(xact('One'));
 		expect((await a.sync.status()).upload).toBe(true);
 		await a.sync.upload();
 
 		const get = vi.spyOn(remote, 'get');
-		expect(await b.sync.status()).toEqual({ upload: false, download: true });
+		expect(await b.sync.status()).toEqual({ upload: false, download: true, gaps: [] });
 		expect(get).not.toHaveBeenCalled();
+	});
+});
+
+describe('echo of peer merges', () => {
+	it('does not upload what the bucket holds already', async () => {
+		const remote = new MemoryRemoteStore();
+		const a = await device(remote, 'A');
+		const b = await device(remote, 'B');
+		await a.store.append(xact('FromA'));
+		await a.sync.upload();
+		// B gets the same record over a peer connection.
+		await b.store.importState(await a.store.exportState());
+
+		expect((await b.sync.upload()).seq).toBeNull();
+		expect(await remote.list('crdt/xacts/B.')).toEqual([]);
+	});
+
+	it('still uploads its own change made on top of a peer-merged one', async () => {
+		const remote = new MemoryRemoteStore();
+		const a = await device(remote, 'A');
+		const b = await device(remote, 'B');
+		const c = await device(remote, 'C');
+		await a.store.append(xact('FromA'));
+		await a.sync.upload();
+		await b.store.importState(await a.store.exportState());
+		await b.store.append(xact('FromB'));
+
+		expect((await b.sync.upload()).seq).toBe(1);
+		await c.sync.download();
+		expect(await payees(c)).toEqual(['FromA', 'FromB']);
+	});
+});
+
+describe('review', () => {
+	it('applies a delta that changes no record, and reports nothing to download', async () => {
+		const remote = new MemoryRemoteStore();
+		const a = await device(remote, 'A');
+		const b = await device(remote, 'B');
+		await a.store.append(xact('One'));
+		await b.store.importState(await a.store.exportState());
+		await a.sync.upload();
+		expect(await b.sync.status()).toMatchObject({ download: true });
+
+		expect(await b.sync.review()).toEqual({ upload: false, download: false, gaps: [], settled: 1 });
+		expect(await b.sync.status()).toEqual({ upload: false, download: false, gaps: [] });
+		expect((await b.sync.download()).deltas).toBe(0);
+	});
+
+	it('leaves a delta that would change records for the manual download', async () => {
+		const remote = new MemoryRemoteStore();
+		const a = await device(remote, 'A');
+		const b = await device(remote, 'B');
+		await a.store.append(xact('One'));
+		await a.sync.upload();
+
+		expect(await b.sync.review()).toMatchObject({ download: true, settled: 0 });
+		expect(await payees(b)).toEqual([]);
+		expect((await b.sync.download()).changes).toBe(1);
+		expect(await b.sync.review()).toMatchObject({ download: false, upload: false });
+	});
+
+	it('reads each delta only once', async () => {
+		const remote = new MemoryRemoteStore();
+		const a = await device(remote, 'A');
+		const b = await device(remote, 'B');
+		await a.store.append(xact('One'));
+		await a.sync.upload();
+		await b.sync.review();
+
+		const get = vi.spyOn(remote, 'get');
+		await b.sync.review();
+		expect(get).not.toHaveBeenCalled();
+	});
+
+	it('reports an upload only for operations the bucket lacks', async () => {
+		const remote = new MemoryRemoteStore();
+		const b = await device(remote, 'B');
+		expect((await b.sync.review()).upload).toBe(false);
+		await b.store.append(xact('Mine'));
+		expect((await b.sync.review()).upload).toBe(true);
+		await b.sync.upload();
+		expect((await b.sync.review()).upload).toBe(false);
+	});
+});
+
+describe('gaps', () => {
+	it('counts only the deltas up to a missing one, and names the gap', async () => {
+		const remote = new MemoryRemoteStore();
+		const a = await device(remote, 'A');
+		const b = await device(remote, 'B');
+		for (const payee of ['One', 'Two', 'Three']) {
+			await a.store.append(xact(payee));
+			await a.sync.upload();
+		}
+		await remote.delete(deltaKey('xacts', 'A', 2));
+
+		const first = await b.sync.status();
+		expect(first.download).toBe(true);
+		expect(first.gaps).toEqual([{ deviceId: 'A', expected: 2, found: 3 }]);
+
+		await b.sync.download();
+		const after = await b.sync.status();
+		expect(after.download).toBe(false);
+		expect(after.gaps).toEqual([{ deviceId: 'A', expected: 2, found: 3 }]);
 	});
 });

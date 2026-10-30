@@ -115,19 +115,31 @@
 	}
 
 	let overwriteDialog = $state<HTMLDialogElement>();
-	let overwriteLabels = $state<string[]>([]);
+	let overwriteItem = $state<SyncItem | null>(null);
 
 	/** Asks for confirmation when uploading would overwrite newer data in the bucket. */
-	function requestUpload() {
-		const stale = statusRows.filter(
-			(r) => selectedItems().includes(r.key as SyncItem) && hasNewerRemote(r.key)
-		);
-		if (stale.length === 0) {
-			void run('upload');
+	function requestUpload(item: SyncItem) {
+		if (!hasNewerRemote(item)) {
+			void run('upload', item);
 			return;
 		}
-		overwriteLabels = stale.map((r) => r.label);
+		overwriteItem = item;
 		overwriteDialog?.showModal();
+	}
+
+	/** What the row's buttons may do, from the comparison with the bucket. All false while unknown. */
+	function actionsFor(key: keyof RemoteOverview): { up: boolean; down: boolean; conflict: boolean } {
+		if (key === 'settings' || key === 'beancount') {
+			const s = fileStatus?.[key];
+			return { up: !!s?.upload, down: !!s?.download, conflict: !!s?.conflict };
+		}
+		const s = crdtStatus?.[key as 'scheduled' | 'xacts'];
+		return { up: !!s?.upload, down: !!s?.download, conflict: false };
+	}
+
+	/** Devices whose next delta is missing from the bucket, for the CRDT rows. */
+	function gapsFor(key: keyof RemoteOverview) {
+		return crdtStatus?.[key as 'scheduled' | 'xacts']?.gaps ?? [];
 	}
 
 	type BadgeKind = 'up' | 'down' | 'conflict' | 'ok';
@@ -191,22 +203,6 @@
 		return parts.join(' · ');
 	}
 
-	const include = $state<Record<SyncItem, boolean>>({
-		settings: false,
-		scheduled: false,
-		xacts: false,
-		beancount: false
-	});
-
-	const allSelected = $derived(Object.values(include).every(Boolean));
-	const someSelected = $derived(Object.values(include).some(Boolean));
-	let indeterminate = $derived(someSelected && !allSelected);
-
-	function toggleSelectAll() {
-		const next = !allSelected;
-		for (const key of Object.keys(include) as SyncItem[]) include[key] = next;
-	}
-
 	let busy = $state(false);
 	let lines = $state<SyncLine[]>([]);
 	let session: S3Session | null = null;
@@ -219,10 +215,6 @@
 			(l) => l.outcome === 'uploaded' || l.outcome === 'downloaded' || l.outcome === 'deleted'
 		)
 	);
-
-	function selectedItems(): SyncItem[] {
-		return statusRows.map((r) => r.key as SyncItem).filter((key) => include[key]);
-	}
 
 	/** Downloaded data reaches the ledger through the working set and the OPFS files. */
 	function reloadIfNeeded(done: SyncLine[]) {
@@ -248,18 +240,17 @@
 		}
 	}
 
-	async function run(direction: SyncDirection) {
+	async function run(direction: SyncDirection, item: SyncItem) {
 		if (!cfg) return;
 		busy = true;
 		lines = [];
 		try {
 			session = await openSession(cfg);
 			lines = [];
-			await runSync(session, direction, selectedItems(), (line) => {
+			await runSync(session, direction, [item], (line) => {
 				lines = [...lines, line];
 			});
 			reloadIfNeeded(lines);
-			for (const key of Object.keys(include) as SyncItem[]) include[key] = false;
 			void refreshStatus();
 			// Conflicts ask before the losing side is overwritten: the bucket on upload, this device on download.
 			if (lines.some((l) => l.outcome === 'conflict')) overwriteDirection = direction;
@@ -411,31 +402,21 @@
 							<span>Last sync on this device:</span>
 							<span class="text-right">{lastSync ? lastSync.toLocaleString() : 'never'}</span>
 						</p>
-						<label class="flex cursor-pointer items-center gap-3">
-							<input
-								type="checkbox"
-								class="checkbox checkbox-primary"
-								checked={allSelected}
-								bind:indeterminate
-								onclick={toggleSelectAll}
-							/>
-							<span class="flex-1 text-sm text-base-content/60">Select all</span>
-						</label>
-						<div class="divider my-0"></div>
 						{#each statusRows as row (row.key)}
-							<label class="flex cursor-pointer items-start gap-3">
-								<input
-									type="checkbox"
-									class="checkbox checkbox-primary mt-0.5"
-									bind:checked={include[row.key as SyncItem]}
-								/>
-								<span class="flex-1">
+							{@const act = actionsFor(row.key)}
+							<div class="flex items-start gap-3 border-t border-base-300 pt-3 first:border-t-0 first:pt-0">
+								<span class="min-w-0 flex-1">
 									<span class="block">{row.label} {@render badge(row.key)}</span>
 									{#if overview}
 										<span class="block text-xs text-base-content/60">
 											{describeItem(overview[row.key], row.key)}
 										</span>
 									{/if}
+									{#each gapsFor(row.key) as g (g.deviceId)}
+										<span class="block text-xs text-warning">
+											Device {g.deviceId.slice(0, 6)}: change {g.expected} is missing from the bucket
+										</span>
+									{/each}
 									{#if row.key === 'settings'}
 										<a href="/backup/s3/settings" class="link text-xs">Review diff</a>
 										<span class="text-xs text-base-content/50">
@@ -452,42 +433,50 @@
 											— compare versions, clear false conflicts
 										</span>
 									{/if}
-								</span>
-							</label>
-						{/each}
-					</div>
-				</div>
-
-				<div class="card bg-base-200 shadow-sm">
-					<div class="card-body gap-3 p-4">
-						<h2 class="card-title text-sm">Actions</h2>
-						<div class="flex justify-center gap-3">
-							<button
-								class="btn btn-primary"
-								disabled={!someSelected || busy}
-								onclick={requestUpload}
-							>
-								{#if busy}<span class="loading loading-spinner loading-sm"
-									></span>{:else}<CloudUploadIcon class="size-5" />{/if}
-								Upload
-							</button>
-							<button
-								class="btn btn-outline btn-error"
-								disabled={!someSelected || busy}
-								onclick={() => run('download')}
-							>
-								<CloudDownloadIcon class="size-5" />
-								Download
-							</button>
+									</span>
+									<div class="flex shrink-0 gap-1">
+										{#if row.key === 'settings'}
+											<button
+												class="btn btn-sm btn-outline"
+												disabled={busy || act.conflict || !(act.up || act.down)}
+												onclick={() => (act.down ? run('download', 'settings') : requestUpload('settings'))}
+											>
+												{#if act.down}<CloudDownloadIcon class="size-4" />{:else}<CloudUploadIcon
+														class="size-4"
+													/>{/if}
+												Sync
+											</button>
+										{:else}
+											<button
+												class="btn btn-sm btn-square btn-outline"
+												aria-label="Download {row.label}"
+												title="Download"
+												disabled={busy || !act.down}
+												onclick={() => run('download', row.key as SyncItem)}
+											>
+												<CloudDownloadIcon class="size-4" />
+											</button>
+											<button
+												class="btn btn-sm btn-square btn-primary"
+												aria-label="Upload {row.label}"
+												title="Upload"
+												disabled={busy || !act.up}
+												onclick={() => requestUpload(row.key as SyncItem)}
+											>
+												<CloudUploadIcon class="size-4" />
+											</button>
+										{/if}
+									</div>
+								</div>
+							{/each}
+							{#if !cfg.passphrase}
+								<p class="text-center text-sm text-warning">
+									Set an encryption passphrase in the
+									<a href="/settings/s3-cfg" class="link">configuration</a> first.
+								</p>
+							{/if}
 						</div>
-						{#if !cfg.passphrase}
-							<p class="text-center text-sm text-warning">
-								Set an encryption passphrase in the
-								<a href="/settings/s3-cfg" class="link">configuration</a> first.
-							</p>
-						{/if}
 					</div>
-				</div>
 
 				{#if lines.length || busy}
 					<div class="card bg-base-200 shadow-sm">
@@ -645,17 +634,20 @@
 	<dialog bind:this={overwriteDialog} class="modal">
 		<div class="modal-box">
 			<h3 class="text-lg font-bold">Overwrite newer data?</h3>
-			<p class="py-3 text-sm">The bucket has newer data that this device has not downloaded:</p>
-			<ul class="list-inside list-disc text-sm">
-				{#each overwriteLabels as label (label)}<li>{label}</li>{/each}
-			</ul>
+			<p class="py-3 text-sm">
+				The bucket has newer data for {statusRows.find((r) => r.key === overwriteItem)?.label} that
+				this device has not downloaded.
+			</p>
 			<p class="py-3 text-sm text-base-content/70">
 				Uploading may overwrite it. Download first to avoid losing changes.
 			</p>
 			<div class="modal-action">
 				<form method="dialog" class="flex gap-2">
 					<button class="btn btn-ghost">Cancel</button>
-					<button class="btn btn-error" onclick={() => run('upload')}>Upload anyway</button>
+					<button
+						class="btn btn-error"
+						onclick={() => overwriteItem && run('upload', overwriteItem)}>Upload anyway</button
+					>
 				</form>
 			</div>
 		</div>

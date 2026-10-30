@@ -24,6 +24,7 @@ import { getDeviceId, type DocKind } from '#lib/sync/ydocDevices';
 import {
 	DeltaSync,
 	type CompactResult,
+	type DeltaGap,
 	decodeSnapshot,
 	deltaKey,
 	deviceDeltaPrefix,
@@ -612,26 +613,27 @@ async function crdtDiffers(s: CrdtSession, item: 'xacts' | 'scheduled'): Promise
 }
 
 /**
- * Compares a CRDT store with the bucket from one listing, without reading any object: `upload`
- * = this device has changes the bucket lacks; `download` = a trusted device (or a snapshot)
- * has changes not merged here.
+ * Compares a CRDT store with the bucket by record changes: `upload` = this device has changes
+ * the bucket lacks; `download` = a trusted device (or a snapshot) has changes that a merge would
+ * make here. What changes no record is applied on the spot (see `DeltaSync.review`), so this
+ * can write bookkeeping state, never data.
  */
-async function crdtStatus(
-	s: CrdtSession,
-	item: 'xacts' | 'scheduled'
-): Promise<{ upload: boolean; download: boolean }> {
+async function crdtStatus(s: CrdtSession, item: 'xacts' | 'scheduled'): Promise<CrdtSyncStatus> {
 	if (item === 'scheduled' && !(await (await storeOf(item)).isInitialized())) {
-		return { upload: false, download: false };
+		return { upload: false, download: false, gaps: [] };
 	}
-	return (await deltaSyncFor(s, item)).status();
+	const { upload, download, gaps } = await (await deltaSyncFor(s, item)).review();
+	return { upload, download, gaps };
 }
 
 export interface CrdtSyncStatus {
 	upload: boolean;
 	download: boolean;
+	/** Devices whose next delta is missing from the bucket, so what follows cannot be applied. */
+	gaps: DeltaGap[];
 }
 
-/** Dry run for the CRDT stores, per item. Lists the bucket, but reads no object. */
+/** Compares the CRDT stores with the bucket, per item. Needs the passphrase: it reads the new objects. */
 export async function fetchCrdtSyncStatus(
 	cfg: S3Config
 ): Promise<Record<'scheduled' | 'xacts', CrdtSyncStatus>> {
