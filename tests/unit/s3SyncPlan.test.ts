@@ -38,8 +38,14 @@ describe('decide: upload', () => {
 		expect(decide('upload', 'b', 'c', 'a').action).toBe('conflict');
 	});
 
-	it('reports a conflict for different files that were never synced', () => {
-		expect(decide('upload', 'b', 'c', null).action).toBe('conflict');
+	it('reports different files that were never synced as an unrelated conflict', () => {
+		const d = decide('upload', 'b', 'c', null);
+		expect(d.action).toBe('conflict');
+		expect(d.unrelated).toBe(true);
+	});
+
+	it('does not call a real conflict unrelated', () => {
+		expect(decide('upload', 'b', 'c', 'a').unrelated).toBeUndefined();
 	});
 
 	it('skips a file that was never synced to this device', () => {
@@ -103,8 +109,10 @@ describe('decide: download', () => {
 		expect(decide('download', 'b', 'c', 'a').action).toBe('conflict');
 	});
 
-	it('reports a conflict for different files that were never synced', () => {
-		expect(decide('download', 'b', 'c', null).action).toBe('conflict');
+	it('reports different files that were never synced as an unrelated conflict', () => {
+		const d = decide('download', 'b', 'c', null);
+		expect(d.action).toBe('conflict');
+		expect(d.unrelated).toBe(true);
 	});
 
 	it('skips a file that is not in the bucket', () => {

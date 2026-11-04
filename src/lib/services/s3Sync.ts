@@ -1065,12 +1065,16 @@ function classify(
 	local: string | null,
 	remote: string | null,
 	base: string | null
-): { kind: 'upload' | 'download' | 'conflict'; reason?: string } | null {
+): { kind: 'upload' | 'download' | 'conflict'; reason?: string; unrelated?: boolean } | null {
 	const up = decide('upload', local, remote, base);
 	const down = decide('download', local, remote, base);
 	if (up.action === 'unchanged') return null;
-	if (up.action === 'conflict') return { kind: 'conflict', reason: up.reason };
-	if (down.action === 'conflict') return { kind: 'conflict', reason: down.reason };
+	if (up.action === 'conflict') {
+		return { kind: 'conflict', reason: up.reason, unrelated: up.unrelated };
+	}
+	if (down.action === 'conflict') {
+		return { kind: 'conflict', reason: down.reason, unrelated: down.unrelated };
+	}
 	if (up.action === 'upload' || up.action === 'delete-remote') {
 		return { kind: 'upload', reason: up.reason };
 	}
@@ -1087,6 +1091,8 @@ export interface FileStatusEntry {
 	path: string;
 	state: FileState;
 	reason?: string;
+	/** A `conflict` that is only "differs": never synced, so it is not known which side is newer. */
+	unrelated?: boolean;
 	/** Present on this device. */
 	local: boolean;
 	/** In the bucket, and not deleted there. */
@@ -1123,6 +1129,7 @@ export async function listFileStatuses(s: S3Session): Promise<FileStatusEntry[]>
 			path: opfsPath,
 			state: verdict?.kind ?? 'unchanged',
 			reason: verdict?.reason,
+			unrelated: verdict?.unrelated,
 			local: !!bytes,
 			remote: inBucket
 		});

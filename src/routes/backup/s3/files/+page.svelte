@@ -352,8 +352,14 @@
 	}
 </script>
 
-{#snippet stateBadge(state: FileState)}
-	<span class="badge badge-sm {STATE_BADGE[state]}">{STATE_LABEL[state]}</span>
+{#snippet stateBadge(state: FileState, unrelated?: boolean)}
+	{#if unrelated}
+		<span class="badge badge-sm badge-warning" title="Never synced: it is not known which copy is newer"
+			>Differs</span
+		>
+	{:else}
+		<span class="badge badge-sm {STATE_BADGE[state]}">{STATE_LABEL[state]}</span>
+	{/if}
 {/snippet}
 
 <main class="flex h-screen flex-col">
@@ -463,7 +469,7 @@
 												</div>
 											{/if}
 										</div>
-										{@render stateBadge(row.entry.state)}
+										{@render stateBadge(row.entry.state, row.entry.unrelated)}
 										{#if row.entry.state !== 'unchanged'}
 											<button
 												class="btn btn-xs btn-ghost"
@@ -507,7 +513,7 @@
 		<div class="modal-box flex h-[90vh] max-w-2xl flex-col p-0">
 			<div class="border-base-300 flex items-center gap-2 border-b px-4 py-3">
 				<h3 class="min-w-0 flex-1 truncate font-mono text-sm font-bold">{comparing.path}</h3>
-				{@render stateBadge(comparing.state)}
+				{@render stateBadge(comparing.state, comparing.unrelated)}
 				<button class="btn btn-ghost btn-sm" aria-label="Close" onclick={closeCompare}>✕</button>
 			</div>
 			<div class="flex-1 space-y-3 overflow-y-auto touch-pan-y p-4">

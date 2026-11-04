@@ -8,6 +8,8 @@
  * ancestor that tells a one-sided change from a conflict.
  */
 
+import { compareToBase } from '#lib/sync/threeWay';
+
 export type SyncDirection = 'upload' | 'download';
 
 /**
@@ -33,6 +35,12 @@ export interface SyncDecision {
 	action: SyncAction;
 	/** Why the file was skipped, or what the conflict is. */
 	reason?: string;
+	/**
+	 * Only with `conflict`: both sides have the file with different content but this path was
+	 * never synced, so there is no common ancestor and nothing proves both sides were edited.
+	 * Handled like any conflict (the user compares), but shown as "differs", not "conflict".
+	 */
+	unrelated?: boolean;
 }
 
 export interface ManifestEntry {
@@ -88,6 +96,21 @@ export function decide(
 	if (local === remote) return { action: 'unchanged' };
 	// Gone on both sides.
 	if (local === null && remote === TOMBSTONE) return { action: 'unchanged' };
+
+	// The one rule shared with every other sync channel (see sync/threeWay.ts): two different
+	// files and no history is "unrelated", not proof that both sides changed. S3 keeps a single
+	// base hash, so both halves of the shared base are that hash.
+	if (
+		remote !== TOMBSTONE &&
+		compareToBase(local, remote, base === null ? null : { local: base, remote: base }) ===
+			'unrelated'
+	) {
+		return {
+			action: 'conflict',
+			reason: 'Different content here and in the bucket, and never synced',
+			unrelated: true
+		};
+	}
 
 	if (direction === 'upload') {
 		if (local === null) {
