@@ -19,9 +19,10 @@
 	`writeFile`/`deleteFile` stay unimplemented until push ships (see the
 	project doc's Future section).
 */
-import type { RequestAction } from '@trystero-p2p/core';
+import type { MessageAction, RequestAction } from '@trystero-p2p/core';
 import type { PeerPresence } from './peerPresence.svelte';
-import type { SyncEntry, SyncSource } from './SyncSource';
+import type { SyncAnnouncement, SyncEntry, SyncSource } from './SyncSource';
+import { recordPeerAnnouncement } from './syncBaseline';
 
 const REQUEST_TIMEOUT_MS = 10_000;
 
@@ -51,6 +52,7 @@ type ReadFileResponse = FoundContent | Missing;
 export class PeerProtocol {
 	private listFilesAction: RequestAction<null, SyncEntry[]>;
 	private readFileAction: RequestAction<PathRequest, ReadFileResponse>;
+	private syncedAction: MessageAction<SyncAnnouncement>;
 
 	/**
 	 * @param presence Room must already be joined (registration happens now).
@@ -67,6 +69,19 @@ export class PeerProtocol {
 				return await localSource.listTree();
 			}
 		);
+
+		// The peer pulled/merged from us and tells us what it now holds: record our
+		// side of the baseline, so we don't show a conflict for a file it reconciled.
+		this.syncedAction = presence.makeAction<SyncAnnouncement>('files-synced');
+		this.syncedAction.onMessage = async (announcement, { peerId: fromId }) => {
+			const peerPersistentId = presence.peersMap[fromId]?.persistentId;
+			if (!peerPersistentId || !presence.peersMap[fromId]?.isTrusted) return;
+			try {
+				await recordPeerAnnouncement(peerPersistentId, announcement, await localSource.listTree());
+			} catch (e) {
+				console.error('Recording peer sync baseline failed', e);
+			}
+		};
 
 		this.readFileAction = presence.makeRequestAction<PathRequest, ReadFileResponse>(
 			'read-file',
@@ -92,6 +107,10 @@ export class PeerProtocol {
 			{ target: targetTrysteroId, timeoutMs: REQUEST_TIMEOUT_MS }
 		);
 		return 'missing' in res ? undefined : res.content;
+	}
+
+	async announceSynced(announcement: SyncAnnouncement, targetTrysteroId: string): Promise<void> {
+		await this.syncedAction.send(announcement, { target: targetTrysteroId });
 	}
 }
 
@@ -120,6 +139,10 @@ export class PeerSource implements SyncSource {
 
 	async readFile(path: string): Promise<string | undefined> {
 		return await this.protocol.readFile(path, this.trysteroId());
+	}
+
+	async announceSynced(announcement: SyncAnnouncement): Promise<void> {
+		await this.protocol.announceSynced(announcement, this.trysteroId());
 	}
 
 	async writeFile(): Promise<void> {

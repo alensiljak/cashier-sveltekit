@@ -4,7 +4,30 @@
 	selection) and /peer-sync (pull-all-newer shortcut).
 */
 import type { SyncEntry, SyncSource } from './SyncSource';
-import { removeBaselineEntries, updateBaseline, type BaselineEntry } from './syncBaseline';
+import {
+	buildAnnouncement,
+	removeBaselineEntries,
+	updateBaseline,
+	type BaselineEntry
+} from './syncBaseline';
+
+/**
+ * Tells the peer a sync just completed so it records its own baseline (it
+ * would otherwise show a false conflict for files we reconciled). Best effort:
+ * the sync itself already succeeded, so a failure here must not surface as one.
+ */
+export async function announceSyncedToPeer(
+	remoteSource: SyncSource,
+	synced: BaselineEntry[],
+	deleted: string[] = []
+): Promise<void> {
+	if (!remoteSource.announceSynced || (synced.length === 0 && deleted.length === 0)) return;
+	try {
+		await remoteSource.announceSynced(buildAnnouncement(synced, deleted));
+	} catch (e) {
+		console.warn('Could not tell peer about completed sync', e);
+	}
+}
 
 export interface PullResult {
 	/** Local scan taken after the writes (baseline records each file's real post-write hash). */
@@ -59,6 +82,7 @@ export async function pullFiles(
 
 	if (baselineUpserts.length) await updateBaseline(peerId, baselineUpserts);
 	if (baselineRemovals.length) await removeBaselineEntries(peerId, baselineRemovals);
+	await announceSyncedToPeer(remoteSource, baselineUpserts, baselineRemovals);
 
 	return { freshLocal, failures };
 }

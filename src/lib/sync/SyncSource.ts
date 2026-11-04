@@ -31,7 +31,28 @@ export interface SyncEntry {
  * locally; in v1 only `OpfsSource` needs a working implementation (push is a
  * later phase — see the project doc's Future section).
  */
+/**
+ * What a device tells its peer after a sync: for each path, the hash it now
+ * holds (`hash`) and the hash of the peer's copy it based that on
+ * (`sourceHash`). Lets the peer record its own baseline for the same sync.
+ */
+export interface SyncedItem {
+	path: string;
+	hash: string;
+	sourceHash: string;
+	[key: string]: string;
+}
+
+export interface SyncAnnouncement {
+	synced: SyncedItem[];
+	/** Paths the announcer removed because the peer no longer had them. */
+	deleted: string[];
+	[key: string]: SyncedItem[] | string[];
+}
+
 export interface SyncSource {
+	/** Remote sources only: tells the peer a sync just completed so it records its baseline too. Best effort. */
+	announceSynced?(announcement: SyncAnnouncement): Promise<void>;
 	/** Metadata + content-hash tree scan (glob-filtered, files only). */
 	listTree(): Promise<SyncEntry[]>;
 	/** Full file content, or undefined if the file no longer exists. */

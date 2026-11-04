@@ -13,7 +13,13 @@
 import type { PeerSyncBaseline } from '#lib/data/model';
 import type { SyncEntry } from './SyncSource';
 
-export type SyncStatus = 'unchanged' | 'local-newer' | 'remote-newer' | 'conflict';
+/**
+ * 'differs' = both sides have the file with different content and there is no
+ * sync history for it with this endpoint, so there is no common ancestor to say
+ * who is newer (unlike 'conflict', which proves both sides changed). Resolved
+ * by comparing content; the first confirmed sync records the baseline.
+ */
+export type SyncStatus = 'unchanged' | 'local-newer' | 'remote-newer' | 'conflict' | 'differs';
 
 /** Source-agnostic rename of opfs/sync's fs/opfs-specific SyncAction — 'push' is a later phase. */
 export type SyncAction = 'pull' | 'conflict' | 'skip';
@@ -60,6 +66,8 @@ function classify(
 	baseline: PeerSyncBaseline | undefined
 ): SyncStatus {
 	if (local && remote && local.hash === remote.hash) return 'unchanged';
+	// Never synced with this endpoint: nothing proves which side moved.
+	if (local && remote && !baseline) return 'differs';
 
 	const localChanged = changedSinceBaseline(local, baseline?.localHash);
 	const remoteChanged = changedSinceBaseline(remote, baseline?.remoteHash);
@@ -72,7 +80,9 @@ function classify(
 function defaultActionFor(status: SyncStatus): SyncAction {
 	// 'local-newer' has no push in v1, so the only meaningful action is skip;
 	// 'conflict' can only be pulled (overwrite local) or skipped — never pushed.
-	return status === 'remote-newer' ? 'pull' : status === 'conflict' ? 'conflict' : 'skip';
+	if (status === 'remote-newer') return 'pull';
+	// 'differs' stays unresolved like a conflict until the user compares and chooses.
+	return status === 'conflict' || status === 'differs' ? 'conflict' : 'skip';
 }
 
 /**

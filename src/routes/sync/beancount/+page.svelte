@@ -29,7 +29,7 @@
 		type SyncAction
 	} from '#lib/sync/syncDiff';
 	import { getBaseline, updateBaseline } from '#lib/sync/syncBaseline';
-	import { pullFiles } from '#lib/sync/pullFiles';
+	import { announceSyncedToPeer, pullFiles } from '#lib/sync/pullFiles';
 	import DiffViewer from '#lib/components/DiffViewer.svelte';
 	import type { PeerSyncBaseline } from '#lib/data/model';
 
@@ -229,7 +229,7 @@
 		for (const d of diffs) {
 			const action = state.overrides.get(d.path) ?? d.action;
 			if (action === 'pull') pull++;
-			else if (action === 'conflict') conflict++;
+			else if (action === 'conflict') conflict++; // includes 'differs': both need a decision
 		}
 		return { pull, conflict };
 	}
@@ -318,7 +318,9 @@
 		const localEntry = localEntries.find((e) => e.path === path);
 		const remoteEntry = remoteEntries?.find((e) => e.path === path);
 		if (!localEntry || !remoteEntry) return;
-		await updateBaseline(activePeer.id, [{ path, local: localEntry, remote: remoteEntry }]);
+		const synced = [{ path, local: localEntry, remote: remoteEntry }];
+		await updateBaseline(activePeer.id, synced);
+		if (peerSource) await announceSyncedToPeer(peerSource, synced);
 		const freshBaseline = await getBaseline(activePeer.id);
 		const nextOverrides = new Map(overrides);
 		nextOverrides.delete(path);
@@ -558,6 +560,12 @@
 				alertClass: 'alert-success'
 			};
 		}
+		if (row.status === 'differs') {
+			return {
+				text: 'Never synced with this peer, so there is no way to tell which copy is newer. Review the differences, then pull, merge, or skip. Previewing the Pull outcome.',
+				alertClass: 'alert-warning'
+			};
+		}
 		return {
 			text: 'Unresolved conflict — previewing the Pull outcome. Choose Skip above to keep the local file unchanged instead.',
 			alertClass: 'alert-warning'
@@ -625,7 +633,9 @@
 			const remoteEntry = remoteEntries?.find((e) => e.path === path);
 			const patch: Partial<PeerSyncState> = {};
 			if (local && remoteEntry) {
-				await updateBaseline(activePeer.id, [{ path, local, remote: remoteEntry }]);
+				const synced = [{ path, local, remote: remoteEntry }];
+				await updateBaseline(activePeer.id, synced);
+				if (peerSource) await announceSyncedToPeer(peerSource, synced);
 				patch.baseline = await getBaseline(activePeer.id);
 			}
 			const nextOverrides = new Map(overrides);
@@ -643,19 +653,25 @@
 
 	let fileRows = $derived(allFileRows);
 	let conflictRows = $derived(fileRows.filter((r) => r.status === 'conflict'));
+	let differsRows = $derived(fileRows.filter((r) => r.status === 'differs'));
 	let remoteNewerRows = $derived(fileRows.filter((r) => r.status === 'remote-newer'));
 	let localNewerRows = $derived(fileRows.filter((r) => r.status === 'local-newer'));
 	let unchangedRows = $derived(fileRows.filter((r) => !r.status || r.status === 'unchanged'));
 
 	let pullCount = $derived(fileRows.filter((r) => r.effectiveAction === 'pull').length);
-	let conflictCount = $derived(fileRows.filter((r) => r.effectiveAction === 'conflict').length);
+	let conflictCount = $derived(
+		fileRows.filter((r) => r.effectiveAction === 'conflict' && r.status === 'conflict').length
+	);
+	let differsCount = $derived(
+		fileRows.filter((r) => r.effectiveAction === 'conflict' && r.status === 'differs').length
+	);
 
 	/** Defaults the filter to "diffs only" the first time this peer's diff
 	 *  counts become known — a manual toggle (see toggleShowDiffsOnly) sticks
 	 *  afterward, so the user's choice is never overridden mid-session. */
 	$effect(() => {
 		if (diffsOnlyUserSet || !activePeer || remoteEntries === null) return;
-		showDiffsOnly = pullCount + conflictCount > 0;
+		showDiffsOnly = pullCount + conflictCount + differsCount > 0;
 	});
 
 	function toggleDir(path: string) {
@@ -700,6 +716,8 @@
 				return 'badge-success';
 			case 'conflict':
 				return 'badge-error';
+			case 'differs':
+				return 'badge-warning';
 			default:
 				return 'badge-ghost';
 		}
@@ -713,6 +731,8 @@
 				return 'status-success';
 			case 'conflict':
 				return 'status-error';
+			case 'differs':
+				return 'status-warning';
 			default:
 				return 'status-neutral';
 		}
@@ -726,6 +746,8 @@
 				return 'Remote newer';
 			case 'conflict':
 				return 'Conflict';
+			case 'differs':
+				return 'Differs';
 			default:
 				return 'Unchanged';
 		}
@@ -772,7 +794,7 @@
 
 {#snippet rowActions(row: TreeRow)}
 	<div class="flex flex-wrap items-center gap-2">
-		{#if row.status === 'remote-newer' || row.status === 'conflict' || row.status === 'local-newer'}
+		{#if row.status === 'remote-newer' || row.status === 'conflict' || row.status === 'differs' || row.status === 'local-newer'}
 			<div class="join">
 				<button
 					type="button"
@@ -962,6 +984,9 @@
 							>{conflictCount} conflict{conflictCount === 1 ? '' : 's'}</span
 						>
 					{/if}
+					{#if differsCount > 0}
+						<span class="badge badge-warning badge-sm">{differsCount} differ</span>
+					{/if}
 				{/if}
 			</div>
 
@@ -1008,7 +1033,7 @@
 										{/if}
 										<span class="font-mono text-sm truncate flex-1">{row.name}</span>
 									</button>
-									{#if row.status === 'remote-newer' || row.status === 'conflict' || row.status === 'local-newer'}
+									{#if row.status === 'remote-newer' || row.status === 'conflict' || row.status === 'differs' || row.status === 'local-newer'}
 										{@render pullCheckbox(row)}
 									{/if}
 								</div>
@@ -1042,6 +1067,34 @@
 			{:else}
 				<!-- Grouped — sections by status, with bulk actions. Ignores folder nesting. -->
 				<div class="flex flex-col gap-3">
+					{#if differsRows.length > 0}
+						<div class="rounded-box bg-warning/10 p-3">
+							<div class="mb-2">
+								<h3 class="text-sm font-semibold">
+									Differs <span class="badge badge-warning badge-sm">{differsRows.length}</span>
+								</h3>
+								<p class="text-xs opacity-60">
+									Never synced with this peer, so it's unknown which copy is newer. Preview to compare.
+								</p>
+							</div>
+							<ul class="flex flex-col gap-2">
+								{#each differsRows as row (row.path)}
+									<li class="rounded-box bg-base-100 p-2.5">
+										<div class="flex items-center gap-2">
+											<FileIcon class="h-3.5 w-3.5 shrink-0 opacity-50" />
+											<span class="font-mono text-sm truncate flex-1">{row.path}</span>
+										</div>
+										<div class="mt-1 flex flex-col gap-0.5 text-xs opacity-60">
+											<span>{metaLine(row.local, 'Local', '— missing')}</span>
+											<span>{metaLine(row.remote, 'Remote', '— missing')}</span>
+										</div>
+										<div class="mt-2">{@render rowActions(row)}</div>
+									</li>
+								{/each}
+							</ul>
+						</div>
+					{/if}
+
 					{#if conflictRows.length > 0}
 						<div class="rounded-box bg-error/10 p-3">
 							<div class="mb-2 flex items-center gap-2">
@@ -1162,9 +1215,10 @@
 				{/if}
 				{pullCount > 0 ? `Pull ${pullCount} file${pullCount === 1 ? '' : 's'}` : 'Nothing to pull'}
 			</button>
-			{#if conflictCount > 0}
+			{#if conflictCount + differsCount > 0}
 				<p class="mt-2 text-center text-xs opacity-60">
-					{conflictCount} conflict{conflictCount === 1 ? '' : 's'} need a decision above.
+					{conflictCount + differsCount} file{conflictCount + differsCount === 1 ? '' : 's'} need a decision
+					above.
 				</p>
 			{/if}
 		</div>

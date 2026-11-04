@@ -213,6 +213,7 @@
 	let pullingFiles = $state(false);
 	let filesPullable = $derived(filesState?.diffs.filter((d) => d.status === 'remote-newer') ?? []);
 	let filesConflicts = $derived(filesState?.diffs.filter((d) => d.status === 'conflict') ?? []);
+	let filesDiffer = $derived(filesState?.diffs.filter((d) => d.status === 'differs') ?? []);
 
 	function peerSourceFor(persistentId: string): PeerSource | null {
 		return peerConnection.protocol
@@ -689,7 +690,10 @@
 									{#if filesConflicts.length > 0}
 										<span class="badge badge-error badge-xs">{filesConflicts.length} conflict</span>
 									{/if}
-									{#if filesPullable.length === 0 && filesConflicts.length === 0}
+									{#if filesDiffer.length > 0}
+											<span class="badge badge-warning badge-xs">{filesDiffer.length} differ</span>
+										{/if}
+										{#if filesPullable.length === 0 && filesConflicts.length === 0 && filesDiffer.length === 0}
 										{@render hashBadge('same')}
 									{/if}
 								{/if}

@@ -8,7 +8,7 @@
 */
 import db from '#lib/data/db';
 import { PeerSyncBaseline } from '#lib/data/model';
-import type { SyncEntry } from './SyncSource';
+import type { SyncAnnouncement, SyncEntry } from './SyncSource';
 
 /** All baseline rows for one endpoint, keyed by path. */
 export async function getBaseline(endpointId: string): Promise<Map<string, PeerSyncBaseline>> {
@@ -37,6 +37,44 @@ export async function updateBaseline(endpointId: string, entries: BaselineEntry[
 		})
 	);
 	await db.peerSyncBaseline.bulkPut(rows);
+}
+
+/** Builds the message telling a peer what this device now holds after a sync (see `recordPeerAnnouncement`). */
+export function buildAnnouncement(
+	synced: BaselineEntry[],
+	deleted: string[]
+): SyncAnnouncement {
+	return {
+		// This device's post-sync copy is `local`; the peer's copy it was based on is `remote`.
+		synced: synced.map((e) => ({ path: e.path, hash: e.local.hash, sourceHash: e.remote.hash })),
+		deleted
+	};
+}
+
+/**
+ * Records this device's half of a sync the peer just completed (it pulled or
+ * merged from us). Only applied while our copy still matches what the peer
+ * based its sync on — if we edited the file since, the files genuinely
+ * diverged again and no agreement should be recorded.
+ */
+export async function recordPeerAnnouncement(
+	endpointId: string,
+	announcement: SyncAnnouncement,
+	localEntries: SyncEntry[]
+): Promise<void> {
+	const byPath = new Map(localEntries.map((e) => [e.path, e]));
+	const entries: BaselineEntry[] = [];
+	for (const item of announcement.synced) {
+		const local = byPath.get(item.path);
+		if (!local || local.hash !== item.sourceHash) continue;
+		// The peer's copy is only needed for its hash.
+		entries.push({ path: item.path, local, remote: { ...local, hash: item.hash } });
+	}
+	await updateBaseline(endpointId, entries);
+	await removeBaselineEntries(
+		endpointId,
+		announcement.deleted.filter((path) => !byPath.has(path))
+	);
 }
 
 /** Drops baseline rows for paths no longer worth tracking (e.g. deleted on both sides). */
