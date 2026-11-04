@@ -40,10 +40,7 @@ export async function updateBaseline(endpointId: string, entries: BaselineEntry[
 }
 
 /** Builds the message telling a peer what this device now holds after a sync (see `recordPeerAnnouncement`). */
-export function buildAnnouncement(
-	synced: BaselineEntry[],
-	deleted: string[]
-): SyncAnnouncement {
+export function buildAnnouncement(synced: BaselineEntry[], deleted: string[]): SyncAnnouncement {
 	return {
 		// This device's post-sync copy is `local`; the peer's copy it was based on is `remote`.
 		synced: synced.map((e) => ({ path: e.path, hash: e.local.hash, sourceHash: e.remote.hash })),

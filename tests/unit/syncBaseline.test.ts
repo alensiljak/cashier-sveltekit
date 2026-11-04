@@ -146,7 +146,13 @@ test('recordPeerAnnouncement records both halves when our copy is what the peer 
 	const endpointId = 'endpoint-announce-ok';
 	// The peer pulled our copy (hash "ours") and now holds "ours" too.
 	const announcement = buildAnnouncement(
-		[{ path: 'a.beancount', local: syncEntry('a.beancount', 'ours'), remote: syncEntry('a.beancount', 'ours') }],
+		[
+			{
+				path: 'a.beancount',
+				local: syncEntry('a.beancount', 'ours'),
+				remote: syncEntry('a.beancount', 'ours')
+			}
+		],
 		[]
 	);
 
@@ -161,7 +167,13 @@ test('recordPeerAnnouncement records the merged hash as the peer side after a me
 	const endpointId = 'endpoint-announce-merge';
 	// Peer merged: it now holds "merged", having read our "ours".
 	const announcement = buildAnnouncement(
-		[{ path: 'a.beancount', local: syncEntry('a.beancount', 'merged'), remote: syncEntry('a.beancount', 'ours') }],
+		[
+			{
+				path: 'a.beancount',
+				local: syncEntry('a.beancount', 'merged'),
+				remote: syncEntry('a.beancount', 'ours')
+			}
+		],
 		[]
 	);
 
@@ -175,11 +187,19 @@ test('recordPeerAnnouncement records the merged hash as the peer side after a me
 test('recordPeerAnnouncement ignores a path we edited since the peer read it', async () => {
 	const endpointId = 'endpoint-announce-stale';
 	const announcement = buildAnnouncement(
-		[{ path: 'a.beancount', local: syncEntry('a.beancount', 'ours'), remote: syncEntry('a.beancount', 'ours') }],
+		[
+			{
+				path: 'a.beancount',
+				local: syncEntry('a.beancount', 'ours'),
+				remote: syncEntry('a.beancount', 'ours')
+			}
+		],
 		[]
 	);
 
-	await recordPeerAnnouncement(endpointId, announcement, [syncEntry('a.beancount', 'edited-since')]);
+	await recordPeerAnnouncement(endpointId, announcement, [
+		syncEntry('a.beancount', 'edited-since')
+	]);
 
 	assert.isFalse((await getBaseline(endpointId)).has('a.beancount'));
 });
@@ -187,13 +207,23 @@ test('recordPeerAnnouncement ignores a path we edited since the peer read it', a
 test('recordPeerAnnouncement drops the baseline for a deletion we have also made', async () => {
 	const endpointId = 'endpoint-announce-delete';
 	await updateBaseline(endpointId, [
-		{ path: 'gone.beancount', local: syncEntry('gone.beancount', 'x'), remote: syncEntry('gone.beancount', 'x') },
-		{ path: 'kept.beancount', local: syncEntry('kept.beancount', 'y'), remote: syncEntry('kept.beancount', 'y') }
+		{
+			path: 'gone.beancount',
+			local: syncEntry('gone.beancount', 'x'),
+			remote: syncEntry('gone.beancount', 'x')
+		},
+		{
+			path: 'kept.beancount',
+			local: syncEntry('kept.beancount', 'y'),
+			remote: syncEntry('kept.beancount', 'y')
+		}
 	]);
 
-	await recordPeerAnnouncement(endpointId, buildAnnouncement([], ['gone.beancount', 'kept.beancount']), [
-		syncEntry('kept.beancount', 'y')
-	]);
+	await recordPeerAnnouncement(
+		endpointId,
+		buildAnnouncement([], ['gone.beancount', 'kept.beancount']),
+		[syncEntry('kept.beancount', 'y')]
+	);
 
 	const baseline = await getBaseline(endpointId);
 	assert.isFalse(baseline.has('gone.beancount'));
