@@ -7,8 +7,10 @@
 */
 
 import {
+	buildAnnouncement,
 	clearBaseline,
 	getBaseline,
+	recordPeerAnnouncement,
 	removeBaselineEntries,
 	updateBaseline
 } from '#lib/sync/syncBaseline';
@@ -136,6 +138,66 @@ test('removeBaselineEntries deletes only the specified paths for that endpoint',
 	assert.equal(baseline.size, 1);
 	assert.isTrue(baseline.has('keep.beancount'), 'untouched path must remain');
 	assert.isFalse(baseline.has('drop.beancount'), 'removed path must be gone');
+});
+
+const syncEntry = (path: string, hash: string) => ({ path, size: 1, lastModified: 1, hash });
+
+test('recordPeerAnnouncement records both halves when our copy is what the peer synced from', async () => {
+	const endpointId = 'endpoint-announce-ok';
+	// The peer pulled our copy (hash "ours") and now holds "ours" too.
+	const announcement = buildAnnouncement(
+		[{ path: 'a.beancount', local: syncEntry('a.beancount', 'ours'), remote: syncEntry('a.beancount', 'ours') }],
+		[]
+	);
+
+	await recordPeerAnnouncement(endpointId, announcement, [syncEntry('a.beancount', 'ours')]);
+
+	const row = (await getBaseline(endpointId)).get('a.beancount');
+	assert.equal(row?.localHash, 'ours');
+	assert.equal(row?.remoteHash, 'ours');
+});
+
+test('recordPeerAnnouncement records the merged hash as the peer side after a merge', async () => {
+	const endpointId = 'endpoint-announce-merge';
+	// Peer merged: it now holds "merged", having read our "ours".
+	const announcement = buildAnnouncement(
+		[{ path: 'a.beancount', local: syncEntry('a.beancount', 'merged'), remote: syncEntry('a.beancount', 'ours') }],
+		[]
+	);
+
+	await recordPeerAnnouncement(endpointId, announcement, [syncEntry('a.beancount', 'ours')]);
+
+	const row = (await getBaseline(endpointId)).get('a.beancount');
+	assert.equal(row?.localHash, 'ours');
+	assert.equal(row?.remoteHash, 'merged');
+});
+
+test('recordPeerAnnouncement ignores a path we edited since the peer read it', async () => {
+	const endpointId = 'endpoint-announce-stale';
+	const announcement = buildAnnouncement(
+		[{ path: 'a.beancount', local: syncEntry('a.beancount', 'ours'), remote: syncEntry('a.beancount', 'ours') }],
+		[]
+	);
+
+	await recordPeerAnnouncement(endpointId, announcement, [syncEntry('a.beancount', 'edited-since')]);
+
+	assert.isFalse((await getBaseline(endpointId)).has('a.beancount'));
+});
+
+test('recordPeerAnnouncement drops the baseline for a deletion we have also made', async () => {
+	const endpointId = 'endpoint-announce-delete';
+	await updateBaseline(endpointId, [
+		{ path: 'gone.beancount', local: syncEntry('gone.beancount', 'x'), remote: syncEntry('gone.beancount', 'x') },
+		{ path: 'kept.beancount', local: syncEntry('kept.beancount', 'y'), remote: syncEntry('kept.beancount', 'y') }
+	]);
+
+	await recordPeerAnnouncement(endpointId, buildAnnouncement([], ['gone.beancount', 'kept.beancount']), [
+		syncEntry('kept.beancount', 'y')
+	]);
+
+	const baseline = await getBaseline(endpointId);
+	assert.isFalse(baseline.has('gone.beancount'));
+	assert.isTrue(baseline.has('kept.beancount'), 'a file we still have must keep its baseline');
 });
 
 test('clearBaseline wipes every row for one endpoint, leaving another endpoint intact', async () => {

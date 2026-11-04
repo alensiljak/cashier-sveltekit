@@ -12,6 +12,7 @@
 */
 import type { PeerSyncBaseline } from '#lib/data/model';
 import type { SyncEntry } from './SyncSource';
+import { compareToBase } from './threeWay';
 
 /**
  * 'differs' = both sides have the file with different content and there is no
@@ -34,47 +35,33 @@ export interface DiffEntry {
 }
 
 /**
- * A side "changed" when its current hash doesn't match *that side's* half
- * of the baseline recorded at the last sync — local and remote are compared
- * against separate baseline halves (see PeerSyncBaseline's doc comment), not
- * against each other's, because a manual merge can leave the two sides
- * holding deliberately different, reconciled content. A missing baseline
- * half (this path/side was never synced with this endpoint before) counts
- * as changed too — there's nothing to confirm it matches, so it can't be
- * reported unchanged. A side that no longer has the file, but did at the
- * last sync, also counts as changed (deletion).
- */
-function changedSinceBaseline(
-	entry: SyncEntry | undefined,
-	baselineHash: string | undefined
-): boolean {
-	if (!entry) return baselineHash !== undefined;
-	if (baselineHash === undefined) return true;
-	return entry.hash !== baselineHash;
-}
-
-/**
- * Local and remote holding byte-identical content is always 'unchanged',
- * regardless of baseline state — this is what used to require a manual
- * "Verify" round trip; now every scan re-derives it for free from the hash
- * already computed during listTree(). Only once the hashes actually differ
- * does baseline history decide which side(s) diverged.
+ * Maps the channel-independent comparison (threeWay.ts) onto peer statuses.
+ * Byte-identical content is 'unchanged' regardless of baseline state; once the
+ * hashes differ, each side is judged against its own baseline half (see
+ * PeerSyncBaseline's doc comment), and a path with no baseline is 'differs'.
  */
 function classify(
 	local: SyncEntry | undefined,
 	remote: SyncEntry | undefined,
 	baseline: PeerSyncBaseline | undefined
 ): SyncStatus {
-	if (local && remote && local.hash === remote.hash) return 'unchanged';
-	// Never synced with this endpoint: nothing proves which side moved.
-	if (local && remote && !baseline) return 'differs';
-
-	const localChanged = changedSinceBaseline(local, baseline?.localHash);
-	const remoteChanged = changedSinceBaseline(remote, baseline?.remoteHash);
-	if (localChanged && remoteChanged) return 'conflict';
-	if (remoteChanged) return 'remote-newer';
-	if (localChanged) return 'local-newer';
-	return 'unchanged';
+	const change = compareToBase(
+		local?.hash ?? null,
+		remote?.hash ?? null,
+		baseline ? { local: baseline.localHash, remote: baseline.remoteHash } : null
+	);
+	switch (change) {
+		case 'both':
+			return 'conflict';
+		case 'remote':
+			return 'remote-newer';
+		case 'local':
+			return 'local-newer';
+		case 'unrelated':
+			return 'differs';
+		default:
+			return 'unchanged';
+	}
 }
 
 function defaultActionFor(status: SyncStatus): SyncAction {

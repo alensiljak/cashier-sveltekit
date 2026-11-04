@@ -116,19 +116,17 @@ test('conflict: both local and remote differ from their baseline halves', () => 
 	assert.equal(result[0].action, 'conflict');
 });
 
-test('no baseline at all, present on both sides: both sides count as changed -> conflict', () => {
-	// Neither side has ever been recorded for this path, so there is nothing to
-	// confirm a match against — changedSinceBaseline returns true for a
-	// present entry when its baseline half is undefined, on both sides. Local
-	// and remote also hold different hashes here, so the hash-equality
-	// shortcut doesn't mask this case.
+test('no baseline at all, present on both sides with different content -> differs (unresolved)', () => {
+	// Never synced with this endpoint: there is no common ancestor, so neither
+	// "newer" nor "conflict" can be claimed. It stays unresolved (action
+	// 'conflict') until the user compares and chooses.
 	const local = [entry('never-synced.beancount', 'hash-local')];
 	const remote = [entry('never-synced.beancount', 'hash-remote')];
 	const baseline = baselineMap(); // empty — no row for this path
 
 	const result = diffAgainstBaseline(local, remote, baseline);
 
-	assert.equal(result[0].status, 'conflict');
+	assert.equal(result[0].status, 'differs');
 	assert.equal(result[0].action, 'conflict');
 });
 
