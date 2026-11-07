@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import { listScx } from '#lib/services/scxService';
+	import { updateRepaymentAmounts } from '#lib/services/repaymentService';
 	import type { ScheduledTransaction, ScxId } from '#lib/data/model';
 	import appService from '#lib/services/appService';
 	import { ChevronLeftIcon, ChevronRightIcon } from '@lucide/svelte';
@@ -18,6 +19,11 @@
 	let selectedDate: string | null = $state(null);
 
 	onMount(async () => {
+		try {
+			await updateRepaymentAmounts();
+		} catch (error) {
+			console.error('Error updating repayment amounts', error);
+		}
 		allItems = await listScx();
 	});
 

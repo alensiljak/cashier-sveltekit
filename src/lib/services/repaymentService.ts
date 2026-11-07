@@ -10,7 +10,18 @@ import fullLedgerService from '#lib/services/ledgerWorkerClient';
  * The Liabilities posting receives -balance (positive, reducing the liability).
  * The Assets posting is cleared so XactAugmenter fills it via zero-sum.
  */
-export async function updateRepaymentAmounts(): Promise<void> {
+export function updateRepaymentAmounts(): Promise<void> {
+	// Several components may request this at once (home cards, list page).
+	// Share the in-flight run instead of querying and saving twice.
+	inFlight ??= doUpdateRepaymentAmounts().finally(() => {
+		inFlight = null;
+	});
+	return inFlight;
+}
+
+let inFlight: Promise<void> | null = null;
+
+async function doUpdateRepaymentAmounts(): Promise<void> {
 	const scxs = await listScx();
 	const repaymentScxs = scxs.filter((s) => s.repayment);
 	if (!repaymentScxs.length) return;
@@ -27,21 +38,31 @@ export async function updateRepaymentAmounts(): Promise<void> {
 
 		const colBalance = result.columns.indexOf('balance');
 		const colCurrency = result.columns.indexOf('currency');
-		if (!result.rows.length || colBalance === -1) continue;
 
+		// No rows means no postings on the account, i.e. a valid zero balance.
 		// Prefer the first row; if multiple currencies exist take the first.
 		const row = (result.rows as unknown[][])[0];
-		const balance = Number(row[colBalance]) || 0;
-		const currency = row[colCurrency] as string;
-
-		if (balance === 0) continue;
+		const balance = row && colBalance !== -1 ? Number(row[colBalance]) || 0 : 0;
+		const currency = row && colCurrency !== -1 ? (row[colCurrency] as string) : undefined;
 
 		// balance is negative (liability owed); payment brings it back toward 0.
-		liabPosting.amount = -balance;
-		liabPosting.currency = currency;
+		// A zero balance yields a zero amount (avoid -0). The currency is kept
+		// from the existing posting when there is no balance row to take it from.
+		const newAmount = balance === 0 ? 0 : -balance;
+		const newCurrency = currency ?? liabPosting.currency;
 
 		// Clear the Assets posting amount so XactAugmenter calculates it via zero-sum.
 		const assetsPosting = postings.find((p: Posting) => p.account?.startsWith('Assets:'));
+
+		// Skip the write if nothing changed, so repeated calls are cheap.
+		const unchanged =
+			liabPosting.amount === newAmount &&
+			liabPosting.currency === newCurrency &&
+			(!assetsPosting || assetsPosting.amount === undefined);
+		if (unchanged) continue;
+
+		liabPosting.amount = newAmount;
+		liabPosting.currency = newCurrency;
 		if (assetsPosting) {
 			assetsPosting.amount = undefined;
 		}
