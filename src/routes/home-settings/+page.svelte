@@ -4,7 +4,7 @@
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import { HomeCardNames } from '#lib/enums';
 	import appService from '#lib/services/appService';
-	import { SettingKeys, settings } from '#lib/settings';
+	import { DeviceSettingKeys, deviceSettings } from '#lib/settings';
 	import { CheckIcon } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 
@@ -43,7 +43,7 @@
 
 	async function onFabClicked() {
 		const visibleCards = items.filter((item) => item.visible).map((item) => item.name);
-		await settings.set(SettingKeys.visibleCards, visibleCards);
+		await deviceSettings.set(DeviceSettingKeys.visibleCards, visibleCards);
 		history.back();
 	}
 </script>

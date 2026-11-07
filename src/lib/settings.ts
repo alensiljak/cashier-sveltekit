@@ -76,8 +76,6 @@ export const SettingKeys = {
 	// syncAssetAllocation: 'syncAssetAllocation',
 	syncPayees: 'syncPayees',
 	syncOpeningBalances: 'syncOpeningBalances',
-	// Home cards
-	visibleCards: 'homeCardNames',
 	// Net worth card period
 	netWorthPeriod: 'netWorth.period',
 	// Peer sync
@@ -111,6 +109,9 @@ export const SettingKeys = {
 
 /** Settings specific to this device (not exported). */
 export const DeviceSettingKeys = {
+	// Home screen cards: visible card names, in display order. Each device keeps its own layout.
+	// (Previously a shared setting under the same key; read as a fallback in appService.getVisibleCards.)
+	visibleCards: 'homeCardNames',
 	// Peer sync identity for this device
 	peerId: 'peerId',
 	peerName: 'peerName',

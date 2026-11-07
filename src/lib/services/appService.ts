@@ -4,7 +4,7 @@
 import db from '#lib/data/db';
 import { ScheduledTransaction, Xact, type ScxId } from '#lib/data/model';
 import { getScx, listScx, replaceAllScx } from '#lib/services/scxService';
-import { settings, SettingKeys } from '#lib/settings';
+import { settings, SettingKeys, deviceSettings, DeviceSettingKeys } from '#lib/settings';
 import { HomeCardNames } from '#lib/enums';
 import { DefaultCurrencyStore, ScheduledXact, xact } from '#lib/data/mainStore';
 import { loadInvestmentAccounts } from './accountsService';
@@ -71,7 +71,11 @@ class AppService {
 	}
 
 	async getVisibleCards(): Promise<string[]> {
-		let visibleCardNames: string[] = (await settings.get(SettingKeys.visibleCards)) as string[];
+		let visibleCardNames = await deviceSettings.get<string[]>(DeviceSettingKeys.visibleCards);
+		if (!visibleCardNames) {
+			// legacy: the list used to be a shared setting; use it until this device saves its own
+			visibleCardNames = await settings.get<string[]>(DeviceSettingKeys.visibleCards);
+		}
 		if (!visibleCardNames) {
 			// create the default cards list here
 			visibleCardNames = [
