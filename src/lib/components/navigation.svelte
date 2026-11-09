@@ -34,6 +34,7 @@
 	import CoinsIcon from '@lucide/svelte/icons/coins';
 	import TrendingUpIcon from '@lucide/svelte/icons/trending-up';
 	import ListTreeIcon from '@lucide/svelte/icons/list-tree';
+	import ListChecksIcon from '@lucide/svelte/icons/list-checks';
 	import PiggyBankIcon from '@lucide/svelte/icons/piggy-bank';
 	import ShieldCheckIcon from '@lucide/svelte/icons/shield-check';
 	import CloudUploadIcon from '@lucide/svelte/icons/cloud-upload';
@@ -277,6 +278,19 @@
 							>
 								<LandmarkIcon />
 								<span>Accounts</span>
+							</a>
+						</li>
+						<li>
+							<a
+								href="/accounts/reconcile"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname ===
+								'/accounts/reconcile'
+									? 'active bg-secondary text-secondary-content'
+									: ''}"
+								onclick={closeDrawer}
+							>
+								<ListChecksIcon />
+								<span>Reconcile</span>
 							</a>
 						</li>
 						<li>

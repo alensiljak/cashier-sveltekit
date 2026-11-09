@@ -19,6 +19,7 @@
 	import CopyIcon from '@lucide/svelte/icons/copy';
 	import ActivityIcon from '@lucide/svelte/icons/activity';
 	import CircleCheckBigIcon from '@lucide/svelte/icons/circle-check-big';
+	import ListChecksIcon from '@lucide/svelte/icons/list-checks';
 
 	function copyToClipboard(text: string) {
 		navigator.clipboard.writeText(text);
@@ -47,6 +48,12 @@
 				text="Balance Assertion"
 				onclick={() =>
 					goto(`/accounts/assert-balance?account=${encodeURIComponent(page.data.account.name)}`)}
+			/>
+			<ToolbarMenuItem
+				Icon={ListChecksIcon}
+				text="Reconcile"
+				onclick={() =>
+					goto(`/accounts/reconcile?account=${encodeURIComponent(page.data.account.name)}`)}
 			/>
 			<ToolbarMenuItem
 				Icon={ActivityIcon}

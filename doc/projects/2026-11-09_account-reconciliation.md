@@ -21,7 +21,7 @@ A "reconcile account" flow would have you pick an account, enter the statement's
 
 ### Implementation steps
 
-1. **Book balance as of a date.** Add a helper next to [existing.ts](/src/lib/importers/existing.ts) that returns an account's balance in one currency before a given date, using a BQL `sum(position)` query with `date < X`. This matches Beancount's start-of-day semantics for `balance`. Keep the difference calculation a pure function so it can be unit-tested.
+1. ✅ **Book balance as of a date.** Add a helper next to [existing.ts](/src/lib/importers/existing.ts) that returns an account's balance in one currency before a given date, using a BQL `sum(position)` query with `date < X`. This matches Beancount's start-of-day semantics for `balance`. Keep the difference calculation a pure function so it can be unit-tested.
 2. **Find the starting point.** Look up the account's latest balance assertion that passes, if there is one. Transactions after it are the ones still to reconcile. Without an assertion, start from the account's first transaction.
 3. **Reconcile page** (`/accounts/reconcile?account=…`). Ask for the statement date, closing balance and currency (reuse the assert-balance form fields). Show the book balance, the statement balance and the difference.
 4. **Tick-off list.** List the transactions since the starting point, each with a checkbox. Show the sum of the ticked transactions and the remaining difference, which reaches zero when the ticked set matches the statement. Highlight `!`-flagged rows. Each row opens the transaction so you can fix it and come back.
