@@ -4,10 +4,10 @@
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import Fab from '#lib/components/FAB.svelte';
 	import { xact as xactStore, xactId } from '#lib/data/mainStore';
-	import { Xact } from '#lib/data/model';
+	import type { Xact } from '#lib/data/model';
+	import { saveBalanceAssertion } from '#lib/reconciliation/saveAssertion';
 	import appService from '#lib/services/appService';
 	import fullLedgerService from '#lib/services/ledgerWorkerClient';
-	import { getXactStore } from '#lib/storage/xactStoreRegistry';
 	import Notifier from '#lib/utils/notifier';
 	import CheckIcon from '@lucide/svelte/icons/check';
 	import { onMount } from 'svelte';
@@ -49,19 +49,10 @@
 			Notifier.error('Enter a currency');
 			return;
 		}
-		const tx = editing ? editing.xact : new Xact();
-		tx.date = date;
-		tx.payee = 'Balance assertion';
-		tx.note = `${accountName} = ${value} ${currency.trim().toUpperCase()}`;
-		tx.postings = [];
-		tx.balanceAssertion = {
-			account: accountName,
-			amount: value,
-			currency: currency.trim().toUpperCase()
-		};
-		const store = await getXactStore();
-		if (editing) await store.updateXact(editing.id, tx);
-		else await store.appendMany([tx]);
+		const tx = await saveBalanceAssertion(
+			{ account: accountName, date, amount: value, currency },
+			editing
+		);
 		Notifier.success('Balance assertion saved');
 		if (editing) {
 			xactStore.set(tx);

@@ -2,6 +2,10 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import Toolbar from '#lib/components/Toolbar.svelte';
+	import Fab from '#lib/components/FAB.svelte';
+	import Notifier from '#lib/utils/notifier';
+	import CheckIcon from '@lucide/svelte/icons/check';
+	import { saveBalanceAssertion } from '#lib/reconciliation/saveAssertion';
 	import { selectionMetadata } from '#lib/data/mainStore';
 	import { SelectionType } from '#lib/enums';
 	import { SelectionModeMetadata } from '#lib/settings';
@@ -58,6 +62,32 @@
 		isNaN(statementValue) ? undefined : reconciliationDifference(clearedBalance, statementValue)
 	);
 	const tickedCount = $derived(ticked.filter(Boolean).length);
+
+	/**
+	 * Beancount checks an assertion against the whole account, so saving is only offered when
+	 * the book itself matches the statement, whatever has been ticked.
+	 */
+	const canSave = $derived(difference === 0 && !loading);
+	let saving = $state(false);
+
+	async function onSave() {
+		if (!canSave || saving) return;
+		saving = true;
+		try {
+			await saveBalanceAssertion({
+				account: accountName,
+				date: assertionDateFor(statementDate),
+				amount: statementValue,
+				currency
+			});
+			Notifier.success('Balance assertion saved');
+			await goto(`/accounts/account-xacts/${encodeURIComponent(accountName)}`);
+		} catch (e) {
+			Notifier.error(`Could not save: ${e instanceof Error ? e.message : e}`);
+		} finally {
+			saving = false;
+		}
+	}
 
 	function setAllTicked(value: boolean) {
 		ticked = postings.map(() => value);
@@ -146,6 +176,10 @@
 
 <main class="flex h-screen flex-col">
 	<Toolbar title="Reconcile Account" />
+
+	{#if canSave}
+		<Fab Icon={CheckIcon} onclick={onSave} />
+	{/if}
 
 	<section class="container mx-auto flex-1 space-y-4 overflow-y-auto p-4 lg:max-w-screen-sm">
 		<div class="form-control">
@@ -258,8 +292,14 @@
 
 			{#if difference === 0 && !loading}
 				<div class="alert alert-success alert-soft text-sm">
-					The book agrees with the statement. A balance assertion for this would be dated
-					{assertionDateFor(statementDate)}.
+					The book agrees with the statement. Tap the check button to save a balance assertion
+					dated {assertionDateFor(statementDate)}.
+				</div>
+			{:else if difference !== undefined && !loading && remaining === 0 && tickedCount > 0}
+				<div class="alert alert-warning alert-soft text-sm">
+					The ticked transactions match the statement, but the book still differs. Unticked
+					transactions are in the book and not on the statement; check them before saving an
+					assertion.
 				</div>
 			{/if}
 
