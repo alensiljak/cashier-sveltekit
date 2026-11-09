@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import { ChevronRight, ChevronDown } from '@lucide/svelte';
+	import ChevronRight from '@lucide/svelte/icons/chevron-right';
+	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 	import Self from './JsonTreeNode.svelte';
 
 	type Props = {
@@ -33,15 +34,15 @@
 		type === 'array'
 			? (value as unknown[]).map((v, i) => ({ key: `[${i}]`, val: v }))
 			: type === 'object'
-			? Object.entries(value as Record<string, unknown>).map(([k, v]) => ({ key: k, val: v }))
-			: []
+				? Object.entries(value as Record<string, unknown>).map(([k, v]) => ({ key: k, val: v }))
+				: []
 	);
 	let summary = $derived(
 		type === 'array'
 			? `[${(value as unknown[]).length}]`
 			: type === 'object'
-			? `{${Object.keys(value as object).length}}`
-			: ''
+				? `{${Object.keys(value as object).length}}`
+				: ''
 	);
 </script>
 

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
-	import { ChevronLeftIcon, ChevronRightIcon } from '@lucide/svelte';
+	import ChevronLeftIcon from '@lucide/svelte/icons/chevron-left';
+	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import fullLedgerService from '#lib/services/ledgerWorkerClient';
 	import { SettingKeys, settings } from '#lib/settings';
@@ -37,10 +38,7 @@
 	let latestYear = $derived(currentFinancialYearStart(config.yearStart));
 	// Grows if the user steps back past the default window, so the selected year is always listed.
 	let years = $derived(
-		Array.from(
-			{ length: Math.max(8, latestYear - startYear + 1) },
-			(_, i) => latestYear - i
-		)
+		Array.from({ length: Math.max(8, latestYear - startYear + 1) }, (_, i) => latestYear - i)
 	);
 
 	function stepYear(delta: number) {
@@ -233,11 +231,10 @@
 								class="flex items-center justify-between rounded px-2 py-1 text-sm hover:bg-base-200"
 							>
 								<span
-										class="truncate {getAccountColour(acc.account)
-											? `${getAccountColour(acc.account)} opacity-70`
-											: 'text-base-content/85'}"
-										>{acc.account}</span
-									>
+									class="truncate {getAccountColour(acc.account)
+										? `${getAccountColour(acc.account)} opacity-70`
+										: 'text-base-content/85'}">{acc.account}</span
+								>
 								<span class="font-mono tabular-nums">{fmt(acc.total)}</span>
 							</a>
 						{:else}
@@ -315,8 +312,8 @@
 		{:else if result}
 			{#if unconverted.length > 0}
 				<div class="mt-3 rounded-lg border border-warning bg-warning/10 p-3 text-sm">
-					No exchange rate to {currency} found for {unconverted.join(', ')}. Those amounts are
-					shown unconverted, so the totals mix currencies. Add price directives (e.g. {unconverted[0]}
+					No exchange rate to {currency} found for {unconverted.join(', ')}. Those amounts are shown
+					unconverted, so the totals mix currencies. Add price directives (e.g. {unconverted[0]}
 					→ {currency}) to the book.
 				</div>
 			{/if}
@@ -351,8 +348,7 @@
 			{#if showConfig}
 				<textarea
 					class="textarea textarea-bordered mt-3 h-72 w-full font-mono text-xs"
-					bind:value={configText}
-				></textarea>
+					bind:value={configText}></textarea>
 				{#if configError}
 					<div class="mt-2 text-sm text-error">{configError}</div>
 				{/if}

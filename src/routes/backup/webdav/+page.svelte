@@ -9,18 +9,16 @@
 	import { uploadCrdtState, webDavModified } from '#lib/services/webdavDelta';
 	import Notifier from '#lib/utils/notifier';
 	import { WebDavClient } from '#lib/utils/webdav';
-	import {
-		SettingsIcon,
-		RefreshCwIcon,
-		RefreshCcwIcon,
-		GitCompareArrowsIcon,
-		EyeIcon,
-		CloudIcon,
-		ArrowUpIcon,
-		ArrowDownIcon,
-		ChevronDownIcon,
-		XIcon
-	} from '@lucide/svelte';
+	import SettingsIcon from '@lucide/svelte/icons/settings';
+	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
+	import RefreshCcwIcon from '@lucide/svelte/icons/refresh-ccw';
+	import GitCompareArrowsIcon from '@lucide/svelte/icons/git-compare-arrows';
+	import EyeIcon from '@lucide/svelte/icons/eye';
+	import CloudIcon from '@lucide/svelte/icons/cloud';
+	import ArrowUpIcon from '@lucide/svelte/icons/arrow-up';
+	import ArrowDownIcon from '@lucide/svelte/icons/arrow-down';
+	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
+	import XIcon from '@lucide/svelte/icons/x';
 	import YdocDevices from '#lib/components/YdocDevices.svelte';
 	import { goto } from '$app/navigation';
 	import type { WebDavLastSyncTs as LastSyncTs } from '#lib/services/webdavAutoBackupService';
@@ -50,7 +48,6 @@
 		if (!settingsLastModified || !lastSyncTs.settings) return null;
 		return settingsLastModified > new Date(lastSyncTs.settings) ? 'down' : null;
 	});
-
 
 	const noneSelected = $derived(!includeSettings && !includeXacts && !includeScheduled);
 	// Local and Scheduled Transactions are binary Yjs documents, merged rather than compared,
@@ -129,12 +126,16 @@
 				const allSettings = await settings.getAll();
 				const json = JSON.stringify(allSettings, null, 2);
 				const res = await dav.putJsonGz('settings.json', json);
-				if (res.ok) { Notifier.success('Settings uploaded'); uploaded.settings = true; }
-				else Notifier.error(`Upload failed for settings.json.gz: ${res.status} ${res.statusText}`);
+				if (res.ok) {
+					Notifier.success('Settings uploaded');
+					uploaded.settings = true;
+				} else
+					Notifier.error(`Upload failed for settings.json.gz: ${res.status} ${res.statusText}`);
 			}
 			if (includeXacts) {
 				const errors = await uploadCrdtState(dav, ['xacts']);
-				if (errors.length) Notifier.error(`Upload failed for local transactions: ${errors.join('; ')}`);
+				if (errors.length)
+					Notifier.error(`Upload failed for local transactions: ${errors.join('; ')}`);
 				else Notifier.success('Local transactions uploaded');
 			}
 			if (includeScheduled) {
@@ -335,11 +336,7 @@
 			</label>
 			<div class="flex items-center gap-3">
 				<label class="flex flex-1 items-center gap-3 cursor-pointer">
-					<input
-						type="checkbox"
-						class="checkbox checkbox-primary"
-						bind:checked={includeXacts}
-					/>
+					<input type="checkbox" class="checkbox checkbox-primary" bind:checked={includeXacts} />
 					<span class="flex-1">Local Transactions</span>
 					<!-- Merged, so there is no newer/older or conflict to flag. -->
 					{@render syncBadge(xactsLastModified, null)}
@@ -356,7 +353,10 @@
 				{/if}
 			</div>
 			{#if webdavUrl}
-				<div class:hidden={!devicesOpen} class="rounded-box bg-base-100 p-3 shadow-sm border border-base-300">
+				<div
+					class:hidden={!devicesOpen}
+					class="rounded-box bg-base-100 p-3 shadow-sm border border-base-300"
+				>
 					<YdocDevices
 						bind:this={ydocDevices}
 						url={webdavUrl}

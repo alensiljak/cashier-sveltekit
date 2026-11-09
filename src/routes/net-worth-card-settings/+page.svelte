@@ -3,7 +3,7 @@
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import PeriodPicker, { type Period } from '#lib/components/PeriodPicker.svelte';
 	import { SettingKeys, settings } from '#lib/settings';
-	import { CheckIcon } from '@lucide/svelte';
+	import CheckIcon from '@lucide/svelte/icons/check';
 	import { onMount } from 'svelte';
 
 	const DEFAULT_PERIOD: Period = { n: 12, unit: 'months' };

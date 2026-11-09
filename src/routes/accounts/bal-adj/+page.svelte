@@ -8,7 +8,8 @@
 	import { SelectionModeMetadata } from '#lib/settings';
 	import fullLedgerService from '#lib/services/ledgerWorkerClient';
 	import appService from '#lib/services/appService';
-	import { CheckIcon, CalculatorIcon } from '@lucide/svelte';
+	import CheckIcon from '@lucide/svelte/icons/check';
+	import CalculatorIcon from '@lucide/svelte/icons/calculator';
 	import { onMount } from 'svelte';
 
 	const accountName = $derived(page.url.searchParams.get('account') ?? '');

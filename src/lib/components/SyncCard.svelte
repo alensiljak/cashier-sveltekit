@@ -1,15 +1,13 @@
 <script lang="ts">
 	import { onMount, untrack, type Component, type Snippet } from 'svelte';
 	import { goto } from '$app/navigation';
-	import {
-		ArrowLeftRightIcon,
-		CloudIcon,
-		DatabaseIcon,
-		RefreshCwIcon,
-		RotateCwIcon,
-		Settings2Icon,
-		UsersIcon
-	} from '@lucide/svelte';
+	import ArrowLeftRightIcon from '@lucide/svelte/icons/arrow-left-right';
+	import CloudIcon from '@lucide/svelte/icons/cloud';
+	import DatabaseIcon from '@lucide/svelte/icons/database';
+	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
+	import RotateCwIcon from '@lucide/svelte/icons/rotate-cw';
+	import Settings2Icon from '@lucide/svelte/icons/settings-2';
+	import UsersIcon from '@lucide/svelte/icons/users';
 	import CashierCardTemplate from './CashierCardTemplate.svelte';
 	import { peerConnection } from '#lib/sync/peerConnection.svelte';
 	import { reloadLedgerFromOpfs } from '#lib/services/ledgerReload';

@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { ArrowDownIcon, ArrowUpIcon, RefreshCwIcon } from '@lucide/svelte';
+	import ArrowDownIcon from '@lucide/svelte/icons/arrow-down';
+	import ArrowUpIcon from '@lucide/svelte/icons/arrow-up';
+	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import { isS3Configured, loadS3Config, type S3Config } from '#lib/services/s3Config';
 	import { describeS3Error } from '#lib/services/s3Client';
@@ -117,8 +119,8 @@
 				{/each}
 			</div>
 			<p class="text-xs text-base-content/60">
-				A preview only: nothing is downloaded, uploaded or merged here. "Old → new" is the record
-				as it is now, and as it would be afterwards.
+				A preview only: nothing is downloaded, uploaded or merged here. "Old → new" is the record as
+				it is now, and as it would be afterwards.
 			</p>
 
 			{#if loadError}
@@ -170,15 +172,16 @@
 						<div class="card-body gap-2 p-4">
 							<h2 class="card-title text-sm">Why the sync arrows show</h2>
 							<p class="text-xs text-base-content/60">
-								The arrows show record changes. This is the lower level, the Yjs clocks per client, for
-								troubleshooting. This device: {diagnostics.localClients} clients, reset id {diagnostics.localResetId ||
+								The arrows show record changes. This is the lower level, the Yjs clocks per client,
+								for troubleshooting. This device: {diagnostics.localClients} clients, reset id {diagnostics.localResetId ||
 									'none'}.
 							</p>
 							{#each diagnostics.files as f (f.key)}
 								<div class="text-xs">
 									<div class="font-semibold break-all">
 										{f.own ? 'This device' : (f.name ?? f.key)}
-										{#if f.ignored}<span class="badge badge-neutral badge-sm">{f.ignored}</span>{/if}
+										{#if f.ignored}<span class="badge badge-neutral badge-sm">{f.ignored}</span
+											>{/if}
 										{#if f.retiredOps}<span class="badge badge-warning badge-sm"
 												>pre-reset operations: skipped by merge</span
 											>{/if}
@@ -189,7 +192,9 @@
 									{#if f.retiredHits.length}
 										<ul class="font-mono text-warning">
 											{#each f.retiredHits as h (h.client + ':' + h.clock)}
-												<li>retired: client {h.client} clock {h.clock} &lt; {h.limit} ({h.kind})</li>
+												<li>
+													retired: client {h.client} clock {h.clock} &lt; {h.limit} ({h.kind})
+												</li>
 											{/each}
 										</ul>
 									{/if}

@@ -4,20 +4,17 @@
 	import HelpButton from '#lib/help/HelpButton.svelte';
 	import SquareButton from '#lib/components/SquareButton.svelte';
 	import SquareButtonGroup from '#lib/components/SquareButtonGroup.svelte';
-	import {
-		TerminalIcon,
-		LandmarkIcon,
-		TrendingUpIcon,
-		ReceiptIcon,
-		ArrowLeftRightIcon,
-		ScaleIcon,
-		ActivityIcon,
-		ChartLineIcon,
-		PercentIcon,
-		ChartColumnStackedIcon,
-		FileSpreadsheetIcon
-
-	} from '@lucide/svelte';
+	import TerminalIcon from '@lucide/svelte/icons/terminal';
+	import LandmarkIcon from '@lucide/svelte/icons/landmark';
+	import TrendingUpIcon from '@lucide/svelte/icons/trending-up';
+	import ReceiptIcon from '@lucide/svelte/icons/receipt';
+	import ArrowLeftRightIcon from '@lucide/svelte/icons/arrow-left-right';
+	import ScaleIcon from '@lucide/svelte/icons/scale';
+	import ActivityIcon from '@lucide/svelte/icons/activity';
+	import ChartLineIcon from '@lucide/svelte/icons/chart-line';
+	import PercentIcon from '@lucide/svelte/icons/percent';
+	import ChartColumnStackedIcon from '@lucide/svelte/icons/chart-column-stacked';
+	import FileSpreadsheetIcon from '@lucide/svelte/icons/file-spreadsheet';
 </script>
 
 <main>

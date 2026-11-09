@@ -3,7 +3,7 @@
 	import { goto } from '$app/navigation';
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import { getHelpHtml } from '#lib/help/helpContent';
-	import { ArrowLeftIcon } from '@lucide/svelte';
+	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 
 	const topic = page.params.topic ?? '';
 	const html = $derived(getHelpHtml(topic));

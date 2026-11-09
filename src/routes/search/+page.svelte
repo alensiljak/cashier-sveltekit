@@ -29,7 +29,11 @@
 		type TransactionResult
 	} from '#lib/services/entitySearchService';
 	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
-	import { UserIcon, LandmarkIcon, CoinsIcon, ReceiptIcon, FileSearchIcon } from '@lucide/svelte';
+	import UserIcon from '@lucide/svelte/icons/user';
+	import LandmarkIcon from '@lucide/svelte/icons/landmark';
+	import CoinsIcon from '@lucide/svelte/icons/coins';
+	import ReceiptIcon from '@lucide/svelte/icons/receipt';
+	import FileSearchIcon from '@lucide/svelte/icons/file-search';
 
 	const SCOPE_OPTIONS: { value: EntitySearchScope; label: string }[] = [
 		{ value: 'all', label: 'All' },
@@ -40,7 +44,10 @@
 	];
 
 	/** Maps a radio scope to the single entity category it searches ('all' searches every category). */
-	const SCOPE_TO_CATEGORY: Record<Exclude<EntitySearchScope, 'all'>, Exclude<EntityCategory, 'any'>> = {
+	const SCOPE_TO_CATEGORY: Record<
+		Exclude<EntitySearchScope, 'all'>,
+		Exclude<EntityCategory, 'any'>
+	> = {
 		payees: 'payee',
 		accounts: 'account',
 		narration: 'narration',
@@ -211,8 +218,16 @@
 			<HelpButton topic="search" />
 		{/snippet}
 		{#snippet menuItems()}
-			<ToolbarMenuItem text="Full-Text Search" targetNav="/search/full-text" Icon={FileSearchIcon} />
-			<ToolbarMenuItem text="Transaction Search" targetNav="/reports/tx-search" Icon={ReceiptIcon} />
+			<ToolbarMenuItem
+				text="Full-Text Search"
+				targetNav="/search/full-text"
+				Icon={FileSearchIcon}
+			/>
+			<ToolbarMenuItem
+				text="Transaction Search"
+				targetNav="/reports/tx-search"
+				Icon={ReceiptIcon}
+			/>
 		{/snippet}
 	</Toolbar>
 	<SearchToolbar focus {onSearch} delay={200} value={$EntitySearchTermStore} />
@@ -231,7 +246,9 @@
 			</div>
 		{:else if $EntitySearchTermStore.trim().length === 0}
 			<div class="flex h-32 items-center justify-center opacity-50">
-				<p class="text-sm">Search <span class="font-mono">@payees #accounts ~narration $commodities</span>.</p>
+				<p class="text-sm">
+					Search <span class="font-mono">@payees #accounts ~narration $commodities</span>.
+				</p>
 			</div>
 		{:else if loading}
 			<div class="flex h-32 items-center justify-center">
@@ -243,7 +260,9 @@
 			</div>
 		{:else}
 			{#if payeeResults.length > 0}
-				<h2 class="pt-2 pb-1 text-xs font-semibold uppercase opacity-50">Payees ({payeeResults.length})</h2>
+				<h2 class="pt-2 pb-1 text-xs font-semibold uppercase opacity-50">
+					Payees ({payeeResults.length})
+				</h2>
 				{#each payeeResults as payee (payee)}
 					<!-- svelte-ignore a11y_click_events_have_key_events -->
 					<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
@@ -255,7 +274,9 @@
 						<UserIcon class="size-4 shrink-0 opacity-60" />
 						<span class="flex-1 truncate">
 							{#each highlight(payee, highlightTerms) as segment, i (i)}
-								{#if segment.hit}<mark class="bg-primary/40 text-inherit rounded-none">{segment.text}</mark>{:else}{segment.text}{/if}
+								{#if segment.hit}<mark class="bg-primary/40 text-inherit rounded-none"
+										>{segment.text}</mark
+									>{:else}{segment.text}{/if}
 							{/each}
 						</span>
 						<span class="text-xs opacity-50 shrink-0">Payee</span>
@@ -264,7 +285,9 @@
 			{/if}
 
 			{#if accountResults.length > 0}
-				<h2 class="pt-2 pb-1 text-xs font-semibold uppercase opacity-50">Accounts ({accountResults.length})</h2>
+				<h2 class="pt-2 pb-1 text-xs font-semibold uppercase opacity-50">
+					Accounts ({accountResults.length})
+				</h2>
 				{#each accountResults as account (account)}
 					<!-- svelte-ignore a11y_click_events_have_key_events -->
 					<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
@@ -276,7 +299,9 @@
 						<LandmarkIcon class="size-4 shrink-0 opacity-60" />
 						<span class="flex-1 truncate font-mono">
 							{#each highlight(account, highlightTerms) as segment, i (i)}
-								{#if segment.hit}<mark class="bg-primary/40 text-inherit rounded-none">{segment.text}</mark>{:else}{segment.text}{/if}
+								{#if segment.hit}<mark class="bg-primary/40 text-inherit rounded-none"
+										>{segment.text}</mark
+									>{:else}{segment.text}{/if}
 							{/each}
 						</span>
 						<span class="text-xs opacity-50 shrink-0">Account</span>
@@ -285,7 +310,9 @@
 			{/if}
 
 			{#if commodityResults.length > 0}
-				<h2 class="pt-2 pb-1 text-xs font-semibold uppercase opacity-50">Commodities ({commodityResults.length})</h2>
+				<h2 class="pt-2 pb-1 text-xs font-semibold uppercase opacity-50">
+					Commodities ({commodityResults.length})
+				</h2>
 				{#each commodityResults as commodity (commodity)}
 					<!-- svelte-ignore a11y_click_events_have_key_events -->
 					<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
@@ -297,7 +324,9 @@
 						<CoinsIcon class="size-4 shrink-0 opacity-60" />
 						<span class="flex-1 truncate font-mono">
 							{#each highlight(commodity, highlightTerms) as segment, i (i)}
-								{#if segment.hit}<mark class="bg-primary/40 text-inherit rounded-none">{segment.text}</mark>{:else}{segment.text}{/if}
+								{#if segment.hit}<mark class="bg-primary/40 text-inherit rounded-none"
+										>{segment.text}</mark
+									>{:else}{segment.text}{/if}
 							{/each}
 						</span>
 						<span class="text-xs opacity-50 shrink-0">Commodity</span>
@@ -307,9 +336,13 @@
 
 			{#if transactionResults.length > 0}
 				<h2 class="pt-2 pb-1 flex items-center gap-2 text-xs font-semibold uppercase opacity-50">
-					<span><ReceiptIcon class="inline size-3 -translate-y-px" /> Transactions ({transactionResults.length})</span>
+					<span
+						><ReceiptIcon class="inline size-3 -translate-y-px" /> Transactions ({transactionResults.length})</span
+					>
 					{#if transactionResults.length > TX_DISPLAY_CAP}
-						<a href={txSearchUrl()} class="link link-primary text-xs font-normal normal-case">Show All</a>
+						<a href={txSearchUrl()} class="link link-primary text-xs font-normal normal-case"
+							>Show All</a
+						>
 					{/if}
 				</h2>
 				{#each visibleTransactionResults as result, i (result.xact.date + '\0' + (result.xact.payee ?? '') + '\0' + (result.xact.note ?? '') + '\0' + i)}

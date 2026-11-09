@@ -1,15 +1,13 @@
 <script lang="ts">
 	import JournalCard from '#lib/components/JournalCard.svelte';
-	import {
-		CircleAlert,
-		FilePlusIcon,
-		FileTextIcon,
-		PlusIcon,
-		RefreshCwIcon,
-		ScanSearchIcon,
-		SettingsIcon,
-		ZapIcon
-	} from '@lucide/svelte';
+	import CircleAlert from '@lucide/svelte/icons/circle-alert';
+	import FilePlusIcon from '@lucide/svelte/icons/file-plus';
+	import FileTextIcon from '@lucide/svelte/icons/file-text';
+	import PlusIcon from '@lucide/svelte/icons/plus';
+	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
+	import ScanSearchIcon from '@lucide/svelte/icons/scan-search';
+	import SettingsIcon from '@lucide/svelte/icons/settings';
+	import ZapIcon from '@lucide/svelte/icons/zap';
 	import Toolbar from '../lib/components/Toolbar.svelte';
 	import { goto } from '$app/navigation';
 	import { xact } from '#lib/data/mainStore';
@@ -65,15 +63,15 @@
 				case HomeCardNames.EXPENSES:
 					card = ExpensesCard;
 					break;
-			case HomeCardNames.BUDGET:
-				card = BudgetCard;
-				break;
-			case HomeCardNames.NET_WORTH:
-				card = NetWorthCard;
-				break;
-			case HomeCardNames.SYNC:
-				card = SyncCard;
-				break;
+				case HomeCardNames.BUDGET:
+					card = BudgetCard;
+					break;
+				case HomeCardNames.NET_WORTH:
+					card = NetWorthCard;
+					break;
+				case HomeCardNames.SYNC:
+					card = SyncCard;
+					break;
 			}
 			if (card) {
 				cards.push(card);

@@ -6,7 +6,9 @@
 	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
 	import PriceHistoryChart from '#lib/components/PriceHistoryChart.svelte';
 	import type { PricePoint } from '#lib/components/PriceHistoryChart.svelte';
-	import { ArrowLeftRightIcon, ChevronDownIcon, ChevronRightIcon } from '@lucide/svelte';
+	import ArrowLeftRightIcon from '@lucide/svelte/icons/arrow-left-right';
+	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
+	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
 	import fullLedgerService from '#lib/services/ledgerWorkerClient';
 	import HelpButton from '#lib/help/HelpButton.svelte';
 	import appService from '#lib/services/appService';

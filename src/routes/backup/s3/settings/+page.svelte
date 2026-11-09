@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { RefreshCwIcon } from '@lucide/svelte';
+	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import DiffViewer from '#lib/components/DiffViewer.svelte';
 	import Notifier from '#lib/utils/notifier';
@@ -143,10 +143,18 @@
 				{#if !comparison.sameText}
 					<div class="flex flex-wrap items-center justify-end gap-2">
 						<span class="text-base-content/60 mr-auto text-xs">Resolve by keeping one side:</span>
-						<button class="btn btn-sm btn-outline" disabled={working} onclick={() => resolve('local')}>
+						<button
+							class="btn btn-sm btn-outline"
+							disabled={working}
+							onclick={() => resolve('local')}
+						>
 							Keep this device
 						</button>
-						<button class="btn btn-sm btn-outline" disabled={working} onclick={() => resolve('remote')}>
+						<button
+							class="btn btn-sm btn-outline"
+							disabled={working}
+							onclick={() => resolve('remote')}
+						>
 							Keep bucket
 						</button>
 					</div>

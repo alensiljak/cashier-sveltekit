@@ -1,6 +1,6 @@
 <script lang="ts">
 	import SearchToolbar from '#lib/components/SearchToolbar.svelte';
-	import { SearchIcon } from '@lucide/svelte';
+	import SearchIcon from '@lucide/svelte/icons/search';
 	import { slide } from 'svelte/transition';
 	import ExpensesDonutChart from '#lib/components/ExpensesDonutChart.svelte';
 	import Toolbar from '#lib/components/Toolbar.svelte';
@@ -51,9 +51,7 @@
 	const filtered: SecurityListItem[] = $derived.by(() => {
 		if (!searchTerm) return rows;
 		const regex = new ListSearch().getRegex(searchTerm);
-		return rows.filter(
-			(r) => regex.test(r.symbol) || (r.name ? regex.test(r.name) : false)
-		);
+		return rows.filter((r) => regex.test(r.symbol) || (r.name ? regex.test(r.name) : false));
 	});
 	const summary = $derived.by(() => {
 		let marketValue = 0;
@@ -120,9 +118,7 @@
 	{/if}
 
 	<!-- Column header -->
-	<div
-		class="flex items-center gap-2 px-2 py-1 text-xs font-semibold uppercase opacity-50"
-	>
+	<div class="flex items-center gap-2 px-2 py-1 text-xs font-semibold uppercase opacity-50">
 		<div class="flex-1 min-w-0">Symbol</div>
 		<div class="w-28 text-right">Last</div>
 		<div class="w-28 text-right">Value</div>
@@ -131,33 +127,33 @@
 
 	<div class="flex-1 overflow-y-auto touch-pan-y px-1">
 		{#if dataLoaded}
-		<!-- Portfolio summary -->
-		<div class="px-3 pt-3">
-			<div class="bg-base-200 flex items-center gap-3 rounded-box p-3">
-				<div class="h-28 w-28 shrink-0">
-					<ExpensesDonutChart
-						labels={summary.labels}
-						values={summary.values}
-						height="7rem"
-						onclick={onSelect}
-					/>
-				</div>
-				<div class="min-w-0 flex-1">
-					<div class="text-xs uppercase opacity-50">Investments</div>
-					<div class="text-2xl font-semibold">
-						{formatAmount(summary.marketValue)}
-						<span class="text-sm opacity-50">{reportCurrency}</span>
+			<!-- Portfolio summary -->
+			<div class="px-3 pt-3">
+				<div class="bg-base-200 flex items-center gap-3 rounded-box p-3">
+					<div class="h-28 w-28 shrink-0">
+						<ExpensesDonutChart
+							labels={summary.labels}
+							values={summary.values}
+							height="7rem"
+							onclick={onSelect}
+						/>
 					</div>
-					<div class="mt-1 text-sm opacity-70">Cost {formatAmount(summary.costBasis)}</div>
-					<div class="text-sm {summary.gainLoss >= 0 ? 'text-success' : 'text-error'}">
-						{summary.gainLoss >= 0 ? '+' : ''}{formatAmount(summary.gainLoss)}
-						<span class="opacity-70">
-							({summary.gainLoss >= 0 ? '+' : ''}{summary.gainLossPct.toFixed(2)}%)
-						</span>
+					<div class="min-w-0 flex-1">
+						<div class="text-xs uppercase opacity-50">Investments</div>
+						<div class="text-2xl font-semibold">
+							{formatAmount(summary.marketValue)}
+							<span class="text-sm opacity-50">{reportCurrency}</span>
+						</div>
+						<div class="mt-1 text-sm opacity-70">Cost {formatAmount(summary.costBasis)}</div>
+						<div class="text-sm {summary.gainLoss >= 0 ? 'text-success' : 'text-error'}">
+							{summary.gainLoss >= 0 ? '+' : ''}{formatAmount(summary.gainLoss)}
+							<span class="opacity-70">
+								({summary.gainLoss >= 0 ? '+' : ''}{summary.gainLossPct.toFixed(2)}%)
+							</span>
+						</div>
 					</div>
 				</div>
 			</div>
-		</div>
 			{#each filtered as row (row.symbol)}
 				<!-- svelte-ignore a11y_click_events_have_key_events -->
 				<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
@@ -194,18 +190,10 @@
 						{/if}
 					</div>
 					<div class="w-24 text-right">
-						<div
-							class="font-mono text-sm {row.gainLoss >= 0
-								? 'text-success'
-								: 'text-error'}"
-						>
+						<div class="font-mono text-sm {row.gainLoss >= 0 ? 'text-success' : 'text-error'}">
 							{row.gainLossPct >= 0 ? '+' : ''}{row.gainLossPct.toFixed(2)}%
 						</div>
-						<div
-							class="text-xs {row.gainLoss >= 0
-								? 'text-success/70'
-								: 'text-error/70'}"
-						>
+						<div class="text-xs {row.gainLoss >= 0 ? 'text-success/70' : 'text-error/70'}">
 							{row.gainLoss >= 0 ? '+' : ''}{formatAmount(row.gainLoss)}
 						</div>
 					</div>
@@ -223,9 +211,7 @@
 		{/if}
 	</div>
 	<!-- Fixed totals -->
-	<div
-		class="border-base-content/15 flex items-center gap-2 border-t bg-base-100 px-2 py-2"
-	>
+	<div class="border-base-content/15 flex items-center gap-2 border-t bg-base-100 px-2 py-2">
 		<div class="flex-1 min-w-0 font-semibold">Total</div>
 		<div class="w-28 text-right text-sm opacity-40">—</div>
 		<div class="w-28 text-right text-sm font-medium">
@@ -233,18 +219,10 @@
 			<span class="text-xs opacity-50">{reportCurrency}</span>
 		</div>
 		<div class="w-24 text-right">
-			<div
-				class="font-mono text-sm {summary.gainLoss >= 0
-					? 'text-success'
-					: 'text-error'}"
-			>
+			<div class="font-mono text-sm {summary.gainLoss >= 0 ? 'text-success' : 'text-error'}">
 				{summary.gainLoss >= 0 ? '+' : ''}{summary.gainLossPct.toFixed(2)}%
 			</div>
-			<div
-				class="text-xs {summary.gainLoss >= 0
-					? 'text-success/70'
-					: 'text-error/70'}"
-			>
+			<div class="text-xs {summary.gainLoss >= 0 ? 'text-success/70' : 'text-error/70'}">
 				{summary.gainLoss >= 0 ? '+' : ''}{formatAmount(summary.gainLoss)}
 			</div>
 		</div>

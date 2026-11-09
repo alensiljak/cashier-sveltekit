@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { ChevronDown, ChevronRight, CoinsIcon } from '@lucide/svelte';
+	import ChevronDown from '@lucide/svelte/icons/chevron-down';
+	import ChevronRight from '@lucide/svelte/icons/chevron-right';
+	import CoinsIcon from '@lucide/svelte/icons/coins';
 	import { goto } from '$app/navigation';
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
@@ -42,9 +44,7 @@
 		const balanceExpr = showBaseCurrency
 			? `convert(sum(position), '${defaultCurrency}')`
 			: 'sum(position)';
-		const result = await fullLedgerService.query(
-			`SELECT account, ${balanceExpr} AS balance`
-		);
+		const result = await fullLedgerService.query(`SELECT account, ${balanceExpr} AS balance`);
 		const accountIdx = result.columns.indexOf('account');
 		const balanceIdx = result.columns.indexOf('balance');
 
@@ -151,7 +151,6 @@
 	function onSearch(value: string) {
 		searchTerm = value;
 	}
-
 
 	function getAccountTypeColour(name: string): string {
 		const root = name.split(':')[0];
@@ -260,14 +259,16 @@
 							<!-- svelte-ignore a11y_click_events_have_key_events -->
 							<!-- svelte-ignore a11y_no_static_element_interactions -->
 							<span
-								class="flex-1 whitespace-nowrap cursor-pointer {node.level === 0 ? 'font-semibold' : ''}"
+								class="flex-1 whitespace-nowrap cursor-pointer {node.level === 0
+									? 'font-semibold'
+									: ''}"
 								onclick={() => goto('/accounts/account-xacts/' + encodeURIComponent(node.name))}
 							>
 								{node.label}
 							</span>
 							<MultiCurrencyBalance
 								balances={node.balances}
-								defaultCurrency={defaultCurrency}
+								{defaultCurrency}
 								loaded={true}
 								class="text-sm pr-2 shrink-0"
 							/>

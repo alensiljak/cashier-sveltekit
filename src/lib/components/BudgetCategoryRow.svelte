@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Account } from '#lib/data/model';
 	import { formatAmount } from '#lib/utils/formatter';
-	import { RepeatIcon } from '@lucide/svelte';
+	import RepeatIcon from '@lucide/svelte/icons/repeat';
 
 	type Props = {
 		account: string;
@@ -43,7 +43,9 @@
 		if (effectiveBudget <= 0) return actual > 0 ? 100 : 0;
 		return Math.min(100, Math.round((actual / effectiveBudget) * 100));
 	});
-	const percentExact = $derived(effectiveBudget > 0 ? Math.round((actual / effectiveBudget) * 100) : null);
+	const percentExact = $derived(
+		effectiveBudget > 0 ? Math.round((actual / effectiveBudget) * 100) : null
+	);
 
 	const progressColour = $derived.by(() => {
 		if (effectiveBudget <= 0) return actual > 0 ? 'progress-error' : 'progress-neutral';
@@ -69,7 +71,9 @@
 
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <div
-	class="border-base-content/15 flex flex-col gap-1 border-b px-1 py-2 {onclick ? 'cursor-pointer' : ''}"
+	class="border-base-content/15 flex flex-col gap-1 border-b px-1 py-2 {onclick
+		? 'cursor-pointer'
+		: ''}"
 	onclick={() => onclick?.(account)}
 	role={onclick ? 'button' : undefined}
 	tabindex={onclick ? 0 : undefined}
@@ -84,10 +88,14 @@
 		</div>
 		<div class="flex shrink-0 items-center gap-1">
 			{#if onRolloverToggle}
-			<button
+				<button
 					type="button"
-					class="btn btn-xs px-1.5 {rolloverEnabled ? 'btn-primary' : 'btn-ghost border border-base-content/25 text-base-content/50'}"
-					title={rolloverEnabled ? 'Rollover on: unspent budget carries into next month' : 'Turn on rollover'}
+					class="btn btn-xs px-1.5 {rolloverEnabled
+						? 'btn-primary'
+						: 'btn-ghost border border-base-content/25 text-base-content/50'}"
+					title={rolloverEnabled
+						? 'Rollover on: unspent budget carries into next month'
+						: 'Turn on rollover'}
 					aria-pressed={rolloverEnabled}
 					aria-label="Toggle rollover"
 					onclick={onRolloverClick}
@@ -95,7 +103,11 @@
 					<RepeatIcon size={14} />
 				</button>
 			{/if}
-			<span class="text-sm tabular-nums {actual > effectiveBudget && effectiveBudget > 0 ? 'text-error' : 'text-base-content/70'}">
+			<span
+				class="text-sm tabular-nums {actual > effectiveBudget && effectiveBudget > 0
+					? 'text-error'
+					: 'text-base-content/70'}"
+			>
 				{formatAmount(actual)}
 			</span>
 			<span class="text-sm text-base-content/40">/</span>

@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { ChartLineIcon, Settings2Icon } from '@lucide/svelte';
+	import ChartLineIcon from '@lucide/svelte/icons/chart-line';
+	import Settings2Icon from '@lucide/svelte/icons/settings-2';
 	import CashierCardTemplate from './CashierCardTemplate.svelte';
 	import { Constants, SettingKeys, settings } from '#lib/settings';
 	import { onMount } from 'svelte';
@@ -23,7 +24,8 @@
 		_accountNames = accountNames;
 
 		// Never saved (null) or 0: use the default length.
-		_days = ((await settings.get(SettingKeys.forecastDays)) as number | null) || Constants.ForecastDays;
+		_days =
+			((await settings.get(SettingKeys.forecastDays)) as number | null) || Constants.ForecastDays;
 
 		_settingsLoaded = true;
 	}
@@ -38,7 +40,7 @@
 	{/snippet}
 	{#snippet menu()}
 		<a href="/forecast-settings">
-			<Settings2Icon  />
+			<Settings2Icon />
 		</a>
 	{/snippet}
 	{#snippet content()}

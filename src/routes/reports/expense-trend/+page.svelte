@@ -14,7 +14,10 @@
 	import { ISODATEFORMAT } from '#lib/constants';
 	import HelpButton from '#lib/help/HelpButton.svelte';
 	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
-	import { Funnel, FunnelX, ListFilter, ReceiptIcon } from '@lucide/svelte';
+	import Funnel from '@lucide/svelte/icons/funnel';
+	import FunnelX from '@lucide/svelte/icons/funnel-x';
+	import ListFilter from '@lucide/svelte/icons/list-filter';
+	import ReceiptIcon from '@lucide/svelte/icons/receipt';
 
 	// The URL is the source of truth for which period is showing (see reports/expenses for
 	// the same pattern): ?period=&anchor= (or ?dateFrom=&dateTo= for the Custom chip),
@@ -180,7 +183,7 @@
 			for (const row of rows as any[]) {
 				// Skip commodity positions (stock tickers longer than fiat/crypto codes) —
 				// CONVERT would multiply units by current market price, inflating amounts.
-				const origCurrency = currencyIdx !== -1 ? String(row[currencyIdx] ?? '') : currency ?? '';
+				const origCurrency = currencyIdx !== -1 ? String(row[currencyIdx] ?? '') : (currency ?? '');
 				if (origCurrency.length > 4) continue;
 
 				const dateStr = toDateStr(row[dateIdx]);

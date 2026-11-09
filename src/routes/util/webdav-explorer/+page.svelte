@@ -5,18 +5,16 @@
 	import Notifier from '#lib/utils/notifier';
 	import { settings, SettingKeys } from '#lib/settings';
 	import { WebDavClient, type WebDavEntry } from '#lib/utils/webdav';
-	import {
-		SettingsIcon,
-		RefreshCwIcon,
-		FolderIcon,
-		FileIcon,
-		DownloadIcon,
-		UploadIcon,
-		TrashIcon,
-		FolderPlusIcon,
-		ChevronRightIcon,
-		CloudIcon
-	} from '@lucide/svelte';
+	import SettingsIcon from '@lucide/svelte/icons/settings';
+	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
+	import FolderIcon from '@lucide/svelte/icons/folder';
+	import FileIcon from '@lucide/svelte/icons/file';
+	import DownloadIcon from '@lucide/svelte/icons/download';
+	import UploadIcon from '@lucide/svelte/icons/upload';
+	import TrashIcon from '@lucide/svelte/icons/trash';
+	import FolderPlusIcon from '@lucide/svelte/icons/folder-plus';
+	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
+	import CloudIcon from '@lucide/svelte/icons/cloud';
 
 	let url = $state('');
 	let username = $state('');
@@ -333,6 +331,7 @@
 				<button class="btn btn-primary" onclick={createFolder}>Create</button>
 			</div>
 		</div>
-		<button class="modal-backdrop" aria-label="Close" onclick={() => (showNewFolder = false)}></button>
+		<button class="modal-backdrop" aria-label="Close" onclick={() => (showNewFolder = false)}
+		></button>
 	</div>
 {/if}

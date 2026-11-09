@@ -16,7 +16,10 @@
 		SecurityIrrCacheStore
 	} from '#lib/data/mainStore.js';
 	import Notifier from '#lib/utils/notifier.js';
-	import { RefreshCwIcon, FileDownIcon, ScaleIcon, PencilIcon } from '@lucide/svelte';
+	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
+	import FileDownIcon from '@lucide/svelte/icons/file-down';
+	import ScaleIcon from '@lucide/svelte/icons/scale';
+	import PencilIcon from '@lucide/svelte/icons/pencil';
 
 	Notifier.init();
 
@@ -122,13 +125,13 @@
 			<button
 				class="view-toggle-btn"
 				class:active={viewMode === 'allocation'}
-				onclick={() => (viewMode = 'allocation')}
-			>%</button>
+				onclick={() => (viewMode = 'allocation')}>%</button
+			>
 			<button
 				class="view-toggle-btn"
 				class:active={viewMode === 'value'}
-				onclick={() => (viewMode = 'value')}
-			>###</button>
+				onclick={() => (viewMode = 'value')}>###</button
+			>
 		</div>
 	</div>
 
@@ -140,20 +143,44 @@
 					<th
 						colspan="3"
 						class="text-center border-r{viewMode !== 'allocation' ? ' hidden' : ''} lg:table-cell"
-					>Allocation</th>
-					<th
-						colspan="3"
-						class="text-center{viewMode !== 'value' ? ' hidden' : ''} lg:table-cell"
-					>Value</th>
+						>Allocation</th
+					>
+					<th colspan="3" class="text-center{viewMode !== 'value' ? ' hidden' : ''} lg:table-cell"
+						>Value</th
+					>
 				</tr>
 				<tr>
 					<th class="table-cell-fit px-2 text-center">Asset Class</th>
-					<th class="table-cell-fit px-2 text-center{viewMode !== 'allocation' ? ' hidden' : ''} lg:table-cell">Target</th>
-					<th class="table-cell-fit px-2 text-center{viewMode !== 'allocation' ? ' hidden' : ''} lg:table-cell">Current</th>
-					<th class="table-cell-fit px-2 text-center{viewMode !== 'allocation' ? ' hidden' : ''} lg:table-cell">Diff %</th>
-					<th class="table-cell-fit px-2 text-center{viewMode !== 'value' ? ' hidden' : ''} lg:table-cell">Allocated</th>
-					<th class="table-cell-fit pr-2 pl-5 text-center{viewMode !== 'value' ? ' hidden' : ''} lg:table-cell">Current</th>
-					<th class="table-cell-fit px-2 text-center{viewMode !== 'value' ? ' hidden' : ''} lg:table-cell">Difference</th>
+					<th
+						class="table-cell-fit px-2 text-center{viewMode !== 'allocation'
+							? ' hidden'
+							: ''} lg:table-cell">Target</th
+					>
+					<th
+						class="table-cell-fit px-2 text-center{viewMode !== 'allocation'
+							? ' hidden'
+							: ''} lg:table-cell">Current</th
+					>
+					<th
+						class="table-cell-fit px-2 text-center{viewMode !== 'allocation'
+							? ' hidden'
+							: ''} lg:table-cell">Diff %</th
+					>
+					<th
+						class="table-cell-fit px-2 text-center{viewMode !== 'value'
+							? ' hidden'
+							: ''} lg:table-cell">Allocated</th
+					>
+					<th
+						class="table-cell-fit pr-2 pl-5 text-center{viewMode !== 'value'
+							? ' hidden'
+							: ''} lg:table-cell">Current</th
+					>
+					<th
+						class="table-cell-fit px-2 text-center{viewMode !== 'value'
+							? ' hidden'
+							: ''} lg:table-cell">Difference</th
+					>
 				</tr>
 			</thead>
 			<tbody>
@@ -178,7 +205,9 @@
 		</table>
 	</section>
 
-	<footer class="flex shrink-0 items-center justify-end gap-2 border-t border-base-300 px-3 py-1 text-xs text-base-content/50">
+	<footer
+		class="flex shrink-0 items-center justify-end gap-2 border-t border-base-300 px-3 py-1 text-xs text-base-content/50"
+	>
 		{#if $AssetAllocationLoadedAtStore}
 			<span>Loaded at {$AssetAllocationLoadedAtStore.toLocaleTimeString()}</span>
 		{:else}

@@ -2,7 +2,7 @@
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import Fab from '#lib/components/FAB.svelte';
 	import DateField from '#lib/components/DateField.svelte';
-	import { CheckIcon } from '@lucide/svelte';
+	import CheckIcon from '@lucide/svelte/icons/check';
 	import { Xact, Posting } from '#lib/data/model';
 	import appService from '#lib/services/appService';
 	import { getXactStore } from '#lib/storage/xactStoreRegistry';
@@ -72,8 +72,7 @@
 			class="textarea textarea-bordered w-full flex-1"
 			placeholder="Type a note…"
 			bind:value={noteText}
-			use:focusOnMount
-		></textarea>
+			use:focusOnMount></textarea>
 	</section>
 	<Fab Icon={CheckIcon} ariaLabel="Save note" onclick={saveNote} disabled={isSaving} />
 </main>

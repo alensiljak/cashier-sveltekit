@@ -4,7 +4,9 @@
 	import Fab from '#lib/components/FAB.svelte';
 	import { settings } from '#lib/settings';
 	import Notifier from '#lib/utils/notifier';
-	import { Check, CircleAlert, CircleCheck } from '@lucide/svelte';
+	import Check from '@lucide/svelte/icons/check';
+	import CircleAlert from '@lucide/svelte/icons/circle-alert';
+	import CircleCheck from '@lucide/svelte/icons/circle-check';
 
 	Notifier.init();
 
@@ -60,8 +62,7 @@
 	<textarea
 		class="font-mono text-sm w-full resize-none p-3 outline-none bg-base-100 text-base-content flex-1"
 		spellcheck="false"
-		bind:value={jsonText}
-	></textarea>
+		bind:value={jsonText}></textarea>
 
 	<Fab Icon={Check} onclick={save} />
 </main>

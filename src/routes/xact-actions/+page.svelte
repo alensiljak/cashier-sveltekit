@@ -12,13 +12,11 @@
 	import { xactToBeancountText } from '#lib/utils/xactUtils';
 	import { buildHighlightParams } from '#lib/utils/unifiedXacts';
 	import Notifier from '#lib/utils/notifier';
-	import {
-		CalendarClockIcon,
-		CopyIcon,
-		ClipboardIcon,
-		SquarePenIcon,
-		TrashIcon
-	} from '@lucide/svelte';
+	import CalendarClockIcon from '@lucide/svelte/icons/calendar-clock';
+	import CopyIcon from '@lucide/svelte/icons/copy';
+	import ClipboardIcon from '@lucide/svelte/icons/clipboard';
+	import SquarePenIcon from '@lucide/svelte/icons/square-pen';
+	import TrashIcon from '@lucide/svelte/icons/trash';
 	import { onMount } from 'svelte';
 	import HelpButton from '#lib/help/HelpButton.svelte';
 
@@ -30,8 +28,7 @@
 		goto('/');
 	}
 
-	onMount(async () => {
-	});
+	onMount(async () => {});
 
 	/**
 	 * Close all dialogs.

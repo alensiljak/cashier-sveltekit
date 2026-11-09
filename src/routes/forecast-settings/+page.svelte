@@ -8,7 +8,9 @@
 	import { selectionMetadata } from '#lib/data/mainStore';
 	import { SelectionType } from '#lib/enums';
 	import { SelectionModeMetadata, SettingKeys, settings } from '#lib/settings';
-	import { CheckIcon, PlusIcon, TrashIcon } from '@lucide/svelte';
+	import CheckIcon from '@lucide/svelte/icons/check';
+	import PlusIcon from '@lucide/svelte/icons/plus';
+	import TrashIcon from '@lucide/svelte/icons/trash';
 	import { onMount } from 'svelte';
 
 	let days = $state(DEFAULT_FORECAST_DAYS);
@@ -97,11 +99,14 @@
 		{/snippet}
 		{#snippet row(item, index)}
 			<span class="grow">{item}</span>
-			<button type="button" class="btn btn-outline btn-secondary btn-sm mr-1" onclick={() => onDeleteClicked(index)} aria-label="Remove account">
+			<button
+				type="button"
+				class="btn btn-outline btn-secondary btn-sm mr-1"
+				onclick={() => onDeleteClicked(index)}
+				aria-label="Remove account"
+			>
 				<TrashIcon size={16} />
 			</button>
 		{/snippet}
 	</DragReorderList>
-
-
 </main>

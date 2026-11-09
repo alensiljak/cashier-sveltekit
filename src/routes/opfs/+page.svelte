@@ -3,7 +3,9 @@
 	import HelpButton from '#lib/help/HelpButton.svelte';
 	import OpfsFilePicker from '#lib/components/OpfsFilePicker.svelte';
 	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
-	import { FilePlusIcon, UploadIcon, Trash2Icon } from '@lucide/svelte';
+	import FilePlusIcon from '@lucide/svelte/icons/file-plus';
+	import UploadIcon from '@lucide/svelte/icons/upload';
+	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
 	import * as OpfsLib from '#lib/utils/opfslib.js';
@@ -204,7 +206,11 @@
 		{/snippet}
 		{#snippet menuItems()}
 			<ToolbarMenuItem text="New File" Icon={FilePlusIcon} onclick={openNewFileDialog} />
-			<ToolbarMenuItem text="Upload File" Icon={UploadIcon} onclick={() => fileUploadInput?.click()} />
+			<ToolbarMenuItem
+				text="Upload File"
+				Icon={UploadIcon}
+				onclick={() => fileUploadInput?.click()}
+			/>
 			<ToolbarMenuItem
 				text="Delete All"
 				Icon={Trash2Icon}

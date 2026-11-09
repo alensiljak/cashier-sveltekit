@@ -1,7 +1,7 @@
 <script lang="ts">
 	import OpfsFilePicker from '#lib/components/OpfsFilePicker.svelte';
 	import FAB from '#lib/components/FAB.svelte';
-	import { Check } from '@lucide/svelte';
+	import Check from '@lucide/svelte/icons/check';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 
@@ -14,7 +14,9 @@
 	function onFabClick() {
 		if (returnSetting) {
 			if (selectedFile) {
-				goto(`/settings?settingKey=${encodeURIComponent(returnSetting)}&settingValue=${encodeURIComponent(selectedFile)}`);
+				goto(
+					`/settings?settingKey=${encodeURIComponent(returnSetting)}&settingValue=${encodeURIComponent(selectedFile)}`
+				);
 			}
 			return;
 		}
@@ -28,10 +30,16 @@
 <main class="h-screen flex flex-col overflow-hidden">
 	<div class="flex-1 overflow-y-auto touch-pan-y p-4">
 		{#if returnSetting}
-			<p class="mb-3 text-sm opacity-70">Select a file for <strong>{returnSetting}</strong>, then tap the confirm button.</p>
+			<p class="mb-3 text-sm opacity-70">
+				Select a file for <strong>{returnSetting}</strong>, then tap the confirm button.
+			</p>
 		{/if}
 		<OpfsFilePicker bind:selectedFile bind:checkedFiles {showCheckboxes} />
 	</div>
 </main>
 
-<FAB Icon={Check} onclick={onFabClick} backgroundColor={showCheckboxes ? 'btn-primary' : 'btn-accent'} />
+<FAB
+	Icon={Check}
+	onclick={onFabClick}
+	backgroundColor={showCheckboxes ? 'btn-primary' : 'btn-accent'}
+/>

@@ -3,7 +3,7 @@
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import HelpButton from '#lib/help/HelpButton.svelte';
 	import Notifier from '#lib/utils/notifier';
-	import { ArrowLeftIcon } from '@lucide/svelte';
+	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 	import { settings, SettingKeys, deviceSettings, DeviceSettingKeys } from '#lib/settings';
 	import {
 		RELAY_STRATEGIES,
@@ -94,7 +94,6 @@
 		autoReload = value;
 		await deviceSettings.set(DeviceSettingKeys.peerAutoReload, value);
 	}
-
 </script>
 
 <main class="flex h-full flex-col">
@@ -176,9 +175,9 @@
 			<div class="card-body gap-2 p-4">
 				<h2 class="card-title text-sm">Relay server (TURN)</h2>
 				<p class="text-xs opacity-60">
-					Optional. For devices that can't connect directly (e.g. mobile data). Paste the ICE servers
-					JSON from your TURN provider. Stored on this device only; set it on every device. Saving
-					reconnects a live room.
+					Optional. For devices that can't connect directly (e.g. mobile data). Paste the ICE
+					servers JSON from your TURN provider. Stored on this device only; set it on every device.
+					Saving reconnects a live room.
 				</p>
 				<textarea
 					bind:value={iceInput}
@@ -187,8 +186,7 @@
 					placeholder={'[{"urls": "turn:...", "username": "...", "credential": "..."}]'}
 					spellcheck="false"
 					autocomplete="off"
-					aria-label="ICE servers JSON"
-				></textarea>
+					aria-label="ICE servers JSON"></textarea>
 				{#if iceError}<span class="text-error text-xs">{iceError}</span>{/if}
 				<div>
 					<button

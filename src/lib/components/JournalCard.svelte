@@ -1,5 +1,7 @@
 <script lang="ts">
-	import { FileUpIcon, PlusIcon, ScrollIcon } from '@lucide/svelte';
+	import FileUpIcon from '@lucide/svelte/icons/file-up';
+	import PlusIcon from '@lucide/svelte/icons/plus';
+	import ScrollIcon from '@lucide/svelte/icons/scroll';
 	import CashierCardTemplate from './CashierCardTemplate.svelte';
 	import XactSummaryLine from './XactSummaryLine.svelte';
 	import { goto } from '$app/navigation';
@@ -160,19 +162,11 @@
 	{/snippet}
 	{#snippet footer()}
 		<center class="flex justify-center gap-2">
-			<button
-				type="button"
-				class="btn btn-outline btn-primary uppercase"
-				onclick={onNewXactClick}
-			>
+			<button type="button" class="btn btn-outline btn-primary uppercase" onclick={onNewXactClick}>
 				<PlusIcon />
 				<span>New</span>
 			</button>
-			<button
-				type="button"
-				class="btn btn-outline btn-warning uppercase"
-				onclick={onExportClick}
-			>
+			<button type="button" class="btn btn-outline btn-warning uppercase" onclick={onExportClick}>
 				<FileUpIcon />
 				<span>Export</span>
 			</button>

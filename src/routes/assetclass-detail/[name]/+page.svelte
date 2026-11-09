@@ -14,7 +14,12 @@
 	import { processWithConcurrencyLimit } from '#lib/utils/concurrency.js';
 	import { getQueries } from '#lib/sync/sync-queries.js';
 	import { PtaSystems } from '#lib/enums.js';
-	import { Loader, X, Bug, ChevronDown, ChevronRight, RefreshCwIcon } from '@lucide/svelte';
+	import Loader from '@lucide/svelte/icons/loader';
+	import X from '@lucide/svelte/icons/x';
+	import Bug from '@lucide/svelte/icons/bug';
+	import ChevronDown from '@lucide/svelte/icons/chevron-down';
+	import ChevronRight from '@lucide/svelte/icons/chevron-right';
+	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
 	import YearPeriodSelector from '#lib/components/YearPeriodSelector.svelte';
 	import {
 		extractAllGroupFlows,
@@ -166,7 +171,12 @@
 			const message = e instanceof Error ? e.message : String(e);
 			const updated: Record<string, IrrData> = { ...irrBySymbol };
 			for (const stock of uncachedStocks) {
-				updated[stock.name] = { irrPct: null, irrError: message, irrHoldingDays: null, loading: false };
+				updated[stock.name] = {
+					irrPct: null,
+					irrError: message,
+					irrHoldingDays: null,
+					loading: false
+				};
 			}
 			irrBySymbol = updated;
 		}
@@ -408,7 +418,7 @@
 								<X class="h-4 w-4" />
 								<span class="text-sm">Error loading analysis: {stock.error}</span>
 							</div>
-		{:else if stock.analysis}
+						{:else if stock.analysis}
 							<div class="ms-3">
 								Yield <span class="text-base-content/40 text-xs">(all-time)</span>:
 								<span class={Formatter.getColourForYield(stock.analysis.yield)}
@@ -433,8 +443,8 @@
 									</span>
 									{#if irrData.irrHoldingDays !== null && irrData.irrHoldingDays < SHORT_HOLDING_DAYS_THRESHOLD}
 										<span class="text-base-content/40 text-xs">
-											(annualized from {Math.round(irrData.irrHoldingDays)}d — short holding
-											period, interpret with caution)
+											(annualized from {Math.round(irrData.irrHoldingDays)}d — short holding period,
+											interpret with caution)
 										</span>
 									{/if}
 								{:else if irrBySymbol[stock.name]?.irrError}

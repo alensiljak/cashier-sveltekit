@@ -1,6 +1,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { FolderIcon, FolderOpenIcon, FileIcon, TrashIcon, RefreshCcwIcon } from '@lucide/svelte';
+	import FolderIcon from '@lucide/svelte/icons/folder';
+	import FolderOpenIcon from '@lucide/svelte/icons/folder-open';
+	import FileIcon from '@lucide/svelte/icons/file';
+	import TrashIcon from '@lucide/svelte/icons/trash';
+	import RefreshCcwIcon from '@lucide/svelte/icons/refresh-ccw';
 	import * as OpfsLib from '#lib/utils/opfslib.js';
 	import type { FileTreeEntry } from '#lib/utils/opfslib.js';
 	import { getManifest } from '#lib/utils/importManifest';
@@ -101,8 +105,18 @@
 	</div>
 {:else if entries.length === 0}
 	<div class="alert alert-info">
-		<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6">
-			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+		<svg
+			xmlns="http://www.w3.org/2000/svg"
+			fill="none"
+			viewBox="0 0 24 24"
+			class="stroke-current shrink-0 w-6 h-6"
+		>
+			<path
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				stroke-width="2"
+				d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+			></path>
 		</svg>
 		<span>No files found in OPFS storage.</span>
 	</div>
@@ -160,7 +174,10 @@
 								{/if}
 								{entry.name}
 								{#if isLocallyModified(entry)}
-									<span class="w-2 h-2 rounded-full bg-warning shrink-0" title="Modified locally since last sync"></span>
+									<span
+										class="w-2 h-2 rounded-full bg-warning shrink-0"
+										title="Modified locally since last sync"
+									></span>
 								{/if}
 							</span>
 						</td>

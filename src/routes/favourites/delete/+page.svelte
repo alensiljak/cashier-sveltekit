@@ -3,7 +3,9 @@
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import { SettingKeys, settings } from '#lib/settings';
 	import Notifier from '#lib/utils/notifier';
-	import { CheckIcon, DeleteIcon, TrashIcon } from '@lucide/svelte';
+	import CheckIcon from '@lucide/svelte/icons/check';
+	import DeleteIcon from '@lucide/svelte/icons/delete';
+	import TrashIcon from '@lucide/svelte/icons/trash';
 	import { onMount } from 'svelte';
 
 	Notifier.init();
@@ -70,7 +72,12 @@
 </main>
 
 <!-- "Delete" dialog -->
-<input type="checkbox" id="delete-fav-confirmation-modal" class="modal-toggle" bind:checked={isDeleteConfirmationOpen} />
+<input
+	type="checkbox"
+	id="delete-fav-confirmation-modal"
+	class="modal-toggle"
+	bind:checked={isDeleteConfirmationOpen}
+/>
 <dialog class="modal">
 	<div class="modal-box">
 		<header class="flex justify-between">
@@ -78,15 +85,13 @@
 		</header>
 		<article>
 			<p class="py-4 opacity-60">
-				Do you want to remove { _accounts[indexToDelete] } from favourites?
+				Do you want to remove {_accounts[indexToDelete]} from favourites?
 			</p>
 		</article>
 		<footer class="flex justify-end gap-4">
 			<button type="button" class="btn btn-ghost" onclick={closeModal}>Cancel</button>
-			<button
-				type="button"
-				class="btn btn-primary text-primary-content"
-				onclick={onDeleteConfirmed}>OK</button
+			<button type="button" class="btn btn-primary text-primary-content" onclick={onDeleteConfirmed}
+				>OK</button
 			>
 		</footer>
 	</div>

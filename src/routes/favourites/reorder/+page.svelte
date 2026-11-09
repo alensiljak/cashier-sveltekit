@@ -3,7 +3,7 @@
 	import Fab from '#lib/components/FAB.svelte';
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import { SettingKeys, settings } from '#lib/settings';
-	import { CheckIcon } from '@lucide/svelte';
+	import CheckIcon from '@lucide/svelte/icons/check';
 	import { onMount } from 'svelte';
 
 	let favourites = $state<string[]>([]);

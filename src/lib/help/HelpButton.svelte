@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { CircleQuestionMarkIcon } from '@lucide/svelte';
+	import CircleQuestionMarkIcon from '@lucide/svelte/icons/circle-question-mark';
 	import { helpTopics } from './helpContent';
 	import HelpDialog from './HelpDialog.svelte';
 

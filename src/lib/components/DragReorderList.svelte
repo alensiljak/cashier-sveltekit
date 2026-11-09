@@ -1,5 +1,5 @@
 <script lang="ts" generics="T">
-	import { GripVerticalIcon } from '@lucide/svelte';
+	import GripVerticalIcon from '@lucide/svelte/icons/grip-vertical';
 	import type { Snippet } from 'svelte';
 
 	interface Props {

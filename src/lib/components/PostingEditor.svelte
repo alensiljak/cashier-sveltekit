@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { xact, postingEditorIndex } from '#lib/data/mainStore';
-	import { DiffIcon, PencilLineIcon } from '@lucide/svelte';
+	import DiffIcon from '@lucide/svelte/icons/diff';
+	import PencilLineIcon from '@lucide/svelte/icons/pencil-line';
 	import { onMount } from 'svelte';
 	import type { EventHandler } from 'svelte/elements';
 	import { goto } from '$app/navigation';
@@ -62,7 +63,6 @@
 			onAmountChanged();
 		}
 	}
-
 </script>
 
 <section class="w-full rounded px-2 py-2 {stripeClass}">

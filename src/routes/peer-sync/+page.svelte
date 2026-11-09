@@ -7,18 +7,16 @@
 	import HelpButton from '#lib/help/HelpButton.svelte';
 	import { Setting } from '#lib/data/model';
 	import Notifier from '#lib/utils/notifier';
-	import {
-		GitCompareArrowsIcon,
-		DownloadIcon,
-		RefreshCwIcon,
-		Circle,
-		CircleCheck,
-		FolderSyncIcon,
-		ChevronRightIcon,
-		PlugZap,
-		Unplug,
-		SettingsIcon
-	} from '@lucide/svelte';
+	import GitCompareArrowsIcon from '@lucide/svelte/icons/git-compare-arrows';
+	import DownloadIcon from '@lucide/svelte/icons/download';
+	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
+	import Circle from '@lucide/svelte/icons/circle';
+	import CircleCheck from '@lucide/svelte/icons/circle-check';
+	import FolderSyncIcon from '@lucide/svelte/icons/folder-sync';
+	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
+	import PlugZap from '@lucide/svelte/icons/plug-zap';
+	import Unplug from '@lucide/svelte/icons/unplug';
+	import SettingsIcon from '@lucide/svelte/icons/settings';
 	import { reloadLedgerFromOpfs } from '#lib/services/ledgerReload';
 	import { OpfsSource } from '#lib/sync/OpfsSource';
 	import { PeerSource } from '#lib/sync/PeerSource';
@@ -152,7 +150,9 @@
 		try {
 			const changed = await peerConnection.syncYdoc(targetId);
 			if (changed) await reloadLedgerFromOpfs();
-			Notifier.success(changed ? 'Local Transactions merged' : 'Local Transactions already in sync');
+			Notifier.success(
+				changed ? 'Local Transactions merged' : 'Local Transactions already in sync'
+			);
 			await checkYdocHash(targetId);
 		} catch (e) {
 			Notifier.error('Sync failed: ' + (e as Error).message);
@@ -449,7 +449,6 @@
 			applyingSettingsMerge = false;
 		}
 	}
-
 </script>
 
 {#snippet hashBadge(status: HashStatus | null)}
@@ -619,7 +618,7 @@
 									onclick={() => openDiff(item)}
 								>
 									{#if diffingItem === item}<span class="loading loading-spinner loading-xs"
-											></span>{:else}<GitCompareArrowsIcon size={16} />{/if}
+										></span>{:else}<GitCompareArrowsIcon size={16} />{/if}
 								</button>
 								<button
 									class="btn btn-sm btn-square btn-primary"
@@ -629,7 +628,7 @@
 									onclick={() => (pullConfirmItem = item)}
 								>
 									{#if pullingItem === item}<span class="loading loading-spinner loading-xs"
-											></span>{:else}<DownloadIcon size={16} />{/if}
+										></span>{:else}<DownloadIcon size={16} />{/if}
 								</button>
 							</div>
 						{/each}
@@ -646,7 +645,7 @@
 								onclick={syncLocalTransactions}
 							>
 								{#if syncingYdoc}<span class="loading loading-spinner loading-xs"
-										></span>{:else}<DownloadIcon size={16} />{/if}
+									></span>{:else}<DownloadIcon size={16} />{/if}
 							</button>
 						</div>
 
@@ -662,7 +661,7 @@
 								onclick={syncScheduledTransactions}
 							>
 								{#if syncingScx}<span class="loading loading-spinner loading-xs"
-										></span>{:else}<DownloadIcon size={16} />{/if}
+									></span>{:else}<DownloadIcon size={16} />{/if}
 							</button>
 						</div>
 					</div>
@@ -691,9 +690,9 @@
 										<span class="badge badge-error badge-xs">{filesConflicts.length} conflict</span>
 									{/if}
 									{#if filesDiffer.length > 0}
-											<span class="badge badge-warning badge-xs">{filesDiffer.length} differ</span>
-										{/if}
-										{#if filesPullable.length === 0 && filesConflicts.length === 0 && filesDiffer.length === 0}
+										<span class="badge badge-warning badge-xs">{filesDiffer.length} differ</span>
+									{/if}
+									{#if filesPullable.length === 0 && filesConflicts.length === 0 && filesDiffer.length === 0}
 										{@render hashBadge('same')}
 									{/if}
 								{/if}
@@ -708,7 +707,7 @@
 							onclick={pullNewerFiles}
 						>
 							{#if pullingFiles}<span class="loading loading-spinner loading-xs"
-									></span>{:else}<DownloadIcon size={16} />{/if}
+								></span>{:else}<DownloadIcon size={16} />{/if}
 						</button>
 					</div>
 				</div>
@@ -810,8 +809,8 @@
 		<div class="modal-box">
 			<h3 class="font-bold text-lg">Confirm Pull</h3>
 			<p class="py-4 text-sm">
-				Overwrite local <strong>{ITEM_LABELS[pullConfirmItem]}</strong> with the version from <strong>{syncTarget?.name}</strong>? This cannot
-				be undone.
+				Overwrite local <strong>{ITEM_LABELS[pullConfirmItem]}</strong> with the version from
+				<strong>{syncTarget?.name}</strong>? This cannot be undone.
 			</p>
 			<div class="modal-action">
 				<button class="btn btn-ghost" onclick={() => (pullConfirmItem = null)}>Cancel</button>

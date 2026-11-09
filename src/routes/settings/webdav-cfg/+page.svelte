@@ -4,9 +4,10 @@
 	import Notifier from '#lib/utils/notifier';
 	import { settings, deviceSettings, SettingKeys, DeviceSettingKeys } from '#lib/settings';
 	import { lastBackupTime } from '#lib/services/webdavAutoBackupService';
-	import { CloudIcon } from '@lucide/svelte';
+	import CloudIcon from '@lucide/svelte/icons/cloud';
 	import { WebDavClient, type WebDavEntry } from '#lib/utils/webdav';
-	import { ChevronRight, ChevronUp } from '@lucide/svelte';
+	import ChevronRight from '@lucide/svelte/icons/chevron-right';
+	import ChevronUp from '@lucide/svelte/icons/chevron-up';
 	import {
 		convertWebDavFolder,
 		loadWebDavEncryption,
@@ -90,7 +91,8 @@
 		try {
 			await checkFolder();
 			if (folderStateError) throw new Error(folderStateError);
-			if (next && !folderState!.encrypted && folderState!.objects > 0) return openConvert('encrypt');
+			if (next && !folderState!.encrypted && folderState!.objects > 0)
+				return openConvert('encrypt');
 			if (!next && folderState!.encrypted) return openConvert('decrypt');
 			encEnabled = next;
 			await saveWebDavEncryption({ enabled: next, passphrase: encPassphrase });
@@ -115,9 +117,14 @@
 		convertError = '';
 		try {
 			const client = new WebDavClient(url, username, password);
-			const { converted } = await convertWebDavFolder(client, mode, encPassphrase, (done, total) => {
-				convertProgress = `${done} of ${total}`;
-			});
+			const { converted } = await convertWebDavFolder(
+				client,
+				mode,
+				encPassphrase,
+				(done, total) => {
+					convertProgress = `${done} of ${total}`;
+				}
+			);
 			encEnabled = mode === 'encrypt';
 			await saveWebDavEncryption({ enabled: encEnabled, passphrase: encPassphrase });
 			Notifier.success(
@@ -341,13 +348,17 @@
 					{/if}
 					{#if encEnabled && folderState && !folderState.encrypted && folderState.objects > 0}
 						<div class="alert alert-warning text-sm">
-							<span>Encryption is on, but {folderState.objects} file(s) in the folder are not encrypted.</span>
-							<button class="btn btn-sm" onclick={() => openConvert('encrypt')}>Encrypt them</button>
+							<span
+								>Encryption is on, but {folderState.objects} file(s) in the folder are not encrypted.</span
+							>
+							<button class="btn btn-sm" onclick={() => openConvert('encrypt')}>Encrypt them</button
+							>
 						</div>
 					{:else if !encEnabled && folderState && folderState.encrypted}
 						<div class="alert alert-warning text-sm">
 							<span>The folder holds encrypted files, but encryption is off here.</span>
-							<button class="btn btn-sm" onclick={() => openConvert('decrypt')}>Decrypt them</button>
+							<button class="btn btn-sm" onclick={() => openConvert('decrypt')}>Decrypt them</button
+							>
 						</div>
 					{/if}
 				</div>
@@ -356,15 +367,17 @@
 			<dialog bind:this={convertDialog} class="modal" onclose={() => (converting = null)}>
 				<div class="modal-box">
 					<h3 class="text-lg font-bold">
-						{converting === 'decrypt' ? 'Decrypt the files in the folder?' : 'Encrypt the files in the folder?'}
+						{converting === 'decrypt'
+							? 'Decrypt the files in the folder?'
+							: 'Encrypt the files in the folder?'}
 					</h3>
 					<p class="py-3 text-sm">
 						{#if converting === 'decrypt'}
 							The folder holds encrypted files. They are decrypted with the passphrase above and
 							stored as plain files; encryption is then off.
 						{:else}
-							The folder holds {folderState?.objects} file(s) that are not encrypted. They are
-							encrypted with the passphrase above and replaced in the folder; encryption is then on.
+							The folder holds {folderState?.objects} file(s) that are not encrypted. They are encrypted
+							with the passphrase above and replaced in the folder; encryption is then on.
 						{/if}
 					</p>
 					<p class="text-sm">
@@ -384,7 +397,9 @@
 						</button>
 					</div>
 				</div>
-				<form method="dialog" class="modal-backdrop"><button aria-label="Close">close</button></form>
+				<form method="dialog" class="modal-backdrop">
+					<button aria-label="Close">close</button>
+				</form>
 			</dialog>
 
 			<!-- Test Settings -->

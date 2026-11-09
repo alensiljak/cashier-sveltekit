@@ -1,5 +1,7 @@
 <script lang="ts">
-	import { ChevronDownIcon, ChevronRightIcon, Settings2Icon } from '@lucide/svelte';
+	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
+	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
+	import Settings2Icon from '@lucide/svelte/icons/settings-2';
 	import CashierCardTemplate from './CashierCardTemplate.svelte';
 	import AccountRow from './AccountRow.svelte';
 	import { goto } from '$app/navigation';
@@ -152,7 +154,9 @@
 	{#snippet menu()}
 		<button
 			type="button"
-			class="btn btn-ghost btn-circle btn-sm {group.color ? 'text-base-content/70' : 'text-primary-content'}"
+			class="btn btn-ghost btn-circle btn-sm {group.color
+				? 'text-base-content/70'
+				: 'text-primary-content'}"
 			onclick={onToggleClick}
 			aria-label={collapsed ? 'Expand group' : 'Collapse group'}
 		>
@@ -164,7 +168,9 @@
 		</button>
 		<button
 			type="button"
-			class="btn btn-ghost btn-circle btn-sm {group.color ? 'text-base-content/70' : 'text-primary-content'}"
+			class="btn btn-ghost btn-circle btn-sm {group.color
+				? 'text-base-content/70'
+				: 'text-primary-content'}"
 			onclick={onSettingsClick}
 			aria-label="Group settings"
 		>
@@ -184,9 +190,17 @@
 	{/snippet}
 	{#snippet footer()}
 		{#if !collapsed && accounts.length > 0 && balancesLoaded}
-			<div class="flex w-full flex-wrap justify-end gap-x-4 gap-y-0.5 border-t-4 border-double border-base-200 px-3 py-1 text-sm font-semibold">
+			<div
+				class="flex w-full flex-wrap justify-end gap-x-4 gap-y-0.5 border-t-4 border-double border-base-200 px-3 py-1 text-sm font-semibold"
+			>
 				{#each Object.entries(currencyTotals) as [currency, total]}
-					<span>{total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currency}</span>
+					<span
+						>{total.toLocaleString(undefined, {
+							minimumFractionDigits: 2,
+							maximumFractionDigits: 2
+						})}
+						{currency}</span
+					>
 				{/each}
 			</div>
 		{/if}

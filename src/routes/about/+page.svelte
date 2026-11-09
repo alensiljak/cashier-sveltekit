@@ -4,7 +4,8 @@
 	import rustledger from '#lib/services/rustledger';
 	import { checkForUpdate, getInstalledBuildTimestamp } from '#lib/services/pwaUpdate';
 	import Notifier from '#lib/utils/notifier';
-	import { MicIcon, RefreshCw } from '@lucide/svelte';
+	import MicIcon from '@lucide/svelte/icons/mic';
+	import RefreshCw from '@lucide/svelte/icons/refresh-cw';
 
 	let wasmVersion = $state('');
 	let buildTimestamp = $state('fetching…');
@@ -77,14 +78,15 @@
 		<h1 class="text-5xl font-bold">Cashier Svelte</h1>
 		<p>
 			Cashier Svelte is a version of
-			<a class="link link-primary" href="https://cashier.alensiljak.eu.org">Cashier</a>,
-			built with Svelte.
+			<a class="link link-primary" href="https://cashier.alensiljak.eu.org">Cashier</a>, built with
+			Svelte.
 		</p>
 
 		<p>
 			Cashier is a pocket helper for Plain-Text Accounting (PTA) systems, like Ledger CLI, Hledger,
 			or Beancount. More on PTA at
-			<a class="link link-primary" href="https://plaintextaccounting.org/">Plain Text Accounting</a>.
+			<a class="link link-primary" href="https://plaintextaccounting.org/">Plain Text Accounting</a
+			>.
 		</p>
 
 		<p>
@@ -95,8 +97,8 @@
 		</p>
 
 		<p>
-			Cashier can also read your whole Beancount ledger. Use Ledger Import function to copy
-			and regularly update your ledger data. Eventually export the Journal transactions created on your
+			Cashier can also read your whole Beancount ledger. Use Ledger Import function to copy and
+			regularly update your ledger data. Eventually export the Journal transactions created on your
 			device and store them into your ledger files.
 		</p>
 

@@ -10,44 +10,42 @@
 		syncOptions.load();
 	});
 	// Icons
-	import {
-		CalendarClockIcon,
-		ChartLineIcon,
-		ChartPieIcon,
-		DatabaseIcon,
-		WrenchIcon,
-		CircleQuestionMarkIcon,
-		HouseIcon,
-		InfoIcon,
-		LandmarkIcon,
-		ScrollIcon,
-		SettingsIcon,
-		UsersRoundIcon,
-		ContainerIcon,
-		FolderOpenIcon,
-		FolderInputIcon,
-		FileSpreadsheetIcon,
-		FolderOutputIcon,
-		ChartNoAxesCombinedIcon,
-		HardDriveIcon,
-		CalculatorIcon,
-		CalendarIcon,
-		CoinsIcon,
-		TrendingUpIcon,
-		ListTreeIcon,
-		PiggyBankIcon,
-		ShieldCheckIcon,
-		CloudUploadIcon,
-		WifiIcon,
-		FilePlusIcon,
-		SquareTerminalIcon,
-		SearchIcon,
-		PinIcon,
-		PinOffIcon,
-		FileChartColumnIcon,
-		CloudIcon,
-		FileTextIcon
-	} from '@lucide/svelte';
+	import CalendarClockIcon from '@lucide/svelte/icons/calendar-clock';
+	import ChartLineIcon from '@lucide/svelte/icons/chart-line';
+	import ChartPieIcon from '@lucide/svelte/icons/chart-pie';
+	import DatabaseIcon from '@lucide/svelte/icons/database';
+	import WrenchIcon from '@lucide/svelte/icons/wrench';
+	import CircleQuestionMarkIcon from '@lucide/svelte/icons/circle-question-mark';
+	import HouseIcon from '@lucide/svelte/icons/house';
+	import InfoIcon from '@lucide/svelte/icons/info';
+	import LandmarkIcon from '@lucide/svelte/icons/landmark';
+	import ScrollIcon from '@lucide/svelte/icons/scroll';
+	import SettingsIcon from '@lucide/svelte/icons/settings';
+	import UsersRoundIcon from '@lucide/svelte/icons/users-round';
+	import ContainerIcon from '@lucide/svelte/icons/container';
+	import FolderOpenIcon from '@lucide/svelte/icons/folder-open';
+	import FolderInputIcon from '@lucide/svelte/icons/folder-input';
+	import FileSpreadsheetIcon from '@lucide/svelte/icons/file-spreadsheet';
+	import FolderOutputIcon from '@lucide/svelte/icons/folder-output';
+	import ChartNoAxesCombinedIcon from '@lucide/svelte/icons/chart-no-axes-combined';
+	import HardDriveIcon from '@lucide/svelte/icons/hard-drive';
+	import CalculatorIcon from '@lucide/svelte/icons/calculator';
+	import CalendarIcon from '@lucide/svelte/icons/calendar';
+	import CoinsIcon from '@lucide/svelte/icons/coins';
+	import TrendingUpIcon from '@lucide/svelte/icons/trending-up';
+	import ListTreeIcon from '@lucide/svelte/icons/list-tree';
+	import PiggyBankIcon from '@lucide/svelte/icons/piggy-bank';
+	import ShieldCheckIcon from '@lucide/svelte/icons/shield-check';
+	import CloudUploadIcon from '@lucide/svelte/icons/cloud-upload';
+	import WifiIcon from '@lucide/svelte/icons/wifi';
+	import FilePlusIcon from '@lucide/svelte/icons/file-plus';
+	import SquareTerminalIcon from '@lucide/svelte/icons/square-terminal';
+	import SearchIcon from '@lucide/svelte/icons/search';
+	import PinIcon from '@lucide/svelte/icons/pin';
+	import PinOffIcon from '@lucide/svelte/icons/pin-off';
+	import FileChartColumnIcon from '@lucide/svelte/icons/file-chart-column';
+	import CloudIcon from '@lucide/svelte/icons/cloud';
+	import FileTextIcon from '@lucide/svelte/icons/file-text';
 
 	function closeDrawer(): void {
 		// the new drawer
@@ -213,8 +211,7 @@
 						<li>
 							<a
 								href="/securities"
-								class="flex w-full items-center gap-2 py-2 {page.url.pathname ===
-								'/securities'
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/securities'
 									? 'active bg-secondary text-secondary-content'
 									: ''}"
 								onclick={closeDrawer}
@@ -557,25 +554,26 @@
 						<li>
 							<a
 								href="/import-ledger-xact"
-								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/import-ledger-xact'
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname ===
+								'/import-ledger-xact'
 									? 'active bg-secondary text-secondary-content'
 									: ''}"
 								onclick={closeDrawer}
 							>
 								<FolderInputIcon />
 								<span>Import Transactions</span>
-								</a>
-							</li>
-							<li>
-								<a
-									href="/share-target"
-									class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/share-target'
-										? 'active bg-secondary text-secondary-content'
-										: ''}"
-									onclick={closeDrawer}
-								>
-									<FileTextIcon />
-									<span>Distribution Statements</span>
+							</a>
+						</li>
+						<li>
+							<a
+								href="/share-target"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/share-target'
+									? 'active bg-secondary text-secondary-content'
+									: ''}"
+								onclick={closeDrawer}
+							>
+								<FileTextIcon />
+								<span>Distribution Statements</span>
 							</a>
 						</li>
 						<li>

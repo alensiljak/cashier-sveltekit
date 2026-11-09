@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { ChevronRightIcon } from '@lucide/svelte';
+	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
 	import JournalXactRow from '#lib/components/JournalXactRow.svelte';
 	import Notifier from '#lib/utils/notifier';
 	import { DEFAULT_DATE_WINDOW_DAYS, findDuplicates } from './dedup';

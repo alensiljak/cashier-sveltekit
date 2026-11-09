@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { WalletIcon, Settings2Icon } from '@lucide/svelte';
+	import WalletIcon from '@lucide/svelte/icons/wallet';
+	import Settings2Icon from '@lucide/svelte/icons/settings-2';
 	import CashierCardTemplate from './CashierCardTemplate.svelte';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { TrashIcon } from '@lucide/svelte';
+	import TrashIcon from '@lucide/svelte/icons/trash';
 	import { untrack } from 'svelte';
 
 	type Props = {
@@ -21,7 +21,10 @@
 	// explicit "add" click; once both its fields are filled, a fresh blank row is
 	// appended below it.
 	let rows = $state<Row[]>(
-		untrack(() => [...Object.entries(meta ?? {}).map(([key, value]) => ({ key, value })), { key: '', value: '' }])
+		untrack(() => [
+			...Object.entries(meta ?? {}).map(([key, value]) => ({ key, value })),
+			{ key: '', value: '' }
+		])
 	);
 
 	function commit() {

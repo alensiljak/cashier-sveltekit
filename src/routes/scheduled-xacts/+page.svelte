@@ -12,14 +12,12 @@
 	import { ListSearch } from '#lib/utils/ListSearch';
 	import Notifier from '#lib/utils/notifier';
 	import { XactAugmenter } from '#lib/utils/xactAugmenter';
-	import {
-		CalendarIcon,
-		CircleQuestionMarkIcon,
-		PackageIcon,
-		PackageOpenIcon,
-		PlusIcon,
-		SearchIcon
-	} from '@lucide/svelte';
+	import CalendarIcon from '@lucide/svelte/icons/calendar';
+	import CircleQuestionMarkIcon from '@lucide/svelte/icons/circle-question-mark';
+	import PackageIcon from '@lucide/svelte/icons/package';
+	import PackageOpenIcon from '@lucide/svelte/icons/package-open';
+	import PlusIcon from '@lucide/svelte/icons/plus';
+	import SearchIcon from '@lucide/svelte/icons/search';
 	import { slide } from 'svelte/transition';
 	import HelpDialog from '#lib/help/HelpDialog.svelte';
 	import { onMount } from 'svelte';

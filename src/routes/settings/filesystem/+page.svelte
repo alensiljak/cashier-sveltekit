@@ -7,15 +7,13 @@
 	import { onMount } from 'svelte';
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
-	import {
-		RefreshCcwIcon,
-		FolderOpenIcon,
-		FileIcon,
-		FolderIcon,
-		BookOpenIcon,
-		XIcon,
-		TriangleAlertIcon
-	} from '@lucide/svelte';
+	import RefreshCcwIcon from '@lucide/svelte/icons/refresh-ccw';
+	import FolderOpenIcon from '@lucide/svelte/icons/folder-open';
+	import FileIcon from '@lucide/svelte/icons/file';
+	import FolderIcon from '@lucide/svelte/icons/folder';
+	import BookOpenIcon from '@lucide/svelte/icons/book-open';
+	import XIcon from '@lucide/svelte/icons/x';
+	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
 	import Notifier from '#lib/utils/notifier';
 	import { settings, SettingKeys } from '#lib/settings';
 	import Fab from '#lib/components/FAB.svelte';
@@ -430,22 +428,38 @@
 				<div class="flex flex-col gap-2 mt-4">
 					{#if bookRootFileName}
 						<div role="alert" class="alert alert-success">
-							<input type="checkbox" class="checkbox checkbox-sm checkbox-success" checked disabled />
+							<input
+								type="checkbox"
+								class="checkbox checkbox-sm checkbox-success"
+								checked
+								disabled
+							/>
 							<span>Book set: {bookRootFileName}</span>
-							<button class="btn btn-xs btn-ghost border border-warning" onclick={() => {
-								bookRootFileName = '';
-							}}>
+							<button
+								class="btn btn-xs btn-ghost border border-warning"
+								onclick={() => {
+									bookRootFileName = '';
+								}}
+							>
 								<XIcon class="w-4 h-4" /> Unset
 							</button>
 						</div>
 					{/if}
 					{#if aaDefinitionFileName}
 						<div role="alert" class="alert alert-success">
-							<input type="checkbox" class="checkbox checkbox-sm checkbox-success" checked disabled />
+							<input
+								type="checkbox"
+								class="checkbox checkbox-sm checkbox-success"
+								checked
+								disabled
+							/>
 							<span>Asset Allocation set: {aaDefinitionFileName}</span>
-							<button class="btn btn-xs btn-ghost border border-warning" onclick={() => {
-								aaDefinitionFileName = '';
-							}}>
+							<button
+								class="btn btn-xs btn-ghost border border-warning"
+								onclick={() => {
+									aaDefinitionFileName = '';
+								}}
+							>
 								<XIcon class="w-4 h-4" /> Unset
 							</button>
 						</div>

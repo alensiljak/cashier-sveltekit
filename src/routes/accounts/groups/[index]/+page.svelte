@@ -10,13 +10,11 @@
 	import { SelectionModeMetadata, SettingKeys, settings, type AccountGroup } from '#lib/settings';
 	import Notifier from '#lib/utils/notifier';
 	import DragReorderList from '#lib/components/DragReorderList.svelte';
-	import {
-		CheckIcon,
-		PencilIcon,
-		PlusIcon,
-		Trash2Icon,
-		TrashIcon
-	} from '@lucide/svelte';
+	import CheckIcon from '@lucide/svelte/icons/check';
+	import PencilIcon from '@lucide/svelte/icons/pencil';
+	import PlusIcon from '@lucide/svelte/icons/plus';
+	import Trash2Icon from '@lucide/svelte/icons/trash-2';
+	import TrashIcon from '@lucide/svelte/icons/trash';
 	import { onMount } from 'svelte';
 
 	Notifier.init();
@@ -224,7 +222,7 @@
 
 <!-- Delete group confirmation dialog -->
 <input
-	 type="checkbox"
+	type="checkbox"
 	id="delete-group-confirm-modal"
 	class="modal-toggle"
 	bind:checked={isDeleteGroupConfirmationOpen}
@@ -238,8 +236,16 @@
 			<p class="py-4 opacity-60">Delete group "{groupTitle}"?</p>
 		</article>
 		<footer class="flex justify-end gap-4">
-			<button type="button" class="btn btn-ghost" onclick={() => (isDeleteGroupConfirmationOpen = false)}>Cancel</button>
-			<button type="button" class="btn btn-error text-error-content" onclick={onDeleteGroupConfirmed}>Delete</button>
+			<button
+				type="button"
+				class="btn btn-ghost"
+				onclick={() => (isDeleteGroupConfirmationOpen = false)}>Cancel</button
+			>
+			<button
+				type="button"
+				class="btn btn-error text-error-content"
+				onclick={onDeleteGroupConfirmed}>Delete</button
+			>
 		</footer>
 	</div>
 </dialog>
@@ -263,10 +269,8 @@
 		</article>
 		<footer class="flex justify-end gap-4">
 			<button type="button" class="btn btn-ghost" onclick={closeModal}>Cancel</button>
-			<button
-				type="button"
-				class="btn btn-primary text-primary-content"
-				onclick={onDeleteConfirmed}>OK</button
+			<button type="button" class="btn btn-primary text-primary-content" onclick={onDeleteConfirmed}
+				>OK</button
 			>
 		</footer>
 	</div>

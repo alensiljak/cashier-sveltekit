@@ -1,18 +1,16 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import {
-		CheckIcon,
-		XIcon,
-		ChevronDownIcon,
-		ChevronRightIcon,
-		FileIcon,
-		FolderIcon,
-		FolderOpenIcon,
-		GitCompareArrowsIcon,
-		RefreshCwIcon,
-		ShieldCheckIcon
-	} from '@lucide/svelte';
+	import CheckIcon from '@lucide/svelte/icons/check';
+	import XIcon from '@lucide/svelte/icons/x';
+	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
+	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
+	import FileIcon from '@lucide/svelte/icons/file';
+	import FolderIcon from '@lucide/svelte/icons/folder';
+	import FolderOpenIcon from '@lucide/svelte/icons/folder-open';
+	import GitCompareArrowsIcon from '@lucide/svelte/icons/git-compare-arrows';
+	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
+	import ShieldCheckIcon from '@lucide/svelte/icons/shield-check';
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import DiffViewer from '#lib/components/DiffViewer.svelte';
 	import Notifier from '#lib/utils/notifier';
@@ -279,7 +277,9 @@
 			await refresh();
 			const entry = entries.find((e) => e.path === path);
 			if (entry && entry.state !== 'unchanged') {
-				Notifier.success(`${path}: applied on this device. The rest still differs from the bucket.`);
+				Notifier.success(
+					`${path}: applied on this device. The rest still differs from the bucket.`
+				);
 				await startCompare(entry);
 			} else {
 				Notifier.success(`${path}: applied on this device. It now matches the bucket.`);
@@ -354,8 +354,9 @@
 
 {#snippet stateBadge(state: FileState, unrelated?: boolean)}
 	{#if unrelated}
-		<span class="badge badge-sm badge-warning" title="Never synced: it is not known which copy is newer"
-			>Differs</span
+		<span
+			class="badge badge-sm badge-warning"
+			title="Never synced: it is not known which copy is newer">Differs</span
 		>
 	{:else}
 		<span class="badge badge-sm {STATE_BADGE[state]}">{STATE_LABEL[state]}</span>
@@ -402,13 +403,17 @@
 				{/if}
 				<div class="join w-full">
 					<button
-						class="btn btn-xs join-item flex-1 {filter === 'conflicts' ? 'btn-primary' : 'btn-outline'}"
+						class="btn btn-xs join-item flex-1 {filter === 'conflicts'
+							? 'btn-primary'
+							: 'btn-outline'}"
 						onclick={() => setFilter('conflicts')}
 					>
 						Conflicts ({conflictCount})
 					</button>
 					<button
-						class="btn btn-xs join-item flex-1 {filter === 'changes' ? 'btn-primary' : 'btn-outline'}"
+						class="btn btn-xs join-item flex-1 {filter === 'changes'
+							? 'btn-primary'
+							: 'btn-outline'}"
 						onclick={() => setFilter('changes')}
 					>
 						Changes ({changeCount})
@@ -528,7 +533,9 @@
 						</div>
 					{:else if comparison.remoteText === null}
 						<div class="alert alert-info text-sm">
-							<span>Not in the bucket (or deleted there). This device's version is shown below.</span>
+							<span
+								>Not in the bucket (or deleted there). This device's version is shown below.</span
+							>
 						</div>
 					{:else if comparison.sameText}
 						<div class="alert alert-success text-sm">
@@ -542,14 +549,14 @@
 							</span>
 						</div>
 						{#if comparison.manifestStale}
-								<div class="alert alert-info text-sm">
-									<span>
-										The bucket's manifest is out of date for this file. Marking it as in sync also
-										corrects the manifest. No file is changed.
-									</span>
-								</div>
-							{/if}
-							<button class="btn btn-success btn-sm" disabled={working} onclick={markInSync}>
+							<div class="alert alert-info text-sm">
+								<span>
+									The bucket's manifest is out of date for this file. Marking it as in sync also
+									corrects the manifest. No file is changed.
+								</span>
+							</div>
+						{/if}
+						<button class="btn btn-success btn-sm" disabled={working} onclick={markInSync}>
 							{#if working}
 								<span class="loading loading-spinner loading-xs"></span>
 							{:else}
@@ -578,19 +585,31 @@
 							applyingMerge={working}
 						/>
 					{:else if comparison.localText !== null && comparison.remoteText === null}
-						<pre class="bg-base-200 overflow-x-auto rounded p-2 text-xs">{comparison.localText}</pre>
+						<pre
+							class="bg-base-200 overflow-x-auto rounded p-2 text-xs">{comparison.localText}</pre>
 					{:else if comparison.localText === null && comparison.remoteText !== null}
-						<pre class="bg-base-200 overflow-x-auto rounded p-2 text-xs">{comparison.remoteText}</pre>
+						<pre
+							class="bg-base-200 overflow-x-auto rounded p-2 text-xs">{comparison.remoteText}</pre>
 					{/if}
 				{/if}
 			</div>
 			{#if isConflict && comparison && !compareLoading}
-				<div class="border-base-300 flex flex-wrap items-center justify-end gap-2 border-t px-4 py-3">
+				<div
+					class="border-base-300 flex flex-wrap items-center justify-end gap-2 border-t px-4 py-3"
+				>
 					<span class="text-base-content/60 mr-auto text-xs">Resolve by keeping one side:</span>
-					<button class="btn btn-sm btn-outline" disabled={working} onclick={() => resolve('local')}>
+					<button
+						class="btn btn-sm btn-outline"
+						disabled={working}
+						onclick={() => resolve('local')}
+					>
 						Keep this device
 					</button>
-					<button class="btn btn-sm btn-outline" disabled={working} onclick={() => resolve('remote')}>
+					<button
+						class="btn btn-sm btn-outline"
+						disabled={working}
+						onclick={() => resolve('remote')}
+					>
 						Keep bucket
 					</button>
 				</div>

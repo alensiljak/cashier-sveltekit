@@ -11,7 +11,7 @@
 	import { locateXactsInSource, findXactAtLine } from '#lib/utils/xactLocator';
 	import type { XactId } from '#lib/storage/crdtXactStore';
 	import type { Xact } from '#lib/data/model';
-	import { SquarePenIcon } from '@lucide/svelte';
+	import SquarePenIcon from '@lucide/svelte/icons/square-pen';
 
 	// Two ways in:
 	//  - `id`: a working-set transaction (from the active store) — editable.

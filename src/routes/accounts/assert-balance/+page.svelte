@@ -9,7 +9,7 @@
 	import fullLedgerService from '#lib/services/ledgerWorkerClient';
 	import { getXactStore } from '#lib/storage/xactStoreRegistry';
 	import Notifier from '#lib/utils/notifier';
-	import { CheckIcon } from '@lucide/svelte';
+	import CheckIcon from '@lucide/svelte/icons/check';
 	import { onMount } from 'svelte';
 
 	const accountName = $derived(page.url.searchParams.get('account') ?? '');
@@ -80,7 +80,13 @@
 
 		<div class="form-control">
 			<label class="label" for="account"><span class="label-text">Account</span></label>
-			<input id="account" type="text" class="input input-bordered w-full" value={accountName} readonly />
+			<input
+				id="account"
+				type="text"
+				class="input input-bordered w-full"
+				value={accountName}
+				readonly
+			/>
 		</div>
 
 		<div class="form-control">
@@ -114,9 +120,9 @@
 			<span>
 				<strong>How it works:</strong> this adds a Beancount <code>balance</code> assertion. It does
 				not change any balance; it only checks it. The assertion is evaluated at the
-				<em>start</em> of the chosen date, i.e. against all transactions dated <em>before</em> that
-				day (transactions on the same day are not counted). If the account's balance in that
-				currency differs, validation reports a failed assertion.
+				<em>start</em> of the chosen date, i.e. against all transactions dated <em>before</em> that day
+				(transactions on the same day are not counted). If the account's balance in that currency differs,
+				validation reports a failed assertion.
 			</span>
 		</div>
 	</section>
