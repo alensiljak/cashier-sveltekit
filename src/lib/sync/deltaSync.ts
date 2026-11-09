@@ -1201,7 +1201,7 @@ export class DeltaSync {
 			await this.learnBucket().catch(() => undefined);
 			const before = this.pending.length;
 			await this.healOutbox();
-			const upload = !!this.state.pendingSnapshot || this.outgoing() !== null;			// A dry run: drop what healing added.
+			const upload = !!this.state.pendingSnapshot || this.outgoing() !== null; // A dry run: drop what healing added.
 			this.pending.length = before;
 
 			this.pruneFetched();
