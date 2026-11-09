@@ -618,7 +618,7 @@ export class DeltaSync {
 
 	/** Forgets cached objects that this device has applied. */
 	private pruneFetched(): void {
-		for (const key of [...this.fetched.keys()]) {
+		for (const key of this.fetched.keys()) {
 			const parsed = parseKey(this.o.kind, key);
 			const done =
 				parsed?.type === 'delta'
@@ -668,7 +668,9 @@ export class DeltaSync {
 		if (this.state.pendingSnapshot) return true;
 		const before = this.pending.length;
 		await this.healOutbox();
-		const needed = this.pending.length > 0;
+		// Not `pending.length`: operations merged from a peer sit in the outbox although the bucket
+		// holds them already (see `outgoing`).
+		const needed = this.outgoing() !== null;
 		// A dry run: drop what healing added.
 		this.pending.length = before;
 		return needed;
@@ -1199,8 +1201,7 @@ export class DeltaSync {
 			await this.learnBucket().catch(() => undefined);
 			const before = this.pending.length;
 			await this.healOutbox();
-			const upload = !!this.state.pendingSnapshot || this.outgoing() !== null;
-			// A dry run: drop what healing added.
+			const upload = !!this.state.pendingSnapshot || this.outgoing() !== null;			// A dry run: drop what healing added.
 			this.pending.length = before;
 
 			this.pruneFetched();
