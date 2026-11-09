@@ -2,7 +2,7 @@
  * Vitest global setup — runs once per test file before its imports execute
  * side effects.
  *
- * Four browser/library things the codebase relies on at module-load time
+ * Three browser/library things the codebase relies on at module-load time
  * don't exist (or don't perform) in Vitest's Node/jsdom environment, so we
  * stub them here rather than special-casing test mode in production code:
  *
@@ -14,14 +14,7 @@
  *    valid URL for Node's fetch. We intercept `.wasm` requests and serve the
  *    real bytes from disk so WASM-dependent tests exercise the actual parser
  *    instead of being skipped or mocked away.
- * 3. `@lucide/svelte` — the package barrel re-exports ~1700 individual icon
- *    components; per lucide-icons/lucide#2806, importing even one icon from
- *    the barrel forces evaluation of all of them, both in dev (10x reload
- *    slowdown) and under Vitest (30s+ per import, well past any test
- *    timeout). Every icon is mocked to the same trivial stub component —
- *    tests assert on behavior/markup structure, never on which icon glyph
- *    rendered.
- * 4. `indexedDB` — Dexie-backed modules (db.ts) call `indexedDB.open(...)` at
+ * 3. `indexedDB` — Dexie-backed modules (db.ts) call `indexedDB.open(...)` at
  *    construction time; jsdom doesn't implement IndexedDB at all.
  *    `fake-indexeddb/auto` installs a real (in-memory) IndexedDB implementation
  *    on the global scope so Dexie-backed code runs against actual IndexedDB
@@ -31,24 +24,6 @@ import 'fake-indexeddb/auto';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { vi } from 'vitest';
-import IconStub from './mocks/IconStub.svelte';
-
-vi.mock('@lucide/svelte', () => {
-	// Only intercept plain string icon-name lookups. `then` in particular
-	// must fall through to `undefined` — otherwise native code awaiting this
-	// module namespace treats it as a thenable and invokes IconStub as an
-	// executor function instead of rendering it as a component.
-	return new Proxy(
-		{},
-		{
-			get: (_target, prop) => (typeof prop === 'string' && prop !== 'then' ? IconStub : undefined),
-			// Vitest's ESM interop checks named-import bindings exist via `in`
-			// before reading them — without this, every named icon import
-			// throws "No export is defined on the mock" despite `get` above.
-			has: (_target, prop) => typeof prop === 'string' && prop !== 'then'
-		}
-	);
-});
 
 class NoopWorker {
 	onmessage: ((e: MessageEvent) => void) | null = null;

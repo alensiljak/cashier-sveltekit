@@ -31,6 +31,19 @@ export default [
 			}
 		},
 		rules: {
+			// The @lucide/svelte barrel re-exports ~1700 icons and forces all of them to load
+			// (slow dev reloads and tests). Use deep imports: '@lucide/svelte/icons/<name>'.
+			'no-restricted-imports': [
+				'error',
+				{
+					paths: [
+						{
+							name: '@lucide/svelte',
+							message: "Use a deep import, e.g. import X from '@lucide/svelte/icons/x'."
+						}
+					]
+				}
+			],
 			// No `paths.base` is configured, so resolve() would be a no-op on every link.
 			'svelte/no-navigation-without-resolve': 'off',
 			// Flags local, short-lived Map/Set/Date instances that never need to be reactive.

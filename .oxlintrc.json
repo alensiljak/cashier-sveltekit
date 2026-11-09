@@ -2,7 +2,19 @@
 	"$schema": "./node_modules/oxlint/configuration_schema.json",
 	"plugins": null,
 	"categories": {},
-	"rules": {},
+	"rules": {
+		"no-restricted-imports": [
+			"error",
+			{
+				"paths": [
+					{
+						"name": "@lucide/svelte",
+						"message": "Use a deep import, e.g. import X from '@lucide/svelte/icons/x'."
+					}
+				]
+			}
+		]
+	},
 	"settings": {
 		"vitest": {
 			"typecheck": false
