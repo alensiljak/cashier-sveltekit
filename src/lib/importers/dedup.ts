@@ -46,6 +46,21 @@ export function findDuplicates(
 	account: string,
 	windowDays = DEFAULT_DATE_WINDOW_DAYS
 ): DedupResult[] {
+	return matchWithExisting(candidates, existing, account, windowDays).results;
+}
+
+/**
+ * Like {@link findDuplicates}, and also returns the recorded transactions that no candidate
+ * matched, dated within the candidates' own date range: in the book, but not on the statement.
+ * (`existing` may reach `windowDays` beyond that range so edge candidates can still match; those
+ * outer transactions are not reported, since the file says nothing about them.)
+ */
+export function matchWithExisting(
+	candidates: Xact[],
+	existing: Xact[],
+	account: string,
+	windowDays = DEFAULT_DATE_WINDOW_DAYS
+): { results: DedupResult[]; unmatchedExisting: Xact[] } {
 	const pairs: { c: number; e: number; distance: number; alike: boolean }[] = [];
 	candidates.forEach((cand, c) => {
 		if (!cand.date) return;
@@ -66,5 +81,14 @@ export function findDuplicates(
 		usedExisting.add(e);
 	}
 
-	return candidates.map((xact, c) => ({ xact, duplicateOf: matched.get(c) }));
+	const results = candidates.map((xact, c) => ({ xact, duplicateOf: matched.get(c) }));
+
+	const dates = candidates.map((c) => c.date).filter((d): d is string => !!d);
+	const first = dates.reduce((a, b) => (b < a ? b : a), dates[0]);
+	const last = dates.reduce((a, b) => (b > a ? b : a), dates[0]);
+	const unmatchedExisting = existing.filter(
+		(ex, e) => !usedExisting.has(e) && !!ex.date && ex.date >= first && ex.date <= last
+	);
+
+	return { results, unmatchedExisting };
 }

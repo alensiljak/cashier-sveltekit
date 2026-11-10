@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { findDuplicates } from '../../src/lib/importers/dedup';
+import { findDuplicates, matchWithExisting } from '../../src/lib/importers/dedup';
 import { identifyImporter } from '../../src/lib/importers';
 import { n26Importer } from '../../src/lib/importers/n26';
 import { allRules, replaceRule, withRules, type RuleConfig } from '../../src/lib/importers/rules';
@@ -199,5 +199,52 @@ describe('findDuplicates', () => {
 			ACCOUNT
 		);
 		expect(results.map((r) => !!r.duplicateOf)).toEqual([true, false]);
+	});
+});
+
+describe('matchWithExisting', () => {
+	it('returns the same matches as findDuplicates', () => {
+		const candidates = [xact('2026-09-09', -7.15), xact('2026-09-11', -7.15)];
+		const existing = [xact('2026-09-11', -7.15)];
+		const { results } = matchWithExisting(candidates, existing, ACCOUNT);
+		expect(results.map((r) => !!r.duplicateOf)).toEqual(
+			findDuplicates(candidates, existing, ACCOUNT).map((r) => !!r.duplicateOf)
+		);
+	});
+
+	it('reports recorded transactions that no row matched, inside the file range', () => {
+		const stray = xact('2026-09-05', -20);
+		const { unmatchedExisting } = matchWithExisting(
+			[xact('2026-09-03', -13.58), xact('2026-09-10', -4)],
+			[xact('2026-09-03', -13.58), stray, xact('2026-09-10', -4)],
+			ACCOUNT
+		);
+		expect(unmatchedExisting).toEqual([stray]);
+	});
+
+	it('ignores unmatched recorded transactions outside the file range', () => {
+		// Loaded with date-window padding so edge rows can match; the padding is not reported.
+		const { unmatchedExisting } = matchWithExisting(
+			[xact('2026-09-03', -13.58), xact('2026-09-10', -4)],
+			[xact('2026-09-01', -50), xact('2026-09-12', -60)],
+			ACCOUNT
+		);
+		expect(unmatchedExisting).toEqual([]);
+	});
+
+	it('does not report an existing transaction that absorbed a row', () => {
+		const { unmatchedExisting } = matchWithExisting(
+			[xact('2026-09-08', -7.15), xact('2026-09-08', -7.15)],
+			[xact('2026-09-08', -7.15), xact('2026-09-08', -7.15)],
+			ACCOUNT
+		);
+		expect(unmatchedExisting).toEqual([]);
+	});
+
+	it('handles an empty file', () => {
+		expect(matchWithExisting([], [xact('2026-09-08', -7)], ACCOUNT)).toEqual({
+			results: [],
+			unmatchedExisting: []
+		});
 	});
 });

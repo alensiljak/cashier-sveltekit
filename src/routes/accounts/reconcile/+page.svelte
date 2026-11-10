@@ -141,6 +141,12 @@
 		currency = draft.currency;
 	});
 
+	// A date in the URL (e.g. from the importer) takes precedence over the saved draft's date.
+	$effect(() => {
+		const date = page.url.searchParams.get('date');
+		if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) statementDate = date;
+	});
+
 	// Load the account's currencies whenever the account changes.
 	$effect(() => {
 		const name = accountName;

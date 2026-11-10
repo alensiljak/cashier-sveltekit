@@ -4,7 +4,7 @@
 	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
 	import JournalXactRow from '#lib/components/JournalXactRow.svelte';
 	import Notifier from '#lib/utils/notifier';
-	import { DEFAULT_DATE_WINDOW_DAYS, findDuplicates } from './dedup';
+	import { DEFAULT_DATE_WINDOW_DAYS, matchWithExisting } from './dedup';
 	import { loadExistingBankXacts, loadFullXact, loadIsinSymbols } from './existing';
 	import { clearPendingImport, loadPendingImport, saveSelection, saveView } from './pendingImport';
 	import { getXactStore } from '#lib/storage/xactStoreRegistry';
@@ -41,6 +41,11 @@
 	/** Hides the rows that match a recorded transaction, leaving what is new. */
 	let unmatchedOnly = $state(false);
 	let scroller: HTMLDivElement;
+	/** Recorded transactions within the file's date range that no row of the file matched. */
+	let notInFile = $state<Xact[]>([]);
+	let bankAccount = $state('');
+	/** The file's last transaction date, offered as the statement date when reconciling. */
+	let lastDate = $state('');
 
 	let isinToSymbol: Record<string, string> = {};
 
@@ -92,11 +97,14 @@
 				);
 			}
 
-			const matches = findDuplicates(
+			const { results: matches, unmatchedExisting: missing } = matchWithExisting(
 				imported.map((r) => r.xact),
 				existing,
 				account
 			);
+			notInFile = missing;
+			bankAccount = account;
+			lastDate = dates[dates.length - 1];
 			const pending = loadPendingImport();
 			const restore =
 				pending?.selection?.length === imported.length ? pending.selection : undefined;
@@ -163,6 +171,19 @@
 			unmatchedOnly
 		});
 		await goto(`/importers/rule?row=${i}${rule === undefined ? '' : `&rule=${rule}`}`);
+	}
+
+	/** Opens reconciliation for the file's account, dated at the file's last transaction. */
+	async function reconcile() {
+		saveView({
+			matchOpen: Object.keys(matchOpen).map(Number),
+			detailsOpen: Object.keys(detailsOpen).map(Number),
+			scrollTop: scroller.scrollTop,
+			unmatchedOnly
+		});
+		await goto(
+			`/accounts/reconcile?account=${encodeURIComponent(bankAccount)}&date=${encodeURIComponent(lastDate)}`
+		);
 	}
 
 	async function accept() {
@@ -297,6 +318,33 @@
 			{/each}
 			{#if unmatchedOnly && matchedCount === rows.length}
 				<p class="py-4 text-sm opacity-70">Every row matches a recorded transaction.</p>
+			{/if}
+		</div>
+
+		<div class="rounded-box bg-base-200 p-3">
+			<div class="flex items-center justify-between gap-2 flex-wrap">
+				<h2 class="text-sm font-semibold">
+					In the book, not in this file
+					<span class="font-normal opacity-60">({notInFile.length})</span>
+				</h2>
+				<button class="btn btn-xs" onclick={reconcile}>Reconcile</button>
+			</div>
+			{#if notInFile.length === 0}
+				<p class="mt-1 text-xs opacity-70">
+					Every recorded transaction in the file's date range appears in the file.
+				</p>
+			{:else}
+				<p class="mt-1 text-xs opacity-70">
+					Recorded for this account within the file's dates but not matched by any row: possible
+					duplicates, wrong-account postings or entries that have not cleared.
+				</p>
+				<div class="mt-2 flex flex-col divide-y divide-base-300">
+					{#each notInFile as xact, i (i)}
+						<div class="py-1">
+							<JournalXactRow {xact} linksEnabled={false} />
+						</div>
+					{/each}
+				</div>
 			{/if}
 		</div>
 	{/if}
