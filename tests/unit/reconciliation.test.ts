@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
 	assertionDateFor,
 	isReconciled,
+	lastAssertionDate,
 	latestAssertion,
 	reconciliationDifference,
 	sumTicked
@@ -64,6 +65,31 @@ describe('latestAssertion', () => {
 
 	it('returns undefined when every assertion is later', () => {
 		expect(latestAssertion(directives, 'Assets:Bank', 'EUR', '2025-12-31')).toBeUndefined();
+	});
+});
+
+describe('lastAssertionDate', () => {
+	const bal = (date: string, account: string, currency = 'EUR') => ({
+		type: 'balance',
+		date,
+		account,
+		amount: { number: '1', currency }
+	});
+
+	it('is the latest assertion across currencies for the account', () => {
+		const directives = [
+			bal('2026-01-01', 'Assets:Bank'),
+			bal('2026-05-01', 'Assets:Bank', 'USD'),
+			bal('2026-03-01', 'Assets:Bank'),
+			bal('2026-09-01', 'Assets:Other'),
+			{ type: 'open', date: '2026-12-01', account: 'Assets:Bank' }
+		];
+		expect(lastAssertionDate(directives, 'Assets:Bank')).toBe('2026-05-01');
+	});
+
+	it('is undefined when the account has no assertion', () => {
+		expect(lastAssertionDate([bal('2026-01-01', 'Assets:Other')], 'Assets:Bank')).toBeUndefined();
+		expect(lastAssertionDate([], 'Assets:Bank')).toBeUndefined();
 	});
 });
 
