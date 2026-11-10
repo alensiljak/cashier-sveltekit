@@ -19,6 +19,7 @@ The idea: enter by hand only what you would otherwise forget (a rare purchase, a
 - **Match ›** — appears on rows that match a recorded transaction. Tap it to see the recorded transaction in full, including its postings, so you can check the match is right.
 - **Details ›** — what the bank sent and what the rules did: the original payee, payment reference, value date, original amount and exchange rate for foreign-currency payments, the ISIN for distributions, and which rules changed the payee or account. None of this is saved on the transaction.
 - **Apply rules** — turn off to see the raw records, as the bank sent them. Turn on again to bring the rules back.
+- **In the book, not in this file** — below the rows, lists recorded transactions for the account that fall within the file's dates but match no row: possible duplicates, wrong-account entries or things that have not cleared. Its **Reconcile** button opens [Reconcile Account](/help/reconcile) for the file's account, dated at the file's last transaction. The statement's closing balance is still entered by hand, as the N26 file has none.
 - **Unmatched only** — hides the rows that match a recorded transaction, so you see just what is new.
 - A **⚠** on a row means it is still on the placeholder account (`Expenses:Uncategorized`) and is flagged `!` for review.
 

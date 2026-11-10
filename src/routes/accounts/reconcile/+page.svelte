@@ -11,6 +11,7 @@
 	import { SelectionType } from '#lib/enums';
 	import { SelectionModeMetadata } from '#lib/settings';
 	import appService from '#lib/services/appService';
+	import { reloadLedgerFromOpfs } from '#lib/services/ledgerReload';
 	import fullLedgerService from '#lib/services/ledgerWorkerClient';
 	import {
 		loadAccountPostings,
@@ -90,6 +91,9 @@
 			});
 			clearDraft(accountName);
 			draftReady = false;
+			// The ledger only reads the working set when it (re)loads; wait for it so the account page
+			// and the next reconciliation already see the new assertion.
+			await reloadLedgerFromOpfs();
 			Notifier.success('Balance assertion saved');
 			await goto(`/accounts/account-xacts/${encodeURIComponent(accountName)}`);
 		} catch (e) {

@@ -4,6 +4,8 @@ This page shows one account's details and every transaction posted to it, newest
 
 The header shows the account's parent group, its current balance, and any metadata set on the account's `open` directive (each value has a copy button).
 
+Below the balance, **Last reconciled on** shows the date of the account's latest balance assertion, or **Never reconciled** if it has none.
+
 If any of the listed transactions only exist on this device and haven't been synced into the ledger yet, a **Local records** notice appears and those rows are highlighted with an amber border.
 
 Tap a transaction to open [Transaction Actions](/help/xact-actions), where you can view, edit, duplicate, schedule, or delete it.

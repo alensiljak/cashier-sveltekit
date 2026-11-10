@@ -7,6 +7,7 @@
 	import type { Xact } from '#lib/data/model';
 	import { saveBalanceAssertion } from '#lib/reconciliation/saveAssertion';
 	import appService from '#lib/services/appService';
+	import { reloadLedgerFromOpfs } from '#lib/services/ledgerReload';
 	import fullLedgerService from '#lib/services/ledgerWorkerClient';
 	import Notifier from '#lib/utils/notifier';
 	import CheckIcon from '@lucide/svelte/icons/check';
@@ -54,6 +55,8 @@
 			editing
 		);
 		Notifier.success('Balance assertion saved');
+		// The ledger only reads the working set when it (re)loads.
+		await reloadLedgerFromOpfs();
 		if (editing) {
 			xactStore.set(tx);
 			history.back();

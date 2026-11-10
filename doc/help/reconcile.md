@@ -2,7 +2,7 @@
 
 Reconciling checks that your book agrees with a bank (or other) statement. When it does, Cashier saves a Beancount `balance` assertion so the check is repeated every time the ledger loads.
 
-Open it from **Reconcile** in the main menu, or from the ⋮ menu on an [Account Transactions](/help/account-transactions) page, which pre-selects that account.
+Open it from **Reconcile** in the main menu, or from the ⋮ menu on an [Account Transactions](/help/account-transactions) page, which pre-selects that account. After an [import](/help/importers) review, the **Reconcile** button opens it for the file's account, dated at the file's last transaction.
 
 ## How it works
 
@@ -22,7 +22,8 @@ Open it from **Reconcile** in the main menu, or from the ⋮ menu on an [Account
 
 ## Good to know
 
-- **Ticks are not saved.** They only help you work through the list; the saved assertion is the lasting result. Changing the account, date or currency clears them.
+- **Your progress is kept as a draft on this device.** The statement date, balance, currency and ticks are remembered per account, so you can leave to fix a transaction and come back. Ticks never go into your books, and the draft is not synced. Changing the date or currency starts a fresh set of ticks. The draft is removed when you save the assertion.
+- **The saved assertion is the lasting result.** Each account's page shows **Last reconciled on** with the date of its latest balance assertion, so stale accounts stand out.
 - **The assertion is dated the day after** the closing date, because Beancount checks balances at the start of the day. See [Balance Assertion](/help/account-transactions).
 - **You can only save when the book itself matches.** Ticking transactions never changes the book balance, so the save button appears only when the Difference is zero.
 - The assertion goes into the working set. Later reconciliations start from it, so they only have to explain newer transactions.

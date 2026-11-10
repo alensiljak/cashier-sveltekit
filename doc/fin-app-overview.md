@@ -9,7 +9,7 @@ Characteristics
 ## Core Principles of a Good Mobile Finance App
 
 - **Security-first** – biometric login, encryption, read-only access where possible.
-- **Minimal friction** – quick to log transactions, easy to reconcile accounts.
+- ✅ **Minimal friction** – quick to log transactions, easy to reconcile accounts.
 - **Actionable insights** – not just tracking, but helping you change behavior.
 - ✅ **Cross-platform sync** – works seamlessly on phone, tablet, and web.
 - ✅ **Privacy** – clear data usage policy, no selling of transaction data.
