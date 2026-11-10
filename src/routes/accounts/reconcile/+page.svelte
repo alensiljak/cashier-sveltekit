@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import Fab from '#lib/components/FAB.svelte';
+	import HelpButton from '#lib/help/HelpButton.svelte';
 	import Notifier from '#lib/utils/notifier';
 	import CheckIcon from '@lucide/svelte/icons/check';
 	import { saveBalanceAssertion } from '#lib/reconciliation/saveAssertion';
@@ -175,7 +176,11 @@
 </script>
 
 <main class="flex h-screen flex-col">
-	<Toolbar title="Reconcile Account" />
+	<Toolbar title="Reconcile Account">
+		{#snippet actions()}
+			<HelpButton topic="reconcile" />
+		{/snippet}
+	</Toolbar>
 
 	{#if canSave}
 		<Fab Icon={CheckIcon} onclick={onSave} />
