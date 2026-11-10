@@ -6,6 +6,7 @@ import { Account, Money } from '#lib/data/model.js';
 import { getXactStore } from '#lib/storage/xactStoreRegistry';
 import fullLedgerService from '#lib/services/ledgerWorkerClient';
 import { mergeUnifiedRows, type UnifiedXact } from '#lib/utils/unifiedXacts';
+import { lastAssertionDate } from '#lib/reconciliation/reconciliation';
 import type { MetaValueJson } from '@rustledger/wasm';
 import type { PageLoad } from './$types';
 
@@ -94,5 +95,7 @@ WHERE account = '${params.accountName}'`;
 	) as { meta?: AccountMeta } | undefined;
 	const accountMeta: AccountMeta = openDirective?.meta ?? {};
 
-	return { account, totals, unifiedRows, hasDeviceXacts, accountMeta };
+	const lastReconciled = lastAssertionDate(directives, params.accountName);
+
+	return { account, totals, unifiedRows, hasDeviceXacts, accountMeta, lastReconciled };
 };

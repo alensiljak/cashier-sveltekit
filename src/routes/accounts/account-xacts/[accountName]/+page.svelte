@@ -82,6 +82,13 @@
 					{/each}
 				</div>
 			</div>
+			<p class="text-base-content/60 mt-1 text-sm">
+				{#if page.data.lastReconciled}
+					Last reconciled on {page.data.lastReconciled}
+				{:else}
+					Never reconciled
+				{/if}
+			</p>
 			{#if Object.keys(page.data.accountMeta as AccountMeta).length > 0}
 				<dl class="mt-2 space-y-0.5 text-sm">
 					{#each Object.entries(page.data.accountMeta as AccountMeta) as [key, value]}

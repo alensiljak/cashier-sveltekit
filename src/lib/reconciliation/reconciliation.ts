@@ -49,6 +49,20 @@ export function latestAssertion(
 	return best;
 }
 
+/**
+ * Date of the most recent `balance` assertion for `account` in any currency, or undefined
+ * if there is none. Shown as "last reconciled on" so stale accounts stand out.
+ */
+export function lastAssertionDate(directives: unknown[], account: string): string | undefined {
+	let best: string | undefined;
+	for (const d of directives as Array<Record<string, unknown>>) {
+		if (d.type !== 'balance' || d.account !== account) continue;
+		const date = String(d.date ?? '');
+		if (date && (!best || date > best)) best = date;
+	}
+	return best;
+}
+
 /** Sum of the amounts at the ticked positions. */
 export function sumTicked(amounts: number[], ticked: boolean[]): number {
 	return amounts.reduce((sum, amount, i) => (ticked[i] ? sum + amount : sum), 0);
