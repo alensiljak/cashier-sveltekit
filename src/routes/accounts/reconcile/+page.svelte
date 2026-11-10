@@ -25,6 +25,13 @@
 		type BalanceAssertion
 	} from '#lib/reconciliation/reconciliation';
 	import * as Formatter from '#lib/utils/formatter';
+	import {
+		clearDraft,
+		loadDraft,
+		postingKeys,
+		restoreTicks,
+		saveDraft
+	} from '#lib/reconciliation/draft';
 	import { onMount } from 'svelte';
 
 	const accountName = $derived(page.url.searchParams.get('account') ?? '');
@@ -81,6 +88,8 @@
 				amount: statementValue,
 				currency
 			});
+			clearDraft(accountName);
+			draftReady = false;
 			Notifier.success('Balance assertion saved');
 			await goto(`/accounts/account-xacts/${encodeURIComponent(accountName)}`);
 		} catch (e) {
@@ -116,6 +125,21 @@
 		selectionMetadata.set(meta);
 		await goto('/accounts');
 	}
+
+	/** True once the postings for the current inputs are loaded and ticks restored. */
+	let draftReady = false;
+
+	// Restore the saved statement inputs when an account is opened.
+	$effect(() => {
+		const name = accountName;
+		draftReady = false;
+		if (!name) return;
+		const draft = loadDraft(name);
+		if (!draft) return;
+		statementDate = draft.statementDate;
+		statementBalance = draft.statementBalance;
+		currency = draft.currency;
+	});
 
 	// Load the account's currencies whenever the account changes.
 	$effect(() => {
@@ -158,8 +182,13 @@
 			bookBalance = balance;
 			assertion = last;
 			postings = list;
-			// A changed window invalidates earlier ticks.
-			ticked = list.map(() => false);
+			// A changed window invalidates earlier ticks, unless the saved draft is for this window.
+			const draft = loadDraft(name);
+			ticked =
+				draft && draft.statementDate === date && draft.currency.toUpperCase() === cur
+					? restoreTicks(postingKeys(list), draft.tickedKeys)
+					: list.map(() => false);
+			draftReady = true;
 		})()
 			.catch((e) => {
 				if (id !== request) return;
@@ -172,6 +201,26 @@
 			.finally(() => {
 				if (id === request) loading = false;
 			});
+	});
+
+	// Persist the draft whenever the inputs or ticks change (after the load has restored them).
+	$effect(() => {
+		const name = accountName;
+		const keys = postingKeys(postings);
+		const tickedKeys = keys.filter((_, i) => ticked[i]);
+		const draft = {
+			account: name,
+			statementDate,
+			statementBalance,
+			currency,
+			tickedKeys
+		};
+		if (!name || loading || !draftReady) return;
+		if (!statementBalance && tickedKeys.length === 0) {
+			clearDraft(name);
+			return;
+		}
+		saveDraft(draft);
 	});
 </script>
 
