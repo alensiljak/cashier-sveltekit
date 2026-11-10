@@ -4,7 +4,7 @@
 	import { onMount } from 'svelte';
 	import { selectionMetadata } from '#lib/data/mainStore';
 	import Fab from '#lib/components/FAB.svelte';
-	import { CheckIcon } from '@lucide/svelte';
+	import CheckIcon from '@lucide/svelte/icons/check';
 	import SearchToolbar from '#lib/components/SearchToolbar.svelte';
 	import { ListSearch } from '#lib/utils/ListSearch';
 	import Notifier from '#lib/utils/notifier';
@@ -19,7 +19,6 @@
 	let searchString = $state('');
 	let showFab = $derived(isInSelectionMode && searchString);
 	let dataLoaded = $state(false);
-
 
 	onMount(async () => {
 		await loadData();
@@ -108,22 +107,22 @@
 	<SearchToolbar focus {onSearch} />
 
 	<div class="flex-1 overflow-y-auto touch-pan-y px-1">
-	{#if !dataLoaded}
-		<div class="flex h-full items-center justify-center">
-			<span class="loading loading-spinner loading-lg"></span>
-		</div>
-	{:else}
-		{#each filteredPayees as payee (payee)}
-			<!-- svelte-ignore a11y_click_events_have_key_events -->
-			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-			<div
-				class="border-base-content/15 border-b py-2 min-h-[44px] flex items-center"
-				onclick={() => onPayeeSelected(payee)}
-				role="listitem"
-			>
-				{payee || ' '}
+		{#if !dataLoaded}
+			<div class="flex h-full items-center justify-center">
+				<span class="loading loading-spinner loading-lg"></span>
 			</div>
-		{/each}
-	{/if}
+		{:else}
+			{#each filteredPayees as payee (payee)}
+				<!-- svelte-ignore a11y_click_events_have_key_events -->
+				<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+				<div
+					class="border-base-content/15 border-b py-2 min-h-[44px] flex items-center"
+					onclick={() => onPayeeSelected(payee)}
+					role="listitem"
+				>
+					{payee || ' '}
+				</div>
+			{/each}
+		{/if}
 	</div>
 </main>

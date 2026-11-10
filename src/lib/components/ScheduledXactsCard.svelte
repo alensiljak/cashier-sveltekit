@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { CalendarClockIcon, CalendarDaysIcon } from '@lucide/svelte';
+	import CalendarClockIcon from '@lucide/svelte/icons/calendar-clock';
+	import CalendarDaysIcon from '@lucide/svelte/icons/calendar-days';
 	import CashierCardTemplate from './CashierCardTemplate.svelte';
 	import { goto } from '$app/navigation';
 	import type { Money, ScheduledTransaction, Xact } from '#lib/data/model';
@@ -7,7 +8,12 @@
 	import { listScx } from '#lib/services/scxService';
 	import { updateRepaymentAmounts } from '#lib/services/repaymentService';
 	import { XactAugmenter } from '#lib/utils/xactAugmenter';
-	import { formatAmount, getXactAmountColour, getDateColour, getReadableDate } from '#lib/utils/formatter';
+	import {
+		formatAmount,
+		getXactAmountColour,
+		getDateColour,
+		getReadableDate
+	} from '#lib/utils/formatter';
 	import { ShortDateFormatStore } from '#lib/data/mainStore';
 
 	let scxs: ScheduledTransaction[] = $state([]);
@@ -65,7 +71,11 @@
 						<data class="min-w-0 grow truncate">
 							{scx.transaction?.payee}
 						</data>
-						<data class={`whitespace-nowrap tabular-nums ${scx.transaction && amounts[index] ? getXactAmountColour(scx.transaction, amounts[index]) : ''}`}>{formatAmount(amounts[index]?.quantity, 2)} <span class="font-mono">{amounts[index]?.currency}</span></data>
+						<data
+							class={`whitespace-nowrap tabular-nums ${scx.transaction && amounts[index] ? getXactAmountColour(scx.transaction, amounts[index]) : ''}`}
+							>{formatAmount(amounts[index]?.quantity, 2)}
+							<span class="font-mono">{amounts[index]?.currency}</span></data
+						>
 					</div>
 				{/each}
 			</div>
@@ -73,11 +83,10 @@
 	{/snippet}
 	{#snippet footer()}
 		<center>
-		<button type="button" class="btn btn-outline btn-warning uppercase"
-			onclick={onCalendarClick}>
-			<CalendarDaysIcon />
-			<span>Calendar</span>
-		</button>
-	</center>
+			<button type="button" class="btn btn-outline btn-warning uppercase" onclick={onCalendarClick}>
+				<CalendarDaysIcon />
+				<span>Calendar</span>
+			</button>
+		</center>
 	{/snippet}
 </CashierCardTemplate>

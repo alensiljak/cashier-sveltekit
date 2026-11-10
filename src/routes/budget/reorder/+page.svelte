@@ -4,7 +4,7 @@
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import { type BudgetCategory, SettingKeys, settings } from '#lib/settings';
 	import { formatAmount } from '#lib/utils/formatter';
-	import { CheckIcon } from '@lucide/svelte';
+	import CheckIcon from '@lucide/svelte/icons/check';
 	import { onMount } from 'svelte';
 
 	let categories = $state<BudgetCategory[]>([]);

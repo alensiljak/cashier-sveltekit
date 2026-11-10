@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { TriangleAlertIcon } from '@lucide/svelte';
+	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
 
 	/**
 	 * Compact one-entry summary: date, flag, payee · note, with the amount right-aligned.

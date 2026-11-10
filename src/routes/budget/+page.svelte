@@ -21,7 +21,9 @@
 	import fullLedgerService from '#lib/services/ledgerWorkerClient';
 	import Notifier from '#lib/utils/notifier';
 	import { formatAmount } from '#lib/utils/formatter';
-	import { ArrowUpDownIcon, PlusCircleIcon, TrashIcon } from '@lucide/svelte';
+	import ArrowUpDownIcon from '@lucide/svelte/icons/arrow-up-down';
+	import PlusCircleIcon from '@lucide/svelte/icons/plus-circle';
+	import TrashIcon from '@lucide/svelte/icons/trash';
 	import HelpButton from '#lib/help/HelpButton.svelte';
 
 	Notifier.init();
@@ -62,9 +64,14 @@
 	const budgetMultiplier = $derived(viewMode === 'month' ? 1 : MONTHS_PER_YEAR);
 
 	const totalBudgeted = $derived(
-		categories.reduce((sum, c) => sum + (c.amount || 0) * budgetMultiplier + (rollovers.get(c.account) ?? 0), 0)
+		categories.reduce(
+			(sum, c) => sum + (c.amount || 0) * budgetMultiplier + (rollovers.get(c.account) ?? 0),
+			0
+		)
 	);
-	const totalActual = $derived(categories.reduce((sum, c) => sum + (actuals.get(c.account) ?? 0), 0));
+	const totalActual = $derived(
+		categories.reduce((sum, c) => sum + (actuals.get(c.account) ?? 0), 0)
+	);
 
 	onMount(async () => {
 		await handleCategorySelection();
@@ -273,7 +280,10 @@
 				const start = since > yearStart ? since : yearStart;
 				for (let cursor = start; cursor < monthStart; cursor = addMonths(cursor, 1)) {
 					const actualForMonth = monthly.get(cat.account)?.get(formatDate(cursor, 'YYYY-MM')) ?? 0;
-					carried.set(cat.account, (carried.get(cat.account) ?? 0) + Math.max(0, cat.amount - actualForMonth));
+					carried.set(
+						cat.account,
+						(carried.get(cat.account) ?? 0) + Math.max(0, cat.amount - actualForMonth)
+					);
 				}
 			}
 
@@ -355,7 +365,11 @@
 		{/snippet}
 		{#snippet menuItems()}
 			<ToolbarMenuItem text="Add Category" Icon={PlusCircleIcon} onclick={onAddCategoryClicked} />
-			<ToolbarMenuItem text="Delete Categories" Icon={TrashIcon} onclick={onDeleteCategoriesClicked} />
+			<ToolbarMenuItem
+				text="Delete Categories"
+				Icon={TrashIcon}
+				onclick={onDeleteCategoriesClicked}
+			/>
 			<ToolbarMenuItem text="Reorder" Icon={ArrowUpDownIcon} onclick={onReorderClicked} />
 		{/snippet}
 	</Toolbar>
@@ -364,14 +378,18 @@
 		<div class="join">
 			<button
 				type="button"
-				class="join-item btn btn-sm {viewMode === 'month' ? 'btn-active' : 'btn-ghost border border-base-content/20'}"
+				class="join-item btn btn-sm {viewMode === 'month'
+					? 'btn-active'
+					: 'btn-ghost border border-base-content/20'}"
 				onclick={() => onViewModeSelect('month')}
 			>
 				Month
 			</button>
 			<button
 				type="button"
-				class="join-item btn btn-sm {viewMode === 'year' ? 'btn-active' : 'btn-ghost border border-base-content/20'}"
+				class="join-item btn btn-sm {viewMode === 'year'
+					? 'btn-active'
+					: 'btn-ghost border border-base-content/20'}"
 				onclick={() => onViewModeSelect('year')}
 			>
 				Year
@@ -399,7 +417,7 @@
 			</div>
 		{:else}
 			{#each categories as category (category.account)}
-			<BudgetCategoryRow
+				<BudgetCategoryRow
 					account={category.account}
 					amount={category.amount * budgetMultiplier}
 					actual={actuals.get(category.account) ?? 0}
@@ -408,16 +426,22 @@
 					onclick={onCategoryClick}
 					rolloverAmount={viewMode === 'month' ? (rollovers.get(category.account) ?? 0) : 0}
 					rolloverEnabled={!!category.rollover}
-					onRolloverToggle={viewMode === 'month' ? (enabled) => onRolloverToggle(category.account, enabled) : undefined}
+					onRolloverToggle={viewMode === 'month'
+						? (enabled) => onRolloverToggle(category.account, enabled)
+						: undefined}
 				/>
 			{/each}
 		{/if}
 	</section>
 
 	{#if categories.length > 0}
-		<div class="flex items-center justify-end gap-2 border-t border-base-300 px-4 py-2 text-sm font-medium">
+		<div
+			class="flex items-center justify-end gap-2 border-t border-base-300 px-4 py-2 text-sm font-medium"
+		>
 			<span class="text-base-content/60">Total:</span>
-			<span class={totalActual > totalBudgeted ? 'text-error' : ''}>{formatAmount(totalActual)}</span>
+			<span class={totalActual > totalBudgeted ? 'text-error' : ''}
+				>{formatAmount(totalActual)}</span
+			>
 			<span class="text-base-content/40">/</span>
 			<span>{formatAmount(totalBudgeted)}</span>
 			<span class="text-base-content/50">{currency}</span>

@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import Fab from '#lib/components/FAB.svelte';
 	import Toolbar from '#lib/components/Toolbar.svelte';
-	import { CheckIcon } from '@lucide/svelte';
+	import CheckIcon from '@lucide/svelte/icons/check';
 	import Notifier from '#lib/utils/notifier';
 	import {
 		emptyS3Config,
@@ -14,7 +14,7 @@
 	import { testConnection, type S3TestStep } from '#lib/services/s3Client';
 	import { deviceSettings, DeviceSettingKeys } from '#lib/settings';
 	import { lastBackupTime } from '#lib/services/webdavAutoBackupService';
-	import { CloudIcon } from '@lucide/svelte';
+	import CloudIcon from '@lucide/svelte/icons/cloud';
 
 	let cfg = $state<S3Config>(emptyS3Config());
 	let testing = $state(false);
@@ -37,7 +37,8 @@
 	let autoBackupEnabled = $state(false);
 
 	onMount(async () => {
-		autoBackupEnabled = (await deviceSettings.get<boolean>(DeviceSettingKeys.s3AutoBackup)) ?? false;
+		autoBackupEnabled =
+			(await deviceSettings.get<boolean>(DeviceSettingKeys.s3AutoBackup)) ?? false;
 		const saved = await loadS3Config();
 		if (saved) cfg = saved;
 	});
@@ -167,21 +168,22 @@
 					</div>
 
 					{#if testSteps.length}
-							<ul class="mt-2 space-y-1 text-sm">
-								{#each testSteps as step (step.name)}
-									<li class={step.ok ? 'text-success' : 'text-error'}>
-										{step.ok ? '✓' : '✗'}
-										{step.name}: {step.message}
-									</li>
-								{/each}
-							</ul>
-						{/if}
+						<ul class="mt-2 space-y-1 text-sm">
+							{#each testSteps as step (step.name)}
+								<li class={step.ok ? 'text-success' : 'text-error'}>
+									{step.ok ? '✓' : '✗'}
+									{step.name}: {step.message}
+								</li>
+							{/each}
+						</ul>
+					{/if}
 
-						<div class="card-actions mt-4 justify-center">
+					<div class="card-actions mt-4 justify-center">
 						<button type="button" class="btn btn-outline" onclick={test} disabled={testing}>
-								{#if testing}<span class="loading loading-spinner loading-sm"></span>{/if}
-								Test connection
-							</button>					</div>
+							{#if testing}<span class="loading loading-spinner loading-sm"></span>{/if}
+							Test connection
+						</button>
+					</div>
 				</form>
 			</div>
 
@@ -226,8 +228,8 @@
 							only and are not part of settings backups.
 						</li>
 						<li>
-							The bucket needs a CORS policy, otherwise the browser will block requests. The policy should
-							allow this app's origin, and headers.
+							The bucket needs a CORS policy, otherwise the browser will block requests. The policy
+							should allow this app's origin, and headers.
 						</li>
 						<li>
 							Everything uploaded is encrypted on this device with the passphrase. Use the same

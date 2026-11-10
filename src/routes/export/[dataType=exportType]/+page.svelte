@@ -6,7 +6,10 @@
 	import { getFilenameForBackup } from '#lib/services/cloudBackupService';
 	import { listScx } from '#lib/services/scxService';
 	import Notifier from '#lib/utils/notifier';
-	import { ArrowDownNarrowWideIcon, CopyIcon, FileDownIcon, Share2Icon } from '@lucide/svelte';
+	import ArrowDownNarrowWideIcon from '@lucide/svelte/icons/arrow-down-narrow-wide';
+	import CopyIcon from '@lucide/svelte/icons/copy';
+	import FileDownIcon from '@lucide/svelte/icons/file-down';
+	import Share2Icon from '@lucide/svelte/icons/share-2';
 	import { onMount } from 'svelte';
 	import HelpButton from '#lib/help/HelpButton.svelte';
 
@@ -102,7 +105,9 @@
 		// const file = new File([output], fileName, { type: 'text/plain' });
 
 		if (!window.isSecureContext) {
-			Notifier.error('Sharing requires a secure context (HTTPS or localhost). Please use Download instead.');
+			Notifier.error(
+				'Sharing requires a secure context (HTTPS or localhost). Please use Download instead.'
+			);
 			return;
 		}
 		if (!navigator.canShare) {
@@ -135,7 +140,9 @@
 						);
 						return;
 					case 'InvalidStateError':
-						Notifier.error('A share operation is already in progress. Please try again in a moment.');
+						Notifier.error(
+							'A share operation is already in progress. Please try again in a moment.'
+						);
 						return;
 				}
 			}
@@ -152,7 +159,11 @@
 			<HelpButton topic="export" />
 		{/snippet}
 		{#snippet menuItems()}
-			<ToolbarMenuItem text="Sort by Date" Icon={ArrowDownNarrowWideIcon} onclick={onSortByDateClick} />
+			<ToolbarMenuItem
+				text="Sort by Date"
+				Icon={ArrowDownNarrowWideIcon}
+				onclick={onSortByDateClick}
+			/>
 		{/snippet}
 	</Toolbar>
 
@@ -163,8 +174,7 @@
 			class="textarea mt-3 overflow-auto p-2 whitespace-nowrap w-full"
 			rows="20"
 			placeholder="Enter some long form content."
-			bind:value={output}
-		></textarea>
+			bind:value={output}></textarea>
 
 		<!-- action buttons -->
 		<div

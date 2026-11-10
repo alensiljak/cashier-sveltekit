@@ -10,7 +10,11 @@
 	import { SelectionModeMetadata, SettingKeys, settings } from '#lib/settings';
 	import AccountRow from '#lib/components/AccountRow.svelte';
 	import Notifier from '#lib/utils/notifier';
-	import { ArrowUpDownIcon, PlusCircleIcon, PlusIcon, Trash2Icon, TrashIcon } from '@lucide/svelte';
+	import ArrowUpDownIcon from '@lucide/svelte/icons/arrow-up-down';
+	import PlusCircleIcon from '@lucide/svelte/icons/plus-circle';
+	import PlusIcon from '@lucide/svelte/icons/plus';
+	import Trash2Icon from '@lucide/svelte/icons/trash-2';
+	import TrashIcon from '@lucide/svelte/icons/trash';
 	import { onMount } from 'svelte';
 	import fullLedgerService from '#lib/services/ledgerWorkerClient';
 	import HelpButton from '#lib/help/HelpButton.svelte';
@@ -43,7 +47,7 @@
 	}
 
 	async function addAccount(accountName: string) {
-		let favNames = await settings.get(SettingKeys.favouriteAccounts) as string[] ?? [];
+		let favNames = ((await settings.get(SettingKeys.favouriteAccounts)) as string[]) ?? [];
 
 		if (favNames.includes(accountName)) {
 			Notifier.info('The account is already present');
@@ -64,7 +68,6 @@
 
 		selectionMetadata.set(undefined);
 	}
-
 
 	/**
 	 * Query account balances from the ParsedLedger via BQL.
@@ -227,12 +230,7 @@
 			<!-- list -->
 			<div>
 				{#each accounts as account (account.name)}
-					<AccountRow
-						{account}
-						balancesLoaded={true}
-						{maxBalance}
-						onclick={onAccountClick}
-					/>
+					<AccountRow {account} balancesLoaded={true} {maxBalance} onclick={onAccountClick} />
 				{/each}
 			</div>
 		{/if}
@@ -240,8 +238,12 @@
 </main>
 
 <!-- "Delete All" dialog -->
-<input type="checkbox" id="delete-all-fav-confirmation-modal" class="modal-toggle"
-    bind:checked={isDeleteAllConfirmationOpen} />
+<input
+	type="checkbox"
+	id="delete-all-fav-confirmation-modal"
+	class="modal-toggle"
+	bind:checked={isDeleteAllConfirmationOpen}
+/>
 <dialog class="modal">
 	<div class="modal-box">
 		<header class="flex justify-between">

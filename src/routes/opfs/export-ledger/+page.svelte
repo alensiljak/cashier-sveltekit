@@ -2,7 +2,9 @@
 	import { onMount } from 'svelte';
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import HelpButton from '#lib/help/HelpButton.svelte';
-	import { FolderOutputIcon, RefreshCcwIcon, DownloadIcon } from '@lucide/svelte';
+	import FolderOutputIcon from '@lucide/svelte/icons/folder-output';
+	import RefreshCcwIcon from '@lucide/svelte/icons/refresh-ccw';
+	import DownloadIcon from '@lucide/svelte/icons/download';
 	import { deviceSettings, DeviceSettingKeys } from '#lib/settings';
 	import {
 		loadPersistedHandle,

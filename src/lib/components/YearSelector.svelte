@@ -7,7 +7,8 @@
 <script lang="ts">
 	import { addYears, endOfYear, formatDate, startOfYear } from '#lib/utils/dates';
 	import { ISODATEFORMAT } from '#lib/constants';
-	import { ChevronLeftIcon, ChevronRightIcon } from '@lucide/svelte';
+	import ChevronLeftIcon from '@lucide/svelte/icons/chevron-left';
+	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
 
 	export interface YearOption {
 		label: string;

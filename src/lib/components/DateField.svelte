@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon } from '@lucide/svelte';
+	import CalendarIcon from '@lucide/svelte/icons/calendar';
+	import ChevronLeftIcon from '@lucide/svelte/icons/chevron-left';
+	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
 	import { addDays, formatDate, parseDate } from '#lib/utils/dates';
 	import { SettingKeys, settings } from '#lib/settings';
 

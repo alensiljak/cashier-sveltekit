@@ -14,19 +14,17 @@
 		type S3Directory
 	} from '#lib/services/s3Client';
 	import { compactBucketNow, getSyncKey, previewObject } from '#lib/services/s3Sync';
-	import {
-		PackageIcon,
-		EyeIcon,
-		SettingsIcon,
-		RefreshCwIcon,
-		FolderIcon,
-		FileIcon,
-		DownloadIcon,
-		UploadIcon,
-		TrashIcon,
-		ChevronRightIcon,
-		CloudIcon
-	} from '@lucide/svelte';
+	import PackageIcon from '@lucide/svelte/icons/package';
+	import EyeIcon from '@lucide/svelte/icons/eye';
+	import SettingsIcon from '@lucide/svelte/icons/settings';
+	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
+	import FolderIcon from '@lucide/svelte/icons/folder';
+	import FileIcon from '@lucide/svelte/icons/file';
+	import DownloadIcon from '@lucide/svelte/icons/download';
+	import UploadIcon from '@lucide/svelte/icons/upload';
+	import TrashIcon from '@lucide/svelte/icons/trash';
+	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
+	import CloudIcon from '@lucide/svelte/icons/cloud';
 
 	interface Row {
 		name: string;
@@ -57,7 +55,12 @@
 			.map((name) => ({ name, isDirectory: true, size: null, lastModified: null })),
 		...[...listing.files]
 			.sort((a, b) => a.name.localeCompare(b.name))
-			.map((f) => ({ name: f.name, isDirectory: false, size: f.size, lastModified: f.lastModified }))
+			.map((f) => ({
+				name: f.name,
+				isDirectory: false,
+				size: f.size,
+				lastModified: f.lastModified
+			}))
 	]);
 
 	onMount(async () => {
@@ -146,7 +149,10 @@
 			const skipped = done.find((r) => r?.skipped)?.skipped;
 			const deleted = done.reduce((n, r) => n + (r?.deleted ?? 0), 0);
 			if (skipped) Notifier.error(`Not compacted: ${skipped}`);
-			else Notifier.success(deleted ? `Compacted: ${deleted} object(s) removed` : 'Nothing to compact');
+			else
+				Notifier.success(
+					deleted ? `Compacted: ${deleted} object(s) removed` : 'Nothing to compact'
+				);
 		} catch (err) {
 			Notifier.error('Compaction failed: ' + describeS3Error(err));
 		} finally {
@@ -275,8 +281,8 @@
 				</div>
 
 				<p class="mb-2 text-xs text-base-content/60">
-					Objects are shown as stored. Synced data is encrypted: use Preview to read it, downloads stay
-					encrypted.
+					Objects are shown as stored. Synced data is encrypted: use Preview to read it, downloads
+					stay encrypted.
 				</p>
 
 				{#if isLoading && rows.length === 0}
@@ -362,7 +368,9 @@
 			<pre
 				class="my-3 flex-1 overflow-auto rounded bg-base-200 p-2 font-mono text-xs leading-5 whitespace-pre select-text">{preview.text}</pre>
 			{#if preview.truncated}
-				<p class="text-xs text-warning">Only the first {PREVIEW_LIMIT.toLocaleString()} characters are shown.</p>
+				<p class="text-xs text-warning">
+					Only the first {PREVIEW_LIMIT.toLocaleString()} characters are shown.
+				</p>
 			{/if}
 			<div class="modal-action mt-2">
 				<button class="btn btn-ghost" onclick={copyPreview}>Copy</button>

@@ -5,7 +5,9 @@
 	import { getCurrencies, convert, type ConversionResult } from '#lib/services/currencyConverter';
 	import fullLedgerService from '#lib/services/ledgerWorkerClient';
 	import { settings, SettingKeys } from '#lib/settings';
-	import { ArrowUpDownIcon, XIcon, CopyIcon } from '@lucide/svelte';
+	import ArrowUpDownIcon from '@lucide/svelte/icons/arrow-up-down';
+	import XIcon from '@lucide/svelte/icons/x';
+	import CopyIcon from '@lucide/svelte/icons/copy';
 	import HelpButton from '#lib/help/HelpButton.svelte';
 
 	// Pre-seed from URL params: ?from=EUR&to=USD
@@ -43,9 +45,7 @@
 				fromCurrency = currencies[0];
 			if (!toCurrency || !currencies.includes(toCurrency)) {
 				toCurrency =
-					baseCurrency && currencies.includes(baseCurrency)
-						? baseCurrency
-						: currencies[1] ?? '';
+					baseCurrency && currencies.includes(baseCurrency) ? baseCurrency : (currencies[1] ?? '');
 			}
 		} catch (e) {
 			error = String(e);
@@ -103,7 +103,10 @@
 					{#if inputAmount}
 						<button
 							class="absolute right-2 top-1/2 -translate-y-1/2 btn btn-ghost btn-xs btn-circle"
-							onclick={() => { inputAmount = ''; result = null; }}
+							onclick={() => {
+								inputAmount = '';
+								result = null;
+							}}
 							title="Clear"
 						>
 							<XIcon size={14} />
@@ -134,15 +137,21 @@
 			<!-- Result -->
 			{#if result}
 				<div class="card bg-base-200 relative">
-					<button class="btn btn-ghost btn-sm btn-circle absolute right-2 top-2" onclick={copyResult} title="Copy result">
+					<button
+						class="btn btn-ghost btn-sm btn-circle absolute right-2 top-2"
+						onclick={copyResult}
+						title="Copy result"
+					>
 						<CopyIcon size={16} />
 					</button>
 					<div class="card-body items-center py-6">
 						<p class="text-sm text-base-content/60">
-							{inputAmount} {fromCurrency} =
+							{inputAmount}
+							{fromCurrency} =
 						</p>
 						<p class="text-3xl font-bold">
-							{result.amount.toFixed(4)} {result.currency}
+							{result.amount.toFixed(4)}
+							{result.currency}
 						</p>
 					</div>
 				</div>

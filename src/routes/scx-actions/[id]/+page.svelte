@@ -12,12 +12,10 @@
 	import Notifier from '#lib/utils/notifier';
 	import { calculateNextIteration } from '#lib/scheduledTransactions';
 	import { removeScx, saveScx } from '#lib/services/scxService';
-	import {
-		ChevronsRightIcon,
-		SquarePenIcon,
-		ScrollIcon,
-		TrashIcon
-	} from '@lucide/svelte';
+	import ChevronsRightIcon from '@lucide/svelte/icons/chevrons-right';
+	import SquarePenIcon from '@lucide/svelte/icons/square-pen';
+	import ScrollIcon from '@lucide/svelte/icons/scroll';
+	import TrashIcon from '@lucide/svelte/icons/trash';
 	import { onMount } from 'svelte';
 	import HelpButton from '#lib/help/HelpButton.svelte';
 
@@ -204,16 +202,14 @@
 		<!-- remarks -->
 		<div>
 			<p>Remarks:</p>
-			<textarea class="textarea w-full rounded border-0" rows="5" readonly>{$ScheduledXact.remarks}</textarea>
+			<textarea class="textarea w-full rounded border-0" rows="5" readonly
+				>{$ScheduledXact.remarks}</textarea
+			>
 		</div>
 
 		<!-- actions -->
 		<SquareButtonGroup>
-			<SquareButton
-				Icon={ScrollIcon}
-				classes="bg-primary text-accent"
-				onclick={onEnterClicked}
-			>
+			<SquareButton Icon={ScrollIcon} classes="bg-primary text-accent" onclick={onEnterClicked}>
 				Enter
 			</SquareButton>
 			<SquareButton
@@ -230,11 +226,7 @@
 			>
 				Edit
 			</SquareButton>
-			<SquareButton
-				Icon={TrashIcon}
-				classes="bg-secondary text-accent"
-				onclick={onDeleteClick}
-			>
+			<SquareButton Icon={TrashIcon} classes="bg-secondary text-accent" onclick={onDeleteClick}>
 				Delete
 			</SquareButton>
 		</SquareButtonGroup>
@@ -242,7 +234,12 @@
 </main>
 
 <!-- "Enter" dialog -->
-<input type="checkbox" id="enter-confirmation-modal" class="modal-toggle" bind:checked={isEnterConfirmationOpen} />
+<input
+	type="checkbox"
+	id="enter-confirmation-modal"
+	class="modal-toggle"
+	bind:checked={isEnterConfirmationOpen}
+/>
 <dialog class="modal">
 	<div class="modal-box">
 		<header class="flex justify-between">
@@ -253,17 +250,20 @@
 		</article>
 		<footer class="flex justify-end gap-4">
 			<button type="button" class="btn btn-ghost" onclick={closeModal}>Cancel</button>
-			<button
-				type="button"
-				class="btn btn-primary text-primary-content"
-				onclick={onEnterConfirmed}>OK</button
+			<button type="button" class="btn btn-primary text-primary-content" onclick={onEnterConfirmed}
+				>OK</button
 			>
 		</footer>
 	</div>
 </dialog>
 
 <!-- "Skip" dialog -->
-<input type="checkbox" id="skip-confirmation-modal" class="modal-toggle" bind:checked={isSkipConfirmationOpen} />
+<input
+	type="checkbox"
+	id="skip-confirmation-modal"
+	class="modal-toggle"
+	bind:checked={isSkipConfirmationOpen}
+/>
 <dialog class="modal">
 	<div class="modal-box">
 		<header class="flex justify-between">
@@ -274,17 +274,20 @@
 		</article>
 		<footer class="flex justify-end gap-4">
 			<button type="button" class="btn btn-ghost" onclick={closeModal}>Cancel</button>
-			<button
-				type="button"
-				class="btn btn-primary text-primary-content"
-				onclick={onSkipConfirmed}>OK</button
+			<button type="button" class="btn btn-primary text-primary-content" onclick={onSkipConfirmed}
+				>OK</button
 			>
 		</footer>
 	</div>
 </dialog>
 
 <!-- "Delete" dialog -->
-<input type="checkbox" id="delete-scx-confirmation-modal" class="modal-toggle" bind:checked={isDeleteConfirmationOpen} />
+<input
+	type="checkbox"
+	id="delete-scx-confirmation-modal"
+	class="modal-toggle"
+	bind:checked={isDeleteConfirmationOpen}
+/>
 <dialog class="modal">
 	<div class="modal-box">
 		<header class="flex justify-between">
@@ -297,10 +300,8 @@
 		</article>
 		<footer class="flex justify-end gap-4">
 			<button type="button" class="btn btn-ghost" onclick={closeModal}>Cancel</button>
-			<button
-				type="button"
-				class="btn btn-primary text-primary-content"
-				onclick={onDeleteConfirmed}>OK</button
+			<button type="button" class="btn btn-primary text-primary-content" onclick={onDeleteConfirmed}
+				>OK</button
 			>
 		</footer>
 	</div>

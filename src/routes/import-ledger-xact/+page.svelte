@@ -6,7 +6,8 @@
 	import { parseXact } from '#lib/utils/transactionParser';
 	import { getXactStore } from '#lib/storage/xactStoreRegistry';
 	import { locateXactsInSource } from '#lib/utils/xactLocator';
-	import { DatabaseIcon, ImportIcon } from '@lucide/svelte';
+	import DatabaseIcon from '@lucide/svelte/icons/database';
+	import ImportIcon from '@lucide/svelte/icons/import';
 	import { onMount } from 'svelte';
 
 	Notifier.init();
@@ -70,9 +71,13 @@
 	<Toolbar title="Import Ledger item"></Toolbar>
 
 	<section class="flex h-full flex-col space-y-3 p-1">
-		<p>Paste transaction records below. "Import one" opens the first in the editor; "Import all to store" adds every record to the active store.</p>
+		<p>
+			Paste transaction records below. "Import one" opens the first in the editor; "Import all to
+			store" adds every record to the active store.
+		</p>
 
-		<textarea class="textarea w-full grow" bind:value={inputText} bind:this={inputControl}></textarea>
+		<textarea class="textarea w-full grow" bind:value={inputText} bind:this={inputControl}
+		></textarea>
 
 		<div class="flex flex-wrap justify-center gap-2 py-6">
 			<button type="button" class="btn btn-primary" onclick={onImportClicked}>

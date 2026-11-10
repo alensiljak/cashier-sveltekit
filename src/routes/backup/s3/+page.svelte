@@ -26,17 +26,15 @@
 	import { reloadLedgerFromOpfs } from '#lib/services/ledgerReload';
 	import { trustDevice } from '#lib/sync/ydocDevices';
 	import Notifier from '#lib/utils/notifier';
-	import {
-		ArrowDownIcon,
-		ArrowUpIcon,
-		CheckIcon,
-		CloudDownloadIcon,
-		CloudUploadIcon,
-		RefreshCwIcon,
-		SettingsIcon,
-		TriangleAlertIcon,
-		UserCheckIcon
-	} from '@lucide/svelte';
+	import ArrowDownIcon from '@lucide/svelte/icons/arrow-down';
+	import ArrowUpIcon from '@lucide/svelte/icons/arrow-up';
+	import CheckIcon from '@lucide/svelte/icons/check';
+	import CloudDownloadIcon from '@lucide/svelte/icons/cloud-download';
+	import CloudUploadIcon from '@lucide/svelte/icons/cloud-upload';
+	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
+	import SettingsIcon from '@lucide/svelte/icons/settings';
+	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
+	import UserCheckIcon from '@lucide/svelte/icons/user-check';
 
 	let cfg = $state<S3Config | null>(null);
 	let ready = $state(false);
@@ -128,7 +126,11 @@
 	}
 
 	/** What the row's buttons may do, from the comparison with the bucket. All false while unknown. */
-	function actionsFor(key: keyof RemoteOverview): { up: boolean; down: boolean; conflict: boolean } {
+	function actionsFor(key: keyof RemoteOverview): {
+		up: boolean;
+		down: boolean;
+		conflict: boolean;
+	} {
 		if (key === 'settings' || key === 'beancount') {
 			const s = fileStatus?.[key];
 			return { up: !!s?.upload, down: !!s?.download, conflict: !!s?.conflict };
@@ -404,7 +406,9 @@
 						</p>
 						{#each statusRows as row (row.key)}
 							{@const act = actionsFor(row.key)}
-							<div class="flex items-start gap-3 border-t border-base-300 pt-3 first:border-t-0 first:pt-0">
+							<div
+								class="flex items-start gap-3 border-t border-base-300 pt-3 first:border-t-0 first:pt-0"
+							>
 								<span class="min-w-0 flex-1">
 									<span class="block">{row.label} {@render badge(row.key)}</span>
 									{#if overview}
@@ -424,8 +428,12 @@
 										</span>
 									{/if}
 									{#if row.key === 'xacts' || row.key === 'scheduled'}
-										<a href="/backup/s3/records?item={row.key}" class="link text-xs">Review records</a>
-										<span class="text-xs text-base-content/50">— preview what a sync would change</span>
+										<a href="/backup/s3/records?item={row.key}" class="link text-xs"
+											>Review records</a
+										>
+										<span class="text-xs text-base-content/50"
+											>— preview what a sync would change</span
+										>
 									{/if}
 									{#if row.key === 'beancount'}
 										<a href="/backup/s3/files" class="link text-xs">Review files</a>
@@ -433,50 +441,51 @@
 											— compare versions, clear false conflicts
 										</span>
 									{/if}
-									</span>
-									<div class="flex shrink-0 gap-1">
-										{#if row.key === 'settings'}
-											<button
-												class="btn btn-sm btn-outline"
-												disabled={busy || act.conflict || !(act.up || act.down)}
-												onclick={() => (act.down ? run('download', 'settings') : requestUpload('settings'))}
-											>
-												{#if act.down}<CloudDownloadIcon class="size-4" />{:else}<CloudUploadIcon
-														class="size-4"
-													/>{/if}
-												Sync
-											</button>
-										{:else}
-											<button
-												class="btn btn-sm btn-square btn-outline"
-												aria-label="Download {row.label}"
-												title="Download"
-												disabled={busy || !act.down}
-												onclick={() => run('download', row.key as SyncItem)}
-											>
-												<CloudDownloadIcon class="size-4" />
-											</button>
-											<button
-												class="btn btn-sm btn-square btn-primary"
-												aria-label="Upload {row.label}"
-												title="Upload"
-												disabled={busy || !act.up}
-												onclick={() => requestUpload(row.key as SyncItem)}
-											>
-												<CloudUploadIcon class="size-4" />
-											</button>
-										{/if}
-									</div>
+								</span>
+								<div class="flex shrink-0 gap-1">
+									{#if row.key === 'settings'}
+										<button
+											class="btn btn-sm btn-outline"
+											disabled={busy || act.conflict || !(act.up || act.down)}
+											onclick={() =>
+												act.down ? run('download', 'settings') : requestUpload('settings')}
+										>
+											{#if act.down}<CloudDownloadIcon class="size-4" />{:else}<CloudUploadIcon
+													class="size-4"
+												/>{/if}
+											Sync
+										</button>
+									{:else}
+										<button
+											class="btn btn-sm btn-square btn-outline"
+											aria-label="Download {row.label}"
+											title="Download"
+											disabled={busy || !act.down}
+											onclick={() => run('download', row.key as SyncItem)}
+										>
+											<CloudDownloadIcon class="size-4" />
+										</button>
+										<button
+											class="btn btn-sm btn-square btn-primary"
+											aria-label="Upload {row.label}"
+											title="Upload"
+											disabled={busy || !act.up}
+											onclick={() => requestUpload(row.key as SyncItem)}
+										>
+											<CloudUploadIcon class="size-4" />
+										</button>
+									{/if}
 								</div>
-							{/each}
-							{#if !cfg.passphrase}
-								<p class="text-center text-sm text-warning">
-									Set an encryption passphrase in the
-									<a href="/settings/s3-cfg" class="link">configuration</a> first.
-								</p>
-							{/if}
-						</div>
+							</div>
+						{/each}
+						{#if !cfg.passphrase}
+							<p class="text-center text-sm text-warning">
+								Set an encryption passphrase in the
+								<a href="/settings/s3-cfg" class="link">configuration</a> first.
+							</p>
+						{/if}
 					</div>
+				</div>
 
 				{#if lines.length || busy}
 					<div class="card bg-base-200 shadow-sm">
@@ -584,8 +593,8 @@
 						Continuing replaces the bucket's {many ? 'versions' : 'version'} with this device's. Other
 						devices will take {many ? 'them' : 'it'} on their next sync.
 					{:else}
-						Continuing replaces this device's {many ? 'versions' : 'version'} with the bucket's.
-						The local changes are lost.
+						Continuing replaces this device's {many ? 'versions' : 'version'} with the bucket's. The local
+						changes are lost.
 					{/if}
 				</p>
 				<ul class="space-y-1 text-sm">
@@ -596,8 +605,8 @@
 				<p class="text-base-content/70 py-2 text-xs">
 					To see the differences first, cancel and open the diff view:
 					<a class="link" href="/backup/s3/settings">Settings</a> or
-					<a class="link" href="/backup/s3/files">Beancount files</a>. The conflict can be resolved there
-					too.
+					<a class="link" href="/backup/s3/files">Beancount files</a>. The conflict can be resolved
+					there too.
 				</p>
 				<div class="modal-action">
 					<button class="btn btn-ghost" onclick={() => (overwriteDirection = null)}>Cancel</button>
@@ -635,8 +644,8 @@
 		<div class="modal-box">
 			<h3 class="text-lg font-bold">Overwrite newer data?</h3>
 			<p class="py-3 text-sm">
-				The bucket has newer data for {statusRows.find((r) => r.key === overwriteItem)?.label} that
-				this device has not downloaded.
+				The bucket has newer data for {statusRows.find((r) => r.key === overwriteItem)?.label} that this
+				device has not downloaded.
 			</p>
 			<p class="py-3 text-sm text-base-content/70">
 				Uploading may overwrite it. Download first to avoid losing changes.

@@ -1,5 +1,8 @@
 <script lang="ts">
-	import { ChevronDownIcon, ChevronUpIcon, Settings2Icon, StarIcon } from '@lucide/svelte';
+	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
+	import ChevronUpIcon from '@lucide/svelte/icons/chevron-up';
+	import Settings2Icon from '@lucide/svelte/icons/settings-2';
+	import StarIcon from '@lucide/svelte/icons/star';
 	import CashierCardTemplate from './CashierCardTemplate.svelte';
 	import AccountRow from './AccountRow.svelte';
 	import { goto } from '$app/navigation';
@@ -113,7 +116,8 @@
 		if (get(fullLedgerService.isReloading)) return;
 
 		try {
-			const favNames: string[] = (await settings.get<string[]>(SettingKeys.favouriteAccounts)) ?? [];
+			const favNames: string[] =
+				(await settings.get<string[]>(SettingKeys.favouriteAccounts)) ?? [];
 			if (favNames.length === 0) {
 				accounts = [];
 				return;
@@ -153,7 +157,9 @@
 			homeCache.saveFavouriteAccounts(
 				accounts.map((a) => ({
 					name: a.name,
-					balance: a.balance ? { quantity: a.balance.quantity ?? null, currency: a.balance.currency } : null,
+					balance: a.balance
+						? { quantity: a.balance.quantity ?? null, currency: a.balance.currency }
+						: null,
 					balances: a.balances ?? null
 				}))
 			);

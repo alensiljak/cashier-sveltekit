@@ -12,7 +12,10 @@
 	import type { StoredXact, XactId } from '#lib/storage/crdtXactStore';
 	import { getXactStore, subscribeXactStore } from '#lib/storage/xactStoreRegistry';
 	import Notifier from '#lib/utils/notifier';
-	import { FileDownIcon, ImportIcon, PlusIcon, TrashIcon } from '@lucide/svelte';
+	import FileDownIcon from '@lucide/svelte/icons/file-down';
+	import ImportIcon from '@lucide/svelte/icons/import';
+	import PlusIcon from '@lucide/svelte/icons/plus';
+	import TrashIcon from '@lucide/svelte/icons/trash';
 	import HelpButton from '#lib/help/HelpButton.svelte';
 	import { reloadLedgerFromOpfs } from '#lib/services/ledgerReload';
 

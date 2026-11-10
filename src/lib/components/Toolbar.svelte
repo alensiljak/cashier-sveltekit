@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { EllipsisVertical, Menu } from '@lucide/svelte';
+	import EllipsisVertical from '@lucide/svelte/icons/ellipsis-vertical';
+	import Menu from '@lucide/svelte/icons/menu';
 	import type { Snippet } from 'svelte';
 	import { desktopNavVisible, drawerState } from '#lib/data/mainStore';
 

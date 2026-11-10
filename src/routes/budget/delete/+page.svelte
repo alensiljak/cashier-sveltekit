@@ -4,7 +4,8 @@
 	import { type BudgetCategory, SettingKeys, settings } from '#lib/settings';
 	import { formatAmount } from '#lib/utils/formatter';
 	import Notifier from '#lib/utils/notifier';
-	import { CheckIcon, TrashIcon } from '@lucide/svelte';
+	import CheckIcon from '@lucide/svelte/icons/check';
+	import TrashIcon from '@lucide/svelte/icons/trash';
 	import { onMount } from 'svelte';
 
 	Notifier.init();
@@ -73,7 +74,12 @@
 </main>
 
 <!-- "Delete" dialog -->
-<input type="checkbox" id="delete-budget-confirmation-modal" class="modal-toggle" bind:checked={isDeleteConfirmationOpen} />
+<input
+	type="checkbox"
+	id="delete-budget-confirmation-modal"
+	class="modal-toggle"
+	bind:checked={isDeleteConfirmationOpen}
+/>
 <dialog class="modal">
 	<div class="modal-box">
 		<header class="flex justify-between">
@@ -86,7 +92,8 @@
 		</article>
 		<footer class="flex justify-end gap-4">
 			<button type="button" class="btn btn-ghost" onclick={closeModal}>Cancel</button>
-			<button type="button" class="btn btn-primary text-primary-content" onclick={onDeleteConfirmed}>OK</button
+			<button type="button" class="btn btn-primary text-primary-content" onclick={onDeleteConfirmed}
+				>OK</button
 			>
 		</footer>
 	</div>

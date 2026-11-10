@@ -5,7 +5,8 @@
 	import { updateRepaymentAmounts } from '#lib/services/repaymentService';
 	import type { ScheduledTransaction, ScxId } from '#lib/data/model';
 	import appService from '#lib/services/appService';
-	import { ChevronLeftIcon, ChevronRightIcon } from '@lucide/svelte';
+	import ChevronLeftIcon from '@lucide/svelte/icons/chevron-left';
+	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
 	import { onMount } from 'svelte';
 	import HelpButton from '#lib/help/HelpButton.svelte';
 
@@ -51,7 +52,11 @@
 		// Padding from previous month
 		for (let i = startDow - 1; i >= 0; i--) {
 			const d = new Date(year, month, -i);
-			days.push({ iso: toIso(d.getFullYear(), d.getMonth(), d.getDate()), day: d.getDate(), currentMonth: false });
+			days.push({
+				iso: toIso(d.getFullYear(), d.getMonth(), d.getDate()),
+				day: d.getDate(),
+				currentMonth: false
+			});
 		}
 
 		// Current month
@@ -63,7 +68,11 @@
 		const remaining = (7 - (days.length % 7)) % 7;
 		for (let i = 1; i <= remaining; i++) {
 			const d = new Date(year, month + 1, i);
-			days.push({ iso: toIso(d.getFullYear(), d.getMonth(), d.getDate()), day: d.getDate(), currentMonth: false });
+			days.push({
+				iso: toIso(d.getFullYear(), d.getMonth(), d.getDate()),
+				day: d.getDate(),
+				currentMonth: false
+			});
 		}
 
 		return days;
@@ -145,13 +154,19 @@
 						'flex h-8 w-8 items-center justify-center rounded-full text-sm',
 						!cell.currentMonth && 'opacity-30',
 						isSelected && 'bg-primary text-primary-content',
-						isToday && !isSelected && 'ring-1 ring-primary',
-					].filter(Boolean).join(' ')}
+						isToday && !isSelected && 'ring-1 ring-primary'
+					]
+						.filter(Boolean)
+						.join(' ')}
 				>
 					{cell.day}
 				</div>
 				<!-- dot marker -->
-				<div class="h-1.5 w-1.5 rounded-full mt-0.5 {hasItems && cell.currentMonth ? 'bg-error' : 'invisible'}"></div>
+				<div
+					class="h-1.5 w-1.5 rounded-full mt-0.5 {hasItems && cell.currentMonth
+						? 'bg-error'
+						: 'invisible'}"
+				></div>
 			</div>
 		{/each}
 	</div>

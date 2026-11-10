@@ -5,7 +5,7 @@
 	import { HomeCardNames } from '#lib/enums';
 	import appService from '#lib/services/appService';
 	import { DeviceSettingKeys, deviceSettings } from '#lib/settings';
-	import { CheckIcon } from '@lucide/svelte';
+	import CheckIcon from '@lucide/svelte/icons/check';
 	import { onMount } from 'svelte';
 
 	const cardLabels: Record<string, string> = {
@@ -53,10 +53,19 @@
 <Fab Icon={CheckIcon} onclick={onFabClicked} />
 
 <main class="p-1">
-	<DragReorderList bind:items getLabel={(item) => cardLabels[item.name] ?? item.name} class="space-y-2 p-1 max-w-6xl mx-auto overflow-y-auto">
+	<DragReorderList
+		bind:items
+		getLabel={(item) => cardLabels[item.name] ?? item.name}
+		class="space-y-2 p-1 max-w-6xl mx-auto overflow-y-auto"
+	>
 		{#snippet row(item)}
 			<span class="grow">{cardLabels[item.name] ?? item.name}</span>
-			<input class="checkbox checkbox-primary" type="checkbox" bind:checked={item.visible} aria-label="Show {cardLabels[item.name] ?? item.name}" />
+			<input
+				class="checkbox checkbox-primary"
+				type="checkbox"
+				bind:checked={item.visible}
+				aria-label="Show {cardLabels[item.name] ?? item.name}"
+			/>
 		{/snippet}
 	</DragReorderList>
 </main>

@@ -3,7 +3,7 @@
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import { DEFAULT_EXPENSES_CARD_ROLLING_DAYS } from '#lib/constants';
 	import { SettingKeys, settings } from '#lib/settings';
-	import { CheckIcon } from '@lucide/svelte';
+	import CheckIcon from '@lucide/svelte/icons/check';
 	import { onMount } from 'svelte';
 
 	type PeriodType = 'calendar-month' | 'rolling-days';
@@ -12,9 +12,11 @@
 	let rollingDays = $state(DEFAULT_EXPENSES_CARD_ROLLING_DAYS as number);
 
 	onMount(async () => {
-		periodType = (await settings.get<PeriodType>(SettingKeys.expensesCardPeriodType)) ?? 'calendar-month';
+		periodType =
+			(await settings.get<PeriodType>(SettingKeys.expensesCardPeriodType)) ?? 'calendar-month';
 		rollingDays =
-			(await settings.get<number>(SettingKeys.expensesCardRollingDays)) ?? DEFAULT_EXPENSES_CARD_ROLLING_DAYS;
+			(await settings.get<number>(SettingKeys.expensesCardRollingDays)) ??
+			DEFAULT_EXPENSES_CARD_ROLLING_DAYS;
 	});
 
 	async function onFabClicked() {

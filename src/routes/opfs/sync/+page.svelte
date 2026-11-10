@@ -2,7 +2,12 @@
 	import { onMount } from 'svelte';
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import HelpButton from '#lib/help/HelpButton.svelte';
-	import { FolderOpenIcon, RefreshCcwIcon, ArrowLeftIcon, ArrowRightIcon, PlayIcon, MinusIcon } from '@lucide/svelte';
+	import FolderOpenIcon from '@lucide/svelte/icons/folder-open';
+	import RefreshCcwIcon from '@lucide/svelte/icons/refresh-ccw';
+	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
+	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
+	import PlayIcon from '@lucide/svelte/icons/play';
+	import MinusIcon from '@lucide/svelte/icons/minus';
 	import { settings, SettingKeys, deviceSettings, DeviceSettingKeys } from '#lib/settings';
 	import fullLedgerService from '#lib/services/ledgerWorkerClient';
 	import {
@@ -11,7 +16,11 @@
 		requestReadPermission,
 		requestWritePermission
 	} from '#lib/utils/fsHandleStore';
-	import { getManifest, putManifestEntries, type ImportedFileMeta } from '#lib/utils/importManifest';
+	import {
+		getManifest,
+		putManifestEntries,
+		type ImportedFileMeta
+	} from '#lib/utils/importManifest';
 	import * as OpfsLib from '#lib/utils/opfslib.js';
 	import { parseSpecs, collectFsFileHandles } from '#lib/utils/fsScan';
 	import { reloadLedgerFromOpfs } from '#lib/services/ledgerReload';
@@ -82,9 +91,11 @@
 		if (idx === -1) return;
 		const current = syncEntries[idx].action;
 		const next: SyncAction =
-			current === 'conflict' || current === 'skip' ? 'fs-to-opfs'
-			: current === 'fs-to-opfs' ? 'opfs-to-fs'
-			: 'skip';
+			current === 'conflict' || current === 'skip'
+				? 'fs-to-opfs'
+				: current === 'fs-to-opfs'
+					? 'opfs-to-fs'
+					: 'skip';
 		syncEntries[idx] = { ...syncEntries[idx], action: next };
 	}
 
@@ -170,7 +181,8 @@
 			const identical: ImportedFileMeta[] = [];
 
 			for (const { path, fsEntry, meta, opfsMeta } of scanResults) {
-				const fsChanged = !meta || fsEntry.lastModified !== meta.lastModified || fsEntry.size !== meta.size;
+				const fsChanged =
+					!meta || fsEntry.lastModified !== meta.lastModified || fsEntry.size !== meta.size;
 				const opfsChanged = opfsMeta && meta ? opfsMeta.lastModified > meta.importedAt : false;
 
 				if (!fsChanged && !opfsChanged) continue;
@@ -179,7 +191,10 @@
 				// it. Identical content on both sides is no difference; record it as synced.
 				if (opfsMeta && opfsMeta.size === fsEntry.size) {
 					const [fsText, opfsText] = await Promise.all([
-						scannedFsHandles.get(path)!.getFile().then((f) => f.text()),
+						scannedFsHandles
+							.get(path)!
+							.getFile()
+							.then((f) => f.text()),
 						OpfsLib.readFile(path)
 					]);
 					if (fsText === opfsText) {
@@ -217,7 +232,9 @@
 	// ── Sync ──────────────────────────────────────────────────────────────────────
 	async function runSync() {
 		if (!dirHandle) return;
-		const toSync = syncEntries.filter((e) => e.action === 'fs-to-opfs' || e.action === 'opfs-to-fs');
+		const toSync = syncEntries.filter(
+			(e) => e.action === 'fs-to-opfs' || e.action === 'opfs-to-fs'
+		);
 		if (toSync.length === 0) return;
 
 		phase = 'syncing';
@@ -299,13 +316,14 @@
 	</Toolbar>
 
 	<div class="flex-1 overflow-y-auto touch-pan-y p-4 flex flex-col gap-4">
-
 		<!-- Directory picker -->
 		<section class="flex flex-col gap-2">
 			<span class="label font-semibold">Source Directory</span>
 			<div class="flex items-center gap-2 flex-wrap">
 				{#if dirName}
-					<span class="font-mono text-sm bg-base-200 rounded px-3 py-2 flex-1 truncate">{dirName}/</span>
+					<span class="font-mono text-sm bg-base-200 rounded px-3 py-2 flex-1 truncate"
+						>{dirName}/</span
+					>
 				{/if}
 				{#if hasDirectoryPicker}
 					<button class="btn btn-primary gap-2" onclick={pickDirectory}>
@@ -316,7 +334,8 @@
 			</div>
 			{#if dirHandle && !hasWritePermission}
 				<p class="text-xs text-warning">
-					Write permission not granted — OPFS → FS sync is disabled. Re-pick the directory to enable it.
+					Write permission not granted — OPFS → FS sync is disabled. Re-pick the directory to enable
+					it.
 				</p>
 			{/if}
 		</section>
@@ -361,7 +380,9 @@
 						<span class="badge badge-success">{actionableCount} to sync</span>
 					{/if}
 					{#if conflictCount > 0}
-						<span class="badge badge-error">{conflictCount} conflict{conflictCount > 1 ? 's' : ''}</span>
+						<span class="badge badge-error"
+							>{conflictCount} conflict{conflictCount > 1 ? 's' : ''}</span
+						>
 					{/if}
 				</div>
 
@@ -385,7 +406,9 @@
 									<!-- OPFS column -->
 									<td class="font-mono text-xs {fsIsSource ? 'opacity-40' : ''}">
 										<div class="truncate max-w-[18rem]">{entry.path}</div>
-										<div class="text-base-content/50 text-[10px]">{formatDate(entry.opfsLastModified)}</div>
+										<div class="text-base-content/50 text-[10px]">
+											{formatDate(entry.opfsLastModified)}
+										</div>
 									</td>
 
 									<!-- Arrow / X / skip column — clickable -->
@@ -410,7 +433,9 @@
 									<!-- FS column -->
 									<td class="font-mono text-xs {opfsIsSource ? 'opacity-40' : ''}">
 										<div class="truncate max-w-[18rem]">{entry.path}</div>
-										<div class="text-base-content/50 text-[10px]">{formatDate(entry.fsLastModified)}</div>
+										<div class="text-base-content/50 text-[10px]">
+											{formatDate(entry.fsLastModified)}
+										</div>
 									</td>
 								</tr>
 							{/each}
@@ -425,23 +450,22 @@
 		<!-- Sync button -->
 		{#if actionableCount > 0 && phase !== 'syncing' && phase !== 'done'}
 			<center class="py-4">
-				<button
-					class="btn btn-accent"
-					disabled={phase === 'scanning'}
-					onclick={runSync}
-				>
+				<button class="btn btn-accent" disabled={phase === 'scanning'} onclick={runSync}>
 					<PlayIcon class="w-4 h-4" />
 					Sync {actionableCount} file{actionableCount > 1 ? 's' : ''}
 				</button>
 				{#if conflictCount > 0}
-					<p class="text-xs text-base-content/50 mt-2">{conflictCount} conflicted file{conflictCount > 1 ? 's' : ''} will be skipped.</p>
+					<p class="text-xs text-base-content/50 mt-2">
+						{conflictCount} conflicted file{conflictCount > 1 ? 's' : ''} will be skipped.
+					</p>
 				{/if}
 			</center>
 		{/if}
 
 		<!-- Progress -->
 		{#if phase === 'syncing' && progress.total > 0}
-			<progress class="progress progress-primary w-full" value={progress.done} max={progress.total}></progress>
+			<progress class="progress progress-primary w-full" value={progress.done} max={progress.total}
+			></progress>
 		{/if}
 
 		<!-- Console log -->
@@ -489,6 +513,5 @@
 				<span>{errorMsg}</span>
 			</div>
 		{/if}
-
 	</div>
 </main>

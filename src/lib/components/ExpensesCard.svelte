@@ -1,5 +1,9 @@
 <script lang="ts">
-	import { ReceiptTextIcon, Settings2Icon, TrendingUpIcon, TrendingDownIcon, MinusIcon } from '@lucide/svelte';
+	import ReceiptTextIcon from '@lucide/svelte/icons/receipt-text';
+	import Settings2Icon from '@lucide/svelte/icons/settings-2';
+	import TrendingUpIcon from '@lucide/svelte/icons/trending-up';
+	import TrendingDownIcon from '@lucide/svelte/icons/trending-down';
+	import MinusIcon from '@lucide/svelte/icons/minus';
 	import CashierCardTemplate from './CashierCardTemplate.svelte';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
@@ -49,7 +53,10 @@
 	});
 
 	/** Resolve the current and comparison (prior, same-length) date ranges. */
-	function resolvePeriods(periodType: string, rollingDays: number): { current: DateRange; previous: DateRange } {
+	function resolvePeriods(
+		periodType: string,
+		rollingDays: number
+	): { current: DateRange; previous: DateRange } {
 		const today = new Date();
 		const iso = (d: Date) => formatDate(d, ISODATEFORMAT);
 
@@ -67,7 +74,10 @@
 		const previousMonth = addMonths(today, -1);
 		return {
 			current: { dateFrom: iso(startOfMonth(today)), dateTo: iso(today) },
-			previous: { dateFrom: iso(startOfMonth(previousMonth)), dateTo: iso(endOfMonth(previousMonth)) }
+			previous: {
+				dateFrom: iso(startOfMonth(previousMonth)),
+				dateTo: iso(endOfMonth(previousMonth))
+			}
 		};
 	}
 
@@ -114,11 +124,15 @@
 		error = null;
 
 		try {
-			const periodType = (await settings.get<string>(SettingKeys.expensesCardPeriodType)) ?? 'calendar-month';
+			const periodType =
+				(await settings.get<string>(SettingKeys.expensesCardPeriodType)) ?? 'calendar-month';
 			const rollingDays =
-				(await settings.get<number>(SettingKeys.expensesCardRollingDays)) ?? DEFAULT_EXPENSES_CARD_ROLLING_DAYS;
+				(await settings.get<number>(SettingKeys.expensesCardRollingDays)) ??
+				DEFAULT_EXPENSES_CARD_ROLLING_DAYS;
 			// Reuse the same category exclusions configured for the Expenses report.
-			const hiddenAccounts = new Set((await settings.get<string[]>(SettingKeys.expensesHiddenAccounts)) ?? []);
+			const hiddenAccounts = new Set(
+				(await settings.get<string[]>(SettingKeys.expensesHiddenAccounts)) ?? []
+			);
 			currency = (await settings.get<string>(SettingKeys.currency)) ?? '';
 
 			const { current, previous } = resolvePeriods(periodType, rollingDays);
@@ -179,14 +193,18 @@
 					<div class="relative overflow-hidden rounded">
 						<div
 							class="bg-error/15 absolute inset-y-0 left-0"
-							style="width: {maxCategoryAmount > 0 ? (category.amount / maxCategoryAmount) * 100 : 0}%"
+							style="width: {maxCategoryAmount > 0
+								? (category.amount / maxCategoryAmount) * 100
+								: 0}%"
 						></div>
 						<div
 							class="relative flex items-center justify-between gap-2 py-1 pl-2 text-sm"
 							style="padding-right: {statBoxWidth + 14}px"
 						>
 							<span class="truncate">{category.label}</span>
-							<span class="text-error shrink-0 font-semibold">{numeral(category.amount).format(NUMBER_FORMAT)}</span>
+							<span class="text-error shrink-0 font-semibold"
+								>{numeral(category.amount).format(NUMBER_FORMAT)}</span
+							>
 						</div>
 					</div>
 				{/each}
@@ -203,9 +221,13 @@
 						{:else}
 							<MinusIcon size={16} class="shrink-0 opacity-50" />
 						{/if}
-						<span class="text-lg leading-none font-semibold whitespace-nowrap">{numeral(currentTotal).format(NUMBER_FORMAT)}</span>
+						<span class="text-lg leading-none font-semibold whitespace-nowrap"
+							>{numeral(currentTotal).format(NUMBER_FORMAT)}</span
+						>
 					</div>
-					<span class="text-xs whitespace-nowrap opacity-50">vs {numeral(previousTotal).format(NUMBER_FORMAT)}</span>
+					<span class="text-xs whitespace-nowrap opacity-50"
+						>vs {numeral(previousTotal).format(NUMBER_FORMAT)}</span
+					>
 				</div>
 			</div>
 		{/if}

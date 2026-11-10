@@ -37,7 +37,8 @@ See [`/doc/architecture.md`](/doc/architecture.md) for the app's architecture, W
 
 ## Tools
 
-- `npm` is the package manager.
+- `node` and `npm` are is available through `mise`.
+- `npm` is the package manager to use.
 - Use ripgrep (`rg`) CLI for fast text search across text files. Prefer over `grep`.
 - For running Python code, use `uv run`.
 - Use `agent-browser` CLI to run the browser.

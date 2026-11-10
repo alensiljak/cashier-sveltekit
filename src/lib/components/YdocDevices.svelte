@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { PackageIcon, RefreshCwIcon, Trash2Icon, UserCheckIcon } from '@lucide/svelte';
+	import PackageIcon from '@lucide/svelte/icons/package';
+	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
+	import Trash2Icon from '@lucide/svelte/icons/trash-2';
+	import UserCheckIcon from '@lucide/svelte/icons/user-check';
 	import Notifier from '#lib/utils/notifier';
 	import { WebDavClient } from '#lib/utils/webdav';
 	import { getXactStore } from '#lib/storage/xactStoreRegistry';
@@ -68,7 +71,9 @@
 
 			for (const [kind, r] of Object.entries(results)) {
 				if (r.declined) {
-					Notifier.info(`Reset by another device not applied (${kind}); you will be asked again at the next sync`);
+					Notifier.info(
+						`Reset by another device not applied (${kind}); you will be asked again at the next sync`
+					);
 				}
 				for (const e of r.errors) Notifier.error(`Merge failed for ${e.key}: ${e.message}`);
 				for (const bad of r.invalid.slice(0, 5)) {
@@ -105,7 +110,8 @@
 			const deleted = Object.values(results).reduce((n, r) => n + (r?.deleted ?? 0), 0);
 			const skipped = Object.values(results).find((r) => r?.skipped)?.skipped;
 			if (skipped) Notifier.error(`Not compacted: ${skipped}`);
-			else Notifier.success(deleted ? `Compacted: ${deleted} file(s) removed` : 'Nothing to compact');
+			else
+				Notifier.success(deleted ? `Compacted: ${deleted} file(s) removed` : 'Nothing to compact');
 		} catch (err) {
 			Notifier.error('Compaction failed: ' + (err as Error).message);
 		} finally {
@@ -150,85 +156,85 @@
 </script>
 
 <div class="flex flex-col gap-3">
-		<div class="flex items-center justify-between">
-			<h3 class="text-sm font-medium text-base-content/60">Files from all devices</h3>
-			{#if isLoading}
-				<RefreshCwIcon size={14} class="animate-spin text-base-content/40" />
-			{:else}
-				<div class="flex items-center gap-3">
-					<button
-						class="text-xs text-base-content/40 hover:text-base-content/70 flex items-center gap-1 cursor-pointer"
-						disabled={!url || isCompacting}
-						title="Fold the uploaded changes into a snapshot and delete those every device has"
-						onclick={compactNow}
-					>
-						<PackageIcon size={12} />
-						{isCompacting ? 'compacting…' : 'compact now'}
-					</button>
-					<button
-						class="text-xs text-base-content/40 hover:text-base-content/70 flex items-center gap-1 cursor-pointer"
-						disabled={!url}
-						onclick={refresh}
-					>
-						<RefreshCwIcon size={12} />
-						refresh
-					</button>
-				</div>
-			{/if}
-		</div>
-
-		{#if error}
-			<p class="text-xs text-error">{error}</p>
-		{:else if devices.length === 0 && !isLoading}
-			<p class="text-xs text-base-content/50">No device files found on WebDAV.</p>
+	<div class="flex items-center justify-between">
+		<h3 class="text-sm font-medium text-base-content/60">Files from all devices</h3>
+		{#if isLoading}
+			<RefreshCwIcon size={14} class="animate-spin text-base-content/40" />
+		{:else}
+			<div class="flex items-center gap-3">
+				<button
+					class="text-xs text-base-content/40 hover:text-base-content/70 flex items-center gap-1 cursor-pointer"
+					disabled={!url || isCompacting}
+					title="Fold the uploaded changes into a snapshot and delete those every device has"
+					onclick={compactNow}
+				>
+					<PackageIcon size={12} />
+					{isCompacting ? 'compacting…' : 'compact now'}
+				</button>
+				<button
+					class="text-xs text-base-content/40 hover:text-base-content/70 flex items-center gap-1 cursor-pointer"
+					disabled={!url}
+					onclick={refresh}
+				>
+					<RefreshCwIcon size={12} />
+					refresh
+				</button>
+			</div>
 		{/if}
+	</div>
 
-		<ul class="flex flex-col gap-3">
-			{#each devices as d (d.deviceId)}
-				<li class="flex items-center gap-2">
-					<div class="flex-1 min-w-0">
-						<div class="flex items-center gap-2">
-							<span class="font-medium truncate">{label(d)}</span>
-							{#if d.status === 'trusted'}
-								<span class="badge badge-success badge-sm">trusted</span>
-								{#if d.readOnly}
-									<span class="badge badge-neutral badge-sm">read-only</span>
-								{/if}
-							{:else if d.status === 'untrusted'}
-								<span class="badge badge-warning badge-sm">not trusted</span>
+	{#if error}
+		<p class="text-xs text-error">{error}</p>
+	{:else if devices.length === 0 && !isLoading}
+		<p class="text-xs text-base-content/50">No device files found on WebDAV.</p>
+	{/if}
+
+	<ul class="flex flex-col gap-3">
+		{#each devices as d (d.deviceId)}
+			<li class="flex items-center gap-2">
+				<div class="flex-1 min-w-0">
+					<div class="flex items-center gap-2">
+						<span class="font-medium truncate">{label(d)}</span>
+						{#if d.status === 'trusted'}
+							<span class="badge badge-success badge-sm">trusted</span>
+							{#if d.readOnly}
+								<span class="badge badge-neutral badge-sm">read-only</span>
 							{/if}
-						</div>
-						<div class="text-xs text-base-content/50">
-							{#if d.lastModified}Updated {d.lastModified.toLocaleString()}{/if}
-							· {d.objects} file{d.objects === 1 ? '' : 's'}
-							{#if d.status === 'self'}
-								· {recordCount(d)} own records
-							{:else if d.status === 'trusted'}
-								· {recordCount(d)} records here
-							{/if}
-						</div>
+						{:else if d.status === 'untrusted'}
+							<span class="badge badge-warning badge-sm">not trusted</span>
+						{/if}
 					</div>
-					{#if d.status === 'untrusted'}
-						<button class="btn btn-xs btn-outline" onclick={() => startTrust(d)}>
-							<UserCheckIcon size={12} />
-							Trust
-						</button>
-					{/if}
-					{#if d.status !== 'self'}
-						<button
-							class="btn btn-xs btn-ghost text-error"
-							title="Delete this device's files from WebDAV"
-							aria-label="Delete the files of {label(d)}"
-							onclick={() => (deleting = d)}
-						>
-							<Trash2Icon size={14} />
-						</button>
-					{/if}
-				</li>
-			{/each}
-		</ul>
+					<div class="text-xs text-base-content/50">
+						{#if d.lastModified}Updated {d.lastModified.toLocaleString()}{/if}
+						· {d.objects} file{d.objects === 1 ? '' : 's'}
+						{#if d.status === 'self'}
+							· {recordCount(d)} own records
+						{:else if d.status === 'trusted'}
+							· {recordCount(d)} records here
+						{/if}
+					</div>
+				</div>
+				{#if d.status === 'untrusted'}
+					<button class="btn btn-xs btn-outline" onclick={() => startTrust(d)}>
+						<UserCheckIcon size={12} />
+						Trust
+					</button>
+				{/if}
+				{#if d.status !== 'self'}
+					<button
+						class="btn btn-xs btn-ghost text-error"
+						title="Delete this device's files from WebDAV"
+						aria-label="Delete the files of {label(d)}"
+						onclick={() => (deleting = d)}
+					>
+						<Trash2Icon size={14} />
+					</button>
+				{/if}
+			</li>
+		{/each}
+	</ul>
 
-		<a href="/settings/trusted-devices" class="link text-xs">Manage trusted devices</a>
+	<a href="/settings/trusted-devices" class="link text-xs">Manage trusted devices</a>
 </div>
 
 {#if trusting}

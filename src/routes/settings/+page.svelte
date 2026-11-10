@@ -16,20 +16,18 @@
 	} from '#lib/data/mainStore.js';
 	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
 	import CashierCardTemplate from '#lib/components/CashierCardTemplate.svelte';
-	import {
-		BellIcon,
-		BookOpenIcon,
-		BoxIcon,
-		ChartPieIcon,
-		Check,
-		ChevronRight,
-		FileBraces,
-		CloudUploadIcon,
-		FlaskConicalIcon,
-		RotateCcw,
-		SlidersHorizontalIcon,
-		SmartphoneIcon
-	} from '@lucide/svelte';
+	import BellIcon from '@lucide/svelte/icons/bell';
+	import BookOpenIcon from '@lucide/svelte/icons/book-open';
+	import BoxIcon from '@lucide/svelte/icons/box';
+	import ChartPieIcon from '@lucide/svelte/icons/chart-pie';
+	import Check from '@lucide/svelte/icons/check';
+	import ChevronRight from '@lucide/svelte/icons/chevron-right';
+	import FileBraces from '@lucide/svelte/icons/file-braces';
+	import CloudUploadIcon from '@lucide/svelte/icons/cloud-upload';
+	import FlaskConicalIcon from '@lucide/svelte/icons/flask-conical';
+	import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
+	import SlidersHorizontalIcon from '@lucide/svelte/icons/sliders-horizontal';
+	import SmartphoneIcon from '@lucide/svelte/icons/smartphone';
 	import { syncOptions, type SyncOption } from '#lib/services/syncOptions.svelte';
 	import Fab from '#lib/components/FAB.svelte';
 	import { page } from '$app/state';
@@ -417,8 +415,8 @@
 	<!-- ── Ledger ──────────────────────────────────────────── -->
 	<CashierCardTemplate heading="Ledger" Icon={BookOpenIcon} bodyClass="space-y-3 px-3">
 		{#snippet description()}
-			<a href="/opfs/import-ledger" class="link">Import Ledger files</a> first, then choose the book
-			file below.
+			<a href="/opfs/import-ledger" class="link">Import Ledger files</a> first, then choose the book file
+			below.
 		{/snippet}
 
 		<div class="flex items-center gap-3">
@@ -669,8 +667,8 @@
 	<CashierCardTemplate heading="Demo Data" Icon={FlaskConicalIcon} bodyClass="space-y-3 px-3">
 		{#snippet description()}
 			A sample book (transactions, accounts, asset allocation target) to explore Cashier without
-			your own data. Demo files live under <code>{DEMO_DIR}/</code> and are read-only — your own
-			entries always go to the device transaction store.
+			your own data. Demo files live under <code>{DEMO_DIR}/</code> and are read-only — your own entries
+			always go to the device transaction store.
 		{/snippet}
 
 		<div class="flex items-center gap-3">
@@ -716,7 +714,9 @@
 					<p class="text-sm font-medium">{row.label}</p>
 					<p class="text-xs opacity-60">
 						{#if storeStats[row.target]}
-							{storeStats[row.target]!.records} records · {formatBytes(storeStats[row.target]!.bytes)}
+							{storeStats[row.target]!.records} records · {formatBytes(
+								storeStats[row.target]!.bytes
+							)}
 						{:else}
 							Not set up on this device
 						{/if}

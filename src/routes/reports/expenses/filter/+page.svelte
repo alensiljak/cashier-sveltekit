@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
-	import { Trash2 } from '@lucide/svelte';
+	import Trash2 from '@lucide/svelte/icons/trash-2';
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
 	import SearchToolbar from '#lib/components/SearchToolbar.svelte';
@@ -67,7 +67,7 @@
 	}
 
 	async function saveAndGoBack() {
-		await settings.set(settingKey,[...hiddenAccounts]);
+		await settings.set(settingKey, [...hiddenAccounts]);
 		history.back();
 	}
 
@@ -104,7 +104,9 @@
 			<div class="py-12 text-center text-base-content/50 text-sm">No expense accounts found.</div>
 		{:else}
 			{#each filteredAccounts as account (account)}
-				<label class="flex items-center gap-3 px-4 py-2.5 border-b border-base-content/10 cursor-pointer hover:bg-base-200 active:bg-base-300">
+				<label
+					class="flex items-center gap-3 px-4 py-2.5 border-b border-base-content/10 cursor-pointer hover:bg-base-200 active:bg-base-300"
+				>
 					<input
 						type="checkbox"
 						class="checkbox checkbox-sm"

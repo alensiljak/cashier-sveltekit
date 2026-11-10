@@ -2,19 +2,17 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import {
-		FolderIcon,
-		FolderOpenIcon,
-		FileIcon,
-		TriangleAlertIcon,
-		DownloadIcon,
-		RefreshCwIcon,
-		GitCompareArrowsIcon,
-		ChevronDownIcon,
-		ChevronRightIcon,
-		FunnelIcon,
-		SettingsIcon
-	} from '@lucide/svelte';
+	import FolderIcon from '@lucide/svelte/icons/folder';
+	import FolderOpenIcon from '@lucide/svelte/icons/folder-open';
+	import FileIcon from '@lucide/svelte/icons/file';
+	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
+	import DownloadIcon from '@lucide/svelte/icons/download';
+	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
+	import GitCompareArrowsIcon from '@lucide/svelte/icons/git-compare-arrows';
+	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
+	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
+	import FunnelIcon from '@lucide/svelte/icons/funnel';
+	import SettingsIcon from '@lucide/svelte/icons/settings';
 	import { PeerSource } from '#lib/sync/PeerSource';
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import HelpButton from '#lib/help/HelpButton.svelte';
@@ -1074,7 +1072,8 @@
 									Differs <span class="badge badge-warning badge-sm">{differsRows.length}</span>
 								</h3>
 								<p class="text-xs opacity-60">
-									Never synced with this peer, so it's unknown which copy is newer. Preview to compare.
+									Never synced with this peer, so it's unknown which copy is newer. Preview to
+									compare.
 								</p>
 							</div>
 							<ul class="flex flex-col gap-2">

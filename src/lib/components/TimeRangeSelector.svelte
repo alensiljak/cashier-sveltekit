@@ -29,7 +29,9 @@
 	} from '#lib/utils/dates';
 	import { untrack } from 'svelte';
 	import { ISODATEFORMAT } from '#lib/constants';
-	import { ChevronLeftIcon, ChevronRightIcon, RotateCcwIcon } from '@lucide/svelte';
+	import ChevronLeftIcon from '@lucide/svelte/icons/chevron-left';
+	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
+	import RotateCcwIcon from '@lucide/svelte/icons/rotate-ccw';
 
 	export interface TimeRange {
 		label: string;
@@ -204,9 +206,19 @@
 
 	{#if isCustom}
 		<div class="flex items-center gap-2">
-			<input type="date" class="input input-bordered input-sm" bind:value={customFrom} onchange={applyCustom} />
+			<input
+				type="date"
+				class="input input-bordered input-sm"
+				bind:value={customFrom}
+				onchange={applyCustom}
+			/>
 			<span class="text-base-content/50">to</span>
-			<input type="date" class="input input-bordered input-sm" bind:value={customTo} onchange={applyCustom} />
+			<input
+				type="date"
+				class="input input-bordered input-sm"
+				bind:value={customTo}
+				onchange={applyCustom}
+			/>
 		</div>
 	{:else}
 		<div class="flex items-center gap-1">

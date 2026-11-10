@@ -17,7 +17,9 @@
 		buildTransaction,
 		refineFromMatches
 	} from '#lib/utils/nlpEntry';
-	import { CodeIcon, FilePlusIcon, TriangleAlertIcon } from '@lucide/svelte';
+	import CodeIcon from '@lucide/svelte/icons/code';
+	import FilePlusIcon from '@lucide/svelte/icons/file-plus';
+	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
 	import HelpButton from '#lib/help/HelpButton.svelte';
 
 	function focusOnMount(el: HTMLElement) {

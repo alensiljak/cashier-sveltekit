@@ -2,7 +2,12 @@
 	import { onMount } from 'svelte';
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import HelpButton from '#lib/help/HelpButton.svelte';
-	import { FolderOpenIcon, RefreshCcwIcon, ChevronUpIcon, ChevronDownIcon, EraserIcon, CopyCheckIcon } from '@lucide/svelte';
+	import FolderOpenIcon from '@lucide/svelte/icons/folder-open';
+	import RefreshCcwIcon from '@lucide/svelte/icons/refresh-ccw';
+	import ChevronUpIcon from '@lucide/svelte/icons/chevron-up';
+	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
+	import EraserIcon from '@lucide/svelte/icons/eraser';
+	import CopyCheckIcon from '@lucide/svelte/icons/copy-check';
 	import { settings, SettingKeys, deviceSettings, DeviceSettingKeys } from '#lib/settings';
 	import fullLedgerService from '#lib/services/ledgerWorkerClient';
 	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
@@ -127,8 +132,7 @@
 		hasDirectoryPicker = 'showDirectoryPicker' in window;
 		dirName = (await deviceSettings.get<string>(DeviceSettingKeys.importBookDirectory)) ?? '';
 		fileSpec = (await settings.get<string>(SettingKeys.importBookFileSpec)) ?? fileSpec;
-		autoReload =
-			(await deviceSettings.get<boolean>(DeviceSettingKeys.importAutoReload)) ?? true;
+		autoReload = (await deviceSettings.get<boolean>(DeviceSettingKeys.importAutoReload)) ?? true;
 		if (hasDirectoryPicker) {
 			const stored = await loadPersistedHandle(HANDLE_KEY);
 			if (stored && (await requestReadPermission(stored))) {
@@ -246,7 +250,13 @@
 						status = 'modified';
 					}
 					const captured = f;
-					result.push({ path, size: f.size, lastModified: f.lastModified, getFile: async () => captured, status });
+					result.push({
+						path,
+						size: f.size,
+						lastModified: f.lastModified,
+						getFile: async () => captured,
+						status
+					});
 					seen.add(path);
 					stats[status]++;
 				}
@@ -256,7 +266,12 @@
 			// Detect deletions: manifest entries that no longer exist in source
 			for (const [path, meta] of manifest) {
 				if (!seen.has(path)) {
-					result.push({ path, size: meta.size, lastModified: meta.lastModified, status: 'deleted' });
+					result.push({
+						path,
+						size: meta.size,
+						lastModified: meta.lastModified,
+						status: 'deleted'
+					});
 					stats.deleted++;
 				}
 			}
@@ -511,12 +526,15 @@
 	</Toolbar>
 
 	<div class="flex-1 overflow-y-auto touch-pan-y p-4 flex flex-col gap-4 mx-auto max-w-2xl w-full">
-
 		<!-- Directory picker -->
 		<section class="flex flex-col gap-2">
 			<label for="directoryPicker" class="label font-semibold">Source Directory</label>
 			<div class="flex items-center gap-2">
-				<span class="font-mono text-sm bg-base-200 rounded px-3 py-2 flex-1 truncate {dirName ? '' : 'text-base-content/40'}">{dirName ? dirName + '/' : 'Not selected'}</span>
+				<span
+					class="font-mono text-sm bg-base-200 rounded px-3 py-2 flex-1 truncate {dirName
+						? ''
+						: 'text-base-content/40'}">{dirName ? dirName + '/' : 'Not selected'}</span
+				>
 				{#if hasDirectoryPicker}
 					<button id="directoryPicker" class="btn btn-primary gap-2" onclick={pickDirectory}>
 						<FolderOpenIcon class="w-5 h-5" />
@@ -637,7 +655,8 @@
 												? 'badge-warning'
 												: file.status === 'deleted'
 													? 'badge-error'
-													: 'badge-ghost'}">{file.status}</span>
+													: 'badge-ghost'}">{file.status}</span
+									>
 									<span class="truncate flex-1">{file.path}</span>
 									{#if file.status !== 'identical'}
 										<button
@@ -655,10 +674,14 @@
 					<!-- Diff panel -->
 					{#if diffPath}
 						<div class="border border-base-300 rounded">
-							<div class="flex items-center justify-between px-2 py-1 bg-base-200 text-xs font-mono gap-2">
+							<div
+								class="flex items-center justify-between px-2 py-1 bg-base-200 text-xs font-mono gap-2"
+							>
 								<span class="truncate flex-1">{diffPath}</span>
 								{#if hunkStarts.length > 0}
-									<span class="text-base-content/50 shrink-0">{currentHunk + 1} / {hunkStarts.length}</span>
+									<span class="text-base-content/50 shrink-0"
+										>{currentHunk + 1} / {hunkStarts.length}</span
+									>
 									<button
 										class="btn btn-xs btn-ghost btn-square shrink-0"
 										aria-label="Previous change"
@@ -674,7 +697,9 @@
 										<ChevronDownIcon class="w-4 h-4" />
 									</button>
 								{/if}
-								<button class="link link-hover shrink-0" onclick={() => (diffPath = null)}>close</button>
+								<button class="link link-hover shrink-0" onclick={() => (diffPath = null)}
+									>close</button
+								>
 							</div>
 							{#if diffLoading}
 								<div class="flex items-center gap-2 text-sm text-base-content/70 p-2">
@@ -688,8 +713,18 @@
 							{:else}
 								<pre
 									bind:this={diffContainerEl}
-									class="text-xs font-mono leading-5 overflow-x-auto max-h-64 overflow-y-auto bg-base-200 p-2 select-text"
-								>{#each diffLines as line, i}{#if line.type === 'removed'}<span data-idx={i} class="block bg-error/20 text-error-content whitespace-pre">- {line.content}</span>{:else if line.type === 'added'}<span data-idx={i} class="block bg-success/20 text-success-content whitespace-pre">+ {line.content}</span>{:else}<span data-idx={i} class="block text-base-content/50 whitespace-pre">  {line.content}</span>{/if}{/each}</pre>
+									class="text-xs font-mono leading-5 overflow-x-auto max-h-64 overflow-y-auto bg-base-200 p-2 select-text">{#each diffLines as line, i}{#if line.type === 'removed'}<span
+												data-idx={i}
+												class="block bg-error/20 text-error-content whitespace-pre"
+												>- {line.content}</span
+											>{:else if line.type === 'added'}<span
+												data-idx={i}
+												class="block bg-success/20 text-success-content whitespace-pre"
+												>+ {line.content}</span
+											>{:else}<span
+												data-idx={i}
+												class="block text-base-content/50 whitespace-pre">  {line.content}</span
+											>{/if}{/each}</pre>
 							{/if}
 						</div>
 					{/if}
@@ -796,6 +831,5 @@
 				<span>{errorMsg}</span>
 			</div>
 		{/if}
-
 	</div>
 </main>

@@ -15,16 +15,14 @@
 	import { debounce } from '#lib/utils/debounce';
 	import { Posting } from '#lib/data/model';
 	import type { ValidationIssue } from '#lib/data/validation';
-	import {
-		SigmaIcon,
-		UserIcon,
-		FileTextIcon,
-		CirclePlusIcon,
-		TriangleAlertIcon,
-		CircleCheckIcon,
-		TagsIcon,
-		ArrowUpDownIcon
-	} from '@lucide/svelte';
+	import SigmaIcon from '@lucide/svelte/icons/sigma';
+	import UserIcon from '@lucide/svelte/icons/user';
+	import FileTextIcon from '@lucide/svelte/icons/file-text';
+	import CirclePlusIcon from '@lucide/svelte/icons/circle-plus';
+	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
+	import CircleCheckIcon from '@lucide/svelte/icons/circle-check';
+	import TagsIcon from '@lucide/svelte/icons/tags';
+	import ArrowUpDownIcon from '@lucide/svelte/icons/arrow-up-down';
 	import { Big } from 'big.js';
 
 	Notifier.init();
@@ -77,9 +75,7 @@
 			.join(', ');
 	});
 
-	let hasPlaceholder = $derived(
-		$xact?.postings?.some((p) => !p.account) ?? false
-	);
+	let hasPlaceholder = $derived($xact?.postings?.some((p) => !p.account) ?? false);
 
 	let liveIssues = $state<ValidationIssue[]>([]);
 
@@ -200,8 +196,6 @@
 			case 'payee':
 				if ($selectionMetadata.selectedId) {
 					$xact.payee = id as string;
-
-	
 				}
 				break;
 
@@ -284,7 +278,6 @@
 	function onMetaChange(meta: Record<string, string>) {
 		if ($xact) $xact.meta = meta;
 	}
-
 </script>
 
 <div class="flex flex-col space-y-3 py-2">
@@ -399,10 +392,7 @@
 	<!-- posting list -->
 	<div>
 		{#each $xact?.postings as posting, index (posting)}
-			<PostingEditor
-				{index}
-				onAccountClicked={(event) => onPostingAccountClicked(index)}
-			/>
+			<PostingEditor {index} onAccountClicked={(event) => onPostingAccountClicked(index)} />
 		{/each}
 		<button
 			type="button"

@@ -3,7 +3,8 @@
   Similar to the period selector used in income vs expense report.
 -->
 <script lang="ts">
-	import { ChevronLeftIcon, ChevronRightIcon } from '@lucide/svelte';
+	import ChevronLeftIcon from '@lucide/svelte/icons/chevron-left';
+	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
 
 	interface Props {
 		selectedPeriod: string;

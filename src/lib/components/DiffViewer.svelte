@@ -13,7 +13,9 @@
 		so JSON sections there simply omit `onApplyMerge` and get a read-only
 		diff with the same navigation.
 	*/
-	import { ChevronUpIcon, ChevronDownIcon, ShieldCheckIcon } from '@lucide/svelte';
+	import ChevronUpIcon from '@lucide/svelte/icons/chevron-up';
+	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
+	import ShieldCheckIcon from '@lucide/svelte/icons/shield-check';
 	import { buildDiffLines } from '#lib/utils/diffText';
 	import { normalizeEol } from '#lib/sync/SyncSource';
 
@@ -246,7 +248,10 @@
 						</button>
 					</div>
 				{/if}
-				<div id="diff-line-{uid}-{i}" class:opacity-40={onApplyMerge && line.type === 'added' && !included}>
+				<div
+					id="diff-line-{uid}-{i}"
+					class:opacity-40={onApplyMerge && line.type === 'added' && !included}
+				>
 					{#if line.type === 'removed' && onApplyMerge && !theirs}
 						<!-- "Mine" keeps this local line: the merge leaves it unchanged. -->
 						<div class="break-all whitespace-pre-wrap">&nbsp; {line.content}</div>
@@ -256,9 +261,9 @@
 						</div>
 					{:else if line.type === 'added'}
 						<div
-								class="bg-success/20 text-success-content break-all whitespace-pre-wrap"
-								class:line-through={onApplyMerge && !included}
-							>
+							class="bg-success/20 text-success-content break-all whitespace-pre-wrap"
+							class:line-through={onApplyMerge && !included}
+						>
 							+ {line.content}
 						</div>
 					{:else}

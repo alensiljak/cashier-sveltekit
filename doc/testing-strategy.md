@@ -41,18 +41,14 @@ don't exist (or don't perform) in Vitest's Node/jsdom environment:
   The setup intercepts `.wasm` requests and serves the real bytes from disk,
   so `rustledger.ts` tests exercise the **actual WASM parser**, not a mock —
   this is a real integration test running fast inside the unit layer.
-- `@lucide/svelte` — the package barrel re-exports ~1700 individual icon
-  components. Per [lucide-icons/lucide#2806](https://github.com/lucide-icons/lucide/issues/2806),
-  importing even one icon from the barrel forces evaluation of all of them —
-  10x dev-server reload slowdown, and 30s+ per import under Vitest (no
-  pre-bundling), blowing past any test timeout. Every icon is globally
-  mocked to a trivial `<svg>` stub (`tests/mocks/IconStub.svelte`) via a
-  `Proxy` in `tests/setup.ts`. **This blocks every component test** — any
-  component importing an icon hangs without it. Tests assert on
-  behavior/markup structure, never on which icon glyph rendered. Production
-  code is untouched; migrating the 69 call sites to deep imports
-  (`@lucide/svelte/icons/circle-alert`) would also fix the real dev-server
-  slowdown but is a separate, larger refactor — not done as part of this.
+- `@lucide/svelte` — always use deep imports
+  (`import X from '@lucide/svelte/icons/circle-alert'`), never the package
+  barrel. The barrel re-exports ~1700 icon components and, per
+  [lucide-icons/lucide#2806](https://github.com/lucide-icons/lucide/issues/2806),
+  importing even one forces evaluation of all of them: 10x dev-server reload
+  slowdown, and 30s+ per import under Vitest (no pre-bundling). Barrel imports
+  are blocked by the `no-restricted-imports` rule in `eslint.config.js` and
+  `.oxlintrc.json`. Icons are rendered for real in tests (no global mock).
 
 Run: `npm run test:unit` (or `test:unit:watch` while iterating).
 

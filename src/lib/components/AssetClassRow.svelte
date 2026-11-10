@@ -3,7 +3,8 @@
 	import { getOffsetColor, getRowColor } from '#lib/assetAllocation/assetAllocationUtils.js';
 	import { NUMBER_FORMAT } from '#lib/constants.js';
 	import numeral from 'numeral';
-	import { ChevronDown, ChevronRight } from '@lucide/svelte';
+	import ChevronDown from '@lucide/svelte/icons/chevron-down';
+	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import AssetClassRow from './AssetClassRow.svelte';
 
 	interface Props {

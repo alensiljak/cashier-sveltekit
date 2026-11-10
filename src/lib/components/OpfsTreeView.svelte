@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { RefreshCw } from '@lucide/svelte';
+	import RefreshCw from '@lucide/svelte/icons/refresh-cw';
 	import OpfsTreeNode from './OpfsTreeNode.svelte';
 	import type { OpfsTreeNode as TreeNodeType } from '#lib/data/opfsTypes';
 
@@ -44,11 +44,7 @@
 <div class="flex flex-col gap-1">
 	<div class="flex items-center justify-between pb-1">
 		<span class="font-semibold opacity-60">Files</span>
-		<button
-			class="btn btn-ghost btn-xs"
-			onclick={load}
-			title="Refresh"
-		>
+		<button class="btn btn-ghost btn-xs" onclick={load} title="Refresh">
 			<RefreshCw size={14} />
 		</button>
 	</div>

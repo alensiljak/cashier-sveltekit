@@ -3,7 +3,8 @@
   Styling matches the arrow buttons in YearPeriodSelector.
 -->
 <script lang="ts">
-	import { ChevronLeftIcon, ChevronRightIcon } from '@lucide/svelte';
+	import ChevronLeftIcon from '@lucide/svelte/icons/chevron-left';
+	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
 
 	interface Props {
 		value: string;

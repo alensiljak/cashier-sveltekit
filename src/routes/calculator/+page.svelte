@@ -3,7 +3,7 @@
 	import Fab from '#lib/components/FAB.svelte';
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import HelpButton from '#lib/help/HelpButton.svelte';
-	import { Check } from '@lucide/svelte';
+	import Check from '@lucide/svelte/icons/check';
 	import { selectionMetadata, xact } from '#lib/data/mainStore';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -240,7 +240,7 @@
 				if (!isNaN(amount)) {
 					$selectionMetadata.selectedId = amount; // Store the calculated amount in selectedId
 				} else {
-				    Notifier.error('The value is not a number!');
+					Notifier.error('The value is not a number!');
 				}
 			}
 
@@ -259,170 +259,170 @@
 		{/snippet}
 	</Toolbar>
 	<div class="flex flex-1 flex-col items-center justify-center p-4">
-	<div
-		class="w-full max-w-xs rounded-2xl border-2 border-gray-500 bg-gradient-to-b from-gray-400 to-gray-600 p-5 shadow-2xl"
-	>
-		<!-- Calculator Display -->
-		<div class="mb-4 rounded-lg border border-gray-700 bg-black p-4 shadow-inner">
-			<div
-				class="min-h-6 overflow-x-auto text-right font-mono text-sm whitespace-nowrap text-green-400"
-			>
-				{currentExpression}
+		<div
+			class="w-full max-w-xs rounded-2xl border-2 border-gray-500 bg-gradient-to-b from-gray-400 to-gray-600 p-5 shadow-2xl"
+		>
+			<!-- Calculator Display -->
+			<div class="mb-4 rounded-lg border border-gray-700 bg-black p-4 shadow-inner">
+				<div
+					class="min-h-6 overflow-x-auto text-right font-mono text-sm whitespace-nowrap text-green-400"
+				>
+					{currentExpression}
+				</div>
+				<div
+					class="mt-1 overflow-x-auto text-right font-mono text-3xl font-bold whitespace-nowrap text-green-400"
+				>
+					{displayValue}
+				</div>
 			</div>
-			<div
-				class="mt-1 overflow-x-auto text-right font-mono text-3xl font-bold whitespace-nowrap text-green-400"
-			>
-				{displayValue}
+
+			<!-- Calculator Buttons -->
+			<div class="grid grid-cols-4 gap-2">
+				<button
+					class="btn btn-lg rounded-lg border border-gray-500 bg-gray-300 text-lg font-bold text-gray-800 shadow-md hover:bg-gray-400"
+					onclick={clear}
+				>
+					AC
+				</button>
+				<button
+					class="btn btn-lg rounded-lg border border-gray-500 bg-gray-300 text-lg font-bold text-gray-800 shadow-md hover:bg-gray-400"
+					onclick={() => inputParenthesis('(')}
+				>
+					(
+				</button>
+				<button
+					class="btn btn-lg rounded-lg border border-gray-500 bg-gray-300 text-lg font-bold text-gray-800 shadow-md hover:bg-gray-400"
+					onclick={() => inputParenthesis(')')}
+				>
+					)
+				</button>
+				<button
+					class="btn btn-lg rounded-lg border border-gray-500 bg-gray-300 text-lg font-bold text-gray-800 shadow-md hover:bg-gray-400"
+					onclick={backspace}
+				>
+					⌫
+				</button>
+
+				<button
+					class="btn btn-lg bg-primary flex items-center justify-center rounded-lg border border-gray-900 text-lg font-bold text-gray-800 shadow-md hover:bg-gray-400"
+				>
+					<img src="/icons/cashier-logo.svg" alt="Cashier Logo" width="32" height="32" />
+				</button>
+				<button
+					class="btn btn-lg rounded-lg border border-gray-500 bg-gray-300 text-lg font-bold text-gray-800 shadow-md hover:bg-gray-400"
+					onclick={toggleSign}
+				>
+					+/-
+				</button>
+				<button
+					class="btn btn-lg rounded-lg border border-gray-500 bg-gray-300 text-lg font-bold text-gray-800 shadow-md hover:bg-gray-400"
+					onclick={inputPercent}
+				>
+					%
+				</button>
+				<button
+					class="btn btn-lg rounded-lg border border-orange-600 bg-orange-500 text-xl font-bold text-white shadow-md hover:bg-orange-600"
+					onclick={() => inputOperator('÷')}
+				>
+					÷
+				</button>
+
+				<button
+					class="btn btn-lg rounded-lg border border-gray-400 bg-gray-200 text-xl font-bold text-gray-800 shadow-md hover:bg-gray-300"
+					onclick={() => inputNumber('7')}
+				>
+					7
+				</button>
+				<button
+					class="btn btn-lg rounded-lg border border-gray-400 bg-gray-200 text-xl font-bold text-gray-800 shadow-md hover:bg-gray-300"
+					onclick={() => inputNumber('8')}
+				>
+					8
+				</button>
+				<button
+					class="btn btn-lg rounded-lg border border-gray-400 bg-gray-200 text-xl font-bold text-gray-800 shadow-md hover:bg-gray-300"
+					onclick={() => inputNumber('9')}
+				>
+					9
+				</button>
+				<button
+					class="btn btn-lg rounded-lg border border-orange-600 bg-orange-500 text-xl font-bold text-white shadow-md hover:bg-orange-600"
+					onclick={() => inputOperator('×')}
+				>
+					×
+				</button>
+
+				<button
+					class="btn btn-lg rounded-lg border border-gray-400 bg-gray-200 text-xl font-bold text-gray-800 shadow-md hover:bg-gray-300"
+					onclick={() => inputNumber('4')}
+				>
+					4
+				</button>
+				<button
+					class="btn btn-lg rounded-lg border border-gray-400 bg-gray-200 text-xl font-bold text-gray-800 shadow-md hover:bg-gray-300"
+					onclick={() => inputNumber('5')}
+				>
+					5
+				</button>
+				<button
+					class="btn btn-lg rounded-lg border border-gray-400 bg-gray-200 text-xl font-bold text-gray-800 shadow-md hover:bg-gray-300"
+					onclick={() => inputNumber('6')}
+				>
+					6
+				</button>
+				<button
+					class="btn btn-lg rounded-lg border border-orange-600 bg-orange-500 text-xl font-bold text-white shadow-md hover:bg-orange-600"
+					onclick={() => inputOperator('+')}
+				>
+					+
+				</button>
+
+				<button
+					class="btn btn-lg rounded-lg border border-gray-400 bg-gray-200 text-xl font-bold text-gray-800 shadow-md hover:bg-gray-300"
+					onclick={() => inputNumber('1')}
+				>
+					1
+				</button>
+				<button
+					class="btn btn-lg rounded-lg border border-gray-400 bg-gray-200 text-xl font-bold text-gray-800 shadow-md hover:bg-gray-300"
+					onclick={() => inputNumber('2')}
+				>
+					2
+				</button>
+				<button
+					class="btn btn-lg rounded-lg border border-gray-400 bg-gray-200 text-xl font-bold text-gray-800 shadow-md hover:bg-gray-300"
+					onclick={() => inputNumber('3')}
+				>
+					3
+				</button>
+				<button
+					class="btn btn-lg rounded-lg border border-orange-600 bg-orange-500 text-xl font-bold text-white shadow-md hover:bg-orange-600"
+					onclick={() => inputOperator('-')}
+				>
+					-
+				</button>
+
+				<button
+					class="btn btn-lg col-span-2 rounded-lg border border-gray-400 bg-gray-200 text-xl font-bold text-gray-800 shadow-md hover:bg-gray-300"
+					onclick={() => inputNumber('0')}
+				>
+					0
+				</button>
+
+				<button
+					class="btn btn-lg rounded-lg border border-gray-400 bg-gray-200 text-xl font-bold text-gray-800 shadow-md hover:bg-gray-300"
+					onclick={inputDecimal}
+				>
+					.
+				</button>
+				<button
+					class="btn btn-lg rounded-lg border border-gray-400 bg-gray-900 text-xl font-bold text-gray-200 shadow-md hover:bg-gray-700"
+					onclick={handleEquals}
+				>
+					=
+				</button>
 			</div>
 		</div>
-
-		<!-- Calculator Buttons -->
-		<div class="grid grid-cols-4 gap-2">
-			<button
-				class="btn btn-lg rounded-lg border border-gray-500 bg-gray-300 text-lg font-bold text-gray-800 shadow-md hover:bg-gray-400"
-				onclick={clear}
-			>
-				AC
-			</button>
-			<button
-				class="btn btn-lg rounded-lg border border-gray-500 bg-gray-300 text-lg font-bold text-gray-800 shadow-md hover:bg-gray-400"
-				onclick={() => inputParenthesis('(')}
-			>
-				(
-			</button>
-			<button
-				class="btn btn-lg rounded-lg border border-gray-500 bg-gray-300 text-lg font-bold text-gray-800 shadow-md hover:bg-gray-400"
-				onclick={() => inputParenthesis(')')}
-			>
-				)
-			</button>
-			<button
-				class="btn btn-lg rounded-lg border border-gray-500 bg-gray-300 text-lg font-bold text-gray-800 shadow-md hover:bg-gray-400"
-				onclick={backspace}
-			>
-				⌫
-			</button>
-
-			<button
-				class="btn btn-lg bg-primary flex items-center justify-center rounded-lg border border-gray-900 text-lg font-bold text-gray-800 shadow-md hover:bg-gray-400"
-			>
-				<img src="/icons/cashier-logo.svg" alt="Cashier Logo" width="32" height="32" />
-			</button>
-			<button
-				class="btn btn-lg rounded-lg border border-gray-500 bg-gray-300 text-lg font-bold text-gray-800 shadow-md hover:bg-gray-400"
-				onclick={toggleSign}
-			>
-				+/-
-			</button>
-			<button
-				class="btn btn-lg rounded-lg border border-gray-500 bg-gray-300 text-lg font-bold text-gray-800 shadow-md hover:bg-gray-400"
-				onclick={inputPercent}
-			>
-				%
-			</button>
-			<button
-				class="btn btn-lg rounded-lg border border-orange-600 bg-orange-500 text-xl font-bold text-white shadow-md hover:bg-orange-600"
-				onclick={() => inputOperator('÷')}
-			>
-				÷
-			</button>
-
-			<button
-				class="btn btn-lg rounded-lg border border-gray-400 bg-gray-200 text-xl font-bold text-gray-800 shadow-md hover:bg-gray-300"
-				onclick={() => inputNumber('7')}
-			>
-				7
-			</button>
-			<button
-				class="btn btn-lg rounded-lg border border-gray-400 bg-gray-200 text-xl font-bold text-gray-800 shadow-md hover:bg-gray-300"
-				onclick={() => inputNumber('8')}
-			>
-				8
-			</button>
-			<button
-				class="btn btn-lg rounded-lg border border-gray-400 bg-gray-200 text-xl font-bold text-gray-800 shadow-md hover:bg-gray-300"
-				onclick={() => inputNumber('9')}
-			>
-				9
-			</button>
-			<button
-				class="btn btn-lg rounded-lg border border-orange-600 bg-orange-500 text-xl font-bold text-white shadow-md hover:bg-orange-600"
-				onclick={() => inputOperator('×')}
-			>
-				×
-			</button>
-
-			<button
-				class="btn btn-lg rounded-lg border border-gray-400 bg-gray-200 text-xl font-bold text-gray-800 shadow-md hover:bg-gray-300"
-				onclick={() => inputNumber('4')}
-			>
-				4
-			</button>
-			<button
-				class="btn btn-lg rounded-lg border border-gray-400 bg-gray-200 text-xl font-bold text-gray-800 shadow-md hover:bg-gray-300"
-				onclick={() => inputNumber('5')}
-			>
-				5
-			</button>
-			<button
-				class="btn btn-lg rounded-lg border border-gray-400 bg-gray-200 text-xl font-bold text-gray-800 shadow-md hover:bg-gray-300"
-				onclick={() => inputNumber('6')}
-			>
-				6
-			</button>
-			<button
-				class="btn btn-lg rounded-lg border border-orange-600 bg-orange-500 text-xl font-bold text-white shadow-md hover:bg-orange-600"
-				onclick={() => inputOperator('+')}
-			>
-				+
-			</button>
-
-			<button
-				class="btn btn-lg rounded-lg border border-gray-400 bg-gray-200 text-xl font-bold text-gray-800 shadow-md hover:bg-gray-300"
-				onclick={() => inputNumber('1')}
-			>
-				1
-			</button>
-			<button
-				class="btn btn-lg rounded-lg border border-gray-400 bg-gray-200 text-xl font-bold text-gray-800 shadow-md hover:bg-gray-300"
-				onclick={() => inputNumber('2')}
-			>
-				2
-			</button>
-			<button
-				class="btn btn-lg rounded-lg border border-gray-400 bg-gray-200 text-xl font-bold text-gray-800 shadow-md hover:bg-gray-300"
-				onclick={() => inputNumber('3')}
-			>
-				3
-			</button>
-			<button
-				class="btn btn-lg rounded-lg border border-orange-600 bg-orange-500 text-xl font-bold text-white shadow-md hover:bg-orange-600"
-				onclick={() => inputOperator('-')}
-			>
-				-
-			</button>
-
-			<button
-				class="btn btn-lg col-span-2 rounded-lg border border-gray-400 bg-gray-200 text-xl font-bold text-gray-800 shadow-md hover:bg-gray-300"
-				onclick={() => inputNumber('0')}
-			>
-				0
-			</button>
-
-			<button
-				class="btn btn-lg rounded-lg border border-gray-400 bg-gray-200 text-xl font-bold text-gray-800 shadow-md hover:bg-gray-300"
-				onclick={inputDecimal}
-			>
-				.
-			</button>
-			<button
-				class="btn btn-lg rounded-lg border border-gray-400 bg-gray-900 text-xl font-bold text-gray-200 shadow-md hover:bg-gray-700"
-				onclick={handleEquals}
-			>
-				=
-			</button>
-		</div>
-	</div>
 	</div>
 	<Fab Icon={Check} onclick={onFabClicked} />
 </main>

@@ -3,9 +3,13 @@
 	import HelpButton from '#lib/help/HelpButton.svelte';
 	import AccordionSection from '#lib/components/AccordionSection.svelte';
 	import QuickQueryResults from '#lib/components/QuickQueryResults.svelte';
-	import { CopyIcon } from '@lucide/svelte';
+	import CopyIcon from '@lucide/svelte/icons/copy';
 	import fullLedgerService from '#lib/services/ledgerWorkerClient';
-	import { buildQuery, type CommonOptions, type LotsOptions } from '#lib/services/quickQueryBuilder';
+	import {
+		buildQuery,
+		type CommonOptions,
+		type LotsOptions
+	} from '#lib/services/quickQueryBuilder';
 	import { parseQqrlCommand } from '#lib/services/quickQueryCliParser';
 
 	const DEBOUNCE_MS = 400;
@@ -15,113 +19,111 @@
 	// transaction in the ledger. balance is grouped/aggregated so it's exempt.
 	const DEFAULT_AUTO_LIMIT = 100;
 
-	let commandLine = $state('balance Assets -l 10')
+	let commandLine = $state('balance Assets -l 10');
 
-	let parsed = $derived(parseQqrlCommand(commandLine))
+	let parsed = $derived(parseQqrlCommand(commandLine));
 
 	let limitAutoApplied = $derived(
 		parsed.command != null &&
 			parsed.command !== 'balance' &&
 			(parsed.command === 'lots' ? parsed.lotsOpts.limit == null : parsed.commonOpts.limit == null)
-	)
+	);
 
 	let effectiveCommonOpts = $derived<CommonOptions>(
 		limitAutoApplied && parsed.command !== 'lots'
 			? { ...parsed.commonOpts, limit: DEFAULT_AUTO_LIMIT }
 			: parsed.commonOpts
-	)
+	);
 	let effectiveLotsOpts = $derived<LotsOptions>(
 		limitAutoApplied && parsed.command === 'lots'
 			? { ...parsed.lotsOpts, limit: DEFAULT_AUTO_LIMIT }
 			: parsed.lotsOpts
-	)
+	);
 
 	let bql = $derived(
 		parsed.command ? buildQuery(parsed.command, effectiveCommonOpts, effectiveLotsOpts) : ''
-	)
-	let showRunningTotal = $derived(
-		parsed.command === 'register' && parsed.commonOpts.total
-	)
+	);
+	let showRunningTotal = $derived(parsed.command === 'register' && parsed.commonOpts.total);
 
 	// --- Results ---
 	interface QueryError {
-		message: string
-		severity?: string
-		line?: number
-		column?: number
+		message: string;
+		severity?: string;
+		line?: number;
+		column?: number;
 	}
 
-	let columns = $state<string[]>([])
-	let rows = $state<unknown[]>([])
-	let queryErrors = $state<QueryError[]>([])
-	let isRunning = $state(false)
+	let columns = $state<string[]>([]);
+	let rows = $state<unknown[]>([]);
+	let queryErrors = $state<QueryError[]>([]);
+	let isRunning = $state(false);
 
 	async function runQuery(queryBql: string) {
-		isRunning = true
+		isRunning = true;
 		try {
-			await fullLedgerService.ensureLoaded()
-			const result = await fullLedgerService.query(queryBql)
-			const errs = (result?.errors ?? []) as QueryError[]
+			await fullLedgerService.ensureLoaded();
+			const result = await fullLedgerService.query(queryBql);
+			const errs = (result?.errors ?? []) as QueryError[];
 			if (errs.length === 0) {
-				columns = result?.columns ?? []
-				rows = result?.rows ?? []
-				queryErrors = []
+				columns = result?.columns ?? [];
+				rows = result?.rows ?? [];
+				queryErrors = [];
 			} else {
-				columns = []
-				rows = []
-				queryErrors = errs
+				columns = [];
+				rows = [];
+				queryErrors = errs;
 			}
 		} catch (e: unknown) {
-			columns = []
-			rows = []
-			const msg = e instanceof Error ? e.message : String(e)
-			queryErrors = [{ message: msg, severity: 'error' }]
+			columns = [];
+			rows = [];
+			const msg = e instanceof Error ? e.message : String(e);
+			queryErrors = [{ message: msg, severity: 'error' }];
 		}
-		isRunning = false
+		isRunning = false;
 	}
 
 	// --- Debounced auto-run whenever the command line (and thus the BQL) changes ---
-	let debounceTimer: ReturnType<typeof setTimeout> | undefined
+	let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
 	$effect(() => {
-		const currentBql = bql
-		const parseErrors = parsed.errors
+		const currentBql = bql;
+		const parseErrors = parsed.errors;
 
-		if (debounceTimer) clearTimeout(debounceTimer)
+		if (debounceTimer) clearTimeout(debounceTimer);
 
 		if (!currentBql) {
-			columns = []
-			rows = []
-			queryErrors = parseErrors.map((message) => ({ message, severity: 'error' }))
-			return
+			columns = [];
+			rows = [];
+			queryErrors = parseErrors.map((message) => ({ message, severity: 'error' }));
+			return;
 		}
 
 		debounceTimer = setTimeout(() => {
 			if (parseErrors.length > 0) {
-				queryErrors = parseErrors.map((message) => ({ message, severity: 'warning' }))
+				queryErrors = parseErrors.map((message) => ({ message, severity: 'warning' }));
 			}
-			runQuery(currentBql)
-		}, DEBOUNCE_MS)
+			runQuery(currentBql);
+		}, DEBOUNCE_MS);
 
 		return () => {
-			if (debounceTimer) clearTimeout(debounceTimer)
-		}
-	})
+			if (debounceTimer) clearTimeout(debounceTimer);
+		};
+	});
 
-	let legendExpanded = $state(false)
+	let legendExpanded = $state(false);
 
-	let copied = $state(false)
+	let copied = $state(false);
 
 	async function copyBql() {
-		await navigator.clipboard.writeText(bql)
-		copied = true
-		setTimeout(() => (copied = false), 1500)
+		await navigator.clipboard.writeText(bql);
+		copied = true;
+		setTimeout(() => (copied = false), 1500);
 	}
 
 	function handleKeydown(e: KeyboardEvent) {
 		if (e.key === 'Enter' && e.ctrlKey) {
-			if (debounceTimer) clearTimeout(debounceTimer)
-			if (bql) runQuery(bql)
+			if (debounceTimer) clearTimeout(debounceTimer);
+			if (bql) runQuery(bql);
 		}
 	}
 </script>
@@ -140,7 +142,8 @@
 		<label class="form-control w-full">
 			<div class="label py-1">
 				<span class="label-text text-xs text-base-content/60">
-					qqrl-style command (e.g. <code>balance Assets not Bank -b 2025-01 -e 2025-12 -c EUR</code>)
+					qqrl-style command (e.g. <code>balance Assets not Bank -b 2025-01 -e 2025-12 -c EUR</code
+					>)
 				</span>
 			</div>
 			<input
@@ -165,23 +168,33 @@
 					<table class="table table-xs w-full">
 						<tbody>
 							<tr>
-								<td class="font-mono whitespace-nowrap">balance <span class="opacity-50">(b, bal)</span></td>
+								<td class="font-mono whitespace-nowrap"
+									>balance <span class="opacity-50">(b, bal)</span></td
+								>
 								<td>Account balances</td>
 							</tr>
 							<tr>
-								<td class="font-mono whitespace-nowrap">register <span class="opacity-50">(r, reg)</span></td>
+								<td class="font-mono whitespace-nowrap"
+									>register <span class="opacity-50">(r, reg)</span></td
+								>
 								<td>Transaction register</td>
 							</tr>
 							<tr>
-								<td class="font-mono whitespace-nowrap">lots <span class="opacity-50">(l, lot)</span></td>
+								<td class="font-mono whitespace-nowrap"
+									>lots <span class="opacity-50">(l, lot)</span></td
+								>
 								<td>Investment lots and cost basis</td>
 							</tr>
 							<tr>
-								<td class="font-mono whitespace-nowrap">assert <span class="opacity-50">(a)</span></td>
+								<td class="font-mono whitespace-nowrap"
+									>assert <span class="opacity-50">(a)</span></td
+								>
 								<td>Balance assertions</td>
 							</tr>
 							<tr>
-								<td class="font-mono whitespace-nowrap">price <span class="opacity-50">(p)</span></td>
+								<td class="font-mono whitespace-nowrap"
+									>price <span class="opacity-50">(p)</span></td
+								>
 								<td>Price history (commodity pattern instead of account)</td>
 							</tr>
 						</tbody>
@@ -205,13 +218,18 @@
 
 				<div>
 					<h3 class="font-semibold text-sm mb-1">
-						Common options <span class="font-normal opacity-60">(balance, register, assert, price)</span>
+						Common options <span class="font-normal opacity-60"
+							>(balance, register, assert, price)</span
+						>
 					</h3>
 					<table class="table table-xs w-full">
 						<tbody>
 							<tr>
 								<td class="font-mono whitespace-nowrap">-b, --begin DATE</td>
-								<td>Start date — <code>YYYY</code>, <code>YYYY-MM</code>, or <code>YYYY-MM-DD</code></td>
+								<td
+									>Start date — <code>YYYY</code>, <code>YYYY-MM</code>, or
+									<code>YYYY-MM-DD</code></td
+								>
 							</tr>
 							<tr>
 								<td class="font-mono whitespace-nowrap">-e, --end DATE</td>
@@ -234,7 +252,10 @@
 							</tr>
 							<tr>
 								<td class="font-mono whitespace-nowrap">-S, --sort FIELD</td>
-								<td>Sort field(s); prefix with <code>-</code> for descending, e.g. <code>-date</code></td>
+								<td
+									>Sort field(s); prefix with <code>-</code> for descending, e.g.
+									<code>-date</code></td
+								>
 							</tr>
 							<tr>
 								<td class="font-mono whitespace-nowrap">-l, --limit N</td>
@@ -265,7 +286,9 @@
 
 				<div>
 					<h3 class="font-semibold text-sm mb-1">
-						Lots-only options <span class="font-normal opacity-60">(in addition to begin/end/date-range/currency/exchange/sort/limit)</span>
+						Lots-only options <span class="font-normal opacity-60"
+							>(in addition to begin/end/date-range/currency/exchange/sort/limit)</span
+						>
 					</h3>
 					<table class="table table-xs w-full">
 						<tbody>
@@ -296,8 +319,8 @@
 				<p class="opacity-60">
 					This UI runs the query automatically as you type, so if no
 					<code>-l/--limit</code> is given, non-<code>balance</code> commands are capped at
-					{DEFAULT_AUTO_LIMIT} rows to avoid loading the entire ledger on every keystroke.
-					Add <code>-l N</code> to raise or remove the cap.
+					{DEFAULT_AUTO_LIMIT} rows to avoid loading the entire ledger on every keystroke. Add
+					<code>-l N</code> to raise or remove the cap.
 				</p>
 
 				<p class="opacity-60">
@@ -324,8 +347,7 @@
 			<textarea
 				class="textarea textarea-bordered w-full font-mono text-xs h-20 resize-none"
 				readonly
-				value={bql}
-			></textarea>
+				value={bql}></textarea>
 			{#if limitAutoApplied}
 				<span class="text-xs text-base-content/40 mt-1">
 					Auto-limited to {DEFAULT_AUTO_LIMIT} rows — add <code>-l N</code> to change.

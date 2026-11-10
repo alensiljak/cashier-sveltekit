@@ -15,7 +15,11 @@
 		return `${value.number} ${value.currency}`;
 	}
 	import * as Formatter from '#lib/utils/formatter';
-	import { ScaleIcon, CopyIcon, ActivityIcon, CircleCheckBigIcon } from '@lucide/svelte';
+	import ScaleIcon from '@lucide/svelte/icons/scale';
+	import CopyIcon from '@lucide/svelte/icons/copy';
+	import ActivityIcon from '@lucide/svelte/icons/activity';
+	import CircleCheckBigIcon from '@lucide/svelte/icons/circle-check-big';
+	import ListChecksIcon from '@lucide/svelte/icons/list-checks';
 
 	function copyToClipboard(text: string) {
 		navigator.clipboard.writeText(text);
@@ -24,9 +28,7 @@
 	import Notifier from '#lib/utils/notifier';
 	import { findHighlightedRow, openXactDetails } from '#lib/utils/unifiedXacts';
 
-	const highlightRow = $derived(
-		findHighlightedRow(page.data.unifiedRows, page.url.searchParams)
-	);
+	const highlightRow = $derived(findHighlightedRow(page.data.unifiedRows, page.url.searchParams));
 </script>
 
 <main class="flex h-screen flex-col">
@@ -38,17 +40,26 @@
 			<ToolbarMenuItem
 				Icon={ScaleIcon}
 				text="Balance Adjustment"
-				onclick={() => goto(`/accounts/bal-adj?account=${encodeURIComponent(page.data.account.name)}`)}
+				onclick={() =>
+					goto(`/accounts/bal-adj?account=${encodeURIComponent(page.data.account.name)}`)}
 			/>
 			<ToolbarMenuItem
 				Icon={CircleCheckBigIcon}
 				text="Balance Assertion"
-				onclick={() => goto(`/accounts/assert-balance?account=${encodeURIComponent(page.data.account.name)}`)}
+				onclick={() =>
+					goto(`/accounts/assert-balance?account=${encodeURIComponent(page.data.account.name)}`)}
+			/>
+			<ToolbarMenuItem
+				Icon={ListChecksIcon}
+				text="Reconcile"
+				onclick={() =>
+					goto(`/accounts/reconcile?account=${encodeURIComponent(page.data.account.name)}`)}
 			/>
 			<ToolbarMenuItem
 				Icon={ActivityIcon}
 				text="Running Balance"
-				onclick={() => goto(`/reports/running-balance?account=${encodeURIComponent(page.data.account.name)}`)}
+				onclick={() =>
+					goto(`/reports/running-balance?account=${encodeURIComponent(page.data.account.name)}`)}
 			/>
 		{/snippet}
 	</Toolbar>

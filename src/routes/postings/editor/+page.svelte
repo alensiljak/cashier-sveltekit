@@ -2,7 +2,12 @@
 	import Fab from '#lib/components/FAB.svelte';
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import { xact, selectionMetadata, postingEditorIndex } from '#lib/data/mainStore';
-	import { CalculatorIcon, CheckIcon, DiffIcon, ListIcon, TrashIcon, XIcon } from '@lucide/svelte';
+	import CalculatorIcon from '@lucide/svelte/icons/calculator';
+	import CheckIcon from '@lucide/svelte/icons/check';
+	import DiffIcon from '@lucide/svelte/icons/diff';
+	import ListIcon from '@lucide/svelte/icons/list';
+	import TrashIcon from '@lucide/svelte/icons/trash';
+	import XIcon from '@lucide/svelte/icons/x';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { SelectionModeMetadata } from '#lib/settings';
@@ -160,7 +165,9 @@
 	<Fab Icon={CheckIcon} onclick={onFab} />
 
 	{#if posting}
-		<section class="container mx-auto flex-1 overflow-y-auto touch-pan-y px-4 py-4 space-y-5 lg:max-w-screen-sm">
+		<section
+			class="container mx-auto flex-1 overflow-y-auto touch-pan-y px-4 py-4 space-y-5 lg:max-w-screen-sm"
+		>
 			<!-- Preview -->
 			{#if previewText}
 				<div class="bg-base-200 rounded px-3 py-2 font-mono text-sm break-all whitespace-pre-wrap">
@@ -218,7 +225,8 @@
 						placeholder="CCY"
 						class="input w-24 rounded text-center uppercase"
 						bind:value={$xact.postings[index].currency}
-						oninput={() => ($xact.postings[index].currency = $xact.postings[index].currency?.toUpperCase())}
+						oninput={() =>
+							($xact.postings[index].currency = $xact.postings[index].currency?.toUpperCase())}
 					/>
 				</div>
 				<div class="mt-2">
@@ -237,7 +245,10 @@
 			<!-- Cost annotation: {amount currency[, date]} -->
 			<div class="form-control">
 				<label class="label flex w-full items-center justify-between">
-					<span class="label-text font-semibold">Cost <span class="font-mono text-xs opacity-60">&#123;amount CCY[, date]&#125;</span></span>
+					<span class="label-text font-semibold"
+						>Cost <span class="font-mono text-xs opacity-60">&#123;amount CCY[, date]&#125;</span
+						></span
+					>
 					{#if $xact.postings[index]?.costAmount != null}
 						<button type="button" class="label-text-alt btn btn-sm btn-error" onclick={clearCost}>
 							<XIcon class="h-4 w-4" />
@@ -257,7 +268,9 @@
 						placeholder="CCY"
 						class="input w-24 rounded text-center uppercase"
 						bind:value={$xact.postings[index].costCurrency}
-						oninput={() => ($xact.postings[index].costCurrency = $xact.postings[index].costCurrency?.toUpperCase())}
+						oninput={() =>
+							($xact.postings[index].costCurrency =
+								$xact.postings[index].costCurrency?.toUpperCase())}
 					/>
 				</div>
 				<div class="mt-2">
@@ -273,7 +286,9 @@
 			<!-- Price annotation: @ or @@ amount currency -->
 			<div class="form-control">
 				<label class="label flex w-full items-center justify-between">
-					<span class="label-text font-semibold">Price <span class="font-mono text-xs opacity-60">@ / @@ amount CCY</span></span>
+					<span class="label-text font-semibold"
+						>Price <span class="font-mono text-xs opacity-60">@ / @@ amount CCY</span></span
+					>
 					{#if $xact.postings[index]?.priceAmount != null}
 						<button type="button" class="label-text-alt btn btn-sm btn-error" onclick={clearPrice}>
 							<XIcon class="h-4 w-4" />
@@ -288,15 +303,15 @@
 							class="join-item btn btn-sm"
 							class:btn-primary={!$xact.postings[index].totalPrice}
 							class:btn-outline={!!$xact.postings[index].totalPrice}
-							onclick={() => ($xact.postings[index].totalPrice = false)}
-						>@</button>
+							onclick={() => ($xact.postings[index].totalPrice = false)}>@</button
+						>
 						<button
 							type="button"
 							class="join-item btn btn-sm"
 							class:btn-primary={!!$xact.postings[index].totalPrice}
 							class:btn-outline={!$xact.postings[index].totalPrice}
-							onclick={() => ($xact.postings[index].totalPrice = true)}
-						>@@</button>
+							onclick={() => ($xact.postings[index].totalPrice = true)}>@@</button
+						>
 					</div>
 				</div>
 				<div class="flex gap-2">
@@ -311,7 +326,9 @@
 						placeholder="CCY"
 						class="input w-24 rounded text-center uppercase"
 						bind:value={$xact.postings[index].priceCurrency}
-						oninput={() => ($xact.postings[index].priceCurrency = $xact.postings[index].priceCurrency?.toUpperCase())}
+						oninput={() =>
+							($xact.postings[index].priceCurrency =
+								$xact.postings[index].priceCurrency?.toUpperCase())}
 					/>
 				</div>
 			</div>
@@ -346,8 +363,10 @@
 				class="btn btn-ghost rounded"
 				onclick={() => (isDeleteConfirmationOpen = false)}>Cancel</button
 			>
-			<button type="button" class="btn btn-primary text-primary-content rounded" onclick={onDeleteConfirmed}
-				>OK</button
+			<button
+				type="button"
+				class="btn btn-primary text-primary-content rounded"
+				onclick={onDeleteConfirmed}>OK</button
 			>
 		</footer>
 	</div>
@@ -360,7 +379,9 @@
 			<h2 class="text-lg font-bold">Replace Account</h2>
 		</header>
 		<article>
-			<p class="py-4 opacity-60">This posting already has an account set. Selecting a new one will overwrite it. Continue?</p>
+			<p class="py-4 opacity-60">
+				This posting already has an account set. Selecting a new one will overwrite it. Continue?
+			</p>
 		</article>
 		<footer class="flex justify-end gap-4">
 			<button
@@ -368,8 +389,10 @@
 				class="btn btn-ghost rounded"
 				onclick={() => (isOverwriteConfirmationOpen = false)}>Cancel</button
 			>
-			<button type="button" class="btn btn-primary text-primary-content rounded" onclick={onOverwriteConfirmed}
-				>OK</button
+			<button
+				type="button"
+				class="btn btn-primary text-primary-content rounded"
+				onclick={onOverwriteConfirmed}>OK</button
 			>
 		</footer>
 	</div>

@@ -1,7 +1,10 @@
 <script lang="ts">
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
-	import { ChevronRightIcon, RocketIcon, SearchIcon, XIcon } from '@lucide/svelte';
+	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
+	import RocketIcon from '@lucide/svelte/icons/rocket';
+	import SearchIcon from '@lucide/svelte/icons/search';
+	import XIcon from '@lucide/svelte/icons/x';
 	import { listHelpTopics } from '#lib/help/helpContent';
 
 	let query = $state('');
@@ -43,5 +46,4 @@
 			<p class="p-3 opacity-70">No help topics match "{query}".</p>
 		{/if}
 	</section>
-
 </main>

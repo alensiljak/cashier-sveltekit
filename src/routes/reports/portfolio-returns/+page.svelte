@@ -28,7 +28,8 @@
 	} from '#lib/portfolioReturns/cashFlows';
 	import { xirr, XirrNoSolutionError, holdingPeriodDays, type CashFlow } from '#lib/utils/xirr';
 	import { formatAmount } from '#lib/utils/formatter';
-	import { CircleAlertIcon, RefreshCwIcon } from '@lucide/svelte';
+	import CircleAlertIcon from '@lucide/svelte/icons/circle-alert';
+	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
 	import type { GroupRow } from '#lib/portfolioReturns/types';
 
 	interface TreeNode {

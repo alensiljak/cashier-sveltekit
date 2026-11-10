@@ -4,7 +4,8 @@
 	import { defaultAccountGroups, SettingKeys, settings, type AccountGroup } from '#lib/settings';
 	import { onMount } from 'svelte';
 	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
-	import { ArrowUpDownIcon, CirclePlusIcon } from '@lucide/svelte';
+	import ArrowUpDownIcon from '@lucide/svelte/icons/arrow-up-down';
+	import CirclePlusIcon from '@lucide/svelte/icons/circle-plus';
 	import { goto } from '$app/navigation';
 	import HelpButton from '#lib/help/HelpButton.svelte';
 

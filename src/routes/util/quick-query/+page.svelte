@@ -3,7 +3,7 @@
 	import HelpButton from '#lib/help/HelpButton.svelte';
 	import AccordionSection from '#lib/components/AccordionSection.svelte';
 	import QuickQueryResults from '#lib/components/QuickQueryResults.svelte';
-	import { CopyIcon } from '@lucide/svelte';
+	import CopyIcon from '@lucide/svelte/icons/copy';
 	import fullLedgerService from '#lib/services/ledgerWorkerClient';
 	import {
 		buildQuery,
@@ -13,8 +13,8 @@
 	} from '#lib/services/quickQueryBuilder';
 
 	// --- Command ---
-	let command = $state<Command>('balance')
-	let filtersExpanded = $state(false)
+	let command = $state<Command>('balance');
+	let filtersExpanded = $state(false);
 
 	const commands: { value: Command; label: string }[] = [
 		{ value: 'balance', label: 'Balance' },
@@ -22,41 +22,46 @@
 		{ value: 'lots', label: 'Lots' },
 		{ value: 'assert', label: 'Assert' },
 		{ value: 'price', label: 'Price' }
-	]
+	];
 
 	// --- Pattern (shared text input, space-separated tokens) ---
-	let pattern = $state('')
+	let pattern = $state('');
 
 	// --- Common options ---
-	let begin = $state('')
-	let end = $state('')
-	let dateRange = $state('')
-	let currency = $state('')
-	let exchange = $state('')
-	let sort = $state('')
-	let limitStr = $state('')
-	let total = $state(false)
+	let begin = $state('');
+	let end = $state('');
+	let dateRange = $state('');
+	let currency = $state('');
+	let exchange = $state('');
+	let sort = $state('');
+	let limitStr = $state('');
+	let total = $state(false);
 
 	// Balance-specific
-	let hierarchy = $state(false)
-	let depth = $state('')
-	let zero = $state(false)
-	let closedAccounts = $state(false)
+	let hierarchy = $state(false);
+	let depth = $state('');
+	let zero = $state(false);
+	let closedAccounts = $state(false);
 
 	// Lots-specific
-	let lotsMode = $state<'active' | 'all' | 'closed'>('active')
-	let average = $state(false)
-	let sortBy = $state<'date' | 'price' | 'symbol' | ''>('')
+	let lotsMode = $state<'active' | 'all' | 'closed'>('active');
+	let average = $state(false);
+	let sortBy = $state<'date' | 'price' | 'symbol' | ''>('');
 
 	// --- Derived options ---
-	let accountTokens = $derived(pattern.trim() ? pattern.trim().split(/\s+/) : [])
+	let accountTokens = $derived(pattern.trim() ? pattern.trim().split(/\s+/) : []);
 
 	let commonOpts = $derived<CommonOptions>({
 		account: accountTokens,
 		begin: begin || undefined,
 		end: end || undefined,
 		dateRange: dateRange || undefined,
-		currency: currency ? currency.split(',').map((s) => s.trim()).filter(Boolean) : [],
+		currency: currency
+			? currency
+					.split(',')
+					.map((s) => s.trim())
+					.filter(Boolean)
+			: [],
 		exchange: exchange || undefined,
 		sort: sort || undefined,
 		limit: limitStr ? parseInt(limitStr) : undefined,
@@ -65,14 +70,19 @@
 		depth: depth ? parseInt(depth) : undefined,
 		zero,
 		closedAccounts
-	})
+	});
 
 	let lotsOpts = $derived<LotsOptions>({
 		account: accountTokens,
 		begin: begin || undefined,
 		end: end || undefined,
 		dateRange: dateRange || undefined,
-		currency: currency ? currency.split(',').map((s) => s.trim()).filter(Boolean) : [],
+		currency: currency
+			? currency
+					.split(',')
+					.map((s) => s.trim())
+					.filter(Boolean)
+			: [],
 		exchange: exchange || undefined,
 		sort: sort || undefined,
 		limit: limitStr ? parseInt(limitStr) : undefined,
@@ -81,64 +91,64 @@
 		active: lotsMode === 'active',
 		showAll: lotsMode === 'all',
 		closed: lotsMode === 'closed'
-	})
+	});
 
 	// --- Live BQL preview ---
-	let bql = $derived(buildQuery(command, commonOpts, lotsOpts))
+	let bql = $derived(buildQuery(command, commonOpts, lotsOpts));
 
 	// --- Results ---
 	interface QueryError {
-		message: string
-		severity?: string
-		line?: number
-		column?: number
+		message: string;
+		severity?: string;
+		line?: number;
+		column?: number;
 	}
 
-	let columns = $state<string[]>([])
-	let rows = $state<unknown[]>([])
-	let errors = $state<QueryError[]>([])
-	let isRunning = $state(false)
+	let columns = $state<string[]>([]);
+	let rows = $state<unknown[]>([]);
+	let errors = $state<QueryError[]>([]);
+	let isRunning = $state(false);
 
 	async function runQuery() {
-		isRunning = true
-		errors = []
+		isRunning = true;
+		errors = [];
 		try {
-			await fullLedgerService.ensureLoaded()
-			const result = await fullLedgerService.query(bql)
-			errors = (result?.errors ?? []) as QueryError[]
+			await fullLedgerService.ensureLoaded();
+			const result = await fullLedgerService.query(bql);
+			errors = (result?.errors ?? []) as QueryError[];
 			if (errors.length === 0) {
-				columns = result?.columns ?? []
-				rows = result?.rows ?? []
+				columns = result?.columns ?? [];
+				rows = result?.rows ?? [];
 			} else {
-				columns = []
-				rows = []
+				columns = [];
+				rows = [];
 			}
 		} catch (e: unknown) {
-			columns = []
-			rows = []
-			const msg = e instanceof Error ? e.message : String(e)
-			errors = [{ message: msg, severity: 'error' }]
+			columns = [];
+			rows = [];
+			const msg = e instanceof Error ? e.message : String(e);
+			errors = [{ message: msg, severity: 'error' }];
 		}
-		isRunning = false
+		isRunning = false;
 	}
 
-	let copied = $state(false)
+	let copied = $state(false);
 
 	async function copyBql() {
-		await navigator.clipboard.writeText(bql)
-		copied = true
-		setTimeout(() => (copied = false), 1500)
+		await navigator.clipboard.writeText(bql);
+		copied = true;
+		setTimeout(() => (copied = false), 1500);
 	}
 
 	function handleKeydown(e: KeyboardEvent) {
-		if (e.key === 'Enter' && e.ctrlKey) runQuery()
+		if (e.key === 'Enter' && e.ctrlKey) runQuery();
 	}
 
 	function handleInputEnter(e: KeyboardEvent) {
-		if (e.key === 'Enter') runQuery()
+		if (e.key === 'Enter') runQuery();
 	}
 
-	let showRunningTotal = $derived(total && command === 'register')
+	let showRunningTotal = $derived(total && command === 'register');
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
@@ -167,7 +177,9 @@
 		<label class="form-control w-full">
 			<div class="label py-1">
 				<span class="label-text text-xs text-base-content/60">
-					{command === 'price' ? 'Commodity (e.g. EUR USD)' : 'Account pattern (e.g. Assets not Bank @Payee)'}
+					{command === 'price'
+						? 'Commodity (e.g. EUR USD)'
+						: 'Account pattern (e.g. Assets not Bank @Payee)'}
 				</span>
 			</div>
 			<input
@@ -236,7 +248,9 @@
 						/>
 					</label>
 					<label class="form-control">
-						<div class="label py-0.5"><span class="label-text text-xs">Exchange (convert to)</span></div>
+						<div class="label py-0.5">
+							<span class="label-text text-xs">Exchange (convert to)</span>
+						</div>
 						<input
 							type="text"
 							class="input input-bordered input-sm font-mono"
@@ -349,11 +363,7 @@
 		<div class="form-control w-full">
 			<div class="flex items-center justify-between py-1">
 				<span class="label-text text-xs text-base-content/60">Generated BQL</span>
-				<button
-					class="btn btn-ghost btn-xs gap-1"
-					onclick={copyBql}
-					title="Copy BQL to clipboard"
-				>
+				<button class="btn btn-ghost btn-xs gap-1" onclick={copyBql} title="Copy BQL to clipboard">
 					<CopyIcon size={14} />
 					{#if copied}<span class="text-xs">Copied!</span>{/if}
 				</button>
@@ -361,8 +371,7 @@
 			<textarea
 				class="textarea textarea-bordered w-full font-mono text-xs h-20 resize-none"
 				readonly
-				value={bql}
-			></textarea>
+				value={bql}></textarea>
 		</div>
 
 		<!-- Run button -->

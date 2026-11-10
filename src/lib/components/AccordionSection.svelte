@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ChevronRight } from '@lucide/svelte';
+	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import type { Snippet } from 'svelte';
 
 	type Props = {
@@ -19,7 +19,11 @@
 		aria-pressed={expanded}
 		class="card-body p-4 cursor-pointer"
 		onclick={onToggle}
-		onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { onToggle(); } }}
+		onkeydown={(e) => {
+			if (e.key === 'Enter' || e.key === ' ') {
+				onToggle();
+			}
+		}}
 	>
 		<div class="flex items-center justify-between">
 			<h2 class="card-title m-0">

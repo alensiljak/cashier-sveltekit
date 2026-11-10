@@ -2,7 +2,11 @@
 	import { tick } from 'svelte';
 	import { goto, replaceState } from '$app/navigation';
 	import { page } from '$app/state';
-	import { ChartBar, ChartPie, Funnel, FunnelX, ListFilter } from '@lucide/svelte';
+	import ChartBar from '@lucide/svelte/icons/chart-bar';
+	import ChartPie from '@lucide/svelte/icons/chart-pie';
+	import Funnel from '@lucide/svelte/icons/funnel';
+	import FunnelX from '@lucide/svelte/icons/funnel-x';
+	import ListFilter from '@lucide/svelte/icons/list-filter';
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import TimeRangeSelector, {
 		type TimeRange,
@@ -98,7 +102,6 @@
 				// Default: filter is ON whenever there is something to hide.
 				filterEnabled = hiddenAccounts.length > 0;
 			}
-
 
 			const defaultCurrency = await settings.get<string>(SettingKeys.currency);
 			await fullLedgerService.ensureLoaded();
@@ -222,7 +225,9 @@
 				{error}
 			</div>
 		{:else if chartLabels.length === 0}
-			<div class="py-12 text-center text-base-content/50 text-sm">No expense data for this period.</div>
+			<div class="py-12 text-center text-base-content/50 text-sm">
+				No expense data for this period.
+			</div>
 		{:else if chartType === 'bar'}
 			<ExpensesBarChart labels={chartLabels} values={chartValues} onclick={handleBarClick} />
 		{:else}
@@ -232,7 +237,9 @@
 
 	<!-- Total -->
 	{#if chartValues.length > 0}
-		<div class="flex items-center justify-end gap-2 px-4 py-2 border-t border-base-300 text-sm font-medium">
+		<div
+			class="flex items-center justify-end gap-2 px-4 py-2 border-t border-base-300 text-sm font-medium"
+		>
 			{#if filterEnabled && hiddenAccounts.length > 0}
 				<span class="text-xs text-primary opacity-70">filtered</span>
 			{/if}

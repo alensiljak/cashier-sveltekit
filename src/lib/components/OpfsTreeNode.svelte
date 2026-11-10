@@ -1,5 +1,9 @@
 <script lang="ts">
-	import { Folder, FolderOpen, File, ChevronRight, ChevronDown } from '@lucide/svelte';
+	import Folder from '@lucide/svelte/icons/folder';
+	import FolderOpen from '@lucide/svelte/icons/folder-open';
+	import File from '@lucide/svelte/icons/file';
+	import ChevronRight from '@lucide/svelte/icons/chevron-right';
+	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 
 	import type { OpfsTreeNode } from '#lib/data/opfsTypes';
 	import Self from './OpfsTreeNode.svelte';
@@ -13,10 +17,7 @@
 
 {#if node.kind === 'directory'}
 	<li>
-		<button
-			class="flex w-full items-center gap-1 text-left"
-			onclick={toggle}
-		>
+		<button class="flex w-full items-center gap-1 text-left" onclick={toggle}>
 			<span class="text-base-content/40">
 				{#if node.expanded}
 					<ChevronDown size={14} />

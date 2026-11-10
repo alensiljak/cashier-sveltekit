@@ -4,7 +4,8 @@
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { TrendingUpIcon, Settings2Icon } from '@lucide/svelte';
+	import TrendingUpIcon from '@lucide/svelte/icons/trending-up';
+	import Settings2Icon from '@lucide/svelte/icons/settings-2';
 	import CashierCardTemplate from './CashierCardTemplate.svelte';
 	import NetWorthMountainChart from './NetWorthMountainChart.svelte';
 	import { type Period } from './PeriodPicker.svelte';
@@ -63,10 +64,14 @@
 	/** Convert any period to a count of month-end sample points. */
 	function toMonths(p: Period): number {
 		switch (p.unit) {
-			case 'days':   return Math.max(1, Math.ceil(p.n / 30));
-			case 'weeks':  return Math.max(1, Math.ceil(p.n / 4.33));
-			case 'months': return p.n;
-			case 'years':  return p.n * 12;
+			case 'days':
+				return Math.max(1, Math.ceil(p.n / 30));
+			case 'weeks':
+				return Math.max(1, Math.ceil(p.n / 4.33));
+			case 'months':
+				return p.n;
+			case 'years':
+				return p.n * 12;
 		}
 	}
 
@@ -138,7 +143,6 @@
 		}
 	}
 
-
 	function onCardClick() {
 		void goto('/reports/net-worth');
 	}
@@ -152,7 +156,11 @@
 		Net Worth
 	{/snippet}
 	{#snippet menu()}
-		<a href="/net-worth-card-settings" onclick={(e) => e.stopPropagation()} aria-label="Net Worth card settings">
+		<a
+			href="/net-worth-card-settings"
+			onclick={(e) => e.stopPropagation()}
+			aria-label="Net Worth card settings"
+		>
 			<Settings2Icon />
 		</a>
 	{/snippet}

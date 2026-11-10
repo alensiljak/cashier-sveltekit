@@ -13,7 +13,9 @@
 		from picked entries and letting the caller `JSON.stringify` it doesn't
 		have that failure mode. See keyedMerge.ts's header comment.
 	*/
-	import { ChevronUpIcon, ChevronDownIcon, ShieldCheckIcon } from '@lucide/svelte';
+	import ChevronUpIcon from '@lucide/svelte/icons/chevron-up';
+	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
+	import ShieldCheckIcon from '@lucide/svelte/icons/shield-check';
 	import { diffKeyed, resolveKeyedMerge, type KeyedDiffEntry } from '#lib/utils/keyedMerge';
 
 	interface Props {

@@ -1,7 +1,8 @@
 <!-- Speed-dial FAB for Home: one main button expanding into labeled action mini-FABs. -->
 <script lang="ts">
 	import { fade, fly } from 'svelte/transition';
-	import { PlusIcon, XIcon } from '@lucide/svelte';
+	import PlusIcon from '@lucide/svelte/icons/plus';
+	import XIcon from '@lucide/svelte/icons/x';
 	import type { Component } from 'svelte';
 	import Fab from './FAB.svelte';
 

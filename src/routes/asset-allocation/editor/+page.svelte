@@ -9,7 +9,8 @@
 	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
 	import * as OpfsLib from '#lib/utils/opfslib.js';
 	import Notifier from '#lib/utils/notifier.js';
-	import { SaveIcon, XIcon } from '@lucide/svelte';
+	import SaveIcon from '@lucide/svelte/icons/save';
+	import XIcon from '@lucide/svelte/icons/x';
 
 	Notifier.init();
 
