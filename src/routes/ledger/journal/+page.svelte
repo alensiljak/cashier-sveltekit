@@ -234,8 +234,8 @@
 						{/if}
 					</div>
 				{/if}
-				{#each xacts as xact (xact.id ?? (xact.date ?? '') + (xact.payee ?? ''))}
-					<div class="py-2">
+				{#each xacts as xact, i (xact.id ?? (xact.date ?? '') + (xact.payee ?? ''))}
+					<div class="py-2 px-1 {i % 2 === 1 ? 'bg-base-200' : ''}">
 						<JournalXactRow {xact} onclick={onXactClick} {linksEnabled} />
 					</div>
 				{/each}

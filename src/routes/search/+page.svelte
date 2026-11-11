@@ -346,7 +346,7 @@
 					{/if}
 				</h2>
 				{#each visibleTransactionResults as result, i (result.xact.date + '\0' + (result.xact.payee ?? '') + '\0' + (result.xact.note ?? '') + '\0' + i)}
-					<div class="border-base-content/15 border-b py-2 px-1">
+					<div class="py-2 px-1 {i % 2 === 1 ? 'bg-base-200' : ''}">
 						<JournalXactRow xact={result.xact} onclick={() => onTransactionClick(result)} />
 					</div>
 				{/each}

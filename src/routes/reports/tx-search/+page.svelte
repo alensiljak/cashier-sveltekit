@@ -374,9 +374,9 @@
 		{:else if rows.length === 0}
 			<div class="py-8 text-center text-base-content/50 text-sm">No results.</div>
 		{:else}
-			<div class="flex flex-col divide-y divide-base-200">
-				{#each visibleXacts as xact (xact.id ?? (xact.date ?? '') + (xact.payee ?? ''))}
-					<div class="py-2 cursor-pointer">
+			<div class="flex flex-col">
+				{#each visibleXacts as xact, i (xact.id ?? (xact.date ?? '') + (xact.payee ?? ''))}
+					<div class="py-2 px-1 cursor-pointer {i % 2 === 1 ? 'bg-base-200' : ''}">
 						<JournalXactRow {xact} onclick={onXactClick} />
 					</div>
 				{/each}

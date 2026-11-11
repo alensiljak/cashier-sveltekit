@@ -524,12 +524,12 @@
 					</div>
 				{/if}
 				<div
-					class="flex flex-col divide-y divide-base-200"
+					class="flex flex-col"
 					class:pointer-events-none={isSelecting}
 					class:opacity-50={isSelecting}
 				>
-					{#each visibleTemplates as template (template)}
-						<div class="py-2">
+					{#each visibleTemplates as template, i (template)}
+						<div class="py-2 px-1 {i % 2 === 1 ? 'bg-base-200' : ''}">
 							<JournalXactRow xact={template} onclick={selectTemplate} />
 						</div>
 					{/each}

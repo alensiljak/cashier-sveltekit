@@ -115,14 +115,16 @@
 		{#if storedXacts.length === 0}
 			<p>The device journal is empty</p>
 		{:else}
-			{#each storedXacts as item (item.id)}
+			{#each storedXacts as item, i (item.id)}
 				{@const from = foreignOrigin(item.origin)}
-				<JournalXactRow
-					xact={item.xact}
-					badge={from}
-					badgeTitle="Created on another device"
-					onclick={() => onRowClick(item.xact, item.id)}
-				/>
+				<div class="px-1 py-1 {i % 2 === 1 ? 'bg-base-200' : ''}">
+					<JournalXactRow
+						xact={item.xact}
+						badge={from}
+						badgeTitle="Created on another device"
+						onclick={() => onRowClick(item.xact, item.id)}
+					/>
+				</div>
 			{/each}
 		{/if}
 	</section>

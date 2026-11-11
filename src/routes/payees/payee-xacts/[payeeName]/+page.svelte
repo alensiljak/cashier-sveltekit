@@ -42,8 +42,8 @@
 			<hr class="border-gray-400" />
 		</div>
 
-		{#each page.data.xacts as row (row.xact)}
-			<div class="border-base-content/10 border-b py-1">
+		{#each page.data.xacts as row, i (row.xact)}
+			<div class="py-1 px-1 {i % 2 === 1 ? 'bg-base-200' : ''}">
 				<JournalXactRow xact={row.xact} onclick={() => onRowClick(row)} />
 			</div>
 		{/each}
