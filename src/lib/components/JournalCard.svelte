@@ -145,7 +145,7 @@
 		{:else}
 			<div class="container text-base">
 				{#each xacts as xact, index (index)}
-					<div class="border-base-content/15 flex border-b py-1">
+					<div class="flex px-1 py-1 {index % 2 === 1 ? 'bg-base-200' : ''}">
 						<XactSummaryLine
 							date={getReadableDate(xact.date ?? '', $ShortDateFormatStore)}
 							payee={xact.payee}

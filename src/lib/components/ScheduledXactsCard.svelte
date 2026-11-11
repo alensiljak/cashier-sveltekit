@@ -61,10 +61,10 @@
 			<p>There are no scheduled transactions</p>
 		{:else}
 			<!-- list container -->
-			<div class="space-y-1 text-base">
+			<div class="text-base">
 				{#each scxs as scx, index (scx)}
 					<!-- row -->
-					<div class="flex flex-row space-x-2">
+					<div class="flex flex-row space-x-2 px-1 py-0.5 {index % 2 === 1 ? 'bg-base-200' : ''}">
 						<time class={`${getDateColour(scx.nextDate)}`}>
 							{getReadableDate(scx.nextDate, $ShortDateFormatStore)}
 						</time>
