@@ -91,12 +91,14 @@
 	});
 </script>
 
-<div class="space-y-1">
-	{#each visibleRows as row (row)}
+<div>
+	{#each visibleRows as row, i (row)}
 		<div
-			class="flex flex-row px-2 cursor-pointer {row.isDevice
+			class="flex flex-row px-2 py-1 cursor-pointer {row.isDevice
 				? 'border-l-2 border-amber-400 bg-amber-50/60 dark:bg-amber-950/25'
-				: ''} {row === highlightRow ? 'highlight-target' : ''}"
+				: i % 2 === 1
+					? 'bg-base-200'
+					: ''} {row === highlightRow ? 'highlight-target' : ''}"
 			onclick={() => onRowClick(row)}
 			onkeypress={() => onRowClick(row)}
 			use:scrollToHighlight={row === highlightRow}
@@ -107,7 +109,7 @@
 				date={row.date}
 				payee={row.payee}
 				note={row.narration}
-				flag={row.xact?.flag}
+				flag={row.xact?.flag ?? row.flag}
 				amount={Formatter.formatAmount(row.amount)}
 				currency={row.currency}
 				amountClass={Formatter.getAmountColour(row.amount)}

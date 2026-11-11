@@ -25,6 +25,8 @@ export type UnifiedXact = {
 	/** Transaction id from the full ledger (rledger). Present on ledger rows; absent on device rows. */
 	rledgerId?: number;
 	isDevice: boolean;
+	/** Transaction flag from the full ledger ('*' or '!'). Device rows carry it on `xact` instead. */
+	flag?: string;
 	xact?: Xact;
 	/** Working-set store ID. Present on device rows only; identifies the editable transaction. */
 	id?: XactId;

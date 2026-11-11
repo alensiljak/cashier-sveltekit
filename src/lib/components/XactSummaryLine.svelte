@@ -1,5 +1,5 @@
 <script lang="ts">
-	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
+	import WarningTriangleIcon from './WarningTriangleIcon.svelte';
 
 	/**
 	 * Compact one-entry summary: date, flag, payee · note, with the amount right-aligned.
@@ -28,7 +28,7 @@
 	<div class="min-w-0 pl-6" style="text-indent: -1.5rem">
 		<time class="opacity-60">{date}</time>
 		{#if flag === '!'}
-			<TriangleAlertIcon class="text-warning inline-block size-4 align-text-bottom" />
+			<WarningTriangleIcon class="inline-block size-4 align-text-bottom" />
 		{/if}
 		{payee}{#if payee && note}<span class="opacity-50"> · {note}</span>{:else if note}{note}{/if}
 		{#if extra}<span class="opacity-50"> · {extra}</span>{/if}
