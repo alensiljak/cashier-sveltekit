@@ -122,7 +122,7 @@ Limits:
 - **Name is a label; the key-derived ID is the identity.**
 - **Group secret** for the private sync room (not one room per pair).
 - **`lastSeen` follows any modification date in any sync**, not only peer hellos.
-- **Eviction is a signed, gossiped revocation**, not a per-device manual removal.
+- **Eviction is a signed, gossiped revocation**, not a per-device manual removal. One trusted device is enough to evict; no second confirmation.
 
 ## Implementation steps
 
@@ -146,7 +146,6 @@ Each step can ship alone. Step 1 fixes the impersonation problem.
 ## Open questions
 
 - **Pairwise or transitive trust.** With three devices, pairing C with A does not make B trust C. Pairwise means each pair pairs once (the link makes that cheap). Transitive would let A forward a signed "I vouch for C" to B. Default: pairwise.
-- Should eviction need more than one device (e.g. a confirmation on a second device), or is any single trusted device enough? Default: any single one.
 - Should S3 and WebDAV signing (step 5) ship together with peer sync, or after it?
 
 ## Related
