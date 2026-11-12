@@ -196,7 +196,9 @@ export async function afterSync(sync: DeltaSync, { compact }: { compact: boolean
 		if (!compact) return;
 		// A device that switched to a key-derived ID removes what it left under the old one.
 		const previous = await deviceSettings.get<string>(DeviceSettingKeys.previousDeviceId);
-		if (previous) await sync.retire(previous);
+		// A device this one was restored from is retired only once a person says it is lost.
+		const held = await deviceSettings.get<boolean>(DeviceSettingKeys.previousDeviceHeld);
+		if (previous && !held) await sync.retire(previous);
 		await sync.compactIfDue({ isActive: await loadTrusted() });
 		await sync.cleanLegacy();
 		await sync.resetIfDue({ trusted: await loadTrustedIds() });

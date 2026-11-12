@@ -115,7 +115,12 @@
 				hasWritePermission = await requestWritePermission(stored);
 			}
 		}
+		handleChecked = true;
 	});
+
+	// A folder name is known (e.g. restored from a backup) but the browser holds no access to it.
+	let handleChecked = $state(false);
+	const handleMissing = $derived(handleChecked && hasDirectoryPicker && !!dirName && !dirHandle);
 
 	async function pickDirectory() {
 		try {
@@ -318,11 +323,15 @@
 	<div class="flex-1 overflow-y-auto touch-pan-y p-4 flex flex-col gap-4">
 		<!-- Directory picker -->
 		<section class="flex flex-col gap-2">
-			<span class="label font-semibold">Source Directory</span>
+			<span class="label font-semibold"
+				>Source Directory{#if handleMissing}<span class="text-error"> (required)</span>{/if}</span
+			>
 			<div class="flex items-center gap-2 flex-wrap">
 				{#if dirName}
-					<span class="font-mono text-sm bg-base-200 rounded px-3 py-2 flex-1 truncate"
-						>{dirName}/</span
+					<span
+						class="font-mono text-sm bg-base-200 rounded px-3 py-2 flex-1 truncate {handleMissing
+							? 'outline outline-error'
+							: ''}">{dirName}/</span
 					>
 				{/if}
 				{#if hasDirectoryPicker}

@@ -117,6 +117,12 @@ export const DeviceSettingKeys = {
 	// The UUID this device had before its ID was derived from its key. Kept until the objects it
 	// wrote under that ID are forgotten (see doc/projects/2026-11-11_device-identity.md, step 5).
 	previousDeviceId: 'previousDeviceId',
+	// Set when `previousDeviceId` is the device this one was restored from (see backupService.ts):
+	// its sync files are not retired (merged and deleted) until a person says that device is lost.
+	previousDeviceHeld: 'previousDeviceHeld',
+	// Fields a restore left empty because they are secrets, e.g. 'webdav.password' (see
+	// restoreMissing.ts). The pages mark them as required until they are filled in.
+	restoreMissing: 'restoreMissing',
 	// Secret shared by the devices paired with each other (base64, 32 bytes). The Peer Sync room and
 	// its signaling password are derived from it (sync/syncGroup.ts). Device-only: it is a credential.
 	syncGroupSecret: 'syncGroupSecret',

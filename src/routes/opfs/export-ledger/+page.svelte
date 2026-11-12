@@ -76,8 +76,13 @@
 				dirHandle = stored;
 			}
 		}
+		handleChecked = true;
 		await scan();
 	});
+
+	// A folder name is known (e.g. restored from a backup) but the browser holds no access to it.
+	let handleChecked = $state(false);
+	const handleMissing = $derived(handleChecked && hasDirectoryPicker && !!dirName && !dirHandle);
 
 	async function pickDirectory() {
 		try {
@@ -172,12 +177,17 @@
 		{#if hasDirectoryPicker}
 			<!-- Destination picker -->
 			<section class="flex flex-col gap-2">
-				<label for="directoryPicker" class="label font-semibold">Destination Directory</label>
+				<label for="directoryPicker" class="label font-semibold"
+					>Destination Directory{#if handleMissing}<span class="text-error">
+							(required)</span
+						>{/if}</label
+				>
 				<div class="flex items-center gap-2">
 					<span
 						class="font-mono text-sm bg-base-200 rounded px-3 py-2 flex-1 truncate {dirName
 							? ''
-							: 'text-base-content/40'}">{dirName ? dirName + '/' : 'Not selected'}</span
+							: 'text-base-content/40'} {handleMissing ? 'outline outline-error' : ''}"
+						>{dirName ? dirName + '/' : 'Not selected'}</span
 					>
 					<button id="directoryPicker" class="btn btn-primary gap-2" onclick={pickDirectory}>
 						<FolderOutputIcon class="w-5 h-5" />

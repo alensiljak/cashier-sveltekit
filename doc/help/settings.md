@@ -23,7 +23,7 @@ Tap **Forecast Settings** to configure the separate forecasting options.
 
 ## Device Settings
 
-These apply only to this device and aren't included in exports or backups.
+These apply only to this device and aren't included in exports or in the settings shared between devices. The [Backup](/help/backup) file can carry them (and, if you choose, the credentials, encrypted).
 
 - **Enable ledger cache** — keeps a local cache of parsed ledger data for faster loading. Turn it off if you suspect the cache is causing stale data to show.
 

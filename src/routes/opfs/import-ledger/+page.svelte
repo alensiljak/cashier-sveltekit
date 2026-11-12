@@ -139,7 +139,14 @@
 				dirHandle = stored;
 			}
 		}
+		handleChecked = true;
 	});
+
+	// A folder name is known (e.g. restored from a backup) but the browser holds no access to it.
+	let handleChecked = $state(false);
+	const handleMissing = $derived(
+		handleChecked && hasDirectoryPicker && !!dirName && !dirHandle && !fallbackFiles
+	);
 
 	function handleFallbackInput(event: Event) {
 		const input = event.target as HTMLInputElement;
@@ -528,12 +535,15 @@
 	<div class="flex-1 overflow-y-auto touch-pan-y p-4 flex flex-col gap-4 mx-auto max-w-2xl w-full">
 		<!-- Directory picker -->
 		<section class="flex flex-col gap-2">
-			<label for="directoryPicker" class="label font-semibold">Source Directory</label>
+			<label for="directoryPicker" class="label font-semibold"
+				>Source Directory{#if handleMissing}<span class="text-error"> (required)</span>{/if}</label
+			>
 			<div class="flex items-center gap-2">
 				<span
 					class="font-mono text-sm bg-base-200 rounded px-3 py-2 flex-1 truncate {dirName
 						? ''
-						: 'text-base-content/40'}">{dirName ? dirName + '/' : 'Not selected'}</span
+						: 'text-base-content/40'} {handleMissing ? 'outline outline-error' : ''}"
+					>{dirName ? dirName + '/' : 'Not selected'}</span
 				>
 				{#if hasDirectoryPicker}
 					<button id="directoryPicker" class="btn btn-primary gap-2" onclick={pickDirectory}>

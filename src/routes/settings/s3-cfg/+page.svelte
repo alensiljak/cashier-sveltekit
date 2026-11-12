@@ -14,6 +14,7 @@
 	import { testConnection, type S3TestStep } from '#lib/services/s3Client';
 	import { deviceSettings, DeviceSettingKeys } from '#lib/settings';
 	import { lastBackupTime } from '#lib/services/webdavAutoBackupService';
+	import { clearRestoreMissing, getRestoreMissing } from '#lib/services/restoreMissing';
 	import CloudIcon from '@lucide/svelte/icons/cloud';
 
 	let cfg = $state<S3Config>(emptyS3Config());
@@ -36,7 +37,14 @@
 
 	let autoBackupEnabled = $state(false);
 
+	// Secrets a backup restore left empty; marked as required until entered.
+	let missing = $state<string[]>([]);
+	const keyIdRequired = $derived(missing.includes('s3.accessKeyId') && !cfg.accessKeyId);
+	const secretRequired = $derived(missing.includes('s3.secretAccessKey') && !cfg.secretAccessKey);
+	const passphraseRequired = $derived(missing.includes('s3.passphrase') && !cfg.passphrase);
+
 	onMount(async () => {
+		missing = await getRestoreMissing();
 		autoBackupEnabled =
 			(await deviceSettings.get<boolean>(DeviceSettingKeys.s3AutoBackup)) ?? false;
 		const saved = await loadS3Config();
@@ -54,6 +62,12 @@
 			return;
 		}
 		await saveS3Config({ ...cfg, prefix: cfg.prefix.replace(/^\/+|\/+$/g, '') });
+		const entered = [
+			cfg.accessKeyId && 's3.accessKeyId',
+			cfg.secretAccessKey && 's3.secretAccessKey',
+			cfg.passphrase && 's3.passphrase'
+		].filter(Boolean) as string[];
+		await clearRestoreMissing(...entered);
 		Notifier.success('S3 configuration saved');
 		history.back();
 	}
@@ -128,7 +142,11 @@
 
 					<div class="form-control md:flex-row md:items-center md:gap-3">
 						<label class="label md:w-40 md:flex-shrink-0" for="s3-key-id">
-							<span class="label-text">Access key ID</span>
+							<span class="label-text"
+								>Access key ID{#if keyIdRequired}<span class="text-error">
+										(required)</span
+									>{/if}</span
+							>
 						</label>
 						<input
 							id="s3-key-id"
@@ -136,12 +154,18 @@
 							autocomplete="off"
 							bind:value={cfg.accessKeyId}
 							class="input input-bordered font-mono text-sm md:flex-1"
+							class:input-error={keyIdRequired}
+							aria-required={keyIdRequired}
 						/>
 					</div>
 
 					<div class="form-control mt-2 md:mt-0 md:flex-row md:items-center md:gap-3">
 						<label class="label md:w-40 md:flex-shrink-0" for="s3-secret">
-							<span class="label-text">Secret access key</span>
+							<span class="label-text"
+								>Secret access key{#if secretRequired}<span class="text-error">
+										(required)</span
+									>{/if}</span
+							>
 						</label>
 						<input
 							id="s3-secret"
@@ -149,6 +173,8 @@
 							autocomplete="off"
 							bind:value={cfg.secretAccessKey}
 							class="input input-bordered font-mono text-sm md:flex-1"
+							class:input-error={secretRequired}
+							aria-required={secretRequired}
 						/>
 					</div>
 
@@ -156,7 +182,11 @@
 
 					<div class="form-control md:flex-row md:items-center md:gap-3">
 						<label class="label md:w-40 md:flex-shrink-0" for="s3-passphrase">
-							<span class="label-text">Passphrase</span>
+							<span class="label-text"
+								>Passphrase{#if passphraseRequired}<span class="text-error">
+										(required)</span
+									>{/if}</span
+							>
 						</label>
 						<input
 							id="s3-passphrase"
@@ -164,6 +194,8 @@
 							autocomplete="off"
 							bind:value={cfg.passphrase}
 							class="input input-bordered md:flex-1"
+							class:input-error={passphraseRequired}
+							aria-required={passphraseRequired}
 						/>
 					</div>
 
@@ -225,7 +257,8 @@
 						</li>
 						<li>
 							Create an API token limited to this one bucket. The credentials stay on this device
-							only and are not part of settings backups.
+							only. A backup file includes them only if you ask for that, and then encrypted with a
+							passphrase.
 						</li>
 						<li>
 							The bucket needs a CORS policy, otherwise the browser will block requests. The policy

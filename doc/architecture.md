@@ -134,6 +134,13 @@ tests. The store is imported on demand, which also avoids an import cycle
   `doc/projects/2026-10-16_delta-sync.md` for the design.
 - **WebDAV backup** (`webdavAutoBackupService.ts`, `webdavDelta.ts`) uploads
   after each write, debounced, using the delta sync.
+- **Backup file** (`backupService.ts`, `backupSecrets.ts`, `restoredDevice.ts`)
+  is a versioned JSON file with optional sections: settings, scheduled
+  transactions, the working set (Yjs state), the portable device settings, and
+  the trusted devices. Secret fields (WebDAV password, S3 keys, passphrases)
+  are left out, or sealed in an encrypted block with a passphrase. A restore
+  creates a new device identity; the backed-up device's ID becomes
+  `previousDeviceId`. See `doc/projects/2026-11-12_backup-restore.md`.
 - Merging is idempotent and order-independent, so any sync path can be
   repeated safely.
 

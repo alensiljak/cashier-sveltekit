@@ -29,7 +29,7 @@ Characteristics
 ### 2. Budgeting
 
 - **Envelope / zero-based budgeting** (assign every dollar a job).
-- **Flexible budget periods** (weekly, monthly, custom).
+- ✅ **Flexible budget periods** (weekly, monthly, custom).
 - **Rollover budgets** (e.g., unspent dining money carries over).
 - **Push notifications** when nearing category limits.
 - **Quick budget templates** based on past spending.

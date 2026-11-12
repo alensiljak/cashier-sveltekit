@@ -4,6 +4,7 @@
 	import Notifier from '#lib/utils/notifier';
 	import { settings, deviceSettings, SettingKeys, DeviceSettingKeys } from '#lib/settings';
 	import { lastBackupTime } from '#lib/services/webdavAutoBackupService';
+	import { clearRestoreMissing, getRestoreMissing } from '#lib/services/restoreMissing';
 	import CloudIcon from '@lucide/svelte/icons/cloud';
 	import { WebDavClient, type WebDavEntry } from '#lib/utils/webdav';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
@@ -44,7 +45,18 @@
 	let convertError = '';
 	let encBusy = false;
 
+	// Secrets a backup restore left empty; marked as required until entered.
+	let missing: string[] = [];
+	$: passwordRequired = missing.includes('webdav.password') && !password;
+	$: passphraseRequired = missing.includes('webdavEncryption.passphrase') && !encPassphrase;
+
+	async function filled(...ids: string[]) {
+		await clearRestoreMissing(...ids);
+		missing = missing.filter((id) => !ids.includes(id));
+	}
+
 	onMount(async () => {
+		missing = await getRestoreMissing();
 		autoBackupEnabled =
 			(await deviceSettings.get<boolean>(DeviceSettingKeys.webdavAutoBackup)) ?? false;
 		const saved = await settings.get<{ url: string; username: string; password: string }>(
@@ -73,7 +85,9 @@
 	}
 
 	async function savePassphrase() {
-		if (!encEnabled) await saveWebDavEncryption({ enabled: false, passphrase: encPassphrase });
+		// With encryption on, the field is editable only when the passphrase is missing (after a restore).
+		await saveWebDavEncryption({ enabled: encEnabled, passphrase: encPassphrase });
+		if (encPassphrase) await filled('webdavEncryption.passphrase');
 	}
 
 	/** Turns encryption on or off, converting the files in the folder first when it holds some in the other form. */
@@ -171,6 +185,7 @@
 
 	async function saveSettings() {
 		await settings.set(SettingKeys.webdavSettings, { url, username, password });
+		if (password) await filled('webdav.password');
 	}
 
 	async function upload(): Promise<void> {
@@ -263,7 +278,10 @@
 
 					<div class="form-control mt-2 md:flex-row md:items-center md:gap-3 md:mt-0">
 						<label class="label md:w-40 md:flex-shrink-0" for="dav-pass">
-							<span class="label-text">Password / App token</span>
+							<span class="label-text"
+								>Password / App token{#if passwordRequired}
+									<span class="text-error"> (required)</span>{/if}</span
+							>
 						</label>
 						<input
 							id="dav-pass"
@@ -271,6 +289,8 @@
 							bind:value={password}
 							onchange={saveSettings}
 							class="input input-bordered md:flex-1"
+							class:input-error={passwordRequired}
+							aria-required={passwordRequired}
 						/>
 					</div>
 				</div>
@@ -327,16 +347,21 @@
 					</label>
 					<div class="form-control mt-2 md:flex-row md:items-center md:gap-3">
 						<label class="label md:w-40 md:flex-shrink-0" for="dav-enc-pass">
-							<span class="label-text">Passphrase</span>
+							<span class="label-text"
+								>Passphrase{#if passphraseRequired}
+									<span class="text-error"> (required)</span>{/if}</span
+							>
 						</label>
 						<input
 							id="dav-enc-pass"
 							type="password"
 							bind:value={encPassphrase}
 							onchange={savePassphrase}
-							disabled={encEnabled}
+							disabled={encEnabled && !!encPassphrase}
 							autocomplete="off"
 							class="input input-bordered md:flex-1"
+							class:input-error={passphraseRequired}
+							aria-required={passphraseRequired}
 						/>
 					</div>
 					<p class="text-xs text-base-content/50">

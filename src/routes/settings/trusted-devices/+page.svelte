@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import Toolbar from '#lib/components/Toolbar.svelte';
+	import RestoredDeviceNotice from '#lib/components/RestoredDeviceNotice.svelte';
 	import DeviceLabel from '#lib/components/DeviceLabel.svelte';
 	import EvictionNotices from '#lib/components/EvictionNotices.svelte';
 	import Notifier from '#lib/utils/notifier';
@@ -149,6 +150,7 @@
 	<Toolbar title="Trusted Devices" />
 
 	<section class="flex-1 space-y-3 overflow-y-auto touch-pan-y p-4">
+		<RestoredDeviceNotice />
 		<p class="text-xs opacity-60">
 			Peer Sync, WebDAV and S3 merge data only from trusted devices. Devices found in the S3 bucket
 			or WebDAV folder are trusted on their sync pages; a read-only device stays on the list but its
