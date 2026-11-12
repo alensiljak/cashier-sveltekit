@@ -8,9 +8,12 @@
  * publish one under another device's ID.
  */
 import db from '#lib/data/db';
+import type { TrustedPeer } from '#lib/data/model';
+import { matchLegacy, replaceTrustedRecord } from '#lib/sync/identityMigration';
 import { deviceSettings, DeviceSettingKeys } from '#lib/settings';
 import {
 	deviceIdFromPublicKey,
+	fingerprintOfKey,
 	getDeviceKey,
 	signMessage,
 	verifyMessage
@@ -176,28 +179,91 @@ export async function loadBucketSigning(): Promise<BucketSigning> {
 	return { ctx: { self, publicKeyOf: (deviceId) => directory.publicKeyOf(deviceId) }, directory };
 }
 
+/** What a device's record adds to a line in a device list (S3, WebDAV). All empty for a device without one. */
+export interface BucketDeviceInfo {
+	/** The name the device announces; the list shows this device's own label for a trusted one. */
+	announcedName?: string;
+	/** Base64 SPKI, to pass to `trustDevice`. */
+	publicKey?: string;
+	fingerprint?: string;
+	/** The legacy ID the device names. */
+	previousId?: string;
+	/**
+	 * A trusted record that trusting this device would replace: a device that switched from its
+	 * legacy ID (see identityMigration.ts). Only `approve` needs a person; `rekey` is adopted by the sync.
+	 */
+	replaces?: { id: string; name: string; kind: 'rekey' | 'approve' };
+}
+
+export async function bucketDeviceInfo(
+	deviceId: string,
+	record: DeviceRecord | undefined,
+	peers: TrustedPeer[]
+): Promise<BucketDeviceInfo> {
+	if (!record) return {};
+	const match = matchLegacy(
+		{ id: deviceId, publicKey: record.publicKey, previousId: record.previousId },
+		peers
+	);
+	return {
+		announcedName: record.name,
+		publicKey: record.publicKey,
+		fingerprint: await fingerprintOfKey(record.publicKey),
+		previousId: record.previousId,
+		replaces: match ? { id: match.record.id, name: match.record.name, kind: match.kind } : undefined
+	};
+}
+
+/**
+ * Re-keys the trusted records of devices that switched to a key-derived ID and left a record in
+ * the store whose key matches (the key proves it is the same device). Returns how many. A
+ * key-less record is never replaced here: that needs a person (`BucketDeviceInfo.replaces`).
+ */
+export async function adoptSwitchedDevices(remote: RemoteStore): Promise<number> {
+	const records = await readDeviceRecords(remote);
+	let adopted = 0;
+	for (const [id, record] of records) {
+		const peers = await db.peers.toArray();
+		const match = matchLegacy(
+			{ id, publicKey: record.publicKey, previousId: record.previousId },
+			peers
+		);
+		if (match?.kind !== 'rekey') continue;
+		await replaceTrustedRecord(match.record.id, {
+			id,
+			name: record.name,
+			publicKey: record.publicKey
+		});
+		adopted++;
+	}
+	return adopted;
+}
+
 const announced = new Set<string>();
 
 /**
- * Publishes this device's record to a store, once per session and store. Does nothing while the
- * device has a legacy ID. Failures are only logged: syncing does not depend on it.
+ * Once per session and store: publishes this device's record (not while it has a legacy ID) and
+ * adopts the devices that switched to a key-derived ID since (`adoptSwitchedDevices`), so that
+ * their objects are merged under the new ID. Failures are only logged: syncing does not depend on it.
  */
 export async function announceDevice(storeId: string, remote: RemoteStore): Promise<void> {
 	if (announced.has(storeId)) return;
 	try {
 		const id = await getDeviceId();
-		if (!isDerivedId(id)) return;
-		const key = await getDeviceKey();
-		const name = (await deviceSettings.get<string>(DeviceSettingKeys.peerName)) ?? 'My Device';
-		const previousId =
-			(await deviceSettings.get<string>(DeviceSettingKeys.previousDeviceId)) || undefined;
-		await publishDeviceRecord(
-			remote,
-			{ id, privateKey: key.privateKey },
-			{ name, publicKey: key.publicKey, previousId }
-		);
+		if (isDerivedId(id)) {
+			const key = await getDeviceKey();
+			const name = (await deviceSettings.get<string>(DeviceSettingKeys.peerName)) ?? 'My Device';
+			const previousId =
+				(await deviceSettings.get<string>(DeviceSettingKeys.previousDeviceId)) || undefined;
+			await publishDeviceRecord(
+				remote,
+				{ id, privateKey: key.privateKey },
+				{ name, publicKey: key.publicKey, previousId }
+			);
+		}
+		await adoptSwitchedDevices(remote);
 		announced.add(storeId);
 	} catch (e) {
-		console.warn('[device-record] Could not publish this device:', e);
+		console.warn('[device-record] Could not publish or read device records:', e);
 	}
 }

@@ -316,6 +316,8 @@ export interface DeltaSyncOptions {
 	ignore?: (deviceId: string) => string | null;
 	/** Checks a record that came in from another device: a reason when it is not valid, else null. */
 	validate?: (record: unknown) => string | null;
+	/** Told what every listing of the bucket found, e.g. to note when each device was last seen. */
+	onListed?: (objects: BucketObject[]) => void;
 }
 
 const stampOf = (o: { size: number; lastModified: Date | null }) =>
@@ -1116,6 +1118,7 @@ export class DeltaSync {
 				lastModified: info.lastModified
 			});
 		}
+		this.o.onListed?.(objects);
 		return objects;
 	}
 

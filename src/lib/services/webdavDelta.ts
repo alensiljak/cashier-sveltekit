@@ -10,7 +10,15 @@
 import db from '#lib/data/db';
 import { getXactStore } from '#lib/storage/xactStoreRegistry';
 import { getScxStore } from '#lib/storage/scxStoreRegistry';
-import { announceDevice } from '#lib/sync/deviceRecords';
+import { deviceSettings, DeviceSettingKeys } from '#lib/settings';
+import { fingerprintOfKey, getDeviceKey } from '#lib/sync/deviceKey';
+import {
+	announceDevice,
+	bucketDeviceInfo,
+	readDeviceRecords,
+	type BucketDeviceInfo,
+	type DeviceRecord
+} from '#lib/sync/deviceRecords';
 import { peerOf } from '#lib/sync/identityMigration';
 import { getDeviceId, type DocKind } from '#lib/sync/ydocDevices';
 import {
@@ -159,14 +167,35 @@ export interface WebDavDevice {
 	lastModified: Date | null;
 	/** Objects it has in the folder (deltas and legacy files). */
 	objects: number;
+	/** Short fingerprint of its key, from the trusted record or its device record. */
+	fingerprint?: string;
+	/** What it announces in its device record (see `BucketDeviceInfo`). */
+	announcedName?: string;
+	publicKey?: string;
+	previousId?: string;
+	replaces?: BucketDeviceInfo['replaces'];
+	/** IDs that records created by this device carry as their origin: its current ID and legacy ones. */
+	originIds: string[];
+}
+
+/** The verified device records in the folder; none when it cannot be read (not encrypted as configured, offline). */
+async function recordsIn(client: WebDavClient) {
+	try {
+		return await readDeviceRecords(await remoteFor(client));
+	} catch {
+		return new Map<string, DeviceRecord>();
+	}
 }
 
 /** The devices that have uploaded to the folder, each classified against the trusted devices. */
 export async function listWebDavDevices(client: WebDavClient): Promise<WebDavDevice[]> {
-	const [infos, peers, selfId] = await Promise.all([
+	const [infos, peers, selfId, records, previousId, selfKey] = await Promise.all([
 		new WebDavRemoteStore(client).list('crdt/'),
 		db.peers.toArray(),
-		getDeviceId()
+		getDeviceId(),
+		recordsIn(client),
+		deviceSettings.get<string>(DeviceSettingKeys.previousDeviceId),
+		getDeviceKey()
 	]);
 	const found = new Map<string, { lastModified: Date | null; objects: number }>();
 	for (const info of infos) {
@@ -182,24 +211,27 @@ export async function listWebDavDevices(client: WebDavClient): Promise<WebDavDev
 		}
 		found.set(parsed.deviceId, entry);
 	}
-	return [...found]
-		.map(([deviceId, { lastModified, objects }]) => {
-			const peer = peerOf(peers, deviceId);
-			return {
-				deviceId,
-				status:
-					deviceId === selfId
-						? ('self' as const)
-						: peer
-							? ('trusted' as const)
-							: ('untrusted' as const),
-				name: peer?.name,
-				readOnly: peer?.readOnly,
-				lastModified,
-				objects
-			};
-		})
-		.sort((a, b) => a.deviceId.localeCompare(b.deviceId));
+	const selfFingerprint = await fingerprintOfKey(selfKey.publicKey);
+	const devices: WebDavDevice[] = [];
+	for (const [deviceId, { lastModified, objects }] of found) {
+		const peer = peerOf(peers, deviceId);
+		const self = deviceId === selfId || (!!previousId && deviceId === previousId);
+		const info = await bucketDeviceInfo(deviceId, records.get(deviceId), peers);
+		devices.push({
+			deviceId,
+			status: self ? 'self' : peer ? 'trusted' : 'untrusted',
+			name: peer?.name,
+			readOnly: peer?.readOnly,
+			lastModified,
+			objects,
+			...info,
+			fingerprint: self ? selfFingerprint : peer?.fingerprint || info.fingerprint,
+			originIds: self
+				? [selfId, ...(previousId ? [previousId] : [])]
+				: [deviceId, ...(peer?.legacyIds ?? [])]
+		});
+	}
+	return devices.sort((a, b) => a.deviceId.localeCompare(b.deviceId));
 }
 
 /**

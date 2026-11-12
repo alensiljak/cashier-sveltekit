@@ -25,6 +25,7 @@
 	} from '#lib/services/s3Sync';
 	import { reloadLedgerFromOpfs } from '#lib/services/ledgerReload';
 	import { trustDevice } from '#lib/sync/ydocDevices';
+	import DeviceLabel from '#lib/components/DeviceLabel.svelte';
 	import Notifier from '#lib/utils/notifier';
 	import ArrowDownIcon from '@lucide/svelte/icons/arrow-down';
 	import ArrowUpIcon from '@lucide/svelte/icons/arrow-up';
@@ -51,15 +52,20 @@
 
 	function startTrust(d: BucketDevice) {
 		trusting = d;
-		trustName = `Device ${d.deviceId.slice(0, 6)}`;
+		trustName = d.replaces?.name ?? d.announcedName ?? `Device ${d.deviceId.slice(0, 6)}`;
 	}
 
 	async function confirmTrust() {
 		if (!trusting) return;
 		const d = trusting;
 		trusting = null;
-		await trustDevice(d.deviceId, trustName);
-		Notifier.success('Device trusted');
+		try {
+			// With the key from its device record, the trusted device is a checked one.
+			await trustDevice(d.deviceId, trustName, d.publicKey, d.previousId);
+			Notifier.success(d.replaces ? 'Device replaced' : 'Device trusted');
+		} catch (e) {
+			Notifier.error((e as Error).message);
+		}
 		await refreshStatus();
 	}
 
@@ -353,8 +359,11 @@
 									<li class="bg-base-300 rounded-box flex items-center gap-2 p-3">
 										<div class="min-w-0 flex-1">
 											<div class="flex items-center gap-2 text-sm">
-												<span class="truncate font-medium">
-													{d.name ?? `Device ${d.deviceId.slice(0, 6)}`}
+												<span class="flex min-w-0 items-baseline font-medium">
+													<DeviceLabel
+													name={d.name ?? d.announcedName ?? `Device ${d.deviceId.slice(0, 6)}`}
+													fingerprint={d.fingerprint}
+												/>
 												</span>
 												{#if !d.trusted}
 													<span class="badge badge-warning badge-sm">not trusted</span>
@@ -371,7 +380,7 @@
 										{#if !d.trusted}
 											<button class="btn btn-xs btn-outline" onclick={() => startTrust(d)}>
 												<UserCheckIcon size={12} />
-												Trust
+												{d.replaces ? 'Replace' : 'Trust'}
 											</button>
 										{/if}
 									</li>
@@ -621,10 +630,32 @@
 	{#if trusting}
 		<div class="modal modal-open">
 			<div class="modal-box">
-				<h3 class="text-lg font-bold">Trust device</h3>
-				<p class="py-2 text-sm">
-					Records from this device will be merged into your local transactions. ID:
-					<code class="break-all">{trusting.deviceId}</code>
+				<h3 class="text-lg font-bold">
+					{trusting.replaces ? 'Replace trusted device' : 'Trust device'}
+				</h3>
+				{#if trusting.replaces}
+					<p class="py-2 text-sm">
+						This device says it is <strong>{trusting.replaces.name}</strong>, which you trust already,
+						and has a new identity. If the name and fingerprint below are right, trusting it replaces
+						that record.
+					</p>
+				{:else}
+					<p class="py-2 text-sm">
+						Records from this device will be merged into your local transactions.
+					</p>
+				{/if}
+				<p class="pb-2 text-sm">
+					<span class="flex items-baseline">
+						<DeviceLabel
+							name={trusting.announcedName ?? trusting.name ?? 'Unnamed device'}
+							fingerprint={trusting.fingerprint}
+						/>
+					</span>
+					{#if !trusting.publicKey}
+						<span class="text-base-content/60 text-xs">
+							This device has not published its key (an older app version), so it cannot be checked.
+						</span>
+					{/if}
 				</p>
 				<input
 					class="input input-bordered w-full"

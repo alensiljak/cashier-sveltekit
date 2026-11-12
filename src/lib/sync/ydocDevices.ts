@@ -6,6 +6,7 @@ import db from '#lib/data/db';
 import { TrustedPeer } from '#lib/data/model';
 import { deviceSettings, DeviceSettingKeys } from '#lib/settings';
 import { deviceIdFromPublicKey, fingerprintOfKey, getDeviceKey } from '#lib/sync/deviceKey';
+import { matchLegacy, replaceTrustedRecord } from '#lib/sync/identityMigration';
 
 /** The documents synced between devices. */
 export type DocKind = 'xacts' | 'scx';
@@ -32,16 +33,29 @@ export async function getDeviceId(): Promise<string> {
 export async function trustDevice(
 	deviceId: string,
 	name?: string,
-	publicKey?: string
+	publicKey?: string,
+	previousId?: string
 ): Promise<TrustedPeer> {
+	if (publicKey) {
+		if ((await deviceIdFromPublicKey(publicKey)) !== deviceId) {
+			throw new Error('The key does not belong to this device ID.');
+		}
+		// A device that switched from a legacy ID replaces its old record, keeping its label and flags.
+		const legacy = matchLegacy({ id: deviceId, publicKey, previousId }, await db.peers.toArray());
+		if (legacy) {
+			const replaced = await replaceTrustedRecord(legacy.record.id, {
+				id: deviceId,
+				name: name?.trim() || legacy.record.name,
+				publicKey
+			});
+			if (replaced) return replaced;
+		}
+	}
 	const tp = new TrustedPeer();
 	tp.id = deviceId;
 	tp.name = name?.trim() || `Device ${deviceId.slice(0, 6)}`;
 	tp.trustedAt = new Date().toISOString();
 	if (publicKey) {
-		if ((await deviceIdFromPublicKey(publicKey)) !== deviceId) {
-			throw new Error('The key does not belong to this device ID.');
-		}
 		tp.publicKey = publicKey;
 		tp.fingerprint = await fingerprintOfKey(publicKey);
 	}

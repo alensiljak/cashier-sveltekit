@@ -48,9 +48,17 @@ import type { ScxRecord } from '#lib/storage/crdtScxRecord';
 import { collectExportableFiles } from '#lib/utils/opfsExport';
 import { deleteFile, saveBinaryFile } from '#lib/utils/opfslib';
 import type { S3Config } from './s3Config';
-import { deleteObject, getObject, listObjectInfos, listObjects, putObject } from './s3Client';
+import { deleteObject, getObject, listObjectInfos, putObject } from './s3Client';
 import { decryptCrdtObject, S3RemoteStore } from './s3RemoteStore';
-import { announceDevice, loadBucketSigning } from '#lib/sync/deviceRecords';
+import {
+	announceDevice,
+	bucketDeviceInfo,
+	loadBucketSigning,
+	readDeviceRecords,
+	type BucketDeviceInfo,
+	type DeviceRecord
+} from '#lib/sync/deviceRecords';
+import { noteBucketActivity } from '#lib/sync/lastSeen';
 import { peerOf } from '#lib/sync/identityMigration';
 import { openSigned, sealSigned, stripSigned, type SigningContext } from '#lib/sync/signedObjects';
 import { createKeyParams, decrypt, encrypt, openKey, sha256Hex, type KeyParams } from './s3Crypto';
@@ -146,7 +154,15 @@ async function loadManifests(
 	signing: SigningContext
 ): Promise<Manifest[]> {
 	const manifests: Manifest[] = [];
-	for (const objectKey of await listObjects(cfg, 'manifests/')) {
+	const listed = await listObjectInfos(cfg, 'manifests/');
+	// When each device last wrote its manifest tells when it was last seen.
+	void noteBucketActivity(
+		listed.map((i) => ({
+			deviceId: /^manifests\/([^/.]+)\.json$/.exec(i.key)?.[1] ?? null,
+			lastModified: i.lastModified
+		}))
+	).catch(() => undefined);
+	for (const { key: objectKey } of listed) {
 		try {
 			const raw = await getObject(cfg, objectKey);
 			if (!raw) continue;
@@ -1031,34 +1047,64 @@ export interface BucketDevice {
 	name?: string;
 	trusted: boolean;
 	readOnly: boolean;
+	/** Short fingerprint of its key, from the trusted record or its device record. */
+	fingerprint?: string;
+	/** What it announces in its device record (see `BucketDeviceInfo`). */
+	announcedName?: string;
+	publicKey?: string;
+	previousId?: string;
+	replaces?: BucketDeviceInfo['replaces'];
 }
 
-/** Other devices that have uploaded CRDT state to the bucket, by a plain listing (no passphrase needed). */
+/** The verified device records in the bucket; none without the passphrase or when it cannot be read. */
+async function bucketRecords(cfg: S3Config): Promise<Map<string, DeviceRecord>> {
+	if (!cfg.passphrase) return new Map();
+	try {
+		const key = await getSyncKey(cfg);
+		const { ctx, directory } = await loadBucketSigning();
+		const remote = new S3RemoteStore(cfg, key, ctx);
+		directory.bind(remote);
+		return await readDeviceRecords(remote);
+	} catch {
+		return new Map();
+	}
+}
+
+/**
+ * Other devices that have uploaded CRDT state to the bucket. The objects are found by a plain
+ * listing; a device's name and fingerprint come from its device record, which needs the passphrase.
+ */
 export async function listBucketDevices(cfg: S3Config): Promise<BucketDevice[]> {
-	const [selfId, peers, xacts, scx] = await Promise.all([
+	const [selfId, previousId, peers, xacts, scx, records] = await Promise.all([
 		getDeviceId(),
+		deviceSettings.get<string>(DeviceSettingKeys.previousDeviceId),
 		db.peers.toArray(),
 		listObjectInfos(cfg, 'crdt/xacts/'),
-		listObjectInfos(cfg, 'crdt/scx/')
+		listObjectInfos(cfg, 'crdt/scx/'),
+		bucketRecords(cfg)
 	]);
 	const found = new Map<string, Date | null>();
 	for (const i of [...xacts, ...scx]) {
 		const id = deviceIdOfKey(i.key);
-		if (!id || id === selfId) continue;
+		// What this device wrote under its legacy ID is its own.
+		if (!id || id === selfId || id === previousId) continue;
 		found.set(id, newest([found.get(id) ?? null, i.lastModified]));
 	}
-	return [...found]
-		.map(([deviceId, lastModified]) => {
-			const peer = peerOf(peers, deviceId);
-			return {
-				deviceId,
-				lastModified,
-				name: peer?.name,
-				trusted: !!peer,
-				readOnly: !!peer?.readOnly
-			};
-		})
-		.sort((a, b) => a.deviceId.localeCompare(b.deviceId));
+	const devices: BucketDevice[] = [];
+	for (const [deviceId, lastModified] of found) {
+		const peer = peerOf(peers, deviceId);
+		const info = await bucketDeviceInfo(deviceId, records.get(deviceId), peers);
+		devices.push({
+			deviceId,
+			lastModified,
+			name: peer?.name,
+			trusted: !!peer,
+			readOnly: !!peer?.readOnly,
+			...info,
+			fingerprint: peer?.fingerprint || info.fingerprint
+		});
+	}
+	return devices.sort((a, b) => a.deviceId.localeCompare(b.deviceId));
 }
 
 /** When this device last finished an upload or download, or null if it never has. */

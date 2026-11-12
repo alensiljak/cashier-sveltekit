@@ -4,6 +4,7 @@
 	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 	import UserCheckIcon from '@lucide/svelte/icons/user-check';
+	import DeviceLabel from '#lib/components/DeviceLabel.svelte';
 	import Notifier from '#lib/utils/notifier';
 	import { WebDavClient } from '#lib/utils/webdav';
 	import { getXactStore } from '#lib/storage/xactStoreRegistry';
@@ -122,13 +123,19 @@
 
 	function startTrust(d: WebDavDevice) {
 		trusting = d;
-		trustName = `Device ${d.deviceId.slice(0, 6)}`;
+		trustName = d.replaces?.name ?? d.announcedName ?? `Device ${d.deviceId.slice(0, 6)}`;
 	}
 
 	async function confirmTrust() {
 		if (!trusting) return;
-		await trustDevice(trusting.deviceId, trustName);
+		const d = trusting;
 		trusting = null;
+		try {
+			// With the key from its device record, the trusted device is a checked one.
+			await trustDevice(d.deviceId, trustName, d.publicKey, d.previousId);
+		} catch (err) {
+			Notifier.error((err as Error).message);
+		}
 		await refresh();
 	}
 
@@ -147,11 +154,12 @@
 
 	function label(d: WebDavDevice): string {
 		if (d.status === 'self') return 'This device';
-		return d.name ?? `Device ${d.deviceId.slice(0, 6)}`;
+		return d.name ?? d.announcedName ?? `Device ${d.deviceId.slice(0, 6)}`;
 	}
 
+	/** Records created by the device, under its current ID and the legacy ones. */
 	function recordCount(d: WebDavDevice): number {
-		return counts[d.deviceId] ?? 0;
+		return d.originIds.reduce((n, id) => n + (counts[id] ?? 0), 0);
 	}
 </script>
 
@@ -194,7 +202,9 @@
 			<li class="flex items-center gap-2">
 				<div class="flex-1 min-w-0">
 					<div class="flex items-center gap-2">
-						<span class="font-medium truncate">{label(d)}</span>
+						<span class="flex min-w-0 items-baseline font-medium"
+							><DeviceLabel name={label(d)} fingerprint={d.fingerprint} /></span
+						>
 						{#if d.status === 'trusted'}
 							<span class="badge badge-success badge-sm">trusted</span>
 							{#if d.readOnly}
@@ -217,7 +227,7 @@
 				{#if d.status === 'untrusted'}
 					<button class="btn btn-xs btn-outline" onclick={() => startTrust(d)}>
 						<UserCheckIcon size={12} />
-						Trust
+						{d.replaces ? 'Replace' : 'Trust'}
 					</button>
 				{/if}
 				{#if d.status !== 'self'}
@@ -240,10 +250,32 @@
 {#if trusting}
 	<div class="modal modal-open">
 		<div class="modal-box">
-			<h3 class="font-bold text-lg">Trust device</h3>
-			<p class="py-2 text-sm">
-				Records from this device will be merged into your local transactions. ID:
-				<code>{trusting.deviceId}</code>
+			<h3 class="font-bold text-lg">
+				{trusting.replaces ? 'Replace trusted device' : 'Trust device'}
+			</h3>
+			{#if trusting.replaces}
+				<p class="py-2 text-sm">
+					This device says it is <strong>{trusting.replaces.name}</strong>, which you trust already,
+					and has a new identity. If the name and fingerprint below are right, trusting it replaces
+					that record.
+				</p>
+			{:else}
+				<p class="py-2 text-sm">
+					Records from this device will be merged into your local transactions.
+				</p>
+			{/if}
+			<p class="pb-2 text-sm">
+				<span class="flex items-baseline">
+					<DeviceLabel
+						name={trusting.announcedName ?? trusting.name ?? 'Unnamed device'}
+						fingerprint={trusting.fingerprint}
+					/>
+				</span>
+				{#if !trusting.publicKey}
+					<span class="text-base-content/60 text-xs">
+						This device has not published its key (an older app version), so it cannot be checked.
+					</span>
+				{/if}
 			</p>
 			<input class="input input-bordered w-full" bind:value={trustName} aria-label="Device name" />
 			<div class="modal-action">

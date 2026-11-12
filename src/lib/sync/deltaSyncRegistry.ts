@@ -10,6 +10,7 @@ import { validateRecord as validateXact } from '#lib/storage/crdtXactRecord';
 import { validateRecord as validateScx } from '#lib/storage/crdtScxRecord';
 import { DeltaSync, type DeltaDoc } from './deltaSync';
 import { deviceSettingsStateStorage } from './deltaStateStorage';
+import { noteBucketActivity } from './lastSeen';
 import type { RemoteObjectInfo, RemoteStore } from './remoteStore';
 import { getDeviceId, type DocKind } from './ydocDevices';
 
@@ -109,7 +110,9 @@ export async function getDeltaSync(target: DeltaSyncTarget): Promise<DeltaSync> 
 				remote,
 				storage: deviceSettingsStateStorage(kind, remoteId),
 				ignore,
-				validate: kind === 'xacts' ? validateXact : validateScx
+				validate: kind === 'xacts' ? validateXact : validateScx,
+				// Whatever a sync lists also tells when the devices last wrote to the bucket.
+				onListed: (objects) => void noteBucketActivity(objects).catch(() => undefined)
 			})
 		};
 		registry.set(id, entry);

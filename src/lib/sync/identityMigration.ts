@@ -14,7 +14,7 @@
 import db from '#lib/data/db';
 import { PeerSyncBaseline, TrustedPeer } from '#lib/data/model';
 import { fingerprintOfKey } from '#lib/sync/deviceKey';
-import { isDerivedId } from '#lib/sync/signedObjects';
+import { isDerivedId } from '#lib/sync/deviceId';
 
 export type LegacyMatch = { kind: 'rekey' | 'approve'; record: TrustedPeer };
 
