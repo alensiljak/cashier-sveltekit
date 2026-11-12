@@ -1,6 +1,6 @@
 # Device Identity: Public-Key Pairing for Multi-Device Sync
 
-Status: in progress. Step 1 (keys and signed hello) is implemented: `src/lib/sync/deviceKey.ts`, `assessHello` in `peerPresence.svelte.ts`, Dexie v8 `deviceKeys` store. Its hello also signs the (still UUID) `id`. Not yet done in the UI: Trusted Devices does not yet flag records without a key.
+Status: in progress. Step 1 (keys and signed hello) is implemented: `src/lib/sync/deviceKey.ts`, `assessHello` in `peerPresence.svelte.ts`, Dexie v8 `deviceKeys` store. Its hello also signs the (still UUID) `id`. Step 2 (names and fingerprints) is implemented: `DeviceLabel.svelte` (`name · 7KQ2-M9XA`) on the peer lists, the pairing prompt and Trusted Devices; local rename (`renamePeer`) with `TrustedPeer.announcedName`; `TrustedPeer.fingerprint`, derived from the key. The Trusted Devices page no longer shows the UUID and flags records without a key. Still shown with a UUID prefix: S3/WebDAV device lists (`Device abc123`) and the journal's origin labels; they switch with the ID in step 5.
 
 ## Problem
 
@@ -26,7 +26,7 @@ The UUID is also shown to users (Trusted Devices page), where it is hard to read
 ### ✅ 1. Device key pair and ID
 
 - On first use, generate an ECDSA P-256 key pair with WebCrypto, `extractable: false`. Store the `CryptoKeyPair` in IndexedDB next to the other device settings.
-- **Device ID = first 16 bytes of SHA-256(public key SPKI), base32 lowercase** (26 characters, no `.`, safe in S3 keys and WebDAV file names). It replaces the UUID in the trust list, the bucket layout (`manifests/<id>.json`, `crdt/<kind>/<id>.<seq>.upd`, `<id>.ack`) and the hello. Checked: `parseObjectKey` in `deltaSync.ts` matches the device with `[^/.]+`, so a 26-character base32 ID parses; nothing assumes the UUID shape (hyphens, length).
+- **Device ID = first 16 bytes of SHA-256(public key SPKI), Crockford base32 lowercase** (alphabet `0-9a-z` without `i l o u`, so an ID that is read out or typed is hard to mistake; 26 characters, no `.`, safe in S3 keys and WebDAV file names). It replaces the UUID in the trust list, the bucket layout (`manifests/<id>.json`, `crdt/<kind>/<id>.<seq>.upd`, `<id>.ack`) and the hello. Checked: `parseObjectKey` in `deltaSync.ts` matches the device with `[^/.]+`, so a 26-character base32 ID parses; nothing assumes the UUID shape (hyphens, length).
 - **Names are labels, not identity.** They are not unique ("My Device" is the default) and anyone can set any name. The name is exchanged in the hello and the invite. Each device can rename a peer locally ("Anna's phone"); the name the peer announced is kept alongside.
 - **UI:** show `name · 7KQ2-M9XA` (the first 8 characters of the ID, grouped). Never show the full ID.
 - `TrustedPeer` gets `publicKey` (base64 SPKI) and `legacyIds?: string[]` (see Migration).

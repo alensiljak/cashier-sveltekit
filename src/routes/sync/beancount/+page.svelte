@@ -15,6 +15,7 @@
 	import SettingsIcon from '@lucide/svelte/icons/settings';
 	import { PeerSource } from '#lib/sync/PeerSource';
 	import Toolbar from '#lib/components/Toolbar.svelte';
+	import DeviceLabel from '#lib/components/DeviceLabel.svelte';
 	import HelpButton from '#lib/help/HelpButton.svelte';
 	import Notifier from '#lib/utils/notifier';
 	import { peerConnection } from '#lib/sync/peerConnection.svelte';
@@ -898,7 +899,9 @@
 									onclick={() => selectPeer(tp.id)}
 								>
 									<span class="status {statusClass(peerState(tp.id))} status-sm"></span>
-									<span class="flex-1 text-left">{tp.name}</span>
+									<span class="flex flex-1 items-baseline overflow-hidden text-left"
+										><DeviceLabel name={tp.name} fingerprint={tp.fingerprint} /></span
+									>
 									{#if counts === null}
 										<span class="loading loading-spinner loading-xs opacity-50"></span>
 									{:else if counts.conflict > 0 || counts.pull > 0}
@@ -924,7 +927,9 @@
 			<div class="rounded-box bg-base-200 flex items-center gap-2 p-3 text-sm">
 				<span class="status {statusClass(peerState(activePeer.id))} status-sm"></span>
 				<span class="opacity-60">Syncing with:</span>
-				<span class="flex-1 font-semibold">{activePeer.name}</span>
+				<span class="flex flex-1 items-baseline overflow-hidden font-semibold"
+					><DeviceLabel name={activePeer.name} fingerprint={activePeer.fingerprint} /></span
+				>
 				<button
 					class="btn btn-ghost btn-xs"
 					disabled={refreshing}

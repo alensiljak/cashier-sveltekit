@@ -24,7 +24,7 @@ import type {
 import { settings, SettingKeys, deviceSettings, DeviceSettingKeys } from '#lib/settings';
 import db from '#lib/data/db';
 import { TrustedPeer } from '#lib/data/model';
-import { getDeviceKey, signHello, verifyHello } from '#lib/sync/deviceKey';
+import { fingerprintOfKey, getDeviceKey, signHello, verifyHello } from '#lib/sync/deviceKey';
 
 const APP_ID = 'cashier-peer-sync';
 
@@ -93,6 +93,8 @@ export interface ActivePeer {
 	isTrusted: boolean;
 	/** Base64 SPKI the peer presented; set only when its signature over this connection verified. */
 	publicKey?: string;
+	/** Short form of the ID derived from `publicKey` (`7KQ2-M9XA`), for people to compare. Set with `publicKey`. */
+	fingerprint?: string;
 	/** The hello carried a key and a signature that verify for this connection. Only a verified peer can be paired. */
 	verified: boolean;
 	/**
@@ -136,12 +138,12 @@ export async function computePairingCode(
 }
 
 /** `publicKey` and `sig` are missing in the hello of versions before signed hellos. */
-export interface HelloMessage {
+export type HelloMessage = {
 	id: string;
 	name: string;
 	publicKey?: string;
 	sig?: string;
-}
+};
 
 /**
  * Decides what a hello proves. Trusted means: the signature verifies for this connection *and*
@@ -151,7 +153,9 @@ export async function assessHello(
 	data: HelloMessage,
 	fps: { local: string; remote: string } | null,
 	trustedPeers: TrustedPeer[]
-): Promise<Pick<ActivePeer, 'isTrusted' | 'verified' | 'publicKey' | 'trustIssue'>> {
+): Promise<
+	Pick<ActivePeer, 'isTrusted' | 'verified' | 'publicKey' | 'fingerprint' | 'trustIssue'>
+> {
 	// The peer signed with its own fingerprint first, ours second.
 	const verified =
 		!!fps &&
@@ -167,13 +171,14 @@ export async function assessHello(
 	if (!verified) return { isTrusted: false, verified: false };
 
 	const publicKey = data.publicKey;
-	if (!record) return { isTrusted: false, verified, publicKey };
-	if (!record.publicKey)
-		return { isTrusted: false, verified, publicKey, trustIssue: 'legacy-record' };
+	const fingerprint = await fingerprintOfKey(publicKey!);
+	const shown = { verified, publicKey, fingerprint };
+	if (!record) return { isTrusted: false, ...shown };
+	if (!record.publicKey) return { isTrusted: false, ...shown, trustIssue: 'legacy-record' };
 	if (record.publicKey !== publicKey) {
-		return { isTrusted: false, verified, publicKey, trustIssue: 'key-mismatch' };
+		return { isTrusted: false, ...shown, trustIssue: 'key-mismatch' };
 	}
-	return { isTrusted: true, verified, publicKey };
+	return { isTrusted: true, ...shown };
 }
 
 export class PeerPresence {
@@ -222,12 +227,20 @@ export class PeerPresence {
 		this.iceServers =
 			(await deviceSettings.get<RTCIceServer[]>(DeviceSettingKeys.peerIceServers)) ?? [];
 
-		this.trustedPeers = await db.peers.toArray();
+		await this.reloadTrustedPeers();
 	}
 
 	/** Re-reads the trusted list; it can change outside this class (WebDAV/S3 pages trust devices directly in the DB). */
 	async reloadTrustedPeers(): Promise<void> {
-		this.trustedPeers = await db.peers.toArray();
+		const peers: TrustedPeer[] = await db.peers.toArray();
+		// Records paired before fingerprints were stored get theirs from the key.
+		for (const tp of peers) {
+			if (tp.publicKey && !tp.fingerprint) {
+				tp.fingerprint = await fingerprintOfKey(tp.publicKey);
+				await db.peers.put(tp);
+			}
+		}
+		this.trustedPeers = peers;
 	}
 
 	/** Persists the TURN/ICE servers. Does NOT reconnect a live room — call `leave()` then `join()` to apply it. */
@@ -302,12 +315,16 @@ export class PeerPresence {
 				: '';
 			const assessed = await assessHello(data, fps, this.trustedPeers);
 			const isTrusted = assessed.isTrusted;
+			// A trusted peer is shown under the label this device gave it, not the name it announces.
+			const label = isTrusted
+				? (this.trustedPeers.find((p) => p.id === data.id)?.name ?? data.name)
+				: data.name;
 			this.peersMap = {
 				...this.peersMap,
 				[trysteroId]: {
 					trysteroId,
 					persistentId: data.id,
-					name: data.name,
+					name: label,
 					pairingCode: code,
 					...assessed,
 					peerConfirmed: this.confirmedBy.has(trysteroId)
@@ -317,6 +334,8 @@ export class PeerPresence {
 				const tp = this.trustedPeers.find((p) => p.id === data.id);
 				if (tp) {
 					tp.lastSeen = new Date().toISOString();
+					// The peer's own name is kept next to the label this device gave it.
+					tp.announcedName = data.name;
 					await db.peers.put(tp);
 				}
 			}
@@ -420,7 +439,9 @@ export class PeerPresence {
 		const tp = new TrustedPeer();
 		tp.id = peer.persistentId;
 		tp.name = peer.name;
+		tp.announcedName = peer.name;
 		tp.publicKey = peer.publicKey;
+		tp.fingerprint = peer.fingerprint || (await fingerprintOfKey(peer.publicKey));
 		tp.trustedAt = new Date().toISOString();
 		tp.lastSeen = new Date().toISOString();
 		await db.peers.put(tp);
@@ -444,6 +465,24 @@ export class PeerPresence {
 	isReadOnly(trysteroId: string): boolean {
 		const persistentId = this.peersMap[trysteroId]?.persistentId;
 		return this.trustedPeers.some((p) => p.id === persistentId && p.readOnly);
+	}
+
+	/**
+	 * Gives a trusted peer a label of this device's own ("Anna's phone"). Names are not unique and
+	 * anyone can announce any name, so this only changes what is shown here. An empty name goes back
+	 * to the one the peer announced.
+	 */
+	async renamePeer(persistentId: string, name: string): Promise<void> {
+		const tp = await db.peers.get(persistentId);
+		if (!tp) return;
+		tp.name = name.trim() || tp.announcedName || tp.name;
+		await db.peers.put(tp);
+		this.trustedPeers = await db.peers.toArray();
+		const updated = { ...this.peersMap };
+		for (const [tid, p] of Object.entries(updated)) {
+			if (p.persistentId === persistentId && p.isTrusted) updated[tid] = { ...p, name: tp.name };
+		}
+		this.peersMap = updated;
 	}
 
 	async setReadOnly(persistentId: string, readOnly: boolean): Promise<void> {

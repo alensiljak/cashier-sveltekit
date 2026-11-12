@@ -9,6 +9,7 @@
 	import Settings2Icon from '@lucide/svelte/icons/settings-2';
 	import UsersIcon from '@lucide/svelte/icons/users';
 	import CashierCardTemplate from './CashierCardTemplate.svelte';
+	import DeviceLabel from './DeviceLabel.svelte';
 	import { peerConnection } from '#lib/sync/peerConnection.svelte';
 	import { reloadLedgerFromOpfs } from '#lib/services/ledgerReload';
 	import Notifier from '#lib/utils/notifier';
@@ -338,7 +339,9 @@
 							{:else}
 								{#each presence.activePeerList as peer (peer.trysteroId)}
 									<div class="flex items-center gap-2">
-										<span class="grow truncate">{peer.name}</span>
+										<span class="flex grow items-baseline overflow-hidden"
+											><DeviceLabel name={peer.name} fingerprint={peer.fingerprint} /></span
+										>
 										{#if !peer.isTrusted}
 											<span class="badge badge-ghost badge-sm">Not paired</span>
 										{/if}

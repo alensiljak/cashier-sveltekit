@@ -73,6 +73,48 @@ export async function verifyHello(
 	}
 }
 
+// Crockford's base32 (lowercase): no I, L, O or U, so an ID that is read out or typed is hard to mistake.
+const BASE32 = '0123456789abcdefghjkmnpqrstvwxyz';
+
+/** Base32 of the bytes, without padding. */
+export function base32(bytes: Uint8Array): string {
+	let out = '';
+	let bits = 0;
+	let acc = 0;
+	for (const b of bytes) {
+		acc = (acc << 8) | b;
+		bits += 8;
+		while (bits >= 5) {
+			out += BASE32[(acc >>> (bits - 5)) & 31];
+			bits -= 5;
+		}
+		acc &= (1 << bits) - 1;
+	}
+	if (bits > 0) out += BASE32[(acc << (5 - bits)) & 31];
+	return out;
+}
+
+/** The ID a key gives its device: the first 16 bytes of SHA-256 of the SPKI, in base32 (26 characters). */
+export async function deviceIdFromPublicKey(publicKey: string): Promise<string> {
+	const hash = await crypto.subtle.digest('SHA-256', fromBase64(publicKey));
+	return base32(new Uint8Array(hash, 0, 16));
+}
+
+/** What people see of an ID: its first 8 characters, grouped (`7kq2-m9xa` shows as `7KQ2-M9XA`). */
+export function formatFingerprint(deviceId: string): string {
+	const head = deviceId.slice(0, 8).toUpperCase();
+	return `${head.slice(0, 4)}-${head.slice(4)}`;
+}
+
+/** The fingerprint of a public key; never throws (undecodable base64 gives ''). It does not check that the key is valid: use it on keys that verified a signature or were stored after one. */
+export async function fingerprintOfKey(publicKey: string): Promise<string> {
+	try {
+		return formatFingerprint(await deviceIdFromPublicKey(publicKey));
+	} catch {
+		return '';
+	}
+}
+
 let loading: Promise<DeviceKey> | null = null;
 
 /** This device's key, created on first use. */

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import Toolbar from '#lib/components/Toolbar.svelte';
+	import DeviceLabel from '#lib/components/DeviceLabel.svelte';
 	import Notifier from '#lib/utils/notifier';
 	import { peerConnection } from '#lib/sync/peerConnection.svelte';
 
@@ -24,6 +25,19 @@
 	}
 
 	type Trusted = (typeof presence.trustedPeers)[number];
+
+	let renaming = $state<string | null>(null);
+	let renameText = $state('');
+
+	function startRename(tp: Trusted) {
+		renaming = tp.id;
+		renameText = tp.name;
+	}
+
+	async function saveRename(tp: Trusted) {
+		await presence.renamePeer(tp.id, renameText);
+		renaming = null;
+	}
 
 	let removeDialog = $state<HTMLDialogElement>();
 	let removing = $state<Trusted | null>(null);
@@ -105,11 +119,41 @@
 						{#each presence.trustedPeers as tp (tp.id)}
 							<li class="flex items-start justify-between gap-2 py-2">
 								<div class="min-w-0 flex-1">
-									<p class="text-sm font-semibold">
-										{tp.name}
-										{#if tp.readOnly}<span class="badge badge-neutral badge-sm">read-only</span>{/if}
-									</p>
-									<p class="font-mono text-xs break-all opacity-40">{tp.id}</p>
+									{#if renaming === tp.id}
+										<form
+											class="flex items-center gap-1"
+											onsubmit={(e) => {
+												e.preventDefault();
+												saveRename(tp);
+											}}
+										>
+											<input
+												class="input input-sm input-bordered min-w-0 flex-1"
+												aria-label="Name for this device"
+												placeholder={tp.announcedName ?? 'Name'}
+												bind:value={renameText}
+											/>
+											<button type="submit" class="btn btn-primary btn-sm">Save</button>
+											<button type="button" class="btn btn-ghost btn-sm" onclick={() => (renaming = null)}>
+												Cancel
+											</button>
+										</form>
+									{:else}
+										<p class="flex items-baseline text-sm font-semibold">
+											<DeviceLabel name={tp.name} fingerprint={tp.fingerprint} />
+											{#if tp.readOnly}<span class="badge badge-neutral badge-sm ml-2"
+													>read-only</span
+												>{/if}
+										</p>
+									{/if}
+									{#if tp.announcedName && tp.announcedName !== tp.name}
+										<p class="text-xs opacity-60">Calls itself "{tp.announcedName}"</p>
+									{/if}
+									{#if !tp.publicKey}
+										<p class="text-warning text-xs">
+											Not verified by a key. Pair it again on the Peer Sync page to use Peer Sync with it.
+										</p>
+									{/if}
 									<p class="text-xs opacity-40">
 										Trusted: {formatDate(tp.trustedAt)} · Seen: {formatDate(tp.lastSeen)}
 									</p>
@@ -124,12 +168,12 @@
 										<span class="text-xs opacity-60">Read-only (ignore its data)</span>
 									</label>
 								</div>
-								<button
-									class="btn btn-ghost btn-sm text-error shrink-0"
-									onclick={() => startRemove(tp)}
-								>
-									Remove
-								</button>
+								<div class="flex shrink-0 flex-col items-end">
+									<button class="btn btn-ghost btn-sm" onclick={() => startRename(tp)}>Rename</button>
+									<button class="btn btn-ghost btn-sm text-error" onclick={() => startRemove(tp)}>
+										Remove
+									</button>
+								</div>
 							</li>
 						{/each}
 					</ul>

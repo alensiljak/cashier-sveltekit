@@ -4,6 +4,7 @@
 	import db from '#lib/data/db';
 	import { summarizeScxReport, type ScxMergeReport } from '#lib/services/scxMergeReport';
 	import Toolbar from '#lib/components/Toolbar.svelte';
+	import DeviceLabel from '#lib/components/DeviceLabel.svelte';
 	import HelpButton from '#lib/help/HelpButton.svelte';
 	import { Setting } from '#lib/data/model';
 	import Notifier from '#lib/utils/notifier';
@@ -555,7 +556,9 @@
 											{:else}
 												<Circle size={16} class="shrink-0 opacity-40" />
 											{/if}
-											<span class="font-semibold flex-1">{peer.name}</span>
+											<span class="flex flex-1 items-baseline overflow-hidden font-semibold"
+												><DeviceLabel name={peer.name} fingerprint={peer.fingerprint} /></span
+											>
 											<span
 												class="badge badge-sm"
 												class:badge-success={!selected}
@@ -564,7 +567,9 @@
 										</button>
 									{:else}
 										<div class="bg-base-300 rounded-box flex items-center gap-2 p-3">
-											<span class="font-semibold flex-1">{peer.name}</span>
+											<span class="flex flex-1 items-baseline overflow-hidden font-semibold"
+												><DeviceLabel name={peer.name} fingerprint={peer.fingerprint} /></span
+											>
 											{#if !peer.verified}
 												<span
 													class="badge badge-ghost badge-sm"
@@ -784,6 +789,11 @@
 	<div class="modal modal-open">
 		<div class="modal-box text-center">
 			<h3 class="font-bold text-lg">Pair with "{pairingPeer.name}"</h3>
+			{#if pairingPeer.fingerprint}
+				<p class="font-mono text-sm opacity-70" aria-label="Device fingerprint">
+					{pairingPeer.fingerprint}
+				</p>
+			{/if}
 			{#if pairingPeer.pairingCode}
 				<p class="py-3 text-sm opacity-70">
 					Check that <strong>this exact code</strong> is shown on the other device, then trust it on both.

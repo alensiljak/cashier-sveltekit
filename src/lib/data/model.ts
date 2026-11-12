@@ -177,6 +177,10 @@ export class TrustedPeer {
 	 * signed hello carries this key; records without one (older versions, S3/WebDAV) must re-pair.
 	 */
 	publicKey?: string;
+	/** Short form of the key-derived ID (`7KQ2-M9XA`), shown next to the name. Empty without a key. */
+	fingerprint?: string;
+	/** The name the peer announced. `name` is this device's own label for it and may be renamed. */
+	announcedName?: string;
 	lastSeen?: string;
 	/** The peer may pull our data, but nothing it sends (live updates, sync pushes, its WebDAV file) is merged here. */
 	readOnly?: boolean;
