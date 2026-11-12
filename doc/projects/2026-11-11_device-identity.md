@@ -65,13 +65,30 @@ Notes:
 - The public `cashier` lobby, the Room field and the 8-digit code comparison go away: all pairing goes through an invite.
 - **Private room for ongoing sync (group secret).** At pairing, the inviter sends a random 32-byte `syncGroupSecret` over the newly authenticated channel (or, if the group exists, shares the existing one). The sync room becomes `HMAC(secret, "room-v1")`, so strangers never see hellos. If the trystero version in use supports a `password` option for signaling encryption, derive it from the same secret so relays see only ciphertext. **Unverified:** `node_modules` was not installed when this was written, so check the `@trystero-p2p/core` 0.26 typings first. The secret is rotated when a device is evicted (see Evicting a device).
 
-### 4. S3 and WebDAV
+### 4. Delegated trust (introductions)
 
-- Devices sign their manifest and CRDT update files with their key. Readers check each file against the stored `publicKey` and skip unsigned or wrongly signed files.
+Pairing a new device C with one existing device A does not require pairing it with every other device. Trust is delegated, but the new device decides whom it accepts.
+
+- **Introduction record:** `{ v: 1, subject: { name, publicKey }, by: <id>, at, sig }`, where `sig` is the introducer's signature over `"cashier-intro-v1" | name | publicKey | at`. It says "I vouch for this key under this name".
+- **The new device chooses.** After A approves C, A sends C an introduction for each non-revoked device A trusts. C lists them ("Also trusted by A: Laptop · 7KQ2-M9XA, Tablet · …") and the user ticks the ones C should trust. C trusts nothing it was not asked about. C verifies a chosen device's signed hello against the key in the introduction, so that device does not have to be online with A.
+- **Existing devices accept the new one.** A sends each device B it trusts an introduction of C. B trusts A, so it accepts C without a prompt, shows a notice ("Anna's phone was added by A") and records `addedBy`. This makes trust mutual, which sync needs because both sides check it. A mistaken add is fixed by eviction.
+- **Rules:** the introducer must be trusted and non-read-only. An introduction of a tombstoned (evicted) key is refused. A device that was itself added by introduction can introduce others (flat trust, as for eviction). The read-only flag is not delegated: each device decides that for itself.
+- The first device in a group is still paired by invite link, so every chain starts with a human approval.
+
+### 5. S3 and WebDAV: signed objects
+
+Why it matters: a bucket object is attributed to a device by its file name (`crdt/<kind>/<id>.<seq>.upd`), and readers merge it when that device is trusted. Every device, including a lost, stolen or evicted one, holds the shared bucket credentials and passphrase, so it can write an object under another device's name and readers will merge it. The AES-GCM binding of an object to its key (format version 2) stops an object being moved to another name, but not a new one being written, since the writer has the passphrase. A signature ties an object to its author's key, which a passphrase holder does not have. It is also what makes eviction enforceable for the bucket: without it, "readers ignore the evicted device's objects" can be bypassed by writing under a trusted ID.
+
+- Each object gets a signature over `"cashier-obj-v1" | objectKey | SHA-256(stored bytes)` from its author's key, kept in the object header (a new format version). Verifying needs no decryption.
+- The author is the ID in the file name. Snapshots and `revocations/` objects carry the author ID in the signed header (a snapshot has no device in its name). A snapshot's signature says who compacted, not who wrote the operations in it, so only snapshots by trusted devices are applied.
+- Readers look up the author's `publicKey` (trusted list, or `devices/<id>.json`) and skip objects with a missing or wrong signature, or from an untrusted or revoked author.
 - Each device publishes `devices/<id>.json` with `{ name, publicKey, previousId? }`. "Trust this device" on the S3 and WebDAV pages shows the name and fingerprint for comparison, as the invite does for peers.
-- The bucket passphrase is still shared. Anyone with it can write objects, so signatures are what limit a device to its own files.
+- Cost: one ECDSA verify per object read, small next to the fetch itself.
+- Signatures limit what a device can write as, not what it can read. The bucket passphrase is still shared.
 
-### 5. Migration
+When it ships: **together with the ID switch (step 5), and at the latest before eviction (step 6).** After the switch every object is written under a new ID, so it can be signed from its first byte and readers can require signatures for new IDs with no tolerance for unsigned objects. Shipping signing later would leave a window in which unsigned objects must be accepted for devices that have already switched, and an attacker can write exactly those. Objects written under legacy IDs before the switch are unsigned and are accepted only until they are compacted or forgotten. Peer sync alone does not need this step, because its hello is already signed and bound to the connection (step 1).
+
+### 6. Migration
 
 Existing trust records are keyed by UUID and have no key. Two facts shape the migration:
 
@@ -88,17 +105,17 @@ Sequence per device:
 
 Optional: a "Remove devices not seen for 30+ days" action on Trusted Devices, based on `lastSeen` (see Last seen). It is local housekeeping, not an eviction.
 
-### 6. Edge cases
+### 7. Edge cases
 
 - Clearing site data deletes the key, so the device is a new device and must pair again. This matches today's behaviour for the UUID.
 - Plain removal (Trusted Devices > Remove) is local to the device it is done on. To remove a device from all devices at once, use eviction (below).
 - S3 passphrase rotation is separate and still needed on its own.
 
-### 7. Last seen
+### 8. Last seen
 
 `TrustedPeer.lastSeen` becomes the latest of the last verified hello and the newest modification date of any object that device wrote in any sync (delta, `.ack` or manifest, on S3 or WebDAV), refreshed whenever a sync lists the bucket or folder. Server modification times are informational, as in the delta-sync design: correctness never depends on them, so using them for display and housekeeping is safe.
 
-### 8. Evicting a device
+### 9. Evicting a device
 
 Yes, without a server: a signed **revocation record** that spreads between devices.
 
@@ -123,6 +140,8 @@ Limits:
 - **Group secret** for the private sync room (not one room per pair).
 - **`lastSeen` follows any modification date in any sync**, not only peer hellos.
 - **Eviction is a signed, gossiped revocation**, not a per-device manual removal. One trusted device is enough to evict; no second confirmation.
+- **Trust is delegated through signed introductions.** The new device chooses which of its introducer's devices to accept; existing devices accept the new one on the introducer's word, with a notice.
+- **Signed S3/WebDAV objects ship with the ID switch**, and before eviction at the latest (see Signed objects).
 
 ## Implementation steps
 
@@ -131,10 +150,10 @@ Each step can ship alone. Step 1 fixes the impersonation problem.
 1. **Keys and signed hello.** Create and store the key. Add `publicKey` to `TrustedPeer` with a Dexie schema bump. The hello carries the key and signature; the UUID is still the ID, hidden from the UI. Legacy records require re-pairing.
 2. **Names and fingerprints in the UI.** Show `name · fingerprint` on Trusted Devices and the peer lists; local rename of a peer.
 3. **Invite link and private room.** `/pair` route, "Paste invite link", inviter approval, group secret, derived room. Remove the Room field and the public lobby.
-4. **Switch the ID to the key-derived one.** Migration as above for peers, S3 and WebDAV together (they share `getDeviceId()`), `legacyIds`, self-`forget`, `devices/<id>.json`.
-5. **Signed S3 and WebDAV data.** Sign and verify manifests and updates.
-6. **Eviction.** Revocation records, gossip over peer sync and the bucket, tombstones, group secret rotation. Needs steps 1 and 3 (keys, group secret); the bucket part needs step 4 (`devices/<id>.json`).
-7. **Later, optional:** QR code for the invite; remove-unseen-devices action. `lastSeen` from sync modification dates can ship with step 4.
+4. **Introductions.** Signed introduction records, the "also trusted by" choice list on the new device, automatic acceptance with a notice on existing devices. Needs steps 1 and 3 (keys, group secret).
+5. **Switch the ID to the key-derived one, with signed objects.** Migration as above for peers, S3 and WebDAV together (they share `getDeviceId()`), `legacyIds`, self-`forget`, `devices/<id>.json`, and signing and verifying every bucket object. `lastSeen` from sync modification dates ships here too.
+6. **Eviction.** Revocation records, gossip over peer sync and the bucket, tombstones, group secret rotation. Needs steps 1 and 3; the bucket part needs step 5.
+7. **Later, optional:** QR code for the invite; remove-unseen-devices action.
 
 ## Tests to add
 
@@ -142,11 +161,12 @@ Each step can ship alone. Step 1 fixes the impersonation problem.
 - E2E or manual: two-browser pairing by invite; an impersonating peer with a copied ID is not trusted; removed device cannot merge.
 - Eviction: a record signed by an untrusted or read-only device is refused; gossip reaches a third device when the evictor is offline; a tombstoned device cannot be re-added by gossip or an old invite; a returning device receives the rotated group secret; bucket readers skip an evicted device's objects.
 - `lastSeen` takes the newest of hello time and object modification dates.
+- Introductions: the new device is offered only non-revoked devices of the introducer and trusts only the ticked ones; an existing device accepts an introduction from a trusted, non-read-only introducer and refuses one from a read-only or unknown device; a tombstoned key is refused; the chosen device's hello must match the introduced key.
+- Signed objects: an object written under a trusted device's name without a valid signature is skipped; a valid signature by a revoked or untrusted author is skipped; a legacy-ID (unsigned) object is accepted until compacted; verification needs no decryption.
 
 ## Open questions
 
-- **Pairwise or transitive trust.** With three devices, pairing C with A does not make B trust C. Pairwise means each pair pairs once (the link makes that cheap). Transitive would let A forward a signed "I vouch for C" to B. Default: pairwise.
-- Should S3 and WebDAV signing (step 5) ship together with peer sync, or after it?
+- Should an existing device be asked before it accepts an introduced device, instead of just being told? Default: told, not asked.
 
 ## Related
 
