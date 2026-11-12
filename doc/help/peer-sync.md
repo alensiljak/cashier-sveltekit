@@ -20,6 +20,10 @@ A device that was trusted before devices proved their identity (or was trusted t
 
 If a device already belongs to a group of paired devices, joining another group replaces its group: the devices paired before have to be invited again.
 
+## Introduced devices
+
+You do not have to invite a new device from every device. Once a device you trust has paired it, it tells your other devices about it the next time they connect. An **Introduced devices** card on the Peer Sync page then asks "Introduced by Laptop": compare the fingerprint with the device itself and tap **Trust** or **Dismiss**. The new device gets the same kind of question about the devices of the one that invited it. Two devices sync only after both have said yes.
+
 ## Trusted devices
 
 Only trusted peers can be selected as a sync source. You can rename a trusted device on the **Trusted Devices** page; the name it announces is kept next to your label.

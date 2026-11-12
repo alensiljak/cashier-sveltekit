@@ -23,8 +23,10 @@ import type {
 } from '@trystero-p2p/core';
 import { settings, SettingKeys, deviceSettings, DeviceSettingKeys } from '#lib/settings';
 import db from '#lib/data/db';
-import { TrustedPeer } from '#lib/data/model';
+import { TrustedPeer, type PendingIntroduction } from '#lib/data/model';
+import { introductionsFor, receiveIntroductions, type Introduction } from '#lib/sync/introductions';
 import {
+	deviceIdFromPublicKey,
 	fingerprintOfKey,
 	getDeviceKey,
 	signHello,
@@ -172,6 +174,9 @@ export type HelloMessage = {
 	sig?: string;
 };
 
+/** Introductions of other trusted devices, sent to a trusted device (see introductions.ts). */
+type IntroMessage = { intros: Introduction[] };
+
 /**
  * Decides what a hello proves. Trusted means: the signature verifies for this connection *and*
  * the trusted record with that ID holds the same key. Repeating a trusted ID is not enough.
@@ -219,6 +224,10 @@ export class PeerPresence {
 	isInRoom = $state(false);
 	peersMap = $state<Record<string, ActivePeer>>({});
 	trustedPeers = $state<TrustedPeer[]>([]);
+	/** Devices a trusted device vouched for, in every status. */
+	introductions = $state<PendingIntroduction[]>([]);
+	/** The ones waiting for this device's person to approve or dismiss. */
+	pendingIntroductions = $derived(this.introductions.filter((i) => i.status === 'pending'));
 
 	activePeerList = $derived(Object.values(this.peersMap));
 
@@ -252,6 +261,7 @@ export class PeerPresence {
 			(await deviceSettings.get<RTCIceServer[]>(DeviceSettingKeys.peerIceServers)) ?? [];
 
 		await this.reloadTrustedPeers();
+		await this.reloadIntroductions();
 	}
 
 	/** Re-reads the trusted list; it can change outside this class (WebDAV/S3 pages trust devices directly in the DB). */
@@ -331,37 +341,20 @@ export class PeerPresence {
 			void this.sendHello(trysteroId);
 		};
 
-		this.helloAction.onMessage = async (data, { peerId: trysteroId }) => {
-			const fps = connectionFingerprints(this.room?.getPeers()[trysteroId]);
-			const assessed = await assessHello(data, fps, this.trustedPeers);
-			const isTrusted = assessed.isTrusted;
-			// A trusted peer is shown under the label this device gave it, not the name it announces.
-			const label = isTrusted
-				? (this.trustedPeers.find((p) => p.id === data.id)?.name ?? data.name)
-				: data.name;
-			this.peersMap = {
-				...this.peersMap,
-				[trysteroId]: {
-					trysteroId,
-					persistentId: data.id,
-					name: label,
-					...assessed
-				}
-			};
-			if (isTrusted) {
-				const tp = this.trustedPeers.find((p) => p.id === data.id);
-				if (tp) {
-					tp.lastSeen = new Date().toISOString();
-					// The peer's own name is kept next to the label this device gave it.
-					tp.announcedName = data.name;
-					await db.peers.put(tp);
-				}
-			}
+		this.introAction = room.makeAction('intro') as unknown as MessageAction<IntroMessage>;
+		this.introAction.onMessage = (data, { peerId }) => this.onIntroductions(data, peerId);
+
+		this.helloAction.onMessage = (data, { peerId: trysteroId }) => {
+			// Introductions can arrive right behind the hello: they wait for this to finish.
+			const done = this.handleHello(data, trysteroId);
+			this.helloDone.set(trysteroId, done);
+			return done;
 		};
 
 		room.onPeerLeave = (trysteroId) => {
 			const { [trysteroId]: _removed, ...rest } = this.peersMap;
 			this.peersMap = rest;
+			this.helloDone.delete(trysteroId);
 		};
 
 		this.isInRoom = true;
@@ -380,6 +373,131 @@ export class PeerPresence {
 		// killed rather than gracefully unloaded) by evicting any peer whose
 		// underlying RTCPeerConnection is no longer actually connected.
 		this.pruneTimer = window.setInterval(() => this.pruneStaleConnections(), 5000);
+	}
+
+	/** Per peer: the hello being checked, which introductions from that peer wait for. */
+	private helloDone = new Map<string, Promise<void>>();
+
+	private async handleHello(data: HelloMessage, trysteroId: string): Promise<void> {
+		const fps = connectionFingerprints(this.room?.getPeers()[trysteroId]);
+		const assessed = await assessHello(data, fps, this.trustedPeers);
+		const isTrusted = assessed.isTrusted;
+		// A trusted peer is shown under the label this device gave it, not the name it announces.
+		const label = isTrusted
+			? (this.trustedPeers.find((p) => p.id === data.id)?.name ?? data.name)
+			: data.name;
+		this.peersMap = {
+			...this.peersMap,
+			[trysteroId]: {
+				trysteroId,
+				persistentId: data.id,
+				name: label,
+				...assessed
+			}
+		};
+		if (isTrusted) {
+			const tp = this.trustedPeers.find((p) => p.id === data.id);
+			if (tp) {
+				tp.lastSeen = new Date().toISOString();
+				// The peer's own name is kept next to the label this device gave it.
+				tp.announcedName = data.name;
+				await db.peers.put(tp);
+			}
+			void this.shareIntroductions(trysteroId, data.id);
+		}
+	}
+
+	// --- introductions (see introductions.ts) ---
+
+	private introAction: MessageAction<IntroMessage> | null = null;
+
+	/**
+	 * A trusted device just connected: offer it the other trusted devices, and tell the other
+	 * connected trusted devices about it. They are proposals, so the receivers ask their people.
+	 * Read-only peers get none: they are not a party to the group's membership.
+	 */
+	private async shareIntroductions(trysteroId: string, persistentId: string): Promise<void> {
+		try {
+			const action = this.introAction;
+			const key = await getDeviceKey();
+			const me = { id: this.myId, key };
+			const canTell = (id: string) =>
+				this.trustedPeers.some((p) => p.id === id && p.publicKey && !p.readOnly);
+			if (!action || !canTell(persistentId)) return;
+
+			const toNew = await introductionsFor(persistentId, me, this.trustedPeers);
+			if (toNew.length) await action.send({ intros: toNew }, { target: trysteroId });
+
+			const arrived = this.trustedPeers.filter((p) => p.id === persistentId);
+			for (const other of Object.values(this.peersMap)) {
+				if (!other.isTrusted || other.trysteroId === trysteroId || !canTell(other.persistentId)) {
+					continue;
+				}
+				const intros = await introductionsFor(
+					other.persistentId,
+					me,
+					arrived // only the device that just arrived
+				);
+				if (intros.length) await action.send({ intros }, { target: other.trysteroId });
+			}
+		} catch (e) {
+			console.error('Could not share introductions', e);
+		}
+	}
+
+	private async onIntroductions(data: IntroMessage, trysteroId: string): Promise<void> {
+		await this.helloDone.get(trysteroId);
+		const sender = this.peersMap[trysteroId];
+		if (!sender?.isTrusted) return;
+		const introducer = this.trustedPeers.find((p) => p.id === sender.persistentId);
+		if (!introducer) return;
+		try {
+			const key = await getDeviceKey();
+			const fresh = await receiveIntroductions(data?.intros, {
+				me: { id: this.myId, publicKey: key.publicKey },
+				introducer,
+				trusted: this.trustedPeers,
+				pending: this.introductions
+			});
+			if (fresh.length) {
+				await db.introductions.bulkPut(fresh);
+				await this.reloadIntroductions();
+			}
+		} catch (e) {
+			console.error('Could not store introductions', e);
+		}
+	}
+
+	async reloadIntroductions(): Promise<void> {
+		this.introductions = await db.introductions.toArray();
+	}
+
+	/** Trusts the introduced device, as this device's own decision. */
+	async approveIntroduction(id: string): Promise<void> {
+		const intro: PendingIntroduction | undefined = await db.introductions.get(id);
+		if (!intro || intro.status !== 'pending') return;
+		// Trust the first introducer still trusted: it is whom this approval rests on.
+		const introducer = intro.introducedBy.find((b) => this.trustedPeers.some((p) => p.id === b.id));
+		if (!introducer) {
+			await db.introductions.delete(id);
+			await this.reloadIntroductions();
+			throw new Error('The device that introduced it is no longer trusted here.');
+		}
+		await this.trustVerified({
+			id: intro.subjectId,
+			name: intro.name,
+			publicKey: intro.publicKey,
+			addedBy: introducer.id
+		});
+	}
+
+	/** Declines an introduction. It is kept as dismissed so the same one is not asked again. */
+	async dismissIntroduction(id: string): Promise<void> {
+		const intro: PendingIntroduction | undefined = await db.introductions.get(id);
+		if (!intro) return;
+		intro.status = 'dismissed';
+		await db.introductions.put(intro);
+		await this.reloadIntroductions();
 	}
 
 	/** Sends this device's hello, signed for the connection to `trysteroId` (unsigned if its fingerprints can't be read). */
@@ -427,7 +545,9 @@ export class PeerPresence {
 			await this.room.leave();
 			this.room = null;
 			this.helloAction = null;
+			this.introAction = null;
 		}
+		this.helloDone.clear();
 		this.peersMap = {};
 		this.isInRoom = false;
 	}
@@ -466,7 +586,13 @@ export class PeerPresence {
 	 * inviter tapped Approve, or the joiner opened the invite). Refuses a key that differs from the
 	 * one already trusted under the same ID.
 	 */
-	async trustVerified(peer: { id: string; name: string; publicKey: string }): Promise<TrustedPeer> {
+	async trustVerified(peer: {
+		id: string;
+		name: string;
+		publicKey: string;
+		/** The trusted device whose introduction this approval rests on. */
+		addedBy?: string;
+	}): Promise<TrustedPeer> {
 		const existing: TrustedPeer | undefined = await db.peers.get(peer.id);
 		if (existing?.publicKey && existing.publicKey !== peer.publicKey) {
 			throw new Error(
@@ -484,8 +610,13 @@ export class PeerPresence {
 		tp.trustedAt = sameKey ? existing.trustedAt : now;
 		tp.lastSeen = now;
 		tp.readOnly = existing?.readOnly;
+		// Pairing directly is a stronger basis than an introduction, so it clears `addedBy`.
+		tp.addedBy = peer.addedBy ?? (sameKey ? existing.addedBy : undefined);
 		await db.peers.put(tp);
 		this.trustedPeers = await db.peers.toArray();
+		// Whatever way it got here, the device no longer waits for approval.
+		await db.introductions.delete(await deviceIdFromPublicKey(peer.publicKey));
+		await this.reloadIntroductions();
 
 		const updated = { ...this.peersMap };
 		for (const [tid, p] of Object.entries(updated)) {

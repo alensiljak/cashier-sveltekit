@@ -25,6 +25,7 @@
 	import { getBaseline } from '#lib/sync/syncBaseline';
 	import { pullFiles } from '#lib/sync/pullFiles';
 	import InviteDialog from '#lib/components/InviteDialog.svelte';
+	import IntroductionRequests from '#lib/components/IntroductionRequests.svelte';
 	import { encodeInvite, parseInvite } from '#lib/sync/invite';
 	import { goto } from '$app/navigation';
 	import {
@@ -607,6 +608,8 @@
 				{/if}
 			</div>
 		</div>
+
+		<IntroductionRequests {presence} />
 
 		<!-- Pair a device -->
 		<div class="card bg-base-200 shadow-sm">

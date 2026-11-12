@@ -149,6 +149,12 @@
 									{#if tp.announcedName && tp.announcedName !== tp.name}
 										<p class="text-xs opacity-60">Calls itself "{tp.announcedName}"</p>
 									{/if}
+									{#if tp.addedBy}
+										{@const introducer = presence.trustedPeers.find((p) => p.id === tp.addedBy)}
+										<p class="text-xs opacity-60">
+											Trusted on the introduction of {introducer?.name ?? 'a device since removed'}
+										</p>
+									{/if}
 									{#if !tp.publicKey}
 										<p class="text-warning text-xs">
 											Not verified by a key. Pair it again on the Peer Sync page to use Peer Sync with it.

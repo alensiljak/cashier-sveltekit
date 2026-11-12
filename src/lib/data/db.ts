@@ -9,6 +9,7 @@ import {
 	// Posting,
 	Setting,
 	TrustedPeer,
+	PendingIntroduction,
 	PeerSyncBaseline
 } from '#lib/data/model';
 
@@ -22,6 +23,7 @@ interface CashierDatabase extends Dexie {
 	peers: Table;
 	peerSyncBaseline: Table;
 	deviceKeys: Table;
+	introductions: Table;
 	// xacts: Table;
 }
 
@@ -123,11 +125,23 @@ db.version(8).stores({
 	deviceKeys: 'id'
 });
 
+// Introductions of devices by trusted devices, waiting for approval (see sync/introductions.ts).
+db.version(9).stores({
+	scheduled: null,
+	settings: 'key',
+	deviceSettings: 'key',
+	peers: 'id',
+	peerSyncBaseline: '[endpointId+path]',
+	deviceKeys: 'id',
+	introductions: 'id'
+});
+
 // Mappings
 
 db.settings.mapToClass(Setting);
 db.deviceSettings.mapToClass(Setting);
 db.peers.mapToClass(TrustedPeer);
+db.introductions.mapToClass(PendingIntroduction);
 db.peerSyncBaseline.mapToClass(PeerSyncBaseline);
 
 export default db;

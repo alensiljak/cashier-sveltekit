@@ -181,9 +181,30 @@ export class TrustedPeer {
 	fingerprint?: string;
 	/** The name the peer announced. `name` is this device's own label for it and may be renamed. */
 	announcedName?: string;
+	/** Set when this device was trusted on the word of another trusted device (an approved introduction): that device's ID. Empty for devices paired directly. */
+	addedBy?: string;
 	lastSeen?: string;
 	/** The peer may pull our data, but nothing it sends (live updates, sync pushes, its WebDAV file) is merged here. */
 	readOnly?: boolean;
+}
+
+/**
+ * A trusted device vouched for another device (see sync/introductions.ts). It stays a request
+ * until a person approves it on this device; only then is the device trusted.
+ */
+export class PendingIntroduction {
+	/** The key-derived ID of `publicKey`: one request per key, however many devices vouch for it. */
+	id: string = '';
+	/** The device ID the subject announces. */
+	subjectId: string = '';
+	name: string = '';
+	publicKey: string = '';
+	fingerprint: string = '';
+	/** Every trusted device that introduced this key. */
+	introducedBy: { id: string; name: string; at: number }[] = [];
+	/** `dismissed` requests are kept so the same introduction is not asked again. */
+	status: 'pending' | 'dismissed' = 'pending';
+	receivedAt: string = '';
 }
 
 /**

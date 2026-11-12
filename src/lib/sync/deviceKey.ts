@@ -41,24 +41,41 @@ export async function generateDeviceKey(): Promise<{ privateKey: CryptoKey; publ
 	return { privateKey: pair.privateKey, publicKey: toBase64(spki) };
 }
 
-export async function signHello(privateKey: CryptoKey, input: HelloSignInput): Promise<string> {
-	return toBase64(await crypto.subtle.sign(SIGN_ALGORITHM, privateKey, helloMessage(input)));
+/** Signs `message` (base64 signature). Every signed record of the app goes through this. */
+export async function signMessage(
+	privateKey: CryptoKey,
+	message: Uint8Array<ArrayBuffer>
+): Promise<string> {
+	return toBase64(await crypto.subtle.sign(SIGN_ALGORITHM, privateKey, message));
 }
 
-/** True when `sig` is the signature of `input` by `publicKey`. Any malformed input is just false. */
-export async function verifyHello(
+/** True when `sig` is the signature of `message` by `publicKey`. Any malformed input is just false. */
+export async function verifyMessage(
 	publicKey: string,
 	sig: string,
-	input: HelloSignInput
+	message: Uint8Array<ArrayBuffer>
 ): Promise<boolean> {
 	try {
 		const key = await crypto.subtle.importKey('spki', fromBase64(publicKey), KEY_ALGORITHM, false, [
 			'verify'
 		]);
-		return await crypto.subtle.verify(SIGN_ALGORITHM, key, fromBase64(sig), helloMessage(input));
+		return await crypto.subtle.verify(SIGN_ALGORITHM, key, fromBase64(sig), message);
 	} catch {
 		return false;
 	}
+}
+
+export function signHello(privateKey: CryptoKey, input: HelloSignInput): Promise<string> {
+	return signMessage(privateKey, helloMessage(input));
+}
+
+/** True when `sig` is the signature of `input` by `publicKey`. Any malformed input is just false. */
+export function verifyHello(
+	publicKey: string,
+	sig: string,
+	input: HelloSignInput
+): Promise<boolean> {
+	return verifyMessage(publicKey, sig, helloMessage(input));
 }
 
 // Crockford's base32 (lowercase): no I, L, O or U, so an ID that is read out or typed is hard to mistake.
