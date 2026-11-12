@@ -67,12 +67,12 @@ Notes:
 
 ### 4. Delegated trust (introductions)
 
-Pairing a new device C with one existing device A does not require pairing it with every other device. Trust is delegated, but the new device decides whom it accepts.
+Pairing a new device C with one existing device A does not require a full invite flow with every other device. An introduction is only a **proposal**: **every device approves for itself whom it syncs with**, on both sides.
 
 - **Introduction record:** `{ v: 1, subject: { name, publicKey }, by: <id>, at, sig }`, where `sig` is the introducer's signature over `"cashier-intro-v1" | name | publicKey | at`. It says "I vouch for this key under this name".
 - **The new device chooses.** After A approves C, A sends C an introduction for each non-revoked device A trusts. C lists them ("Also trusted by A: Laptop · 7KQ2-M9XA, Tablet · …") and the user ticks the ones C should trust. C trusts nothing it was not asked about. C verifies a chosen device's signed hello against the key in the introduction, so that device does not have to be online with A.
-- **Existing devices accept the new one.** A sends each device B it trusts an introduction of C. B trusts A, so it accepts C without a prompt, shows a notice ("Anna's phone was added by A") and records `addedBy`. This makes trust mutual, which sync needs because both sides check it. A mistaken add is fixed by eviction.
-- **Rules:** the introducer must be trusted and non-read-only. An introduction of a tombstoned (evicted) key is refused. A device that was itself added by introduction can introduce others (flat trust, as for eviction). The read-only flag is not delegated: each device decides that for itself.
+- **Existing devices are asked.** A sends each device B it trusts an introduction of C. B queues a request ("A introduced **Anna's phone** · 7KQ2-M9XA. Trust it?") and trusts C only after the user approves, recording `addedBy`. Until then C is not trusted and B ignores it. A pending request stays until it is approved or dismissed, and is dropped if the key is evicted. Trust is mutual only when both sides have approved, which is what sync needs because both sides check it.
+- **Rules:** the introducer must be trusted and non-read-only. An introduction of a tombstoned (evicted) key is refused. A device that was itself added by introduction can introduce others. The read-only flag is not passed along: each device decides that for itself.
 - The first device in a group is still paired by invite link, so every chain starts with a human approval.
 
 ### 5. S3 and WebDAV: signed objects
@@ -140,7 +140,7 @@ Limits:
 - **Group secret** for the private sync room (not one room per pair).
 - **`lastSeen` follows any modification date in any sync**, not only peer hellos.
 - **Eviction is a signed, gossiped revocation**, not a per-device manual removal. One trusted device is enough to evict; no second confirmation.
-- **Trust is delegated through signed introductions.** The new device chooses which of its introducer's devices to accept; existing devices accept the new one on the introducer's word, with a notice.
+- **Introductions are signed proposals; every device approves for itself.** The new device chooses which of its introducer's devices to accept, and each existing device is asked before it accepts the new one. Admission needs each device's consent; eviction does not (one device is enough).
 - **Signed S3/WebDAV objects ship with the ID switch**, and before eviction at the latest (see Signed objects).
 
 ## Implementation steps
@@ -150,7 +150,7 @@ Each step can ship alone. Step 1 fixes the impersonation problem.
 1. **Keys and signed hello.** Create and store the key. Add `publicKey` to `TrustedPeer` with a Dexie schema bump. The hello carries the key and signature; the UUID is still the ID, hidden from the UI. Legacy records require re-pairing.
 2. **Names and fingerprints in the UI.** Show `name · fingerprint` on Trusted Devices and the peer lists; local rename of a peer.
 3. **Invite link and private room.** `/pair` route, "Paste invite link", inviter approval, group secret, derived room. Remove the Room field and the public lobby.
-4. **Introductions.** Signed introduction records, the "also trusted by" choice list on the new device, automatic acceptance with a notice on existing devices. Needs steps 1 and 3 (keys, group secret).
+4. **Introductions.** Signed introduction records, the "also trusted by" choice list on the new device, an approval request on every existing device. Needs steps 1 and 3 (keys, group secret).
 5. **Switch the ID to the key-derived one, with signed objects.** Migration as above for peers, S3 and WebDAV together (they share `getDeviceId()`), `legacyIds`, self-`forget`, `devices/<id>.json`, and signing and verifying every bucket object. `lastSeen` from sync modification dates ships here too.
 6. **Eviction.** Revocation records, gossip over peer sync and the bucket, tombstones, group secret rotation. Needs steps 1 and 3; the bucket part needs step 5.
 7. **Later, optional:** QR code for the invite; remove-unseen-devices action.
@@ -161,12 +161,12 @@ Each step can ship alone. Step 1 fixes the impersonation problem.
 - E2E or manual: two-browser pairing by invite; an impersonating peer with a copied ID is not trusted; removed device cannot merge.
 - Eviction: a record signed by an untrusted or read-only device is refused; gossip reaches a third device when the evictor is offline; a tombstoned device cannot be re-added by gossip or an old invite; a returning device receives the rotated group secret; bucket readers skip an evicted device's objects.
 - `lastSeen` takes the newest of hello time and object modification dates.
-- Introductions: the new device is offered only non-revoked devices of the introducer and trusts only the ticked ones; an existing device accepts an introduction from a trusted, non-read-only introducer and refuses one from a read-only or unknown device; a tombstoned key is refused; the chosen device's hello must match the introduced key.
+- Introductions: the new device is offered only non-revoked devices of the introducer and trusts only the ticked ones; an existing device queues a request for an introduction from a trusted, non-read-only introducer and trusts the device only after approval, and refuses one from a read-only or unknown device; a tombstoned key is refused; the chosen device's hello must match the introduced key.
 - Signed objects: an object written under a trusted device's name without a valid signature is skipped; a valid signature by a revoked or untrusted author is skipped; a legacy-ID (unsigned) object is accepted until compacted; verification needs no decryption.
 
 ## Open questions
 
-- Should an existing device be asked before it accepts an introduced device, instead of just being told? Default: told, not asked.
+- None open at the moment.
 
 ## Related
 
