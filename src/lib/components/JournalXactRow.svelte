@@ -1,6 +1,12 @@
 <script lang="ts">
 	import type { Xact } from '#lib/data/model';
-	import { formatPostingCost, formatPostingPrice, getAmountColour } from '#lib/utils/formatter';
+	import {
+		formatAmount,
+		formatPostingCost,
+		formatPostingPrice,
+		getAmountColour
+	} from '#lib/utils/formatter';
+	import AssertionLine from './AssertionLine.svelte';
 	import WarningTriangleIcon from './WarningTriangleIcon.svelte';
 
 	interface Props {
@@ -24,6 +30,15 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <article onclick={onRowClicked} class:cursor-pointer={linksEnabled}>
+	{#if xact.balanceAssertion}
+		<AssertionLine
+			date={xact.date ?? ''}
+			account={xact.balanceAssertion.account}
+			amount={formatAmount(xact.balanceAssertion.amount)}
+			currency={xact.balanceAssertion.currency}
+			extra={badge}
+		/>
+	{:else}
 	<!-- date / payee / narration — inline flow; hanging indent aligns wrapped lines with postings -->
 	<div class="pl-6" style="text-indent: -1.5rem">
 		<time class="opacity-85">{xact.date}</time>
@@ -74,5 +89,6 @@
 				</div>
 			{/each}
 		</div>
+	{/if}
 	{/if}
 </article>

@@ -65,10 +65,16 @@ export class CrdtXactStore extends CrdtDocStore<XactRecord> {
 		}
 	}
 
-	/** Records in date order; the ID breaks ties so the order is deterministic. */
+	/**
+	 * Records in date order. Within a day, balance assertions come first (Beancount checks
+	 * them at the start of their date); the ID then breaks ties so the order is deterministic.
+	 */
 	private sorted(): XactRecord[] {
 		return [...this.records.values()].sort(
-			(a, b) => (a.date ?? '').localeCompare(b.date ?? '') || a.id.localeCompare(b.id)
+			(a, b) =>
+				(a.date ?? '').localeCompare(b.date ?? '') ||
+				Number(!!b.balanceAssertion) - Number(!!a.balanceAssertion) ||
+				a.id.localeCompare(b.id)
 		);
 	}
 

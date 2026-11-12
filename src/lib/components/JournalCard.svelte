@@ -73,9 +73,11 @@
 		isLoading = true;
 
 		try {
-			// The store lists records in date order; take the last 5, newest first.
+			// The store lists records in date order; take the last 5 transactions, newest first.
+			// Balance assertions are checkpoints, not activity, so the card leaves them out.
 			const stored = await (await getXactStore()).list();
 			const newXacts = stored
+				.filter((s) => !s.xact.balanceAssertion)
 				.slice(-5)
 				.reverse()
 				.map((s) => s.xact);

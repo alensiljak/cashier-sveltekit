@@ -25,6 +25,8 @@ export type UnifiedXact = {
 	/** Transaction id from the full ledger (rledger). Present on ledger rows; absent on device rows. */
 	rledgerId?: number;
 	isDevice: boolean;
+	/** A `balance` assertion rather than a transaction; `amount`/`currency` hold the asserted balance. */
+	isAssertion?: boolean;
 	/** Transaction flag from the full ledger ('*' or '!'). Device rows carry it on `xact` instead. */
 	flag?: string;
 	xact?: Xact;
@@ -46,6 +48,7 @@ export function mergeUnifiedRows(
 	for (const dr of deviceRows) {
 		const matchIdx = ledgerRows.findIndex(
 			(lr) =>
+				!!lr.isAssertion === !!dr.isAssertion &&
 				lr.date === dr.date &&
 				lr.payee === dr.payee &&
 				lr.amount === dr.amount &&
@@ -61,7 +64,18 @@ export function mergeUnifiedRows(
 		}
 	}
 
-	return [...unmatchedDeviceRows, ...ledgerRows].sort((a, b) => b.date.localeCompare(a.date));
+	return [...unmatchedDeviceRows, ...ledgerRows].sort(compareUnifiedDesc);
+}
+
+/**
+ * Newest first. Within a day an assertion sorts after the day's transactions, because
+ * Beancount checks it at the start of its date: reading the list top-down is going back
+ * in time, so the checkpoint lands below everything it precedes.
+ */
+function compareUnifiedDesc(a: UnifiedXact, b: UnifiedXact): number {
+	return (
+		b.date.localeCompare(a.date) || Number(!!a.isAssertion) - Number(!!b.isAssertion)
+	);
 }
 
 /**
@@ -70,6 +84,9 @@ export function mergeUnifiedRows(
  * transaction id (preferred) or date/payee/narration to gather every posting.
  */
 export async function openXactDetails(row: UnifiedXact): Promise<void> {
+	// A ledger assertion is read-only and has no detail view.
+	if (row.isAssertion && !(row.isDevice && row.xact && row.id !== undefined)) return;
+
 	if (row.isDevice && row.xact && row.id !== undefined) {
 		xact.set(row.xact);
 		xactId.set(row.id);

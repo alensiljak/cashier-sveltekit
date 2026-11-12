@@ -61,6 +61,38 @@ WHERE account = '${params.accountName}'`;
 		};
 	});
 
+	// Balance assertions: device ones from the working set, the rest from the book's directives.
+	const directives = await fullLedgerService.getDirectives();
+	const deviceAssertionRows: UnifiedXact[] = storedXacts
+		.filter(({ xact }) => xact.balanceAssertion?.account === params.accountName)
+		.map(({ xact, id }) => ({
+			date: xact.date ?? '',
+			payee: '',
+			narration: '',
+			amount: xact.balanceAssertion!.amount,
+			currency: xact.balanceAssertion!.currency,
+			isDevice: true,
+			isAssertion: true,
+			xact,
+			id
+		}));
+	const ledgerAssertionRows: UnifiedXact[] = [];
+	for (const d of directives as Array<Record<string, unknown>>) {
+		if (d.type !== 'balance' || d.account !== params.accountName) continue;
+		const amount = d.amount as { number?: unknown; currency?: unknown } | undefined;
+		const value = parseFloat(String(amount?.number));
+		if (!amount || isNaN(value)) continue;
+		ledgerAssertionRows.push({
+			date: String(d.date ?? ''),
+			payee: '',
+			narration: '',
+			amount: value,
+			currency: String(amount.currency ?? ''),
+			isDevice: false,
+			isAssertion: true
+		});
+	}
+
 	// Normalize ledger rows
 	const safeColumns: string[] = columns ?? [];
 	const safeRows = (rows ?? []) as unknown[][];
@@ -84,12 +116,14 @@ WHERE account = '${params.accountName}'`;
 	}));
 
 	// Merge and sort descending by date
-	const unifiedRows = mergeUnifiedRows(deviceRows, ledgerNormalized);
+	const unifiedRows = mergeUnifiedRows(
+		[...deviceRows, ...deviceAssertionRows],
+		[...ledgerNormalized, ...ledgerAssertionRows]
+	);
 
-	const hasDeviceXacts = deviceRows.length > 0;
+	const hasDeviceXacts = deviceRows.length + deviceAssertionRows.length > 0;
 
 	// Extract metadata from the account's open directive
-	const directives = await fullLedgerService.getDirectives();
 	const openDirective = directives.find(
 		(d) =>
 			(d as { type: string }).type === 'open' &&

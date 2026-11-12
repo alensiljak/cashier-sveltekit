@@ -2,6 +2,7 @@
 	import { untrack } from 'svelte';
 	import type { UnifiedXact } from '#lib/utils/unifiedXacts';
 	import * as Formatter from '#lib/utils/formatter';
+	import AssertionLine from './AssertionLine.svelte';
 	import XactSummaryLine from './XactSummaryLine.svelte';
 
 	interface Props {
@@ -105,16 +106,25 @@
 			role="button"
 			tabindex="0"
 		>
-			<XactSummaryLine
-				date={row.date}
-				payee={row.payee}
-				note={row.narration}
-				flag={row.xact?.flag ?? row.flag}
-				amount={Formatter.formatAmount(row.amount)}
-				currency={row.currency}
-				amountClass={Formatter.getAmountColour(row.amount)}
-				extra={showAccount ? row.account : null}
-			/>
+			{#if row.isAssertion}
+				<AssertionLine
+					date={row.date}
+					account={row.account ?? 'Balance'}
+					amount={Formatter.formatAmount(row.amount)}
+					currency={row.currency}
+				/>
+			{:else}
+				<XactSummaryLine
+					date={row.date}
+					payee={row.payee}
+					note={row.narration}
+					flag={row.xact?.flag ?? row.flag}
+					amount={Formatter.formatAmount(row.amount)}
+					currency={row.currency}
+					amountClass={Formatter.getAmountColour(row.amount)}
+					extra={showAccount ? row.account : null}
+				/>
+			{/if}
 		</div>
 	{/each}
 	{#if rows.length === 0}
