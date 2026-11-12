@@ -27,6 +27,8 @@ export type UnifiedXact = {
 	isDevice: boolean;
 	/** A `balance` assertion rather than a transaction; `amount`/`currency` hold the asserted balance. */
 	isAssertion?: boolean;
+	/** Set on an assertion the validator rejected: the balance the book actually holds. */
+	actualBalance?: number;
 	/** Transaction flag from the full ledger ('*' or '!'). Device rows carry it on `xact` instead. */
 	flag?: string;
 	xact?: Xact;

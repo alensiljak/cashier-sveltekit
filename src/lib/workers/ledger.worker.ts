@@ -14,10 +14,19 @@ import { LEDGER_CACHE_FILE, LEDGER_CACHE_WORKING_SET_HASH_FILE } from '../consta
 // State
 // ---------------------------------------------------------------------------
 
+type BeancountError = import('@rustledger/wasm').BeancountError;
+
 let wasmModule: typeof import('@rustledger/wasm') | null = null;
 let ledger: import('@rustledger/wasm').Ledger | null = null;
 /** Hash of the working-set source the current ledger was built from (see saveLedgerCache). */
 let loadedWorkingSetHash: string | undefined;
+/**
+ * Virtual file name and text of the working set the current ledger was built from. Kept (it is
+ * small) so a failed-assertion lookup can read the failing line of a device assertion without
+ * the caller having to resupply the text. Book files are read from OPFS only when needed.
+ */
+let loadedMainFileName: string | undefined;
+let loadedWorkingSetSource: string | undefined;
 
 // ---------------------------------------------------------------------------
 // WASM init
@@ -208,6 +217,8 @@ async function loadFromCacheOrFiles(
 						}
 						ledger = wasmModule!.Ledger.fromCache(bytes);
 						loadedWorkingSetHash = workingSetHash;
+						loadedMainFileName = mainFileName;
+						loadedWorkingSetSource = workingSetSource;
 						return;
 					} catch {
 						// Cache corrupt or version mismatch — fall through to file parse
@@ -256,6 +267,8 @@ export type WorkerRequestPayload =
 	| { type: 'query'; bql: string }
 	| { type: 'get-directives' }
 	| { type: 'get-errors' }
+	/** Failed `balance` assertions, located in their source files. Free when none failed. */
+	| { type: 'get-assertion-failures' }
 	| { type: 'get-state' }
 	| { type: 'reset' }
 	/** Serialize the persistent ledger to the OPFS cache file. */
@@ -281,6 +294,7 @@ export type WorkerResponsePayload =
 	| { type: 'query-done'; columns: string[]; rows: unknown[][]; errors: unknown[] }
 	| { type: 'directives-done'; directives: unknown[] }
 	| { type: 'errors-done'; errors: unknown[] }
+	| { type: 'assertion-failures-done'; failures: AssertionFailure[] }
 	| { type: 'state-done'; isLoaded: boolean }
 	| { type: 'reset-done' }
 	| { type: 'all-accounts-done'; accounts: Array<{ name: string; currencies: string[] }> }
@@ -293,6 +307,75 @@ export type WorkerResponsePayload =
 	| { type: 'error'; message: string };
 
 export type WorkerResponse = { id: number } & WorkerResponsePayload;
+
+/** A `balance` assertion the validator rejected, identified by its own date/account/amount. */
+export interface AssertionFailure {
+	date: string;
+	account: string;
+	currency: string;
+	/** What the assertion claims. */
+	expected: number;
+	/** What the book actually holds at that point. */
+	actual: number;
+}
+
+/** E2001 Balance Assertion Failed; E2002 Balance Exceeds Tolerance. */
+const ASSERTION_ERROR_CODES = new Set(['E2001', 'E2002']);
+
+/** Same message for both codes; E2002 adds `~ tolerance` after the expected amount. */
+const ASSERTION_MESSAGE =
+	/^Balance (?:failed|exceeds explicit tolerance) for (\S+): expected (-?[\d.]+) (\S+?)(?: ~ [^,]+)?, got (-?[\d.]+) (\S+)/;
+
+/** The 1-based `line` of `text`, without splitting the whole file. */
+function lineAt(text: string, line: number): string | undefined {
+	let start = 0;
+	for (let i = 1; i < line; i++) {
+		start = text.indexOf('\n', start) + 1;
+		if (start === 0) return undefined;
+	}
+	const end = text.indexOf('\n', start);
+	return text.slice(start, end === -1 ? undefined : end);
+}
+
+/**
+ * Locates the failed assertions. The validator's errors carry the file and line but no date, and
+ * directives carry no line, so the line's own text supplies the date. Does nothing unless some
+ * assertion actually failed; only then are source files read (the working set from memory, book
+ * files from OPFS, once). Anything that can't be resolved confidently is left out.
+ */
+async function findAssertionFailures(): Promise<AssertionFailure[]> {
+	if (!ledger) return [];
+	const errors = (ledger.getErrors() as BeancountError[]).filter(
+		(e) => e.code && ASSERTION_ERROR_CODES.has(e.code) && e.file && e.line
+	);
+	if (errors.length === 0) return [];
+
+	let bookFiles: Map<string, string> | undefined;
+	const failures: AssertionFailure[] = [];
+	for (const err of errors) {
+		const msg = ASSERTION_MESSAGE.exec(err.message);
+		if (!msg) continue;
+		let text: string | undefined;
+		if (err.file === loadedMainFileName) {
+			text = loadedWorkingSetSource;
+		} else {
+			bookFiles ??= new Map((await opfsListBeanFiles()).map((f) => [f.path, f.content]));
+			text = bookFiles.get(err.file!);
+		}
+		const src = text === undefined ? undefined : lineAt(text, err.line!);
+		const directive = src ? /^(\d{4}-\d{2}-\d{2})\s+balance\s+(\S+)/.exec(src) : null;
+		// The file may have changed since the load; trust the line only if it is this assertion.
+		if (!directive || directive[2] !== msg[1]) continue;
+		failures.push({
+			date: directive[1],
+			account: msg[1],
+			currency: msg[3],
+			expected: parseFloat(msg[2]),
+			actual: parseFloat(msg[4])
+		});
+	}
+	return failures;
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -321,6 +404,8 @@ async function loadFromFiles(
 	}
 	fileMap[mainFileName] = workingSetSource;
 	loadedWorkingSetHash = await hashText(workingSetSource);
+	loadedMainFileName = mainFileName;
+	loadedWorkingSetSource = workingSetSource;
 	// When the user has their own book, treat *it* as the top-level ledger —
 	// exactly as if it were opened directly on desktop (e.g. via `rledger check`) —
 	// and fold the device transactions (the working set) into it via an in-memory
@@ -463,6 +548,11 @@ async function handleMessage(e: MessageEvent<WorkerRequest>): Promise<void> {
 					type: 'errors-done',
 					errors: ledger ? ledger.getErrors() : []
 				});
+				break;
+			}
+
+			case 'get-assertion-failures': {
+				reply({ type: 'assertion-failures-done', failures: await findAssertionFailures() });
 				break;
 			}
 

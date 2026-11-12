@@ -121,6 +121,22 @@ WHERE account = '${params.accountName}'`;
 		[...ledgerNormalized, ...ledgerAssertionRows]
 	);
 
+	// Flag the assertions the validator rejected. Only asked when there are assertions to check.
+	if (unifiedRows.some((r) => r.isAssertion)) {
+		const failures = await fullLedgerService.getAssertionFailures();
+		for (const row of unifiedRows) {
+			if (!row.isAssertion) continue;
+			const failure = failures.find(
+				(f) =>
+					f.account === params.accountName &&
+					f.date === row.date &&
+					f.currency === row.currency &&
+					f.expected === row.amount
+			);
+			if (failure) row.actualBalance = failure.actual;
+		}
+	}
+
 	const hasDeviceXacts = deviceRows.length + deviceAssertionRows.length > 0;
 
 	// Extract metadata from the account's open directive

@@ -112,6 +112,9 @@
 					account={row.account ?? 'Balance'}
 					amount={Formatter.formatAmount(row.amount)}
 					currency={row.currency}
+					actual={row.actualBalance === undefined
+						? undefined
+						: Formatter.formatAmount(row.actualBalance)}
 				/>
 			{:else}
 				<XactSummaryLine

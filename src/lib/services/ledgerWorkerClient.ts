@@ -13,6 +13,7 @@ import { writable, derived, get, type Readable } from 'svelte/store';
 import { Account } from '#lib/data/model';
 import { settings, deviceSettings, DeviceSettingKeys } from '#lib/settings';
 import type {
+	AssertionFailure,
 	WorkerRequestPayload,
 	WorkerResponse,
 	WorkerResponsePayload
@@ -230,6 +231,16 @@ class LedgerWorkerClient {
 	async getErrors(): Promise<unknown[]> {
 		const resp = await this.send<'errors-done'>({ type: 'get-errors' });
 		return resp.errors;
+	}
+
+	/**
+	 * Balance assertions the validator rejected, with the balance the book actually holds.
+	 * Costs nothing beyond the round trip when no assertion failed.
+	 */
+	async getAssertionFailures(): Promise<AssertionFailure[]> {
+		if (!this._isLoaded) return [];
+		const resp = await this.send<'assertion-failures-done'>({ type: 'get-assertion-failures' });
+		return resp.failures;
 	}
 
 	/**
