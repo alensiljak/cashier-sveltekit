@@ -30,9 +30,9 @@
 		"publish": "npm run lint && npm run check && npm run test:unit && npm run deploy"
 	},
 	"dependencies": {
-		"@trystero-p2p/core": "^0.26.0",
-		"@trystero-p2p/mqtt": "^0.26.0",
-		"@trystero-p2p/nostr": "^0.26.0",
+		"@trystero-p2p/core": "^0.27.0",
+		"@trystero-p2p/mqtt": "^0.27.0",
+		"@trystero-p2p/nostr": "^0.27.0",
 		"@trystero-p2p/torrent": "^0.27.0",
 		"aws4fetch": "^1.0.20",
 		"big.js": "^7.0.0",
