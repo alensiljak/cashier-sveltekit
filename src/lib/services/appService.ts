@@ -4,6 +4,7 @@
 import db from '#lib/data/db';
 import { ScheduledTransaction, Xact, type ScxId } from '#lib/data/model';
 import { getScx, listScx, replaceAllScx } from '#lib/services/scxService';
+import { applyRepaymentAmounts } from '#lib/services/repaymentService';
 import { settings, SettingKeys, deviceSettings, DeviceSettingKeys } from '#lib/settings';
 import { HomeCardNames } from '#lib/enums';
 import { DefaultCurrencyStore, ScheduledXact, xact } from '#lib/data/mainStore';
@@ -448,6 +449,9 @@ class AppService {
 		if (!scx) {
 			throw new Error('Scheduled transaction not found!');
 		}
+
+		// Repayment amounts are derived from the ledger, not stored.
+		await applyRepaymentAmounts([scx]);
 
 		ScheduledXact.set(scx);
 		xact.set(scx.transaction as Xact);

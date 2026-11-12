@@ -1,8 +1,7 @@
 /*
     Scheduled Transactions list
 */
-import { listScx } from '#lib/services/scxService';
-import { updateRepaymentAmounts } from '#lib/services/repaymentService';
+import { listScxWithRepayments } from '#lib/services/repaymentService';
 import type { PageLoad } from './$types';
 
 export const load: PageLoad = async () => {
@@ -11,12 +10,7 @@ export const load: PageLoad = async () => {
 };
 
 async function loadData() {
-	try {
-		await updateRepaymentAmounts();
-	} catch (error) {
-		console.error('Error updating repayment amounts', error);
-	}
-	const sorted = await listScx();
+	const sorted = await listScxWithRepayments();
 
 	// sort also by payee, case insensitive
 	sorted.sort((a, b) => {

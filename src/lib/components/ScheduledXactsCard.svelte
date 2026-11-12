@@ -6,7 +6,7 @@
 	import type { Money, ScheduledTransaction, Xact } from '#lib/data/model';
 	import { onMount } from 'svelte';
 	import { listScx } from '#lib/services/scxService';
-	import { updateRepaymentAmounts } from '#lib/services/repaymentService';
+	import { applyRepaymentAmounts } from '#lib/services/repaymentService';
 	import { XactAugmenter } from '#lib/utils/xactAugmenter';
 	import {
 		formatAmount,
@@ -31,12 +31,7 @@
 	}
 
 	async function loadData() {
-		try {
-			await updateRepaymentAmounts();
-		} catch (error) {
-			console.error('Error updating repayment amounts', error);
-		}
-		scxs = (await listScx()).slice(0, 5);
+		scxs = await applyRepaymentAmounts((await listScx()).slice(0, 5));
 	}
 
 	async function onCalendarClick(e: MouseEvent) {

@@ -23,11 +23,10 @@
 	import { Composite6 } from 'hw-chartjs-plugin-colorschemes/src/colorschemes/colorschemes.office';
 	import { getShortAccountName } from '#lib/services/accountsService';
 	import { homeCache } from '#lib/services/homeCache';
-	import { listScx } from '#lib/services/scxService';
 	import { type ScheduledTransaction, type Xact } from '#lib/data/model';
 	import appService from '#lib/services/appService';
 	import fullLedgerService from '#lib/services/ledgerWorkerClient';
-	import { updateRepaymentAmounts } from '#lib/services/repaymentService';
+	import { listScxWithRepayments } from '#lib/services/repaymentService';
 	import { addDays, diffDays, formatDate, parseDate, today as startOfToday } from '#lib/utils/dates';
 	import { XactAugmenter } from '#lib/utils/xactAugmenter';
 	import { ISODATEFORMAT } from '#lib/constants';
@@ -96,8 +95,6 @@
 		maxDate = addDays(new Date(), daysCount);
 
 		try {
-			await updateRepaymentAmounts();
-
 			const balances = await loadAccountBalances();
 
 			// Skip redraw if we already rendered from cache and the balances haven't changed.
@@ -251,7 +248,7 @@
 	}
 
 	async function loadScxsFor(accountName: string) {
-		let scxs: ScheduledTransaction[] = await listScx();
+		let scxs: ScheduledTransaction[] = await listScxWithRepayments();
 		let scxsForAccount = scxs.filter(
 			(scx) =>
 				scx?.transaction?.postings?.filter((scx) => scx.account == accountName).length &&

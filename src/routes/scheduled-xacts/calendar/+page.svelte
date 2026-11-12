@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import Toolbar from '#lib/components/Toolbar.svelte';
-	import { listScx } from '#lib/services/scxService';
-	import { updateRepaymentAmounts } from '#lib/services/repaymentService';
+	import { listScxWithRepayments } from '#lib/services/repaymentService';
 	import type { ScheduledTransaction, ScxId } from '#lib/data/model';
 	import appService from '#lib/services/appService';
 	import ChevronLeftIcon from '@lucide/svelte/icons/chevron-left';
@@ -20,12 +19,7 @@
 	let selectedDate: string | null = $state(null);
 
 	onMount(async () => {
-		try {
-			await updateRepaymentAmounts();
-		} catch (error) {
-			console.error('Error updating repayment amounts', error);
-		}
-		allItems = await listScx();
+		allItems = await listScxWithRepayments();
 	});
 
 	function toIso(y: number, m: number, d: number): string {
