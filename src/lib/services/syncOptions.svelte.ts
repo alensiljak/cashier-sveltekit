@@ -20,7 +20,7 @@ async function isConfigured(option: SyncOption): Promise<boolean> {
 		case 's3':
 			return !!(await deviceSettings.get(DeviceSettingKeys.s3Settings));
 		case 'peer':
-			return !!(await settings.get<string>(SettingKeys.peerRoom));
+			return !!(await deviceSettings.get<string>(DeviceSettingKeys.syncGroupSecret));
 	}
 }
 

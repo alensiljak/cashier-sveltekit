@@ -24,7 +24,9 @@
 	import { diffAgainstBaseline, type DiffEntry } from '#lib/sync/syncDiff';
 	import { getBaseline } from '#lib/sync/syncBaseline';
 	import { pullFiles } from '#lib/sync/pullFiles';
-	import type { ActivePeer } from '#lib/sync/peerPresence.svelte';
+	import InviteDialog from '#lib/components/InviteDialog.svelte';
+	import { encodeInvite, parseInvite } from '#lib/sync/invite';
+	import { goto } from '$app/navigation';
 	import {
 		peerConnection,
 		getLocalData,
@@ -299,18 +301,19 @@
 
 	onMount(async () => {
 		await peerConnection.ensureInit();
-		// Join the saved room automatically; the Connect button is for manual control.
-		if (!presence.isInRoom) await joinPeerRoom(presence.roomCode, true);
+		// Join the group's room automatically once there is one; the Connect button is for manual control.
+		if (presence.hasGroup && !presence.isInRoom) await joinPeerRoom(true);
 	});
 
 	// ─── Connection ─────────────────────────────────────────────────────────────
-	// Name, room and network are edited on /peer-sync/setup.
+	// Name and network are edited on /peer-sync/setup. The room is private to the devices that
+	// were paired with each other (see "Invite a device").
 
-	async function joinPeerRoom(code: string, silent = false) {
-		if (!code.trim() || presence.isInRoom) return;
+	async function joinPeerRoom(silent = false) {
+		if (presence.isInRoom) return;
 		connecting = true;
 		try {
-			await peerConnection.connect(code);
+			await peerConnection.connect();
 			if (!silent) Notifier.success('Connected');
 		} catch (e) {
 			Notifier.error('Failed to connect: ' + (e as Error).message);
@@ -353,33 +356,32 @@
 		if (presence.isInRoom) {
 			await leaveRoom();
 		} else {
-			await joinPeerRoom(presence.roomCode);
+			await joinPeerRoom();
 		}
 	}
 
-	// ─── Trust ───────────────────────────────────────────────────────────────────
+	// ─── Pairing ─────────────────────────────────────────────────────────────────
+	// All pairing goes through an invite link: "Invite a device" here, or "Join" on the other
+	// device (the link opens /pair, or is pasted below).
 
-	// The pairing prompt is opened explicitly ("Pair") rather than popping up
-	// for every stranger in a shared room. Derived from `peersMap` so the code
-	// shown is always the live one, and the prompt closes if the peer leaves.
-	let pairingTargetId = $state<string | null>(null);
-	let pairingPeer = $derived(pairingTargetId ? (presence.peersMap[pairingTargetId] ?? null) : null);
-	$effect(() => {
-		if (pairingPeer?.isTrusted) pairingTargetId = null;
-	});
+	let inviting = $state(false);
+	let pasted = $state('');
+	let pasteError = $state('');
 
-	/** "12345678" → "1234 5678" */
-	function groupCode(code: string): string {
-		return code.replace(/(\d{4})(?=\d)/g, '$1 ');
-	}
-
-	async function trustPeer(peer: ActivePeer) {
-		try {
-			await presence.trust(peer);
-			Notifier.success(`Trusted "${peer.name}"`);
-		} catch (e) {
-			Notifier.error(e instanceof Error ? e.message : String(e));
+	function joinWithPastedLink() {
+		const result = parseInvite(pasted);
+		if (!result.ok) {
+			pasteError =
+				result.reason === 'expired'
+					? 'This invite has expired. Ask for a new one.'
+					: result.reason === 'unsupported'
+						? 'This invite needs a newer version of Cashier.'
+						: 'This is not an invite link.';
+			return;
 		}
+		pasteError = '';
+		pasted = '';
+		void goto(`/pair#${encodeInvite(result.payload)}`);
 	}
 
 	// ─── Sync actions ─────────────────────────────────────────────────────────────
@@ -495,8 +497,6 @@
 						<div class="flex items-center gap-1 text-sm">
 							<span class="truncate">
 								<span class="font-semibold">{presence.myName || '…'}</span>
-								<span class="opacity-40">· Room:</span>
-								<span class="font-mono">{presence.roomCode || '—'}</span>
 							</span>
 						</div>
 						<div class="flex items-center gap-1 text-xs opacity-60">
@@ -531,6 +531,13 @@
 						/>
 					{/if}
 				</div>
+
+				{#if !presence.hasGroup && !presence.isInRoom}
+					<p class="text-sm opacity-60">
+						Devices meet in a private room that only paired devices know. Invite a device below to
+						start, or join another device's invite.
+					</p>
+				{/if}
 
 				{#if presence.isInRoom}
 					{#if presence.activePeerList.length === 0}
@@ -582,19 +589,14 @@
 													title="This device uses a different key than the trusted device with the same ID. Remove the trusted device to pair again."
 													>Key changed</span
 												>
-											{:else}
-												{#if peer.peerConfirmed}
-													<span class="badge badge-warning badge-sm">Wants to pair</span>
-												{/if}
-												{#if peer.trustIssue === 'legacy-record'}
-													<span class="badge badge-info badge-sm">Pair again</span>
-												{/if}
-												<button
-													class="btn btn-primary btn-sm"
-													onclick={() => (pairingTargetId = peer.trysteroId)}
+											{:else if peer.trustIssue === 'legacy-record'}
+												<span
+													class="badge badge-info badge-sm"
+													title="This device was trusted before devices proved their identity. Invite it again."
+													>Invite again</span
 												>
-													Pair
-												</button>
+											{:else}
+												<span class="badge badge-ghost badge-sm" title="Not paired with this device.">Not trusted</span>
 											{/if}
 										</div>
 									{/if}
@@ -603,6 +605,38 @@
 						</ul>
 					{/if}
 				{/if}
+			</div>
+		</div>
+
+		<!-- Pair a device -->
+		<div class="card bg-base-200 shadow-sm">
+			<div class="card-body gap-3 p-4">
+				<h2 class="card-title text-sm">Pair a device</h2>
+				<div class="flex flex-col gap-2">
+					<button class="btn btn-primary btn-sm" onclick={() => (inviting = true)}>
+						Invite a device
+					</button>
+					<form
+						class="flex gap-2"
+						onsubmit={(e) => {
+							e.preventDefault();
+							joinWithPastedLink();
+						}}
+					>
+						<input
+							type="text"
+							class="input input-bordered input-sm min-w-0 flex-1"
+							class:input-error={pasteError}
+							placeholder="Paste invite link"
+							aria-label="Paste invite link"
+							autocomplete="off"
+							spellcheck="false"
+							bind:value={pasted}
+						/>
+						<button type="submit" class="btn btn-sm" disabled={!pasted.trim()}>Join</button>
+					</form>
+					{#if pasteError}<span class="text-error text-xs">{pasteError}</span>{/if}
+				</div>
 			</div>
 		</div>
 
@@ -784,50 +818,9 @@
 	</div>
 {/if}
 
-<!-- ─── Pairing ────────────────────────────────────────────────────────────── -->
-{#if pairingPeer}
-	<div class="modal modal-open">
-		<div class="modal-box text-center">
-			<h3 class="font-bold text-lg">Pair with "{pairingPeer.name}"</h3>
-			{#if pairingPeer.fingerprint}
-				<p class="font-mono text-sm opacity-70" aria-label="Device fingerprint">
-					{pairingPeer.fingerprint}
-				</p>
-			{/if}
-			{#if pairingPeer.pairingCode}
-				<p class="py-3 text-sm opacity-70">
-					Check that <strong>this exact code</strong> is shown on the other device, then trust it on both.
-				</p>
-				<p class="font-mono text-4xl font-bold tracking-widest py-3" aria-label="Pairing code">
-					{groupCode(pairingPeer.pairingCode)}
-				</p>
-				{#if pairingPeer.peerConfirmed}
-					<p class="text-success text-sm">"{pairingPeer.name}" has confirmed this code.</p>
-				{:else}
-					<p class="text-xs opacity-60">Waiting for "{pairingPeer.name}" to confirm.</p>
-				{/if}
-				<p class="text-warning mt-3 text-xs">
-					If the codes differ, do not trust — someone may be intercepting the connection.
-				</p>
-			{:else}
-				<p class="py-4 text-sm">
-					Couldn't read this connection's security details. Rescan for devices and try again.
-				</p>
-			{/if}
-			<div class="modal-action justify-center">
-				<button class="btn btn-ghost" onclick={() => (pairingTargetId = null)}>Cancel</button>
-				<button
-					class="btn btn-success"
-					disabled={!pairingPeer.pairingCode}
-					onclick={() => trustPeer(pairingPeer)}
-				>
-					Codes match — Trust
-				</button>
-			</div>
-		</div>
-		<button class="modal-backdrop" aria-label="Close" onclick={() => (pairingTargetId = null)}
-		></button>
-	</div>
+<!-- ─── Invite ─────────────────────────────────────────────────────────────── -->
+{#if inviting}
+	<InviteDialog {presence} onclose={() => (inviting = false)} />
 {/if}
 
 <!-- ─── Pull Confirm ───────────────────────────────────────────────────────── -->

@@ -1,6 +1,6 @@
 # Device Identity: Public-Key Pairing for Multi-Device Sync
 
-Status: in progress. Step 1 (keys and signed hello) is implemented: `src/lib/sync/deviceKey.ts`, `assessHello` in `peerPresence.svelte.ts`, Dexie v8 `deviceKeys` store. Its hello also signs the (still UUID) `id`. Step 2 (names and fingerprints) is implemented: `DeviceLabel.svelte` (`name · 7KQ2-M9XA`) on the peer lists, the pairing prompt and Trusted Devices; local rename (`renamePeer`) with `TrustedPeer.announcedName`; `TrustedPeer.fingerprint`, derived from the key. The Trusted Devices page no longer shows the UUID and flags records without a key. Still shown with a UUID prefix: S3/WebDAV device lists (`Device abc123`) and the journal's origin labels; they switch with the ID in step 5.
+Status: in progress. Step 1 (keys and signed hello) is implemented: `src/lib/sync/deviceKey.ts`, `assessHello` in `peerPresence.svelte.ts`, Dexie v8 `deviceKeys` store. Its hello also signs the (still UUID) `id`. Step 2 (names and fingerprints) is implemented: `DeviceLabel.svelte` (`name · 7KQ2-M9XA`) on the peer lists, the pairing prompt and Trusted Devices; local rename (`renamePeer`) with `TrustedPeer.announcedName`; `TrustedPeer.fingerprint`, derived from the key. The Trusted Devices page no longer shows the UUID and flags records without a key. Still shown with a UUID prefix: S3/WebDAV device lists (`Device abc123`) and the journal's origin labels; they switch with the ID in step 5. Step 3 (invite link and private room) is implemented: `invite.ts` (link format), `syncGroup.ts` (secret, derived room and password), `pairing.svelte.ts` (`InviteSession` / `JoinSession`), `InviteDialog.svelte`, the `/pair` route and "Paste invite link" on Peer Sync. The Room field, the public lobby, the 8-digit code and `pair-confirm` are gone. Not yet verified between real devices (only against an in-memory fake of trystero in `tests/unit/pairing.test.ts`).
 
 ## Problem
 
@@ -23,7 +23,7 @@ The UUID is also shown to users (Trusted Devices page), where it is hard to read
 
 ## Design
 
-### ✅ 1. Device key pair and ID
+### 1. Device key pair and ID
 
 - On first use, generate an ECDSA P-256 key pair with WebCrypto, `extractable: false`. Store the `CryptoKeyPair` in IndexedDB next to the other device settings.
 - **Device ID = first 16 bytes of SHA-256(public key SPKI), Crockford base32 lowercase** (alphabet `0-9a-z` without `i l o u`, so an ID that is read out or typed is hard to mistake; 26 characters, no `.`, safe in S3 keys and WebDAV file names). It replaces the UUID in the trust list, the bucket layout (`manifests/<id>.json`, `crdt/<kind>/<id>.<seq>.upd`, `<id>.ack`) and the hello. Checked: `parseObjectKey` in `deltaSync.ts` matches the device with `[^/.]+`, so a 26-character base32 ID parses; nothing assumes the UUID shape (hyphens, length).
@@ -44,10 +44,11 @@ The UUID is also shown to users (Trusted Devices page), where it is hard to read
 
 One invite link, pasted into any chat. No QR code in the first release (see Decisions).
 
-`https://<app-origin>/pair#<base64url payload>` where the payload is `{ v: 1, name, fingerprint, room, exp }`:
+`https://<app-origin>/pair#<base64url payload>` where the payload is `{ v: 1, name, fingerprint, strategy, seed, exp }`:
 
-- `fingerprint` is the inviter's device ID. The joiner verifies the inviter's signed hello against it, so the joiner knows it reached the right device.
-- `room` is a random 128-bit name used once, on the same relay network. It is the rendezvous for this invite only.
+- `fingerprint` is the inviter's key-derived device ID (the full 26 characters, not the short form people see). The joiner accepts only a signed hello whose key hashes to it, so the joiner knows it reached the right device.
+- `strategy` is the signaling network (Nostr, MQTT, BitTorrent) the inviter is on. Peers only find each other on the same network, so the joiner uses it for this invite whatever its own setting is.
+- `seed` is 128 random bits. The one-use room and its signaling password are derived from it (`HMAC(seed, "invite-room-v1")` and `"invite-password-v1"`), so the relay sees neither the seed nor the password. A random room name alone would be public, since the room name is the relay topic, and the default signaling encryption is keyed from it.
 - `exp` is about 10 minutes from creation.
 - The payload is in the URL fragment, so it never reaches a server or its logs.
 
@@ -62,6 +63,9 @@ What a leaked link allows: asking to join. Nobody is trusted until the inviter a
 
 Notes:
 
+- On a device where the app is not set up yet, the app first redirects to onboarding and the link's fragment is lost; finish onboarding, then paste the link.
+- A device that joins an invite while already in a group replaces its group secret (after a warning); the devices it was paired with before have to be invited again. Merging two groups is not supported.
+- Devices paired before step 3 have no group secret. Whichever of them sends the first invite creates it; the others get it when they are invited again.
 - An installed PWA does not reliably capture `https` links, so the in-app "Paste invite link" field is the dependable path; the link is also usable by opening it in a browser where that browser shares the app's storage.
 - The public `cashier` lobby, the Room field and the 8-digit code comparison go away: all pairing goes through an invite.
 - **Private room for ongoing sync (group secret).** At pairing, the inviter sends a random 32-byte `syncGroupSecret` over the newly authenticated channel (or, if the group exists, shares the existing one). The sync room becomes `HMAC(secret, "room-v1")`, so strangers never see hellos. Derive the trystero `password` from the same secret so relays see only ciphertext: `@trystero-p2p/core` 0.26 supports `password` in the room config (`BaseRoomConfig.password`), which encrypts the session descriptions with AES-GCM (by default the key comes from the public app ID and room name, so a relay operator can recover it) and also runs a challenge handshake, so peers with a different password fail to connect. All peers in the room need the same password. The secret is rotated when a device is evicted (see Evicting a device).
@@ -148,13 +152,9 @@ Limits:
 
 Each step can ship alone. Step 1 fixes the impersonation problem.
 
-1. **Keys and signed hello.** Create and store the key. Add `publicKey` to `TrustedPeer` (`src/lib/data/model.ts`) with a Dexie schema bump (the current version is 7 in `src/lib/data/db.ts`). The hello carries the key and signature; the UUID is still the ID, hidden from the UI. Legacy records require re-pairing.
-2. **Names and fingerprints in the UI.** Show `name · fingerprint` on Trusted Devices and the peer lists; local rename of a peer.
-3. **Invite link and private room.** `/pair` route, "Paste invite link", inviter approval, group secret, derived room. Remove the Room field and the public lobby.
-4. **Introductions.** Signed introduction records, the "also trusted by" choice list on the new device, an approval request on every existing device. Needs steps 1 and 3 (keys, group secret).
-5. **Switch the ID to the key-derived one, with signed objects.** Migration as above for peers, S3 and WebDAV together (they share `getDeviceId()`), `legacyIds`, self-`forget`, `devices/<id>.json`, and signing and verifying every bucket object. `lastSeen` from sync modification dates ships here too.
-6. **Eviction.** Revocation records, gossip over peer sync and the bucket, tombstones, group secret rotation. Needs steps 1 and 3; the bucket part needs step 5.
-7. **Later, optional:** QR code for the invite; remove-unseen-devices action; **handshake hardening**: also verify the signature in trystero's `onPeerHandshake(peerId, send, receive, isInitiator)` (`JoinRoomCallbacks`, with `handshakeTimeoutMs`), so a peer with an invalid signature never gets an active connection. It would reject only bad signatures, not unknown keys (pairing needs those). Unchecked: whether the DTLS fingerprints are readable inside the callback, and how a failed handshake treats legacy unsigned peers (they would be dropped, not shown as "needs re-pairing"), so apply it only once legacy hellos are no longer supported.
+✅ 1. **Keys and signed hello.** Create and store the key. Add `publicKey` to `TrustedPeer` (`src/lib/data/model.ts`) with a Dexie schema bump (the current version is 7 in `src/lib/data/db.ts`). The hello carries the key and signature; the UUID is still the ID, hidden from the UI. Legacy records require re-pairing.
+✅ 2. **Names and fingerprints in the UI.** Show `name · fingerprint` on Trusted Devices and the peer lists; local rename of a peer.
+✅ 3. **Invite link and private room.** `/pair` route, "Paste invite link", inviter approval, group secret, derived room. Remove the Room field and the public lobby. 4. **Introductions.** Signed introduction records, the "also trusted by" choice list on the new device, an approval request on every existing device. Needs steps 1 and 3 (keys, group secret). 5. **Switch the ID to the key-derived one, with signed objects.** Migration as above for peers, S3 and WebDAV together (they share `getDeviceId()`), `legacyIds`, self-`forget`, `devices/<id>.json`, and signing and verifying every bucket object. `lastSeen` from sync modification dates ships here too. 6. **Eviction.** Revocation records, gossip over peer sync and the bucket, tombstones, group secret rotation. Needs steps 1 and 3; the bucket part needs step 5. 7. **Later, optional:** QR code for the invite; remove-unseen-devices action; **handshake hardening**: also verify the signature in trystero's `onPeerHandshake(peerId, send, receive, isInitiator)` (`JoinRoomCallbacks`, with `handshakeTimeoutMs`), so a peer with an invalid signature never gets an active connection. It would reject only bad signatures, not unknown keys (pairing needs those). Unchecked: whether the DTLS fingerprints are readable inside the callback, and how a failed handshake treats legacy unsigned peers (they would be dropped, not shown as "needs re-pairing"), so apply it only once legacy hellos are no longer supported.
 
 ## Tests to add
 

@@ -24,7 +24,20 @@ import type {
 import { settings, SettingKeys, deviceSettings, DeviceSettingKeys } from '#lib/settings';
 import db from '#lib/data/db';
 import { TrustedPeer } from '#lib/data/model';
-import { fingerprintOfKey, getDeviceKey, signHello, verifyHello } from '#lib/sync/deviceKey';
+import {
+	fingerprintOfKey,
+	getDeviceKey,
+	signHello,
+	verifyHello,
+	type DeviceKey
+} from '#lib/sync/deviceKey';
+import {
+	deriveSyncPassword,
+	deriveSyncRoom,
+	ensureGroupSecret,
+	getGroupSecret,
+	setGroupSecret
+} from '#lib/sync/syncGroup';
 
 const APP_ID = 'cashier-peer-sync';
 
@@ -88,14 +101,12 @@ export interface ActivePeer {
 	trysteroId: string;
 	persistentId: string;
 	name: string;
-	/** 8-digit code bound to this connection's DTLS certificates; '' when they can't be read (pairing is then refused). */
-	pairingCode: string;
 	isTrusted: boolean;
 	/** Base64 SPKI the peer presented; set only when its signature over this connection verified. */
 	publicKey?: string;
 	/** Short form of the ID derived from `publicKey` (`7KQ2-M9XA`), for people to compare. Set with `publicKey`. */
 	fingerprint?: string;
-	/** The hello carried a key and a signature that verify for this connection. Only a verified peer can be paired. */
+	/** The hello carried a key and a signature that verify for this connection. */
 	verified: boolean;
 	/**
 	 * Why a peer whose ID is in the trusted list is not trusted: the record has no key yet
@@ -103,8 +114,6 @@ export interface ActivePeer {
 	 * (`key-mismatch`, possibly an impersonator).
 	 */
 	trustIssue?: 'legacy-record' | 'key-mismatch';
-	/** The peer has already confirmed the code and trusted this device. */
-	peerConfirmed: boolean;
 }
 
 /** First DTLS `a=fingerprint` in an SDP blob, or null. */
@@ -112,29 +121,47 @@ function sdpFingerprint(sdp: string | undefined): string | null {
 	return sdp?.match(/a=fingerprint:\S+\s+([0-9A-Fa-f:]+)/)?.[1]?.toUpperCase() ?? null;
 }
 
+export type ConnectionFingerprints = { local: string; remote: string };
+
 /** DTLS certificate fingerprints of both ends of a live peer connection. */
-function connectionFingerprints(pc: RTCPeerConnection | undefined) {
+export function connectionFingerprints(
+	pc: RTCPeerConnection | undefined
+): ConnectionFingerprints | null {
 	const local = sdpFingerprint(pc?.localDescription?.sdp);
 	const remote = sdpFingerprint(pc?.remoteDescription?.sdp);
 	return local && remote ? { local, remote } : null;
 }
 
-/**
- * Short authentication string for a pairing. Hashes both devices' IDs *and*
- * the DTLS fingerprints of the connection between them, so the code is
- * different every session and a man-in-the-middle relaying two separate
- * connections cannot make both users see the same code.
- */
-export async function computePairingCode(
-	self: { id: string; fingerprint: string },
-	peer: { id: string; fingerprint: string }
-): Promise<string> {
-	const combined = [self, peer]
-		.map((d) => `${d.id}|${d.fingerprint}`)
-		.sort()
-		.join('\n');
-	const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(combined));
-	return (new DataView(hash).getUint32(0) % 100_000_000).toString().padStart(8, '0');
+/** Joins a trystero room on the given signaling network. Both peers need the same password. */
+export async function joinTrysteroRoom(opts: {
+	strategy: RelayStrategy;
+	roomId: string;
+	password: string;
+	iceServers: RTCIceServer[];
+}): Promise<Room> {
+	const { joinRoom } = await STRATEGY_LOADERS[opts.strategy]();
+	return joinRoom(
+		{ appId: APP_ID, password: opts.password, turnConfig: opts.iceServers },
+		opts.roomId
+	);
+}
+
+/** This device's hello for the connection with `fps`; unsigned when the fingerprints can't be read. */
+export async function buildHello(
+	me: { id: string; name: string },
+	key: DeviceKey,
+	fps: ConnectionFingerprints | null
+): Promise<HelloMessage> {
+	const hello: HelloMessage = { id: me.id, name: me.name, publicKey: key.publicKey };
+	if (fps) {
+		hello.sig = await signHello(key.privateKey, {
+			id: me.id,
+			name: me.name,
+			signerFp: fps.local,
+			receiverFp: fps.remote
+		});
+	}
+	return hello;
 }
 
 /** `publicKey` and `sig` are missing in the hello of versions before signed hellos. */
@@ -151,7 +178,7 @@ export type HelloMessage = {
  */
 export async function assessHello(
 	data: HelloMessage,
-	fps: { local: string; remote: string } | null,
+	fps: ConnectionFingerprints | null,
 	trustedPeers: TrustedPeer[]
 ): Promise<
 	Pick<ActivePeer, 'isTrusted' | 'verified' | 'publicKey' | 'fingerprint' | 'trustIssue'>
@@ -184,7 +211,8 @@ export async function assessHello(
 export class PeerPresence {
 	myId = $state('');
 	myName = $state('');
-	roomCode = $state('cashier');
+	/** This device has a sync group secret, so it has a private room to join. */
+	hasGroup = $state(false);
 	strategy = $state<RelayStrategy>('nostr');
 	/** Extra TURN/ICE servers (device-only setting); empty = direct connections and default STUN only. */
 	iceServers = $state<RTCIceServer[]>([]);
@@ -196,9 +224,6 @@ export class PeerPresence {
 
 	room: Room | null = null;
 	private helloAction: MessageAction<HelloMessage> | null = null;
-	private confirmAction: MessageAction<{ id: string }> | null = null;
-	/** trysteroIds that confirmed the pairing code; kept apart from `peersMap` because the confirmation can arrive before their hello. */
-	private confirmedBy = new Set<string>();
 	/** Polls `room.getPeers()` so a dead RTCPeerConnection is evicted even when
 	 *  `onPeerLeave` never fires — WebRTC's own disconnect detection can take
 	 *  tens of seconds to minutes, which otherwise leaves a since-refreshed
@@ -218,8 +243,7 @@ export class PeerPresence {
 		const savedName = await deviceSettings.get<string>(DeviceSettingKeys.peerName);
 		this.myName = savedName ?? 'My Device';
 
-		const savedRoom = await settings.get<string>(SettingKeys.peerRoom);
-		if (savedRoom) this.roomCode = savedRoom;
+		this.hasGroup = !!(await getGroupSecret());
 
 		const savedStrategy = await settings.get<RelayStrategy>(SettingKeys.peerRelayStrategy);
 		if (savedStrategy) this.strategy = savedStrategy;
@@ -276,43 +300,39 @@ export class PeerPresence {
 		return this.room.makeAction<T, R>(name, { kind: 'request', onRequest });
 	}
 
-	async join(roomCode: string = this.roomCode): Promise<void> {
-		const trimmed = roomCode.trim();
-		if (!trimmed || this.isInRoom) return;
+	/**
+	 * Joins the group's private room: its name and signaling password come from the sync group
+	 * secret, created here if this device has none yet (a group of one, which others join by invite).
+	 */
+	async join(): Promise<void> {
+		if (this.isInRoom || this.joining) return;
+		this.joining = true;
+		try {
+			const secret = await ensureGroupSecret();
+			this.hasGroup = true;
+			this.room = await joinTrysteroRoom({
+				strategy: this.strategy,
+				roomId: await deriveSyncRoom(secret),
+				password: await deriveSyncPassword(secret),
+				iceServers: $state.snapshot(this.iceServers) as RTCIceServer[]
+			});
+			this.attachRoom(this.room);
+		} finally {
+			this.joining = false;
+		}
+	}
 
-		const { joinRoom } = await STRATEGY_LOADERS[this.strategy]();
-		this.room = joinRoom(
-			{ appId: APP_ID, turnConfig: $state.snapshot(this.iceServers) as RTCIceServer[] },
-			trimmed
-		);
-		this.roomCode = trimmed;
+	private joining = false;
 
-		this.helloAction = this.room.makeAction('hello') as unknown as MessageAction<HelloMessage>;
+	private attachRoom(room: Room): void {
+		this.helloAction = room.makeAction('hello') as unknown as MessageAction<HelloMessage>;
 
-		this.room.onPeerJoin = (trysteroId) => {
+		room.onPeerJoin = (trysteroId) => {
 			void this.sendHello(trysteroId);
-		};
-
-		this.confirmAction = this.room.makeAction('pair-confirm') as unknown as MessageAction<{
-			id: string;
-		}>;
-		this.confirmAction.onMessage = (data, { peerId: trysteroId }) => {
-			this.confirmedBy.add(trysteroId);
-			const peer = this.peersMap[trysteroId];
-			// Ignore a confirmation whose ID doesn't match the hello we saw.
-			if (peer && peer.persistentId === data.id) {
-				this.peersMap = { ...this.peersMap, [trysteroId]: { ...peer, peerConfirmed: true } };
-			}
 		};
 
 		this.helloAction.onMessage = async (data, { peerId: trysteroId }) => {
 			const fps = connectionFingerprints(this.room?.getPeers()[trysteroId]);
-			const code = fps
-				? await computePairingCode(
-						{ id: this.myId, fingerprint: fps.local },
-						{ id: data.id, fingerprint: fps.remote }
-					)
-				: '';
 			const assessed = await assessHello(data, fps, this.trustedPeers);
 			const isTrusted = assessed.isTrusted;
 			// A trusted peer is shown under the label this device gave it, not the name it announces.
@@ -325,9 +345,7 @@ export class PeerPresence {
 					trysteroId,
 					persistentId: data.id,
 					name: label,
-					pairingCode: code,
-					...assessed,
-					peerConfirmed: this.confirmedBy.has(trysteroId)
+					...assessed
 				}
 			};
 			if (isTrusted) {
@@ -341,14 +359,12 @@ export class PeerPresence {
 			}
 		};
 
-		this.room.onPeerLeave = (trysteroId) => {
-			this.confirmedBy.delete(trysteroId);
+		room.onPeerLeave = (trysteroId) => {
 			const { [trysteroId]: _removed, ...rest } = this.peersMap;
 			this.peersMap = rest;
 		};
 
 		this.isInRoom = true;
-		await settings.set(SettingKeys.peerRoom, trimmed);
 
 		// Best-effort: lets the relay propagate an immediate leave signal on tab
 		// close/refresh/navigation instead of the remaining peer waiting out
@@ -370,16 +386,11 @@ export class PeerPresence {
 	private async sendHello(trysteroId: string): Promise<void> {
 		try {
 			const fps = connectionFingerprints(this.room?.getPeers()[trysteroId]);
-			const key = await getDeviceKey();
-			const hello: HelloMessage = { id: this.myId, name: this.myName, publicKey: key.publicKey };
-			if (fps) {
-				hello.sig = await signHello(key.privateKey, {
-					id: this.myId,
-					name: this.myName,
-					signerFp: fps.local,
-					receiverFp: fps.remote
-				});
-			}
+			const hello = await buildHello(
+				{ id: this.myId, name: this.myName },
+				await getDeviceKey(),
+				fps
+			);
 			await this.helloAction?.send(hello, { target: trysteroId });
 		} catch (e) {
 			console.error('Could not send hello', e);
@@ -416,38 +427,73 @@ export class PeerPresence {
 			await this.room.leave();
 			this.room = null;
 			this.helloAction = null;
-			this.confirmAction = null;
 		}
-		this.confirmedBy.clear();
 		this.peersMap = {};
 		this.isInRoom = false;
 	}
 
-	/** Trusts a peer after the user confirmed the pairing code, and tells the peer so its UI can show it. */
-	async trust(peer: ActivePeer): Promise<TrustedPeer> {
-		if (!peer.pairingCode) throw new Error('Cannot pair: connection fingerprint unavailable');
-		if (!peer.verified || !peer.publicKey) {
+	// --- pairing (see pairing.svelte.ts; this class is its host) ---
+
+	getKey(): Promise<DeviceKey> {
+		return getDeviceKey();
+	}
+
+	async ensureGroupSecret(): Promise<string> {
+		const secret = await ensureGroupSecret();
+		this.hasGroup = true;
+		return secret;
+	}
+
+	/** Takes over another device's group secret. A live room keeps the old one until it is rejoined. */
+	async adoptGroupSecret(secret: string): Promise<void> {
+		await setGroupSecret(secret);
+		this.hasGroup = true;
+	}
+
+	joinPairingRoom(opts: {
+		strategy: RelayStrategy;
+		roomId: string;
+		password: string;
+	}): Promise<Room> {
+		return joinTrysteroRoom({
+			...opts,
+			iceServers: $state.snapshot(this.iceServers) as RTCIceServer[]
+		});
+	}
+
+	/**
+	 * Trusts a device whose identity was proven by a signed hello and which a person approved (the
+	 * inviter tapped Approve, or the joiner opened the invite). Refuses a key that differs from the
+	 * one already trusted under the same ID.
+	 */
+	async trustVerified(peer: { id: string; name: string; publicKey: string }): Promise<TrustedPeer> {
+		const existing: TrustedPeer | undefined = await db.peers.get(peer.id);
+		if (existing?.publicKey && existing.publicKey !== peer.publicKey) {
 			throw new Error(
-				'Cannot pair: this device did not prove its identity. Update it and try again.'
+				'This device presents a different key than the trusted device with the same ID. Remove the trusted device first.'
 			);
 		}
-		if (peer.trustIssue === 'key-mismatch') {
-			throw new Error(
-				'Cannot pair: this device presents a different key than the trusted one. Remove the trusted device first.'
-			);
-		}
+		const sameKey = !!existing && existing.publicKey === peer.publicKey;
+		const now = new Date().toISOString();
 		const tp = new TrustedPeer();
-		tp.id = peer.persistentId;
-		tp.name = peer.name;
+		tp.id = peer.id;
+		tp.name = sameKey ? existing.name : peer.name;
 		tp.announcedName = peer.name;
 		tp.publicKey = peer.publicKey;
-		tp.fingerprint = peer.fingerprint || (await fingerprintOfKey(peer.publicKey));
-		tp.trustedAt = new Date().toISOString();
-		tp.lastSeen = new Date().toISOString();
+		tp.fingerprint = await fingerprintOfKey(peer.publicKey);
+		tp.trustedAt = sameKey ? existing.trustedAt : now;
+		tp.lastSeen = now;
+		tp.readOnly = existing?.readOnly;
 		await db.peers.put(tp);
 		this.trustedPeers = await db.peers.toArray();
-		this.peersMap = { ...this.peersMap, [peer.trysteroId]: { ...peer, isTrusted: true } };
-		void this.confirmAction?.send({ id: this.myId }, { target: peer.trysteroId });
+
+		const updated = { ...this.peersMap };
+		for (const [tid, p] of Object.entries(updated)) {
+			if (p.persistentId === peer.id && p.publicKey === peer.publicKey) {
+				updated[tid] = { ...p, isTrusted: true, trustIssue: undefined, name: tp.name };
+			}
+		}
+		this.peersMap = updated;
 		return tp;
 	}
 

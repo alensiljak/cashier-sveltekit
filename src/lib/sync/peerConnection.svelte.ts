@@ -122,10 +122,10 @@ class PeerConnection {
 	}
 
 	/** Joins the room (if not already joined) and registers both protocols. No-op if already connected. */
-	async connect(roomCode: string = this.presence.roomCode): Promise<void> {
+	async connect(): Promise<void> {
 		await this.ensureInit();
 		if (this.presence.isInRoom) return;
-		await this.presence.join(roomCode);
+		await this.presence.join();
 
 		this.syncRequestAction = this.presence.makeAction<SyncRequestMsg>('sync-request');
 		this.syncResponseAction = this.presence.makeAction<SyncResponseMsg>('sync-response');
@@ -300,9 +300,8 @@ class PeerConnection {
 	 *  the reload. No-op if not currently connected. */
 	async rescan(): Promise<void> {
 		if (!this.presence.isInRoom) return;
-		const code = this.presence.roomCode;
 		await this.disconnect();
-		await this.connect(code);
+		await this.connect();
 	}
 
 	/** Reconnects with a different relay strategy (see PeerPresence.setStrategy). */

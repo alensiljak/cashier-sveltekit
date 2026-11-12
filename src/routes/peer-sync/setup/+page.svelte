@@ -4,7 +4,8 @@
 	import HelpButton from '#lib/help/HelpButton.svelte';
 	import Notifier from '#lib/utils/notifier';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
-	import { settings, SettingKeys, deviceSettings, DeviceSettingKeys } from '#lib/settings';
+	import { deviceSettings, DeviceSettingKeys } from '#lib/settings';
+	import { deviceIdFromPublicKey, formatFingerprint } from '#lib/sync/deviceKey';
 	import {
 		RELAY_STRATEGIES,
 		parseIceServers,
@@ -16,7 +17,6 @@
 	const presence = peerConnection.presence;
 
 	let nameInput = $state('');
-	let roomInput = $state('');
 	let autoReload = $state(true);
 	let iceInput = $state('');
 	let iceSaved = $state('');
@@ -31,14 +31,16 @@
 	let saving = $state(false);
 	let ready = $state(false);
 
-	let dirty = $derived(
-		ready && (nameInput.trim() !== presence.myName || roomInput.trim() !== presence.roomCode)
-	);
+	let fingerprint = $state('');
+
+	let dirty = $derived(ready && nameInput.trim() !== presence.myName);
 
 	onMount(async () => {
 		await peerConnection.ensureInit();
 		nameInput = presence.myName;
-		roomInput = presence.roomCode;
+		fingerprint = formatFingerprint(
+			await deviceIdFromPublicKey((await presence.getKey()).publicKey)
+		);
 		autoReload = (await deviceSettings.get<boolean>(DeviceSettingKeys.peerAutoReload)) ?? true;
 		iceSaved = presence.iceServers.length ? JSON.stringify(presence.iceServers, null, 2) : '';
 		iceInput = iceSaved;
@@ -62,18 +64,9 @@
 
 	async function saveIdentity() {
 		const name = nameInput.trim();
-		const room = roomInput.trim();
 		saving = true;
 		try {
 			if (name && name !== presence.myName) await presence.setName(name);
-			if (room && room !== presence.roomCode) {
-				// A room change needs a fresh join; reconnect if we were connected.
-				const wasConnected = presence.isInRoom;
-				if (wasConnected) await peerConnection.disconnect();
-				presence.roomCode = room;
-				await settings.set(SettingKeys.peerRoom, room);
-				if (wasConnected) await peerConnection.connect(room);
-			}
 			Notifier.success('Saved');
 		} catch (e) {
 			Notifier.error('Save failed: ' + (e as Error).message);
@@ -121,22 +114,13 @@
 						onkeydown={(e) => e.key === 'Enter' && dirty && saveIdentity()}
 					/>
 				</label>
-				<label class="form-control w-full">
-					<span class="label-text text-xs opacity-60">Room</span>
-					<input
-						type="text"
-						bind:value={roomInput}
-						class="input input-bordered input-sm w-full font-mono"
-						placeholder="cashier"
-						onkeydown={(e) => e.key === 'Enter' && dirty && saveIdentity()}
-					/>
-					<span class="label-text-alt pt-1 opacity-50"
-						>Devices find each other only when they use the same room and network.</span
-					>
-				</label>
 				<div>
-					<span class="text-xs opacity-60">Device ID</span>
-					<p class="font-mono text-xs break-all opacity-60">{presence.myId}</p>
+					<span class="text-xs opacity-60">Fingerprint</span>
+					<p class="font-mono text-sm opacity-80">{fingerprint || '…'}</p>
+					<span class="text-xs opacity-50"
+						>Other devices show this next to your name, so you can tell devices with the same name
+						apart.</span
+					>
 				</div>
 				<button class="btn btn-success btn-sm" disabled={!dirty || saving} onclick={saveIdentity}>
 					{#if saving}<span class="loading loading-spinner loading-xs"></span>{/if}

@@ -6,6 +6,7 @@
  * the site's data does not carry it out as bytes. The public key travels as base64 SPKI.
  */
 import db from '#lib/data/db';
+import { fromBase64, toBase64 } from '#lib/sync/encoding';
 
 const HELLO_TAG = 'cashier-hello-v1';
 const KEY_RECORD_ID = 'device';
@@ -24,19 +25,6 @@ export interface HelloSignInput {
 	name: string;
 	signerFp: string;
 	receiverFp: string;
-}
-
-function toBase64(bytes: ArrayBuffer): string {
-	let s = '';
-	for (const b of new Uint8Array(bytes)) s += String.fromCharCode(b);
-	return btoa(s);
-}
-
-function fromBase64(text: string): Uint8Array<ArrayBuffer> {
-	const s = atob(text);
-	const bytes = new Uint8Array(s.length);
-	for (let i = 0; i < s.length; i++) bytes[i] = s.charCodeAt(i);
-	return bytes;
 }
 
 /**

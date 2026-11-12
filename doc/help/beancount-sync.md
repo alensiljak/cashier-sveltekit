@@ -4,7 +4,7 @@ Open Beancount Sync compares your device's full ledger book — every `*.bean`/`
 
 ## Prerequisites
 
-You need a trusted peer, and you need to be **connected** — toggle **Connect** on the **Peer Sync** page first (device name, room, pairing) if you haven't already; this page reuses the same room connection and trust list, but doesn't join on its own. Until you're connected, this page shows a **Connect via Peer Sync** prompt instead of a peer list.
+You need a trusted peer, and you need to be **connected** — toggle **Connect** on the **Peer Sync** page first (device name, pairing by invite link) if you haven't already; this page reuses the same room connection and trust list, but doesn't join on its own. Until you're connected, this page shows a **Connect via Peer Sync** prompt instead of a peer list.
 
 ## Picking a peer
 

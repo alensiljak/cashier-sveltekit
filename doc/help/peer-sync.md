@@ -2,13 +2,27 @@
 
 Peer Sync transfers data directly between devices over a peer-to-peer connection — no server or cloud storage involved.
 
-## Device & Room
+## Your device
 
-Each device has an editable **Device Name** and a **Room** code (default `cashier`). Devices in the same room can see each other; use a custom room code if you want to keep your devices separate from others.
+Each device has an editable **Device Name** (on the Setup page) and a **fingerprint** such as `7KQ2-M9XA`, made from the device's secret key. Names are only labels and several devices can share one, so other devices show your name together with the fingerprint (`Anna's phone · 7KQ2-M9XA`).
 
-## Trusting a device
+## Pairing a device
 
-When another device joins your room, it appears under **Peers in Room**. Before you can sync with it, both devices must confirm they see the same **pairing code** — a 6-digit code shown on both screens. Tap **Trust This Device** on each device once you've verified the codes match. Only trusted peers can be selected as a sync source.
+Devices meet in a **private room** that only paired devices know, so strangers never see them. To pair two devices:
+
+1. On the first device, tap **Invite a device**. Send the link it shows to the other device (any chat will do). The link works once and expires after 10 minutes.
+2. On the other device, open the link, or paste it into **Paste invite link** on the Peer Sync page, and tap **Join**. If the app is not set up on that device yet, finish setup first and then paste the link.
+3. The first device shows `Anna's phone · 7KQ2-M9XA wants to join`. Check that it is the device you invited, then tap **Approve**. Both devices now trust each other, and the second joins the first one's private room.
+
+Someone who gets hold of the link can only ask to join; nothing is trusted until you tap **Approve**, and an unexpected name or fingerprint shows up on that screen. If you are unsure, tap **Reject**.
+
+A device that was trusted before devices proved their identity (or was trusted through S3 or WebDAV only) shows **Invite again** until it is paired this way. A device that shows **Key changed** is using a different key than the trusted device with the same ID; remove the trusted device and pair again if you recognise it.
+
+If a device already belongs to a group of paired devices, joining another group replaces its group: the devices paired before have to be invited again.
+
+## Trusted devices
+
+Only trusted peers can be selected as a sync source. You can rename a trusted device on the **Trusted Devices** page; the name it announces is kept next to your label.
 
 Trusted devices are remembered and listed on the **Trusted Devices** page (open it from the **Trusted devices** card on Peer Sync Setup, or from the WebDAV and S3 sync pages). There you can mark a device **read-only** — it stays on the list but its data is ignored — or remove trust at any time.
 
