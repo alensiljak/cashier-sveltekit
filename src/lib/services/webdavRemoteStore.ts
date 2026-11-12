@@ -17,7 +17,10 @@ export function fileNameOf(key: string): string | null {
 	if (m) return `cashier-${m[1]}-${m[2]}`;
 	// A device's own record (see sync/deviceRecords.ts): `devices/<id>.json`.
 	const device = /^devices\/([^/]+\.json)$/.exec(key);
-	return device ? `cashier-device-${device[1]}` : null;
+	if (device) return `cashier-device-${device[1]}`;
+	// An eviction record (see sync/revocations.ts): `revocations/<id>.json`.
+	const revocation = /^revocations\/([^/]+\.json)$/.exec(key);
+	return revocation ? `cashier-revocation-${revocation[1]}` : null;
 }
 
 /** The protocol key for a file in the folder, or null for any other file. */
@@ -25,7 +28,9 @@ export function keyOfFile(name: string): string | null {
 	const m = /^cashier-(xacts|scx)-(.+)$/.exec(name);
 	if (m) return `crdt/${m[1]}/${m[2]}`;
 	const device = /^cashier-device-([^/]+\.json)$/.exec(name);
-	return device ? `devices/${device[1]}` : null;
+	if (device) return `devices/${device[1]}`;
+	const revocation = /^cashier-revocation-([^/]+\.json)$/.exec(name);
+	return revocation ? `revocations/${revocation[1]}` : null;
 }
 
 const fail = (name: string, res: Response) =>

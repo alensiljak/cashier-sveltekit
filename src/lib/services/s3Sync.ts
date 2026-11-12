@@ -58,6 +58,7 @@ import {
 	type BucketDeviceInfo,
 	type DeviceRecord
 } from '#lib/sync/deviceRecords';
+import { syncBucketRevocations } from '#lib/sync/revocations';
 import { noteBucketActivity } from '#lib/sync/lastSeen';
 import { peerOf } from '#lib/sync/identityMigration';
 import { openSigned, sealSigned, stripSigned, type SigningContext } from '#lib/sync/signedObjects';
@@ -470,6 +471,7 @@ async function deltaSyncFor(s: CrdtSession, item: 'xacts' | 'scheduled'): Promis
 	const remote = new S3RemoteStore(s.cfg, s.key, ctx);
 	directory.bind(remote);
 	await announceDevice(s3RemoteId(s.cfg), remote);
+	await syncBucketRevocations(s3RemoteId(s.cfg), remote, s.deviceId);
 	return getDeltaSync({
 		kind: kindOf(item),
 		deviceId: s.deviceId,

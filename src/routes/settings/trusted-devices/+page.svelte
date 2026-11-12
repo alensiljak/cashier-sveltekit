@@ -44,7 +44,15 @@
 	let evicting = $state<Trusted | null>(null);
 	let evictError = $state('');
 
-	function startEvict(tp: Trusted) {
+	let evictCleanUp = $state(true);
+	let evictHasBucket = $state(false);
+	let evictBusy = $state(false);
+
+	async function startEvict(tp: Trusted) {
+		const { loadS3Config, isS3Configured } = await import('#lib/services/s3Config');
+		const cfg = await loadS3Config();
+		evictHasBucket = isS3Configured(cfg) && !!cfg.passphrase && navigator.onLine;
+		evictCleanUp = true;
 		evicting = tp;
 		evictError = '';
 		evictDialog?.showModal();
@@ -52,13 +60,22 @@
 
 	async function confirmEvict() {
 		if (!evicting) return;
+		evictBusy = true;
 		try {
+			if (evictHasBucket && evictCleanUp) {
+				// While it is still trusted: what it uploaded is merged and kept first, then its files go.
+				const { loadS3Config } = await import('#lib/services/s3Config');
+				const { forgetBucketDevice } = await import('#lib/services/s3Sync');
+				await forgetBucketDevice((await loadS3Config())!, evicting.id);
+			}
 			await presence.evictPeer(evicting.id);
 			Notifier.info(`${evicting.name} evicted`);
 			evictDialog?.close();
 			evicting = null;
 		} catch (e) {
 			evictError = e instanceof Error ? e.message : String(e);
+		} finally {
+			evictBusy = false;
 		}
 	}
 
@@ -232,10 +249,28 @@
 				It keeps the data it already has. Change the S3/WebDAV credentials and passphrase as well if
 				it holds them. To bring it back, pair with it again on each device.
 			</p>
+			{#if evictHasBucket}
+				<label class="flex cursor-pointer items-start gap-2 pb-3">
+					<input type="checkbox" class="checkbox checkbox-sm mt-0.5" bind:checked={evictCleanUp} />
+					<span class="text-sm">
+						Also delete its data from the S3 bucket. What it uploaded is merged here and kept for the
+						other devices first.
+					</span>
+				</label>
+			{/if}
+			<p class="pb-3 text-xs opacity-60">
+				The eviction is also written to the S3 bucket or WebDAV folder at the next sync, for devices
+				that are not online together.
+			</p>
 			{#if evictError}<p class="text-error text-sm">{evictError}</p>{/if}
 			<div class="modal-action">
-				<button class="btn btn-ghost" onclick={() => evictDialog?.close()}>Cancel</button>
-				<button class="btn btn-error" onclick={confirmEvict}>Evict</button>
+				<button class="btn btn-ghost" disabled={evictBusy} onclick={() => evictDialog?.close()}>
+					Cancel
+				</button>
+				<button class="btn btn-error" disabled={evictBusy} onclick={confirmEvict}>
+					{#if evictBusy}<span class="loading loading-spinner loading-sm"></span>{/if}
+					Evict
+				</button>
 			</div>
 		</div>
 		<form method="dialog" class="modal-backdrop"><button aria-label="Close">close</button></form>

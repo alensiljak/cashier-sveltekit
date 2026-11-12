@@ -15,6 +15,7 @@ import db from '#lib/data/db';
 import { Revocation, type RevocationRecord, type TrustedPeer } from '#lib/data/model';
 import { fingerprintOfKey, signMessage, verifyMessage, type DeviceKey } from '#lib/sync/deviceKey';
 import { peerOf } from '#lib/sync/identityMigration';
+import type { RemoteStore } from '#lib/sync/remoteStore';
 
 export type { RevocationRecord };
 
@@ -194,6 +195,83 @@ export async function clearTombstones(ids: string[], now: Date = new Date()): Pr
 			await db.revocations.put(row);
 		}
 	});
+}
+
+// --- S3 / WebDAV ---
+
+/** Where a revoked device's record lives in a bucket or folder. */
+export const revocationKey = (revokedId: string) => `revocations/${revokedId}.json`;
+
+/** The well-formed records in the store. Whether they hold is for `acceptRevocations` to say. */
+export async function readBucketRevocations(remote: RemoteStore): Promise<RevocationRecord[]> {
+	const out: RevocationRecord[] = [];
+	for (const info of await remote.list('revocations/')) {
+		if (!/^revocations\/[^/.]+\.json$/.test(info.key)) continue;
+		try {
+			const raw = await remote.get(info.key);
+			const parsed = raw ? JSON.parse(new TextDecoder().decode(raw)) : null;
+			if (isRevocationRecord(parsed)) out.push(parsed);
+		} catch {
+			// An unreadable object is skipped; it does not block the others.
+		}
+	}
+	return out;
+}
+
+/** Publishes the records the store does not hold yet. Returns how many were written. */
+export async function publishRevocations(
+	remote: RemoteStore,
+	records: RevocationRecord[]
+): Promise<number> {
+	let written = 0;
+	for (const record of records) {
+		const body = new TextEncoder().encode(JSON.stringify(record));
+		if (await remote.put(revocationKey(record.revoked), body, { onlyIfAbsent: true })) written++;
+	}
+	return written;
+}
+
+type Listener = () => void;
+const listeners = new Set<Listener>();
+
+/** Called when evictions were applied outside peer sync (a bucket), so the trusted list is stale. */
+export function onRevocationsApplied(listener: Listener): () => void {
+	listeners.add(listener);
+	return () => listeners.delete(listener);
+}
+
+const lastRun = new Map<string, number>();
+/** A sync lists the store twice per store kind; once a half minute is enough. */
+const MIN_INTERVAL_MS = 30_000;
+
+/**
+ * Reads the evictions in the store and applies those that hold, then publishes the ones this
+ * device knows that the store lacks. Failures are only logged: syncing does not depend on it.
+ * Returns the evictions applied.
+ */
+export async function syncBucketRevocations(
+	storeId: string,
+	remote: RemoteStore,
+	myId: string
+): Promise<AcceptedRevocation[]> {
+	const last = lastRun.get(storeId);
+	if (last && Date.now() - last < MIN_INTERVAL_MS) return [];
+	lastRun.set(storeId, Date.now());
+	try {
+		const accepted = await acceptRevocations(await readBucketRevocations(remote), {
+			myId,
+			trusted: await db.peers.toArray(),
+			tombstones: await db.revocations.toArray()
+		});
+		for (const a of accepted) await applyRevocation(a);
+		if (accepted.length) for (const l of listeners) l();
+		await publishRevocations(remote, recordsToShare(await db.revocations.toArray()));
+		return accepted;
+	} catch (e) {
+		lastRun.delete(storeId);
+		console.warn('[revocations] Could not read or publish evictions:', e);
+		return [];
+	}
 }
 
 /** The records to pass on to a device: every active eviction, once per signed record. */

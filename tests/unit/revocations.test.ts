@@ -12,9 +12,15 @@ import {
 	applyRevocation,
 	clearTombstones,
 	evictedIds,
+	onRevocationsApplied,
+	publishRevocations,
+	readBucketRevocations,
 	recordsToShare,
-	signRevocation
+	signRevocation,
+	syncBucketRevocations
 } from '#lib/sync/revocations';
+import { MemoryRemoteStore } from '#lib/sync/remoteStore';
+import { fileNameOf, keyOfFile } from '#lib/services/webdavRemoteStore';
 
 async function device(name: string) {
 	const key = await generateDeviceKey();
@@ -303,5 +309,61 @@ describe('what an eviction blocks on a device', () => {
 		expect(presence.evicted.has(old.id)).toBe(true);
 		await expect(presence.evictPeer(me)).rejects.toThrow();
 		await expect(presence.evictPeer('nobody')).rejects.toThrow('not trusted');
+	});
+});
+
+describe('eviction records in a bucket or folder', () => {
+	beforeEach(async () => {
+		await db.peers.clear();
+		await db.revocations.clear();
+		await db.introductions.clear();
+	});
+
+	it('publishes active records once and reads them back', async () => {
+		const [anna, old] = [await device('Anna'), await device('Old')];
+		const remote = new MemoryRemoteStore();
+		const record = await signRevocation(anna.key, anna.id, old.id);
+
+		expect(await publishRevocations(remote, [record])).toBe(1);
+		expect(await publishRevocations(remote, [record])).toBe(0);
+		expect([...remote.objects.keys()]).toEqual([`revocations/${old.id}.json`]);
+		expect(await readBucketRevocations(remote)).toEqual([record]);
+	});
+
+	it('evicts on a record found in the store, publishes what it knows, and tells listeners', async () => {
+		const [anna, bob, old] = [await device('Anna'), await device('Bob'), await device('Old')];
+		await db.peers.bulkPut([trusted(anna), trusted(bob), trusted(old)]);
+		const remote = new MemoryRemoteStore();
+		await publishRevocations(remote, [await signRevocation(anna.key, anna.id, old.id)]);
+		let told = 0;
+		const stop = onRevocationsApplied(() => told++);
+
+		const applied = await syncBucketRevocations('store-a', remote, ME);
+		stop();
+
+		expect(applied.map((a) => a.record.revoked)).toEqual([old.id]);
+		expect(await db.peers.get(old.id)).toBeUndefined();
+		expect(await db.peers.get(bob.id)).toBeDefined();
+		expect(told).toBe(1);
+
+		// What this device learned elsewhere is written to a store that lacks it.
+		const other = new MemoryRemoteStore();
+		await syncBucketRevocations('store-b', other, ME);
+		expect([...other.objects.keys()]).toEqual([`revocations/${old.id}.json`]);
+	});
+
+	it('ignores a record in the store from a device that is not trusted', async () => {
+		const [anna, stranger, old] = [await device('Anna'), await device('X'), await device('Old')];
+		await db.peers.bulkPut([trusted(anna), trusted(old)]);
+		const remote = new MemoryRemoteStore();
+		await publishRevocations(remote, [await signRevocation(stranger.key, stranger.id, old.id)]);
+
+		expect(await syncBucketRevocations('store-c', remote, ME)).toEqual([]);
+		expect(await db.peers.get(old.id)).toBeDefined();
+	});
+
+	it('maps the records to WebDAV file names and back', () => {
+		expect(fileNameOf('revocations/abc.json')).toBe('cashier-revocation-abc.json');
+		expect(keyOfFile('cashier-revocation-abc.json')).toBe('revocations/abc.json');
 	});
 });

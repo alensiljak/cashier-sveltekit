@@ -35,6 +35,7 @@ import {
 	applyRevocation,
 	clearTombstones,
 	evictedIds,
+	onRevocationsApplied,
 	recordsToShare,
 	signRevocation,
 	type AcceptedRevocation
@@ -321,6 +322,8 @@ export class PeerPresence {
 		await this.reloadTrustedPeers();
 		await this.reloadIntroductions();
 		await this.reloadRevocations();
+		// Evictions read from a bucket or folder change the trusted list behind this class's back.
+		this.unsubscribeBucketEvictions ??= onRevocationsApplied(() => void this.refreshEvictions());
 	}
 
 	async reloadRevocations(): Promise<void> {
@@ -524,12 +527,19 @@ export class PeerPresence {
 		for (const a of accepted) {
 			for (const row of await applyRevocation(a)) ids.add(row.id);
 		}
+		await this.refreshEvictions(ids);
+	}
+
+	private unsubscribeBucketEvictions: (() => void) | null = null;
+
+	/** Re-reads trust and tombstones, and marks the connected peers that are evicted (all of them when `ids` is omitted). */
+	private async refreshEvictions(ids?: Set<string>): Promise<void> {
 		await this.reloadTrustedPeers();
 		await this.reloadRevocations();
 		// Evicted devices stay in the room, but nothing is served to them or merged from them.
 		const updated = { ...this.peersMap };
 		for (const [tid, p] of Object.entries(updated)) {
-			if (ids.has(p.persistentId)) {
+			if (ids ? ids.has(p.persistentId) : this.evicted.has(p.persistentId)) {
 				updated[tid] = { ...p, isTrusted: false, evicted: true, trustIssue: undefined };
 			}
 		}

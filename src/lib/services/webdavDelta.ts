@@ -20,6 +20,7 @@ import {
 	type DeviceRecord
 } from '#lib/sync/deviceRecords';
 import { peerOf } from '#lib/sync/identityMigration';
+import { syncBucketRevocations } from '#lib/sync/revocations';
 import { getDeviceId, type DocKind } from '#lib/sync/ydocDevices';
 import {
 	parseKey,
@@ -46,9 +47,11 @@ async function syncFor(client: WebDavClient, kind: DocKind): Promise<DeltaSync> 
 	const remote = await remoteFor(client);
 	const remoteId = webDavRemoteId(client.fileUrl(''));
 	await announceDevice(remoteId, remote);
+	const deviceId = await getDeviceId();
+	await syncBucketRevocations(remoteId, remote, deviceId);
 	return getDeltaSync({
 		kind,
-		deviceId: await getDeviceId(),
+		deviceId,
 		store: await storeOf(kind),
 		remote,
 		remoteId
