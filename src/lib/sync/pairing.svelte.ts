@@ -48,7 +48,14 @@ export interface PairingHost {
 		roomId: string;
 		password: string;
 	}): Promise<Room>;
-	trustVerified(peer: { id: string; name: string; publicKey: string }): Promise<TrustedPeer>;
+	/** IDs of evicted devices; pairing with one on purpose clears its eviction (`readmit`). */
+	readonly evicted?: ReadonlySet<string>;
+	trustVerified(peer: {
+		id: string;
+		name: string;
+		publicKey: string;
+		readmit?: boolean;
+	}): Promise<TrustedPeer>;
 }
 
 type ApproveMsg = { secret: string };
@@ -98,6 +105,8 @@ export interface Candidate {
 	alreadyTrusted: boolean;
 	/** The key differs from the one trusted under the same ID: it cannot be approved. */
 	issue?: 'key-mismatch';
+	/** This device was evicted from the group. Approving it pairs with it again, which clears that here. */
+	evicted: boolean;
 }
 
 export type InviteStatus =
@@ -179,7 +188,8 @@ export class InviteSession {
 		const assessed = await assessHello(
 			data,
 			connectionFingerprints(this.room?.getPeers()[peerId]),
-			this.host.trustedPeers
+			this.host.trustedPeers,
+			this.host.evicted
 		);
 		// A device that can't prove a key (older version, forged hello) can't be paired at all.
 		if (!assessed.verified || !assessed.publicKey) return;
@@ -190,7 +200,8 @@ export class InviteSession {
 			fingerprint: assessed.fingerprint ?? '',
 			publicKey: assessed.publicKey,
 			alreadyTrusted: assessed.isTrusted,
-			issue: assessed.trustIssue === 'key-mismatch' ? 'key-mismatch' : undefined
+			issue: assessed.trustIssue === 'key-mismatch' ? 'key-mismatch' : undefined,
+			evicted: !!assessed.evicted
 		};
 		this.candidates = [...this.candidates.filter((c) => c.trysteroId !== peerId), candidate];
 	}
@@ -214,7 +225,8 @@ export class InviteSession {
 			await this.host.trustVerified({
 				id: candidate.id,
 				name: candidate.name,
-				publicKey: candidate.publicKey
+				publicKey: candidate.publicKey,
+				readmit: true
 			});
 			const secret = await this.host.ensureGroupSecret();
 			const acked = new Promise<void>((resolve) => {
@@ -342,7 +354,8 @@ export class JoinSession {
 		const assessed = await assessHello(
 			data,
 			connectionFingerprints(this.room?.getPeers()[peerId]),
-			this.host.trustedPeers
+			this.host.trustedPeers,
+			this.host.evicted
 		);
 		if (!assessed.verified || !assessed.publicKey) return;
 		// Other joiners share this room. Only the device the link names is the inviter.
@@ -382,7 +395,8 @@ export class JoinSession {
 			await this.host.trustVerified({
 				id: inviter.id,
 				name: inviter.name,
-				publicKey: inviter.publicKey
+				publicKey: inviter.publicKey,
+				readmit: true
 			});
 			await this.host.adoptGroupSecret(secret);
 			this.status = 'approved';

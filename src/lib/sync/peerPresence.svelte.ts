@@ -23,8 +23,22 @@ import type {
 } from '@trystero-p2p/core';
 import { settings, SettingKeys, deviceSettings, DeviceSettingKeys } from '#lib/settings';
 import db from '#lib/data/db';
-import { TrustedPeer, type PendingIntroduction } from '#lib/data/model';
+import {
+	TrustedPeer,
+	type PendingIntroduction,
+	type Revocation,
+	type RevocationRecord
+} from '#lib/data/model';
 import { introductionsFor, receiveIntroductions, type Introduction } from '#lib/sync/introductions';
+import {
+	acceptRevocations,
+	applyRevocation,
+	clearTombstones,
+	evictedIds,
+	recordsToShare,
+	signRevocation,
+	type AcceptedRevocation
+} from '#lib/sync/revocations';
 import {
 	deviceIdFromPublicKey,
 	fingerprintOfKey,
@@ -125,6 +139,8 @@ export interface ActivePeer {
 	 * `from` is the ID of that record. See identityMigration.ts.
 	 */
 	migration?: { kind: 'rekey' | 'approve'; from: string };
+	/** Its key verified, but it was evicted from the group (see revocations.ts): never trusted unless a person pairs with it again. */
+	evicted?: boolean;
 }
 
 /** First DTLS `a=fingerprint` in an SDP blob, or null. */
@@ -190,6 +206,9 @@ export type HelloMessage = {
 /** Introductions of other trusted devices, sent to a trusted device (see introductions.ts). */
 type IntroMessage = { intros: Introduction[] };
 
+/** Signed evictions, passed between trusted devices (see revocations.ts). */
+type RevokeMessage = { records: RevocationRecord[] };
+
 /**
  * Decides what a hello proves. Trusted means: the signature verifies for this connection *and*
  * the trusted record with that ID holds the same key. Repeating a trusted ID is not enough.
@@ -197,11 +216,12 @@ type IntroMessage = { intros: Introduction[] };
 export async function assessHello(
 	data: HelloMessage,
 	fps: ConnectionFingerprints | null,
-	trustedPeers: TrustedPeer[]
+	trustedPeers: TrustedPeer[],
+	evicted?: ReadonlySet<string>
 ): Promise<
 	Pick<
 		ActivePeer,
-		'isTrusted' | 'verified' | 'publicKey' | 'fingerprint' | 'trustIssue' | 'migration'
+		'isTrusted' | 'verified' | 'publicKey' | 'fingerprint' | 'trustIssue' | 'migration' | 'evicted'
 	>
 > {
 	// The peer signed with its own fingerprint first, ours second.
@@ -226,6 +246,10 @@ export async function assessHello(
 	}
 	const fingerprint = await fingerprintOfKey(publicKey!);
 	const shown = { verified, publicKey, fingerprint };
+	// Evicted devices have no trusted record, but a hello must not read as a new device either.
+	if (evicted?.has(data.id) || evicted?.has(await deviceIdFromPublicKey(publicKey!))) {
+		return { isTrusted: false, ...shown, evicted: true };
+	}
 	if (!record) {
 		const match = matchLegacy(
 			{ id: data.id, publicKey: publicKey!, previousId: data.previousId },
@@ -259,6 +283,14 @@ export class PeerPresence {
 	introductions = $state<PendingIntroduction[]>([]);
 	/** The ones waiting for this device's person to approve or dismiss. */
 	pendingIntroductions = $derived(this.introductions.filter((i) => i.status === 'pending'));
+	/** Tombstones of evicted devices, in every status (see revocations.ts). */
+	revocations = $state<Revocation[]>([]);
+	/** The IDs that are evicted now. */
+	evicted = $derived(evictedIds(this.revocations));
+	/** Evictions nobody has read the notice of yet. */
+	unseenEvictions = $derived(
+		this.revocations.filter((r) => r.status === 'evicted' && !r.seen && r.id === r.record.revoked)
+	);
 
 	activePeerList = $derived(Object.values(this.peersMap));
 
@@ -288,6 +320,11 @@ export class PeerPresence {
 
 		await this.reloadTrustedPeers();
 		await this.reloadIntroductions();
+		await this.reloadRevocations();
+	}
+
+	async reloadRevocations(): Promise<void> {
+		this.revocations = await db.revocations.toArray();
 	}
 
 	/** Re-reads the trusted list; it can change outside this class (WebDAV/S3 pages trust devices directly in the DB). */
@@ -370,6 +407,9 @@ export class PeerPresence {
 		this.introAction = room.makeAction('intro') as unknown as MessageAction<IntroMessage>;
 		this.introAction.onMessage = (data, { peerId }) => this.onIntroductions(data, peerId);
 
+		this.revokeAction = room.makeAction('revoke') as unknown as MessageAction<RevokeMessage>;
+		this.revokeAction.onMessage = (data, { peerId }) => this.onRevocations(data, peerId);
+
 		this.helloAction.onMessage = (data, { peerId: trysteroId }) => {
 			// Introductions can arrive right behind the hello: they wait for this to finish.
 			const done = this.handleHello(data, trysteroId);
@@ -406,7 +446,7 @@ export class PeerPresence {
 
 	private async handleHello(data: HelloMessage, trysteroId: string): Promise<void> {
 		const fps = connectionFingerprints(this.room?.getPeers()[trysteroId]);
-		let assessed = await assessHello(data, fps, this.trustedPeers);
+		let assessed = await assessHello(data, fps, this.trustedPeers, this.evicted);
 		if (assessed.migration?.kind === 'rekey') {
 			// The same key that was paired under the old ID signed this hello: the same device.
 			await this.trustVerified({
@@ -415,7 +455,7 @@ export class PeerPresence {
 				publicKey: assessed.publicKey!,
 				previousId: data.previousId
 			});
-			assessed = await assessHello(data, fps, this.trustedPeers);
+			assessed = await assessHello(data, fps, this.trustedPeers, this.evicted);
 		}
 		const isTrusted = assessed.isTrusted;
 		// A trusted peer is shown under the label this device gave it, not the name it announces.
@@ -440,7 +480,99 @@ export class PeerPresence {
 				await db.peers.put(tp);
 			}
 			void this.shareIntroductions(trysteroId, data.id);
+			void this.shareRevocations(trysteroId);
 		}
+	}
+
+	// --- eviction (see revocations.ts) ---
+
+	private revokeAction: MessageAction<RevokeMessage> | null = null;
+
+	/** Tells a trusted device that connected about the evictions this device knows. */
+	private async shareRevocations(trysteroId: string): Promise<void> {
+		try {
+			const records = recordsToShare(this.revocations);
+			if (records.length) await this.revokeAction?.send({ records }, { target: trysteroId });
+		} catch (e) {
+			console.error('Could not share evictions', e);
+		}
+	}
+
+	/** A trusted device sent evictions: apply the ones that hold, and pass them on. */
+	private async onRevocations(data: RevokeMessage, trysteroId: string): Promise<void> {
+		await this.helloDone.get(trysteroId);
+		if (!this.peersMap[trysteroId]?.isTrusted) return;
+		try {
+			const accepted = await acceptRevocations(data?.records, {
+				myId: this.myId,
+				trusted: this.trustedPeers,
+				tombstones: this.revocations
+			});
+			if (!accepted.length) return;
+			await this.applyAccepted(accepted);
+			await this.broadcastRevocations(
+				accepted.map((a) => a.record),
+				trysteroId
+			);
+		} catch (e) {
+			console.error('Could not apply evictions', e);
+		}
+	}
+
+	private async applyAccepted(accepted: AcceptedRevocation[]): Promise<void> {
+		const ids = new Set<string>();
+		for (const a of accepted) {
+			for (const row of await applyRevocation(a)) ids.add(row.id);
+		}
+		await this.reloadTrustedPeers();
+		await this.reloadRevocations();
+		// Evicted devices stay in the room, but nothing is served to them or merged from them.
+		const updated = { ...this.peersMap };
+		for (const [tid, p] of Object.entries(updated)) {
+			if (ids.has(p.persistentId)) {
+				updated[tid] = { ...p, isTrusted: false, evicted: true, trustIssue: undefined };
+			}
+		}
+		this.peersMap = updated;
+	}
+
+	/** Sends records to every connected trusted device except `exceptTrysteroId`. */
+	private async broadcastRevocations(
+		records: RevocationRecord[],
+		exceptTrysteroId?: string
+	): Promise<void> {
+		for (const peer of Object.values(this.peersMap)) {
+			if (!peer.isTrusted || peer.trysteroId === exceptTrysteroId) continue;
+			try {
+				await this.revokeAction?.send({ records }, { target: peer.trysteroId });
+			} catch (e) {
+				console.error('Could not pass on an eviction', e);
+			}
+		}
+	}
+
+	/**
+	 * Evicts a trusted device from the group: signs the record, drops its trust here and tells the
+	 * connected devices, which pass it on. Returns the record (to publish to the bucket).
+	 */
+	async evictPeer(persistentId: string): Promise<RevocationRecord> {
+		const target = this.trustedPeers.find((p) => p.id === persistentId);
+		if (!target) throw new Error('This device is not trusted here.');
+		if (persistentId === this.myId) throw new Error('A device cannot evict itself.');
+		const record = await signRevocation(await getDeviceKey(), this.myId, target.id);
+		await this.applyAccepted([
+			{ record, evictor: { name: this.myName } as TrustedPeer, subject: target, self: false }
+		]);
+		await this.broadcastRevocations([record]);
+		return record;
+	}
+
+	/** A person has read the eviction notices. */
+	async markEvictionsSeen(): Promise<void> {
+		const rows = this.revocations.filter((r) => r.status === 'evicted' && !r.seen);
+		if (!rows.length) return;
+		await db.revocations.bulkPut(rows.map((r) => ({ ...$state.snapshot(r), seen: true })));
+		await this.reloadRevocations();
 	}
 
 	// --- introductions (see introductions.ts) ---
@@ -493,7 +625,8 @@ export class PeerPresence {
 				me: { id: this.myId, publicKey: key.publicKey },
 				introducer,
 				trusted: this.trustedPeers,
-				pending: this.introductions
+				pending: this.introductions,
+				evicted: this.evicted
 			});
 			if (fresh.length) {
 				await db.introductions.bulkPut(fresh);
@@ -512,6 +645,11 @@ export class PeerPresence {
 	async approveIntroduction(id: string): Promise<void> {
 		const intro: PendingIntroduction | undefined = await db.introductions.get(id);
 		if (!intro || intro.status !== 'pending') return;
+		if (this.evicted.has(intro.id) || this.evicted.has(intro.subjectId)) {
+			await db.introductions.delete(id);
+			await this.reloadIntroductions();
+			throw new Error('That device was evicted from the group.');
+		}
 		// Trust the first introducer still trusted: it is whom this approval rests on.
 		// The introducer may have switched to a key-derived ID since it vouched: find it by either.
 		const introducer = intro.introducedBy
@@ -586,6 +724,7 @@ export class PeerPresence {
 			this.room = null;
 			this.helloAction = null;
 			this.introAction = null;
+			this.revokeAction = null;
 		}
 		this.helloDone.clear();
 		this.peersMap = {};
@@ -634,7 +773,16 @@ export class PeerPresence {
 		addedBy?: string;
 		/** The legacy ID the device names, which a key-less record of it is found by. */
 		previousId?: string;
+		/** A person is pairing with this device on purpose: an eviction of it stops counting. */
+		readmit?: boolean;
 	}): Promise<TrustedPeer> {
+		const keyId = await deviceIdFromPublicKey(peer.publicKey);
+		const tombstoned = [peer.id, keyId].filter((id) => this.evicted.has(id));
+		if (tombstoned.length) {
+			if (!peer.readmit) throw new Error('This device was evicted from the group.');
+			await clearTombstones(tombstoned);
+			await this.reloadRevocations();
+		}
 		// A device that switched to a key-derived ID replaces its old record instead of being added next to it.
 		const legacy = matchLegacy(
 			{ id: peer.id, publicKey: peer.publicKey, previousId: peer.previousId },
@@ -664,7 +812,7 @@ export class PeerPresence {
 		await db.peers.put(tp);
 		this.trustedPeers = await db.peers.toArray();
 		// Whatever way it got here, the device no longer waits for approval.
-		await db.introductions.delete(await deviceIdFromPublicKey(peer.publicKey));
+		await db.introductions.delete(keyId);
 		await this.reloadIntroductions();
 
 		const updated = { ...this.peersMap };
@@ -673,6 +821,7 @@ export class PeerPresence {
 				updated[tid] = {
 					...p,
 					isTrusted: true,
+					evicted: undefined,
 					trustIssue: undefined,
 					migration: undefined,
 					name: tp.name

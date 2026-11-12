@@ -10,6 +10,7 @@ import {
 	Setting,
 	TrustedPeer,
 	PendingIntroduction,
+	Revocation,
 	PeerSyncBaseline
 } from '#lib/data/model';
 
@@ -24,6 +25,7 @@ interface CashierDatabase extends Dexie {
 	peerSyncBaseline: Table;
 	deviceKeys: Table;
 	introductions: Table;
+	revocations: Table;
 	// xacts: Table;
 }
 
@@ -136,12 +138,25 @@ db.version(9).stores({
 	introductions: 'id'
 });
 
+// Tombstones of evicted devices (see sync/revocations.ts).
+db.version(10).stores({
+	scheduled: null,
+	settings: 'key',
+	deviceSettings: 'key',
+	peers: 'id',
+	peerSyncBaseline: '[endpointId+path]',
+	deviceKeys: 'id',
+	introductions: 'id',
+	revocations: 'id'
+});
+
 // Mappings
 
 db.settings.mapToClass(Setting);
 db.deviceSettings.mapToClass(Setting);
 db.peers.mapToClass(TrustedPeer);
 db.introductions.mapToClass(PendingIntroduction);
+db.revocations.mapToClass(Revocation);
 db.peerSyncBaseline.mapToClass(PeerSyncBaseline);
 
 export default db;

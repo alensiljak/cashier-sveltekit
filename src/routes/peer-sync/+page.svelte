@@ -26,6 +26,7 @@
 	import { pullFiles } from '#lib/sync/pullFiles';
 	import InviteDialog from '#lib/components/InviteDialog.svelte';
 	import IntroductionRequests from '#lib/components/IntroductionRequests.svelte';
+	import EvictionNotices from '#lib/components/EvictionNotices.svelte';
 	import { encodeInvite, parseInvite } from '#lib/sync/invite';
 	import { goto } from '$app/navigation';
 	import {
@@ -624,6 +625,8 @@
 				{/if}
 			</div>
 		</div>
+
+		<EvictionNotices {presence} />
 
 		<IntroductionRequests {presence} />
 

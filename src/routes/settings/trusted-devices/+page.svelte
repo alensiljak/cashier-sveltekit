@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import DeviceLabel from '#lib/components/DeviceLabel.svelte';
+	import EvictionNotices from '#lib/components/EvictionNotices.svelte';
 	import Notifier from '#lib/utils/notifier';
 	import { peerConnection } from '#lib/sync/peerConnection.svelte';
 
@@ -37,6 +38,28 @@
 	async function saveRename(tp: Trusted) {
 		await presence.renamePeer(tp.id, renameText);
 		renaming = null;
+	}
+
+	let evictDialog = $state<HTMLDialogElement>();
+	let evicting = $state<Trusted | null>(null);
+	let evictError = $state('');
+
+	function startEvict(tp: Trusted) {
+		evicting = tp;
+		evictError = '';
+		evictDialog?.showModal();
+	}
+
+	async function confirmEvict() {
+		if (!evicting) return;
+		try {
+			await presence.evictPeer(evicting.id);
+			Notifier.info(`${evicting.name} evicted`);
+			evictDialog?.close();
+			evicting = null;
+		} catch (e) {
+			evictError = e instanceof Error ? e.message : String(e);
+		}
 	}
 
 	let removeDialog = $state<HTMLDialogElement>();
@@ -103,6 +126,8 @@
 			or WebDAV folder are trusted on their sync pages; a read-only device stays on the list but its
 			data is ignored.
 		</p>
+
+		<EvictionNotices {presence} />
 
 		<div class="card bg-base-200 shadow-sm">
 			<div class="card-body gap-2 p-4">
@@ -181,6 +206,11 @@
 									<button class="btn btn-ghost btn-sm text-error" onclick={() => startRemove(tp)}>
 										Remove
 									</button>
+									{#if tp.publicKey}
+										<button class="btn btn-ghost btn-sm text-error" onclick={() => startEvict(tp)}>
+											Evict
+										</button>
+									{/if}
 								</div>
 							</li>
 						{/each}
@@ -189,6 +219,27 @@
 			</div>
 		</div>
 	</section>
+
+	<dialog bind:this={evictDialog} class="modal" onclose={() => (evicting = null)}>
+		<div class="modal-box">
+			<h3 class="text-lg font-bold">Evict {evicting?.name}?</h3>
+			<p class="py-3 text-sm">
+				Use this for a lost or stolen device. Every trusted device that hears of it stops trusting
+				{evicting?.name}: nothing is merged from it or served to it, and nobody introduces it. A
+				device that is offline learns of it when it next connects.
+			</p>
+			<p class="pb-3 text-sm opacity-70">
+				It keeps the data it already has. Change the S3/WebDAV credentials and passphrase as well if
+				it holds them. To bring it back, pair with it again on each device.
+			</p>
+			{#if evictError}<p class="text-error text-sm">{evictError}</p>{/if}
+			<div class="modal-action">
+				<button class="btn btn-ghost" onclick={() => evictDialog?.close()}>Cancel</button>
+				<button class="btn btn-error" onclick={confirmEvict}>Evict</button>
+			</div>
+		</div>
+		<form method="dialog" class="modal-backdrop"><button aria-label="Close">close</button></form>
+	</dialog>
 
 	<dialog bind:this={removeDialog} class="modal" onclose={() => (removing = null)}>
 		<div class="modal-box">

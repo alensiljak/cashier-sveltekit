@@ -129,6 +129,8 @@ export interface ReceiveContext {
 	introducer: TrustedPeer;
 	trusted: TrustedPeer[];
 	pending: PendingIntroduction[];
+	/** IDs of evicted devices (see revocations.ts): an introduction of one is refused. */
+	evicted?: ReadonlySet<string>;
 	now?: number;
 }
 
@@ -139,7 +141,8 @@ export interface ReceiveContext {
  * - the sender must be trusted with a key and not read-only (this device does not take its word);
  * - it must be the one that signed, with a valid signature;
  * - the subject is not this device and not already trusted under that key;
- * - a subject that claims an ID this device already trusts with another key is refused.
+ * - a subject that claims an ID this device already trusts with another key is refused;
+ * - a subject that was evicted (`evicted`) is refused.
  *
  * The caller has already made sure the message came over a connection the sender proved its key on.
  */
@@ -173,6 +176,7 @@ export async function receiveIntroductions(
 		}
 		// A key-derived ID that is not the hash of the key is not a real one.
 		if (isDerivedId(subject.id) && subject.id !== keyId) continue;
+		if (ctx.evicted?.has(subject.id) || ctx.evicted?.has(keyId)) continue;
 		const existing = byKey.get(keyId);
 		const record: PendingIntroduction = existing ?? {
 			id: keyId,

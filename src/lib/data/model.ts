@@ -212,6 +212,42 @@ export class PendingIntroduction {
 	receivedAt: string = '';
 }
 
+/** A signed eviction: `by` vouches that `revoked` is no longer part of the group (see sync/revocations.ts). */
+export type RevocationRecord = {
+	v: 1;
+	/** The ID of the evicted device. */
+	revoked: string;
+	/** The ID of the trusted device that evicted it. */
+	by: string;
+	/** ms since the epoch. Part of the signature. */
+	at: number;
+	sig: string;
+};
+
+/**
+ * The tombstone of an evicted device. It is its own table, not a flag on `TrustedPeer`, so that
+ * nothing that reads the trusted list can take an evicted device for a trusted one. While
+ * `evicted`, the device is not trusted, is not introduced, and is not re-admitted by gossip or an
+ * old invite; a person who pairs with it again clears it (`readmitted`).
+ */
+export class Revocation {
+	/** The evicted device's ID (and one row for each legacy ID of its trusted record). */
+	id: string = '';
+	status: 'evicted' | 'readmitted' = 'evicted';
+	/** The signed record, kept so it can be passed on to devices that have not heard of it. */
+	record!: RevocationRecord;
+	/** What this device called it, for the notice. Empty when it was not trusted here. */
+	name: string = '';
+	fingerprint: string = '';
+	/** What this device called the evictor. */
+	byName: string = '';
+	receivedAt: string = '';
+	/** A person has read the notice. */
+	seen: boolean = false;
+	/** When a person paired with the device again (ISO). Older eviction records are then ignored. */
+	readmittedAt?: string;
+}
+
 /**
  * Last-synced content hash for one path against one peer endpoint. Compared
  * against a fresh SyncEntry scan (see src/lib/sync/syncDiff.ts) to classify
