@@ -11,6 +11,25 @@ export interface Listed {
 	lastModified: Date | null;
 }
 
+/** A device not seen for this long is offered for removal (same window as the delta-sync ack window). */
+export const UNSEEN_WINDOW_MS = 30 * 24 * 3600 * 1000;
+
+/**
+ * Trusted devices not seen for `windowMs`. A device that was never seen counts from when it was
+ * trusted, so a freshly paired one is not offered. Local housekeeping only, not an eviction.
+ */
+export function unseenDevices<T extends { lastSeen?: string; trustedAt: string }>(
+	peers: T[],
+	now: number = Date.now(),
+	windowMs: number = UNSEEN_WINDOW_MS
+): T[] {
+	return peers.filter((p) => {
+		const t = Date.parse(p.lastSeen || p.trustedAt);
+		// An unparseable date is not evidence of absence: keep the device.
+		return Number.isFinite(t) && now - t > windowMs;
+	});
+}
+
 /** Moves `lastSeen` of the trusted devices forward to the newest object each wrote. Returns how many changed. */
 export async function noteBucketActivity(items: Listed[]): Promise<number> {
 	const newest = new Map<string, number>();

@@ -12,7 +12,7 @@ import {
 	publishDeviceRecord,
 	readDeviceRecords
 } from '#lib/sync/deviceRecords';
-import { noteBucketActivity } from '#lib/sync/lastSeen';
+import { noteBucketActivity, unseenDevices } from '#lib/sync/lastSeen';
 import { MemoryRemoteStore } from '#lib/sync/remoteStore';
 import { trustDevice } from '#lib/sync/ydocDevices';
 
@@ -60,6 +60,21 @@ describe('noteBucketActivity', () => {
 		);
 		await noteBucketActivity([{ deviceId: UUID, lastModified: new Date('2026-04-01T00:00:00Z') }]);
 		expect((await db.peers.get('newid'))?.lastSeen).toBe('2026-04-01T00:00:00.000Z');
+	});
+});
+
+describe('unseenDevices', () => {
+	const now = Date.parse('2026-11-12T00:00:00Z');
+
+	it('offers devices not seen for over 30 days, counting from trustedAt when never seen', () => {
+		const list = [
+			record('old', { lastSeen: '2026-09-01T00:00:00.000Z' }),
+			record('recent', { lastSeen: '2026-11-01T00:00:00.000Z' }),
+			record('never-old', { trustedAt: '2026-08-01T00:00:00.000Z' }),
+			record('never-new', { trustedAt: '2026-11-10T00:00:00.000Z' }),
+			record('garbage', { trustedAt: 'then' })
+		];
+		expect(unseenDevices(list, now).map((p) => p.id)).toEqual(['old', 'never-old']);
 	});
 });
 

@@ -5,6 +5,7 @@
 	import EvictionNotices from '#lib/components/EvictionNotices.svelte';
 	import Notifier from '#lib/utils/notifier';
 	import { peerConnection } from '#lib/sync/peerConnection.svelte';
+	import { unseenDevices, UNSEEN_WINDOW_MS } from '#lib/sync/lastSeen';
 
 	// Shared singleton. Only its stored identity and trusted list are loaded here; it does not
 	// connect, so this works when Peer Sync is not in use.
@@ -77,6 +78,16 @@
 		} finally {
 			evictBusy = false;
 		}
+	}
+
+	let unseenDialog = $state<HTMLDialogElement>();
+	const unseen = $derived(unseenDevices(presence.trustedPeers));
+
+	async function removeUnseen() {
+		const ids = unseen.map((p) => p.id);
+		for (const id of ids) await presence.removeTrust(id);
+		Notifier.info(`Removed ${ids.length} device(s)`);
+		unseenDialog?.close();
 	}
 
 	let removeDialog = $state<HTMLDialogElement>();
@@ -233,9 +244,38 @@
 						{/each}
 					</ul>
 				{/if}
+				{#if unseen.length > 0}
+					<button class="btn btn-outline btn-sm mt-2" onclick={() => unseenDialog?.showModal()}>
+						Remove devices not seen for {UNSEEN_WINDOW_MS / 86400000}+ days ({unseen.length})
+					</button>
+				{/if}
 			</div>
 		</div>
 	</section>
+
+	<dialog bind:this={unseenDialog} class="modal">
+		<div class="modal-box">
+			<h3 class="text-lg font-bold">Remove unseen devices?</h3>
+			<p class="py-3 text-sm">
+				These devices have not been seen for over {UNSEEN_WINDOW_MS / 86400000} days. They are
+				removed from this device only; data they uploaded stays in the S3 bucket or WebDAV folder. A
+				removed device can be paired again. For a lost or stolen device, use Evict instead.
+			</p>
+			<ul class="space-y-1 pb-3 text-sm">
+				{#each unseen as tp (tp.id)}
+					<li class="flex items-baseline justify-between gap-2">
+						<DeviceLabel name={tp.name} fingerprint={tp.fingerprint} />
+						<span class="text-xs opacity-60">{formatDate(tp.lastSeen || tp.trustedAt)}</span>
+					</li>
+				{/each}
+			</ul>
+			<div class="modal-action">
+				<button class="btn btn-ghost" onclick={() => unseenDialog?.close()}>Cancel</button>
+				<button class="btn btn-error" onclick={removeUnseen}>Remove {unseen.length}</button>
+			</div>
+		</div>
+		<form method="dialog" class="modal-backdrop"><button aria-label="Close">close</button></form>
+	</dialog>
 
 	<dialog bind:this={evictDialog} class="modal" onclose={() => (evicting = null)}>
 		<div class="modal-box">
