@@ -26,7 +26,7 @@ The UUID is also shown to users (Trusted Devices page), where it is hard to read
 ### 1. Device key pair and ID
 
 - On first use, generate an ECDSA P-256 key pair with WebCrypto, `extractable: false`. Store the `CryptoKeyPair` in IndexedDB next to the other device settings.
-- **Device ID = first 16 bytes of SHA-256(public key SPKI), base32 lowercase** (26 characters, no `.`, safe in S3 keys and WebDAV file names). It replaces the UUID in the trust list, the bucket layout (`manifests/<id>.json`, `crdt/<kind>/<id>.<seq>.upd`, `<id>.ack`) and the hello. Check the key parsers in `deltaSync.ts` for assumptions about the old UUID shape.
+- **Device ID = first 16 bytes of SHA-256(public key SPKI), base32 lowercase** (26 characters, no `.`, safe in S3 keys and WebDAV file names). It replaces the UUID in the trust list, the bucket layout (`manifests/<id>.json`, `crdt/<kind>/<id>.<seq>.upd`, `<id>.ack`) and the hello. Checked: `parseObjectKey` in `deltaSync.ts` matches the device with `[^/.]+`, so a 26-character base32 ID parses; nothing assumes the UUID shape (hyphens, length).
 - **Names are labels, not identity.** They are not unique ("My Device" is the default) and anyone can set any name. The name is exchanged in the hello and the invite. Each device can rename a peer locally ("Anna's phone"); the name the peer announced is kept alongside.
 - **UI:** show `name · 7KQ2-M9XA` (the first 8 characters of the ID, grouped). Never show the full ID.
 - `TrustedPeer` gets `publicKey` (base64 SPKI) and `legacyIds?: string[]` (see Migration).
@@ -37,6 +37,7 @@ The UUID is also shown to users (Trusted Devices page), where it is hard to read
 - The receiver reads both fingerprints with `connectionFingerprints()`, swaps their order for the peer's view, and verifies the signature.
 - A peer is trusted only if the signature verifies **and** a `TrustedPeer` with the derived ID has the same `publicKey`.
 - Binding to DTLS fingerprints stops replay and relay: a captured hello fails on any other connection.
+- **Option to evaluate in step 1:** trystero's `onPeerHandshake(peerId, send, receive, isInitiator)` callback (in `JoinRoomCallbacks`, with `handshakeTimeoutMs`) runs before a peer is activated and fails the connection if it throws. The signed hello could run there instead of in a post-join `hello` action, so an unverified peer never gets an active connection. Cost: untrusted peers are rejected before the UI can list them, so the invite flow (step 3) still needs the hello for joiners not yet trusted. Decide when implementing step 1.
 - Existing `peersMap[fromId]?.isTrusted` checks in [peerConnection.svelte.ts](/src/lib/sync/peerConnection.svelte.ts) stay as they are. Only where `isTrusted` is set changes.
 
 ### 3. Pairing by invite link
@@ -63,7 +64,7 @@ Notes:
 
 - An installed PWA does not reliably capture `https` links, so the in-app "Paste invite link" field is the dependable path; the link is also usable by opening it in a browser where that browser shares the app's storage.
 - The public `cashier` lobby, the Room field and the 8-digit code comparison go away: all pairing goes through an invite.
-- **Private room for ongoing sync (group secret).** At pairing, the inviter sends a random 32-byte `syncGroupSecret` over the newly authenticated channel (or, if the group exists, shares the existing one). The sync room becomes `HMAC(secret, "room-v1")`, so strangers never see hellos. If the trystero version in use supports a `password` option for signaling encryption, derive it from the same secret so relays see only ciphertext. **Unverified:** `node_modules` was not installed when this was written, so check the `@trystero-p2p/core` 0.26 typings first. The secret is rotated when a device is evicted (see Evicting a device).
+- **Private room for ongoing sync (group secret).** At pairing, the inviter sends a random 32-byte `syncGroupSecret` over the newly authenticated channel (or, if the group exists, shares the existing one). The sync room becomes `HMAC(secret, "room-v1")`, so strangers never see hellos. Derive the trystero `password` from the same secret so relays see only ciphertext: `@trystero-p2p/core` 0.26 supports `password` in the room config (`BaseRoomConfig.password`), which encrypts the session descriptions with AES-GCM (by default the key comes from the public app ID and room name, so a relay operator can recover it) and also runs a challenge handshake, so peers with a different password fail to connect. All peers in the room need the same password. The secret is rotated when a device is evicted (see Evicting a device).
 
 ### 4. Delegated trust (introductions)
 
@@ -100,7 +101,7 @@ Sequence per device:
 1. Before switching, the device syncs, so everything it wrote is uploaded and merged elsewhere.
 2. It generates its key, derives its new ID, and keeps the old UUID as `previousId` (device-only setting).
 3. On pairing, the peer finds a `TrustedPeer` with that `previousId`, and after the user's approval replaces it with the new record, keeping the old UUID in `legacyIds`, plus the name and read-only flag. The trust filter treats `legacyIds` as trusted, so old-ID deltas stay readable until compacted.
-4. After its first successful sync under the new ID, the device runs `forget(previousId)` on its own old objects. Anything other devices have not yet applied is covered by the snapshot `forget` writes first. Verify this ordering against `DeltaSync.forget` before relying on it.
+4. After its first successful sync under the new ID, the device runs `forget(previousId)` on its own old objects. Anything other devices have not yet applied is covered by the snapshot `forget` writes first. Verified against `DeltaSync.forget`: it downloads and merges first (aborting on errors), uploads its own deltas, writes a snapshot, and only then deletes the device's objects. The device being forgotten must still be trusted (`ignore` must not filter it) while `forget` runs, so run it before dropping the old ID from the trust filter.
 5. Old-ID objects on devices that never come back age out through the 30-day window; the user can remove them from Trusted Devices with the existing cleanup option.
 
 Optional: a "Remove devices not seen for 30+ days" action on Trusted Devices, based on `lastSeen` (see Last seen). It is local housekeeping, not an eviction.
@@ -147,7 +148,7 @@ Limits:
 
 Each step can ship alone. Step 1 fixes the impersonation problem.
 
-1. **Keys and signed hello.** Create and store the key. Add `publicKey` to `TrustedPeer` with a Dexie schema bump. The hello carries the key and signature; the UUID is still the ID, hidden from the UI. Legacy records require re-pairing.
+1. **Keys and signed hello.** Create and store the key. Add `publicKey` to `TrustedPeer` (`src/lib/data/model.ts`) with a Dexie schema bump (the current version is 7 in `src/lib/data/db.ts`). The hello carries the key and signature; the UUID is still the ID, hidden from the UI. Legacy records require re-pairing.
 2. **Names and fingerprints in the UI.** Show `name · fingerprint` on Trusted Devices and the peer lists; local rename of a peer.
 3. **Invite link and private room.** `/pair` route, "Paste invite link", inviter approval, group secret, derived room. Remove the Room field and the public lobby.
 4. **Introductions.** Signed introduction records, the "also trusted by" choice list on the new device, an approval request on every existing device. Needs steps 1 and 3 (keys, group secret).
