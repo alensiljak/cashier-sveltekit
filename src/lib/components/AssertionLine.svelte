@@ -25,20 +25,19 @@
 	const failed = $derived(actual !== undefined);
 </script>
 
-<div class="flex min-w-0 grow items-end justify-between gap-2">
+<!-- The whole row is dimmed as one unit so it reads as a quiet checkpoint; a failure is not dimmed. -->
+<div class="flex min-w-0 grow items-end justify-between gap-2 {failed ? '' : 'opacity-70'}">
 	<div class="min-w-0 pl-6" style="text-indent: -1.5rem">
-		<time class="opacity-60">{date}</time>
+		<time>{date}</time>
 		{#if failed}
 			<CircleXIcon class="inline-block size-4 align-text-bottom text-error" />
 		{:else}
-			<CircleCheckBigIcon class="inline-block size-4 align-text-bottom opacity-70" />
+			<CircleCheckBigIcon class="inline-block size-4 align-text-bottom" />
 		{/if}
 		{account}
-		{#if extra}<span class="opacity-50"> · {extra}</span>{/if}
+		{#if extra}<span class="opacity-70"> · {extra}</span>{/if}
 	</div>
-	<div
-		class="shrink-0 text-right whitespace-nowrap tabular-nums {failed ? 'text-error' : 'opacity-70'}"
-	>
+	<div class="shrink-0 text-right whitespace-nowrap tabular-nums {failed ? 'text-error' : ''}">
 		= {amount}
 		<span class="font-mono">{currency}</span>
 		{#if failed}
