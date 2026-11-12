@@ -24,6 +24,7 @@ import type {
 import { settings, SettingKeys, deviceSettings, DeviceSettingKeys } from '#lib/settings';
 import db from '#lib/data/db';
 import { TrustedPeer } from '#lib/data/model';
+import { getDeviceKey, signHello, verifyHello } from '#lib/sync/deviceKey';
 
 const APP_ID = 'cashier-peer-sync';
 
@@ -90,6 +91,16 @@ export interface ActivePeer {
 	/** 8-digit code bound to this connection's DTLS certificates; '' when they can't be read (pairing is then refused). */
 	pairingCode: string;
 	isTrusted: boolean;
+	/** Base64 SPKI the peer presented; set only when its signature over this connection verified. */
+	publicKey?: string;
+	/** The hello carried a key and a signature that verify for this connection. Only a verified peer can be paired. */
+	verified: boolean;
+	/**
+	 * Why a peer whose ID is in the trusted list is not trusted: the record has no key yet
+	 * (`legacy-record`, pairing again fixes it) or its key differs from the one that was paired
+	 * (`key-mismatch`, possibly an impersonator).
+	 */
+	trustIssue?: 'legacy-record' | 'key-mismatch';
 	/** The peer has already confirmed the code and trusted this device. */
 	peerConfirmed: boolean;
 }
@@ -124,6 +135,47 @@ export async function computePairingCode(
 	return (new DataView(hash).getUint32(0) % 100_000_000).toString().padStart(8, '0');
 }
 
+/** `publicKey` and `sig` are missing in the hello of versions before signed hellos. */
+export interface HelloMessage {
+	id: string;
+	name: string;
+	publicKey?: string;
+	sig?: string;
+}
+
+/**
+ * Decides what a hello proves. Trusted means: the signature verifies for this connection *and*
+ * the trusted record with that ID holds the same key. Repeating a trusted ID is not enough.
+ */
+export async function assessHello(
+	data: HelloMessage,
+	fps: { local: string; remote: string } | null,
+	trustedPeers: TrustedPeer[]
+): Promise<Pick<ActivePeer, 'isTrusted' | 'verified' | 'publicKey' | 'trustIssue'>> {
+	// The peer signed with its own fingerprint first, ours second.
+	const verified =
+		!!fps &&
+		typeof data.publicKey === 'string' &&
+		typeof data.sig === 'string' &&
+		(await verifyHello(data.publicKey, data.sig, {
+			id: data.id,
+			name: data.name,
+			signerFp: fps.remote,
+			receiverFp: fps.local
+		}));
+	const record = trustedPeers.find((p) => p.id === data.id);
+	if (!verified) return { isTrusted: false, verified: false };
+
+	const publicKey = data.publicKey;
+	if (!record) return { isTrusted: false, verified, publicKey };
+	if (!record.publicKey)
+		return { isTrusted: false, verified, publicKey, trustIssue: 'legacy-record' };
+	if (record.publicKey !== publicKey) {
+		return { isTrusted: false, verified, publicKey, trustIssue: 'key-mismatch' };
+	}
+	return { isTrusted: true, verified, publicKey };
+}
+
 export class PeerPresence {
 	myId = $state('');
 	myName = $state('');
@@ -138,7 +190,7 @@ export class PeerPresence {
 	activePeerList = $derived(Object.values(this.peersMap));
 
 	room: Room | null = null;
-	private helloAction: MessageAction<{ id: string; name: string }> | null = null;
+	private helloAction: MessageAction<HelloMessage> | null = null;
 	private confirmAction: MessageAction<{ id: string }> | null = null;
 	/** trysteroIds that confirmed the pairing code; kept apart from `peersMap` because the confirmation can arrive before their hello. */
 	private confirmedBy = new Set<string>();
@@ -222,13 +274,10 @@ export class PeerPresence {
 		);
 		this.roomCode = trimmed;
 
-		this.helloAction = this.room.makeAction('hello') as unknown as MessageAction<{
-			id: string;
-			name: string;
-		}>;
+		this.helloAction = this.room.makeAction('hello') as unknown as MessageAction<HelloMessage>;
 
 		this.room.onPeerJoin = (trysteroId) => {
-			this.helloAction!.send({ id: this.myId, name: this.myName }, { target: trysteroId });
+			void this.sendHello(trysteroId);
 		};
 
 		this.confirmAction = this.room.makeAction('pair-confirm') as unknown as MessageAction<{
@@ -251,7 +300,8 @@ export class PeerPresence {
 						{ id: data.id, fingerprint: fps.remote }
 					)
 				: '';
-			const isTrusted = this.trustedPeers.some((p) => p.id === data.id);
+			const assessed = await assessHello(data, fps, this.trustedPeers);
+			const isTrusted = assessed.isTrusted;
 			this.peersMap = {
 				...this.peersMap,
 				[trysteroId]: {
@@ -259,7 +309,7 @@ export class PeerPresence {
 					persistentId: data.id,
 					name: data.name,
 					pairingCode: code,
-					isTrusted,
+					...assessed,
 					peerConfirmed: this.confirmedBy.has(trysteroId)
 				}
 			};
@@ -295,6 +345,26 @@ export class PeerPresence {
 		// killed rather than gracefully unloaded) by evicting any peer whose
 		// underlying RTCPeerConnection is no longer actually connected.
 		this.pruneTimer = window.setInterval(() => this.pruneStaleConnections(), 5000);
+	}
+
+	/** Sends this device's hello, signed for the connection to `trysteroId` (unsigned if its fingerprints can't be read). */
+	private async sendHello(trysteroId: string): Promise<void> {
+		try {
+			const fps = connectionFingerprints(this.room?.getPeers()[trysteroId]);
+			const key = await getDeviceKey();
+			const hello: HelloMessage = { id: this.myId, name: this.myName, publicKey: key.publicKey };
+			if (fps) {
+				hello.sig = await signHello(key.privateKey, {
+					id: this.myId,
+					name: this.myName,
+					signerFp: fps.local,
+					receiverFp: fps.remote
+				});
+			}
+			await this.helloAction?.send(hello, { target: trysteroId });
+		} catch (e) {
+			console.error('Could not send hello', e);
+		}
 	}
 
 	/** Drops any `peersMap` entry whose RTCPeerConnection has gone dead without `onPeerLeave` firing. */
@@ -337,9 +407,20 @@ export class PeerPresence {
 	/** Trusts a peer after the user confirmed the pairing code, and tells the peer so its UI can show it. */
 	async trust(peer: ActivePeer): Promise<TrustedPeer> {
 		if (!peer.pairingCode) throw new Error('Cannot pair: connection fingerprint unavailable');
+		if (!peer.verified || !peer.publicKey) {
+			throw new Error(
+				'Cannot pair: this device did not prove its identity. Update it and try again.'
+			);
+		}
+		if (peer.trustIssue === 'key-mismatch') {
+			throw new Error(
+				'Cannot pair: this device presents a different key than the trusted one. Remove the trusted device first.'
+			);
+		}
 		const tp = new TrustedPeer();
 		tp.id = peer.persistentId;
 		tp.name = peer.name;
+		tp.publicKey = peer.publicKey;
 		tp.trustedAt = new Date().toISOString();
 		tp.lastSeen = new Date().toISOString();
 		await db.peers.put(tp);

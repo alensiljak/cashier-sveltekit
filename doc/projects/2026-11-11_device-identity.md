@@ -1,6 +1,6 @@
 # Device Identity: Public-Key Pairing for Multi-Device Sync
 
-Status: planned, not started.
+Status: in progress. Step 1 (keys and signed hello) is implemented: `src/lib/sync/deviceKey.ts`, `assessHello` in `peerPresence.svelte.ts`, Dexie v8 `deviceKeys` store. Its hello also signs the (still UUID) `id`. Not yet done in the UI: Trusted Devices does not yet flag records without a key.
 
 ## Problem
 
@@ -23,7 +23,7 @@ The UUID is also shown to users (Trusted Devices page), where it is hard to read
 
 ## Design
 
-### 1. Device key pair and ID
+### ✅ 1. Device key pair and ID
 
 - On first use, generate an ECDSA P-256 key pair with WebCrypto, `extractable: false`. Store the `CryptoKeyPair` in IndexedDB next to the other device settings.
 - **Device ID = first 16 bytes of SHA-256(public key SPKI), base32 lowercase** (26 characters, no `.`, safe in S3 keys and WebDAV file names). It replaces the UUID in the trust list, the bucket layout (`manifests/<id>.json`, `crdt/<kind>/<id>.<seq>.upd`, `<id>.ack`) and the hello. Checked: `parseObjectKey` in `deltaSync.ts` matches the device with `[^/.]+`, so a 26-character base32 ID parses; nothing assumes the UUID shape (hyphens, length).
@@ -37,7 +37,7 @@ The UUID is also shown to users (Trusted Devices page), where it is hard to read
 - The receiver reads both fingerprints with `connectionFingerprints()`, swaps their order for the peer's view, and verifies the signature.
 - A peer is trusted only if the signature verifies **and** a `TrustedPeer` with the derived ID has the same `publicKey`.
 - Binding to DTLS fingerprints stops replay and relay: a captured hello fails on any other connection.
-- **Option to evaluate in step 1:** trystero's `onPeerHandshake(peerId, send, receive, isInitiator)` callback (in `JoinRoomCallbacks`, with `handshakeTimeoutMs`) runs before a peer is activated and fails the connection if it throws. The signed hello could run there instead of in a post-join `hello` action, so an unverified peer never gets an active connection. Cost: untrusted peers are rejected before the UI can list them, so the invite flow (step 3) still needs the hello for joiners not yet trusted. Decide when implementing step 1.
+- **Decision: the signature check stays in the post-join `hello` action** (not trystero's `onPeerHandshake`). Legacy peers with an unsigned hello must stay visible as "needs re-pairing" instead of being dropped, and an unknown joiner must reach the inviter for approval, so trust is decided in the hello handler either way. See Hardening (step 7) for the handshake as an optional extra.
 - Existing `peersMap[fromId]?.isTrusted` checks in [peerConnection.svelte.ts](/src/lib/sync/peerConnection.svelte.ts) stay as they are. Only where `isTrusted` is set changes.
 
 ### 3. Pairing by invite link
@@ -154,7 +154,7 @@ Each step can ship alone. Step 1 fixes the impersonation problem.
 4. **Introductions.** Signed introduction records, the "also trusted by" choice list on the new device, an approval request on every existing device. Needs steps 1 and 3 (keys, group secret).
 5. **Switch the ID to the key-derived one, with signed objects.** Migration as above for peers, S3 and WebDAV together (they share `getDeviceId()`), `legacyIds`, self-`forget`, `devices/<id>.json`, and signing and verifying every bucket object. `lastSeen` from sync modification dates ships here too.
 6. **Eviction.** Revocation records, gossip over peer sync and the bucket, tombstones, group secret rotation. Needs steps 1 and 3; the bucket part needs step 5.
-7. **Later, optional:** QR code for the invite; remove-unseen-devices action.
+7. **Later, optional:** QR code for the invite; remove-unseen-devices action; **handshake hardening**: also verify the signature in trystero's `onPeerHandshake(peerId, send, receive, isInitiator)` (`JoinRoomCallbacks`, with `handshakeTimeoutMs`), so a peer with an invalid signature never gets an active connection. It would reject only bad signatures, not unknown keys (pairing needs those). Unchecked: whether the DTLS fingerprints are readable inside the callback, and how a failed handshake treats legacy unsigned peers (they would be dropped, not shown as "needs re-pairing"), so apply it only once legacy hellos are no longer supported.
 
 ## Tests to add
 

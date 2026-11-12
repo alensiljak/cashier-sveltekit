@@ -1,0 +1,104 @@
+/**
+ * The device's signing key and the signed `hello` of peer sync (see
+ * doc/projects/2026-11-11_device-identity.md, steps 1 and 2).
+ *
+ * The private key is a non-extractable WebCrypto ECDSA P-256 key kept in IndexedDB, so a copy of
+ * the site's data does not carry it out as bytes. The public key travels as base64 SPKI.
+ */
+import db from '#lib/data/db';
+
+const HELLO_TAG = 'cashier-hello-v1';
+const KEY_RECORD_ID = 'device';
+const KEY_ALGORITHM = { name: 'ECDSA', namedCurve: 'P-256' } as const;
+const SIGN_ALGORITHM = { name: 'ECDSA', hash: 'SHA-256' } as const;
+
+export interface DeviceKey {
+	privateKey: CryptoKey;
+	/** Base64 SPKI of the public key. */
+	publicKey: string;
+}
+
+/** What a hello signature covers. `signerFp` is the signer's own DTLS fingerprint, `receiverFp` the other end's. */
+export interface HelloSignInput {
+	id: string;
+	name: string;
+	signerFp: string;
+	receiverFp: string;
+}
+
+function toBase64(bytes: ArrayBuffer): string {
+	let s = '';
+	for (const b of new Uint8Array(bytes)) s += String.fromCharCode(b);
+	return btoa(s);
+}
+
+function fromBase64(text: string): Uint8Array<ArrayBuffer> {
+	const s = atob(text);
+	const bytes = new Uint8Array(s.length);
+	for (let i = 0; i < s.length; i++) bytes[i] = s.charCodeAt(i);
+	return bytes;
+}
+
+/**
+ * The signed bytes. JSON of an array keeps the fields apart whatever the name contains, and the
+ * two fingerprints in signer/receiver order tie the signature to this one connection.
+ */
+function helloMessage({ id, name, signerFp, receiverFp }: HelloSignInput): Uint8Array<ArrayBuffer> {
+	return new TextEncoder().encode(JSON.stringify([HELLO_TAG, id, name, signerFp, receiverFp]));
+}
+
+export async function generateDeviceKey(): Promise<{ privateKey: CryptoKey; publicKey: string }> {
+	const pair = await crypto.subtle.generateKey(KEY_ALGORITHM, false, ['sign', 'verify']);
+	const spki = await crypto.subtle.exportKey('spki', pair.publicKey);
+	return { privateKey: pair.privateKey, publicKey: toBase64(spki) };
+}
+
+export async function signHello(privateKey: CryptoKey, input: HelloSignInput): Promise<string> {
+	return toBase64(await crypto.subtle.sign(SIGN_ALGORITHM, privateKey, helloMessage(input)));
+}
+
+/** True when `sig` is the signature of `input` by `publicKey`. Any malformed input is just false. */
+export async function verifyHello(
+	publicKey: string,
+	sig: string,
+	input: HelloSignInput
+): Promise<boolean> {
+	try {
+		const key = await crypto.subtle.importKey('spki', fromBase64(publicKey), KEY_ALGORITHM, false, [
+			'verify'
+		]);
+		return await crypto.subtle.verify(SIGN_ALGORITHM, key, fromBase64(sig), helloMessage(input));
+	} catch {
+		return false;
+	}
+}
+
+let loading: Promise<DeviceKey> | null = null;
+
+/** This device's key, created on first use. */
+export function getDeviceKey(): Promise<DeviceKey> {
+	loading ??= loadOrCreate().catch((e) => {
+		loading = null;
+		throw e;
+	});
+	return loading;
+}
+
+async function loadOrCreate(): Promise<DeviceKey> {
+	const existing = await db.deviceKeys.get(KEY_RECORD_ID);
+	if (existing) return { privateKey: existing.privateKey, publicKey: existing.publicKey };
+
+	const fresh = await generateDeviceKey();
+	// Another tab may have created a key while this one was generating; the first one stays.
+	return db.transaction('rw', db.deviceKeys, async () => {
+		const winner = await db.deviceKeys.get(KEY_RECORD_ID);
+		if (winner) return { privateKey: winner.privateKey, publicKey: winner.publicKey };
+		await db.deviceKeys.put({ id: KEY_RECORD_ID, ...fresh });
+		return fresh;
+	});
+}
+
+/** Forgets the in-memory copy (tests that clear the database). */
+export function resetDeviceKeyCache(): void {
+	loading = null;
+}

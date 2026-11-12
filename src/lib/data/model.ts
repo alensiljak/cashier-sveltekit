@@ -172,6 +172,11 @@ export class TrustedPeer {
 	id: string = '';
 	name: string = '';
 	trustedAt: string = '';
+	/**
+	 * Base64 SPKI of the key this peer proved at pairing. Peer sync trusts the peer only while its
+	 * signed hello carries this key; records without one (older versions, S3/WebDAV) must re-pair.
+	 */
+	publicKey?: string;
 	lastSeen?: string;
 	/** The peer may pull our data, but nothing it sends (live updates, sync pushes, its WebDAV file) is merged here. */
 	readOnly?: boolean;

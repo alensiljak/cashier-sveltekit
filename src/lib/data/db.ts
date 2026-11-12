@@ -21,6 +21,7 @@ interface CashierDatabase extends Dexie {
 	deviceSettings: Table;
 	peers: Table;
 	peerSyncBaseline: Table;
+	deviceKeys: Table;
 	// xacts: Table;
 }
 
@@ -110,6 +111,16 @@ db.version(7).stores({
 	deviceSettings: 'key',
 	peers: 'id',
 	peerSyncBaseline: '[endpointId+path]'
+});
+
+// The device's signing key pair (see sync/deviceKey.ts). Holds a non-extractable CryptoKey.
+db.version(8).stores({
+	scheduled: null,
+	settings: 'key',
+	deviceSettings: 'key',
+	peers: 'id',
+	peerSyncBaseline: '[endpointId+path]',
+	deviceKeys: 'id'
 });
 
 // Mappings

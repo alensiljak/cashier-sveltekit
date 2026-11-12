@@ -565,15 +565,32 @@
 									{:else}
 										<div class="bg-base-300 rounded-box flex items-center gap-2 p-3">
 											<span class="font-semibold flex-1">{peer.name}</span>
-											{#if peer.peerConfirmed}
-												<span class="badge badge-warning badge-sm">Wants to pair</span>
+											{#if !peer.verified}
+												<span
+													class="badge badge-ghost badge-sm"
+													title="This device did not prove its identity. It may need an update."
+													>Unverified</span
+												>
+											{:else if peer.trustIssue === 'key-mismatch'}
+												<span
+													class="badge badge-error badge-sm"
+													title="This device uses a different key than the trusted device with the same ID. Remove the trusted device to pair again."
+													>Key changed</span
+												>
+											{:else}
+												{#if peer.peerConfirmed}
+													<span class="badge badge-warning badge-sm">Wants to pair</span>
+												{/if}
+												{#if peer.trustIssue === 'legacy-record'}
+													<span class="badge badge-info badge-sm">Pair again</span>
+												{/if}
+												<button
+													class="btn btn-primary btn-sm"
+													onclick={() => (pairingTargetId = peer.trysteroId)}
+												>
+													Pair
+												</button>
 											{/if}
-											<button
-												class="btn btn-primary btn-sm"
-												onclick={() => (pairingTargetId = peer.trysteroId)}
-											>
-												Pair
-											</button>
 										</div>
 									{/if}
 								</li>
