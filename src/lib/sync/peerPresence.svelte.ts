@@ -33,6 +33,9 @@ import {
 	verifyHello,
 	type DeviceKey
 } from '#lib/sync/deviceKey';
+import { matchLegacy, peerOf, replaceTrustedRecord } from '#lib/sync/identityMigration';
+import { isDerivedId } from '#lib/sync/signedObjects';
+import { getDeviceId } from '#lib/sync/ydocDevices';
 import {
 	deriveSyncPassword,
 	deriveSyncRoom,
@@ -116,6 +119,12 @@ export interface ActivePeer {
 	 * (`key-mismatch`, possibly an impersonator).
 	 */
 	trustIssue?: 'legacy-record' | 'key-mismatch';
+	/**
+	 * This device has a key-derived ID and replaces a trusted record: `rekey` (same key; done without
+	 * asking) or `approve` (a key-less record it names as its previous ID; a person confirms).
+	 * `from` is the ID of that record. See identityMigration.ts.
+	 */
+	migration?: { kind: 'rekey' | 'approve'; from: string };
 }
 
 /** First DTLS `a=fingerprint` in an SDP blob, or null. */
@@ -150,17 +159,19 @@ export async function joinTrysteroRoom(opts: {
 
 /** This device's hello for the connection with `fps`; unsigned when the fingerprints can't be read. */
 export async function buildHello(
-	me: { id: string; name: string },
+	me: { id: string; name: string; previousId?: string },
 	key: DeviceKey,
 	fps: ConnectionFingerprints | null
 ): Promise<HelloMessage> {
 	const hello: HelloMessage = { id: me.id, name: me.name, publicKey: key.publicKey };
+	if (me.previousId) hello.previousId = me.previousId;
 	if (fps) {
 		hello.sig = await signHello(key.privateKey, {
 			id: me.id,
 			name: me.name,
 			signerFp: fps.local,
-			receiverFp: fps.remote
+			receiverFp: fps.remote,
+			previousId: me.previousId
 		});
 	}
 	return hello;
@@ -172,6 +183,8 @@ export type HelloMessage = {
 	name: string;
 	publicKey?: string;
 	sig?: string;
+	/** The legacy UUID of a device that has switched to a key-derived ID (signed with the rest). */
+	previousId?: string;
 };
 
 /** Introductions of other trusted devices, sent to a trusted device (see introductions.ts). */
@@ -186,7 +199,10 @@ export async function assessHello(
 	fps: ConnectionFingerprints | null,
 	trustedPeers: TrustedPeer[]
 ): Promise<
-	Pick<ActivePeer, 'isTrusted' | 'verified' | 'publicKey' | 'fingerprint' | 'trustIssue'>
+	Pick<
+		ActivePeer,
+		'isTrusted' | 'verified' | 'publicKey' | 'fingerprint' | 'trustIssue' | 'migration'
+	>
 > {
 	// The peer signed with its own fingerprint first, ours second.
 	const verified =
@@ -197,15 +213,30 @@ export async function assessHello(
 			id: data.id,
 			name: data.name,
 			signerFp: fps.remote,
-			receiverFp: fps.local
+			receiverFp: fps.local,
+			previousId: data.previousId
 		}));
 	const record = trustedPeers.find((p) => p.id === data.id);
 	if (!verified) return { isTrusted: false, verified: false };
 
 	const publicKey = data.publicKey;
+	// A key-derived ID that is not the hash of the key it comes with is a lie, whoever signed it.
+	if (isDerivedId(data.id) && (await deviceIdFromPublicKey(publicKey!)) !== data.id) {
+		return { isTrusted: false, verified: false };
+	}
 	const fingerprint = await fingerprintOfKey(publicKey!);
 	const shown = { verified, publicKey, fingerprint };
-	if (!record) return { isTrusted: false, ...shown };
+	if (!record) {
+		const match = matchLegacy(
+			{ id: data.id, publicKey: publicKey!, previousId: data.previousId },
+			trustedPeers
+		);
+		return {
+			isTrusted: false,
+			...shown,
+			migration: match ? { kind: match.kind, from: match.record.id } : undefined
+		};
+	}
 	if (!record.publicKey) return { isTrusted: false, ...shown, trustIssue: 'legacy-record' };
 	if (record.publicKey !== publicKey) {
 		return { isTrusted: false, ...shown, trustIssue: 'key-mismatch' };
@@ -242,12 +273,7 @@ export class PeerPresence {
 
 	/** Loads identity/room/trusted-peers from storage. Call once before `join()`. */
 	async init(): Promise<void> {
-		let id = await deviceSettings.get<string>(DeviceSettingKeys.peerId);
-		if (!id) {
-			id = crypto.randomUUID();
-			await deviceSettings.set(DeviceSettingKeys.peerId, id);
-		}
-		this.myId = id;
+		this.myId = await getDeviceId();
 
 		const savedName = await deviceSettings.get<string>(DeviceSettingKeys.peerName);
 		this.myName = savedName ?? 'My Device';
@@ -380,7 +406,17 @@ export class PeerPresence {
 
 	private async handleHello(data: HelloMessage, trysteroId: string): Promise<void> {
 		const fps = connectionFingerprints(this.room?.getPeers()[trysteroId]);
-		const assessed = await assessHello(data, fps, this.trustedPeers);
+		let assessed = await assessHello(data, fps, this.trustedPeers);
+		if (assessed.migration?.kind === 'rekey') {
+			// The same key that was paired under the old ID signed this hello: the same device.
+			await this.trustVerified({
+				id: data.id,
+				name: data.name,
+				publicKey: assessed.publicKey!,
+				previousId: data.previousId
+			});
+			assessed = await assessHello(data, fps, this.trustedPeers);
+		}
 		const isTrusted = assessed.isTrusted;
 		// A trusted peer is shown under the label this device gave it, not the name it announces.
 		const label = isTrusted
@@ -477,7 +513,10 @@ export class PeerPresence {
 		const intro: PendingIntroduction | undefined = await db.introductions.get(id);
 		if (!intro || intro.status !== 'pending') return;
 		// Trust the first introducer still trusted: it is whom this approval rests on.
-		const introducer = intro.introducedBy.find((b) => this.trustedPeers.some((p) => p.id === b.id));
+		// The introducer may have switched to a key-derived ID since it vouched: find it by either.
+		const introducer = intro.introducedBy
+			.map((b) => peerOf(this.trustedPeers, b.id))
+			.find((p) => p !== undefined);
 		if (!introducer) {
 			await db.introductions.delete(id);
 			await this.reloadIntroductions();
@@ -504,8 +543,9 @@ export class PeerPresence {
 	private async sendHello(trysteroId: string): Promise<void> {
 		try {
 			const fps = connectionFingerprints(this.room?.getPeers()[trysteroId]);
+			const previousId = await deviceSettings.get<string>(DeviceSettingKeys.previousDeviceId);
 			const hello = await buildHello(
-				{ id: this.myId, name: this.myName },
+				{ id: this.myId, name: this.myName, previousId: previousId || undefined },
 				await getDeviceKey(),
 				fps
 			);
@@ -592,7 +632,15 @@ export class PeerPresence {
 		publicKey: string;
 		/** The trusted device whose introduction this approval rests on. */
 		addedBy?: string;
+		/** The legacy ID the device names, which a key-less record of it is found by. */
+		previousId?: string;
 	}): Promise<TrustedPeer> {
+		// A device that switched to a key-derived ID replaces its old record instead of being added next to it.
+		const legacy = matchLegacy(
+			{ id: peer.id, publicKey: peer.publicKey, previousId: peer.previousId },
+			await db.peers.toArray()
+		);
+		if (legacy) await replaceTrustedRecord(legacy.record.id, peer);
 		const existing: TrustedPeer | undefined = await db.peers.get(peer.id);
 		if (existing?.publicKey && existing.publicKey !== peer.publicKey) {
 			throw new Error(
@@ -610,6 +658,7 @@ export class PeerPresence {
 		tp.trustedAt = sameKey ? existing.trustedAt : now;
 		tp.lastSeen = now;
 		tp.readOnly = existing?.readOnly;
+		tp.legacyIds = existing?.legacyIds;
 		// Pairing directly is a stronger basis than an introduction, so it clears `addedBy`.
 		tp.addedBy = peer.addedBy ?? (sameKey ? existing.addedBy : undefined);
 		await db.peers.put(tp);
@@ -621,11 +670,34 @@ export class PeerPresence {
 		const updated = { ...this.peersMap };
 		for (const [tid, p] of Object.entries(updated)) {
 			if (p.persistentId === peer.id && p.publicKey === peer.publicKey) {
-				updated[tid] = { ...p, isTrusted: true, trustIssue: undefined, name: tp.name };
+				updated[tid] = {
+					...p,
+					isTrusted: true,
+					trustIssue: undefined,
+					migration: undefined,
+					name: tp.name
+				};
 			}
 		}
 		this.peersMap = updated;
 		return tp;
+	}
+
+	/**
+	 * A person confirms that the device in the room (which names a legacy ID of a key-less trusted
+	 * record) is that device: its record is replaced by the one under the key-derived ID.
+	 */
+	async approveMigration(trysteroId: string): Promise<void> {
+		const peer = this.peersMap[trysteroId];
+		if (peer?.migration?.kind !== 'approve' || !peer.publicKey) {
+			throw new Error('This device is not waiting to replace a trusted one.');
+		}
+		await this.trustVerified({
+			id: peer.persistentId,
+			name: peer.name,
+			publicKey: peer.publicKey,
+			previousId: peer.migration.from
+		});
 	}
 
 	async removeTrust(persistentId: string): Promise<void> {

@@ -91,7 +91,11 @@ Pairing a new device C with one existing device A does not require a full invite
 
 Why it matters: a bucket object is attributed to a device by its file name (`crdt/<kind>/<id>.<seq>.upd`), and readers merge it when that device is trusted. Every device, including a lost, stolen or evicted one, holds the shared bucket credentials and passphrase, so it can write an object under another device's name and readers will merge it. The AES-GCM binding of an object to its key (format version 2) stops an object being moved to another name, but not a new one being written, since the writer has the passphrase. A signature ties an object to its author's key, which a passphrase holder does not have. It is also what makes eviction enforceable for the bucket: without it, "readers ignore the evicted device's objects" can be bypassed by writing under a trusted ID.
 
-- Each object gets a signature over `"cashier-obj-v1" | objectKey | SHA-256(stored bytes)` from its author's key, kept in the object header (a new format version). Verifying needs no decryption.
+- Each object gets a signature over `"cashier-obj-v1" | objectKey | author | SHA-256(content)` from its author's key, kept in an envelope around the content.
+- **As built (5a):** the envelope (`CSO3 | idLength | author id | 64-byte signature | content`) sits _inside_ the encryption, not around it (`signedObjects.ts`). Reason: WebDAV can convert a folder between encrypted and plain, and a signature over the stored bytes would break on every conversion, which only the author could repair. The cost is that verifying needs the decryption first, which every reader does anyway. S3 manifests (`manifests/<id>.json`) are signed too; the data files under `data/` are not (their hashes are in the signed manifests).
+- **Acceptance rules:** a signed object is accepted when its author is key-derived, matches the author in its name, and the author's key is known and hashes to the ID. An unsigned object is accepted only from a legacy (non-key-derived) author, until it is forgotten. An unsigned snapshot is accepted only while this device itself still has a legacy ID. A rejected object is skipped and reported (`ObjectRejectedError`), and one rejected delta stops only that device's run; a rejected snapshot is skipped and the deltas are still read; a rejected `.ack` is ignored.
+- **Device records (5a):** `devices/<id>.json` (WebDAV: `cashier-device-<id>.json`) is self-certifying: `{ v, name, publicKey, previousId?, sig }`, where the ID must be the hash of the key and the key signs the rest. It is not wrapped in an envelope, as it carries its own key. The key of an author is looked up in the Trusted Devices list first, then in the store.
+- **Inert until the switch:** a device with a legacy ID signs nothing and publishes no record (`loadBucketSigning`, `announceDevice`); only the checks on key-derived authors are active.
 - The author is the ID in the file name. Snapshots and `revocations/` objects carry the author ID in the signed header (a snapshot has no device in its name). A snapshot's signature says who compacted, not who wrote the operations in it, so only snapshots by trusted devices are applied.
 - Readers look up the author's `publicKey` (trusted list, or `devices/<id>.json`) and skip objects with a missing or wrong signature, or from an untrusted or revoked author.
 - Each device publishes `devices/<id>.json` with `{ name, publicKey, previousId? }`. "Trust this device" on the S3 and WebDAV pages shows the name and fingerprint for comparison, as the invite does for peers.
@@ -172,6 +176,37 @@ Each step can ship alone. Step 1 fixes the impersonation problem.
 - `lastSeen` takes the newest of hello time and object modification dates.
 - Introductions: the new device is offered only non-revoked devices of the introducer and trusts only the ticked ones; an existing device queues a request for an introduction from a trusted, non-read-only introducer and trusts the device only after approval, and refuses one from a read-only or unknown device; a tombstoned key is refused; the chosen device's hello must match the introduced key.
 - Signed objects: an object written under a trusted device's name without a valid signature is skipped; a valid signature by a revoked or untrusted author is skipped; a legacy-ID (unsigned) object is accepted until compacted; verification needs no decryption.
+
+## Step 5 plan and decisions
+
+Sub-steps (the switch comes last, so the earlier ones change nothing until it is turned on):
+
+- ✅ **5a. Signed bucket objects.** `signedObjects.ts`, `deviceRecords.ts`, S3 and WebDAV stores, rejection handling in `deltaSync.ts`. Tests: `tests/unit/signedObjects.test.ts`.
+- ✅ **5b. Trust model.** `identityMigration.ts`, `TrustedPeer.legacyIds`, `previousId` in the hello, `assessHello` / `trustVerified` / `approveMigration` in `peerPresence.svelte.ts`. Tests: `tests/unit/identityMigration.test.ts`. As built:
+  - **Two ways a switched device is recognised.** _Rekey:_ a record under the old ID that holds the same key. The new hello is signed by that key, so the record is re-keyed with no prompt (this covers every device paired in steps 1–4). _Approve:_ a key-less record (trusted through S3/WebDAV) that the device names as its signed `previousId`; Peer Sync shows "Same device? Replace" and `approveMigration` does it. `previousId` is part of the signature only when present, so older hellos still verify.
+  - **A key-derived ID must be the hash of its key**, in hellos and introductions; otherwise the hello is unverified / the introduction is dropped.
+  - **Re-keying** (`replaceTrustedRecord`, one transaction) keeps the label, read-only flag, `addedBy`, trust date, and moves the Beancount sync baselines; the old UUID goes into `legacyIds`.
+  - **Bucket trust:** `loadIgnoreReasons` also accepts `legacyIds`; `loadTrusted` / `loadTrustedIds` (compaction and reset) deliberately do not, so a device that switched does not hold them back. The S3/WebDAV device lists and the journal show legacy IDs under the device's name; the journal counts a record whose origin is this device's `previousDeviceId` as its own.
+  - `trustDevice(id, name, publicKey?)` stores the key and fingerprint and refuses a key that does not hash to the ID. **Not yet wired (5d):** the S3/WebDAV pages passing the key from the device record, and the bucket-only "replace this device?" prompt (a device record whose `previousId` names a key-less record).
+  - Not touched yet: the per-device record counts in `YdocDevices.svelte` (`originCounts`) are by origin ID and do not merge legacy and new IDs (5d).
+- ✅ **5c. The switch and migration.** `deviceIdSwitch.ts`, `getDeviceId()`, `DeltaSync.retire`, `DeltaState.owner` / `retired`. Tests: `tests/unit/deviceIdSwitch.test.ts`. As built:
+  - **New devices** derive their ID from their key at first use (`getDeviceId`). **Existing devices** keep their UUID until `switchDeviceIdIfReady()` runs, once per launch from the root layout after the app has initialised.
+  - **When it switches:** when no S3 bucket or WebDAV folder the device syncs with is missing any of its changes (`hasUpload()` is false for every store and remote; local check only, no network), or at once when it syncs with none. Otherwise it waits for a later launch. Limit: a remote that is configured but never reachable keeps the device on its UUID.
+  - **What it writes:** `previousDeviceId` first, then `peerId`, so an interrupted launch is finished by the next. The UUID stays in `previousDeviceId` for good: records it created carry it as `origin`, and it goes into every hello (signed) so a peer with a key-less record can match it.
+  - **Delta numbering:** `DeltaState.owner` records which ID `nextSeq` and `acked` belong to; when the ID differs (or an older state meets a key-derived ID), the device restarts at delta 1 and drops the old acknowledgement. The registry also rebuilds a sync whose device ID changed.
+  - **Retiring the old objects:** after a full sync (`afterSync` with `compact`), `DeltaSync.retire(previousId)` runs `forget` once per store: merge, upload, snapshot, delete what was written under the UUID, then mark it in `DeltaState.retired`. A merge error aborts it and it is tried again at the next sync. `loadIgnoreReasons` lets the device's own `previousDeviceId` through meanwhile.
+  - **Peers** re-key the record on the next hello (5b); introductions and "added by" find an introducer that switched through its `legacyIds`.
+  - **Known limit:** a device still on the old app version that compacts after another has switched writes an unsigned snapshot, which switched devices reject, so their `compact` and `retire` report an error until it updates.
+- **5d. Last seen and labels.** `lastSeen` from sync modification dates; names and fingerprints in the S3/WebDAV device lists.
+
+Decisions:
+
+- **Bucket-only devices migrate through a prompt.** A `devices/<newId>.json` whose `previousId` matches a trusted record asks "replace this device?", showing name and fingerprint. Nothing is trusted until a person confirms.
+- **Legacy objects stay accepted until forgotten** (no bound on their numbers). The manual clean-up on Trusted Devices is the remedy.
+- **The switch happens at once**, on the first launch after the update, when the outbox is empty and a sync succeeded. Approvals follow later: when a peer next connects (Peer Sync, "Introduced devices" / re-pairing prompt) or when the device is seen in a bucket.
+- **Sign everything practical**, without extra machinery for edge cases.
+
+Known limits of 5a: a forged object under a trusted name blocks `compact` and `forget` for that device (they refuse to run while a merge reports errors; "Remove anyway" still works). A device on an older app version that is not yet switched keeps writing unsigned snapshots, which switched devices ignore.
 
 ## Open questions
 

@@ -18,6 +18,7 @@ import {
 	verifyMessage,
 	type DeviceKey
 } from '#lib/sync/deviceKey';
+import { isDerivedId } from '#lib/sync/signedObjects';
 
 const INTRO_TAG = 'cashier-intro-v1';
 const MAX_NAME_LENGTH = 100;
@@ -170,6 +171,8 @@ export async function receiveIntroductions(
 		} catch {
 			continue;
 		}
+		// A key-derived ID that is not the hash of the key is not a real one.
+		if (isDerivedId(subject.id) && subject.id !== keyId) continue;
 		const existing = byKey.get(keyId);
 		const record: PendingIntroduction = existing ?? {
 			id: keyId,

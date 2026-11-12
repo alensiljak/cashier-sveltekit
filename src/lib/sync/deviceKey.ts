@@ -25,14 +25,25 @@ export interface HelloSignInput {
 	name: string;
 	signerFp: string;
 	receiverFp: string;
+	/** The legacy ID this device had before its ID was derived from its key; covered by the signature when present. */
+	previousId?: string;
 }
 
 /**
  * The signed bytes. JSON of an array keeps the fields apart whatever the name contains, and the
- * two fingerprints in signer/receiver order tie the signature to this one connection.
+ * two fingerprints in signer/receiver order tie the signature to this one connection. A hello
+ * without `previousId` signs exactly what it did before the field existed.
  */
-function helloMessage({ id, name, signerFp, receiverFp }: HelloSignInput): Uint8Array<ArrayBuffer> {
-	return new TextEncoder().encode(JSON.stringify([HELLO_TAG, id, name, signerFp, receiverFp]));
+function helloMessage({
+	id,
+	name,
+	signerFp,
+	receiverFp,
+	previousId
+}: HelloSignInput): Uint8Array<ArrayBuffer> {
+	const fields = [HELLO_TAG, id, name, signerFp, receiverFp];
+	if (previousId) fields.push(previousId);
+	return new TextEncoder().encode(JSON.stringify(fields));
 }
 
 export async function generateDeviceKey(): Promise<{ privateKey: CryptoKey; publicKey: string }> {

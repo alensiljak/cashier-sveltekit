@@ -11,7 +11,9 @@
  * put back.
  */
 import { deviceSettings, DeviceSettingKeys } from '#lib/settings';
+import { loadBucketSigning } from '#lib/sync/deviceRecords';
 import type { RemoteStore } from '#lib/sync/remoteStore';
+import { SignedRemoteStore } from '#lib/sync/signedObjects';
 import type { WebDavClient } from '#lib/utils/webdav';
 import { EncryptedRemoteStore } from './encryptedRemoteStore';
 import { createKeyParams, decrypt, encrypt, openKey, type KeyParams } from './s3Crypto';
@@ -104,18 +106,26 @@ export async function remoteFor(client: WebDavClient): Promise<RemoteStore> {
 	const { enabled, passphrase } = await loadWebDavEncryption();
 	const params = await readKeyParams(client);
 
+	// Signing sits above the encryption (see signedObjects.ts). Device records are looked up in
+	// the store below it, which only decrypts.
+	const signing = await loadBucketSigning();
+	const signed = (store: RemoteStore): RemoteStore => {
+		signing.directory.bind(store);
+		return new SignedRemoteStore(store, signing.ctx);
+	};
+
 	if (!enabled) {
 		if (params) throw new EncryptionMismatchError('needs-decrypt');
-		return plain;
+		return signed(plain);
 	}
 	if (!passphrase)
 		throw new Error('Set an encryption passphrase in the WebDAV configuration first.');
 	if (!params) {
 		if ((await plain.list('crdt/')).length) throw new EncryptionMismatchError('needs-encrypt');
 		// An empty folder has nothing to convert: it starts out encrypted.
-		return new EncryptedRemoteStore(plain, await createOrOpenKey(client, passphrase));
+		return signed(new EncryptedRemoteStore(plain, await createOrOpenKey(client, passphrase)));
 	}
-	return new EncryptedRemoteStore(plain, await keyFor(client, passphrase, params));
+	return signed(new EncryptedRemoteStore(plain, await keyFor(client, passphrase, params)));
 }
 
 async function opens(key: CryptoKey, body: Uint8Array, aad: Uint8Array<ArrayBuffer>) {

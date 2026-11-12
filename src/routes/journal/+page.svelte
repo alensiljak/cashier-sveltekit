@@ -8,6 +8,7 @@
 	import { Xact } from '#lib/data/model';
 	import db from '#lib/data/db';
 	import { getDeviceId } from '#lib/sync/ydocDevices';
+	import { deviceSettings, DeviceSettingKeys } from '#lib/settings';
 	import { xact, xactId } from '#lib/data/mainStore';
 	import type { StoredXact, XactId } from '#lib/storage/crdtXactStore';
 	import { getXactStore, subscribeXactStore } from '#lib/storage/xactStoreRegistry';
@@ -25,20 +26,27 @@
 	let listContainer = $state<HTMLElement | null>(null);
 
 	let storedXacts: StoredXact[] = $state([]);
-	let ownDeviceId = $state('');
+	/** This device's ID, and the legacy one it had before its ID was derived from its key. */
+	let ownDeviceIds = $state<string[]>([]);
 	let peerNames = $state<Record<string, string>>({});
 
 	/** Name of the device that created a record, or null for records made here (or without an origin). */
 	function foreignOrigin(origin?: string): string | null {
-		if (!origin || origin === ownDeviceId) return null;
+		if (!origin || ownDeviceIds.includes(origin)) return null;
 		return peerNames[origin] ?? `Device ${origin.slice(0, 6)}`;
 	}
 
 	async function loadXacts() {
 		const result = await (await getXactStore()).list();
 		if (result.some((r) => r.origin)) {
-			ownDeviceId = await getDeviceId();
-			peerNames = Object.fromEntries((await db.peers.toArray()).map((p) => [p.id, p.name]));
+			const previous = await deviceSettings.get<string>(DeviceSettingKeys.previousDeviceId);
+			ownDeviceIds = [await getDeviceId(), ...(previous ? [previous] : [])];
+			// What a device created under a legacy ID is still shown under its name.
+			peerNames = Object.fromEntries(
+				(await db.peers.toArray()).flatMap((p) =>
+					[p.id, ...(p.legacyIds ?? [])].map((id) => [id, p.name])
+				)
+			);
 		}
 		storedXacts = result;
 		// A single tick() can fire before the browser has reflowed newly-mounted rows

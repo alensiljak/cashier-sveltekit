@@ -57,6 +57,17 @@
 
 		const { initNotifications } = await import('#lib/services/notificationService');
 		initNotifications();
+
+		// Move to the key-derived device ID once everything this device wrote has been uploaded.
+		void import('#lib/sync/deviceIdSwitch')
+			.then(({ switchDeviceIdIfReady }) => switchDeviceIdIfReady())
+			.then((r) => {
+				if (r.switched) console.info('[device-id] Switched to the key-derived ID', r.id);
+				else if (r.reason === 'unsent-changes') {
+					console.info('[device-id] Not switching yet: changes are waiting to be uploaded');
+				}
+			})
+			.catch((err) => console.error('Device ID switch failed:', err));
 	});
 
 	async function initializeApp(): Promise<boolean> {

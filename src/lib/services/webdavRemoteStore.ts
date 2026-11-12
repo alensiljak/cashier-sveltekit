@@ -14,13 +14,18 @@ import type { WebDavClient } from '#lib/utils/webdav';
 /** The file name for a protocol key, or null when the key is not one of ours. */
 export function fileNameOf(key: string): string | null {
 	const m = /^crdt\/([^/]+)\/([^/]+)$/.exec(key);
-	return m ? `cashier-${m[1]}-${m[2]}` : null;
+	if (m) return `cashier-${m[1]}-${m[2]}`;
+	// A device's own record (see sync/deviceRecords.ts): `devices/<id>.json`.
+	const device = /^devices\/([^/]+\.json)$/.exec(key);
+	return device ? `cashier-device-${device[1]}` : null;
 }
 
 /** The protocol key for a file in the folder, or null for any other file. */
 export function keyOfFile(name: string): string | null {
 	const m = /^cashier-(xacts|scx)-(.+)$/.exec(name);
-	return m ? `crdt/${m[1]}/${m[2]}` : null;
+	if (m) return `crdt/${m[1]}/${m[2]}`;
+	const device = /^cashier-device-([^/]+\.json)$/.exec(name);
+	return device ? `devices/${device[1]}` : null;
 }
 
 const fail = (name: string, res: Response) =>

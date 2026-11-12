@@ -179,6 +179,11 @@ export class TrustedPeer {
 	publicKey?: string;
 	/** Short form of the key-derived ID (`7KQ2-M9XA`), shown next to the name. Empty without a key. */
 	fingerprint?: string;
+	/**
+	 * The IDs this device had before its ID was derived from its key (UUIDs). What it wrote under
+	 * them stays trusted until it is forgotten (see sync/identityMigration.ts).
+	 */
+	legacyIds?: string[];
 	/** The name the peer announced. `name` is this device's own label for it and may be renamed. */
 	announcedName?: string;
 	/** Set when this device was trusted on the word of another trusted device (an approved introduction): that device's ID. Empty for devices paired directly. */

@@ -9,7 +9,8 @@ describe('getDeviceId', () => {
 	it('is created once and then stays the same', async () => {
 		const id = await getDeviceId();
 
-		expect(id).toMatch(/^[0-9a-f-]{36}$/);
+		// Derived from the device key: 26 characters of Crockford base32.
+		expect(id).toMatch(/^[0-9a-hjkmnp-tv-z]{26}$/);
 		expect(await getDeviceId()).toBe(id);
 	});
 });

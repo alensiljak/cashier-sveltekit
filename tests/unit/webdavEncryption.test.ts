@@ -4,6 +4,7 @@
 */
 import { beforeEach, describe, expect, it } from 'vitest';
 import db from '#lib/data/db';
+import { deviceSettings, DeviceSettingKeys } from '#lib/settings';
 import { EncryptedRemoteStore } from '#lib/services/encryptedRemoteStore';
 import { createKeyParams, WrongPassphraseError } from '#lib/services/s3Crypto';
 import {
@@ -61,6 +62,8 @@ async function configure(enabled: boolean, passphrase = 'secret') {
 
 beforeEach(async () => {
 	await db.deviceSettings.clear();
+	// A device with a legacy ID signs nothing, so these tests, which write as `dev1`, test encryption alone.
+	await deviceSettings.set(DeviceSettingKeys.peerId, 'dev1');
 });
 
 describe('settings', () => {

@@ -74,6 +74,16 @@
 
 	// Sole trusted peer in the room and nothing chosen yet — pick it automatically.
 	let trustedActivePeers = $derived(presence.activePeerList.filter((p) => p.isTrusted));
+
+	/** A device that switched to a key-derived ID asks to replace a trusted record that has no key. */
+	async function approveMigration(trysteroId: string) {
+		try {
+			await presence.approveMigration(trysteroId);
+			Notifier.success('Device updated');
+		} catch (e) {
+			Notifier.error((e as Error).message);
+		}
+	}
 	$effect(() => {
 		if (!syncTargetId && trustedActivePeers.length === 1) {
 			syncTargetId = trustedActivePeers[0].trysteroId;
@@ -589,6 +599,12 @@
 													class="badge badge-error badge-sm"
 													title="This device uses a different key than the trusted device with the same ID. Remove the trusted device to pair again."
 													>Key changed</span
+												>
+											{:else if peer.migration?.kind === 'approve'}
+												<button
+													class="btn btn-info btn-xs"
+													title="This device says it is a trusted device that was added without a key. If the name and fingerprint are right, replace that record with this one."
+													onclick={() => approveMigration(peer.trysteroId)}>Same device? Replace</button
 												>
 											{:else if peer.trustIssue === 'legacy-record'}
 												<span

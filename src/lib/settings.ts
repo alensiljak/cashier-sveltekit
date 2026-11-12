@@ -114,6 +114,9 @@ export const DeviceSettingKeys = {
 	// Peer sync identity for this device
 	peerId: 'peerId',
 	peerName: 'peerName',
+	// The UUID this device had before its ID was derived from its key. Kept until the objects it
+	// wrote under that ID are forgotten (see doc/projects/2026-11-11_device-identity.md, step 5).
+	previousDeviceId: 'previousDeviceId',
 	// Secret shared by the devices paired with each other (base64, 32 bytes). The Peer Sync room and
 	// its signaling password are derived from it (sync/syncGroup.ts). Device-only: it is a credential.
 	syncGroupSecret: 'syncGroupSecret',

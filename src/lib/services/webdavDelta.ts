@@ -10,6 +10,8 @@
 import db from '#lib/data/db';
 import { getXactStore } from '#lib/storage/xactStoreRegistry';
 import { getScxStore } from '#lib/storage/scxStoreRegistry';
+import { announceDevice } from '#lib/sync/deviceRecords';
+import { peerOf } from '#lib/sync/identityMigration';
 import { getDeviceId, type DocKind } from '#lib/sync/ydocDevices';
 import {
 	parseKey,
@@ -32,13 +34,16 @@ async function usable(kind: DocKind): Promise<boolean> {
 }
 
 async function syncFor(client: WebDavClient, kind: DocKind): Promise<DeltaSync> {
+	// Encrypted as configured; refuses (EncryptionMismatchError) when the folder disagrees.
+	const remote = await remoteFor(client);
+	const remoteId = webDavRemoteId(client.fileUrl(''));
+	await announceDevice(remoteId, remote);
 	return getDeltaSync({
 		kind,
 		deviceId: await getDeviceId(),
 		store: await storeOf(kind),
-		// Encrypted as configured; refuses (EncryptionMismatchError) when the folder disagrees.
-		remote: await remoteFor(client),
-		remoteId: webDavRemoteId(client.fileUrl(''))
+		remote,
+		remoteId
 	});
 }
 
@@ -179,7 +184,7 @@ export async function listWebDavDevices(client: WebDavClient): Promise<WebDavDev
 	}
 	return [...found]
 		.map(([deviceId, { lastModified, objects }]) => {
-			const peer = peers.find((p) => p.id === deviceId);
+			const peer = peerOf(peers, deviceId);
 			return {
 				deviceId,
 				status:

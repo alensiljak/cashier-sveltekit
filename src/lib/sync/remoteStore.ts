@@ -8,6 +8,21 @@ export interface RemoteObjectInfo {
 	lastModified: Date | null;
 }
 
+/**
+ * An object is in the store but must not be used: its signature is missing or wrong, or its
+ * author cannot be checked (see signedObjects.ts). Delta sync skips such an object and reports it;
+ * it does not fail the whole sync, or one bad object would block everybody.
+ */
+export class ObjectRejectedError extends Error {
+	constructor(
+		readonly objectKey: string,
+		reason: string
+	) {
+		super(`${objectKey}: ${reason}`);
+		this.name = 'ObjectRejectedError';
+	}
+}
+
 export interface RemoteStore {
 	/** All objects whose key starts with `prefix`. */
 	list(prefix: string): Promise<RemoteObjectInfo[]>;

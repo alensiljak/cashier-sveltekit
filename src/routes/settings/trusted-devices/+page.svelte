@@ -150,7 +150,9 @@
 										<p class="text-xs opacity-60">Calls itself "{tp.announcedName}"</p>
 									{/if}
 									{#if tp.addedBy}
-										{@const introducer = presence.trustedPeers.find((p) => p.id === tp.addedBy)}
+										{@const introducer = presence.trustedPeers.find(
+											(p) => p.id === tp.addedBy || p.legacyIds?.includes(tp.addedBy!)
+										)}
 										<p class="text-xs opacity-60">
 											Trusted on the introduction of {introducer?.name ?? 'a device since removed'}
 										</p>

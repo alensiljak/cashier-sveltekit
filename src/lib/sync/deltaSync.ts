@@ -20,7 +20,8 @@ import {
 	type ReplaceReason
 } from '#lib/storage/crdtDocStore';
 import type { DocKind } from '#lib/sync/ydocDevices';
-import type { RemoteStore } from './remoteStore';
+import { isDerivedId } from './deviceId';
+import { ObjectRejectedError, type RemoteStore } from './remoteStore';
 
 /** Yjs state vector as JSON: client id -> clock. */
 export type StateVectorJson = Record<string, number>;
@@ -43,6 +44,13 @@ export interface DeltaState {
 	acked?: string;
 	/** This device reset its document: the bucket still needs the new generation's snapshot. */
 	pendingSnapshot?: boolean;
+	/**
+	 * The device ID that `nextSeq` and `acked` belong to. A device that switches to a key-derived ID
+	 * starts at delta 1 under it, as readers expect of a device they have not seen (see `load`).
+	 */
+	owner?: string;
+	/** Legacy IDs of this device whose objects were removed from the bucket (see `retire`). */
+	retired?: string[];
 }
 
 /** What this device tells the others it has applied, so they can compact. Own deltas not included. */
@@ -378,6 +386,16 @@ export class DeltaSync {
 	private load(): Promise<void> {
 		this.loaded ??= (async () => {
 			this.state = (await this.o.storage.load()) ?? emptyState();
+			const { deviceId } = this.o;
+			if (this.state.owner !== deviceId) {
+				// Progress saved under another ID, or before IDs were recorded and this one is key-derived:
+				// the device switched. Its deltas count from 1 under the new ID, and the old acknowledgement is not its own.
+				if (this.state.owner !== undefined || isDerivedId(deviceId)) {
+					this.state.nextSeq = 1;
+					this.state.acked = undefined;
+				}
+				this.state.owner = deviceId;
+			}
 			if (this.state.outbox) this.pending.unshift(fromBase64(this.state.outbox));
 		})();
 		return this.loaded;
@@ -441,7 +459,8 @@ export class DeltaSync {
 			if (o.type !== 'ack' || !o.deviceId || o.deviceId === this.o.deviceId) continue;
 			if (!isActive(o.deviceId)) continue;
 			if (o.lastModified && now - o.lastModified.getTime() > ACK_ACTIVE_WINDOW_MS) continue;
-			const raw = await this.o.remote.get(o.key);
+			// A forged acknowledgement would let the others delete what this device lacks: ignore it.
+			const raw = await this.o.remote.get(o.key).catch(rejectedAsMissing);
 			if (!raw) continue;
 			try {
 				const parsed = JSON.parse(new TextDecoder().decode(raw));
@@ -610,7 +629,7 @@ export class DeltaSync {
 	private async fetchObject(key: string): Promise<Uint8Array | null> {
 		const cached = this.fetched.get(key);
 		if (cached) return cached;
-		const raw = await this.o.remote.get(key);
+		const raw = await this.o.remote.get(key).catch(rejectedAsMissing);
 		if (!raw || oversize(raw.length)) return null;
 		this.fetched.set(key, raw);
 		return raw;
@@ -847,6 +866,24 @@ export class DeltaSync {
 		});
 	}
 
+	/**
+	 * After this device switched to a key-derived ID: removes what it wrote under its legacy ID
+	 * (`forget`, which merges first and publishes a snapshot, so no other device loses a change),
+	 * once per store. The legacy ID must still be let through by `ignore` meanwhile. Returns null
+	 * when it was done before. Throws when the merge did not succeed; it is tried again next time.
+	 */
+	async retire(previousId: string): Promise<{ deleted: number } | null> {
+		await this.load();
+		if (this.state.retired?.includes(previousId)) return null;
+		const wrote = (await this.objects()).some((o) => o.deviceId === previousId);
+		const result = wrote ? await this.forget(previousId) : { deleted: 0 };
+		await this.serial(async () => {
+			this.state.retired = [...(this.state.retired ?? []), previousId];
+			await this.persist();
+		});
+		return result;
+	}
+
 	// --- download ---
 
 	/**
@@ -899,26 +936,35 @@ export class DeltaSync {
 				result.errors.push({ key, message: tooBig });
 				return result;
 			}
-			const raw = await remote.get(key);
-			if (!raw) throw new Vanished(key);
-			try {
-				const oversized = oversize(raw.length);
-				if (oversized) throw new Error(oversized);
-				const { coverage, update } = decodeSnapshot(raw);
-				this.apply(result, await doc.importState(update, importOpts));
-				state.snapId = snapshotId;
-				for (const [device, seq] of Object.entries(coverage)) {
-					state.applied[device] = Math.max(state.applied[device] ?? 0, seq);
+			// A snapshot that must not be used is reported and skipped; the deltas are still read.
+			let rejected = false as boolean;
+			const raw = await remote.get(key).catch((e) => {
+				if (!(e instanceof ObjectRejectedError)) throw e;
+				result.errors.push({ key, message: e.message });
+				rejected = true;
+				return null;
+			});
+			if (!raw && !rejected) throw new Vanished(key);
+			if (raw) {
+				try {
+					const oversized = oversize(raw.length);
+					if (oversized) throw new Error(oversized);
+					const { coverage, update } = decodeSnapshot(raw);
+					this.apply(result, await doc.importState(update, importOpts));
+					state.snapId = snapshotId;
+					for (const [device, seq] of Object.entries(coverage)) {
+						state.applied[device] = Math.max(state.applied[device] ?? 0, seq);
+					}
+					raise(state.bucketSV, vectorOf(update));
+					result.snapshot = true;
+				} catch (e) {
+					if (e instanceof Vanished) throw e;
+					if (e instanceof AdoptDeclinedError) result.declined = true;
+					else result.errors.push({ key, message: errorText(e) });
+					// Deltas that follow a snapshot we could not apply would not make sense: stop here.
+					await this.persist();
+					return result;
 				}
-				raise(state.bucketSV, vectorOf(update));
-				result.snapshot = true;
-			} catch (e) {
-				if (e instanceof Vanished) throw e;
-				if (e instanceof AdoptDeclinedError) result.declined = true;
-				else result.errors.push({ key, message: errorText(e) });
-				// Deltas that follow a snapshot we could not apply would not make sense: stop here.
-				await this.persist();
-				return result;
 			}
 		}
 
@@ -942,7 +988,17 @@ export class DeltaSync {
 					result.errors.push({ key, message: tooBig });
 					break;
 				}
-				const raw = await remote.get(key);
+				let rejected = null as string | null;
+				const raw = await remote.get(key).catch((e) => {
+					if (!(e instanceof ObjectRejectedError)) throw e;
+					rejected = e.message;
+					return null;
+				});
+				if (rejected) {
+					// Not signed by its device, or not verifiable: nothing after it is applied either.
+					result.errors.push({ key, message: rejected });
+					break;
+				}
 				if (!raw) throw new Vanished(key);
 				try {
 					const oversized = oversize(raw.length);
@@ -1123,7 +1179,7 @@ export class DeltaSync {
 
 		const updates: BucketUpdate[] = [];
 		for (const object of wanted) {
-			const raw = await remote.get(object.key);
+			const raw = await remote.get(object.key).catch(rejectedAsMissing);
 			if (!raw) continue;
 			updates.push({
 				object,
@@ -1268,3 +1324,9 @@ function oversize(bytes: number | undefined): string | null {
 }
 
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
+
+/** For `get(...).catch(...)` where an object that must not be used counts as missing. */
+function rejectedAsMissing(e: unknown): null {
+	if (e instanceof ObjectRejectedError) return null;
+	throw e;
+}

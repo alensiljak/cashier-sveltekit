@@ -50,6 +50,9 @@ import { deleteFile, saveBinaryFile } from '#lib/utils/opfslib';
 import type { S3Config } from './s3Config';
 import { deleteObject, getObject, listObjectInfos, listObjects, putObject } from './s3Client';
 import { decryptCrdtObject, S3RemoteStore } from './s3RemoteStore';
+import { announceDevice, loadBucketSigning } from '#lib/sync/deviceRecords';
+import { peerOf } from '#lib/sync/identityMigration';
+import { openSigned, sealSigned, stripSigned, type SigningContext } from '#lib/sync/signedObjects';
 import { createKeyParams, decrypt, encrypt, openKey, sha256Hex, type KeyParams } from './s3Crypto';
 import {
 	decide,
@@ -88,6 +91,8 @@ export interface S3Session {
 	cfg: S3Config;
 	key: CryptoKey;
 	deviceId: string;
+	/** Signs this device's manifest and checks the others' (see sync/signedObjects.ts). */
+	signing: SigningContext;
 	/** All devices' manifests, including this device's own. */
 	manifests: Manifest[];
 	own: Manifest;
@@ -135,13 +140,19 @@ async function loadKey(cfg: S3Config): Promise<CryptoKey> {
 	return openKey(cfg.passphrase, params);
 }
 
-async function loadManifests(cfg: S3Config, key: CryptoKey): Promise<Manifest[]> {
+async function loadManifests(
+	cfg: S3Config,
+	key: CryptoKey,
+	signing: SigningContext
+): Promise<Manifest[]> {
 	const manifests: Manifest[] = [];
 	for (const objectKey of await listObjects(cfg, 'manifests/')) {
 		try {
 			const raw = await getObject(cfg, objectKey);
 			if (!raw) continue;
-			manifests.push(JSON.parse(new TextDecoder().decode(await decrypt(key, raw))) as Manifest);
+			// A manifest not signed by its device, or forged, is ignored like an unreadable one.
+			const content = await openSigned(signing, objectKey, await decrypt(key, raw));
+			manifests.push(JSON.parse(new TextDecoder().decode(content)) as Manifest);
 		} catch (e) {
 			console.warn('[s3-sync] Ignoring unreadable manifest', objectKey, e);
 		}
@@ -159,7 +170,9 @@ export async function openSession(cfg: S3Config): Promise<S3Session> {
 	}
 	const key = await loadKey(cfg);
 	const deviceId = await getDeviceId();
-	const manifests = await loadManifests(cfg, key);
+	const { ctx: signing, directory } = await loadBucketSigning();
+	directory.bind(new S3RemoteStore(cfg, key, signing));
+	const manifests = await loadManifests(cfg, key, signing);
 	let own = manifests.find((m) => m.deviceId === deviceId);
 	if (!own) {
 		own = { deviceId, updated: '', files: {} };
@@ -173,6 +186,7 @@ export async function openSession(cfg: S3Config): Promise<S3Session> {
 		cfg,
 		key,
 		deviceId,
+		signing,
 		manifests,
 		own,
 		bases,
@@ -201,8 +215,12 @@ function canonical(
 async function persist(s: S3Session): Promise<void> {
 	if (s.manifestDirty) {
 		s.own.updated = new Date().toISOString();
-		const body = await encrypt(s.key, TEXT.encode(JSON.stringify(s.own)));
-		await putObject(s.cfg, manifestKey(s.deviceId), body);
+		const content = await sealSigned(
+			s.signing,
+			manifestKey(s.deviceId),
+			TEXT.encode(JSON.stringify(s.own))
+		);
+		await putObject(s.cfg, manifestKey(s.deviceId), await encrypt(s.key, content));
 		s.manifestDirty = false;
 	}
 	if (s.basesDirty) {
@@ -432,11 +450,15 @@ const storeOf = (item: 'xacts' | 'scheduled') =>
  * edited meanwhile is captured for upload.
  */
 async function deltaSyncFor(s: CrdtSession, item: 'xacts' | 'scheduled'): Promise<DeltaSync> {
+	const { ctx, directory } = await loadBucketSigning();
+	const remote = new S3RemoteStore(s.cfg, s.key, ctx);
+	directory.bind(remote);
+	await announceDevice(s3RemoteId(s.cfg), remote);
 	return getDeltaSync({
 		kind: kindOf(item),
 		deviceId: s.deviceId,
 		store: await storeOf(item),
-		remote: new S3RemoteStore(s.cfg, s.key),
+		remote,
 		remoteId: s3RemoteId(s.cfg)
 	});
 }
@@ -697,7 +719,7 @@ export async function previewCrdtChanges(
 	unapplied.forEach(({ object }, i) =>
 		files.push({
 			deviceId: object.deviceId,
-			name: peers.find((p) => p.id === object.deviceId)?.name,
+			name: peerOf(peers, object.deviceId)?.name,
 			key: object.key,
 			changes: results[i]
 		})
@@ -765,7 +787,7 @@ export async function diagnoseCrdt(
 		files.push({
 			key: object.key,
 			own,
-			name: peers.find((p) => p.id === object.deviceId)?.name,
+			name: peerOf(peers, object.deviceId)?.name,
 			ignored: ignored ?? undefined,
 			ahead: [...theirs]
 				.filter(([client, clock]) => clock > (ours.get(client) ?? 0))
@@ -1027,7 +1049,7 @@ export async function listBucketDevices(cfg: S3Config): Promise<BucketDevice[]> 
 	}
 	return [...found]
 		.map(([deviceId, lastModified]) => {
-			const peer = peers.find((p) => p.id === deviceId);
+			const peer = peerOf(peers, deviceId);
 			return {
 				deviceId,
 				lastModified,
@@ -1301,8 +1323,10 @@ export async function previewObject(
 	// key.json holds only key-derivation parameters and is not encrypted.
 	let bytes: Uint8Array<ArrayBuffer>;
 	if (objectKey === 'key.json') bytes = raw;
-	else if (objectKey.startsWith('crdt/')) bytes = await decryptCrdtObject(key, objectKey, raw);
-	else bytes = await decrypt(key, raw);
+	// The signature header is not shown; checking it is the sync's job.
+	else if (objectKey.startsWith('crdt/') || objectKey.startsWith('devices/')) {
+		bytes = stripSigned(await decryptCrdtObject(key, objectKey, raw));
+	} else bytes = stripSigned(await decrypt(key, raw));
 
 	const records = (update: Uint8Array) => {
 		const doc = new Y.Doc();

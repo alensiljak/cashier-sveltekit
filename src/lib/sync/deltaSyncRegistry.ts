@@ -4,6 +4,7 @@
  * capture a store's changes as soon as the store opens.
  */
 import db from '#lib/data/db';
+import { deviceSettings, DeviceSettingKeys } from '#lib/settings';
 import { setAdoptConfirm } from '#lib/storage/crdtDocStore';
 import { validateRecord as validateXact } from '#lib/storage/crdtXactRecord';
 import { validateRecord as validateScx } from '#lib/storage/crdtScxRecord';
@@ -12,10 +13,18 @@ import { deviceSettingsStateStorage } from './deltaStateStorage';
 import type { RemoteObjectInfo, RemoteStore } from './remoteStore';
 import { getDeviceId, type DocKind } from './ydocDevices';
 
-/** Why another device's data is not merged here: not on the Trusted Devices list, or read-only. */
+/**
+ * Why another device's data is not merged here: not on the Trusted Devices list, or read-only.
+ * What a device wrote under a legacy ID counts as its own while it stays on the bucket.
+ */
 export async function loadIgnoreReasons(): Promise<(deviceId: string | null) => string | null> {
-	const peers = new Map((await db.peers.toArray()).map((p) => [p.id, p]));
+	const list = await db.peers.toArray();
+	const peers = new Map(list.map((p) => [p.id, p]));
+	for (const p of list) for (const legacy of p.legacyIds ?? []) peers.set(legacy, p);
+	// What this device itself wrote under its legacy ID is merged like anything else, until it is retired.
+	const own = await deviceSettings.get<string>(DeviceSettingKeys.previousDeviceId);
 	return (deviceId) => {
+		if (own && deviceId === own) return null;
 		const peer = deviceId ? peers.get(deviceId) : undefined;
 		if (!peer) return 'Device not trusted';
 		return peer.readOnly ? 'Device is read-only' : null;
@@ -41,7 +50,11 @@ setAdoptConfirm(({ kind, carried, dropped }) => {
 	);
 });
 
-/** The IDs of the devices on the Trusted Devices list. */
+/**
+ * The IDs of the devices on the Trusted Devices list. Legacy IDs are left out on purpose: a
+ * device that switched has nothing more to say under them, so they must not hold back compaction
+ * or the reset (see `ignore` for what is still read).
+ */
 export async function loadTrustedIds(): Promise<string[]> {
 	return (await db.peers.toArray()).map((p) => p.id);
 }
@@ -59,7 +72,7 @@ export const s3RemoteId = (cfg: { endpoint: string; bucket: string; prefix: stri
 /** Names the WebDAV folder in the saved sync progress. `url` as configured. */
 export const webDavRemoteId = (url: string) => `webdav|${url.endsWith('/') ? url : url + '/'}`;
 
-const registry = new Map<string, { store: object; sync: DeltaSync }>();
+const registry = new Map<string, { store: object; deviceId: string; sync: DeltaSync }>();
 
 export interface DeltaSyncTarget {
 	kind: DocKind;
@@ -80,13 +93,15 @@ export async function getDeltaSync(target: DeltaSyncTarget): Promise<DeltaSync> 
 	const ignore = await loadIgnoreReasons();
 
 	let entry = registry.get(id);
-	if (entry && entry.store !== store) {
+	// Another store, or the device switched to another ID since: start over.
+	if (entry && (entry.store !== store || entry.deviceId !== deviceId)) {
 		entry.sync.dispose();
 		entry = undefined;
 	}
 	if (!entry) {
 		entry = {
 			store,
+			deviceId,
 			sync: new DeltaSync({
 				kind,
 				deviceId,
@@ -105,8 +120,14 @@ export async function getDeltaSync(target: DeltaSyncTarget): Promise<DeltaSync> 
 	return entry.sync;
 }
 
+/** Forgets every delta sync, so the next `getDeltaSync` is built with the device's current ID (after it switched). */
+export function resetDeltaSyncRegistry(): void {
+	for (const { sync } of registry.values()) sync.dispose();
+	registry.clear();
+}
+
 /** A transport that is not connected yet: capturing changes needs none, syncing does. */
-const notConnected: RemoteStore = {
+export const notConnected: RemoteStore = {
 	list: async (): Promise<RemoteObjectInfo[]> => {
 		throw new Error('Not connected');
 	},
@@ -127,25 +148,30 @@ const notConnected: RemoteStore = {
  * before the first sync of a session are only found at upload time, and sent together with the
  * whole delete set. Needs no passphrase and no network. Failures are only logged.
  */
+/** The S3 bucket and WebDAV folder this device syncs with, as the ids that name their saved progress. */
+export async function configuredRemoteIds(): Promise<string[]> {
+	const { isSyncOptionEnabled } = await import('#lib/services/syncOptions.svelte');
+	const remoteIds: string[] = [];
+	if (await isSyncOptionEnabled('s3')) {
+		const { loadS3Config, isS3Configured } = await import('#lib/services/s3Config');
+		const cfg = await loadS3Config();
+		if (isS3Configured(cfg)) remoteIds.push(s3RemoteId(cfg));
+	}
+	if (await isSyncOptionEnabled('webdav')) {
+		const { settings, SettingKeys } = await import('#lib/settings');
+		const cfg = await settings.get<{ url?: string }>(SettingKeys.webdavSettings);
+		if (cfg?.url) remoteIds.push(webDavRemoteId(cfg.url));
+	}
+	return remoteIds;
+}
+
 export async function attachConfiguredRemotes(
 	kind: DocKind,
 	store: DeltaDoc & object
 ): Promise<void> {
 	try {
-		const { isSyncOptionEnabled } = await import('#lib/services/syncOptions.svelte');
 		const deviceId = await getDeviceId();
-		const remoteIds: string[] = [];
-
-		if (await isSyncOptionEnabled('s3')) {
-			const { loadS3Config, isS3Configured } = await import('#lib/services/s3Config');
-			const cfg = await loadS3Config();
-			if (isS3Configured(cfg)) remoteIds.push(s3RemoteId(cfg));
-		}
-		if (await isSyncOptionEnabled('webdav')) {
-			const { settings, SettingKeys } = await import('#lib/settings');
-			const cfg = await settings.get<{ url?: string }>(SettingKeys.webdavSettings);
-			if (cfg?.url) remoteIds.push(webDavRemoteId(cfg.url));
-		}
+		const remoteIds = await configuredRemoteIds();
 
 		for (const remoteId of remoteIds) {
 			await getDeltaSync({ kind, deviceId, store, remote: notConnected, remoteId });
@@ -165,6 +191,9 @@ export async function afterSync(sync: DeltaSync, { compact }: { compact: boolean
 	try {
 		await sync.publishAck();
 		if (!compact) return;
+		// A device that switched to a key-derived ID removes what it left under the old one.
+		const previous = await deviceSettings.get<string>(DeviceSettingKeys.previousDeviceId);
+		if (previous) await sync.retire(previous);
 		await sync.compactIfDue({ isActive: await loadTrusted() });
 		await sync.cleanLegacy();
 		await sync.resetIfDue({ trusted: await loadTrustedIds() });
