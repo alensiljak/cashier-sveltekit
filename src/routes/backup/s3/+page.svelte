@@ -5,6 +5,8 @@
 	import { isS3Configured, loadS3Config, type S3Config } from '#lib/services/s3Config';
 	import { describeS3Error } from '#lib/services/s3Client';
 	import type { SyncDirection } from '#lib/services/s3SyncPlan';
+	import * as view from '#lib/services/s3StatusView';
+	import type { CompareStatus, ItemKey } from '#lib/services/s3StatusView';
 	import {
 		applyDeletion,
 		fetchCrdtSyncStatus,
@@ -17,7 +19,6 @@
 		resolveConflict,
 		runSync,
 		type FileSyncOverview,
-		type RemoteItemStatus,
 		type RemoteOverview,
 		type S3Session,
 		type SyncItem,
@@ -108,15 +109,13 @@
 		}
 	}
 
-	/** True when the bucket holds newer data for this item that an upload could overwrite. */
-	function hasNewerRemote(key: keyof RemoteOverview): boolean {
-		if (key === 'settings' || key === 'beancount') {
-			const s = fileStatus?.[key];
-			return !!s && (s.download > 0 || s.conflict > 0);
-		}
-		// CRDT stores merge on download and each device uploads only its own file: nothing to overwrite.
-		return false;
-	}
+	// Display logic lives in s3StatusView.ts, so it can be tested without a bucket.
+	const compare = $derived<CompareStatus>({ fileStatus, crdtStatus });
+	const hasNewerRemote = (key: ItemKey) => view.hasNewerRemote(compare, key);
+	const actionsFor = (key: ItemKey) => view.actionsFor(compare, key);
+	const gapsFor = (key: ItemKey) => view.gapsFor(compare, key);
+	const badgeFor = (key: ItemKey) => view.badgeFor(compare, key);
+	const describeItem = view.describeItem;
 
 	let overwriteDialog = $state<HTMLDialogElement>();
 	let overwriteItem = $state<SyncItem | null>(null);
@@ -129,86 +128,6 @@
 		}
 		overwriteItem = item;
 		overwriteDialog?.showModal();
-	}
-
-	/** What the row's buttons may do, from the comparison with the bucket. All false while unknown. */
-	function actionsFor(key: keyof RemoteOverview): {
-		up: boolean;
-		down: boolean;
-		conflict: boolean;
-	} {
-		if (key === 'settings' || key === 'beancount') {
-			const s = fileStatus?.[key];
-			return { up: !!s?.upload, down: !!s?.download, conflict: !!s?.conflict };
-		}
-		const s = crdtStatus?.[key as 'scheduled' | 'xacts'];
-		return { up: !!s?.upload, down: !!s?.download, conflict: false };
-	}
-
-	/** Devices whose next delta is missing from the bucket, for the CRDT rows. */
-	function gapsFor(key: keyof RemoteOverview) {
-		return crdtStatus?.[key as 'scheduled' | 'xacts']?.gaps ?? [];
-	}
-
-	type BadgeKind = 'up' | 'down' | 'conflict' | 'ok';
-	type Badge = { text: string; cls: string; kinds: BadgeKind[]; count?: string };
-
-	/** What a sync of this item would do, or null when it is in sync or unknown. */
-	function badgeFor(key: keyof RemoteOverview): Badge | null {
-		if (key === 'settings' || key === 'beancount') {
-			const s = fileStatus?.[key];
-			if (!s) return null;
-			const n = (count: number) => (key === 'beancount' ? ' (' + count + ')' : '');
-			if (s.conflict) {
-				return {
-					text: 'Conflict' + n(s.conflict),
-					cls: 'badge-error',
-					kinds: ['conflict'],
-					count: n(s.conflict)
-				};
-			}
-			if (s.upload && s.download) {
-				return {
-					text: 'Upload' + n(s.upload) + ' / Download' + n(s.download),
-					cls: 'badge-warning',
-					kinds: ['up', 'down']
-				};
-			}
-			if (s.upload) {
-				return {
-					text: 'Upload needed' + n(s.upload),
-					cls: 'badge-warning',
-					kinds: ['up'],
-					count: n(s.upload)
-				};
-			}
-			if (s.download) {
-				return {
-					text: 'Download available' + n(s.download),
-					cls: 'badge-warning',
-					kinds: ['down'],
-					count: n(s.download)
-				};
-			}
-			return { text: 'In sync', cls: 'badge-success', kinds: ['ok'] };
-		}
-		// CRDT stores: compared by their Yjs state, so each item is judged on its own.
-		const s = crdtStatus?.[key as 'scheduled' | 'xacts'];
-		if (!s) return null;
-		if (s.upload && s.download)
-			return { text: 'Upload / Download', cls: 'badge-warning', kinds: ['up', 'down'] };
-		if (s.upload) return { text: 'Upload needed', cls: 'badge-warning', kinds: ['up'] };
-		if (s.download) return { text: 'Download available', cls: 'badge-warning', kinds: ['down'] };
-		return { text: 'In sync', cls: 'badge-success', kinds: ['ok'] };
-	}
-	function describeItem(item: RemoteItemStatus, key: keyof RemoteOverview): string {
-		if (!item.count) return 'Nothing in the bucket';
-		const parts = [item.lastModified ? item.lastModified.toLocaleString() : 'unknown time'];
-		if (key === 'beancount') parts.push(`${item.count} ${item.count === 1 ? 'file' : 'files'}`);
-		if (item.otherDeviceModified) {
-			parts.push(`other devices: ${item.otherDeviceModified.toLocaleString()}`);
-		}
-		return parts.join(' · ');
 	}
 
 	let busy = $state(false);
@@ -224,14 +143,8 @@
 		)
 	);
 
-	/** Downloaded data reaches the ledger through the working set and the OPFS files. */
 	function reloadIfNeeded(done: SyncLine[]) {
-		const touched = done.some(
-			(l) =>
-				(l.outcome === 'downloaded' && (l.item === 'xacts' || l.item === 'beancount')) ||
-				(l.outcome === 'deleted' && l.item === 'beancount')
-		);
-		if (touched) void reloadLedgerFromOpfs();
+		if (view.touchesLedger(done)) void reloadLedgerFromOpfs();
 	}
 
 	/** Applies the deletions the user confirmed: one line, or all pending ones. */
@@ -262,11 +175,7 @@
 			void refreshStatus();
 			// Conflicts ask before the losing side is overwritten: the bucket on upload, this device on download.
 			if (lines.some((l) => l.outcome === 'conflict')) overwriteDirection = direction;
-			if (
-				!lines.some(
-					(l) => l.outcome === 'conflict' || l.outcome === 'error' || l.outcome === 'pending-delete'
-				)
-			) {
+			if (view.isCleanRun(lines)) {
 				Notifier.success(direction === 'upload' ? 'Upload complete' : 'Download complete');
 			}
 		} catch (e) {
@@ -361,9 +270,9 @@
 											<div class="flex items-center gap-2 text-sm">
 												<span class="flex min-w-0 items-baseline font-medium">
 													<DeviceLabel
-													name={d.name ?? d.announcedName ?? `Device ${d.deviceId.slice(0, 6)}`}
-													fingerprint={d.fingerprint}
-												/>
+														name={d.name ?? d.announcedName ?? `Device ${d.deviceId.slice(0, 6)}`}
+														fingerprint={d.fingerprint}
+													/>
 												</span>
 												{#if !d.trusted}
 													<span class="badge badge-warning badge-sm">not trusted</span>
@@ -635,9 +544,9 @@
 				</h3>
 				{#if trusting.replaces}
 					<p class="py-2 text-sm">
-						This device says it is <strong>{trusting.replaces.name}</strong>, which you trust already,
-						and has a new identity. If the name and fingerprint below are right, trusting it replaces
-						that record.
+						This device says it is <strong>{trusting.replaces.name}</strong>, which you trust
+						already, and has a new identity. If the name and fingerprint below are right, trusting
+						it replaces that record.
 					</p>
 				{:else}
 					<p class="py-2 text-sm">

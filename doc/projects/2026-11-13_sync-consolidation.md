@@ -56,8 +56,13 @@ No behaviour change. Each step is its own commit, with unit tests for whatever b
    - `s3Status.ts` (135): `fetchRemoteOverview`, `listBucketDevices`
    - `s3Preview.ts` (66): `previewObject`
    - [ ] Follow-up: update callers to import from the specific module and drop the barrel.
-3. [ ] **Other oversized pages.** Check `/peer-sync` (~800 lines), `/backup/s3` (~660) and `/opfs/import-ledger` (~770) for inline orchestration. Extract only where it is real logic, not markup.
-4. [ ] **Tests.** Unit tests for the extracted controller and the pure S3 modules. Record any gap that needs real S3 or peers as an e2e candidate, not a mock-heavy unit test.
+3. ✅ **Other oversized pages.** Extracted only real logic, not markup:
+   - `/backup/s3` -> [s3StatusView.ts](/src/lib/services/s3StatusView.ts): badge, available actions, gaps, item description, "does this touch the ledger", "was the run clean". The hub's S3 card in Phase 3 can reuse `badgeFor` and `actionsFor`.
+   - `/opfs/import-ledger` -> [importScan.ts](/src/lib/utils/importScan.ts): file classification against the manifest, deletion detection, copy and delete selection, the manifest rebuild plan.
+   - `/peer-sync`: left as is. The script is mostly async glue over `peerConnection` with stale-peer guards, and the only pure parts are tiny (`itemHashStatus`, the file-diff summary). The peer channel adapter in Phase 2 will need the same status calculation, so extract it there.
+4. ✅ **Tests.** [syncTree.test.ts](/tests/unit/syncTree.test.ts) (14), [s3StatusView.test.ts](/tests/unit/s3StatusView.test.ts) and [importScan.test.ts](/tests/unit/importScan.test.ts) (33 between them).
+   - Not covered: the S3 session and sync core (`syncShared`, `persist`, `canonical`, `classify`) need `s3Client` and OPFS mocks. `canonical` and `classify` are pure but unexported or file-private; export them for tests when touching that code next, and leave the I/O paths to an e2e test with a real or emulated bucket.
+   - Not covered: `BeancountSyncController` itself (peer I/O and reactive state). Its pure parts are covered through `syncTree.ts`.
 
 ### Phase 2: A common channel interface
 

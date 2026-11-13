@@ -33,6 +33,19 @@
 	import { reloadLedgerFromOpfs } from '#lib/services/ledgerReload';
 	import { buildDiffLines, type DiffLine } from '#lib/utils/diffText';
 	import { CASHIER_DATA_DIR } from '#lib/constants';
+	import {
+		classifyFile,
+		countStatuses,
+		filesToCopy,
+		filesToDelete,
+		findDeleted,
+		importCount,
+		normalizeLineEndings,
+		planManifestRebuild,
+		type ImportMode,
+		type ScanStats,
+		type ScannedFile
+	} from '#lib/utils/importScan';
 
 	const CACHE_DIR_PREFIX = `${CASHIER_DATA_DIR}/`;
 
@@ -41,14 +54,6 @@
 
 	// ── State ─────────────────────────────────────────────────────────────────────
 	type Phase = 'idle' | 'scanning' | 'copying' | 'done' | 'error';
-	type FileStatus = 'new' | 'modified' | 'identical' | 'deleted';
-	type ScannedFile = {
-		path: string;
-		size: number;
-		lastModified: number;
-		getFile?: () => Promise<File>;
-		status: FileStatus;
-	};
 
 	let dirHandle = $state<FileSystemDirectoryHandle | null>(null);
 	let fallbackFiles = $state<File[] | null>(null);
@@ -66,13 +71,8 @@
 	let scannedFiles = $state<ScannedFile[]>([]);
 	let reloadPhase = $state<'idle' | 'reloading' | 'done' | 'error'>('idle');
 	let reloadError = $state('');
-	let scanStats = $state<{
-		new: number;
-		modified: number;
-		identical: number;
-		deleted: number;
-	} | null>(null);
-	let importMode = $state<'all' | 'modified'>('modified');
+	let scanStats = $state<ScanStats | null>(null);
+	let importMode = $state<ImportMode>('modified');
 	let autoReload = $state(true);
 	let diffPath = $state<string | null>(null);
 	let diffLines = $state<DiffLine[]>([]);
@@ -98,11 +98,7 @@
 		target?.scrollIntoView({ block: 'center' });
 	}
 
-	let filesToImportCount = $derived(
-		importMode === 'modified'
-			? scannedFiles.filter((f) => f.status !== 'identical').length
-			: scannedFiles.length
-	);
+	let filesToImportCount = $derived(importCount(scannedFiles, importMode));
 
 	$effect(() => {
 		let timer: ReturnType<typeof setInterval> | null = null;
@@ -203,7 +199,6 @@
 			const manifest = await getManifest();
 			const seen = new Set<string>();
 			const result: ScannedFile[] = [];
-			const stats = { new: 0, modified: 0, identical: 0, deleted: 0 };
 
 			if (dirHandle) {
 				// Pipeline: fire getFile() for each file as it is discovered during
@@ -217,24 +212,14 @@
 
 					metadataPromises.push(
 						handle.getFile().then((file) => {
-							const prev = manifest.get(path);
-							let status: FileStatus;
-							if (!prev) {
-								status = 'new';
-							} else if (prev.size === file.size && prev.lastModified === file.lastModified) {
-								status = 'identical';
-							} else {
-								status = 'modified';
-							}
 							result[idx] = {
 								path,
 								size: file.size,
 								lastModified: file.lastModified,
 								getFile: () => Promise.resolve(file),
-								status
+								status: classifyFile(manifest.get(path), file)
 							};
 							seen.add(path);
-							stats[status]++;
 							scanProgress.done++;
 						})
 					);
@@ -247,44 +232,24 @@
 					const parts = f.webkitRelativePath.split('/');
 					const path = parts.slice(1).join('/');
 					if (!path || !matchesAny(parts[parts.length - 1], patterns)) continue;
-					const prev = manifest.get(path);
-					let status: FileStatus;
-					if (!prev) {
-						status = 'new';
-					} else if (prev.size === f.size && prev.lastModified === f.lastModified) {
-						status = 'identical';
-					} else {
-						status = 'modified';
-					}
 					const captured = f;
 					result.push({
 						path,
 						size: f.size,
 						lastModified: f.lastModified,
 						getFile: async () => captured,
-						status
+						status: classifyFile(manifest.get(path), f)
 					});
 					seen.add(path);
-					stats[status]++;
 				}
 				scanProgress = { done: result.length, total: result.length };
 			}
 
 			// Detect deletions: manifest entries that no longer exist in source
-			for (const [path, meta] of manifest) {
-				if (!seen.has(path)) {
-					result.push({
-						path,
-						size: meta.size,
-						lastModified: meta.lastModified,
-						status: 'deleted'
-					});
-					stats.deleted++;
-				}
-			}
+			result.push(...findDeleted(manifest, seen));
 
 			scannedFiles = result;
-			scanStats = stats;
+			scanStats = countStatuses(result);
 			phase = 'idle';
 		} catch (e) {
 			const err = e as { message?: string };
@@ -343,11 +308,8 @@
 		logLines = [];
 
 		try {
-			const toCopy =
-				importMode === 'modified'
-					? scannedFiles.filter((f) => f.status === 'new' || f.status === 'modified')
-					: scannedFiles.filter((f) => f.status !== 'deleted');
-			const toDelete = scannedFiles.filter((f) => f.status === 'deleted');
+			const toCopy = filesToCopy(scannedFiles, importMode);
+			const toDelete = filesToDelete(scannedFiles);
 
 			progress.total = toCopy.length + toDelete.length;
 
@@ -420,7 +382,7 @@
 		comparing = true;
 		errorMsg = '';
 		try {
-			const norm = (s: string) => s.replace(/\r\n/g, '\n');
+			const norm = normalizeLineEndings;
 			const candidates = scannedFiles.filter(
 				(f) => (f.status === 'new' || f.status === 'modified') && f.getFile
 			);
@@ -449,9 +411,7 @@
 			scannedFiles = scannedFiles.map((f) =>
 				identicalPaths.has(f.path) ? { ...f, status: 'identical' as const } : f
 			);
-			const stats = { new: 0, modified: 0, identical: 0, deleted: 0 };
-			for (const f of scannedFiles) stats[f.status]++;
-			scanStats = stats;
+			scanStats = countStatuses(scannedFiles);
 		} catch (e) {
 			const err = e as { message?: string };
 			errorMsg = err?.message ?? String(e);
@@ -471,31 +431,13 @@
 	// for peer sync.
 	async function rebuildManifestAndRescan() {
 		const [manifest, tree] = await Promise.all([getManifest(), listFileTree()]);
-		const patterns = parseSpecs(fileSpec);
-
-		const actualPaths = new Set<string>();
-		const upserts: ImportedFileMeta[] = [];
-
-		for (const entry of tree) {
-			if (entry.kind !== 'file') continue;
-			if (entry.path.startsWith(CACHE_DIR_PREFIX)) continue;
-			if (patterns.length > 0 && !matchesAny(entry.name, patterns)) continue;
-			if (entry.size === undefined || entry.lastModified === undefined) continue;
-
-			actualPaths.add(entry.path);
-			const prev = manifest.get(entry.path);
-			if (prev && prev.size === entry.size && prev.lastModified === entry.lastModified) {
-				continue; // unchanged, no need to rewrite
-			}
-			upserts.push({
-				path: entry.path,
-				size: entry.size,
-				lastModified: entry.lastModified,
-				importedAt: prev?.importedAt ?? Date.now()
-			});
-		}
-
-		const stale = [...manifest.keys()].filter((path) => !actualPaths.has(path));
+		const { upserts, stale } = planManifestRebuild(
+			manifest,
+			tree,
+			parseSpecs(fileSpec),
+			CACHE_DIR_PREFIX,
+			Date.now()
+		);
 
 		await putManifestEntries(upserts);
 		await deleteManifestEntries(stale);
