@@ -1,6 +1,6 @@
 /**
  * Headless check and full sync of the CRDT stores (working set, scheduled transactions) with a
- * WebDAV folder, for the home-screen Sync card. The /backup/webdav page does the same with more
+ * WebDAV folder, for the home-screen Sync card. The /sync/webdav page does the same with more
  * options and reporting. The work is in webdavDelta.ts.
  */
 import { settings, SettingKeys } from '#lib/settings';

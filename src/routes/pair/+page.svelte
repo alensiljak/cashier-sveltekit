@@ -81,7 +81,7 @@
 							Open an invite link from another device, or paste it on the Peer Sync page.
 						{/if}
 					</p>
-					<a href="/peer-sync" class="btn btn-sm">Go to Peer Sync</a>
+					<a href="/sync/peer" class="btn btn-sm">Go to Peer Sync</a>
 				</div>
 			</div>
 		{:else if !session || session.status === 'idle'}
@@ -104,7 +104,7 @@
 					{/if}
 					<div class="flex gap-2">
 						<button class="btn btn-primary btn-sm" onclick={join}>Join</button>
-						<a href="/peer-sync" class="btn btn-ghost btn-sm">Cancel</a>
+						<a href="/sync/peer" class="btn btn-ghost btn-sm">Cancel</a>
 					</div>
 				</div>
 			</div>
@@ -131,16 +131,16 @@
 						<p class="text-success text-sm">
 							Paired with "{session.inviterName}". This device now shares its sync group.
 						</p>
-						<a href="/peer-sync" class="btn btn-primary btn-sm">Open Peer Sync</a>
+						<a href="/sync/peer" class="btn btn-primary btn-sm">Open Peer Sync</a>
 					{:else if session.status === 'rejected'}
 						<p class="text-sm">"{session.inviterName}" did not approve this device.</p>
-						<a href="/peer-sync" class="btn btn-sm">Go to Peer Sync</a>
+						<a href="/sync/peer" class="btn btn-sm">Go to Peer Sync</a>
 					{:else if session.status === 'expired'}
 						<p class="text-sm">The invite expired before it was approved. Ask for a new one.</p>
-						<a href="/peer-sync" class="btn btn-sm">Go to Peer Sync</a>
+						<a href="/sync/peer" class="btn btn-sm">Go to Peer Sync</a>
 					{:else if session.status === 'error'}
 						<p class="text-error text-sm">{session.error || 'Pairing failed.'}</p>
-						<a href="/peer-sync" class="btn btn-sm">Go to Peer Sync</a>
+						<a href="/sync/peer" class="btn btn-sm">Go to Peer Sync</a>
 					{/if}
 				</div>
 			</div>

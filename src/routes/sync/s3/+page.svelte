@@ -340,13 +340,13 @@
 										</span>
 									{/each}
 									{#if row.key === 'settings'}
-										<a href="/backup/s3/settings" class="link text-xs">Review diff</a>
+										<a href="/sync/s3/settings" class="link text-xs">Review diff</a>
 										<span class="text-xs text-base-content/50">
 											— compare settings.json with the bucket
 										</span>
 									{/if}
 									{#if row.key === 'xacts' || row.key === 'scheduled'}
-										<a href="/backup/s3/records?item={row.key}" class="link text-xs"
+										<a href="/sync/s3/records?item={row.key}" class="link text-xs"
 											>Review records</a
 										>
 										<span class="text-xs text-base-content/50"
@@ -354,7 +354,7 @@
 										>
 									{/if}
 									{#if row.key === 'beancount'}
-										<a href="/backup/s3/files" class="link text-xs">Review files</a>
+										<a href="/sync/s3/files" class="link text-xs">Review files</a>
 										<span class="text-xs text-base-content/50">
 											— compare versions, clear false conflicts
 										</span>
@@ -522,8 +522,8 @@
 				</ul>
 				<p class="text-base-content/70 py-2 text-xs">
 					To see the differences first, cancel and open the diff view:
-					<a class="link" href="/backup/s3/settings">Settings</a> or
-					<a class="link" href="/backup/s3/files">Beancount files</a>. The conflict can be resolved
+					<a class="link" href="/sync/s3/settings">Settings</a> or
+					<a class="link" href="/sync/s3/files">Beancount files</a>. The conflict can be resolved
 					there too.
 				</p>
 				<div class="modal-action">

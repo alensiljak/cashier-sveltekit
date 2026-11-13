@@ -74,7 +74,7 @@
 	const syncOptionRows: { option: SyncOption; label: string; configHref: string }[] = [
 		{ option: 'webdav', label: 'WebDAV', configHref: '/settings/webdav-cfg' },
 		{ option: 's3', label: 'S3', configHref: '/settings/s3-cfg' },
-		{ option: 'peer', label: 'Peer Sync', configHref: '/peer-sync/setup' }
+		{ option: 'peer', label: 'Peer Sync', configHref: '/sync/peer/setup' }
 	];
 
 	let ledgerCacheEnabled = $state<boolean>(true);

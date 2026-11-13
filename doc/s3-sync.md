@@ -68,7 +68,7 @@ Code: `sync/deltaSync.ts`, `s3RemoteStore.ts`, `deltaSyncRegistry.ts`.
 - **Reset** (`reset()`) clears accumulated tombstones: it writes a new snapshot with a new generation id and removes older deltas and snapshots. Operations from before a reset are refused as retired.
 - Peer (WebRTC) sync is separate and uses state-vector diffs. Peer-merged operations do reach the bucket through the outbox.
 
-## The sync page (`/backup/s3`)
+## The sync page (`/sync/s3`)
 
 - **Items**: each row has a badge, the bucket's last-modified time and a review link.
 - **Review pages**: _Review diff_ (settings), _Review records_ (CRDT record-level preview, nothing is applied), _Review files_ (Beancount tree and conflict resolution).

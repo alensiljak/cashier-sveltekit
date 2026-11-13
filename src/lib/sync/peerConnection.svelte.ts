@@ -4,11 +4,11 @@
 	Wraps one `PeerPresence` (room join/leave, identity, trust) plus the
 	protocols built on top of it:
 	  - the quick key/value sync (settings) used by
-	    peer-sync/+page.svelte's Preview/Diff/Pull actions
+	    sync/peer/+page.svelte's Preview/Diff/Pull actions
 	  - the CRDT stores (working set, scheduled transactions): hash, two-way
 	    merge and live-update actions each, merged rather than diffed
 	  - the cheap hash-only variant of the above (`sync-hash`), used by
-	    peer-sync/+page.svelte to show a same/different pill per item as soon
+	    sync/peer/+page.svelte to show a same/different pill per item as soon
 	    as a peer is selected, without transferring full file content
 	  - the full ledger file protocol (list-files/read-file) used by
 	    sync/beancount/+page.svelte

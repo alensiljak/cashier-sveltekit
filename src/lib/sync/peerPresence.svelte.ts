@@ -4,7 +4,7 @@
 	Handles device identity, room join/leave, the `hello` handshake (peer
 	discovery + pairing-code computation), and trust bookkeeping. This is the
 	"pure identity/pairing" surface consumed through the singleton in
-	peerConnection.svelte.ts — both `peer-sync/+page.svelte` and
+	peerConnection.svelte.ts — both `sync/peer/+page.svelte` and
 	`sync/beancount/+page.svelte` share ONE instance so the room (and its
 	discovered peers) stays joined across navigation between the two pages
 	instead of each page joining/leaving its own copy.

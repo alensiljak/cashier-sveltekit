@@ -1,7 +1,7 @@
 /*
 	Applies a download-only pull of ledger files from a peer into local OPFS and
 	records the result in the sync baseline. Shared by /sync/beancount (per-file
-	selection) and /peer-sync (pull-all-newer shortcut).
+	selection) and /sync/peer (pull-all-newer shortcut).
 */
 import type { SyncEntry, SyncSource } from './SyncSource';
 import {

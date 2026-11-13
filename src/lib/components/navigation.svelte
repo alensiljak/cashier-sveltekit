@@ -69,7 +69,7 @@
 	<div class="bg-primary relative w-full p-4">
 		{#if peerConnection.presence.isInRoom}
 			<a
-				href="/peer-sync"
+				href="/sync/peer"
 				class="btn btn-circle btn-ghost btn-xs absolute top-2 left-2 border border-white/20 bg-white/10 backdrop-blur-sm"
 				title="Connected to peer sync room"
 				aria-label="Connected to peer sync room"
@@ -440,8 +440,8 @@
 						</li>
 						<li>
 							<a
-								href="/backup"
-								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/backup'
+								href="/sync/backup-file"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/sync/backup-file'
 									? 'active bg-secondary text-secondary-content'
 									: ''}"
 								onclick={closeDrawer}
@@ -583,8 +583,8 @@
 			</li>
 			<!-- <li>
 				<a
-					href="/peer-sync"
-					class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/peer-sync'
+					href="/sync/peer"
+					class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/sync/peer'
 						? 'active bg-secondary text-secondary-content'
 						: ''}"
 					onclick={closeDrawer}

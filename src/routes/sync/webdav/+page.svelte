@@ -225,11 +225,11 @@
 	}
 
 	function openDiff() {
-		goto(`/backup/webdav/diff?${fileParams()}`);
+		goto(`/sync/webdav/diff?${fileParams()}`);
 	}
 
 	function openPreview(source: 'local' | 'remote') {
-		goto(`/backup/webdav/preview?source=${source}&${fileParams()}`);
+		goto(`/sync/webdav/preview?source=${source}&${fileParams()}`);
 	}
 
 	const overwrittenLabels = $derived(includeSettings ? ['Settings'] : []);

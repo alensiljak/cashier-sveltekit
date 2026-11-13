@@ -85,7 +85,7 @@ bg-none` so the track matches the surrounding surface:
 />
 ```
 
-See `src/routes/peer-sync/+page.svelte` (Connect toggle) and
+See `src/routes/sync/peer/+page.svelte` (Connect toggle) and
 `src/lib/components/ScheduleEditor.svelte` (Repayment toggle).
 
 ## Working Set Store

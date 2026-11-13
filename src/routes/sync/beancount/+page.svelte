@@ -209,7 +209,7 @@
 	<Toolbar title="Beancount Sync">
 		{#snippet actions()}
 			<a
-				href="/peer-sync/setup"
+				href="/sync/peer/setup"
 				class="btn btn-ghost btn-sm btn-square"
 				aria-label="Peer sync setup"
 				title="Peer sync setup"
@@ -235,12 +235,12 @@
 			{:else if presence.trustedPeers.length === 0}
 				<div class="rounded-box bg-base-200 space-y-3 p-4 text-center text-sm">
 					<p class="opacity-70">No peers configured yet.</p>
-					<a href="/peer-sync" class="btn btn-primary btn-sm">Set Up Peer Sync</a>
+					<a href="/sync/peer" class="btn btn-primary btn-sm">Set Up Peer Sync</a>
 				</div>
 			{:else if !presence.isInRoom}
 				<div class="rounded-box bg-base-200 space-y-3 p-4 text-center text-sm">
 					<p class="opacity-70">Not connected to the peer sync room.</p>
-					<a href="/peer-sync" class="btn btn-primary btn-sm">Connect via Peer Sync</a>
+					<a href="/sync/peer" class="btn btn-primary btn-sm">Connect via Peer Sync</a>
 				</div>
 			{:else if ctrl.onlineTrustedPeers.length === 0}
 				<div class="rounded-box bg-base-200 space-y-2 p-4 text-center text-sm">

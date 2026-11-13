@@ -188,7 +188,7 @@
 				</li>
 			{/if}
 			<li>
-				<a class="rounded-box bg-base-200 flex items-center gap-3 p-3" href="/backup">
+				<a class="rounded-box bg-base-200 flex items-center gap-3 p-3" href="/sync/backup-file">
 					<FileDownIcon size={20} />
 					<span class="min-w-0 flex-1">
 						<span class="block text-base font-semibold">Backup file</span>

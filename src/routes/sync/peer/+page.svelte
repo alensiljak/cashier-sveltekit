@@ -318,7 +318,7 @@
 	});
 
 	// ─── Connection ─────────────────────────────────────────────────────────────
-	// Name and network are edited on /peer-sync/setup. The room is private to the devices that
+	// Name and network are edited on /sync/peer/setup. The room is private to the devices that
 	// were paired with each other (see "Invite a device").
 
 	async function joinPeerRoom(silent = false) {
@@ -484,7 +484,7 @@
 	<Toolbar title="Peer Sync">
 		{#snippet actions()}
 			<a
-				href="/peer-sync/setup"
+				href="/sync/peer/setup"
 				class="btn btn-ghost btn-sm btn-square"
 				aria-label="Setup"
 				title="Setup"

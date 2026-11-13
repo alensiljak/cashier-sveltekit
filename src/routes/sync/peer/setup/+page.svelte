@@ -92,7 +92,7 @@
 <main class="flex h-full flex-col">
 	<Toolbar title="Peer Sync Setup">
 		{#snippet actions()}
-			<a href="/peer-sync" class="btn btn-ghost btn-sm btn-square" aria-label="Back" title="Back">
+			<a href="/sync/peer" class="btn btn-ghost btn-sm btn-square" aria-label="Back" title="Back">
 				<ArrowLeftIcon size={20} />
 			</a>
 			<HelpButton topic="peer-sync" />

@@ -90,12 +90,12 @@ Design, decided while implementing (differs from the first sketch):
 6. [ ] Follow-up: make the staleness period a setting.
 7. [ ] Follow-up: an e2e test that opens `/sync` on demo data (no options enabled: shows the "No sync options" banner) and follows a link.
 
-### Phase 4: Move pages under `/sync`
+### ✅ Phase 4: Move pages under `/sync`
 
-1. [ ] Move the route folders per the target structure above, one channel per commit.
-2. [ ] Add redirects from the old paths (a `+page.ts` with `redirect(308, ...)`, or `+layout`-level handling).
-3. [ ] Update internal links, including `SyncCard.svelte`, `peer-sync/+page.svelte`, `pullFiles.ts`, `PeerSource.ts` and `OpfsSource.ts` (these reference the old paths), plus any e2e tests and the help content.
-4. [ ] Update `doc/architecture.md` and the user docs.
+1. ✅ Moved the route folders per the target structure above (`/sync/s3`, `/sync/webdav`, `/sync/peer`, `/sync/backup-file`).
+2. ✅ No redirects: the old paths were removed outright (decision: the app is not public enough for bookmarks to matter, and the PWA manifest and service worker held no references).
+3. ✅ Internal links, comments and the e2e test updated.
+4. ✅ `doc/architecture.md` and `doc/s3-sync.md` updated. Help topics keep their `/help/peer-sync` slug.
 
 ### Phase 5: Optional, merge the file-sync pages
 

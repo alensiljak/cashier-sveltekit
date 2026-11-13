@@ -222,7 +222,7 @@
 					{@render targetRow(
 						CloudIcon,
 						'WebDAV',
-						'/backup/webdav',
+						'/sync/webdav',
 						webdavSnap.status,
 						webdavSnap.busy,
 						() => checkWithNotice('webdav', 'WebDAV'),
@@ -233,7 +233,7 @@
 					{@render targetRow(
 						DatabaseIcon,
 						'S3',
-						'/backup/s3',
+						'/sync/s3',
 						s3Snap.status,
 						s3Snap.busy,
 						() => checkWithNotice('s3', 'S3'),
@@ -245,7 +245,7 @@
 						{@render targetRow(
 							UsersIcon,
 							'P2P',
-							'/peer-sync',
+							'/sync/peer',
 							peerStatus,
 							syncing,
 							checkPeers,

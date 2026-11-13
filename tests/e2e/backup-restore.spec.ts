@@ -34,7 +34,7 @@ const rent = {
 
 /** Clicks Backup on /backup and returns the parsed downloaded file. */
 async function downloadBackup(page: Page): Promise<BackupFile> {
-	await page.goto('/backup');
+	await page.goto('/sync/backup-file');
 	const [download] = await Promise.all([
 		page.waitForEvent('download'),
 		page.getByRole('button', { name: 'Backup', exact: true }).click()
@@ -45,7 +45,7 @@ async function downloadBackup(page: Page): Promise<BackupFile> {
 
 /** Selects a file on /backup. */
 async function chooseFile(page: Page, content: string) {
-	await page.goto('/backup');
+	await page.goto('/sync/backup-file');
 	await page.locator('#backupFile').setInputFiles({
 		name: 'backup.json',
 		mimeType: 'application/json',

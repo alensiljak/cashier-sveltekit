@@ -16,7 +16,7 @@ export const describeError = (e: unknown) => (e instanceof Error ? e.message : d
 const webdav: SyncChannel = {
 	id: 'webdav',
 	label: 'WebDAV',
-	href: '/backup/webdav',
+	href: '/sync/webdav',
 	isEnabled: () => syncOptions.webdav,
 	unavailableReason: () => null,
 	async check() {
@@ -42,7 +42,7 @@ async function loadS3() {
 const s3: SyncChannel = {
 	id: 's3',
 	label: 'S3',
-	href: '/backup/s3',
+	href: '/sync/s3',
 	isEnabled: () => syncOptions.s3,
 	unavailableReason: () => null,
 	async check() {
@@ -66,7 +66,7 @@ const trustedPeers = () => peerConnection.presence.activePeerList.filter((p) => 
 const peer: SyncChannel = {
 	id: 'peer',
 	label: 'P2P',
-	href: '/peer-sync',
+	href: '/sync/peer',
 	isEnabled: () => syncOptions.peer,
 	unavailableReason() {
 		if (!peerConnection.presence.isInRoom) return 'Peer sync is off';

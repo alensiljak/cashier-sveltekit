@@ -4,7 +4,7 @@
  *
  * Call `scheduleBackup()` after any write to the store. The upload is
  * debounced so rapid successive writes (e.g. sort + save) coalesce into one
- * PUT. The backup runs in the background and reports the result with an app message. The /backup/webdav/ page shows the last-backup
+ * PUT. The backup runs in the background and reports the result with an app message. The /sync/webdav/ page shows the last-backup
  * timestamp via the exported `lastBackupTime` store.
  */
 
