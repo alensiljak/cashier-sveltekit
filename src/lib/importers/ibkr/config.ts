@@ -35,6 +35,13 @@ export interface IbkrConfig {
 	 * `[ticker, isin]` or `[ticker, bookSymbol, isin]`.
 	 */
 	symbols?: SymbolEntry[];
+	/** Which sections of the report to import. Missing entries default to included. */
+	sections?: IbkrSections;
+}
+
+export interface IbkrSections {
+	/** Balance assertions (cash and open positions). */
+	assertions?: boolean;
 }
 
 /** Fills `{currency}` and `{symbol}` in an account template. */

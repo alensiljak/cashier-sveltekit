@@ -63,6 +63,23 @@
 </script>
 
 <div class="flex flex-col gap-3">
+	<div class="flex flex-col gap-1">
+		<span class="text-sm">Sections to import</span>
+		<label class="flex items-center gap-2 text-sm cursor-pointer">
+			<input
+				type="checkbox"
+				class="toggle toggle-primary toggle-sm bg-transparent bg-none"
+				checked={value.sections?.assertions !== false}
+				onchange={(e) =>
+					onchange({
+						...value,
+						sections: { ...value.sections, assertions: e.currentTarget.checked }
+					})}
+			/>
+			Balance assertions
+		</label>
+	</div>
+
 	{#each FIELDS as [label, key, hint] (key)}
 		<label class="form-control w-full">
 			<span class="text-sm">{label} <span class="opacity-50 text-xs">{hint}</span></span>

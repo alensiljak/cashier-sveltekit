@@ -65,7 +65,8 @@ export const ibkrImporter: Importer<IbkrConfig> = {
 				})
 			);
 			result.push(...trades(statement.trades, { config, symbols, warnings }));
-			result.push(...balances(statement, { config, symbols, warnings }));
+			if (config.sections?.assertions !== false)
+				result.push(...balances(statement, { config, symbols, warnings }));
 			if (statement.corporateActions.length > 0)
 				warnings.push(
 					`${statement.corporateActions.length} corporate actions not imported (not supported).`
