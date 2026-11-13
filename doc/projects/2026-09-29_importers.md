@@ -89,7 +89,8 @@ Gaps and decisions:
 5. [x] Trades (`ibkr/trades.ts`): stock buys (same day/symbol/price merged), forex + merge (amounts rounded to 4 decimals, rate to 5). Sells, forex with commission and non-ExchTrade pair-like rows (`TCF.RTS0`) create nothing and warn. 9 tests pass, all 4 trade fixtures.
    - A zero fee creates no fee posting (the Python always wrote one).
    - Buys merge only if the `tradeDate` (cost date) is also equal.
-6. [ ] Balance assertions (cash and stock).
+6. [x] Balance assertions (`ibkr/balances.ts`): cash per currency (`BASE_SUMMARY` skipped) and stock positions, dated `toDate + 1`. Unknown stock symbol: ticker fallback, `!`, warning. Wired into the importer; 3 tests, both fixtures pass.
+   - The review screen's duplicate matching is still the default one, which does not understand balance rows; this is part of phase 7.
 7. [ ] Importer-specific dedup.
 8. [ ] Config UI + review screen wiring; unsupported records reported to the user.
 9. [ ] Later, separate project: corporate actions (split, merger, issue change, rights issue); optional `distribution` metadata.

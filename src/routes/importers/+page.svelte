@@ -120,6 +120,14 @@
 							>
 								Load defaults
 							</button>
+							{#if importer.id in configs}
+								<button
+									class="btn btn-ghost btn-sm text-error ml-auto"
+									onclick={() => askReset(importer.id)}
+								>
+									Reset
+								</button>
+							{/if}
 						</div>
 					{:else}
 						<div class="flex items-center justify-between gap-3">
@@ -138,12 +146,6 @@
 												Rules ({allRules(configs[importer.id] as RuleConfig).length})
 											</a>
 										{/if}
-										<button
-											class="btn btn-ghost btn-sm text-error"
-											onclick={() => askReset(importer.id)}
-										>
-											Reset
-										</button>
 									{/if}
 								</div>
 							</div>

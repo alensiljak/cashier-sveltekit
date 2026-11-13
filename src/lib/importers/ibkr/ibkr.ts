@@ -2,6 +2,7 @@ import type { ImportedXact, Importer } from '../types';
 import { fillTemplate, type IbkrConfig } from './config';
 import { cashTransactions } from './cashTransactions';
 import { isFlexQuery, parseFlexQuery } from './flexXml';
+import { balances } from './balances';
 import { trades } from './trades';
 import { SymbolMap, type SymbolEntry } from './symbols';
 
@@ -45,6 +46,7 @@ export const ibkrImporter: Importer<IbkrConfig> = {
 		for (const statement of parseFlexQuery(text)) {
 			result.push(...cashTransactions(statement.cashTransactions, { config, symbols, warnings }));
 			result.push(...trades(statement.trades, { config, symbols, warnings }));
+			result.push(...balances(statement, { config, symbols, warnings }));
 			if (statement.corporateActions.length > 0)
 				warnings.push(
 					`${statement.corporateActions.length} corporate actions not imported (not supported).`
