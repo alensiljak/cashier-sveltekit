@@ -33,7 +33,7 @@ To import bank statements directly in Cashier. The reason is that rustledger onl
 ### What is imported
 
 | XML section                                                   | Result                                                                                                                                  |
-|---------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------|
+| ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | `CashTransaction` Deposits/Withdrawals                        | cash <-> transfer account (`txfer-{CCY}`), payee "IB {CCY} Deposit"                                                                     |
 | `CashTransaction` Dividends, Payment In Lieu, Withholding Tax | one transaction per distribution; tax lines merged in by (date, payee, type); tax reversals/adjustments kept as separate postings       |
 | `CashTransaction` Fees, Commission Adjustment                 | fee transaction                                                                                                                         |
@@ -67,7 +67,7 @@ Covered: deposits, dividends, tax merge/reversal/adjustment, interest distributi
 Gaps and decisions:
 
 | Case                                                          | Decision                                                                                                                              |
-|---------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------|
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | Payment In Lieu of Dividends (incl. reversal)                 | Implement. Real record exists in `bean-import.xml`; add a reduced fixture.                                                            |
 | Broker interest paid                                          | Implement (same code path as received); add a fixture.                                                                                |
 | `Fees` cash transactions                                      | Implement (same path as Commission Adjustment); add a fixture.                                                                        |

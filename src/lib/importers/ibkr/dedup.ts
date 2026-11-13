@@ -18,7 +18,9 @@ function keyOf(xact: Xact): string | undefined {
 	if (!xact.date || xact.balanceAssertion) return undefined;
 	const postings = xact.postings
 		.filter((p) => !p.account.startsWith('Equity:Currency'))
-		.map((p) => JSON.stringify([p.account, p.amount === undefined ? '' : hundredths(p.amount), p.currency]))
+		.map((p) =>
+			JSON.stringify([p.account, p.amount === undefined ? '' : hundredths(p.amount), p.currency])
+		)
 		.sort();
 	return JSON.stringify([xact.date, postings]);
 }
