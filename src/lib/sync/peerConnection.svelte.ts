@@ -122,7 +122,16 @@ class PeerConnection {
 	}
 
 	/** Joins the room (if not already joined) and registers both protocols. No-op if already connected. */
-	async connect(): Promise<void> {
+	connect(): Promise<void> {
+		this.connectPromise ??= this.doConnect().finally(() => {
+			this.connectPromise = null;
+		});
+		return this.connectPromise;
+	}
+
+	private connectPromise: Promise<void> | null = null;
+
+	private async doConnect(): Promise<void> {
 		await this.ensureInit();
 		if (this.presence.isInRoom) return;
 		await this.presence.join();

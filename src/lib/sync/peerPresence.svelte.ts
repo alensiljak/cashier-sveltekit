@@ -380,25 +380,44 @@ export class PeerPresence {
 	 * Joins the group's private room: its name and signaling password come from the sync group
 	 * secret, created here if this device has none yet (a group of one, which others join by invite).
 	 */
-	async join(): Promise<void> {
-		if (this.isInRoom || this.joining) return;
-		this.joining = true;
-		try {
-			const secret = await ensureGroupSecret();
-			this.hasGroup = true;
-			this.room = await joinTrysteroRoom({
-				strategy: this.strategy,
-				roomId: await deriveSyncRoom(secret),
-				password: await deriveSyncPassword(secret),
-				iceServers: $state.snapshot(this.iceServers) as RTCIceServer[]
-			});
-			this.attachRoom(this.room);
-		} finally {
-			this.joining = false;
-		}
+	join(): Promise<void> {
+		if (this.isInRoom) return Promise.resolve();
+		// Concurrent callers share one join: trystero allows a room to be joined only once per page.
+		this.joinPromise ??= this.doJoin().finally(() => {
+			this.joinPromise = null;
+		});
+		return this.joinPromise;
 	}
 
-	private joining = false;
+	private joinPromise: Promise<void> | null = null;
+
+	private async doJoin(): Promise<void> {
+		// A room left over from a failed attempt or a page-hide leave still occupies trystero's registry.
+		if (this.room) {
+			try {
+				await this.room.leave();
+			} catch {
+				// already gone
+			}
+			this.room = null;
+		}
+		const secret = await ensureGroupSecret();
+		this.hasGroup = true;
+		const room = await joinTrysteroRoom({
+			strategy: this.strategy,
+			roomId: await deriveSyncRoom(secret),
+			password: await deriveSyncPassword(secret),
+			iceServers: $state.snapshot(this.iceServers) as RTCIceServer[]
+		});
+		this.room = room;
+		try {
+			this.attachRoom(room);
+		} catch (e) {
+			this.room = null;
+			await room.leave().catch(() => {});
+			throw e;
+		}
+	}
 
 	private attachRoom(room: Room): void {
 		this.helloAction = room.makeAction('hello') as unknown as MessageAction<HelloMessage>;
