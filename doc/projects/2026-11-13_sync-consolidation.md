@@ -48,12 +48,14 @@ Consequences:
 No behaviour change. Each step is its own commit, with unit tests for whatever becomes pure.
 
 1. ✅ **Beancount sync controller.** Extract `loadLocalTree`, `refreshPeer`, `refreshAll`, `markSynced`, `applyChanges`, `openDiffFor`, `markDiffModalIdentical` and `applyMergeForModal` from [sync/beancount/+page.svelte](/src/routes/sync/beancount/+page.svelte) into a `.svelte.ts` controller (or a plain service plus a state class). The page keeps only markup and event wiring.
-2. [ ] **Split `s3Sync.ts`** along its existing seams, keeping `s3Sync.ts` as a re-exporting barrel at first so callers do not change:
-   - session and `runSync` -> `s3Session.ts`
-   - CRDT store sync and diagnostics (`backupCrdtStores`, `syncCrdtStores`, `diagnoseCrdt`, `previewCrdtChanges`, compaction, device forgetting) -> `s3CrdtSync.ts`
-   - remote overview, bucket devices, last sync -> `s3Status.ts`
-   - per-file status and compare (`listFileStatuses`, `compareFile`, `compareSettings`, `markSameContent`) -> `s3FileCompare.ts`
-   - Then update callers to import from the specific module and drop the barrel.
+2. ✅ **Split `s3Sync.ts`** (1,311 lines) along its existing seams. `s3Sync.ts` is now a 72-line re-exporting barrel, so no caller changed. There was no module-level mutable state, only constants.
+   - `s3Session.ts` (200): types, bucket layout constants, key and manifest loading, `openSession`, `persist`, last-sync bookkeeping
+   - `s3Files.ts` (330): settings and Beancount file sync, `runSync`, `resolveConflict`, `applyMerge`, `applyDeletion` (`runSync` lives here, not in the session, because it needs both files and CRDT stores)
+   - `s3CrdtSync.ts` (423): CRDT store sync, status, previews, diagnostics, compaction, forgetting a device
+   - `s3FileCompare.ts` (224): `listFileStatuses`, `compareFile`, `compareSettings`, `markSameContent`, `fetchFileSyncStatus`
+   - `s3Status.ts` (135): `fetchRemoteOverview`, `listBucketDevices`
+   - `s3Preview.ts` (66): `previewObject`
+   - [ ] Follow-up: update callers to import from the specific module and drop the barrel.
 3. [ ] **Other oversized pages.** Check `/peer-sync` (~800 lines), `/backup/s3` (~660) and `/opfs/import-ledger` (~770) for inline orchestration. Extract only where it is real logic, not markup.
 4. [ ] **Tests.** Unit tests for the extracted controller and the pure S3 modules. Record any gap that needs real S3 or peers as an e2e candidate, not a mock-heavy unit test.
 
