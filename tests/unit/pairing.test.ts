@@ -49,7 +49,7 @@ class FakeNet {
 		const target = this.rooms.find((r) => r.selfId === to && !r.left);
 		setTimeout(
 			() =>
-				void target?.actions.get(name)?.onMessage?.(structuredClone(data), { peerId: from.selfId }),
+				void target?.actions.get(name)?.handler?.(structuredClone(data), { peerId: from.selfId }),
 			0
 		);
 	}
@@ -58,12 +58,27 @@ class FakeNet {
 class FakeRoom {
 	actions = new Map<
 		string,
-		{ onMessage: Handler; send: (d: unknown, o?: { target?: string }) => Promise<void> }
+		{
+			handler: Handler;
+			onMessage: (h: Handler) => void;
+			send: (d: unknown, o?: { target?: string }) => Promise<void>;
+		}
 	>();
 	peers: Record<string, FakeRoom> = {};
-	onPeerJoin: ((id: string) => void) | null = null;
-	onPeerLeave: ((id: string) => void) | null = null;
+	private joinHandlers: ((p: { peerId: string }) => void)[] = [];
+	private leaveHandlers: ((p: { peerId: string }) => void)[] = [];
 	left = false;
+
+	// Like trystero: handlers are subscribed by calling these, and receive `{ peerId }`.
+	onPeerJoin(handler: (p: { peerId: string }) => void) {
+		this.joinHandlers.push(handler);
+	}
+	onPeerLeave(handler: (p: { peerId: string }) => void) {
+		this.leaveHandlers.push(handler);
+	}
+	emitLeave(id: string) {
+		for (const h of this.leaveHandlers) h({ peerId: id });
+	}
 
 	constructor(
 		private net: FakeNet,
@@ -75,12 +90,15 @@ class FakeRoom {
 
 	connect(other: FakeRoom) {
 		this.peers[other.selfId] = other;
-		this.onPeerJoin?.(other.selfId);
+		for (const h of this.joinHandlers) h({ peerId: other.selfId });
 	}
 
 	makeAction(name: string) {
 		const action = {
-			onMessage: null as Handler,
+			handler: null as Handler,
+			onMessage: (h: Handler) => {
+				action.handler = h;
+			},
 			send: async (data: unknown, opts?: { target?: string }) => {
 				if (this.left) throw new Error('left the room');
 				for (const id of opts?.target ? [opts.target] : Object.keys(this.peers)) {
@@ -92,14 +110,16 @@ class FakeRoom {
 		return action;
 	}
 
-	/** Enough of an RTCPeerConnection for `connectionFingerprints`. */
+	/** Enough of trystero's peer info (with an RTCPeerConnection) for `connectionFingerprints`. */
 	getPeers() {
 		return Object.fromEntries(
 			Object.entries(this.peers).map(([id, other]) => [
 				id,
 				{
-					localDescription: { sdp: `a=fingerprint:sha-256 ${this.fingerprint}` },
-					remoteDescription: { sdp: `a=fingerprint:sha-256 ${other.fingerprint}` }
+					connection: {
+						localDescription: { sdp: `a=fingerprint:sha-256 ${this.fingerprint}` },
+						remoteDescription: { sdp: `a=fingerprint:sha-256 ${other.fingerprint}` }
+					}
 				}
 			])
 		);
@@ -107,7 +127,7 @@ class FakeRoom {
 
 	async leave() {
 		this.left = true;
-		for (const other of Object.values(this.peers)) other.onPeerLeave?.(this.selfId);
+		for (const other of Object.values(this.peers)) other.emitLeave(this.selfId);
 	}
 }
 
@@ -259,8 +279,12 @@ describe('pairing by invite', () => {
 			await deriveInvitePassword(parsed.payload.seed)
 		);
 		const hello = room.makeAction('hello');
-		room.onPeerJoin = (id) =>
-			void hello.send({ id: 'old-uuid', name: 'Old phone' } satisfies HelloMessage, { target: id });
+		room.onPeerJoin(
+			({ peerId }) =>
+				void hello.send({ id: 'old-uuid', name: 'Old phone' } satisfies HelloMessage, {
+					target: peerId
+				})
+		);
 		await new Promise((r) => setTimeout(r, 50));
 
 		expect(invite.candidates).toHaveLength(0);
@@ -287,7 +311,7 @@ describe('pairing by invite', () => {
 			local: 'EE:EE:EE',
 			remote: 'FF:FF:FF'
 		});
-		room.onPeerJoin = (id) => void hello.send(stale, { target: id });
+		room.onPeerJoin(({ peerId }) => void hello.send(stale, { target: peerId }));
 		await new Promise((r) => setTimeout(r, 50));
 
 		expect(invite.candidates).toHaveLength(0);
