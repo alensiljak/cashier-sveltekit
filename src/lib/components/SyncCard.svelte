@@ -15,7 +15,8 @@
 	import Notifier from '#lib/utils/notifier';
 	import { syncOptions } from '#lib/services/syncOptions.svelte';
 	import { syncHub } from '#lib/sync/hub';
-	import type { ChannelId, ChannelStatus as Status } from '#lib/sync/channel';
+	import { checkWithNotice, syncWithNotice } from '#lib/sync/hubActions';
+	import type { ChannelStatus as Status } from '#lib/sync/channel';
 
 	const presence = peerConnection.presence;
 
@@ -112,20 +113,6 @@
 	}
 
 	// --- WebDAV and S3 ---
-
-	async function checkTarget(id: ChannelId, label: string) {
-		const s = await syncHub.check(id);
-		if (s.status === 'error') Notifier.error(`${label} check failed: ${s.error}`);
-	}
-
-	async function syncTarget(id: ChannelId, label: string) {
-		const r = await syncHub.sync(id);
-		if (!r.ok) Notifier.error(`${label} sync failed: ${r.errors.join('; ')}`);
-		else
-			Notifier.success(
-				r.merged ? `${label} synced — new transactions received` : `${label} synced`
-			);
-	}
 
 	const dotClass: Record<Status, string> = {
 		unchecked: 'bg-base-300',
@@ -238,8 +225,8 @@
 						'/backup/webdav',
 						webdavSnap.status,
 						webdavSnap.busy,
-						() => checkTarget('webdav', 'WebDAV'),
-						() => syncTarget('webdav', 'WebDAV')
+						() => checkWithNotice('webdav', 'WebDAV'),
+						() => syncWithNotice('webdav', 'WebDAV')
 					)}
 				{/if}
 				{#if syncOptions.s3}
@@ -249,8 +236,8 @@
 						'/backup/s3',
 						s3Snap.status,
 						s3Snap.busy,
-						() => checkTarget('s3', 'S3'),
-						() => syncTarget('s3', 'S3')
+						() => checkWithNotice('s3', 'S3'),
+						() => syncWithNotice('s3', 'S3')
 					)}
 				{/if}
 				{#if syncOptions.peer}

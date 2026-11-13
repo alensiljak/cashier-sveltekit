@@ -638,7 +638,9 @@
 	<div id="backup-sync" class="scroll-mt-16"></div>
 	<CashierCardTemplate heading="Backup & Sync" Icon={CloudUploadIcon} bodyClass="space-y-3 px-3">
 		{#snippet description()}
-			Enable only the options you use. Enabled options appear in the menu. Stored on this device.
+			Enable only the options you use. Enabled options appear on the <a class="link" href="/sync"
+				>Sync page</a
+			>. Stored on this device.
 		{/snippet}
 
 		{#each syncOptionRows as row (row.option)}

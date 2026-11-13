@@ -6,6 +6,7 @@
 import {
 	DEFAULT_STALE_MS,
 	emptySnapshot,
+	formatAge,
 	isStale,
 	newestSync,
 	overallState,
@@ -271,5 +272,21 @@ describe('SyncHub', () => {
 			message = (e as Error).message;
 		}
 		assert.match(message, /Unknown sync channel/);
+	});
+});
+
+describe('formatAge', () => {
+	const ago = (ms: number) => new Date(NOW.getTime() - ms);
+	test('unknown is never', () => assert.equal(formatAge(null, NOW), 'never'));
+	test('under a minute is just now', () => assert.equal(formatAge(ago(30_000), NOW), 'just now'));
+	test('a time in the future is just now', () =>
+		assert.equal(formatAge(ago(-5000), NOW), 'just now'));
+	test('minutes, hours and days, singular and plural', () => {
+		assert.equal(formatAge(ago(60_000), NOW), '1 minute ago');
+		assert.equal(formatAge(ago(5 * 60_000), NOW), '5 minutes ago');
+		assert.equal(formatAge(ago(3_600_000), NOW), '1 hour ago');
+		assert.equal(formatAge(ago(23 * 3_600_000), NOW), '23 hours ago');
+		assert.equal(formatAge(ago(86_400_000), NOW), '1 day ago');
+		assert.equal(formatAge(ago(10 * 86_400_000), NOW), '10 days ago');
 	});
 });

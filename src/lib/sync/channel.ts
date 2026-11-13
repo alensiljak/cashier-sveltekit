@@ -90,3 +90,16 @@ export function newestSync(snapshots: ChannelSnapshot[]): Date | null {
 		null
 	);
 }
+
+/** "just now", "5 minutes ago", "3 days ago", or "never" for a time that is not known. */
+export function formatAge(at: Date | null, now: Date): string {
+	if (!at) return 'never';
+	const seconds = Math.max(0, Math.round((now.getTime() - at.getTime()) / 1000));
+	if (seconds < 60) return 'just now';
+	const unit = (n: number, name: string) => `${n} ${name}${n === 1 ? '' : 's'} ago`;
+	const minutes = Math.floor(seconds / 60);
+	if (minutes < 60) return unit(minutes, 'minute');
+	const hours = Math.floor(minutes / 60);
+	if (hours < 24) return unit(hours, 'hour');
+	return unit(Math.floor(hours / 24), 'day');
+}

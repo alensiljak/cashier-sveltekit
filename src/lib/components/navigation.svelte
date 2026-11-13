@@ -38,7 +38,7 @@
 	import PiggyBankIcon from '@lucide/svelte/icons/piggy-bank';
 	import ShieldCheckIcon from '@lucide/svelte/icons/shield-check';
 	import CloudUploadIcon from '@lucide/svelte/icons/cloud-upload';
-	import WifiIcon from '@lucide/svelte/icons/wifi';
+	import ArrowLeftRightIcon from '@lucide/svelte/icons/arrow-left-right';
 	import FilePlusIcon from '@lucide/svelte/icons/file-plus';
 	import SquareTerminalIcon from '@lucide/svelte/icons/square-terminal';
 	import SearchIcon from '@lucide/svelte/icons/search';
@@ -425,6 +425,19 @@
 						<span class="flex-1"></span>
 					</summary>
 					<ul>
+						<!-- The hub links to each channel's page (WebDAV, S3, peer) and to Beancount file sync. -->
+						<li>
+							<a
+								href="/sync"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/sync'
+									? 'active bg-secondary text-secondary-content'
+									: ''}"
+								onclick={closeDrawer}
+							>
+								<ArrowLeftRightIcon />
+								<span>Sync</span>
+							</a>
+						</li>
 						<li>
 							<a
 								href="/backup"
@@ -438,18 +451,6 @@
 							</a>
 						</li>
 						{#if syncOptions.webdav}
-							<li>
-								<a
-									href="/backup/webdav"
-									class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/backup/webdav'
-										? 'active bg-secondary text-secondary-content'
-										: ''}"
-									onclick={closeDrawer}
-								>
-									<CloudUploadIcon />
-									<span>WebDAV Backup</span>
-								</a>
-							</li>
 							<li>
 								<a
 									href="/util/webdav-explorer"
@@ -467,18 +468,6 @@
 						{#if syncOptions.s3}
 							<li>
 								<a
-									href="/backup/s3"
-									class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/backup/s3'
-										? 'active bg-secondary text-secondary-content'
-										: ''}"
-									onclick={closeDrawer}
-								>
-									<CloudIcon />
-									<span>S3 Sync</span>
-								</a>
-							</li>
-							<li>
-								<a
 									href="/util/s3-explorer"
 									class="flex w-full items-center gap-2 py-2 {page.url.pathname ===
 									'/util/s3-explorer'
@@ -488,20 +477,6 @@
 								>
 									<CloudIcon />
 									<span>S3 Explorer</span>
-								</a>
-							</li>
-						{/if}
-						{#if syncOptions.peer}
-							<li>
-								<a
-									href="/peer-sync"
-									class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/peer-sync'
-										? 'active bg-secondary text-secondary-content'
-										: ''}"
-									onclick={closeDrawer}
-								>
-									<WifiIcon />
-									<span>Peer Sync</span>
 								</a>
 							</li>
 						{/if}

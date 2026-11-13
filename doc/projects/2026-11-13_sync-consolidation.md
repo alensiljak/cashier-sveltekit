@@ -80,13 +80,15 @@ Design, decided while implementing (differs from the first sketch):
 6. [ ] Follow-up: move the P2P row of the home card onto the hub's peer channel. Needs a per-peer breakdown in the snapshot, which Phase 3's hub page wants anyway.
 7. [ ] Follow-up: a channel-level "pending counts" view (files to upload or download, conflicts). The hub currently knows only same/differs; richer detail stays on the channel's own page (`s3StatusView.ts`).
 
-### Phase 3: The `/sync` hub
+### ✅ Phase 3: The `/sync` hub
 
-1. [ ] `/sync/+page.svelte`: one card per enabled channel, driven by `syncHub` (not a copy of the home [SyncCard.svelte](/src/lib/components/SyncCard.svelte), which stays the compact home version). Each shows last sync, the cached status, an error line, "Check" and "Sync now", and a link to the detail page. Opening the page only calls `syncHub.load()`; it contacts no channel.
-2. [ ] A staleness warning at the top when no channel has synced within a configurable period, and a prompt to set one up when none is configured.
-3. [ ] A "Backup file" section for the offline export and restore fallback.
-4. [ ] Collapse the sync/backup entries in [navigation.svelte](/src/lib/components/navigation.svelte) into a single "Sync" entry. The `syncOptions` toggles still decide which cards appear.
-5. [ ] Update the Settings page links ([settings/+page.svelte](/src/routes/settings/+page.svelte)) to point at the hub.
+1. ✅ [/sync/+page.svelte](/src/routes/sync/+page.svelte): one card per enabled channel, driven by `syncHub` (not a copy of the home SyncCard, which stays the compact home version). Each shows the cached status badge, last sync ("x ago" plus the date), when it was checked, an error or "unavailable" reason, **Check**, **Sync now**, and **Details**. A **Check all** button contacts every reachable channel. Opening the page only reads local state (`syncHub.load()`); it contacts no channel.
+2. ✅ Overall banner from `syncHub.overall`: no channels (links to Settings), failed, changes to exchange, stale (default: nothing synced for a week), or up to date with the newest sync time. The period is the fixed `DEFAULT_STALE_MS` for now; making it a setting is a follow-up.
+3. ✅ "More" section with links to Beancount file sync (when peer sync is on), the backup file page, and the sync options in Settings. The backup page itself stays a separate page.
+4. ✅ [navigation.svelte](/src/lib/components/navigation.svelte): the Backup & Sync group now starts with **Sync**; the separate WebDAV Backup, S3 Sync and Peer Sync entries are gone (the hub's cards link to them). Backup and the two explorers stay.
+5. ✅ Settings' Backup & Sync card now points at the hub. [hubActions.ts](/src/lib/sync/hubActions.ts) holds the check/sync notices shared by the card and the page.
+6. [ ] Follow-up: make the staleness period a setting.
+7. [ ] Follow-up: an e2e test that opens `/sync` on demo data (no options enabled: shows the "No sync options" banner) and follows a link.
 
 ### Phase 4: Move pages under `/sync`
 
