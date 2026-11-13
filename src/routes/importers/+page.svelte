@@ -6,6 +6,8 @@
 	import { goto } from '$app/navigation';
 	import { allRules, type RuleConfig } from '#lib/importers/rules';
 	import { listImporters } from '#lib/importers';
+	import IbkrConfigForm from '#lib/importers/ibkr/IbkrConfigForm.svelte';
+	import type { IbkrConfig } from '#lib/importers/ibkr/config';
 	import { savePendingImport } from '#lib/importers/pendingImport';
 	import {
 		loadImporterConfig,
@@ -21,17 +23,70 @@
 	let editorText = $state('');
 	let error = $state('');
 
+	/** Importers with a form editor; the others are edited as JSON. */
+	const FORM_IMPORTERS = ['ibkr'];
+	let jsonMode = $state(false);
+	/** Bumped to remount the form after the text changed from outside it (defaults, JSON). */
+	let formKey = $state(0);
+
+	// The edit in progress survives a page reload (e.g. the dev server reloading after a code change).
+	const DRAFT_KEY = 'cashier.importers.draft';
+	function saveDraft() {
+		try {
+			if (editingId)
+				sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ editingId, editorText, jsonMode }));
+			else sessionStorage.removeItem(DRAFT_KEY);
+		} catch {
+			// Storage unavailable: the draft is simply not kept.
+		}
+	}
+	$effect(() => {
+		// Track the edit state, then store it.
+		void [editingId, editorText, jsonMode];
+		saveDraft();
+	});
+
 	onMount(async () => {
 		for (const importer of importers) {
 			const config = await loadImporterConfig<unknown>(importer.id);
 			if (config !== null) configs[importer.id] = config;
+		}
+		try {
+			const draft = JSON.parse(sessionStorage.getItem(DRAFT_KEY) ?? 'null');
+			if (draft && importers.some((i) => i.id === draft.editingId)) {
+				editingId = draft.editingId;
+				editorText = draft.editorText;
+				jsonMode = draft.jsonMode;
+			}
+		} catch {
+			// No usable draft.
 		}
 	});
 
 	function edit(id: string, fallback: unknown) {
 		editingId = id;
 		editorText = JSON.stringify(configs[id] ?? fallback, null, 2);
+		jsonMode = !FORM_IMPORTERS.includes(id);
 		error = '';
+	}
+
+	/** The config in the editor, or undefined if the text is not valid JSON. */
+	function draftConfig<T>(): T | undefined {
+		try {
+			return JSON.parse(editorText) as T;
+		} catch {
+			return undefined;
+		}
+	}
+
+	function showForm() {
+		if (draftConfig() === undefined) {
+			error = 'The JSON is not valid; fix it before switching to the form.';
+			return;
+		}
+		error = '';
+		formKey++;
+		jsonMode = false;
 	}
 
 	async function save(id: string) {
@@ -105,18 +160,46 @@
 			<div class="card bg-base-200">
 				<div class="card-body p-4 gap-3">
 					{#if editingId === importer.id}
-						<span class="font-medium">{importer.name}</span>
-						<textarea
-							class="textarea textarea-bordered w-full font-mono text-xs h-72"
-							bind:value={editorText}
-							spellcheck="false"></textarea>
+						<div class="flex items-center justify-between gap-2">
+							<span class="font-medium">{importer.name}</span>
+							{#if FORM_IMPORTERS.includes(importer.id)}
+								<div class="join">
+									<button
+										class="btn btn-xs join-item"
+										class:btn-active={!jsonMode}
+										onclick={showForm}>Form</button
+									>
+									<button
+										class="btn btn-xs join-item"
+										class:btn-active={jsonMode}
+										onclick={() => (jsonMode = true)}>JSON</button
+									>
+								</div>
+							{/if}
+						</div>
+						{#if !jsonMode && importer.id === 'ibkr'}
+							{#key formKey}
+								<IbkrConfigForm
+									value={draftConfig<IbkrConfig>() ?? importer.defaultConfig}
+									onchange={(c) => (editorText = JSON.stringify(c, null, 2))}
+								/>
+							{/key}
+						{:else}
+							<textarea
+								class="textarea textarea-bordered w-full font-mono text-xs h-72"
+								bind:value={editorText}
+								spellcheck="false"></textarea>
+						{/if}
 						{#if error}<p class="text-error text-sm">{error}</p>{/if}
 						<div class="flex gap-2 flex-wrap">
 							<button class="btn btn-primary btn-sm" onclick={() => save(importer.id)}>Save</button>
 							<button class="btn btn-sm" onclick={() => (editingId = null)}>Cancel</button>
 							<button
 								class="btn btn-ghost btn-sm"
-								onclick={() => (editorText = JSON.stringify(importer.defaultConfig, null, 2))}
+								onclick={() => {
+									editorText = JSON.stringify(importer.defaultConfig, null, 2);
+									formKey++;
+								}}
 							>
 								Load defaults
 							</button>

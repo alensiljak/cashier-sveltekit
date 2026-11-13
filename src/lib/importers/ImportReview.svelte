@@ -9,7 +9,8 @@
 		loadExistingBankXacts,
 		loadExistingXacts,
 		loadFullXact,
-		loadIsinSymbols
+		loadIsinSymbols,
+		loadSymbolIsins
 	} from './existing';
 	import { clearPendingImport, loadPendingImport, saveSelection, saveView } from './pendingImport';
 	import { getXactStore } from '#lib/storage/xactStoreRegistry';
