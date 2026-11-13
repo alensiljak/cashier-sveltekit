@@ -14,6 +14,11 @@
 		['Cash account', 'cashAccount', '{currency}'],
 		['Stock account', 'stockAccount', '{symbol}'],
 		['Distribution (dividend) account', 'distributionAccount', '{symbol}, {currency}'],
+		[
+			'Interest account (commodities tagged distribution: "interest")',
+			'interestAccount',
+			'{symbol}, {currency}'
+		],
 		['Distribution payee', 'distributionPayee', '{symbol}'],
 		['Withholding tax account', 'withholdingTaxAccount', '{symbol}, {currency}'],
 		['Capital gains account', 'capitalGainAccount', '{symbol}, {currency}'],

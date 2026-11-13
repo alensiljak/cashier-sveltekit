@@ -13,6 +13,11 @@ export interface IbkrConfig {
 	stockAccount: string;
 	/** Dividends and fund distributions of any kind, e.g. `Income:Investments:Dividend:IB:{symbol}`. */
 	distributionAccount: string;
+	/**
+	 * Income account for securities whose commodity carries `distribution: "interest"` metadata,
+	 * e.g. `Income:Investments:Interest:IB:{symbol}`. Without it they use `distributionAccount`.
+	 */
+	interestAccount?: string;
 	/** Payee template for distributions. Default `{symbol} distribution`. */
 	distributionPayee?: string;
 	/** Realized gains on sales. */

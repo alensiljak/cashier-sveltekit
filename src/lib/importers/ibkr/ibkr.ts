@@ -18,6 +18,7 @@ export const ibkrImporter: Importer<IbkrConfig> = {
 		cashAccount: 'Assets:Investments:IB:Cash-{currency}',
 		stockAccount: 'Assets:Investments:IB:Stocks:{symbol}',
 		distributionAccount: 'Income:Investments:Dividend:IB:{symbol}',
+		interestAccount: 'Income:Investments:Interest:IB:{symbol}',
 		distributionPayee: '{symbol} distribution',
 		capitalGainAccount: 'Income:Investments:CapitalGain:IB',
 		brokerInterestAccount: 'Income:Investments:Interest:IB',
@@ -51,10 +52,18 @@ export const ibkrImporter: Importer<IbkrConfig> = {
 			...(config.symbols ?? [])
 		];
 		const symbols = new SymbolMap(entries);
+		const distributionKinds = ctx.distributionKinds;
 
 		const result: ImportedXact[] = [];
 		for (const statement of parseFlexQuery(text)) {
-			result.push(...cashTransactions(statement.cashTransactions, { config, symbols, warnings }));
+			result.push(
+				...cashTransactions(statement.cashTransactions, {
+					config,
+					symbols,
+					distributionKinds,
+					warnings
+				})
+			);
 			result.push(...trades(statement.trades, { config, symbols, warnings }));
 			result.push(...balances(statement, { config, symbols, warnings }));
 			if (statement.corporateActions.length > 0)

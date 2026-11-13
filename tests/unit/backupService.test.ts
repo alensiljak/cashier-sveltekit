@@ -27,6 +27,11 @@ import {
 	restoreBackup,
 	type BackupOptions
 } from '#lib/services/backupService';
+import {
+	loadImporterConfig,
+	resetImporterConfig,
+	saveImporterConfig
+} from '#lib/importers/config';
 import { getRestoreMissing } from '#lib/services/restoreMissing';
 import { getRestoredDevice } from '#lib/services/restoredDevice';
 
@@ -57,6 +62,23 @@ const payees = async () => (await scxStore.list()).map((s) => s.transaction?.pay
 
 beforeEach(seed);
 afterEach(() => vi.restoreAllMocks());
+
+describe('importer configs', () => {
+	it('travel in the backup and come back on restore', async () => {
+		const config = { cashAccount: 'Assets:IB:Cash-{currency}', transferAccounts: { EUR: 'A:B' } };
+		await saveImporterConfig('ibkr', config);
+
+		const backup = await createBackup(basic);
+		expect(JSON.parse(backup).settings.map((s: { key: string }) => s.key)).toContain(
+			'importer.ibkr'
+		);
+
+		await resetImporterConfig('ibkr');
+		expect(await loadImporterConfig('ibkr')).toBeNull();
+		await restoreBackup(backup, basic);
+		expect(await loadImporterConfig('ibkr')).toEqual(config);
+	});
+});
 
 describe('getBackupFilename', () => {
 	it('embeds the date and time', () => {

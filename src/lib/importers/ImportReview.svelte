@@ -7,6 +7,7 @@
 	import { DEFAULT_DATE_WINDOW_DAYS, matchWithExisting } from './dedup';
 	import {
 		loadExistingBankXacts,
+		loadDistributionKinds,
 		loadExistingXacts,
 		loadFullXact,
 		loadIsinSymbols,
@@ -55,6 +56,7 @@
 
 	let isinToSymbol: Record<string, string> = {};
 	let symbolIsinsCache: [string, string][] = [];
+	let distributionKinds: Record<string, string> = {};
 	/** Records the importer skipped or could not fully handle. */
 	let warnings = $state<string[]>([]);
 
@@ -94,10 +96,16 @@
 				// Already warned above.
 			}
 			symbolIsinsCache = symbolIsins;
+			try {
+				distributionKinds = await loadDistributionKinds();
+			} catch {
+				// Already warned above.
+			}
 			const newWarnings: string[] = [];
 			const imported = importer.extract(text, config, {
 				isinToSymbol,
 				symbolIsins,
+				distributionKinds,
 				warnings: newWarnings,
 				applyRules
 			});
@@ -162,6 +170,7 @@
 		const imported = importer.extract(text, config, {
 			isinToSymbol,
 			symbolIsins: symbolIsinsCache,
+			distributionKinds,
 			warnings: [],
 			applyRules
 		});

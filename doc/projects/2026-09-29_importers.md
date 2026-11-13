@@ -8,7 +8,7 @@ To import bank statements directly in Cashier. The reason is that rustledger onl
 
 - [x] modify payees
 - [x] match categories / accounts
-- [ ] fix ibkr importer interest vs dividends choice (manual symbol list!)
+- [x] fix ibkr importer interest vs dividends choice: commodity metadata `distribution: "interest"` routes a security to the config's `interestAccount` (replaces the manual symbol list)
 - [x] booking date vs value date: banks dates often lag
 - [x] deduplication
 - [x] save importer configuration in Settings (or JSON in OPFS)

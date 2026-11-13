@@ -116,6 +116,23 @@ export async function loadSymbolIsins(): Promise<[string, string][]> {
 	return pairs;
 }
 
+/**
+ * Commodity symbol -> the value of its `distribution` metadata (e.g. `interest`): which kind of
+ * income the security's distributions are booked as. Securities without the tag are left out.
+ */
+export async function loadDistributionKinds(): Promise<Record<string, string>> {
+	await fullLedgerService.ensureLoaded();
+	const commodities = commoditiesFromDirectives(
+		(await fullLedgerService.getDirectives()) as unknown[]
+	);
+	const kinds: Record<string, string> = {};
+	for (const c of commodities) {
+		const kind = c.meta?.distribution;
+		if (typeof kind === 'string' && kind) kinds[c.currency] = kind.trim().toLowerCase();
+	}
+	return kinds;
+}
+
 /** ISIN -> commodity symbol. With a dual listing the last one wins; see `loadSymbolIsins`. */
 export async function loadIsinSymbols(): Promise<Record<string, string>> {
 	const map: Record<string, string> = {};

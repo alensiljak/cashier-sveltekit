@@ -62,6 +62,11 @@ export interface ImportContext {
 	 */
 	symbolIsins?: [symbol: string, isin: string][];
 	/**
+	 * Commodity symbol -> its `distribution` metadata (e.g. `interest`), which routes the income
+	 * of its distributions to a different account.
+	 */
+	distributionKinds?: Record<string, string>;
+	/**
 	 * Out-parameter: the importer appends a message for every record it skipped or could not
 	 * fully handle, so the review screen can tell the user. Skipped records are not created.
 	 */

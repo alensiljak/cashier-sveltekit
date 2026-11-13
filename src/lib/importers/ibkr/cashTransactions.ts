@@ -31,6 +31,8 @@ const TYPE = {
 export interface CashEnv {
 	config: IbkrConfig;
 	symbols: SymbolMap;
+	/** Book symbol -> `distribution` metadata of its commodity. */
+	distributionKinds?: Record<string, string>;
 	warnings: string[];
 }
 
@@ -161,12 +163,21 @@ function distribution(row: CashTransactionRow, env: CashEnv): Draft {
 	if (row.isin) draft.details.push(['ISIN', row.isin]);
 	draft.matchText.unshift(bookSymbol);
 
+	const isInterest = env.distributionKinds?.[bookSymbol] === 'interest';
+	if (isInterest && !isTax && !env.config.interestAccount) {
+		const message = `${bookSymbol} is tagged distribution: interest, but the config has no interest account; booked on the distribution account.`;
+		if (!env.warnings.includes(message)) env.warnings.push(message);
+	}
+	const incomeTemplate =
+		isInterest && env.config.interestAccount
+			? env.config.interestAccount
+			: env.config.distributionAccount;
 	const account = isTax
 		? fillTemplate(env.config.withholdingTaxAccount, {
 				currency: row.currency,
 				symbol: accountSymbol(bookSymbol)
 			})
-		: fillTemplate(env.config.distributionAccount, {
+		: fillTemplate(incomeTemplate, {
 				currency: row.currency,
 				symbol: accountSymbol(bookSymbol)
 			});

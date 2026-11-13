@@ -237,3 +237,42 @@ describe('SymbolMap', () => {
 		expect(m.resolve({ symbol: 'OPI', isin: 'US67623C1099' })).toBe('OPI');
 	});
 });
+
+describe('IBKR distributions tagged as interest', () => {
+	const xml = `<FlexQueryResponse><FlexStatements><FlexStatement accountId="A0001111" fromDate="2025-01-01" toDate="2025-01-31" whenGenerated="2025-02-01 00:00:00"><CashTransactions><CashTransaction currency="USD" symbol="OPI" isin="US67623C1099" reportDate="2025-01-15" amount="10" type="Dividends" description="OPI(US67623C1099) CASH DIVIDEND USD 0.1 PER SHARE" /><CashTransaction currency="USD" symbol="OPI" isin="US67623C1099" reportDate="2025-01-15" amount="-1.5" type="Withholding Tax" description="OPI(US67623C1099) CASH DIVIDEND USD 0.1 PER SHARE - US TAX" /></CashTransactions></FlexStatement></FlexStatements></FlexQueryResponse>`;
+	const interestConfig = { ...CONFIG, interestAccount: 'Income:Interest:IB:{symbol}' };
+
+	function accounts(config: IbkrConfig, kinds: Record<string, string>, warnings: string[] = []) {
+		const [statement] = parseFlexQuery(xml);
+		const [imported] = cashTransactions(statement.cashTransactions, {
+			config,
+			symbols: new SymbolMap(FUND_CODES),
+			distributionKinds: kinds,
+			warnings
+		});
+		return imported.xact.postings.map((p) => p.account);
+	}
+
+	it('books a tagged security on the interest account, tax stays on the tax account', () => {
+		expect(accounts(interestConfig, { OPI: 'interest' })).toEqual([
+			'Assets:Investments:IB:Cash-USD',
+			'Income:Interest:IB:OPI',
+			'Expenses:Investments:IB:WithholdingTax'
+		]);
+	});
+
+	it('ignores other tags and untagged securities', () => {
+		expect(accounts(interestConfig, { OPI: 'dividend' })).toContain(
+			'Income:Investments:Dividend:IB:USD:OPI'
+		);
+		expect(accounts(interestConfig, {})).toContain('Income:Investments:Dividend:IB:USD:OPI');
+	});
+
+	it('falls back to the distribution account, once-warned, without an interest account', () => {
+		const warnings: string[] = [];
+		expect(accounts(CONFIG, { OPI: 'interest' }, warnings)).toContain(
+			'Income:Investments:Dividend:IB:USD:OPI'
+		);
+		expect(warnings).toHaveLength(1);
+	});
+});
