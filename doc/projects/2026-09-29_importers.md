@@ -86,7 +86,9 @@ Gaps and decisions:
 4. [x] Cash transactions (`ibkr/cashTransactions.ts`, config type in `ibkr/config.ts`): deposits, dividends and payment in lieu with the tax merge, reversals/adjustments, fees, broker interest. 12 fixtures pass (balance lines excluded until phase 6). Unknown row types and unknown symbols warn; a missing transfer account leaves the deposit on the placeholder account, flagged `!`.
    - The `Other Fees` row type name is taken from the ibflex library; no real record or fixture has it yet.
    - Fees use the Python payee "IB Commission Adjustment" for both fee types.
-5. [ ] Trades: stock buys, merge, forex + merge. Sells with lots and forex with commission are reported as not supported yet.
+5. [x] Trades (`ibkr/trades.ts`): stock buys (same day/symbol/price merged), forex + merge (amounts rounded to 4 decimals, rate to 5). Sells, forex with commission and non-ExchTrade pair-like rows (`TCF.RTS0`) create nothing and warn. 9 tests pass, all 4 trade fixtures.
+   - A zero fee creates no fee posting (the Python always wrote one).
+   - Buys merge only if the `tradeDate` (cost date) is also equal.
 6. [ ] Balance assertions (cash and stock).
 7. [ ] Importer-specific dedup.
 8. [ ] Config UI + review screen wiring; unsupported records reported to the user.
