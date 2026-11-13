@@ -153,8 +153,9 @@ export type ConnectionFingerprints = { local: string; remote: string };
 
 /** DTLS certificate fingerprints of both ends of a live peer connection. */
 export function connectionFingerprints(
-	pc: RTCPeerConnection | undefined
+	peer: { connection: RTCPeerConnection | null } | undefined
 ): ConnectionFingerprints | null {
+	const pc = peer?.connection;
 	const local = sdpFingerprint(pc?.localDescription?.sdp);
 	const remote = sdpFingerprint(pc?.remoteDescription?.sdp);
 	return local && remote ? { local, remote } : null;
@@ -424,7 +425,7 @@ export class PeerPresence {
 	private attachRoom(room: Room): void {
 		this.helloAction = room.makeAction('hello') as unknown as MessageAction<HelloMessage>;
 
-		room.onPeerJoin((trysteroId) => {
+		room.onPeerJoin(({ peerId: trysteroId }) => {
 			void this.sendHello(trysteroId);
 		});
 
@@ -441,7 +442,7 @@ export class PeerPresence {
 			return done;
 		});
 
-		room.onPeerLeave((trysteroId) => {
+		room.onPeerLeave(({ peerId: trysteroId }) => {
 			const { [trysteroId]: _removed, ...rest } = this.peersMap;
 			this.peersMap = rest;
 			this.helloDone.delete(trysteroId);
@@ -732,8 +733,8 @@ export class PeerPresence {
 		let changed = false;
 		const next = { ...this.peersMap };
 		for (const trysteroId of Object.keys(next)) {
-			const pc = live[trysteroId];
-			if (!pc || deadStates.has(pc.connectionState)) {
+			const peer = live[trysteroId];
+			if (!peer || (peer.connection && deadStates.has(peer.connection.connectionState))) {
 				delete next[trysteroId];
 				changed = true;
 			}

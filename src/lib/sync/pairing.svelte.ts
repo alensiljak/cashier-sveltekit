@@ -74,7 +74,7 @@ async function openPairingRoom(host: PairingHost, payload: InvitePayload) {
 	const reject = room.makeAction('pair-reject') as unknown as MessageAction<NoticeMsg>;
 	const ack = room.makeAction('pair-ack') as unknown as MessageAction<NoticeMsg>;
 
-	room.onPeerJoin((peerId) => {
+	room.onPeerJoin(({ peerId }) => {
 		void (async () => {
 			try {
 				const msg = await buildHello(
@@ -170,7 +170,7 @@ export class InviteSession {
 			actions.ack.onMessage((_data, { peerId }) => {
 				if (this.ackWaiter?.peerId === peerId) this.ackWaiter.resolve();
 			});
-			actions.room.onPeerLeave((peerId) => {
+			actions.room.onPeerLeave(({ peerId }) => {
 				this.candidates = this.candidates.filter((c) => c.trysteroId !== peerId);
 			});
 
