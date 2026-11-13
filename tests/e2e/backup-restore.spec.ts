@@ -43,15 +43,20 @@ async function downloadBackup(page: Page): Promise<BackupFile> {
 	return JSON.parse(readFileSync((await download.path())!, 'utf8'));
 }
 
-/** Selects a file on /backup and confirms the restore dialog. */
-async function restore(page: Page, content: string) {
+/** Selects a file on /backup. */
+async function chooseFile(page: Page, content: string) {
 	await page.goto('/backup');
 	await page.locator('#backupFile').setInputFiles({
 		name: 'backup.json',
 		mimeType: 'application/json',
 		buffer: Buffer.from(content)
 	});
-	await page.getByRole('button', { name: 'OK' }).click();
+}
+
+/** Selects a file on /backup and confirms the restore dialog. */
+async function restore(page: Page, content: string) {
+	await chooseFile(page, content);
+	await page.getByRole('dialog').getByRole('button', { name: 'Restore' }).click();
 }
 
 const payees = (backup: BackupFile) => backup.scx.map((s) => s.transaction?.payee);
@@ -81,20 +86,16 @@ test('restoring a backup brings its data back, and the next backup contains it',
 	expect(after.settings).toEqual(original.settings);
 });
 
-test('an invalid backup is rejected and existing data is kept', async ({
-	demoPage: page,
-	errors
-}) => {
+test('an invalid backup is rejected and existing data is kept', async ({ demoPage: page }) => {
 	const original = await downloadBackup(page);
 	await restore(page, JSON.stringify({ ...original, scx: [rent] }));
 	await expect(page.getByText('Backup restored')).toBeVisible();
 
-	// Restoring a file that is not a backup must not wipe what was just restored.
-	await restore(page, JSON.stringify({ hello: 'world' }));
-	await expect(page.getByText(/Restore failed, existing data was kept/)).toBeVisible();
-	// The failure is logged on purpose; assert it, then clear it so the error fixture doesn't fail the test.
-	expect(errors).toEqual([expect.stringContaining('Restore failed')]);
-	errors.length = 0;
+	// A file that is not a backup is rejected when chosen, before any restore dialog,
+	// and must not wipe what was just restored.
+	await chooseFile(page, JSON.stringify({ hello: 'world' }));
+	await expect(page.getByText(/Cannot restore, existing data was kept/)).toBeVisible();
+	await expect(page.getByRole('dialog')).toBeHidden();
 
 	const after = await downloadBackup(page);
 	expect(payees(after)).toEqual(['E2E Rent']);
