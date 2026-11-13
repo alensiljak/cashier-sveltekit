@@ -50,7 +50,7 @@ To import bank statements directly in Cashier. The reason is that rustledger onl
 - **Interest vs dividends**: distributions are income, regardless of type. The config has one distribution account template (e.g. `Income:Investment:Distribution:IB-Aus:{symbol}`) and the 50-entry `interest_symbols` list goes away. If a split is needed later (Australian tax), add a `distribution` metadata value on the commodity directive (like `isin`), read into the import context, and route by it. This is a later, optional step.
 - **Dedup**: importers may provide their own dedup strategy; the importer interface gets an optional `findDuplicates`. Without one, the default in `dedup.ts` applies. IBKR uses the Python rule: same date (exact) and same set of (account, amount to 2 decimals, currency), one-to-one. The default (single bank account, +-3 days) stays as is, as it suits bank statements. Revisit only if real use shows problems.
 - **Numbers**: `Posting.amount` stays a JS `number`; the model is not changed (it is persisted in the CRDT, used across the app, and changing it is a much bigger project). Inside the importer, all sums and scaling (merging dividend+tax, merging same-day trades, forex rate = amount/amount) use an integer-based decimal helper (BigInt mantissa + scale, building on `addDecimalStrings` in `numberUtils.ts`), and the result is converted to `number` only at the end, rounded to the precision needed. Amounts are read from the XML as strings, never via float arithmetic. Tests compare formatted output, so float noise (`0.30000000000000004`) is caught.
-- **XML parsing**: a typed reader over `DOMParser` (browser/worker); check which parser Vitest has available (`linkedom`/`jsdom`) or whether `fast-xml-parser` is already a dependency.
+- **XML parsing**: a typed reader over `DOMParser` (`src/lib/importers/ibkr/flexXml.ts`). Vitest already runs under jsdom, so no new dependency. `DOMParser` does not exist inside a Web Worker; the review screen currently runs `extract` on the main thread, so this is fine, but a move to a worker would need another parser. Only `yyyy-MM-dd` dates are accepted; other formats give an error telling the user to change the Flex Query setting.
 - **Dropped from the Python**: the holdings map (`use_existing_holdings` is hard-coded `False`; used only by corporate actions), unused helpers (`convert_date`, `get_balance_assertion_date`), commented-out code.
 
 ### Test data
@@ -66,22 +66,22 @@ Covered: deposits, dividends, tax merge/reversal/adjustment, interest distributi
 
 Gaps and decisions:
 
-| Case | Decision |
-|---|---|
-| Payment In Lieu of Dividends (incl. reversal) | Implement. Real record exists in `bean-import.xml`; add a reduced fixture. |
-| Broker interest paid | Implement (same code path as received); add a fixture. |
-| `Fees` cash transactions | Implement (same path as Commission Adjustment); add a fixture. |
-| Fee currency differs from trade currency | Fix the Python label bug; unit test with a synthetic record. |
-| Unknown symbol (ISIN not in the map) | Decide one behaviour for all record types (warn, fall back to the ticker, mark `!`), instead of the Python mix of raise and fallback. |
-| Stock sell with `Lot` rows | **Not supported yet**: notify. No real record; the Python relies on the holdings map and on lot matching by date in Beancount. |
-| Forex trade with non-zero commission | **Not supported yet**: notify. |
-| Corporate actions (split, merger, issue change, rights issue) | **Not supported yet**: notify. Separate project. |
-| IBKR dedup | New tests, written with the strategy. |
+| Case                                                          | Decision                                                                                                                              |
+|---------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------|
+| Payment In Lieu of Dividends (incl. reversal)                 | Implement. Real record exists in `bean-import.xml`; add a reduced fixture.                                                            |
+| Broker interest paid                                          | Implement (same code path as received); add a fixture.                                                                                |
+| `Fees` cash transactions                                      | Implement (same path as Commission Adjustment); add a fixture.                                                                        |
+| Fee currency differs from trade currency                      | Fix the Python label bug; unit test with a synthetic record.                                                                          |
+| Unknown symbol (ISIN not in the map)                          | Decide one behaviour for all record types (warn, fall back to the ticker, mark `!`), instead of the Python mix of raise and fallback. |
+| Stock sell with `Lot` rows                                    | **Not supported yet**: notify. No real record; the Python relies on the holdings map and on lot matching by date in Beancount.        |
+| Forex trade with non-zero commission                          | **Not supported yet**: notify.                                                                                                        |
+| Corporate actions (split, merger, issue change, rights issue) | **Not supported yet**: notify. Separate project.                                                                                      |
+| IBKR dedup                                                    | New tests, written with the strategy.                                                                                                 |
 
 ### Phases
 
 1. [x] Fixtures: the 20 cases are in `tests/data/ibkr/`; golden-file harness in `tests/helpers/beancountExpected.ts` (self-tested in `tests/unit/ibkrHarness.test.ts`). Amounts are compared exactly, not rounded. `div-interest.xml.beancount` was changed to the single-income-account rule.
-2. [ ] XML reader and decimal helper, with unit tests.
+2. [x] XML reader (`flexXml.ts`) and decimal helper (`src/lib/utils/decimal.ts`, half-even rounding like Python), with unit tests.
 3. [ ] Symbol resolution (`get_bc_symbol`: ticker/ISIN disambiguation, dual listings).
 4. [ ] Cash transactions: deposits, dividends + tax merge + reversal/adjustment, fees, broker interest.
 5. [ ] Trades: stock buys, merge, forex + merge. Sells with lots and forex with commission are reported as not supported yet.
@@ -94,5 +94,5 @@ Gaps and decisions:
 
 - How are "not supported yet" records shown to the user? `extract` returns only `ImportedXact[]`. Options: a warnings list in `ImportContext` that the review screen displays, or a flagged placeholder row per unsupported record. Leaning towards a warnings list in the context, shown as a banner on the review screen.
 - Sells with `Lot` rows, forex commission, and corporate actions wait for real records. Records that are not recognized are not created; a warning is added to the list instead (decided).
-- **Posting metadata.** `tax-reversal` and `tax-adjustment` expect a `date: <original dividend date>` line on the tax posting. `Posting` has no metadata field. Options: add an optional `meta` to `Posting` (touches the model, CRDT record and Beancount output), put the date in transaction `meta`, or show it only in the review `details`. Undecided; the harness already compares posting metadata if the model gets it.
-- `forex-mix` contains a `TCF.RTS0` fractional-share trade and a rights issue. The Python drops the trade silently (its symbol looks like forex but it has an ISIN, so it matches neither the forex nor the stock filter). The TS version creates no transaction for them and adds a warning for each.
+- **Tax reversal date (decided).** The Python put `date: <original dividend date>` on the tax posting; `Posting` has no metadata field. The TS version puts it in the transaction `meta` as `tax-reversal-date`, and the two fixtures (`tax-reversal`, `tax-adjustment`) expect that. Showing it in the review `details` as well can be added when the case comes up again.
+- `forex-mix` contains a `TCF.RTS0` fractional-share trade (a wound-down ETF, handled manually) and a rights issue. The Python drops the trade silently (its symbol looks like forex but it has an ISIN, so it matches neither the forex nor the stock filter). The TS version creates no transaction for them and adds a warning for each (decided; rare, postponed).

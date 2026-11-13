@@ -38,7 +38,9 @@ function formatCost(spec: string): string {
 	const parts = spec.split(',').map((s) => s.trim());
 	return (
 		'{' +
-		parts.map((p) => (/^-?[\d.]+ /.test(p) ? num(p.split(' ')[0]) + ' ' + p.split(' ')[1] : p)).join(', ') +
+		parts
+			.map((p) => (/^-?[\d.]+ /.test(p) ? num(p.split(' ')[0]) + ' ' + p.split(' ')[1] : p))
+			.join(', ') +
 		'}'
 	);
 }
@@ -110,7 +112,8 @@ export function canonicalize(xacts: Xact[]): string[] {
 				if (p.amount !== undefined) line += ` ${num(String(p.amount))} ${p.currency}`;
 				if (p.costAmount !== undefined || p.costDate) {
 					const parts: string[] = [];
-					if (p.costAmount !== undefined) parts.push(`${num(String(p.costAmount))} ${p.costCurrency}`);
+					if (p.costAmount !== undefined)
+						parts.push(`${num(String(p.costAmount))} ${p.costCurrency}`);
 					if (p.costDate) parts.push(p.costDate);
 					line += ` {${parts.join(', ')}}`;
 				}
