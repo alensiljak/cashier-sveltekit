@@ -98,14 +98,24 @@ export async function uploadCrdtState(
 
 /** True when the folder and this device differ: changes to merge here, or changes it lacks. Lists only. */
 export async function checkWebDav(client: WebDavClient): Promise<boolean> {
-	for (const kind of ALL_KINDS) {
-		if (!(await usable(kind))) continue;
-		const { upload, download } = await (await syncFor(client, kind)).status();
-		if (upload || download) return true;
-	}
-	return false;
+	const { upload, download } = await pendingWebDav(client);
+	return upload || download;
 }
 
+/** Which way changes are waiting, across the stores in use: this device has some, or the folder has. */
+export async function pendingWebDav(
+	client: WebDavClient
+): Promise<{ upload: boolean; download: boolean }> {
+	let upload = false;
+	let download = false;
+	for (const kind of ALL_KINDS) {
+		if (!(await usable(kind))) continue;
+		const s = await (await syncFor(client, kind)).status();
+		upload ||= s.upload;
+		download ||= s.download;
+	}
+	return { upload, download };
+}
 /** Merges what the trusted devices uploaded, for the given kinds. `records` are the store's reports of what changed. */
 export async function mergeWebDav(
 	client: WebDavClient,

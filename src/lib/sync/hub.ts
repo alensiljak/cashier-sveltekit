@@ -14,5 +14,9 @@ export const syncHub = new SyncHub(defaultChannels(), {
 			{},
 		save: (map) => deviceSettings.set(DeviceSettingKeys.syncChannelLastSync, map)
 	},
+	staleDays: {
+		load: async () => (await deviceSettings.get<number>(DeviceSettingKeys.syncStaleDays)) ?? null,
+		save: (days) => deviceSettings.set(DeviceSettingKeys.syncStaleDays, days)
+	},
 	onMerged: reloadLedgerFromOpfs
 });

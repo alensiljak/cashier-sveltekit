@@ -180,7 +180,9 @@ export const DeviceSettingKeys = {
 	syncPeerEnabled: 'sync.peer.enabled',
 	// When each sync channel last completed a sync from the Sync hub or home card.
 	// Shape: Record<channelId, ISO string>. S3 also has its own s3LastSync, which takes precedence.
-	syncChannelLastSync: 'sync.channel.last-sync'
+	syncChannelLastSync: 'sync.channel.last-sync',
+	// Days without a completed sync before the Sync page warns. Number; default 7.
+	syncStaleDays: 'sync.stale-days'
 };
 
 class UserSettings {

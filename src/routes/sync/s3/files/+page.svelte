@@ -21,15 +21,12 @@
 		compareFile,
 		listFileStatuses,
 		markSameContent,
-		persistSession,
-		openSession,
-		resolveConflict,
-		applyMerge,
 		type FileComparison,
 		type FileState,
-		type FileStatusEntry,
-		type S3Session
-	} from '#lib/services/s3Sync';
+		type FileStatusEntry
+	} from '#lib/services/s3FileCompare';
+	import { applyMerge, resolveConflict } from '#lib/services/s3Files';
+	import { openSession, persistSession, type S3Session } from '#lib/services/s3Session';
 
 	let cfg = $state<S3Config | null>(null);
 	// Raw: the session is mutated by the sync service, which must not go through a proxy.

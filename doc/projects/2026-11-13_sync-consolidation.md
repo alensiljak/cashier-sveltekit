@@ -48,14 +48,14 @@ Consequences:
 No behaviour change. Each step is its own commit, with unit tests for whatever becomes pure.
 
 1. ✅ **Beancount sync controller.** Extract `loadLocalTree`, `refreshPeer`, `refreshAll`, `markSynced`, `applyChanges`, `openDiffFor`, `markDiffModalIdentical` and `applyMergeForModal` from [sync/beancount/+page.svelte](/src/routes/sync/beancount/+page.svelte) into a `.svelte.ts` controller (or a plain service plus a state class). The page keeps only markup and event wiring.
-2. ✅ **Split `s3Sync.ts`** (1,311 lines) along its existing seams. `s3Sync.ts` is now a 72-line re-exporting barrel, so no caller changed. There was no module-level mutable state, only constants.
+2. ✅ **Split `s3Sync.ts`** (1,311 lines) along its existing seams. `s3Sync.ts` was first kept as a re-exporting barrel and then removed; callers import the specific modules. There was no module-level mutable state, only constants.
    - `s3Session.ts` (200): types, bucket layout constants, key and manifest loading, `openSession`, `persist`, last-sync bookkeeping
    - `s3Files.ts` (330): settings and Beancount file sync, `runSync`, `resolveConflict`, `applyMerge`, `applyDeletion` (`runSync` lives here, not in the session, because it needs both files and CRDT stores)
    - `s3CrdtSync.ts` (423): CRDT store sync, status, previews, diagnostics, compaction, forgetting a device
    - `s3FileCompare.ts` (224): `listFileStatuses`, `compareFile`, `compareSettings`, `markSameContent`, `fetchFileSyncStatus`
    - `s3Status.ts` (135): `fetchRemoteOverview`, `listBucketDevices`
    - `s3Preview.ts` (66): `previewObject`
-   - [ ] Follow-up: update callers to import from the specific module and drop the barrel.
+   - ✅ Callers now import from the specific modules; the barrel is gone.
 3. ✅ **Other oversized pages.** Extracted only real logic, not markup:
    - `/backup/s3` -> [s3StatusView.ts](/src/lib/services/s3StatusView.ts): badge, available actions, gaps, item description, "does this touch the ledger", "was the run clean". The hub's S3 card in Phase 3 can reuse `badgeFor` and `actionsFor`.
    - `/opfs/import-ledger` -> [importScan.ts](/src/lib/utils/importScan.ts): file classification against the manifest, deletion detection, copy and delete selection, the manifest rebuild plan.
@@ -77,18 +77,18 @@ Design, decided while implementing (differs from the first sketch):
 3. ✅ [syncHub.svelte.ts](/src/lib/sync/syncHub.svelte.ts): the cached state class, with channels and storage injected. The app's instance is [hub.ts](/src/lib/sync/hub.ts) (reloads the ledger after a merge).
 4. ✅ [SyncCard.svelte](/src/lib/components/SyncCard.svelte): the WebDAV and S3 rows now use the hub, so the home card and the `/sync` page will show the same cached status. The P2P row keeps its own per-device comparison for now.
 5. ✅ [syncHub.test.ts](/tests/unit/syncHub.test.ts): 26 tests with fake channels (no services, network or storage).
-6. [ ] Follow-up: move the P2P row of the home card onto the hub's peer channel. Needs a per-peer breakdown in the snapshot, which Phase 3's hub page wants anyway.
-7. [ ] Follow-up: a channel-level "pending counts" view (files to upload or download, conflicts). The hub currently knows only same/differs; richer detail stays on the channel's own page (`s3StatusView.ts`).
+6. ✅ The home card's P2P row now uses the hub's peer channel. `check` returns a per-device breakdown (`peers`), which the card shows as a "Changes" badge and `/sync` lists. The card still checks as soon as a trusted device appears.
+7. ✅ (partly) Checks now report direction: `pending { upload, download }` for WebDAV and S3 (`pendingWebDav`, `pendingCrdtStores`). Record or file counts are not shown: the cheap status calls return booleans, and counting would mean fetching and decrypting the objects. That stays on the channel pages.
 
 ### ✅ Phase 3: The `/sync` hub
 
 1. ✅ [/sync/+page.svelte](/src/routes/sync/+page.svelte): one card per enabled channel, driven by `syncHub` (not a copy of the home SyncCard, which stays the compact home version). Each shows the cached status badge, last sync ("x ago" plus the date), when it was checked, an error or "unavailable" reason, **Check**, **Sync now**, and **Details**. A **Check all** button contacts every reachable channel. Opening the page only reads local state (`syncHub.load()`); it contacts no channel.
-2. ✅ Overall banner from `syncHub.overall`: no channels (links to Settings), failed, changes to exchange, stale (default: nothing synced for a week), or up to date with the newest sync time. The period is the fixed `DEFAULT_STALE_MS` for now; making it a setting is a follow-up.
+2. ✅ Overall banner from `syncHub.overall`: no channels (links to Settings), failed, changes to exchange, stale (default: nothing synced for a week), or up to date with the newest sync time. The period is a device setting (`sync.stale-days`, default 7), chosen on `/sync`.
 3. ✅ "More" section with links to Beancount file sync (when peer sync is on), the backup file page, and the sync options in Settings. The backup page itself stays a separate page.
 4. ✅ [navigation.svelte](/src/lib/components/navigation.svelte): the Backup & Sync group now starts with **Sync**; the separate WebDAV Backup, S3 Sync and Peer Sync entries are gone (the hub's cards link to them). Backup and the two explorers stay.
 5. ✅ Settings' Backup & Sync card now points at the hub. [hubActions.ts](/src/lib/sync/hubActions.ts) holds the check/sync notices shared by the card and the page.
-6. [ ] Follow-up: make the staleness period a setting.
-7. [ ] Follow-up: an e2e test that opens `/sync` on demo data (no options enabled: shows the "No sync options" banner) and follows a link.
+6. ✅ The staleness period is a setting.
+7. ✅ `tests/e2e/sync-hub.spec.ts`: the no-options banner, following links, and the stale setting surviving a reload. Not covered: a channel card with a live check, which needs a reachable backend.
 
 ### ✅ Phase 4: Move pages under `/sync`
 
@@ -97,9 +97,14 @@ Design, decided while implementing (differs from the first sketch):
 3. ✅ Internal links, comments and the e2e test updated.
 4. ✅ `doc/architecture.md` and `doc/s3-sync.md` updated. Help topics keep their `/help/peer-sync` slug.
 
-### Phase 5: Optional, merge the file-sync pages
+### ✅ Phase 5: Optional, merge the file-sync pages (evaluated, not merged)
 
-`/sync/beancount` and `/opfs/sync` both diff and pull files, using `PeerSource` and `OpfsSource` over the shared `syncDiff.ts` and `pullFiles.ts`. Evaluate one page with a source selector. Do this only after phases 1–4, and only if the two pages still look redundant after the controller extraction.
+Evaluated and **not merged**. The premise was wrong: `/opfs/sync` does not use `PeerSource`, `OpfsSource`, `syncDiff.ts` or `pullFiles.ts`.
+
+- `/sync/beancount` compares OPFS with a **peer device**, by content hash against a per-peer baseline, and pulls.
+- `/opfs/sync` compares OPFS with a **folder on this device** (File System Access API), by mtime and size against the import manifest, and copies both ways. It shares its setup (folder handle, file spec, manifest) with Ledger Import/Export.
+- Different source, different change detection, different action set (it writes to the folder). A source selector would mean new `SyncSource` support for a local folder plus a baseline model change, a rewrite rather than a consolidation.
+- `/opfs/sync` is already commented out of the navigation, so it is unreachable except by URL. It stays where it is, next to the import and export pages it shares state with. Decide separately whether to delete it.
 
 ## Risks
 

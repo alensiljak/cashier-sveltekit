@@ -13,7 +13,9 @@
 		putObject,
 		type S3Directory
 	} from '#lib/services/s3Client';
-	import { compactBucketNow, getSyncKey, previewObject } from '#lib/services/s3Sync';
+	import { compactBucketNow } from '#lib/services/s3CrdtSync';
+	import { previewObject } from '#lib/services/s3Preview';
+	import { getSyncKey } from '#lib/services/s3Session';
 	import PackageIcon from '@lucide/svelte/icons/package';
 	import EyeIcon from '@lucide/svelte/icons/eye';
 	import SettingsIcon from '@lucide/svelte/icons/settings';

@@ -14,7 +14,7 @@
 		type CrdtChangePreview,
 		type CrdtDiagnostics,
 		type CrdtRecord
-	} from '#lib/services/s3Sync';
+	} from '#lib/services/s3CrdtSync';
 	import type { RecordChange } from '#lib/storage/crdtDocStore';
 
 	type Item = 'xacts' | 'scheduled';

@@ -67,7 +67,7 @@
 			if (evictHasBucket && evictCleanUp) {
 				// While it is still trusted: what it uploaded is merged and kept first, then its files go.
 				const { loadS3Config } = await import('#lib/services/s3Config');
-				const { forgetBucketDevice } = await import('#lib/services/s3Sync');
+				const { forgetBucketDevice } = await import('#lib/services/s3CrdtSync');
 				await forgetBucketDevice((await loadS3Config())!, evicting.id);
 			}
 			await presence.evictPeer(evicting.id);
@@ -123,7 +123,7 @@
 		try {
 			if (cleanUp) {
 				const { loadS3Config } = await import('#lib/services/s3Config');
-				const { forgetBucketDevice } = await import('#lib/services/s3Sync');
+				const { forgetBucketDevice } = await import('#lib/services/s3CrdtSync');
 				const { deleted } = await forgetBucketDevice((await loadS3Config())!, removing.id);
 				Notifier.info(`Removed ${deleted} object(s) of the device from the bucket`);
 			}

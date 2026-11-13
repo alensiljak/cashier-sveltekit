@@ -50,6 +50,11 @@
 		})
 	);
 
+	// A stored value outside the list (set elsewhere) is still offered, so the select shows it.
+	const staleChoices = $derived(
+		[...new Set([1, 3, 7, 14, 30, syncHub.staleDays])].sort((a, b) => a - b)
+	);
+
 	const overall = $derived(syncHub.overall);
 	const newest = $derived(syncHub.newestSync);
 </script>
@@ -135,6 +140,41 @@
 							{/if}
 						</div>
 
+						{#if snap.status === 'differs' && snap.pending}
+							<p class="text-sm" data-testid="pending-{channel.id}">
+								{#if snap.pending.upload && snap.pending.download}
+									This device and {channel.label} each have changes the other lacks.
+								{:else if snap.pending.upload}
+									This device has changes {channel.label} lacks.
+								{:else if snap.pending.download}
+									{channel.label} has changes this device lacks.
+								{/if}
+							</p>
+						{/if}
+
+						{#if snap.peers && snap.peers.length > 0}
+							<ul class="space-y-1 text-sm" data-testid="peers-{channel.id}">
+								{#each snap.peers as peer (peer.id)}
+									<li class="flex items-center gap-2">
+										<span class="min-w-0 flex-1 truncate">{peer.name}</span>
+										<span
+											class="badge badge-sm {peer.status === 'same'
+												? 'badge-success'
+												: peer.status === 'differs'
+													? 'badge-warning'
+													: 'badge-ghost'}"
+										>
+											{peer.status === 'same'
+												? 'In sync'
+												: peer.status === 'differs'
+													? 'Changes to sync'
+													: 'No answer'}
+										</span>
+									</li>
+								{/each}
+							</ul>
+						{/if}
+
 						{#if snap.status === 'error' && snap.error}
 							<p class="text-error text-sm">{snap.error}</p>
 						{:else if reason}
@@ -169,6 +209,20 @@
 				{/each}
 			</ul>
 		{/if}
+
+		<label class="flex items-center gap-2 text-sm">
+			<span class="flex-1">Warn when nothing has synced for</span>
+			<select
+				class="select select-sm w-28"
+				data-testid="stale-days"
+				value={String(syncHub.staleDays)}
+				onchange={(e) => syncHub.setStaleDays(Number(e.currentTarget.value))}
+			>
+				{#each staleChoices as days (days)}
+					<option value={String(days)}>{days === 1 ? '1 day' : `${days} days`}</option>
+				{/each}
+			</select>
+		</label>
 
 		<!-- Other ways to move data -->
 		<h2 class="pt-2 text-lg font-semibold">More</h2>

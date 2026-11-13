@@ -9,6 +9,28 @@ export type ChannelId = 'webdav' | 's3' | 'peer';
 /** unchecked = not compared yet; differs = there are changes to exchange. */
 export type ChannelStatus = 'unchecked' | 'checking' | 'same' | 'differs' | 'error';
 
+/** Which way changes are waiting. Record counts would need the objects fetched, so only direction is known. */
+export interface Pending {
+	/** This device has changes the other side lacks. */
+	upload: boolean;
+	/** The other side has changes this device lacks. */
+	download: boolean;
+}
+
+/** One other device in a peer comparison. `unknown` = it did not answer. */
+export interface PeerDetail {
+	id: string;
+	name: string;
+	status: 'same' | 'differs' | 'unknown';
+}
+
+/** What a check found. `pending` and `peers` are extra detail when the channel can tell. */
+export interface ChannelCheck {
+	status: 'same' | 'differs';
+	pending?: Pending;
+	peers?: PeerDetail[];
+}
+
 /** The last known state of a channel. Never fetched on its own: see SyncHub. */
 export interface ChannelSnapshot {
 	status: ChannelStatus;
@@ -20,6 +42,10 @@ export interface ChannelSnapshot {
 	error?: string;
 	/** A sync is running. */
 	busy: boolean;
+	/** From the last check, while it still holds: which way changes are waiting. */
+	pending?: Pending;
+	/** From the last check, while it still holds: each other device (peer channel). */
+	peers?: PeerDetail[];
 }
 
 export interface SyncResult {
@@ -39,7 +65,7 @@ export interface SyncChannel {
 	/** Why the channel cannot check or sync right now (not connected, no peers), or null if it can. */
 	unavailableReason(): string | null;
 	/** Compares this device with the other side without changing anything. Throws on failure. */
-	check(): Promise<'same' | 'differs'>;
+	check(): Promise<ChannelCheck>;
 	/** Merges and uploads the CRDT stores. Throws on failure; per-item failures go in `errors`. */
 	sync(): Promise<Omit<SyncResult, 'ok'>>;
 	/** The channel's own record of its last sync, when it keeps one. */

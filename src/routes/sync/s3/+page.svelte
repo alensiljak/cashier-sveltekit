@@ -7,23 +7,22 @@
 	import type { SyncDirection } from '#lib/services/s3SyncPlan';
 	import * as view from '#lib/services/s3StatusView';
 	import type { CompareStatus, ItemKey } from '#lib/services/s3StatusView';
+	import { fetchCrdtSyncStatus } from '#lib/services/s3CrdtSync';
+	import { fetchFileSyncStatus, type FileSyncOverview } from '#lib/services/s3FileCompare';
+	import { applyDeletion, resolveConflict, runSync } from '#lib/services/s3Files';
 	import {
-		applyDeletion,
-		fetchCrdtSyncStatus,
-		fetchFileSyncStatus,
-		fetchRemoteOverview,
 		getLastSync,
-		listBucketDevices,
 		openSession,
-		type BucketDevice,
-		resolveConflict,
-		runSync,
-		type FileSyncOverview,
-		type RemoteOverview,
 		type S3Session,
 		type SyncItem,
 		type SyncLine
-	} from '#lib/services/s3Sync';
+	} from '#lib/services/s3Session';
+	import {
+		fetchRemoteOverview,
+		listBucketDevices,
+		type BucketDevice,
+		type RemoteOverview
+	} from '#lib/services/s3Status';
 	import { reloadLedgerFromOpfs } from '#lib/services/ledgerReload';
 	import { trustDevice } from '#lib/sync/ydocDevices';
 	import DeviceLabel from '#lib/components/DeviceLabel.svelte';
@@ -346,8 +345,7 @@
 										</span>
 									{/if}
 									{#if row.key === 'xacts' || row.key === 'scheduled'}
-										<a href="/sync/s3/records?item={row.key}" class="link text-xs"
-											>Review records</a
+										<a href="/sync/s3/records?item={row.key}" class="link text-xs">Review records</a
 										>
 										<span class="text-xs text-base-content/50"
 											>— preview what a sync would change</span

@@ -45,7 +45,7 @@ Each device has an ID. Its deltas are found by the ID in the object name.
 
 ## File sync (settings and Beancount files)
 
-Code: `s3SyncPlan.ts` (decisions, no I/O), `s3Sync.ts`.
+Code: `s3SyncPlan.ts` (decisions, no I/O), `s3Session.ts`, `s3Files.ts`, `s3CrdtSync.ts`, `s3FileCompare.ts`, `s3Status.ts`.
 
 - Each device keeps its own **manifest**: the hash of every file it last uploaded. The newest entry for a path across all manifests (highest `seq`, then time) is the **remote** version.
 - The **base** is the hash this device saw at its last sync of that path.

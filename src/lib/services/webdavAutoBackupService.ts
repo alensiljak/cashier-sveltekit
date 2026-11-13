@@ -58,7 +58,7 @@ async function doS3Backup(kinds: DocKind[]): Promise<void> {
 
 		if (!navigator.onLine) return;
 
-		const { backupCrdtStores } = await import('#lib/services/s3Sync');
+		const { backupCrdtStores } = await import('#lib/services/s3CrdtSync');
 		const failed = await backupCrdtStores(cfg, kinds);
 		if (failed.length) throw new Error(failed.map((l) => l.message).join('; '));
 		lastBackupTime.set(new Date());

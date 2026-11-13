@@ -11,7 +11,6 @@
 	import CashierCardTemplate from './CashierCardTemplate.svelte';
 	import DeviceLabel from './DeviceLabel.svelte';
 	import { peerConnection } from '#lib/sync/peerConnection.svelte';
-	import { reloadLedgerFromOpfs } from '#lib/services/ledgerReload';
 	import Notifier from '#lib/utils/notifier';
 	import { syncOptions } from '#lib/services/syncOptions.svelte';
 	import { syncHub } from '#lib/sync/hub';
@@ -26,7 +25,6 @@
 	const s3Snap = $derived(syncHub.snapshotOf('s3'));
 
 	let connecting = $state(false);
-	let syncing = $state(false);
 
 	let noOptions = $derived(
 		syncOptions.loaded && !syncOptions.webdav && !syncOptions.s3 && !syncOptions.peer
@@ -36,39 +34,19 @@
 
 	let trustedPeers = $derived(presence.activePeerList.filter((p) => p.isTrusted));
 
-	/** Per-peer comparison of Local Transactions, done as soon as a trusted peer appears. */
-	type DiffState = 'checking' | 'same' | 'differs' | 'unknown';
-	let diffs = $state<Record<string, DiffState>>({});
-
-	async function checkPeer(id: string) {
-		diffs[id] = 'checking';
-		try {
-			const [local, remote] = await Promise.all([
-				peerConnection.getLocalYdocHash(),
-				peerConnection.fetchRemoteYdocHash(id)
-			]);
-			diffs[id] = remote === null ? 'unknown' : local === remote ? 'same' : 'differs';
-		} catch {
-			diffs[id] = 'unknown';
-		}
-	}
+	// The peer channel goes through the hub too. Its check reads each trusted device's hash, which
+	// is cheap, so it runs as soon as a trusted device appears (the other channels wait for you).
+	const peerSnap = $derived(syncHub.snapshotOf('peer'));
+	const peerReady = $derived(presence.isInRoom && trustedPeers.length > 0);
 
 	$effect(() => {
-		const ids = trustedPeers.map((p) => p.trysteroId);
-		untrack(() => {
-			for (const id of ids) if (!(id in diffs)) void checkPeer(id);
-			for (const id of Object.keys(diffs)) if (!ids.includes(id)) delete diffs[id];
-		});
+		const key = trustedPeers.map((p) => p.trysteroId).join(',');
+		if (key) untrack(() => void syncHub.check('peer'));
 	});
 
-	let peerStatus = $derived.by<Status>(() => {
-		const states = trustedPeers.map((p) => diffs[p.trysteroId]);
-		if (states.includes('checking')) return 'checking';
-		if (states.includes('differs')) return 'differs';
-		if (states.length && states.every((s) => s === 'same')) return 'same';
-		return 'unchecked';
-	});
-
+	/** Only meaningful while a trusted device is reachable; after that the old result is stale. */
+	const peerStatus = $derived<Status>(peerReady ? peerSnap.status : 'unchecked');
+	const peerStatusOf = (id: string) => peerSnap.peers?.find((p) => p.id === id)?.status;
 	onMount(() => {
 		if (!syncOptions.loaded) void syncOptions.load();
 		return peerConnection.ensureInit();
@@ -86,29 +64,6 @@
 			Notifier.error('Connection failed: ' + (e as Error).message);
 		} finally {
 			connecting = false;
-		}
-	}
-
-	async function checkPeers() {
-		await Promise.all(trustedPeers.map((p) => checkPeer(p.trysteroId)));
-	}
-
-	/** Merges Local Transactions with every trusted peer that is currently online. */
-	async function syncPeers() {
-		if (syncing || trustedPeers.length === 0) return;
-		syncing = true;
-		try {
-			let changed = false;
-			for (const peer of trustedPeers) {
-				changed = (await peerConnection.syncYdoc(peer.trysteroId)) || changed;
-			}
-			await checkPeers();
-			if (changed) await reloadLedgerFromOpfs();
-			Notifier.success(changed ? 'Synced — new transactions received' : 'Already in sync');
-		} catch (e) {
-			Notifier.error('Sync failed: ' + (e as Error).message);
-		} finally {
-			syncing = false;
 		}
 	}
 
@@ -247,10 +202,10 @@
 							'P2P',
 							'/sync/peer',
 							peerStatus,
-							syncing,
-							checkPeers,
-							syncPeers,
-							presence.isInRoom && trustedPeers.length > 0,
+							peerSnap.busy,
+							() => checkWithNotice('peer', 'P2P'),
+							() => syncWithNotice('peer', 'P2P'),
+							peerReady,
 							peerSwitch
 						)}
 						<div class="pl-8 text-sm opacity-70">
@@ -266,6 +221,8 @@
 										>
 										{#if !peer.isTrusted}
 											<span class="badge badge-ghost badge-sm">Not paired</span>
+										{:else if peerStatusOf(peer.trysteroId) === 'differs'}
+											<span class="badge badge-warning badge-sm">Changes</span>
 										{/if}
 									</div>
 								{/each}

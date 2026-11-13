@@ -1,7 +1,28 @@
 /**
- * S3 sync session: types, bucket layout constants, key and manifest loading, and the
- * bookkeeping every other s3*.ts module builds on. See s3Sync.ts for the bucket layout and
- * doc/projects/2026-10-05_s3-sync.md.
+ * Manual sync of the app's data with an S3 bucket. See doc/projects/2026-10-05_s3-sync.md.
+ * This module holds the session, keys, manifests and last-sync bookkeeping that every other
+ * s3*.ts module builds on.
+ *
+ * Bucket layout (every object except key.json is encrypted, see s3Crypto.ts):
+ * - key.json                  key-derivation parameters, shared by all devices
+ * - manifests/<deviceId>.json what each device last uploaded (path -> hash, time)
+ * - data/settings.json        shared settings
+ * - data/files/<path>         Beancount files, by their OPFS path
+ * - crdt/<xacts|scx>/snap-<ulid>.ydoc, crdt/<xacts|scx>/<deviceId>.<seq>.upd
+ *                             the CRDT stores as a snapshot plus per-device deltas (see
+ *                             sync/deltaSync.ts). Merged on download, so they never conflict.
+ *                             The older crdt/<kind>/<deviceId>.ydoc files are still read.
+ *
+ * Settings and files can be changed on several devices. They are compared by content hash
+ * against the last-synced hash, and a change on both sides is reported as a conflict to be
+ * resolved by the user, never overwritten silently.
+ *
+ * The sync is split by concern:
+ * - s3Files.ts        settings and Beancount files, runSync, conflicts, deletions
+ * - s3CrdtSync.ts     CRDT stores: sync, status, previews, diagnostics, compaction
+ * - s3FileCompare.ts  per-file status and comparison
+ * - s3Status.ts       bucket overview and other devices
+ * - s3Preview.ts      readable bucket objects
  */
 import { deviceSettings, DeviceSettingKeys } from '#lib/settings';
 import { getDeviceId } from '#lib/sync/ydocDevices';

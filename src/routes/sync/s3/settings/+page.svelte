@@ -8,13 +8,9 @@
 	import { canonicalizeJson } from '#lib/utils/diffText';
 	import { isS3Configured, loadS3Config, type S3Config } from '#lib/services/s3Config';
 	import { describeS3Error } from '#lib/services/s3Client';
-	import {
-		compareSettings,
-		openSession,
-		resolveConflict,
-		type FileComparison,
-		type S3Session
-	} from '#lib/services/s3Sync';
+	import { compareSettings, type FileComparison } from '#lib/services/s3FileCompare';
+	import { resolveConflict } from '#lib/services/s3Files';
+	import { openSession, type S3Session } from '#lib/services/s3Session';
 
 	let cfg = $state<S3Config | null>(null);
 	// Raw: the session is mutated by the sync service, which must not go through a proxy.

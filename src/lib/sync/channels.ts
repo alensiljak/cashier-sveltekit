@@ -7,7 +7,7 @@
 import { describeS3Error } from '#lib/services/s3Client';
 import { isS3Configured, loadS3Config } from '#lib/services/s3Config';
 import { syncOptions } from '#lib/services/syncOptions.svelte';
-import type { SyncChannel } from './channel';
+import type { PeerDetail, SyncChannel } from './channel';
 import { peerConnection } from './peerConnection.svelte';
 
 /** Like `Error.message`, but also makes sense of S3 client errors. */
@@ -20,10 +20,11 @@ const webdav: SyncChannel = {
 	isEnabled: () => syncOptions.webdav,
 	unavailableReason: () => null,
 	async check() {
-		const { loadWebDavClient, checkWebDav } = await import('#lib/services/webdavSync');
+		const { loadWebDavClient, pendingWebDav } = await import('#lib/services/webdavSync');
 		const client = await loadWebDavClient();
 		if (!client) throw new Error('WebDAV is not configured');
-		return (await checkWebDav(client)) ? 'differs' : 'same';
+		const pending = await pendingWebDav(client);
+		return { status: pending.upload || pending.download ? 'differs' : 'same', pending };
 	},
 	async sync() {
 		const { loadWebDavClient, syncWebDav } = await import('#lib/services/webdavSync');
@@ -46,16 +47,17 @@ const s3: SyncChannel = {
 	isEnabled: () => syncOptions.s3,
 	unavailableReason: () => null,
 	async check() {
-		const { checkCrdtStores } = await import('#lib/services/s3Sync');
-		return (await checkCrdtStores(await loadS3())) ? 'differs' : 'same';
+		const { pendingCrdtStores } = await import('#lib/services/s3CrdtSync');
+		const pending = await pendingCrdtStores(await loadS3());
+		return { status: pending.upload || pending.download ? 'differs' : 'same', pending };
 	},
 	async sync() {
-		const { syncCrdtStores } = await import('#lib/services/s3Sync');
+		const { syncCrdtStores } = await import('#lib/services/s3CrdtSync');
 		const { errors, merged } = await syncCrdtStores(await loadS3());
 		return { errors: errors.map((l) => l.message ?? `${l.item} ${l.path}`), merged };
 	},
 	async lastSync() {
-		const { getLastSync } = await import('#lib/services/s3Sync');
+		const { getLastSync } = await import('#lib/services/s3Session');
 		return getLastSync();
 	}
 };
@@ -74,19 +76,18 @@ const peer: SyncChannel = {
 		return null;
 	},
 	async check() {
-		let compared = 0;
-		let differs = false;
-		for (const p of trustedPeers()) {
-			const [local, remote] = await Promise.all([
-				peerConnection.getLocalYdocHash(),
-				peerConnection.fetchRemoteYdocHash(p.trysteroId)
-			]);
-			if (remote === null) continue;
-			compared++;
-			if (local !== remote) differs = true;
-		}
-		if (compared === 0) throw new Error('Could not read the other devices');
-		return differs ? 'differs' : 'same';
+		const local = await peerConnection.getLocalYdocHash();
+		const peers: PeerDetail[] = await Promise.all(
+			trustedPeers().map(async (p) => {
+				const remote = await peerConnection.fetchRemoteYdocHash(p.trysteroId).catch(() => null);
+				const status: PeerDetail['status'] =
+					remote === null ? 'unknown' : remote === local ? 'same' : 'differs';
+				return { id: p.trysteroId, name: p.name || 'Unnamed device', status };
+			})
+		);
+		if (peers.every((p) => p.status === 'unknown'))
+			throw new Error('Could not read the other devices');
+		return { status: peers.some((p) => p.status === 'differs') ? 'differs' : 'same', peers };
 	},
 	async sync() {
 		let merged = false;

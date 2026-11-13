@@ -7,7 +7,7 @@ import { settings, SettingKeys } from '#lib/settings';
 import { WebDavClient } from '#lib/utils/webdav';
 import type { WebDavSettings } from './webdavAutoBackupService';
 
-export { checkWebDav, syncWebDav } from './webdavDelta';
+export { checkWebDav, pendingWebDav, syncWebDav } from './webdavDelta';
 
 export async function loadWebDavClient(): Promise<WebDavClient | null> {
 	const cfg = await settings.get<WebDavSettings>(SettingKeys.webdavSettings);

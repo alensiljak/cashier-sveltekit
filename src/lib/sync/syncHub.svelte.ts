@@ -7,6 +7,7 @@
 	in hub.ts.
 */
 import {
+	DEFAULT_STALE_MS,
 	emptySnapshot,
 	newestSync,
 	overallState,
@@ -24,9 +25,16 @@ export interface SyncHubDeps {
 		load(): Promise<Record<string, string>>;
 		save(map: Record<string, string>): Promise<void>;
 	};
+	/** Persists how many days without a sync count as stale. */
+	staleDays?: {
+		load(): Promise<number | null>;
+		save(days: number): Promise<void>;
+	};
 	/** Called after a sync merged records into the ledger. */
 	onMerged?: () => Promise<void>;
 }
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
@@ -36,12 +44,15 @@ export class SyncHub {
 
 	snapshots = $state<Record<string, ChannelSnapshot>>({});
 	loaded = $state(false);
+	/** Days without a completed sync before `overall` becomes `stale`. */
+	staleDays = $state(DEFAULT_STALE_MS / DAY_MS);
 
 	constructor(channels: SyncChannel[], deps: SyncHubDeps = {}) {
 		this.channels = channels;
 		this.deps = {
 			now: deps.now ?? (() => new Date()),
 			store: deps.store ?? { load: async () => ({}), save: async () => undefined },
+			staleDays: deps.staleDays ?? { load: async () => null, save: async () => undefined },
 			onMerged: deps.onMerged ?? (async () => undefined)
 		};
 		for (const c of channels) this.snapshots[c.id] = emptySnapshot();
@@ -56,7 +67,8 @@ export class SyncHub {
 	get overall(): OverallState {
 		return overallState(
 			this.enabled.map((c) => this.snapshotOf(c.id)),
-			this.deps.now()
+			this.deps.now(),
+			this.staleDays * DAY_MS
 		);
 	}
 
@@ -87,7 +99,16 @@ export class SyncHub {
 			const iso = stored[c.id];
 			this.patch(c.id, { lastSync: own ?? (iso ? new Date(iso) : null) });
 		}
+		const days = await this.deps.staleDays.load().catch(() => null);
+		if (days && days > 0) this.staleDays = days;
 		this.loaded = true;
+	}
+
+	/** Changes how long without a sync counts as stale, and remembers it. */
+	async setStaleDays(days: number) {
+		if (!(days > 0)) return;
+		this.staleDays = days;
+		await this.deps.staleDays.save(days);
 	}
 
 	/** Compares one channel with the other side. Contacts the network. */
@@ -100,10 +121,10 @@ export class SyncHub {
 			this.patch(id, { status: 'error', error: reason, checkedAt: this.deps.now() });
 			return this.snapshotOf(id);
 		}
-		this.patch(id, { status: 'checking', error: undefined });
+		this.patch(id, { status: 'checking', error: undefined, pending: undefined, peers: undefined });
 		try {
-			const status = await channel.check();
-			this.patch(id, { status, checkedAt: this.deps.now() });
+			const { status, pending, peers } = await channel.check();
+			this.patch(id, { status, pending, peers, checkedAt: this.deps.now() });
 		} catch (e) {
 			this.patch(id, { status: 'error', error: message(e), checkedAt: this.deps.now() });
 		}
@@ -135,7 +156,13 @@ export class SyncHub {
 				return { ok: false, merged, errors };
 			}
 			const at = this.deps.now();
-			this.patch(id, { status: 'same', checkedAt: at, lastSync: at });
+			this.patch(id, {
+				status: 'same',
+				checkedAt: at,
+				lastSync: at,
+				pending: undefined,
+				peers: undefined
+			});
 			await this.remember(id, at);
 			return { ok: true, merged, errors: [] };
 		} catch (e) {

@@ -2,7 +2,7 @@
  * Display helpers for the records of the CRDT stores (transactions, scheduled transactions),
  * used to show what a sync would change.
  */
-import type { CrdtRecord } from './s3Sync';
+import type { CrdtRecord } from './s3CrdtSync';
 
 export interface FieldDiff {
 	field: string;

@@ -10,6 +10,7 @@ import {
 	isStale,
 	newestSync,
 	overallState,
+	type ChannelCheck,
 	type ChannelSnapshot,
 	type SyncChannel
 } from '#lib/sync/channel';
@@ -81,7 +82,7 @@ test('newestSync', () => {
 interface FakeOpts {
 	enabled?: boolean;
 	unavailable?: string | null;
-	check?: () => Promise<'same' | 'differs'>;
+	check?: () => Promise<'same' | 'differs' | ChannelCheck>;
 	sync?: () => Promise<{ errors: string[]; merged: boolean }>;
 	lastSync?: () => Promise<Date | null>;
 }
@@ -97,7 +98,8 @@ function fake(id: SyncChannel['id'], o: FakeOpts = {}): SyncChannel & { calls: s
 		unavailableReason: () => o.unavailable ?? null,
 		check: async () => {
 			calls.push('check');
-			return (o.check ?? (async () => 'same' as const))();
+			const r = await (o.check ?? (async () => 'same' as const))();
+			return typeof r === 'string' ? { status: r } : r;
 		},
 		sync: async () => {
 			calls.push('sync');
@@ -155,6 +157,57 @@ describe('SyncHub', () => {
 		const s = await h.check('s3');
 		assert.equal(s.status, 'differs');
 		assert.equal(s.checkedAt?.getTime(), NOW.getTime());
+	});
+
+	test('check keeps the direction and per-device detail, and a sync clears them', async () => {
+		const peers = [{ id: 'p1', name: 'Phone', status: 'differs' as const }];
+		const { h } = hub([
+			fake('s3', {
+				check: async () => ({ status: 'differs', pending: { upload: true, download: false } })
+			}),
+			fake('peer', { check: async () => ({ status: 'differs', peers }) })
+		]);
+		await h.check('s3');
+		await h.check('peer');
+		assert.deepEqual(h.snapshotOf('s3').pending, { upload: true, download: false });
+		assert.deepEqual(h.snapshotOf('peer').peers, peers);
+		await h.sync('s3');
+		assert.isUndefined(h.snapshotOf('s3').pending);
+		assert.equal(h.snapshotOf('s3').status, 'same');
+	});
+
+	test('the stale period is a setting that load restores and overall obeys', async () => {
+		const saved: number[] = [];
+		const old = fake('webdav');
+		const h = new SyncHub([old], {
+			now: () => NOW,
+			staleDays: { load: async () => 3, save: async (d) => void saved.push(d) }
+		});
+		await h.load();
+		assert.equal(h.staleDays, 3);
+		h['snapshots'].webdav = snap({ lastSync: daysAgo(5) });
+		assert.equal(h.overall, 'stale');
+		await h.setStaleDays(10);
+		assert.equal(h.overall, 'ok');
+		assert.deepEqual(saved, [10]);
+		await h.setStaleDays(0);
+		assert.equal(h.staleDays, 10);
+	});
+
+	test('a failed re-check drops the old detail', async () => {
+		let fail = false;
+		const { h } = hub([
+			fake('s3', {
+				check: async () => {
+					if (fail) throw new Error('down');
+					return { status: 'differs', pending: { upload: true, download: true } };
+				}
+			})
+		]);
+		await h.check('s3');
+		fail = true;
+		await h.check('s3');
+		assert.isUndefined(h.snapshotOf('s3').pending);
 	});
 
 	test('a failed check is an error with its message', async () => {

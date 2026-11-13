@@ -188,10 +188,6 @@ export async function backupCrdtStores(
  * True when the bucket and this device differ in a CRDT store: another device has changes not
  * merged here, or this device has changes the bucket lacks.
  */
-async function crdtDiffers(s: CrdtSession, item: 'xacts' | 'scheduled'): Promise<boolean> {
-	const { upload, download } = await crdtStatus(s, item);
-	return upload || download;
-}
 
 /**
  * Compares a CRDT store with the bucket by record changes: `upload` = this device has changes
@@ -381,10 +377,18 @@ async function crdtSession(cfg: S3Config): Promise<CrdtSession> {
 
 /** Compares the CRDT stores with the bucket without changing anything. True = they differ. */
 export async function checkCrdtStores(cfg: S3Config): Promise<boolean> {
-	const s = await crdtSession(cfg);
-	return (await crdtDiffers(s, 'xacts')) || (await crdtDiffers(s, 'scheduled'));
+	const { upload, download } = await pendingCrdtStores(cfg);
+	return upload || download;
 }
 
+/** Which way changes are waiting: this device has some the bucket lacks, or the bucket has some here. */
+export async function pendingCrdtStores(
+	cfg: S3Config
+): Promise<{ upload: boolean; download: boolean }> {
+	const s = await crdtSession(cfg);
+	const [x, sc] = [await crdtStatus(s, 'xacts'), await crdtStatus(s, 'scheduled')];
+	return { upload: x.upload || sc.upload, download: x.download || sc.download };
+}
 /**
  * Full sync of the CRDT stores: merges the other devices' state, then uploads this device's.
  * Returns the failed lines and whether records were merged in (the ledger then needs a reload).
