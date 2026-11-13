@@ -3,6 +3,7 @@ import { fillTemplate, type IbkrConfig } from './config';
 import { cashTransactions } from './cashTransactions';
 import { isFlexQuery, parseFlexQuery } from './flexXml';
 import { balances } from './balances';
+import { matchIbkr } from './dedup';
 import { trades } from './trades';
 import { SymbolMap, type SymbolEntry } from './symbols';
 
@@ -33,6 +34,15 @@ export const ibkrImporter: Importer<IbkrConfig> = {
 	},
 
 	identify: isFlexQuery,
+
+	dedup: {
+		// Anything that touches the broker's cash or stock accounts.
+		isRelevant(config, xact) {
+			const prefixes = [config.cashAccount, config.stockAccount].map((t) => t.split('{')[0]);
+			return xact.postings.some((p) => prefixes.some((prefix) => p.account.startsWith(prefix)));
+		},
+		match: matchIbkr
+	},
 
 	extract(text, config, ctx = {}) {
 		const warnings = ctx.warnings ?? [];

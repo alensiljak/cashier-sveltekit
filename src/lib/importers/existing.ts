@@ -40,6 +40,37 @@ export async function loadExistingBankXacts(
 }
 
 /**
+ * Every recorded transaction between `from` and `to` (ISO dates), with all its postings, for
+ * importers that bring their own duplicate rule.
+ */
+export async function loadExistingXacts(from: string, to: string): Promise<Xact[]> {
+	await fullLedgerService.ensureLoaded();
+	const bql = `SELECT id, date, payee, narration, account, number, currency WHERE date >= ${from} AND date <= ${to}`;
+	const { columns, rows } = await fullLedgerService.query(bql);
+	const idx = (name: string) => columns.indexOf(name);
+
+	const byId = new Map<number, Xact>();
+	for (const row of rows) {
+		const id = Number(row[idx('id')]);
+		let x = byId.get(id);
+		if (!x) {
+			x = new Xact();
+			x.id = id;
+			x.date = String(row[idx('date')]);
+			x.payee = (row[idx('payee')] as string | null) ?? '';
+			x.note = (row[idx('narration')] as string | null) ?? '';
+			byId.set(id, x);
+		}
+		const p = new Posting();
+		p.account = String(row[idx('account')]);
+		p.amount = parseFloat(String(row[idx('number')]));
+		p.currency = String(row[idx('currency')]);
+		x.postings.push(p);
+	}
+	return [...byId.values()];
+}
+
+/**
  * The whole recorded transaction (all postings) that `summary` was loaded from,
  * for showing what an imported row matched. Falls back to `summary` if it can't be read.
  */

@@ -5,7 +5,12 @@
 	import JournalXactRow from '#lib/components/JournalXactRow.svelte';
 	import Notifier from '#lib/utils/notifier';
 	import { DEFAULT_DATE_WINDOW_DAYS, matchWithExisting } from './dedup';
-	import { loadExistingBankXacts, loadFullXact, loadIsinSymbols } from './existing';
+	import {
+		loadExistingBankXacts,
+		loadExistingXacts,
+		loadFullXact,
+		loadIsinSymbols
+	} from './existing';
 	import { clearPendingImport, loadPendingImport, saveSelection, saveView } from './pendingImport';
 	import { getXactStore } from '#lib/storage/xactStoreRegistry';
 	import type { Importer } from './types';
@@ -102,23 +107,23 @@
 			const account = importer.account(config);
 
 			let existing: Xact[] = [];
+			const own = importer.dedup;
 			try {
-				existing = await loadExistingBankXacts(
-					account,
-					shiftDate(dates[0], -DEFAULT_DATE_WINDOW_DAYS),
-					shiftDate(dates[dates.length - 1], DEFAULT_DATE_WINDOW_DAYS)
-				);
+				const from = shiftDate(dates[0], -DEFAULT_DATE_WINDOW_DAYS);
+				const to = shiftDate(dates[dates.length - 1], DEFAULT_DATE_WINDOW_DAYS);
+				existing = own
+					? (await loadExistingXacts(from, to)).filter((x) => own.isRelevant(config, x))
+					: await loadExistingBankXacts(account, from, to);
 			} catch (e) {
 				Notifier.warning(
 					`Could not check for duplicates (${e instanceof Error ? e.message : e}). Is the ledger loaded?`
 				);
 			}
 
-			const { results: matches, unmatchedExisting: missing } = matchWithExisting(
-				imported.map((r) => r.xact),
-				existing,
-				account
-			);
+			const candidates = imported.map((r) => r.xact);
+			const { results: matches, unmatchedExisting: missing } = own
+				? own.match(candidates, existing)
+				: matchWithExisting(candidates, existing, account);
 			notInFile = missing;
 			bankAccount = account;
 			lastDate = dates[dates.length - 1];

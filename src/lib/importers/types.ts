@@ -22,6 +22,20 @@ export interface Importer<TConfig = unknown> {
 	identify(text: string): boolean;
 	/** Parse the file into transactions. Unknown counter-accounts are left on the placeholder account. */
 	extract(text: string, config: TConfig, ctx?: ImportContext): ImportedXact[];
+	/**
+	 * Own duplicate strategy, for files that touch many accounts. Without it the default
+	 * (one bank account, +-3 days, see dedup.ts) applies.
+	 */
+	readonly dedup?: ImporterDedup<TConfig>;
+}
+
+export interface ImporterDedup<TConfig = unknown> {
+	/** Whether a recorded transaction (with all its postings) can be a duplicate, e.g. it touches the broker's accounts. */
+	isRelevant(config: TConfig, xact: Xact): boolean;
+	match(
+		candidates: Xact[],
+		existing: Xact[]
+	): { results: DedupResult[]; unmatchedExisting: Xact[] };
 }
 
 /**

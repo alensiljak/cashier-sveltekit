@@ -91,7 +91,7 @@ Gaps and decisions:
    - Buys merge only if the `tradeDate` (cost date) is also equal.
 6. [x] Balance assertions (`ibkr/balances.ts`): cash per currency (`BASE_SUMMARY` skipped) and stock positions, dated `toDate + 1`. Unknown stock symbol: ticker fallback, `!`, warning. Wired into the importer; 3 tests, both fixtures pass.
    - The review screen's duplicate matching is still the default one, which does not understand balance rows; this is part of phase 7.
-7. [ ] Importer-specific dedup.
+7. [x] Importer-specific dedup: optional `Importer.dedup` (`isRelevant` + `match`); IBKR rule in `ibkr/dedup.ts` (exact date, set of (account, amount to 2 decimals, currency), one-to-one, `Equity:Currency` ignored). Review screen loads all recorded transactions in the range (`loadExistingXacts`) and filters to the broker's accounts. Balance assertions are never flagged as duplicates (re-importing adds them again). 5 tests.
 8. [ ] Config UI + review screen wiring; unsupported records reported to the user.
 9. [ ] Later, separate project: corporate actions (split, merger, issue change, rights issue); optional `distribution` metadata.
 
