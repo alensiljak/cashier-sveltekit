@@ -71,16 +71,23 @@ export async function loadFullXact(summary: Xact): Promise<Xact> {
 	}
 }
 
-/** ISIN -> commodity symbol, from the `isin` metadata on the book's commodity directives. */
-export async function loadIsinSymbols(): Promise<Record<string, string>> {
+/** Every (commodity symbol, ISIN) pair, from the `isin` metadata on the book's commodity directives. */
+export async function loadSymbolIsins(): Promise<[string, string][]> {
 	await fullLedgerService.ensureLoaded();
 	const commodities = commoditiesFromDirectives(
 		(await fullLedgerService.getDirectives()) as unknown[]
 	);
-	const map: Record<string, string> = {};
+	const pairs: [string, string][] = [];
 	for (const c of commodities) {
 		const isin = c.meta?.isin;
-		if (typeof isin === 'string' && isin) map[isin] = c.currency;
+		if (typeof isin === 'string' && isin) pairs.push([c.currency, isin]);
 	}
+	return pairs;
+}
+
+/** ISIN -> commodity symbol. With a dual listing the last one wins; see `loadSymbolIsins`. */
+export async function loadIsinSymbols(): Promise<Record<string, string>> {
+	const map: Record<string, string> = {};
+	for (const [symbol, isin] of await loadSymbolIsins()) map[isin] = symbol;
 	return map;
 }

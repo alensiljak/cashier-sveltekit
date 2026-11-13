@@ -82,8 +82,10 @@ Gaps and decisions:
 
 1. [x] Fixtures: the 20 cases are in `tests/data/ibkr/`; golden-file harness in `tests/helpers/beancountExpected.ts` (self-tested in `tests/unit/ibkrHarness.test.ts`). Amounts are compared exactly, not rounded. `div-interest.xml.beancount` was changed to the single-income-account rule.
 2. [x] XML reader (`flexXml.ts`) and decimal helper (`src/lib/utils/decimal.ts`, half-even rounding like Python), with unit tests.
-3. [ ] Symbol resolution (`get_bc_symbol`: ticker/ISIN disambiguation, dual listings).
-4. [ ] Cash transactions: deposits, dividends + tax merge + reversal/adjustment, fees, broker interest.
+3. [x] Symbol resolution (`ibkr/symbols.ts`, `SymbolMap`: ticker/ISIN disambiguation, dual listings). The context gets `symbolIsins` (all symbol/ISIN pairs of the book, `loadSymbolIsins()` in `existing.ts`) and `warnings`.
+4. [x] Cash transactions (`ibkr/cashTransactions.ts`, config type in `ibkr/config.ts`): deposits, dividends and payment in lieu with the tax merge, reversals/adjustments, fees, broker interest. 12 fixtures pass (balance lines excluded until phase 6). Unknown row types and unknown symbols warn; a missing transfer account leaves the deposit on the placeholder account, flagged `!`.
+   - The `Other Fees` row type name is taken from the ibflex library; no real record or fixture has it yet.
+   - Fees use the Python payee "IB Commission Adjustment" for both fee types.
 5. [ ] Trades: stock buys, merge, forex + merge. Sells with lots and forex with commission are reported as not supported yet.
 6. [ ] Balance assertions (cash and stock).
 7. [ ] Importer-specific dedup.

@@ -42,6 +42,16 @@ export interface ImportedXact {
 export interface ImportContext {
 	/** ISIN -> commodity symbol, from the book's commodity directives. */
 	isinToSymbol?: Record<string, string>;
+	/**
+	 * Every (commodity symbol, ISIN) pair of the book. Unlike `isinToSymbol` it keeps dual listings:
+	 * one ISIN traded under several symbols (e.g. DGSE.MI and WTED.DE).
+	 */
+	symbolIsins?: [symbol: string, isin: string][];
+	/**
+	 * Out-parameter: the importer appends a message for every record it skipped or could not
+	 * fully handle, so the review screen can tell the user. Skipped records are not created.
+	 */
+	warnings?: string[];
 	/** Set to false to see the raw records: payee and account rules are skipped. Default true. */
 	applyRules?: boolean;
 }
