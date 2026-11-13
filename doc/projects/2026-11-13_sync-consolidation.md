@@ -43,7 +43,7 @@ Consequences:
 
 ## Phases
 
-### Phase 1: Move logic out of the pages
+### ✅ Phase 1: Move logic out of the pages
 
 No behaviour change. Each step is its own commit, with unit tests for whatever becomes pure.
 
@@ -64,37 +64,25 @@ No behaviour change. Each step is its own commit, with unit tests for whatever b
    - Not covered: the S3 session and sync core (`syncShared`, `persist`, `canonical`, `classify`) need `s3Client` and OPFS mocks. `canonical` and `classify` are pure but unexported or file-private; export them for tests when touching that code next, and leave the I/O paths to an e2e test with a real or emulated bucket.
    - Not covered: `BeancountSyncController` itself (peer I/O and reactive state). Its pure parts are covered through `syncTree.ts`.
 
-### Phase 2: A common channel interface
+### ✅ Phase 2: A common channel interface
 
-1. [ ] Define `SyncChannel` in `src/lib/sync/channel.ts`:
+Design, decided while implementing (differs from the first sketch):
 
-   ```ts
-   interface SyncChannelStatus {
-   	lastSync: Date | null;
-   	pending: number; // uploads + downloads
-   	conflicts: number;
-   	error?: string;
-   }
-   interface SyncChannel {
-   	id: 's3' | 'webdav' | 'peer' | 'beancount';
-   	label: string;
-   	isEnabled(): boolean; // from syncOptions
-   	isConfigured(): boolean;
-   	status(): Promise<SyncChannelStatus>;
-   	syncNow?(): Promise<void>; // omitted where a sync needs user decisions
-   	href: string;
-   }
-   ```
+- The channels are the three that already have a headless check and sync and are shown on the home Sync card: **WebDAV, S3 and P2P**, all for the CRDT stores. File-level Beancount sync (`/sync/beancount`, `/opfs/sync`) needs a peer scan and user decisions per file, so it is not a channel; the hub links to it instead.
+- **Status is cached, not fetched.** `SyncHub` keeps the last known status in memory. Opening the hub or the card contacts nothing. A channel is contacted only by `check(id)`, `sync(id)`, or an explicit `checkAll()`. Last-sync times are persisted (`DeviceSettingKeys.syncChannelLastSync`, plus S3's own `s3LastSync`), so they survive a restart; the status itself starts as "not checked".
+- The hub reports outcomes instead of showing notifications. The UI decides how to present them.
 
-2. [ ] Adapters per channel, reusing existing calls: `getLastSync`, `fetchRemoteOverview`, `fetchFileSyncStatus` for S3; the equivalents in `webdavDelta.ts`; `peerConnection` and `peerPresence` for peers; the sync diff for Beancount files.
-3. [ ] A registry (`getChannels()`) filtered by `syncOptions`.
-4. [ ] Unit tests for each adapter against stubbed stores.
-
-Open point: `status()` must be cheap and must not trigger network traffic on hub load unless the user asks. Prefer cached "last known" state, with an explicit refresh.
+1. ✅ [channel.ts](/src/lib/sync/channel.ts): `SyncChannel` (`check`, `sync`, `isEnabled`, `unavailableReason`, optional `lastSync`), `ChannelSnapshot`, and the pure rules `isStale` / `overallState` (`none`, `error`, `attention`, `ok`, `stale`; default staleness 7 days) / `newestSync`.
+2. ✅ [channels.ts](/src/lib/sync/channels.ts): adapters wrapping the same calls the home card used (`checkWebDav` / `syncWebDav`, `checkCrdtStores` / `syncCrdtStores`, the peer Ydoc hash comparison and `syncYdoc`). Services are imported on use.
+3. ✅ [syncHub.svelte.ts](/src/lib/sync/syncHub.svelte.ts): the cached state class, with channels and storage injected. The app's instance is [hub.ts](/src/lib/sync/hub.ts) (reloads the ledger after a merge).
+4. ✅ [SyncCard.svelte](/src/lib/components/SyncCard.svelte): the WebDAV and S3 rows now use the hub, so the home card and the `/sync` page will show the same cached status. The P2P row keeps its own per-device comparison for now.
+5. ✅ [syncHub.test.ts](/tests/unit/syncHub.test.ts): 26 tests with fake channels (no services, network or storage).
+6. [ ] Follow-up: move the P2P row of the home card onto the hub's peer channel. Needs a per-peer breakdown in the snapshot, which Phase 3's hub page wants anyway.
+7. [ ] Follow-up: a channel-level "pending counts" view (files to upload or download, conflicts). The hub currently knows only same/differs; richer detail stays on the channel's own page (`s3StatusView.ts`).
 
 ### Phase 3: The `/sync` hub
 
-1. [ ] `/sync/+page.svelte`: one [SyncCard.svelte](/src/lib/components/SyncCard.svelte) per enabled channel, showing last sync, a pending/conflict badge, an error line, "Sync now" (where offered) and a link to the detail page.
+1. [ ] `/sync/+page.svelte`: one card per enabled channel, driven by `syncHub` (not a copy of the home [SyncCard.svelte](/src/lib/components/SyncCard.svelte), which stays the compact home version). Each shows last sync, the cached status, an error line, "Check" and "Sync now", and a link to the detail page. Opening the page only calls `syncHub.load()`; it contacts no channel.
 2. [ ] A staleness warning at the top when no channel has synced within a configurable period, and a prompt to set one up when none is configured.
 3. [ ] A "Backup file" section for the offline export and restore fallback.
 4. [ ] Collapse the sync/backup entries in [navigation.svelte](/src/lib/components/navigation.svelte) into a single "Sync" entry. The `syncOptions` toggles still decide which cards appear.

@@ -177,7 +177,10 @@ export const DeviceSettingKeys = {
 	// When unset, an option counts as enabled if it was already configured (see syncOptions.svelte.ts)
 	syncWebdavEnabled: 'sync.webdav.enabled',
 	syncS3Enabled: 'sync.s3.enabled',
-	syncPeerEnabled: 'sync.peer.enabled'
+	syncPeerEnabled: 'sync.peer.enabled',
+	// When each sync channel last completed a sync from the Sync hub or home card.
+	// Shape: Record<channelId, ISO string>. S3 also has its own s3LastSync, which takes precedence.
+	syncChannelLastSync: 'sync.channel.last-sync'
 };
 
 class UserSettings {

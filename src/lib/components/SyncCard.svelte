@@ -14,19 +14,16 @@
 	import { reloadLedgerFromOpfs } from '#lib/services/ledgerReload';
 	import Notifier from '#lib/utils/notifier';
 	import { syncOptions } from '#lib/services/syncOptions.svelte';
-	import { isS3Configured, loadS3Config } from '#lib/services/s3Config';
-	import { describeS3Error } from '#lib/services/s3Client';
+	import { syncHub } from '#lib/sync/hub';
+	import type { ChannelId, ChannelStatus as Status } from '#lib/sync/channel';
 
 	const presence = peerConnection.presence;
 
-	/** unchecked = not compared yet; differs = there are changes to exchange. */
-	type Status = 'unchecked' | 'checking' | 'same' | 'differs' | 'error';
-	type Target = 'webdav' | 's3' | 'peer';
+	// WebDAV and S3 go through the shared Sync hub, so the card and the /sync page show the same
+	// cached status. The peer row has its own per-device comparison below.
+	const webdavSnap = $derived(syncHub.snapshotOf('webdav'));
+	const s3Snap = $derived(syncHub.snapshotOf('s3'));
 
-	let webdavStatus = $state<Status>('unchecked');
-	let s3Status = $state<Status>('unchecked');
-	let webdavBusy = $state(false);
-	let s3Busy = $state(false);
 	let connecting = $state(false);
 	let syncing = $state(false);
 
@@ -116,80 +113,18 @@
 
 	// --- WebDAV and S3 ---
 
-	const message = (e: unknown) => (e instanceof Error ? e.message : describeS3Error(e));
-
-	async function checkWebDavTarget() {
-		webdavStatus = 'checking';
-		try {
-			const { loadWebDavClient, checkWebDav } = await import('#lib/services/webdavSync');
-			const client = await loadWebDavClient();
-			if (!client) throw new Error('WebDAV is not configured');
-			webdavStatus = (await checkWebDav(client)) ? 'differs' : 'same';
-		} catch (e) {
-			webdavStatus = 'error';
-			Notifier.error('WebDAV check failed: ' + message(e));
-		}
+	async function checkTarget(id: ChannelId, label: string) {
+		const s = await syncHub.check(id);
+		if (s.status === 'error') Notifier.error(`${label} check failed: ${s.error}`);
 	}
 
-	async function syncWebDavTarget() {
-		webdavBusy = true;
-		try {
-			const { loadWebDavClient, syncWebDav } = await import('#lib/services/webdavSync');
-			const client = await loadWebDavClient();
-			if (!client) throw new Error('WebDAV is not configured');
-			const { errors, merged } = await syncWebDav(client);
-			if (merged) await reloadLedgerFromOpfs();
-			if (errors.length) {
-				webdavStatus = 'error';
-				Notifier.error('WebDAV sync failed: ' + errors.join('; '));
-			} else {
-				webdavStatus = 'same';
-				Notifier.success(merged ? 'WebDAV synced — new transactions received' : 'WebDAV synced');
-			}
-		} catch (e) {
-			webdavStatus = 'error';
-			Notifier.error('WebDAV sync failed: ' + message(e));
-		} finally {
-			webdavBusy = false;
-		}
-	}
-
-	async function loadS3() {
-		const cfg = await loadS3Config();
-		if (!isS3Configured(cfg)) throw new Error('S3 is not configured');
-		return cfg;
-	}
-
-	async function checkS3Target() {
-		s3Status = 'checking';
-		try {
-			const { checkCrdtStores } = await import('#lib/services/s3Sync');
-			s3Status = (await checkCrdtStores(await loadS3())) ? 'differs' : 'same';
-		} catch (e) {
-			s3Status = 'error';
-			Notifier.error('S3 check failed: ' + message(e));
-		}
-	}
-
-	async function syncS3Target() {
-		s3Busy = true;
-		try {
-			const { syncCrdtStores } = await import('#lib/services/s3Sync');
-			const { errors, merged } = await syncCrdtStores(await loadS3());
-			if (merged) await reloadLedgerFromOpfs();
-			if (errors.length) {
-				s3Status = 'error';
-				Notifier.error('S3 sync failed: ' + errors.map((l) => l.message).join('; '));
-			} else {
-				s3Status = 'same';
-				Notifier.success(merged ? 'S3 synced — new transactions received' : 'S3 synced');
-			}
-		} catch (e) {
-			s3Status = 'error';
-			Notifier.error('S3 sync failed: ' + message(e));
-		} finally {
-			s3Busy = false;
-		}
+	async function syncTarget(id: ChannelId, label: string) {
+		const r = await syncHub.sync(id);
+		if (!r.ok) Notifier.error(`${label} sync failed: ${r.errors.join('; ')}`);
+		else
+			Notifier.success(
+				r.merged ? `${label} synced — new transactions received` : `${label} synced`
+			);
 	}
 
 	const dotClass: Record<Status, string> = {
@@ -301,10 +236,10 @@
 						CloudIcon,
 						'WebDAV',
 						'/backup/webdav',
-						webdavStatus,
-						webdavBusy,
-						checkWebDavTarget,
-						syncWebDavTarget
+						webdavSnap.status,
+						webdavSnap.busy,
+						() => checkTarget('webdav', 'WebDAV'),
+						() => syncTarget('webdav', 'WebDAV')
 					)}
 				{/if}
 				{#if syncOptions.s3}
@@ -312,10 +247,10 @@
 						DatabaseIcon,
 						'S3',
 						'/backup/s3',
-						s3Status,
-						s3Busy,
-						checkS3Target,
-						syncS3Target
+						s3Snap.status,
+						s3Snap.busy,
+						() => checkTarget('s3', 'S3'),
+						() => syncTarget('s3', 'S3')
 					)}
 				{/if}
 				{#if syncOptions.peer}
