@@ -1,0 +1,21 @@
+<FlexQueryResponse queryName="bean-import" type="AF">
+<FlexStatements count="1">
+<FlexStatement accountId="A0001111" fromDate="2025-01-22" toDate="2025-05-21" period="LastNCalendarDays" whenGenerated="2025-05-22 20:41:57">
+<AccountInformation accountId="A0001111" currency="EUR" />
+<CashReport>
+<CashReportCurrency currency="BASE_SUMMARY" toDate="2025-05-21" startingCash="500" startingCashSec="500" startingCashCom="0" endingCash="500" endingCashSec="500" endingCashCom="0" slbNetCash="500" slbNetCashSec="500" slbNetCashCom="0" />
+<CashReportCurrency currency="AUD" toDate="2025-05-21" startingCash="100" startingCashSec="100" startingCashCom="0" endingCash="100" endingCashSec="100" endingCashCom="0" slbNetCash="100" slbNetCashSec="100" slbNetCashCom="0" />
+<CashReportCurrency currency="EUR" toDate="2025-05-21" startingCash="200" startingCashSec="200" startingCashCom="0" endingCash="200" endingCashSec="200" endingCashCom="0" slbNetCash="200" slbNetCashSec="200" slbNetCashCom="0" />
+<CashReportCurrency currency="GBP" toDate="2025-05-21" startingCash="50" startingCashSec="50" startingCashCom="0" endingCash="50" endingCashSec="50" endingCashCom="0" slbNetCash="50" slbNetCashSec="50" slbNetCashCom="0" />
+<CashReportCurrency currency="USD" toDate="2025-05-21" startingCash="150" startingCashSec="150" startingCashCom="0" endingCash="150" endingCashSec="150" endingCashCom="0" slbNetCash="150" slbNetCashSec="150" slbNetCashCom="0" />
+</CashReport>
+<OpenPositions>
+</OpenPositions><NetStockPositionSummary>
+</NetStockPositionSummary><Trades>
+</Trades><CashTransactions>
+</CashTransactions><Transfers>
+</Transfers><OpenDividendAccruals>
+</OpenDividendAccruals>
+</FlexStatement>
+</FlexStatements>
+</FlexQueryResponse>

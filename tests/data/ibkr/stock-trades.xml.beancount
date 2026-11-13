@@ -1,0 +1,13 @@
+;; Account: ibkr
+;; Date: 2025-05-22T20:41:57
+;; Name: stock-trades.xml
+
+2025-03-17 * "Buy VHY.AX" ""
+  Assets:Investments:IB:Stocks:VHY-AX             12 VHY.AX {71.99 AUD}
+  Expenses:Financial:IB                   5.53919856 AUD
+  Assets:Investments:IB:Cash-AUD       -869.41919856 AUD
+
+2025-06-06 * "Buy PFXF" ""
+  Assets:Investments:IB:Stocks:PFXF       4 PFXF {16.935 USD, 2025-06-09}
+  Expenses:Financial:IB                0.20 USD
+  Assets:Investments:IB:Cash-USD     -67.94 USD

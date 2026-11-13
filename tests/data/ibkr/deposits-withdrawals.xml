@@ -1,0 +1,23 @@
+<FlexQueryResponse queryName="bean-import" type="AF">
+<FlexStatements count="1">
+<FlexStatement accountId="A0001111" fromDate="2025-01-22" toDate="2025-05-21" period="LastNCalendarDays" whenGenerated="2025-05-22 20:41:57">
+<AccountInformation accountId="A0001111" currency="EUR" />
+<CashReport>
+</CashReport>
+<OpenPositions>
+</OpenPositions>
+<NetStockPositionSummary>
+</NetStockPositionSummary>
+<Trades>
+</Trades>
+<CashTransactions>
+<CashTransaction currency="AUD" symbol="" isin="" reportDate="2025-03-10" dateTime="2025-03-10 15:00:00" amount="100" type="Deposits/Withdrawals" commodityType="" description="CASH RECEIPTS / ELECTRONIC FUND TRANSFERS" />
+<CashTransaction currency="EUR" symbol="" isin="" reportDate="2025-03-15" dateTime="2025-03-15 15:00:00" amount="-100" type="Deposits/Withdrawals" commodityType="" description="CASH RECEIPTS / ELECTRONIC FUND TRANSFERS" />
+</CashTransactions>
+<Transfers>
+</Transfers>
+<OpenDividendAccruals>
+</OpenDividendAccruals>
+</FlexStatement>
+</FlexStatements>
+</FlexQueryResponse>

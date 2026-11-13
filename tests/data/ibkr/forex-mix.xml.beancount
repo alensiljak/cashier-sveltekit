@@ -1,0 +1,11 @@
+;; Account: ibkr
+;; Date: 2025-05-22T20:41:57
+;; Name: forex-mix.xml
+
+2025-02-24 * "FX EUR.USD" ""
+  Assets:Investments:IB:Cash-EUR      -331.3 EUR @ 1.04633 USD
+  Assets:Investments:IB:Cash-USD  346.649129 USD
+
+2025-03-10 * "FX EUR.AUD" ""
+  Assets:Investments:IB:Cash-EUR       -77.12 EUR @ 1.72079 AUD
+  Assets:Investments:IB:Cash-AUD  132.7073248 AUD

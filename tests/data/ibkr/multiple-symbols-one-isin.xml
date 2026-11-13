@@ -1,0 +1,22 @@
+<FlexQueryResponse queryName="bean-import" type="AF">
+<FlexStatements count="1">
+<FlexStatement accountId="A0001111" fromDate="2025-01-22" toDate="2025-05-21" period="LastNCalendarDays" whenGenerated="2025-05-22 20:41:57">
+<AccountInformation accountId="A0001111" currency="EUR" />
+<CashReport>
+</CashReport>
+<OpenPositions>
+</OpenPositions>
+<NetStockPositionSummary>
+</NetStockPositionSummary>
+<Trades>
+</Trades>
+<CashTransactions>
+<CashTransaction currency="USD" symbol="DGSE" isin="IE00BQZJBM26" reportDate="2026-07-20" dateTime="2026-07-18 10:20:00" amount="73.06" type="Dividends" commodityType="" description="DGSE(IE00BQZJBM26) CASH DIVIDEND USD 0.26 PER SHARE (Mixed Income)" />
+</CashTransactions>
+<Transfers>
+</Transfers>
+<OpenDividendAccruals>
+</OpenDividendAccruals>
+</FlexStatement>
+</FlexStatements>
+</FlexQueryResponse>

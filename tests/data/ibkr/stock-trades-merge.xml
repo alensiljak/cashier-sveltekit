@@ -1,0 +1,19 @@
+<FlexQueryResponse queryName="bean-import" type="AF">
+<FlexStatements count="1">
+<FlexStatement accountId="A0001111" fromDate="2025-01-22" toDate="2025-05-21" period="LastNCalendarDays" whenGenerated="2025-05-22 20:41:57">
+<AccountInformation accountId="A0001111" currency="EUR" />
+<CashReport>
+</CashReport>
+<OpenPositions>
+</OpenPositions><NetStockPositionSummary>
+</NetStockPositionSummary><Trades>
+<Trade reportDate="2025-06-25" currency="AUD" symbol="VACF" securityID="AU00000VACF9" isin="AU00000VACF9" dateTime="2025-06-25 15:51:57" transactionType="ExchTrade" quantity="3" tradePrice="52.43" tradeMoney="157.29" proceeds="-157.29" ibCommission="-5.006488212" ibCommissionCurrency="AUD" netCash="-162.797137032" cost="162.797137032" fifoPnlRealized="0" buySell="BUY" openCloseIndicator="O" openDateTime="" taxes="-0.50064882" />
+<Trade reportDate="2025-06-25" currency="AUD" symbol="VACF" securityID="AU00000VACF9" isin="AU00000VACF9" dateTime="2025-06-25 15:54:13" transactionType="ExchTrade" quantity="2" tradePrice="52.43" tradeMoney="104.86" proceeds="-104.86" ibCommission="-0.004325475" ibCommissionCurrency="AUD" netCash="-104.864758025" cost="104.864758025" fifoPnlRealized="0" buySell="BUY" openCloseIndicator="O" openDateTime="" taxes="-0.00043255" />
+<Trade reportDate="2025-06-25" currency="AUD" symbol="VACF" securityID="AU00000VACF9" isin="AU00000VACF9" dateTime="2025-06-25 15:54:37" transactionType="ExchTrade" quantity="1" tradePrice="52.43" tradeMoney="52.43" proceeds="-52.43" ibCommission="-0.002162737" ibCommissionCurrency="AUD" netCash="-52.432379007" cost="52.432379007" fifoPnlRealized="0" buySell="BUY" openCloseIndicator="O" openDateTime="" taxes="-0.00021627" />
+</Trades><CashTransactions>
+</CashTransactions><Transfers>
+</Transfers><OpenDividendAccruals>
+</OpenDividendAccruals>
+</FlexStatement>
+</FlexStatements>
+</FlexQueryResponse>

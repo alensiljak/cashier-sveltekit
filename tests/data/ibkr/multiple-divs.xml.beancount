@@ -1,0 +1,12 @@
+;; Account: ibkr
+;; Date: 2025-05-22T20:41:57
+;; Name: multiple-divs.xml
+
+2026-07-13 * "SDIV.MI distribution" "USD 0.0845 PER SHARE (Mixed Income)"
+  Assets:Investments:IB:Cash-USD               40.56 USD
+  Income:Investments:Dividend:IB:USD:SDIV-MI  -40.56 USD
+
+2026-07-13 * "SDIV distribution" "USD 0.18 PER SHARE (Ordinary Dividend)"
+  Assets:Investments:IB:Cash-USD            7.50 USD
+  Income:Investments:Dividend:IB:USD:SDIV  -8.82 USD
+  Expenses:Investments:IB:WithholdingTax    1.32 USD

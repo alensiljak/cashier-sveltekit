@@ -1,0 +1,11 @@
+;; Account: ibkr
+;; Date: 2025-05-22T20:41:57
+;; Name: commission-adjustment.xml
+
+2025-05-08 * "IB Commission Adjustment" "Refund (DES, 19, 2025-04-08)"
+  Expenses:Financial:IB           -0.37013125 USD
+  Assets:Investments:IB:Cash-USD   0.37013125 USD
+
+2025-05-22 balance Assets:Investments:IB:Cash-AUD                  100 AUD
+2025-05-22 balance Assets:Investments:IB:Cash-EUR                  200 EUR
+2025-05-22 balance Assets:Investments:IB:Stocks:OPI                10 OPI

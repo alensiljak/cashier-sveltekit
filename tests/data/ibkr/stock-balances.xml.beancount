@@ -1,0 +1,6 @@
+;; Account: ibkr
+;; Date: 2025-05-22T20:41:57
+;; Name: stock-balances.xml
+2025-05-22 balance Assets:Investments:IB:Cash-AUD                  100 AUD
+2025-05-22 balance Assets:Investments:IB:Stocks:OPI                10 OPI
+2025-05-22 balance Assets:Investments:IB:Stocks:VAP-AX             20 VAP.AX

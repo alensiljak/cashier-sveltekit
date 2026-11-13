@@ -1,0 +1,11 @@
+;; Account: ibkr
+;; Date: 2025-05-22T20:41:57
+;; Name: deposits-withdrawals.xml
+
+2025-03-10 * "IB AUD Deposit" ""
+  Assets:Investments:IB:Cash-AUD   100 AUD
+  Assets:Bank-Accounts:AUD        -100 AUD
+
+2025-03-15 * "IB EUR Deposit" ""
+  Assets:Investments:IB:Cash-EUR  -100 EUR
+  Assets:Bank-Accounts:EUR         100 EUR

@@ -1,0 +1,18 @@
+<FlexQueryResponse queryName="bean-import" type="AF">
+<FlexStatements count="1">
+<FlexStatement accountId="A0001111" fromDate="2025-01-22" toDate="2025-05-21" period="LastNCalendarDays" whenGenerated="2025-05-22 20:41:57">
+<AccountInformation accountId="A0001111" currency="EUR" />
+<CashReport>
+</CashReport>
+<OpenPositions>
+</OpenPositions><NetStockPositionSummary>
+</NetStockPositionSummary><Trades>
+<Trade reportDate="2025-06-06" currency="USD" symbol="PFXF" securityID="US92189F4292" isin="US92189F4292" dateTime="2025-06-06 23:56:36" transactionType="ExchTrade" quantity="4" tradeDate="2025-06-09" tradePrice="16.935" tradeMoney="67.74" proceeds="-67.74" ibCommission="-0.20" ibCommissionCurrency="USD" netCash="-67.94" cost="67.94" fifoPnlRealized="0" buySell="BUY" openCloseIndicator="O" />
+<Trade reportDate="2025-03-17" currency="AUD" symbol="VHY" securityID="AU000000VHY4" isin="AU000000VHY4" dateTime="2025-03-17 15:47:18" transactionType="ExchTrade" quantity="12" tradePrice="71.99" tradeMoney="863.88" proceeds="-863.88" ibCommission="-5.03563505" ibCommissionCurrency="AUD" netCash="-869.41919856" cost="869.41919856" fifoPnlRealized="0" buySell="BUY" openCloseIndicator="O" openDateTime="" taxes="-0.50356351" origTradeDate="" />
+</Trades><CashTransactions>
+</CashTransactions><Transfers>
+</Transfers><OpenDividendAccruals>
+</OpenDividendAccruals>
+</FlexStatement>
+</FlexStatements>
+</FlexQueryResponse>

@@ -1,0 +1,8 @@
+;; Account: ibkr
+;; Date: 2025-05-22T20:41:57
+;; Name: commissions.xml
+
+2025-03-25 * "Buy VHY.AX" ""
+  Assets:Investments:IB:Stocks:VHY-AX             12 VHY.AX {73.3 AUD}
+  Expenses:Financial:IB                   5.53991185 AUD
+  Assets:Investments:IB:Cash-AUD       -885.13991185 AUD

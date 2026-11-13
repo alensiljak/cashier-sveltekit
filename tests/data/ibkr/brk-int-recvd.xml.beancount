@@ -1,0 +1,7 @@
+;; Account: ibkr
+;; Date: 2025-05-22T20:41:57
+;; Name: brk-int-recvd.xml
+
+2025-05-05 * "Interactive Brokers" "EUR CREDIT INT FOR APR-2025"
+  Assets:Investments:IB:Cash-EUR        1.49 EUR
+  Income:Investments:Interest:IB:Cash  -1.49 EUR

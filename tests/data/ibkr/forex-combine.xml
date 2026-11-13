@@ -1,0 +1,20 @@
+<FlexQueryResponse queryName="bean-import" type="AF">
+<FlexStatements count="1">
+<FlexStatement accountId="A0001111" fromDate="2025-01-22" toDate="2025-06-21" period="LastNCalendarDays" whenGenerated="2025-06-22 20:41:57">
+<AccountInformation accountId="A0001111" currency="EUR" />
+<CashReport>
+</CashReport>
+<OpenPositions>
+</OpenPositions><NetStockPositionSummary>
+</NetStockPositionSummary><Trades>
+<Trade reportDate="2025-06-06" currency="USD" symbol="EUR.USD" securityID="" isin="" dateTime="2025-06-07 07:00:00" transactionType="ExchTrade" quantity="-0.00455178" tradePrice="1.13909241" tradeMoney="-0.0051849" proceeds="0.0051849" ibCommission="0" ibCommissionCurrency="EUR" netCash="0" cost="0" fifoPnlRealized="0" buySell="SELL" openCloseIndicator="" openDateTime="" taxes="0" />
+<Trade reportDate="2025-06-09" currency="USD" symbol="EUR.USD" securityID="" isin="" dateTime="2025-06-09 23:32:22" transactionType="ExchTrade" quantity="-495.19" tradePrice="1.13879" tradeMoney="-563.9174201" proceeds="563.9174201" ibCommission="0" ibCommissionCurrency="EUR" netCash="0" cost="0" fifoPnlRealized="0" buySell="SELL" openCloseIndicator="" openDateTime="" taxes="0" />
+<Trade reportDate="2025-06-09" currency="USD" symbol="EUR.USD" securityID="" isin="" dateTime="2025-06-09 23:32:22" transactionType="ExchTrade" quantity="-0.36" tradePrice="1.13879" tradeMoney="-0.4099644" proceeds="0.4099644" ibCommission="0" ibCommissionCurrency="EUR" netCash="0" cost="0" fifoPnlRealized="0" buySell="SELL" openCloseIndicator="" openDateTime="" taxes="0" />
+<Trade reportDate="2025-06-09" currency="USD" symbol="EUR.USD" securityID="" isin="" dateTime="2025-06-10 07:00:00" transactionType="ExchTrade" quantity="3.45763387" tradePrice="1.14237464" tradeMoney="3.94991325" proceeds="-3.94991325" ibCommission="0" ibCommissionCurrency="EUR" netCash="0" cost="0" fifoPnlRealized="0" buySell="BUY" openCloseIndicator="" openDateTime="" taxes="0" />
+</Trades><CashTransactions>
+</CashTransactions><Transfers>
+</Transfers><OpenDividendAccruals>
+</OpenDividendAccruals>
+</FlexStatement>
+</FlexStatements>
+</FlexQueryResponse>

@@ -1,0 +1,18 @@
+<FlexQueryResponse queryName="bean-import" type="AF">
+<FlexStatements count="1">
+<FlexStatement accountId="A0001111" fromDate="2025-01-22" toDate="2025-05-21" period="LastNCalendarDays" whenGenerated="2025-05-22 20:41:57">
+<AccountInformation accountId="A0001111" currency="EUR" />
+<CashReport>
+</CashReport>
+<OpenPositions>
+</OpenPositions><NetStockPositionSummary>
+</NetStockPositionSummary><Trades>
+</Trades><CashTransactions>
+<CashTransaction currency="USD" symbol="AMLP" isin="US00162Q4525" reportDate="2025-02-28" dateTime="2024-05-15 10:20:00" amount="6.49" type="Withholding Tax" commodityType="" description="AMLP(US00162Q4525) CASH DIVIDEND USD 0.94 PER SHARE - US TAX" />
+<CashTransaction currency="USD" symbol="AMLP" isin="US00162Q4525" reportDate="2025-02-28" dateTime="2024-05-15 10:20:00" amount="-6.1" type="Withholding Tax" commodityType="" description="AMLP(US00162Q4525) CASH DIVIDEND USD 0.94 PER SHARE - US TAX" />
+</CashTransactions><Transfers>
+</Transfers><OpenDividendAccruals>
+</OpenDividendAccruals>
+</FlexStatement>
+</FlexStatements>
+</FlexQueryResponse>

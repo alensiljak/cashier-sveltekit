@@ -1,0 +1,24 @@
+<FlexQueryResponse queryName="bean-import" type="AF">
+<FlexStatements count="1">
+<FlexStatement accountId="A0001111" fromDate="2025-01-22" toDate="2025-05-21" period="LastNCalendarDays" whenGenerated="2025-05-22 20:41:57">
+<AccountInformation accountId="A0001111" currency="EUR" />
+<CashReport>
+</CashReport>
+<OpenPositions>
+</OpenPositions>
+<NetStockPositionSummary>
+</NetStockPositionSummary>
+<Trades>
+</Trades>
+<CashTransactions>
+<CashTransaction currency="USD" symbol="SDIV" isin="US37960A6698" reportDate="2026-07-13" dateTime="2026-07-14 10:20:00" amount="-1.32" type="Withholding Tax" commodityType="" description="SDIV(US37960A6698) CASH DIVIDEND USD 0.18 PER SHARE - US TAX" />
+<CashTransaction currency="USD" symbol="SDIV" isin="IE00077FRP95" reportDate="2026-07-13" dateTime="2026-07-11 10:20:00" amount="40.56" type="Dividends" commodityType="" description="SDIV(IE00077FRP95) CASH DIVIDEND USD 0.0845 PER SHARE (Mixed Income)" />
+<CashTransaction currency="USD" symbol="SDIV" isin="US37960A6698" reportDate="2026-07-13" dateTime="2026-07-14 10:20:00" amount="8.82" type="Dividends" commodityType="" description="SDIV(US37960A6698) CASH DIVIDEND USD 0.18 PER SHARE (Ordinary Dividend)" />
+</CashTransactions>
+<Transfers>
+</Transfers>
+<OpenDividendAccruals>
+</OpenDividendAccruals>
+</FlexStatement>
+</FlexStatements>
+</FlexQueryResponse>

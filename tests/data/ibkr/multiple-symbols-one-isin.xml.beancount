@@ -1,0 +1,7 @@
+;; Account: ibkr
+;; Date: 2025-05-22T20:41:57
+;; Name: multiple-symbols-one-isin.xml
+
+2026-07-20 * "DGSE.MI distribution" "USD 0.26 PER SHARE (Mixed Income)"
+  Assets:Investments:IB:Cash-USD               73.06 USD
+  Income:Investments:Dividend:IB:USD:DGSE-MI  -73.06 USD

@@ -1,0 +1,9 @@
+;; Account: ibkr
+;; Date: 2025-05-22T20:41:57
+;; Name: div-interest.xml
+;; Changed from the Python original: distributions are all income, there is no
+;; separate interest account (the interest_symbols list is gone).
+
+2025-02-26 * "VGOV_F distribution" "GBP 0.052018 PER SHARE (Mixed Income)"
+  Assets:Investments:IB:Cash-GBP                  11.24 GBP
+  Income:Investments:Dividend:IB:GBP:VGOV-F      -11.24 GBP

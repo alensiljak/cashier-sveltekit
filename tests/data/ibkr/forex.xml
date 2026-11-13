@@ -1,0 +1,18 @@
+<FlexQueryResponse queryName="bean-import" type="AF">
+<FlexStatements count="1">
+<FlexStatement accountId="A0001111" fromDate="2025-01-22" toDate="2025-05-21" period="LastNCalendarDays" whenGenerated="2025-05-22 20:41:57">
+<AccountInformation accountId="A0001111" currency="EUR" />
+<CashReport>
+</CashReport>
+<OpenPositions>
+</OpenPositions><NetStockPositionSummary>
+</NetStockPositionSummary><Trades>
+<Trade currency="AUD" symbol="EUR.AUD" securityID="" isin="" dateTime="2025-03-10 11:29:49" transactionType="ExchTrade" quantity="-77.12" tradePrice="1.72079" tradeMoney="-132.7073248" proceeds="132.7073248" ibCommission="0" ibCommissionCurrency="EUR" netCash="0" cost="0" fifoPnlRealized="0" buySell="SELL" reportDate="2025-03-10" />
+<Trade currency="USD" symbol="EUR.USD" securityID="" isin="" dateTime="2025-02-25 02:18:27" transactionType="ExchTrade" quantity="-331.3" tradePrice="1.04633" tradeMoney="-346.649129" proceeds="346.649129" ibCommission="0" ibCommissionCurrency="EUR" netCash="0" cost="0" fifoPnlRealized="0" buySell="SELL" reportDate="2025-02-24" />
+</Trades><CashTransactions>
+</CashTransactions><Transfers>
+</Transfers><OpenDividendAccruals>
+</OpenDividendAccruals>
+</FlexStatement>
+</FlexStatements>
+</FlexQueryResponse>

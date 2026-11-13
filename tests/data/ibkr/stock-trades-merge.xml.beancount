@@ -1,0 +1,8 @@
+;; Account: ibkr
+;; Date: 2025-05-22T20:41:57
+;; Name: stock-trades-merge.xml
+
+2025-06-25 * "Buy VACF.AX" ""
+  Assets:Investments:IB:Stocks:VACF-AX               6 VACF.AX {52.43 AUD}
+  Expenses:Financial:IB                    5.514274064 AUD
+  Assets:Investments:IB:Cash-AUD        -320.094274064 AUD

@@ -1,0 +1,26 @@
+<FlexQueryResponse queryName="bean-import" type="AF">
+<FlexStatements count="1">
+<FlexStatement accountId="A0001111" fromDate="2025-01-22" toDate="2025-05-21" period="LastNCalendarDays" whenGenerated="2025-05-22 20:41:57">
+<AccountInformation accountId="A0001111" currency="EUR" />
+<CashReport>
+</CashReport>
+<OpenPositions>
+</OpenPositions><NetStockPositionSummary>
+</NetStockPositionSummary><Trades>
+<Trade currency="AUD" symbol="TCF.RTS0" securityID="AU0000389900" isin="AU0000389900" dateTime="2025-04-03 11:25:00" transactionType="FracShare" quantity="-0.3333" tradePrice="0" tradeMoney="0" proceeds="0" ibCommission="0" ibCommissionCurrency="AUD" netCash="0" cost="0" fifoPnlRealized="0" buySell="SELL" reportDate="2025-04-03" />
+<Lot currency="AUD" symbol="TCF.RTS0" securityID="AU0000389900" isin="AU0000389900" dateTime="2025-04-03 11:25:00" transactionType="" quantity="0.3333" tradePrice="0" tradeMoney="" proceeds="" ibCommission="" ibCommissionCurrency="" netCash="" cost="0" fifoPnlRealized="0" buySell="SELL" reportDate="2025-04-03" />
+
+<Trade currency="AUD" symbol="EUR.AUD" securityID="" isin="" dateTime="2025-03-10 11:29:49" transactionType="ExchTrade" quantity="-77.12" tradePrice="1.72079" tradeMoney="-132.7073248" proceeds="132.7073248" ibCommission="0" ibCommissionCurrency="EUR" netCash="0" cost="0" fifoPnlRealized="0" buySell="SELL" reportDate="2025-03-10" />
+<Trade currency="USD" symbol="EUR.USD" securityID="" isin="" dateTime="2025-02-25 02:18:27" transactionType="ExchTrade" quantity="-331.3" tradePrice="1.04633" tradeMoney="-346.649129" proceeds="346.649129" ibCommission="0" ibCommissionCurrency="EUR" netCash="0" cost="0" fifoPnlRealized="0" buySell="SELL" reportDate="2025-02-24" />
+</Trades>
+<CorporateActions>
+<CorporateAction currency="AUD" symbol="TCF.RTS0" description="TCF(AU0000108771) SUBSCRIBABLE RIGHTS ISSUE  1 FOR 3 (TCF.RTS0, 360 CAPITAL MORTGAGE REIT - RIGHTS, AU0000389900)" isin="AU0000389900" listingExchange="CORPACT" underlyingSymbol="TCF.RTS0" reportDate="2025-04-03" dateTime="2025-04-03 11:25:00" actionDescription="TCF(AU0000108771) SUBSCRIBABLE RIGHTS ISSUE  1 FOR 3 (TCF.RTS0, 360 CAPITAL MORTGAGE REIT - RIGHTS, AU0000389900)" amount="0" proceeds="0" value="0" quantity="4.3333" fifoPnlRealized="0" type="RI" weight="0.0" />
+<CorporateAction currency="AUD" symbol="TCF.RTS0" description="(AU0000389900) DELISTED (TCF.RTS0, 360 CAPITAL MORTGAGE REIT - RIGHTS, AU0000389900)" isin="AU0000389900" listingExchange="CORPACT" underlyingSymbol="TCF.RTS0" reportDate="2025-04-28" dateTime="2025-04-24 10:25:00" actionDescription="(AU0000389900) DELISTED (TCF.RTS0, 360 CAPITAL MORTGAGE REIT - RIGHTS, AU0000389900)" amount="0" proceeds="0" value="0" quantity="-4" fifoPnlRealized="0" type="DW" weight="0.0" />
+</CorporateActions>
+<CashTransactions>
+</CashTransactions><Transfers>
+</Transfers><OpenDividendAccruals>
+</OpenDividendAccruals>
+</FlexStatement>
+</FlexStatements>
+</FlexQueryResponse>

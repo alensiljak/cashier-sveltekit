@@ -1,0 +1,12 @@
+;; Account: ibkr
+;; Date: 2025-05-22T20:41:57
+;; Name: div-tax.xml
+
+2025-02-20 * "OPI distribution" ""
+  Assets:Investments:IB:Cash-USD           0.44 USD
+  Income:Investments:Dividend:IB:USD:OPI  -0.52 USD
+  Expenses:Investments:IB:WithholdingTax   0.08 USD
+
+2025-05-22 balance Assets:Investments:IB:Cash-AUD                  100 AUD
+2025-05-22 balance Assets:Investments:IB:Cash-EUR                  200 EUR
+2025-05-22 balance Assets:Investments:IB:Stocks:OPI                10 OPI

@@ -1,0 +1,7 @@
+;; Account: ibkr
+;; Date: 2025-05-22T20:41:57
+;; Name: cash-balances.xml
+2025-05-22 balance Assets:Investments:IB:Cash-AUD                  100 AUD
+2025-05-22 balance Assets:Investments:IB:Cash-EUR                  200 EUR
+2025-05-22 balance Assets:Investments:IB:Cash-GBP                  50 GBP
+2025-05-22 balance Assets:Investments:IB:Cash-USD                  150 USD

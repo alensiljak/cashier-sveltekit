@@ -1,0 +1,7 @@
+;; Account: ibkr
+;; Date: 2025-05-22T20:41:57
+;; Name: one-decimal.xml
+
+2025-02-20 * "OPI distribution" ""
+  Assets:Investments:IB:Cash-USD           0.50 USD
+  Income:Investments:Dividend:IB:USD:OPI  -0.50 USD

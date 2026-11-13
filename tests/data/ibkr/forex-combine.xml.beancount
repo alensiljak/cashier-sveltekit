@@ -1,0 +1,11 @@
+;; Account: ibkr
+;; Date: 2025-06-22T20:41:57
+;; Name: forex-combine.xml
+
+2025-06-06 * "FX EUR.USD" ""
+  Assets:Investments:IB:Cash-EUR  -0.00455178 EUR @ 1.13909241 USD
+  Assets:Investments:IB:Cash-USD    0.0051849 USD
+
+2025-06-09 * "FX EUR.USD" ""
+  Assets:Investments:IB:Cash-EUR  -492.0924 EUR @ 1.13876 USD
+  Assets:Investments:IB:Cash-USD   560.3775 USD

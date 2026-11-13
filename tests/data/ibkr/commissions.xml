@@ -1,0 +1,17 @@
+<FlexQueryResponse queryName="bean-import" type="AF">
+<FlexStatements count="1">
+<FlexStatement accountId="A0001111" fromDate="2025-01-22" toDate="2025-05-21" period="LastNCalendarDays" whenGenerated="2025-05-22 20:41:57">
+<AccountInformation accountId="A0001111" currency="EUR" />
+<CashReport>
+</CashReport>
+<OpenPositions>
+</OpenPositions><NetStockPositionSummary>
+</NetStockPositionSummary><Trades>
+<Trade reportDate="2025-03-25" currency="AUD" symbol="VHY" securityID="AU000000VHY4" isin="AU000000VHY4" dateTime="2025-03-25 10:25:44" transactionType="ExchTrade" quantity="12" tradePrice="73.3" tradeMoney="879.6" proceeds="-879.6" ibCommission="-5.0362835" ibCommissionCurrency="AUD" netCash="-885.13991185" cost="885.13991185" fifoPnlRealized="0" buySell="BUY" openCloseIndicator="O" openDateTime="" taxes="-0.50362835" origTradeDate="" />
+</Trades><CashTransactions>
+</CashTransactions><Transfers>
+</Transfers><OpenDividendAccruals>
+</OpenDividendAccruals>
+</FlexStatement>
+</FlexStatements>
+</FlexQueryResponse>
