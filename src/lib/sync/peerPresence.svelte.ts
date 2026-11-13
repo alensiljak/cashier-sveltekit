@@ -373,7 +373,9 @@ export class PeerPresence {
 		onRequest: (data: T, context: RequestContext) => R | Promise<R>
 	): RequestAction<T, R> {
 		if (!this.room) throw new Error('Not in a room');
-		return this.room.makeAction<T, R>(name, { kind: 'request', onRequest });
+		const action = this.room.makeAction<T, R>(name, { kind: 'request' });
+		action.onRequest(onRequest);
+		return action;
 	}
 
 	/**
