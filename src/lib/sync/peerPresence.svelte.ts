@@ -422,28 +422,28 @@ export class PeerPresence {
 	private attachRoom(room: Room): void {
 		this.helloAction = room.makeAction('hello') as unknown as MessageAction<HelloMessage>;
 
-		room.onPeerJoin = (trysteroId) => {
+		room.onPeerJoin((trysteroId) => {
 			void this.sendHello(trysteroId);
-		};
+		});
 
 		this.introAction = room.makeAction('intro') as unknown as MessageAction<IntroMessage>;
-		this.introAction.onMessage = (data, { peerId }) => this.onIntroductions(data, peerId);
+		this.introAction.onMessage((data, { peerId }) => this.onIntroductions(data, peerId));
 
 		this.revokeAction = room.makeAction('revoke') as unknown as MessageAction<RevokeMessage>;
-		this.revokeAction.onMessage = (data, { peerId }) => this.onRevocations(data, peerId);
+		this.revokeAction.onMessage((data, { peerId }) => this.onRevocations(data, peerId));
 
-		this.helloAction.onMessage = (data, { peerId: trysteroId }) => {
+		this.helloAction.onMessage((data, { peerId: trysteroId }) => {
 			// Introductions can arrive right behind the hello: they wait for this to finish.
 			const done = this.handleHello(data, trysteroId);
 			this.helloDone.set(trysteroId, done);
 			return done;
-		};
+		});
 
-		room.onPeerLeave = (trysteroId) => {
+		room.onPeerLeave((trysteroId) => {
 			const { [trysteroId]: _removed, ...rest } = this.peersMap;
 			this.peersMap = rest;
 			this.helloDone.delete(trysteroId);
-		};
+		});
 
 		this.isInRoom = true;
 

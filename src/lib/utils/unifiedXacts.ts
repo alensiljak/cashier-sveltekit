@@ -75,9 +75,7 @@ export function mergeUnifiedRows(
  * in time, so the checkpoint lands below everything it precedes.
  */
 function compareUnifiedDesc(a: UnifiedXact, b: UnifiedXact): number {
-	return (
-		b.date.localeCompare(a.date) || Number(!!a.isAssertion) - Number(!!b.isAssertion)
-	);
+	return b.date.localeCompare(a.date) || Number(!!a.isAssertion) - Number(!!b.isAssertion);
 }
 
 /**

@@ -74,7 +74,7 @@ async function openPairingRoom(host: PairingHost, payload: InvitePayload) {
 	const reject = room.makeAction('pair-reject') as unknown as MessageAction<NoticeMsg>;
 	const ack = room.makeAction('pair-ack') as unknown as MessageAction<NoticeMsg>;
 
-	room.onPeerJoin = (peerId) => {
+	room.onPeerJoin((peerId) => {
 		void (async () => {
 			try {
 				const msg = await buildHello(
@@ -87,7 +87,7 @@ async function openPairingRoom(host: PairingHost, payload: InvitePayload) {
 				console.error('Could not send hello', e);
 			}
 		})();
-	};
+	});
 	return { room, hello, approve, reject, ack };
 }
 
@@ -166,13 +166,13 @@ export class InviteSession {
 			const actions = await openPairingRoom(this.host, payload);
 			this.actions = actions;
 			this.room = actions.room;
-			actions.hello.onMessage = (data, { peerId }) => this.onHello(data, peerId);
-			actions.ack.onMessage = (_data, { peerId }) => {
+			actions.hello.onMessage((data, { peerId }) => this.onHello(data, peerId));
+			actions.ack.onMessage((_data, { peerId }) => {
 				if (this.ackWaiter?.peerId === peerId) this.ackWaiter.resolve();
-			};
-			actions.room.onPeerLeave = (peerId) => {
+			});
+			actions.room.onPeerLeave((peerId) => {
 				this.candidates = this.candidates.filter((c) => c.trysteroId !== peerId);
-			};
+			});
 
 			this.timer = setTimeout(() => void this.expire(), Math.max(0, payload.exp - this.now()));
 			this.status = 'waiting';
@@ -327,14 +327,14 @@ export class JoinSession {
 			const actions = await openPairingRoom(this.host, this.invite);
 			this.actions = actions;
 			this.room = actions.room;
-			actions.hello.onMessage = (data, { peerId }) => this.onHello(data, peerId);
-			actions.approve.onMessage = (data, { peerId }) => this.onApprove(data, peerId);
-			actions.reject.onMessage = (_data, { peerId }) => {
+			actions.hello.onMessage((data, { peerId }) => this.onHello(data, peerId));
+			actions.approve.onMessage((data, { peerId }) => this.onApprove(data, peerId));
+			actions.reject.onMessage((_data, { peerId }) => {
 				if (this.inviter?.trysteroId === peerId && this.status === 'waiting') {
 					this.status = 'rejected';
 					void this.leaveRoom();
 				}
-			};
+			});
 			this.timer = setTimeout(
 				() => {
 					if (this.status === 'connecting' || this.status === 'waiting') this.status = 'expired';

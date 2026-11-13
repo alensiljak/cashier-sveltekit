@@ -140,11 +140,11 @@ class PeerConnection {
 		this.syncResponseAction = this.presence.makeAction<SyncResponseMsg>('sync-response');
 
 		// Respond to quick-sync requests from trusted peers.
-		this.syncRequestAction.onMessage = async ({ requestId, files }, { peerId: fromId }) => {
+		this.syncRequestAction.onMessage(async ({ requestId, files }, { peerId: fromId }) => {
 			if (!this.presence.peersMap[fromId]?.isTrusted) return;
 			const data = await getLocalData(files);
 			this.syncResponseAction!.send({ requestId, ...data }, { target: fromId });
-		};
+		});
 
 		// Cheap hash-only counterpart — lets a peer's item statuses be shown
 		// as soon as it's selected, without transferring full content.
@@ -185,12 +185,12 @@ class PeerConnection {
 		// Live sync: local edits are pushed to every online trusted peer, and
 		// pushed updates are merged as they arrive.
 		this.ydocUpdateAction = this.presence.makeAction<Uint8Array>('ydoc-update');
-		this.ydocUpdateAction.onMessage = async (update, { peerId: fromId }) => {
+		this.ydocUpdateAction.onMessage(async (update, { peerId: fromId }) => {
 			if (!this.presence.peersMap[fromId]?.isTrusted) return;
 			if (this.presence.isReadOnly(fromId)) return;
 			await (await getXactStore()).importState(update);
 			void this.reloadAfterMerge();
-		};
+		});
 		// Scheduled transactions (CRDT store): the same three protocols. An empty
 		// result means "not available" (untrusted requester, or no store on this
 		// device yet).
@@ -213,21 +213,21 @@ class PeerConnection {
 			}
 		);
 		this.scxUpdateAction = this.presence.makeAction<Uint8Array>('scx-update');
-		this.scxUpdateAction.onMessage = async (update, { peerId: fromId }) => {
+		this.scxUpdateAction.onMessage(async (update, { peerId: fromId }) => {
 			if (!this.presence.peersMap[fromId]?.isTrusted) return;
 			if (this.presence.isReadOnly(fromId)) return;
 			await (await existingScxStore())?.importState(update);
-		};
+		});
 		void this.startLiveSync();
 
 		// Resolve pending fetchRemoteData() promises.
-		this.syncResponseAction.onMessage = ({ requestId, settings: s }) => {
+		this.syncResponseAction.onMessage(({ requestId, settings: s }) => {
 			const pending = this.pendingRequests.get(requestId);
 			if (pending) {
 				pending.resolve({ settings: s });
 				this.pendingRequests.delete(requestId);
 			}
-		};
+		});
 
 		this.protocol = new PeerProtocol(this.presence, new OpfsSource());
 	}

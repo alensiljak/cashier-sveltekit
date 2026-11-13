@@ -73,7 +73,7 @@ export class PeerProtocol {
 		// The peer pulled/merged from us and tells us what it now holds: record our
 		// side of the baseline, so we don't show a conflict for a file it reconciled.
 		this.syncedAction = presence.makeAction<SyncAnnouncement>('files-synced');
-		this.syncedAction.onMessage = async (announcement, { peerId: fromId }) => {
+		this.syncedAction.onMessage(async (announcement, { peerId: fromId }) => {
 			const peerPersistentId = presence.peersMap[fromId]?.persistentId;
 			if (!peerPersistentId || !presence.peersMap[fromId]?.isTrusted) return;
 			try {
@@ -81,7 +81,7 @@ export class PeerProtocol {
 			} catch (e) {
 				console.error('Recording peer sync baseline failed', e);
 			}
-		};
+		});
 
 		this.readFileAction = presence.makeRequestAction<PathRequest, ReadFileResponse>(
 			'read-file',
