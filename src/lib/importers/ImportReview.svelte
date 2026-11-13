@@ -48,6 +48,9 @@
 	let lastDate = $state('');
 
 	let isinToSymbol: Record<string, string> = {};
+	let symbolIsinsCache: [string, string][] = [];
+	/** Records the importer skipped or could not fully handle. */
+	let warnings = $state<string[]>([]);
 
 	let selectedCount = $derived(rows.filter((r) => r.selected).length);
 	let matchedCount = $derived(rows.filter((r) => r.matchedWith).length);
@@ -78,7 +81,21 @@
 					`Could not read ISINs from the book (${e instanceof Error ? e.message : e}). Is the ledger loaded?`
 				);
 			}
-			const imported = importer.extract(text, config, { isinToSymbol, applyRules });
+			let symbolIsins: [string, string][] = [];
+			try {
+				symbolIsins = await loadSymbolIsins();
+			} catch {
+				// Already warned above.
+			}
+			symbolIsinsCache = symbolIsins;
+			const newWarnings: string[] = [];
+			const imported = importer.extract(text, config, {
+				isinToSymbol,
+				symbolIsins,
+				warnings: newWarnings,
+				applyRules
+			});
+			warnings = newWarnings;
 			if (imported.length === 0) throw new Error('The file contains no transactions.');
 
 			const dates = imported.map((r) => r.xact.date ?? '').sort();
@@ -136,7 +153,12 @@
 
 	/** Re-reads the file with the current rules setting. Rows keep their position, ticks and matches. */
 	function reextract() {
-		const imported = importer.extract(text, config, { isinToSymbol, applyRules });
+		const imported = importer.extract(text, config, {
+			isinToSymbol,
+			symbolIsins: symbolIsinsCache,
+			warnings: [],
+			applyRules
+		});
 		if (imported.length !== rows.length) return;
 		imported.forEach((r, i) => {
 			rows[i].xact = r.xact;
@@ -204,6 +226,14 @@
 <div bind:this={scroller} class="flex-1 overflow-y-auto touch-pan-y p-4 flex flex-col gap-4">
 	{#if busy && rows.length === 0 && !error}
 		<p class="opacity-70">Reading {fileName}…</p>
+	{/if}
+
+	{#if warnings.length > 0}
+		<div class="alert alert-warning text-sm">
+			<ul class="list-disc pl-4">
+				{#each warnings as warning, i (i)}<li>{warning}</li>{/each}
+			</ul>
+		</div>
 	{/if}
 
 	{#if rows.length > 0}

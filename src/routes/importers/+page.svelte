@@ -89,7 +89,7 @@
 
 	<input
 		type="file"
-		accept=".csv,text/csv"
+		accept=".csv,text/csv,.xml,text/xml,application/xml"
 		class="hidden"
 		bind:this={fileInput}
 		onchange={onFileSelected}
