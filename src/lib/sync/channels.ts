@@ -7,7 +7,8 @@
 import { describeS3Error } from '#lib/services/s3Client';
 import { isS3Configured, loadS3Config } from '#lib/services/s3Config';
 import { syncOptions } from '#lib/services/syncOptions.svelte';
-import type { PeerDetail, SyncChannel } from './channel';
+import type { ActivePeer } from './peerPresence.svelte';
+import type { FileCounts, Pending, PeerDetail, SyncChannel } from './channel';
 import { peerConnection } from './peerConnection.svelte';
 
 /** Like `Error.message`, but also makes sense of S3 client errors. */
@@ -48,8 +49,23 @@ const s3: SyncChannel = {
 	unavailableReason: () => null,
 	async check() {
 		const { pendingCrdtStores } = await import('#lib/services/s3CrdtSync');
-		const pending = await pendingCrdtStores(await loadS3());
-		return { status: pending.upload || pending.download ? 'differs' : 'same', pending };
+		const { fetchFileSyncStatus } = await import('#lib/services/s3FileCompare');
+		const cfg = await loadS3();
+		const [crdt, overview] = await Promise.all([pendingCrdtStores(cfg), fetchFileSyncStatus(cfg)]);
+		// Settings are a file too, so they count with the Beancount files.
+		const { settings, beancount } = overview;
+		const files: FileCounts = {
+			upload: settings.upload + beancount.upload,
+			download: settings.download + beancount.download,
+			conflict: settings.conflict + beancount.conflict
+		};
+		const pending: Pending = {
+			upload: crdt.upload || files.upload > 0,
+			download: crdt.download || files.download > 0,
+			files
+		};
+		const differs = pending.upload || pending.download || files.conflict > 0;
+		return { status: differs ? 'differs' : 'same', pending };
 	},
 	async sync() {
 		const { syncCrdtStores } = await import('#lib/services/s3CrdtSync');
@@ -64,6 +80,35 @@ const s3: SyncChannel = {
 
 /** The trusted devices currently in the room. */
 const trustedPeers = () => peerConnection.presence.activePeerList.filter((p) => p.isTrusted);
+
+/**
+ * How many Beancount files a pull from this peer would change, judged as /sync/beancount does it
+ * (content hashes against the baseline of the last sync with that peer). Null if it cannot be read.
+ */
+async function peerFileCounts(p: ActivePeer): Promise<PeerDetail['files'] | null> {
+	const protocol = peerConnection.protocol;
+	if (!protocol) return null;
+	const [
+		{ OpfsSource },
+		{ PeerSource },
+		{ getBaseline },
+		{ diffAgainstBaseline },
+		{ countPeerDiffs }
+	] = await Promise.all([
+		import('./OpfsSource'),
+		import('./PeerSource'),
+		import('./syncBaseline'),
+		import('./syncDiff'),
+		import('./syncTree')
+	]);
+	const source = new PeerSource(peerConnection.presence, protocol, p.persistentId);
+	const [local, remote, baseline] = await Promise.all([
+		new OpfsSource().listTree(),
+		source.listTree(),
+		getBaseline(p.persistentId)
+	]);
+	return countPeerDiffs(diffAgainstBaseline(local, remote, baseline), new Map());
+}
 
 const peer: SyncChannel = {
 	id: 'peer',
@@ -80,9 +125,19 @@ const peer: SyncChannel = {
 		const peers: PeerDetail[] = await Promise.all(
 			trustedPeers().map(async (p) => {
 				const remote = await peerConnection.fetchRemoteYdocHash(p.trysteroId).catch(() => null);
-				const status: PeerDetail['status'] =
-					remote === null ? 'unknown' : remote === local ? 'same' : 'differs';
-				return { id: p.trysteroId, name: p.name || 'Unnamed device', status };
+				const files = (await peerFileCounts(p).catch(() => null)) ?? undefined;
+				const filesDiffer = !!files && files.pull + files.conflict > 0;
+				// Unknown only when neither the records nor the files could be read.
+				let status: PeerDetail['status'] = 'differs';
+				if (!filesDiffer && remote === null) status = 'unknown';
+				else if (!filesDiffer && remote === local) status = 'same';
+				return {
+					id: p.trysteroId,
+					persistentId: p.persistentId,
+					name: p.name || 'Unnamed device',
+					status,
+					files
+				};
 			})
 		);
 		if (peers.every((p) => p.status === 'unknown'))

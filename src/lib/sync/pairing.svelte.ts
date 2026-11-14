@@ -110,7 +110,13 @@ export interface Candidate {
 }
 
 export type InviteStatus =
-	'idle' | 'starting' | 'waiting' | 'approved' | 'expired' | 'closed' | 'error';
+	| 'idle'
+	| 'starting'
+	| 'waiting'
+	| 'approved'
+	| 'expired'
+	| 'closed'
+	| 'error';
 
 export class InviteSession {
 	status = $state<InviteStatus>('idle');
@@ -275,7 +281,13 @@ export class InviteSession {
 }
 
 export type JoinStatus =
-	'idle' | 'connecting' | 'waiting' | 'approved' | 'rejected' | 'expired' | 'error';
+	| 'idle'
+	| 'connecting'
+	| 'waiting'
+	| 'approved'
+	| 'rejected'
+	| 'expired'
+	| 'error';
 
 export class JoinSession {
 	status = $state<JoinStatus>('idle');

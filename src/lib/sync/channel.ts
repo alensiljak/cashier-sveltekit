@@ -15,13 +15,32 @@ export interface Pending {
 	upload: boolean;
 	/** The other side has changes this device lacks. */
 	download: boolean;
+	/** File sync (Beancount files and settings), when the channel syncs files: how many files. */
+	files?: FileCounts;
 }
+
+/** Files waiting to move, by what would happen to them. */
+export interface FileCounts {
+	/** Only this device has the change. */
+	upload: number;
+	/** Only the other side has the change. */
+	download: number;
+	/** Both changed, or never synced and different: the user decides. */
+	conflict: number;
+}
+
+export const hasFileChanges = (f: FileCounts | undefined) =>
+	!!f && f.upload + f.download + f.conflict > 0;
 
 /** One other device in a peer comparison. `unknown` = it did not answer. */
 export interface PeerDetail {
 	id: string;
+	/** The device's ID that Beancount file sync uses to select it. */
+	persistentId?: string;
 	name: string;
 	status: 'same' | 'differs' | 'unknown';
+	/** Beancount files this device would pull, and the ones needing a decision. */
+	files?: { pull: number; conflict: number };
 }
 
 /** What a check found. `pending` and `peers` are extra detail when the channel can tell. */

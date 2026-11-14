@@ -5,7 +5,6 @@
 	import DatabaseIcon from '@lucide/svelte/icons/database';
 	import UsersIcon from '@lucide/svelte/icons/users';
 	import FileDownIcon from '@lucide/svelte/icons/file-down';
-	import FolderSyncIcon from '@lucide/svelte/icons/folder-sync';
 	import RotateCwIcon from '@lucide/svelte/icons/rotate-cw';
 	import ArrowLeftRightIcon from '@lucide/svelte/icons/arrow-left-right';
 	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
@@ -14,7 +13,7 @@
 	import { peerConnection } from '#lib/sync/peerConnection.svelte';
 	import { syncHub } from '#lib/sync/hub';
 	import { checkWithNotice, syncWithNotice } from '#lib/sync/hubActions';
-	import { formatAge, type ChannelId, type ChannelStatus } from '#lib/sync/channel';
+	import { formatAge, hasFileChanges, type ChannelId, type ChannelStatus } from '#lib/sync/channel';
 
 	const icons: Record<ChannelId, Component<{ size?: number }>> = {
 		webdav: CloudIcon,
@@ -152,11 +151,40 @@
 							</p>
 						{/if}
 
+						{#if snap.pending?.files && hasFileChanges(snap.pending.files)}
+							{@const f = snap.pending.files}
+							<p class="text-sm" data-testid="files-{channel.id}">
+								Beancount files and settings:
+								{[
+									f.upload ? `${f.upload} to upload` : '',
+									f.download ? `${f.download} to download` : '',
+									f.conflict ? `${f.conflict} to review` : ''
+								]
+									.filter(Boolean)
+									.join(', ')}.
+								<a class="link" href={channel.href}>Review</a>
+							</p>
+						{/if}
+
 						{#if snap.peers && snap.peers.length > 0}
 							<ul class="space-y-1 text-sm" data-testid="peers-{channel.id}">
 								{#each snap.peers as peer (peer.id)}
 									<li class="flex items-center gap-2">
 										<span class="min-w-0 flex-1 truncate">{peer.name}</span>
+										{#if peer.files && peer.files.pull + peer.files.conflict > 0}
+											<a
+												class="link text-xs"
+												data-testid="peer-files-{peer.id}"
+												href="/sync/beancount?peer={peer.persistentId}"
+											>
+												{[
+													peer.files.pull ? `${peer.files.pull} to pull` : '',
+													peer.files.conflict ? `${peer.files.conflict} to review` : ''
+												]
+													.filter(Boolean)
+													.join(', ')}
+											</a>
+										{/if}
 										<span
 											class="badge badge-sm {peer.status === 'same'
 												? 'badge-success'
@@ -227,20 +255,6 @@
 		<!-- Other ways to move data -->
 		<h2 class="pt-2 text-lg font-semibold">More</h2>
 		<ul class="space-y-2">
-			{#if syncOptions.peer}
-				<li>
-					<a class="rounded-box bg-base-200 flex items-center gap-3 p-3" href="/sync/beancount">
-						<FolderSyncIcon size={20} />
-						<span class="min-w-0 flex-1">
-							<span class="block text-base font-semibold">Beancount files</span>
-							<span class="block text-xs opacity-70">
-								Compare and pull ledger files from a trusted device.
-							</span>
-						</span>
-						<ChevronRightIcon size={16} />
-					</a>
-				</li>
-			{/if}
 			<li>
 				<a class="rounded-box bg-base-200 flex items-center gap-3 p-3" href="/sync/backup-file">
 					<FileDownIcon size={20} />

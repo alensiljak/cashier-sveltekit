@@ -168,11 +168,11 @@ Each step can ship alone. Step 1 fixes the impersonation problem.
 ✅ 3. **Invite link and private room.** `/pair` route, "Paste invite link", inviter approval, group secret, derived room. Remove the Room field and the public lobby.
 ✅ 4. **Introductions.** Signed introduction records, the "also trusted by" choice list on the new device, an approval request on every existing device. Needs steps 1 and 3 (keys, group secret).
 ✅ 5. **Switch the ID to the key-derived one, with signed objects.** Migration as above for peers, S3 and WebDAV together (they share `getDeviceId()`), `legacyIds`, self-`forget`, `devices/<id>.json`, and signing and verifying every bucket object. `lastSeen` from sync modification dates ships here too.
-✅ 6. **Eviction.** Revocation records, gossip over peer sync and the bucket, tombstones, group secret rotation. Needs steps 1 and 3; the bucket part needs step 5. Done except the group secret rotation, which is left out (see below).
-7. **Later, optional:**
-  1. QR code for the invite;
-  2. ✅ remove-unseen-devices action (`unseenDevices` in `lastSeen.ts`, a button and confirmation dialog on Trusted Devices; devices unseen for 30+ days, counted from `trustedAt` when never seen; local removal only, no bucket clean-up);
-8. **handshake hardening**: also verify the signature in trystero's `onPeerHandshake(peerId, send, receive, isInitiator)` (`JoinRoomCallbacks`, with `handshakeTimeoutMs`), so a peer with an invalid signature never gets an active connection. It would reject only bad signatures, not unknown keys (pairing needs those). Unchecked: whether the DTLS fingerprints are readable inside the callback, and how a failed handshake treats legacy unsigned peers (they would be dropped, not shown as "needs re-pairing"), so apply it only once legacy hellos are no longer supported.
+✅ 6. **Eviction.** Revocation records, gossip over peer sync and the bucket, tombstones, group secret rotation. Needs steps 1 and 3; the bucket part needs step 5. Done except the group secret rotation, which is left out (see below). 7. **Later, optional:**
+
+1. QR code for the invite;
+2. ✅ remove-unseen-devices action (`unseenDevices` in `lastSeen.ts`, a button and confirmation dialog on Trusted Devices; devices unseen for 30+ days, counted from `trustedAt` when never seen; local removal only, no bucket clean-up);
+3. **handshake hardening**: also verify the signature in trystero's `onPeerHandshake(peerId, send, receive, isInitiator)` (`JoinRoomCallbacks`, with `handshakeTimeoutMs`), so a peer with an invalid signature never gets an active connection. It would reject only bad signatures, not unknown keys (pairing needs those). Unchecked: whether the DTLS fingerprints are readable inside the callback, and how a failed handshake treats legacy unsigned peers (they would be dropped, not shown as "needs re-pairing"), so apply it only once legacy hellos are no longer supported.
 
 ## Tests to add
 
