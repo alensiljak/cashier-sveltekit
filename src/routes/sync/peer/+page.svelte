@@ -4,6 +4,9 @@
 	import db from '#lib/data/db';
 	import { summarizeScxReport, type ScxMergeReport } from '#lib/services/scxMergeReport';
 	import Toolbar from '#lib/components/Toolbar.svelte';
+	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
+	import UserPlusIcon from '@lucide/svelte/icons/user-plus';
+	import LinkIcon from '@lucide/svelte/icons/link';
 	import DeviceLabel from '#lib/components/DeviceLabel.svelte';
 	import HelpButton from '#lib/help/HelpButton.svelte';
 	import { Setting } from '#lib/data/model';
@@ -377,6 +380,7 @@
 	// device (the link opens /pair, or is pasted below).
 
 	let inviting = $state(false);
+	let joining = $state(false);
 	let pasted = $state('');
 	let pasteError = $state('');
 
@@ -393,6 +397,7 @@
 		}
 		pasteError = '';
 		pasted = '';
+		joining = false;
 		void goto(`/pair#${encodeInvite(result.payload)}`);
 	}
 
@@ -491,7 +496,15 @@
 			>
 				<SettingsIcon size={20} />
 			</a>
-			<HelpButton topic="peer-sync" />
+		{/snippet}
+		{#snippet menuItems()}
+			<ToolbarMenuItem text="Invite a device" Icon={UserPlusIcon} onclick={() => (inviting = true)} />
+			<ToolbarMenuItem
+				text="Join with invite link"
+				Icon={LinkIcon}
+				onclick={() => (joining = true)}
+			/>
+			<HelpButton topic="peer-sync" variant="menu-item" />
 		{/snippet}
 	</Toolbar>
 	<section class="flex-1 space-y-3 overflow-y-auto touch-pan-y p-4">
@@ -546,8 +559,8 @@
 
 				{#if !presence.hasGroup && !presence.isInRoom}
 					<p class="text-sm opacity-60">
-						Devices meet in a private room that only paired devices know. Invite a device below to
-						start, or join another device's invite.
+						Devices meet in a private room that only paired devices know. Use the menu to invite a
+						device and start, or to join another device's invite.
 					</p>
 				{/if}
 
@@ -629,38 +642,6 @@
 		<EvictionNotices {presence} />
 
 		<IntroductionRequests {presence} />
-
-		<!-- Pair a device -->
-		<div class="card bg-base-200 shadow-sm">
-			<div class="card-body gap-3 p-4">
-				<h2 class="card-title text-sm">Pair a device</h2>
-				<div class="flex flex-col gap-2">
-					<button class="btn btn-primary btn-sm" onclick={() => (inviting = true)}>
-						Invite a device
-					</button>
-					<form
-						class="flex gap-2"
-						onsubmit={(e) => {
-							e.preventDefault();
-							joinWithPastedLink();
-						}}
-					>
-						<input
-							type="text"
-							class="input input-bordered input-sm min-w-0 flex-1"
-							class:input-error={pasteError}
-							placeholder="Paste invite link"
-							aria-label="Paste invite link"
-							autocomplete="off"
-							spellcheck="false"
-							bind:value={pasted}
-						/>
-						<button type="submit" class="btn btn-sm" disabled={!pasted.trim()}>Join</button>
-					</form>
-					{#if pasteError}<span class="text-error text-xs">{pasteError}</span>{/if}
-				</div>
-			</div>
-		</div>
 
 		<!-- Sync Panel -->
 		{#if syncTarget}
@@ -843,6 +824,55 @@
 <!-- ─── Invite ─────────────────────────────────────────────────────────────── -->
 {#if inviting}
 	<InviteDialog {presence} onclose={() => (inviting = false)} />
+{/if}
+
+<!-- ─── Join with invite link ──────────────────────────────────────────────── -->
+{#if joining}
+	<div class="modal modal-open">
+		<div class="modal-box">
+			<h3 class="text-lg font-bold">Join with invite link</h3>
+			<form
+				class="flex flex-col gap-2 pt-4"
+				onsubmit={(e) => {
+					e.preventDefault();
+					joinWithPastedLink();
+				}}
+			>
+				<input
+					type="text"
+					class="input input-bordered w-full"
+					class:input-error={pasteError}
+					placeholder="Paste invite link"
+					aria-label="Paste invite link"
+					autocomplete="off"
+					spellcheck="false"
+					bind:value={pasted}
+					{@attach (el) => el.focus()}
+				/>
+				{#if pasteError}<span class="text-error text-xs">{pasteError}</span>{/if}
+				<div class="modal-action">
+					<button
+						type="button"
+						class="btn btn-ghost"
+						onclick={() => {
+							joining = false;
+							pasted = '';
+							pasteError = '';
+						}}>Cancel</button
+					>
+					<button type="submit" class="btn btn-primary" disabled={!pasted.trim()}>Join</button>
+				</div>
+			</form>
+		</div>
+		<button
+			class="modal-backdrop"
+			aria-label="Close"
+			onclick={() => {
+				joining = false;
+				pasteError = '';
+			}}
+		></button>
+	</div>
 {/if}
 
 <!-- ─── Pull Confirm ───────────────────────────────────────────────────────── -->
