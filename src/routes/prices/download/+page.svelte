@@ -402,7 +402,11 @@
 						</div>
 					{:else}
 						<p class="text-sm opacity-70">
-							{#if plan.provider.kind === 'securities'}
+							{#if plan.provider.kind === 'securities' && !plan.provider.fetchCatalogue}
+								Nothing to fetch — no <code>commodity</code> directive in your book has a
+								<code>price</code> meta entry naming this provider's source, e.g.
+								<code>price: "AUD:yahoo/ASX:VHY"</code>.
+							{:else if plan.provider.kind === 'securities'}
 								Nothing to fetch — select products in
 								<a class="link" href="/prices/providers/{plan.provider.id}">the provider's settings</a>
 								that match a commodity in your book (by <code>apir</code> or <code>ticker</code> meta).

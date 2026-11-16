@@ -15,7 +15,9 @@ export type PriceNicknames = Record<string, string>;
 /** Shipped mapping, used until the user saves their own. */
 export const DEFAULT_NICKNAMES: PriceNicknames = {
 	ecbrates: 'ecb-frankfurter',
-	aware: 'aware'
+	aware: 'aware',
+	yahoo: 'yahoo',
+	'alens.pricedl.beanprice.yahoo': 'yahoo'
 };
 
 function normalizeNicknames(stored: unknown): PriceNicknames | null {

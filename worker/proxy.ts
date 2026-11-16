@@ -29,8 +29,16 @@ export { PROXY_KEY_HEADER, PROXY_PATH, UPSTREAM_KEY_HEADER };
 export const ALLOWED_HOSTS: Record<string, true> = {
 	'www.ecb.europa.eu': true,
 	'www.vanguard.com.au': true,
-	'api.aware.com.au': true
+	'api.aware.com.au': true,
+	'query1.finance.yahoo.com': true
 };
+
+/** Hosts that reject the proxy's own User-Agent; they get a browser one instead. */
+export const BROWSER_UA_HOSTS: Record<string, true> = {
+	'query1.finance.yahoo.com': true
+};
+const BROWSER_USER_AGENT =
+	'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
 /**
  * Hosts that need an API key from the user. The client's `X-Upstream-Key`
@@ -166,7 +174,9 @@ export async function handleProxyRequest(
 		// sources reject foreign origins outright (Vanguard answers 500).
 		const upstreamHeaders: Record<string, string> = {
 			Accept: 'application/json, text/plain, */*',
-			'User-Agent': USER_AGENT
+			'User-Agent': Object.hasOwn(BROWSER_UA_HOSTS, target.hostname)
+				? BROWSER_USER_AGENT
+				: USER_AGENT
 		};
 		const upstreamKey = request.headers.get(UPSTREAM_KEY_HEADER);
 		if (upstreamKey && Object.hasOwn(UPSTREAM_KEY_HOSTS, target.hostname)) {
