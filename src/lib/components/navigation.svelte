@@ -47,6 +47,7 @@
 	import FileChartColumnIcon from '@lucide/svelte/icons/file-chart-column';
 	import CloudIcon from '@lucide/svelte/icons/cloud';
 	import FileTextIcon from '@lucide/svelte/icons/file-text';
+	import TrendingDownIcon from '@lucide/svelte/icons/trending-down';
 
 	function closeDrawer(): void {
 		// the new drawer
@@ -402,6 +403,18 @@
 								<span>File Storage</span>
 							</a>
 						</li>
+						<li>
+							<a
+								href="/prices/download"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/prices/download'
+									? 'active bg-secondary text-secondary-content'
+									: ''}"
+								onclick={closeDrawer}
+							>
+								<TrendingDownIcon />
+								<span>Price Download</span>
+							</a>
+						</li>
 						<!-- <li>
 							<a
 								href="/sync/beancount"
@@ -441,7 +454,8 @@
 						<li>
 							<a
 								href="/sync/backup-file"
-								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/sync/backup-file'
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname ===
+								'/sync/backup-file'
 									? 'active bg-secondary text-secondary-content'
 									: ''}"
 								onclick={closeDrawer}

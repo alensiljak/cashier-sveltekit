@@ -32,6 +32,14 @@ export const NUMBER_FORMAT = '#,##0.00';
 /** Default OPFS filename for asset allocation definition. */
 export const AA_DEFINITION_FILE = 'asset-allocation.toml';
 
+/**
+ * Default OPFS destination file for downloaded prices (see
+ * src/lib/services/prices/ and doc/projects/2026-11-15_price-download.md).
+ * The engine inverts these native-direction pairs on lookup, and the user
+ * wires the file into their book with an `include` themselves.
+ */
+export const PRICES_DEFAULT_DESTINATION = 'prices/prices.current.bean' as const;
+
 // settings key
 export const USER_BOOK_FILENAME = 'userBookFilename';
 

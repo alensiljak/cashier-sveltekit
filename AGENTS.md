@@ -41,6 +41,8 @@ See [`/doc/architecture.md`](/doc/architecture.md) for the app's architecture, W
 - `npm` is the package manager to use.
 - Use ripgrep (`rg`) CLI for fast text search across text files. Prefer over `grep`.
 - For running Python code, use `uv run`.
+- Agent shells (e.g. Vibe's bash tool) run pwsh without the user profile, so mise is never activated there; `node`, `npm`, and `agent-browser` resolve through `mise exec` shims in `~/.local/bin/`.
+- The first `agent-browser open` of a session must run as a background process: the headed Chrome inherits the console pipe, so a foreground call completes its work but never exits. Do not stop that background process — doing so kills its Chrome. All subsequent `agent-browser` commands return normally.
 - Use `agent-browser` CLI to run the browser.
 - **Formatting**: `oxfmt` (with Prettier as fallback for `.svelte` files via `prettier-plugin-svelte`).
 - **Linting**: `oxlint` for JS/TS; `eslint-plugin-svelte` via ESLint for Svelte templates.

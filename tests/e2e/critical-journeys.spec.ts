@@ -50,6 +50,7 @@ const pages: { path: string; title: string; expected?: string | RegExp }[] = [
 	},
 	{ path: '/scheduled-xacts', title: 'Scheduled Transactions' },
 	{ path: '/favourites', title: 'Favourites' },
+	{ path: '/prices/download', title: 'Price Download' },
 	{ path: '/settings', title: 'Settings' }
 ];
 

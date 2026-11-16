@@ -28,6 +28,7 @@
 	import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
 	import SlidersHorizontalIcon from '@lucide/svelte/icons/sliders-horizontal';
 	import SmartphoneIcon from '@lucide/svelte/icons/smartphone';
+	import TrendingDownIcon from '@lucide/svelte/icons/trending-down';
 	import { syncOptions, type SyncOption } from '#lib/services/syncOptions.svelte';
 	import Fab from '#lib/components/FAB.svelte';
 	import { page } from '$app/state';
@@ -443,6 +444,29 @@
 					Select
 				</button>
 			</div>
+		</div>
+	</CashierCardTemplate>
+
+	<!-- ── Price Download ───────────────────────────────────────── -->
+	<CashierCardTemplate heading="Price Download" Icon={TrendingDownIcon} bodyClass="space-y-2 px-3">
+		{#snippet description()}
+			Download exchange-rate reference prices (ECB) into a prices file of your choice.
+		{/snippet}
+
+		<div class="flex items-center gap-3">
+			<div class="min-w-0 flex-1">
+				<p class="text-sm font-medium">Rates &amp; prices</p>
+				<p class="text-xs opacity-60">
+					Manual download, written to <code>prices/prices.current.bean</code> by default.
+				</p>
+			</div>
+			<button
+				class="btn btn-primary btn-xs rounded"
+				type="button"
+				onclick={() => goto('/prices/download')}
+			>
+				Open
+			</button>
 		</div>
 	</CashierCardTemplate>
 

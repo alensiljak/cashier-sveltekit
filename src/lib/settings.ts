@@ -103,7 +103,15 @@ export const SettingKeys = {
 	// Expenses home card: 'calendar-month' or 'rolling-days'
 	expensesCardPeriodType: 'expensesCard.periodType',
 	// Expenses home card: window size when periodType is 'rolling-days'
-	expensesCardRollingDays: 'expensesCard.rollingDays'
+	expensesCardRollingDays: 'expensesCard.rollingDays',
+	// Price download (see doc/projects/2026-11-15_price-download.md). Shared so
+	// every device writes the same destination file the same way.
+	// provider: registry id ('ecb-frankfurter'); default: first registered.
+	// targetFile: OPFS path, default PRICES_DEFAULT_DESTINATION.
+	// writeMode: 'overwrite' | 'append', default 'overwrite'.
+	priceProvider: 'prices.provider',
+	priceTargetFile: 'prices.targetFile',
+	priceWriteMode: 'prices.writeMode'
 };
 
 /** Settings specific to this device (not exported). */
@@ -182,7 +190,11 @@ export const DeviceSettingKeys = {
 	// Shape: Record<channelId, ISO string>. S3 also has its own s3LastSync, which takes precedence.
 	syncChannelLastSync: 'sync.channel.last-sync',
 	// Days without a completed sync before the Sync page warns. Number; default 7.
-	syncStaleDays: 'sync.stale-days'
+	syncStaleDays: 'sync.stale-days',
+	// Price download bookkeeping for this device. Shape: PriceDownloadStatus
+	// (see services/prices/priceDownloadService.ts): lastRun, fixingDate,
+	// written/added/updated counts, fetched and skipped symbols, lastError.
+	priceDownloadStatus: 'prices.download.status'
 };
 
 class UserSettings {
