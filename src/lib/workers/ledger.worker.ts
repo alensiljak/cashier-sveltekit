@@ -674,7 +674,10 @@ async function handleMessage(e: MessageEvent<WorkerRequest>): Promise<void> {
 				}
 				const row = ((convertResult.rows ?? []) as any[])[0];
 				const val = row ? ((row as any[])[0] as { number: string; currency: string } | null) : null;
-				if (!val?.number)
+				// BQL's CONVERT falls back to the unchanged amount (in the
+				// original currency) when no price path exists, so a truthy
+				// number alone is not a successful conversion.
+				if (!val?.number || val.currency !== toCurrency)
 					throw new Error(`No conversion path from ${fromCurrency} to ${toCurrency}`);
 				reply({ type: 'convert-currency-done', number: val.number, currency: val.currency });
 				break;
