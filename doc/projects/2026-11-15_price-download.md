@@ -163,7 +163,11 @@ Entry points: a row in Settings, and a "rates may be stale" hint on the currency
 
 Review of `f72cfa42` (`feat: price downloaders concept`). Four behaviors below were confirmed with throwaway Vitest probes against the real functions (probe file deleted; no code changes). Ordered by risk.
 
-### Confirmed bugs
+### Status (updated after the fix pass)
+
+Items 1–8 and all nits are fixed except the header attribution (the provider name already says "via Frankfurter"; left as is). Beyond the list: the destination is chosen with the shared OPFS file picker (new file and new folder supported) and validated (`validateTargetFile`); a failed run keeps the previous successful status; "nothing to fetch" is recorded; the page warns when the main book has no direct `include` of the destination; the status card shows lines in file, skipped, securities and missing symbols; the currency converter links here and says when no rate path exists. Item 6 is implemented as: append mode drops the destination's opposite-direction lines for pairs written this run, reported as "N opposite-direction removed". BGN was removed from the ECB list (euro member since 2026-01-01). Remaining: service-level tests for the orchestration (only the pure helpers are covered).
+
+### Confirmed bugs (original findings)
 
 1. **Append mode rewrites the user's own price lines — data corruption.** `mergePriceFile` (`src/lib/services/prices/priceFileService.ts:143-171`) re-renders every parsed directive through `renderDirectives`, not just incoming keys. `parsePriceLine` strips quotes (`:53-56`), `formatRate` caps at 6 decimals (`:42-48`), and the renderer never re-quotes (`:97-110`). Confirmed:
    - `2026-01-01 price "VTI " 202.50 EUR` → `2026-01-01 price VTI  202.5 EUR` — a different commodity, invalid directive.

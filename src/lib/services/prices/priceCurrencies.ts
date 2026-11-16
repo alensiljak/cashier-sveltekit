@@ -40,10 +40,38 @@ export interface SymbolPlan {
 }
 
 /**
- * Pure core: classify candidates. `ownedPairs` is the list of pairs the book
- * already maintains for base ↔ candidate, **priority-ordered**: the book's own
- * (non-destination) series first, the destination file's own pairs after, so a
- * series the user maintains wins over pairs this app downloaded earlier.
+ * Direction of the series the given pairs hold for base ↔ candidate: the
+ * direction with more directives wins, mirroring how the engine coalesces a
+ * pair maintained both ways (denser series wins). A tie keeps the direction
+ * seen first. `null` when the pairs hold no series for it.
+ */
+function seriesDirection(
+	pairs: PricePair[],
+	base: string,
+	candidate: string
+): 'native' | 'inverted' | null {
+	let native = 0;
+	let inverted = 0;
+	let first: 'native' | 'inverted' | null = null;
+	for (const p of pairs) {
+		if (p.base === base && p.quote === candidate) {
+			native++;
+			first ??= 'native';
+		} else if (p.base === candidate && p.quote === base) {
+			inverted++;
+			first ??= 'inverted';
+		}
+	}
+	if (native === 0 && inverted === 0) return null;
+	if (native === inverted) return first;
+	return native > inverted ? 'native' : 'inverted';
+}
+
+/**
+ * Pure core: classify candidates. Direction comes from the book's own series
+ * (`userPairs`, one entry per directive, destination file excluded) first; only
+ * when the user keeps none for a pair do the destination file's earlier
+ * downloads (`destinationPairs`) decide. Within a tier the denser direction wins.
  */
 export function derivePriceSymbols(input: {
 	/** Provider's native base (candidates equal to it are meaningless). */
@@ -52,8 +80,10 @@ export function derivePriceSymbols(input: {
 	operatingCurrencies: string[];
 	pairCurrencies: string[];
 	accountCurrencies: string[];
-	/** Pairs of the recommended direction series, priority-ordered. */
-	ownedPairs: PricePair[];
+	/** The user's own price directives, one entry per directive (destination excluded). */
+	userPairs: PricePair[];
+	/** Price directives previously written to the destination file, one per directive. */
+	destinationPairs: PricePair[];
 	/** Declared securities (commodity directives with ticker/ISIN metadata). */
 	declaredSecurities: string[];
 	covers: (symbol: string) => boolean;
@@ -85,12 +115,10 @@ export function derivePriceSymbols(input: {
 		}
 
 		// Which direction does the book maintain for base ↔ candidate, if any?
-		const series = input.ownedPairs.find(
-			(p) =>
-				(p.base === input.base && p.quote === candidate) ||
-				(p.base === candidate && p.quote === input.base)
-		);
-		if (series && series.quote === input.base) {
+		const direction =
+			seriesDirection(input.userPairs, input.base, candidate) ??
+			seriesDirection(input.destinationPairs, input.base, candidate);
+		if (direction === 'inverted') {
 			// The book keeps `candidate → base`: extend it, write inverted.
 			invertedSymbols.push(candidate);
 		} else {

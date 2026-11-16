@@ -162,6 +162,18 @@ describe('mergePriceFile (append mode)', () => {
 		expect(merged.text).toBe('2026-11-13 price EUR 1.1052 USD\n; tail\n');
 	});
 
+	it('drops only the opposite-direction price lines of the listed pairs', () => {
+		const existing =
+			'; keep\n2026-11-12 price USD 0.9 EUR\n2026-11-12 price EUR 1.1 USD\n2026-11-12 price EUR 0.9 CHF\n';
+		const merged = mergePriceFile(existing, [d('2026-11-13', 'EUR', 1.1052, 'USD')], {
+			dropPairs: new Set(['USD/EUR'])
+		});
+		expect(merged.removed).toBe(1);
+		expect(merged.text).toBe(
+			'; keep\n2026-11-12 price EUR 1.1 USD\n2026-11-12 price EUR 0.9 CHF\n2026-11-13 price EUR 1.1052 USD\n'
+		);
+	});
+
 	it('preserves CRLF line endings', () => {
 		const merged = mergePriceFile('; c\r\n', [d('2026-11-13', 'EUR', 1.1052, 'USD')]);
 		expect(merged.text).toBe('; c\r\n2026-11-13 price EUR 1.1052 USD\r\n');

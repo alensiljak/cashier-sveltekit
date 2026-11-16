@@ -16,7 +16,8 @@ function plan(input: Partial<Parameters<typeof derivePriceSymbols>[0]> = {}) {
 		operatingCurrencies: ['EUR'],
 		pairCurrencies: [],
 		accountCurrencies: [],
-		ownedPairs: [],
+		userPairs: [],
+		destinationPairs: [],
 		declaredSecurities: [],
 		covers,
 		...input
@@ -70,7 +71,7 @@ describe('derivePriceSymbols', () => {
 		const result = plan({
 			defaultCurrency: 'CHF',
 			pairCurrencies: ['USD', 'EUR'],
-			ownedPairs: [{ base: 'USD', quote: 'EUR' }]
+			userPairs: [{ base: 'USD', quote: 'EUR' }]
 		});
 		expect(result).toEqual({
 			symbols: ['CHF'],
@@ -85,21 +86,41 @@ describe('derivePriceSymbols', () => {
 		// just extends the series.
 		const result = plan({
 			defaultCurrency: 'CHF',
-			ownedPairs: [{ base: 'EUR', quote: 'CHF' }]
+			userPairs: [{ base: 'EUR', quote: 'CHF' }]
 		});
 		expect(result.symbols).toEqual(['CHF']);
 		expect(result.invertedSymbols).toEqual([]);
 	});
 
 	it('prefers the book series direction over pairs the app downloaded earlier', () => {
-		// ownedPairs is priority-ordered: user-maintained pairs first, then the
-		// destination file's own (previously downloaded) pairs.
 		const result = plan({
 			pairCurrencies: ['USD', 'EUR'],
-			ownedPairs: [
-				{ base: 'USD', quote: 'EUR' }, // user's series: USD → EUR
-				{ base: 'EUR', quote: 'USD' } //  app's earlier native download
-			]
+			userPairs: [{ base: 'USD', quote: 'EUR' }], // user's series: USD → EUR
+			destinationPairs: [{ base: 'EUR', quote: 'USD' }] // app's earlier native download
+		});
+		expect(result.invertedSymbols).toEqual(['USD']);
+	});
+
+	it('follows the denser series when the user keeps both directions', () => {
+		const usdEur = { base: 'USD', quote: 'EUR' };
+		const eurUsd = { base: 'EUR', quote: 'USD' };
+		// First-seen is the sparse EUR → USD, but USD → EUR has more directives.
+		const inverted = plan({
+			pairCurrencies: ['USD'],
+			userPairs: [eurUsd, usdEur, usdEur, usdEur]
+		});
+		expect(inverted.invertedSymbols).toEqual(['USD']);
+		const native = plan({
+			pairCurrencies: ['USD'],
+			userPairs: [usdEur, eurUsd, eurUsd]
+		});
+		expect(native.symbols).toEqual(['USD']);
+	});
+
+	it('uses the destination direction when the user keeps no series for the pair', () => {
+		const result = plan({
+			pairCurrencies: ['USD'],
+			destinationPairs: [{ base: 'USD', quote: 'EUR' }]
 		});
 		expect(result.invertedSymbols).toEqual(['USD']);
 	});

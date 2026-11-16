@@ -8,6 +8,8 @@
 		planDownload,
 		downloadPrices,
 		validateTargetFile,
+		isTargetIncluded,
+		describeError,
 		getDownloadStatus,
 		type PriceDownloadConfig,
 		type PriceDownloadPlan,
@@ -37,6 +39,8 @@
 	});
 	let loaded = $state(false);
 	let targetError = $state<string | null>(null);
+	/** Whether the main book includes the destination; null = unknown. */
+	let included = $state<boolean | null>(null);
 	let plan = $state<PriceDownloadPlan | null>(null);
 	let status = $state<PriceDownloadStatus | null>(null);
 	let result = $state<PriceDownloadResult | null>(null);
@@ -59,7 +63,7 @@
 	async function load() {
 		config = await resolveConfig();
 		applyPickerReturn();
-		targetError = await validateTargetFile(config.targetFile);
+		await checkTarget();
 		await refreshPlan();
 		status = await getDownloadStatus();
 		demoActive = await demoDataService.isDemoActive();
@@ -76,20 +80,25 @@
 		replaceState('', {});
 	}
 
+	async function checkTarget() {
+		targetError = await validateTargetFile(config.targetFile);
+		included = targetError ? null : await isTargetIncluded(config.targetFile);
+	}
+
 	async function refreshPlan() {
 		try {
 			plan = await planDownload(config);
 			error = null;
 		} catch (e) {
 			plan = null;
-			error = String(e);
+			error = describeError(e);
 		}
 	}
 
 	/** Persist on change and keep the preview in sync. */
 	async function updateConfig(patch: Partial<PriceDownloadConfig>) {
 		config = { ...config, ...patch };
-		targetError = await validateTargetFile(config.targetFile);
+		await checkTarget();
 		await saveConfig(config);
 		await refreshPlan();
 	}
@@ -111,7 +120,7 @@
 			// book pairs may have grown, so recompute the preview.
 			await refreshPlan();
 		} catch (e) {
-			error = String(e);
+			error = describeError(e);
 			status = await getDownloadStatus();
 		} finally {
 			running = false;
@@ -176,11 +185,18 @@
 					{#if targetError}
 						<p class="mt-1 text-xs text-error">{targetError}</p>
 					{/if}
-					<p class="mt-1 text-xs opacity-60">
-						The app does not edit your book — wire the file in yourself with<code class="mx-1"
-							>include "{config.targetFile}"</code
-						>.
-					</p>
+					{#if included === false && !demoActive}
+						<p class="mt-1 text-xs text-warning">
+							Your main book has no <code>include "{config.targetFile}"</code> line, so these prices
+							will have no effect until you add one (nested includes are not checked).
+						</p>
+					{:else}
+						<p class="mt-1 text-xs opacity-60">
+							The app does not edit your book — wire the file in yourself with<code class="mx-1"
+								>include "{config.targetFile}"</code
+							>.
+						</p>
+					{/if}
 				</div>
 
 				<div class="flex items-center justify-between gap-3">
@@ -289,7 +305,7 @@
 							<code>{result.targetFile}</code>
 							— {result.added}
 							{result.added === 1 ? 'line' : 'lines'} added{result.writeMode === 'append'
-								? `, ${result.updated} updated, ${result.directives} lines in file`
+								? `, ${result.updated} updated${result.removed > 0 ? `, ${result.removed} opposite-direction removed` : ''}, ${result.directives} lines in file`
 								: ''}.
 						{:else}
 							Nothing to fetch.
@@ -314,11 +330,33 @@
 					{/if}
 					<p><span class="opacity-60">When:</span> {new Date(status.lastRun).toLocaleString()}</p>
 					{#if status.fixingDate}
-						<p><span class="opacity-60">Fixing date:</span> {status.fixingDate}</p>
+						<p><span class="opacity-60">Last fixing:</span> {status.fixingDate}</p>
 						<p>
 							<span class="opacity-60">Destination:</span>
 							{status.targetFile} ({status.writeMode})
 						</p>
+						<p>
+							<span class="opacity-60">Lines in file:</span>
+							{status.directives ?? '—'}
+						</p>
+						{#if status.skippedUnsupported.length > 0}
+							<p>
+								<span class="opacity-60">No rate from provider:</span>
+								{status.skippedUnsupported.join(', ')}
+							</p>
+						{/if}
+						{#if status.securities.length > 0}
+							<p>
+								<span class="opacity-60">Securities (not FX):</span>
+								{status.securities.join(', ')}
+							</p>
+						{/if}
+						{#if (status.missing ?? []).length > 0}
+							<p class="text-warning">
+								<span class="opacity-60">Missing from response:</span>
+								{(status.missing ?? []).join(', ')}
+							</p>
+						{/if}
 					{/if}
 				</div>
 			</div>

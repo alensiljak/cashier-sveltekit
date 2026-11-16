@@ -16,10 +16,12 @@
 
 import type { FetchedQuotes, PriceProvider } from './priceProvider';
 
-/** Currencies the ECB publishes daily reference rates for (EUR-base). */
+/**
+ * Currencies the ECB publishes daily reference rates for (EUR-base). BGN is
+ * absent: Bulgaria joined the euro on 2026-01-01, so there is no BGN rate.
+ */
 export const ECB_SYMBOLS = [
 	'AUD',
-	'BGN',
 	'BRL',
 	'CAD',
 	'CHF',

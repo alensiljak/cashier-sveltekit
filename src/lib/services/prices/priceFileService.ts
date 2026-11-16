@@ -127,6 +127,18 @@ export interface MergeResult {
 	added: number;
 	/** Keys whose rate changed this run. */
 	updated: number;
+	/** Existing price lines dropped because they ran against the planned direction. */
+	removed: number;
+}
+
+export interface MergeOptions {
+	/**
+	 * `base/quote` pairs whose existing price lines are removed: the opposite
+	 * direction of what this run writes. The engine coalesces both directions
+	 * of a pair and the denser series wins, so a stale opposite-direction
+	 * history in the destination could outvote the fresh series.
+	 */
+	dropPairs?: ReadonlySet<string>;
 }
 
 /**
@@ -135,9 +147,14 @@ export interface MergeResult {
  * whose `date|base|quote` key is in `incoming` *and* carries a different
  * rate — that one line is replaced by the incoming value (a corrected fixing
  * converges on every device). Keys not yet in the file are appended, sorted,
- * at the end. Line endings of the existing file are kept.
+ * at the end. Line endings of the existing file are kept. The only other
+ * lines ever removed are price lines of `options.dropPairs`.
  */
-export function mergePriceFile(existing: string, incoming: PriceDirective[]): MergeResult {
+export function mergePriceFile(
+	existing: string,
+	incoming: PriceDirective[],
+	options: MergeOptions = {}
+): MergeResult {
 	const eol = existing.includes('\r\n') ? '\r\n' : '\n';
 	const lines = existing.split(/\r?\n/);
 	// A file ending in a newline splits to a trailing ''; the final newline is
@@ -149,20 +166,30 @@ export function mergePriceFile(existing: string, incoming: PriceDirective[]): Me
 
 	const seen = new Set<string>();
 	let updated = 0;
+	let removed = 0;
+	const kept: string[] = [];
 	for (let i = 0; i < lines.length; i++) {
 		const parsed = parsePriceLine(lines[i]);
-		if (!parsed) continue;
-		const key = priceKey(parsed);
-		const wanted = pending.get(key);
-		if (!wanted) continue;
-		if (formatRate(parsed.rate) !== formatRate(wanted.rate)) {
-			lines[i] = renderDirectives([wanted])[0];
-			if (!seen.has(key)) updated++;
+		if (parsed && options.dropPairs?.has(`${parsed.base}/${parsed.quote}`)) {
+			removed++;
+			continue;
 		}
-		seen.add(key);
+		const key = parsed ? priceKey(parsed) : null;
+		const wanted = key ? pending.get(key) : undefined;
+		if (parsed && key && wanted) {
+			if (formatRate(parsed.rate) !== formatRate(wanted.rate)) {
+				kept.push(renderDirectives([wanted])[0]);
+				if (!seen.has(key)) updated++;
+			} else {
+				kept.push(lines[i]);
+			}
+			seen.add(key);
+		} else {
+			kept.push(lines[i]);
+		}
 	}
 
 	const fresh = [...pending].filter(([key]) => !seen.has(key)).map(([, d]) => d);
-	lines.push(...renderDirectives(fresh));
-	return { text: lines.join(eol) + eol, added: fresh.length, updated };
+	kept.push(...renderDirectives(fresh));
+	return { text: kept.join(eol) + eol, added: fresh.length, updated, removed };
 }

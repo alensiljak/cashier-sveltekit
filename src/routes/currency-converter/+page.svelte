@@ -157,6 +157,17 @@
 				</div>
 			{/if}
 
+			{#if result && result.currency !== toCurrency}
+				<p class="text-sm text-warning">
+					No rate path from {fromCurrency} to {toCurrency} in your book — the amount is unchanged.
+				</p>
+			{/if}
+
+			<p class="text-center text-xs opacity-60">
+				Rates out of date or missing?
+				<a class="link" href="/prices/download">Download the latest rates</a>
+			</p>
+
 			<!-- Error -->
 			{#if error}
 				<div class="alert alert-error">
