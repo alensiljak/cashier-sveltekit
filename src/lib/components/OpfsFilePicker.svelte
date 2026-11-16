@@ -15,6 +15,8 @@
 		checkedFiles?: string[];
 		showDeleteButtons?: boolean;
 		onfileselect?: (entry: FileTreeEntry) => void;
+		/** Called when a folder row is clicked (it still expands/collapses). */
+		ondirectoryclick?: (entry: FileTreeEntry) => void;
 		ondeleteclick?: (path: string) => void;
 	};
 
@@ -24,6 +26,7 @@
 		checkedFiles = $bindable([]),
 		showDeleteButtons = false,
 		onfileselect,
+		ondirectoryclick,
 		ondeleteclick
 	}: Props = $props();
 
@@ -40,6 +43,15 @@
 		} finally {
 			isLoading = false;
 		}
+	}
+
+	/** Expand the folder at `path` and all its ancestors (e.g. after creating it). */
+	export function expandTo(path: string) {
+		const parts = path.split('/');
+		const toOpen = new Set(parts.map((_, i) => parts.slice(0, i + 1).join('/')));
+		entries = entries.map((e) =>
+			e.kind === 'directory' && toOpen.has(e.path) ? { ...e, expanded: true } : e
+		);
 	}
 
 	function isLocallyModified(entry: FileTreeEntry): boolean {
@@ -70,6 +82,7 @@
 	function onEntryClick(entry: FileTreeEntry) {
 		if (entry.kind === 'directory') {
 			toggleDirectory(entry);
+			ondirectoryclick?.(entry);
 			return;
 		}
 		selectedFile = entry.path;

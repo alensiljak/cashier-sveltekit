@@ -88,6 +88,21 @@ async function getHandle(filename: string, create: boolean = false) {
 	return undefined;
 }
 
+/**
+ * Create a directory (and any missing parents) at `path`, e.g. `prices/fx`.
+ * Throws on an invalid path or a failed OPFS call; existing directories are fine.
+ */
+export async function createDirectory(path: string): Promise<void> {
+	const parts = path.split('/');
+	if (parts.some((p) => p === '' || p === '.' || p === '..' || p.includes('\\'))) {
+		throw new Error(`Invalid folder path: ${path}`);
+	}
+	let dir = await navigator.storage.getDirectory();
+	for (const part of parts) {
+		dir = await dir.getDirectoryHandle(part, { create: true });
+	}
+}
+
 export async function listFiles(): Promise<string[]> {
 	try {
 		const root = await navigator.storage.getDirectory();
