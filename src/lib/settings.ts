@@ -191,6 +191,9 @@ export const DeviceSettingKeys = {
 	syncChannelLastSync: 'sync.channel.last-sync',
 	// Days without a completed sync before the Sync page warns. Number; default 7.
 	syncStaleDays: 'sync.stale-days',
+	// Shared key for the CORS proxy (worker/proxy.ts). Device-only: it is a
+	// credential and is not exported or synced.
+	proxyKey: 'proxy.key',
 	// Price download bookkeeping for this device. Shape: PriceDownloadStatus
 	// (see services/prices/priceDownloadService.ts): lastRun, fixingDate,
 	// written/added/updated counts, fetched and skipped symbols, lastError.

@@ -16,6 +16,13 @@
 	// SvelteKit has no aliases configured.
 	//
 	// SvelteKit 3's generated config no longer supplies include/exclude, so list them here.
-	"include": ["src", "tests", "vite.config.ts", "vitest.config.ts", "playwright.config.ts"],
+	"include": [
+		"src",
+		"tests",
+		"worker",
+		"vite.config.ts",
+		"vitest.config.ts",
+		"playwright.config.ts"
+	],
 	"exclude": ["src/service-worker.ts", "src/service-worker", "node_modules/**/*"]
 }

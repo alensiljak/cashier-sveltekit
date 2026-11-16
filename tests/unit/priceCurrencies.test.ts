@@ -5,7 +5,7 @@
     and no query is ever sent.
 */
 import { describe, expect, it } from 'vitest';
-import { derivePriceSymbols } from '#lib/services/prices/priceCurrencies';
+import { derivePriceSymbols, deriveSecuritySymbols } from '#lib/services/prices/priceCurrencies';
 
 const covers = (symbol: string) => ['USD', 'CHF', 'AUD', 'GBP'].includes(symbol);
 
@@ -139,5 +139,44 @@ describe('derivePriceSymbols', () => {
 		expect(result.invertedSymbols).toEqual([]);
 		expect(result.skippedUnsupported).toEqual([]);
 		expect(result.securities).toEqual([]);
+	});
+});
+
+describe('deriveSecuritySymbols', () => {
+	it('keeps covered commodities and reports the rest as skipped', () => {
+		const result = deriveSecuritySymbols({
+			declaredSecurities: [
+				{ name: 'VAN0004AU', apir: 'VAN0004AU' },
+				{ name: 'VTI', ticker: 'VTI' },
+				{ name: 'UNKNOWN', ticker: 'UNKNOWN' }
+			],
+			covered: ['VAN0004AU', 'VTI']
+		});
+		expect(result).toEqual({
+			symbols: ['VAN0004AU', 'VTI'],
+			invertedSymbols: [],
+			skippedUnsupported: ['UNKNOWN'],
+			securities: []
+		});
+	});
+
+	it('deduplicates repeated commodity directives', () => {
+		const result = deriveSecuritySymbols({
+			declaredSecurities: [
+				{ name: 'VAN0004AU', apir: 'VAN0004AU' },
+				{ name: 'VAN0004AU', apir: 'VAN0004AU' }
+			],
+			covered: ['VAN0004AU']
+		});
+		expect(result.symbols).toEqual(['VAN0004AU']);
+	});
+
+	it('returns an empty plan when nothing is declared', () => {
+		expect(deriveSecuritySymbols({ declaredSecurities: [], covered: [] })).toEqual({
+			symbols: [],
+			invertedSymbols: [],
+			skippedUnsupported: [],
+			securities: []
+		});
 	});
 });

@@ -107,6 +107,18 @@ describe('buildPriceFile (overwrite mode)', () => {
 			text
 		);
 	});
+
+	it('uses the provider-supplied as-of label', () => {
+		const text = buildPriceFile(
+			[d('2026-11-16', 'VAN0004AU', 0.9736, 'AUD')],
+			'Fund prices',
+			'2026-11-16',
+			'latest prices'
+		);
+		expect(text).toBe(
+			'; Fund prices — latest prices: 2026-11-16\n2026-11-16 price VAN0004AU 0.9736 AUD\n'
+		);
+	});
 });
 
 describe('mergePriceFile (append mode)', () => {
@@ -225,6 +237,24 @@ describe('toDirectives', () => {
 		const directives = toDirectives(fetched, ['USD'], 'EUR');
 		const keys = directives.map(priceKey);
 		expect(new Set(keys).size).toBe(2);
+	});
+
+	it('uses a quote-specific date when the provider supplies one', () => {
+		const directives = toDirectives(
+			{
+				asOf: '2026-11-16',
+				quotes: [
+					{ base: 'VAN0004AU', rate: 0.9736, quote: 'AUD', date: '2026-11-16' },
+					{ base: 'VTI', rate: 300.12, quote: 'AUD', date: '2026-11-14' }
+				]
+			},
+			[],
+			'AUD'
+		);
+		expect(directives).toEqual([
+			d('2026-11-16', 'VAN0004AU', 0.9736, 'AUD'),
+			d('2026-11-14', 'VTI', 300.12, 'AUD')
+		]);
 	});
 });
 

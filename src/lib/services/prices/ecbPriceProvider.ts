@@ -104,6 +104,7 @@ export function parseEcbResponse(body: unknown, requested: string[]): FetchedQuo
 export const ecbPriceProvider: PriceProvider = {
 	id: 'ecb-frankfurter',
 	name: 'ECB reference rates (via Frankfurter)',
+	kind: 'fx',
 	base: 'EUR',
 	covers(symbol) {
 		return COVERED.has(symbol);

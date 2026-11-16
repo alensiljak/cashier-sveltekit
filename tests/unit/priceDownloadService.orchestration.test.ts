@@ -70,17 +70,29 @@ vi.mock('#lib/settings', async (importOriginal) => {
 });
 
 vi.mock('#lib/services/prices/priceProviderRegistry', () => {
-	const provider = {
+	const fxProvider = {
 		id: 'test',
 		name: 'Test rates',
+		kind: 'fx',
 		base: 'EUR',
 		covers: () => true,
 		fetchLatest: (...args: unknown[]) => state.fetchLatest(...args)
 	};
+	const securitiesProvider = {
+		id: 'test-securities',
+		name: 'Test fund prices',
+		kind: 'securities',
+		base: 'AUD',
+		covers: () => false,
+		resolveSecurities: async (securities: Array<{ name: string }>) =>
+			securities.map((s) => s.name).filter((name) => name !== 'UNKNOWN'),
+		fetchLatest: (...args: unknown[]) => state.fetchLatest(...args)
+	};
+	const providers = [fxProvider, securitiesProvider];
 	return {
-		getPriceProvider: () => provider,
-		defaultPriceProvider: () => provider,
-		listPriceProviders: () => [provider]
+		getPriceProvider: (id: string) => providers.find((p) => p.id === id) ?? fxProvider,
+		defaultPriceProvider: () => fxProvider,
+		listPriceProviders: () => providers
 	};
 });
 
@@ -270,6 +282,59 @@ describe('downloadPrices', () => {
 		expect(result).toMatchObject({ fixingDate: '', added: 0, unchanged: false });
 		expect(state.saveCalls).toEqual([]);
 		expect(await getDownloadStatus()).toMatchObject({ lastError: null });
+	});
+
+	it('plans securities by catalogue and writes each quote on its own date', async () => {
+		state.directives = [
+			{ type: 'commodity', currency: 'VAN0004AU', meta: { apir: 'VAN0004AU' } },
+			{ type: 'commodity', currency: 'VTI', meta: { ticker: 'VTI' } },
+			{ type: 'commodity', currency: 'UNKNOWN', meta: { ticker: 'UNKNOWN' } }
+		];
+		state.fetchLatest.mockResolvedValue({
+			source: 'test-securities',
+			asOf: '2026-11-16',
+			quotes: [
+				{ base: 'VAN0004AU', rate: 0.9736, quote: 'AUD', date: '2026-11-16' },
+				{ base: 'VTI', rate: 300.12, quote: 'AUD', date: '2026-11-14' }
+			],
+			missing: []
+		});
+
+		const result = await downloadPrices(config({ providerId: 'test-securities' }));
+
+		expect(state.fetchLatest).toHaveBeenCalledWith(['VAN0004AU', 'VTI']);
+		expect(result).toMatchObject({
+			fixingDate: '2026-11-16',
+			symbols: ['VAN0004AU', 'VTI'],
+			invertedSymbols: [],
+			skippedUnsupported: ['UNKNOWN'],
+			securities: []
+		});
+		expect(state.files.get(PRICES_DEFAULT_DESTINATION)).toBe(
+			'; Test fund prices — latest prices: 2026-11-16\n' +
+				'2026-11-14 price VTI 300.12 AUD\n' +
+				'2026-11-16 price VAN0004AU 0.9736 AUD\n'
+		);
+	});
+
+	it('drops the opposite direction for securities in append mode', async () => {
+		state.directives = [{ type: 'commodity', currency: 'VAN0004AU', meta: { apir: 'VAN0004AU' } }];
+		state.files.set(PRICES_DEFAULT_DESTINATION, '2026-11-01 price AUD 1.02 VAN0004AU\n');
+		state.fetchLatest.mockResolvedValue({
+			source: 'test-securities',
+			asOf: '2026-11-16',
+			quotes: [{ base: 'VAN0004AU', rate: 0.9736, quote: 'AUD', date: '2026-11-16' }],
+			missing: []
+		});
+
+		const result = await downloadPrices(
+			config({ providerId: 'test-securities', writeMode: 'append' })
+		);
+
+		expect(result.removed).toBe(1);
+		expect(state.files.get(PRICES_DEFAULT_DESTINATION)).toBe(
+			'2026-11-16 price VAN0004AU 0.9736 AUD\n'
+		);
 	});
 });
 

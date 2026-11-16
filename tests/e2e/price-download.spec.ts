@@ -52,7 +52,7 @@ test.describe('price download', () => {
 		await expect(page.locator('.badge-ghost', { hasText: 'your series' })).toHaveCount(0);
 		await expect(page.getByText('Securities in the book are not exchange rates')).toHaveCount(0);
 
-		const download = page.getByRole('button', { name: 'Download latest rates' });
+		const download = page.getByRole('button', { name: 'Download latest prices' });
 		await expect(download).toBeEnabled();
 		await download.click();
 
@@ -88,7 +88,7 @@ test.describe('price download', () => {
 
 		await page.locator('input[type="checkbox"].toggle').click();
 
-		await page.getByRole('button', { name: 'Download latest rates' }).click();
+		await page.getByRole('button', { name: 'Download latest prices' }).click();
 
 		const resultCard = page.locator('.card.bg-base-200');
 		await expect(resultCard).toContainText('2026-01-05', { timeout: 10_000 });
@@ -101,7 +101,7 @@ test.describe('price download', () => {
 
 		// Run again with the next fixing: the file keeps both dates (append).
 		await mockFixing(page, '2026-01-06', '1.6222');
-		await page.getByRole('button', { name: 'Download latest rates' }).click();
+		await page.getByRole('button', { name: 'Download latest prices' }).click();
 		await expect(resultCard).toContainText('2026-01-06', { timeout: 10_000 });
 		await expect(resultCard).toContainText('4 lines in file');
 		expect(await readOpfsFile(page, 'prices/e2e-test.bean')).toBe(
@@ -113,13 +113,13 @@ test.describe('price download', () => {
 	test('overwrite mode replaces the file with the latest fixing', async ({ demoPage: page }) => {
 		await mockFixing(page, '2026-01-05', '1.6111');
 		await page.goto('/prices/download');
-		await page.getByRole('button', { name: 'Download latest rates' }).click();
+		await page.getByRole('button', { name: 'Download latest prices' }).click();
 		await expect(page.locator('.card.bg-base-200')).toContainText('2 lines added', {
 			timeout: 10_000
 		});
 
 		await mockFixing(page, '2026-01-06', '1.6222');
-		await page.getByRole('button', { name: 'Download latest rates' }).click();
+		await page.getByRole('button', { name: 'Download latest prices' }).click();
 		await expect(page.locator('.card.bg-base-200')).toContainText('2026-01-06', {
 			timeout: 10_000
 		});
@@ -136,17 +136,30 @@ test.describe('price download', () => {
 	}) => {
 		await mockFixing(page, '2026-01-05', '1.6111');
 		await page.goto('/prices/download');
-		await page.getByRole('button', { name: 'Download latest rates' }).click();
+		await page.getByRole('button', { name: 'Download latest prices' }).click();
 		await expect(page.locator('.card.bg-base-200')).toContainText('2 lines added', {
 			timeout: 10_000
 		});
 		const written = await readOpfsFile(page, DEFAULT_DESTINATION);
 
-		await page.getByRole('button', { name: 'Download latest rates' }).click();
+		await page.getByRole('button', { name: 'Download latest prices' }).click();
 		await expect(page.locator('.card.bg-base-200')).toContainText('already in', {
 			timeout: 10_000
 		});
 		await expect(page.locator('.card.bg-base-200')).toContainText('no changes');
 		expect(await readOpfsFile(page, DEFAULT_DESTINATION)).toBe(written);
+	});
+
+	test('proxy requires the key and rejects hosts outside its allowlist', async ({ request }) => {
+		const target = encodeURIComponent('https://example.com/');
+
+		const unauthorized = await request.get(`/api/proxy?url=${target}`);
+		expect(unauthorized.status()).toBe(401);
+
+		const response = await request.get(`/api/proxy?url=${target}`, {
+			headers: { 'X-Proxy-Key': 'e2e-proxy-key' }
+		});
+		expect(response.status()).toBe(403);
+		expect(await response.json()).toEqual({ error: 'Host not allowed: example.com' });
 	});
 });

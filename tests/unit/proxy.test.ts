@@ -1,0 +1,194 @@
+// @vitest-environment node
+/*
+    Tests for the generic CORS proxy handler (worker/proxy.ts). The handler is
+    exercised with an injected fetch, so no network is touched; the Vite
+    middleware and the Worker entry both call this same function.
+*/
+import { describe, expect, it, vi } from 'vitest';
+import {
+	ALLOWED_HOSTS,
+	handleProxyRequest,
+	PROXY_KEY_HEADER,
+	ProxyRequestError,
+	resolveProxyTarget,
+	type FetchLike
+} from '../../worker/proxy';
+
+const ALLOWED =
+	'https://www.vanguard.com.au/personal/api/products/personal/fund/8105/prices?limit=1';
+
+function proxyRequest(target: string, init: RequestInit = {}): Request {
+	return new Request(`https://cashier.test/api/proxy?url=${encodeURIComponent(target)}`, init);
+}
+
+function stubFetch(response: Response | (() => Promise<Response>)): FetchLike {
+	return vi.fn(async () => (typeof response === 'function' ? response() : response)) as FetchLike;
+}
+
+describe('resolveProxyTarget', () => {
+	it('accepts an allowlisted https URL and keeps its query', () => {
+		const url = resolveProxyTarget(ALLOWED);
+		expect(url.hostname).toBe('www.vanguard.com.au');
+		expect(url.search).toBe('?limit=1');
+	});
+
+	it('rejects missing, malformed, non-https and credential-bearing URLs', () => {
+		expect(() => resolveProxyTarget(null)).toThrow(ProxyRequestError);
+		expect(() => resolveProxyTarget('not a url')).toThrow(/Invalid/);
+		expect(() => resolveProxyTarget('http://www.vanguard.com.au/x')).toThrow(/https/);
+		expect(() => resolveProxyTarget('https://user:pass@www.vanguard.com.au/x')).toThrow(
+			/Credentials/
+		);
+	});
+
+	it('rejects hosts outside the allowlist', () => {
+		expect(() => resolveProxyTarget('https://example.com/')).toThrow(/Host not allowed/);
+		expect(Object.hasOwn(ALLOWED_HOSTS, 'www.vanguard.com.au')).toBe(true);
+	});
+});
+
+describe('proxy key', () => {
+	it('rejects a missing key when one is required', async () => {
+		const response = await handleProxyRequest(proxyRequest(ALLOWED), { requiredKey: 'secret' });
+		expect(response.status).toBe(401);
+		expect(await response.json()).toEqual({ error: 'Invalid proxy key' });
+	});
+
+	it('rejects a wrong key', async () => {
+		const response = await handleProxyRequest(
+			proxyRequest(ALLOWED, { headers: { [PROXY_KEY_HEADER]: 'wrong' } }),
+			{ requiredKey: 'secret' }
+		);
+		expect(response.status).toBe(401);
+	});
+
+	it('accepts the matching key', async () => {
+		const response = await handleProxyRequest(
+			proxyRequest(ALLOWED, { headers: { [PROXY_KEY_HEADER]: 'secret' } }),
+			{ requiredKey: 'secret', fetchImpl: stubFetch(new Response('{}')) }
+		);
+		expect(response.status).toBe(200);
+	});
+
+	it('fails closed when the Worker has no key configured', async () => {
+		const response = await handleProxyRequest(proxyRequest(ALLOWED), { requireKey: true });
+		expect(response.status).toBe(503);
+	});
+
+	it('stays open in dev when no key policy is supplied', async () => {
+		const response = await handleProxyRequest(proxyRequest(ALLOWED), {
+			fetchImpl: stubFetch(new Response('{}'))
+		});
+		expect(response.status).toBe(200);
+	});
+});
+
+describe('handleProxyRequest', () => {
+	it('rejects non-GET requests', async () => {
+		const response = await handleProxyRequest(proxyRequest(ALLOWED, { method: 'POST' }));
+		expect(response.status).toBe(405);
+	});
+
+	it('forwards only the proxy headers, never Origin, Referer or Cookie', async () => {
+		let seen: { input: RequestInfo | URL; init?: RequestInit } | undefined;
+		const fetchImpl: FetchLike = async (input, init) => {
+			seen = { input, init };
+			return new Response('{"ok":true}', {
+				headers: { 'content-type': 'application/json; charset=utf-8' }
+			});
+		};
+
+		const response = await handleProxyRequest(
+			proxyRequest(ALLOWED, {
+				headers: {
+					Origin: 'https://cashier.test',
+					Referer: 'https://cashier.test/prices/download',
+					Cookie: 'session=secret'
+				}
+			}),
+			{ fetchImpl }
+		);
+
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual({ ok: true });
+		expect(String(seen?.input)).toBe(ALLOWED);
+		expect(seen?.init?.headers).toEqual({
+			Accept: 'application/json, text/plain, */*',
+			'User-Agent': 'Cashier price proxy (+https://cashier.alensiljak.cc)'
+		});
+		expect(seen?.init?.redirect).toBe('manual');
+	});
+
+	it('passes an upstream error status and body through', async () => {
+		const response = await handleProxyRequest(proxyRequest(ALLOWED), {
+			fetchImpl: stubFetch(new Response('upstream boom', { status: 500 }))
+		});
+		expect(response.status).toBe(500);
+		expect(await response.text()).toBe('upstream boom');
+	});
+
+	it('refuses to follow redirects', async () => {
+		const response = await handleProxyRequest(proxyRequest(ALLOWED), {
+			fetchImpl: stubFetch(
+				new Response(null, { status: 302, headers: { location: 'https://example.com/' } })
+			)
+		});
+		expect(response.status).toBe(502);
+		expect(await response.text()).toContain('redirect');
+	});
+
+	it('caps oversized upstream responses', async () => {
+		const response = await handleProxyRequest(proxyRequest(ALLOWED), {
+			fetchImpl: stubFetch(new Response(new Uint8Array(5 * 1024 * 1024 + 1)))
+		});
+		expect(response.status).toBe(502);
+		expect(await response.text()).toContain('exceeds');
+	});
+
+	it('falls back to octet-stream for non-text content types', async () => {
+		const response = await handleProxyRequest(proxyRequest(ALLOWED), {
+			fetchImpl: stubFetch(
+				new Response('binary', { headers: { 'content-type': 'application/octet-stream' } })
+			)
+		});
+		expect(response.headers.get('content-type')).toBe('application/octet-stream');
+	});
+
+	it('returns a null body for a 204 response', async () => {
+		const response = await handleProxyRequest(proxyRequest(ALLOWED), {
+			fetchImpl: stubFetch(new Response(null, { status: 204 }))
+		});
+		expect(response.status).toBe(204);
+		expect(await response.text()).toBe('');
+	});
+
+	it('maps an abort to a timeout response', async () => {
+		const abort = Object.assign(new Error('aborted'), { name: 'AbortError' });
+		const response = await handleProxyRequest(proxyRequest(ALLOWED), {
+			fetchImpl: stubFetch(async () => {
+				throw abort;
+			})
+		});
+		expect(response.status).toBe(504);
+		expect(await response.text()).toContain('timed out');
+	});
+
+	it('maps a network failure to a bad-gateway response', async () => {
+		const response = await handleProxyRequest(proxyRequest(ALLOWED), {
+			fetchImpl: stubFetch(async () => {
+				throw new TypeError('fetch failed');
+			})
+		});
+		expect(response.status).toBe(502);
+		expect(await response.text()).toContain('Upstream request failed');
+	});
+
+	it('rejects a disallowed target before fetching', async () => {
+		const fetchImpl = vi.fn();
+		const response = await handleProxyRequest(proxyRequest('https://example.com/'), {
+			fetchImpl: fetchImpl as unknown as FetchLike
+		});
+		expect(response.status).toBe(403);
+		expect(fetchImpl).not.toHaveBeenCalled();
+	});
+});

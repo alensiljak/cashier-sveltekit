@@ -1,11 +1,12 @@
 import { sveltekit } from '@sveltejs/kit/vite';
-import type { UserConfig } from 'vite';
+import type { Connect, Plugin, UserConfig } from 'vite';
 import { defineConfig } from 'vite';
 import adapter from '@sveltejs/adapter-static';
 import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
+import { handleProxyRequest, PROXY_KEY_HEADER, PROXY_PATH } from './worker/proxy.ts';
 
 // SvelteKit's default version is Date.now(). Any per-build value (timestamp, commit SHA) is
 // inlined into a shared chunk and into the `__sveltekit_<hash>` global of every prerendered
@@ -44,6 +45,44 @@ function staticRevisions(): Record<string, string> {
 	return result;
 }
 
+/**
+ * Serve the same `/api/proxy` handler in `vite dev` and `vite preview` as the
+ * deployed Worker, so providers use one URL in every environment.
+ */
+function corsProxy(): Plugin {
+	const attach = (middlewares: Connect.Server) => {
+		middlewares.use((req, res, next) => {
+			if (!req.url) return next();
+			const url = new URL(req.url, 'http://localhost');
+			if (url.pathname !== PROXY_PATH) return next();
+
+			const key = req.headers[PROXY_KEY_HEADER.toLowerCase()];
+			const request = new Request(url, {
+				method: req.method ?? 'GET',
+				headers: { [PROXY_KEY_HEADER]: typeof key === 'string' ? key : '' }
+			});
+			const requiredKey = process.env.PROXY_KEY;
+			void handleProxyRequest(request, { requiredKey, requireKey: Boolean(requiredKey) })
+				.then(async (response) => {
+					res.statusCode = response.status;
+					response.headers.forEach((value, key) => res.setHeader(key, value));
+					res.end(Buffer.from(await response.arrayBuffer()));
+				})
+				.catch(next);
+		});
+	};
+
+	return {
+		name: 'cashier-cors-proxy',
+		configureServer(server) {
+			attach(server.middlewares);
+		},
+		configurePreviewServer(server) {
+			attach(server.middlewares);
+		}
+	};
+}
+
 const config: UserConfig = defineConfig({
 	define: {
 		__STATIC_REVISIONS__: JSON.stringify(staticRevisions()),
@@ -66,6 +105,7 @@ const config: UserConfig = defineConfig({
 		sourcemap: false
 	},
 	plugins: [
+		corsProxy(),
 		tailwindcss(),
 		sveltekit({
 			adapter: adapter({ fallback: '200.html' }),

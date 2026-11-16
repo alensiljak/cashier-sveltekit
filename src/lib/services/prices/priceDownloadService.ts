@@ -1,5 +1,5 @@
 /**
- * Price Download service (doc/projects/2026-11-15_price-download.md).
+ * Price Download service (doc/completed-projects/2026-11-15_price-download.md).
  *
  * Orchestrates: config from shared settings → book-relevant symbol plan →
  * provider fetch → deterministic file write (overwrite or append) → device
@@ -25,10 +25,12 @@ import type { PriceProvider } from './priceProvider';
 import { getPriceProvider, defaultPriceProvider } from './priceProviderRegistry';
 import {
 	derivePriceSymbols,
+	deriveSecuritySymbols,
 	fetchBookPricePairs,
 	fetchAccountCurrencies,
 	fetchDeclaredSecurities,
-	type PricePair
+	type PricePair,
+	type SymbolPlan
 } from './priceCurrencies';
 import { buildPriceFile, mergePriceFile, parsePriceFile, toDirectives } from './priceFileService';
 
@@ -226,17 +228,25 @@ export async function planDownload(configArg?: PriceDownloadConfig): Promise<Pri
 		return false;
 	});
 
-	const plan = derivePriceSymbols({
-		base: provider.base,
-		defaultCurrency,
-		operatingCurrencies: operating,
-		pairCurrencies: bookPairs.flatMap((p) => [p.base, p.quote]),
-		accountCurrencies,
-		userPairs,
-		destinationPairs,
-		declaredSecurities,
-		covers: (symbol) => provider.covers(symbol)
-	});
+	const plan: SymbolPlan =
+		provider.kind === 'securities'
+			? deriveSecuritySymbols({
+					declaredSecurities,
+					covered: provider.resolveSecurities
+						? await provider.resolveSecurities(declaredSecurities)
+						: declaredSecurities.map((s) => s.name).filter((s) => provider.covers(s))
+				})
+			: derivePriceSymbols({
+					base: provider.base,
+					defaultCurrency,
+					operatingCurrencies: operating,
+					pairCurrencies: bookPairs.flatMap((p) => [p.base, p.quote]),
+					accountCurrencies,
+					userPairs,
+					destinationPairs,
+					declaredSecurities: declaredSecurities.map((s) => s.name),
+					covers: (symbol) => provider.covers(symbol)
+				});
 
 	return { provider, config, ...plan };
 }
@@ -281,16 +291,20 @@ export async function downloadPrices(
 		let updated: number;
 		let removed = 0;
 		if (config.writeMode === 'overwrite') {
-			text = buildPriceFile(incoming, provider.name, fetched.asOf);
+			text = buildPriceFile(
+				incoming,
+				provider.name,
+				fetched.asOf,
+				provider.kind === 'fx' ? 'latest fixing' : 'latest prices'
+			);
 			added = incoming.length;
 			updated = 0;
 		} else {
 			// Pairs written this run supersede an older opposite-direction series
 			// in the destination (the engine would coalesce both, denser wins).
-			const dropPairs = new Set([
-				...plan.symbols.map((s) => `${s}/${provider.base}`),
-				...plan.invertedSymbols.map((s) => `${provider.base}/${s}`)
-			]);
+			// Deriving the drop set from the incoming directives works for FX
+			// native/inverted pairs and for securities (`commodity → AUD`).
+			const dropPairs = new Set(incoming.map((d) => `${d.quote}/${d.base}`));
 			const merged = mergePriceFile(existing ?? '', incoming, { dropPairs });
 			text = merged.text;
 			added = merged.added;

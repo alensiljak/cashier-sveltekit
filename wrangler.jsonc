@@ -1,11 +1,15 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "cashier",
+	"main": "worker/index.ts",
 	"compatibility_date": "2026-10-29",
 	"routes": [{ "pattern": "cashier.alensiljak.cc", "custom_domain": true }],
 	"assets": {
+		"binding": "ASSETS",
 		"directory": "./build",
 		// Unknown paths (e.g. parameterised routes that are not prerendered) get the app shell.
-		"not_found_handling": "single-page-application"
+		"not_found_handling": "single-page-application",
+		// The CORS proxy must reach the Worker before the SPA fallback.
+		"run_worker_first": ["/api/*"]
 	}
 }

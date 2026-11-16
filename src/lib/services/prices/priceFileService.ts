@@ -1,6 +1,6 @@
 /**
  * Formats and merges price directives for the Price Download feature
- * (doc/projects/2026-11-15_price-download.md).
+ * (doc/completed-projects/2026-11-15_price-download.md).
  *
  * The output is fully deterministic — fixed directive order, fixed number
  * formatting — so two devices that fetch the same fixing write byte-identical
@@ -69,16 +69,20 @@ export function priceKey(d: { date: string; base: string; quote: string }): stri
  * device renders the same inverted value.
  */
 export function toDirectives(
-	fetched: { asOf: string; quotes: Array<{ base: string; rate: number; quote: string }> },
+	fetched: {
+		asOf: string;
+		quotes: Array<{ base: string; rate: number; quote: string; date?: string }>;
+	},
 	inverted: Iterable<string>,
 	providerBase: string
 ): PriceDirective[] {
 	const invertedSet = new Set(inverted);
-	return fetched.quotes.map((q) =>
-		invertedSet.has(q.quote)
-			? { date: fetched.asOf, base: q.quote, rate: 1 / q.rate, quote: providerBase }
-			: { date: fetched.asOf, base: q.base, rate: q.rate, quote: q.quote }
-	);
+	return fetched.quotes.map((q) => {
+		const date = q.date ?? fetched.asOf;
+		return invertedSet.has(q.quote)
+			? { date, base: q.quote, rate: 1 / q.rate, quote: providerBase }
+			: { date, base: q.base, rate: q.rate, quote: q.quote };
+	});
 }
 
 export function parsePriceFile(text: string): ParsedPriceFile {
@@ -112,12 +116,10 @@ export function renderDirectives(directives: Iterable<PriceDirective>): string[]
 export function buildPriceFile(
 	directives: PriceDirective[],
 	sourceComment: string,
-	fixingDate: string
+	asOf: string,
+	asOfLabel = 'latest fixing'
 ): string {
-	const lines = [
-		`; ${sourceComment} — latest fixing: ${fixingDate}`,
-		...renderDirectives(directives)
-	];
+	const lines = [`; ${sourceComment} — ${asOfLabel}: ${asOf}`, ...renderDirectives(directives)];
 	return lines.join('\n') + '\n';
 }
 

@@ -23,7 +23,7 @@
 	import demoDataService from '#lib/services/demoDataService';
 	import fullLedgerService from '#lib/services/ledgerWorkerClient';
 	import { PRICES_DEFAULT_DESTINATION } from '#lib/constants';
-	import { SettingKeys } from '#lib/settings';
+	import { deviceSettings, DeviceSettingKeys, SettingKeys } from '#lib/settings';
 	import { onMount } from 'svelte';
 	import { goto, replaceState } from '$app/navigation';
 	import { page } from '$app/state';
@@ -47,6 +47,7 @@
 	let running = $state(false);
 	let error = $state<string | null>(null);
 	let demoActive = $state(false);
+	let proxyKey = $state('');
 
 	const provider = $derived(plan?.provider ?? providers.find((p) => p.id === config.providerId));
 
@@ -67,7 +68,12 @@
 		await refreshPlan();
 		status = await getDownloadStatus();
 		demoActive = await demoDataService.isDemoActive();
+		proxyKey = (await deviceSettings.get<string>(DeviceSettingKeys.proxyKey)) ?? '';
 		loaded = true;
+	}
+
+	async function saveProxyKey() {
+		await deviceSettings.set(DeviceSettingKeys.proxyKey, proxyKey.trim());
 	}
 
 	/** The OPFS file picker hands the chosen path back via the URL. */
@@ -114,6 +120,7 @@
 		error = null;
 		result = null;
 		try {
+			await saveProxyKey();
 			result = await downloadPrices(config);
 			status = await getDownloadStatus();
 			// The file write triggered a background ledger reload; the plan's
@@ -161,6 +168,22 @@
 					/>
 				</label>
 
+				<label class="form-control w-full">
+					<div class="label"><span class="label-text">Proxy key</span></div>
+					<input
+						type="password"
+						class="input input-bordered w-full"
+						autocomplete="off"
+						placeholder="Required when the server sets PROXY_KEY"
+						bind:value={proxyKey}
+						onchange={() => void saveProxyKey()}
+					/>
+					<p class="mt-1 text-xs opacity-60">
+						Stored on this device only and sent as the <code>X-Proxy-Key</code> header. Leave empty when
+						the proxy is not protected.
+					</p>
+				</label>
+
 				<div>
 					<div class="flex items-center gap-3">
 						<div class="min-w-0 flex-1">
@@ -187,8 +210,9 @@
 					{/if}
 					{#if included === false && !demoActive}
 						<p class="mt-1 text-xs text-warning">
-							Your main book has no <code>include "{config.targetFile}"</code> line, so these prices
-							will have no effect until you add one (nested includes are followed, but glob patterns are not expanded).
+							Your main book has no <code>include "{config.targetFile}"</code> line, so these prices will
+							have no effect until you add one (nested includes are followed, but glob patterns are not
+							expanded).
 						</p>
 					{:else}
 						<p class="mt-1 text-xs opacity-60">
@@ -222,16 +246,24 @@
 		<!-- ── Preview ────────────────────────────────────────────── -->
 		{#if plan}
 			<div class="card bg-base-100 rounded-lg">
-				<div class="bg-primary rounded-t-lg px-3 py-2 text-lg">Rates to fetch</div>
+				<div class="bg-primary rounded-t-lg px-3 py-2 text-lg">Prices to fetch</div>
 				<div class="card-body py-3 px-3 space-y-3">
-					{#if plan.provider.base !== 'EUR'}
+					{#if plan.provider.kind === 'securities'}
+						<p class="text-xs opacity-60">Prices are quoted in {plan.provider.base}.</p>
+					{:else if plan.provider.base !== 'EUR'}
 						<p class="text-xs opacity-60">Pairs are published as {plan.provider.base}-base.</p>
 					{/if}
 
 					{#if plan.symbols.length > 0}
 						<div class="flex flex-wrap gap-1">
 							{#each plan.symbols as symbol (symbol)}
-								<span class="badge badge-outline">{plan.provider.base} → {symbol}</span>
+								<span class="badge badge-outline">
+									{#if plan.provider.kind === 'securities'}
+										{symbol} → {plan.provider.base}
+									{:else}
+										{plan.provider.base} → {symbol}
+									{/if}
+								</span>
 							{/each}
 						</div>
 					{/if}
@@ -241,7 +273,7 @@
 							{#each plan.invertedSymbols as symbol (symbol)}
 								<span
 									class="badge badge-ghost"
-									title="Your book already keeps this pair — the rates extend that series, in its own direction."
+									title="Your book already keeps this pair — the prices extend that series, in its own direction."
 								>
 									{symbol} → {plan.provider.base} (your series)
 								</span>
@@ -251,13 +283,13 @@
 
 					{#if plan.symbols.length + plan.invertedSymbols.length === 0}
 						<p class="text-sm opacity-70">
-							Nothing to fetch — the provider cannot serve any of the currencies your book uses.
+							Nothing to fetch — the provider cannot serve any of the commodities your book uses.
 						</p>
 					{/if}
 
 					{#if plan.skippedUnsupported.length > 0}
 						<p class="text-xs opacity-60">
-							No rate from this provider: {plan.skippedUnsupported.join(', ')}
+							No price from this provider: {plan.skippedUnsupported.join(', ')}
 						</p>
 					{/if}
 				</div>
@@ -279,7 +311,7 @@
 			{:else}
 				<DownloadIcon size={16} />
 			{/if}
-			{running ? 'Downloading…' : 'Download latest rates'}
+			{running ? 'Downloading…' : 'Download latest prices'}
 		</button>
 
 		{#if error}
@@ -291,9 +323,9 @@
 				<div class="card-body py-3 px-3">
 					<p class="text-sm">
 						{#if result.fixingDate && result.unchanged}
-							The {result.fixingDate} fixing is already in <code>{result.targetFile}</code> — no changes.
+							The {result.fixingDate} prices are already in <code>{result.targetFile}</code> — no changes.
 						{:else if result.fixingDate}
-							Downloaded the {result.fixingDate} fixing into
+							Downloaded the {result.fixingDate} prices into
 							<code>{result.targetFile}</code>
 							— {result.added}
 							{result.added === 1 ? 'line' : 'lines'} added{result.writeMode === 'append'
@@ -322,7 +354,7 @@
 					{/if}
 					<p><span class="opacity-60">When:</span> {new Date(status.lastRun).toLocaleString()}</p>
 					{#if status.fixingDate}
-						<p><span class="opacity-60">Last fixing:</span> {status.fixingDate}</p>
+						<p><span class="opacity-60">Last price date:</span> {status.fixingDate}</p>
 						<p>
 							<span class="opacity-60">Destination:</span>
 							{status.targetFile} ({status.writeMode})
@@ -333,7 +365,7 @@
 						</p>
 						{#if status.skippedUnsupported.length > 0}
 							<p>
-								<span class="opacity-60">No rate from provider:</span>
+								<span class="opacity-60">No price from provider:</span>
 								{status.skippedUnsupported.join(', ')}
 							</p>
 						{/if}

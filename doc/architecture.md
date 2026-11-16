@@ -214,3 +214,7 @@ menu row and supports `text`, `Icon`, `disabled`, `onclick`, and
 `targetNav` (navigates via `goto` before calling `onclick`). See
 `src/routes/sync/beancount/+page.svelte` and
 `src/routes/opfs/import-ledger/+page.svelte` for examples.
+
+## Price Fetching Proxy
+
+A small worker is required to proxy the request for price fetching due to CORS applied by the providers.
