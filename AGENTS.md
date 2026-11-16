@@ -1,12 +1,23 @@
 # Cashier
 
-Cashier is a mobile assistant for Beancount personal finance management.
-It is implemented as a PWA using Svelte and DaisyUI frameworks.
+Cashier is a mobile assistant for Beancount personal finance management, implemented as a PWA using Svelte and DaisyUI frameworks.
+
+Contents:
+
+- [Cashier](#cashier)
+  - [Projects](#projects)
+  - [Usage Scenarios](#usage-scenarios)
+    - [Mobile App](#mobile-app)
+      - [Desktop App](#desktop-app)
+  - [Architecture](#architecture)
+  - [Dev Server](#dev-server)
+  - [Demo Data](#demo-data)
+  - [Tools](#tools)
 
 ## Projects
 
 - Project plans and docs are stored in the `/doc/` folder.
-- Completed project docs are in `/doc/completed-projects/`.
+  - Completed project docs are in `/doc/completed-projects/`.
 
 ## Usage Scenarios
 
@@ -37,6 +48,7 @@ See [`/doc/architecture.md`](/doc/architecture.md) for the app's architecture, W
 
 ## Tools
 
+- do not commit changes with git unless specifically asked to.
 - `node` and `npm` are is available through `mise`.
 - `npm` is the package manager to use.
 - Use ripgrep (`rg`) CLI for fast text search across text files. Prefer over `grep`.
@@ -50,11 +62,3 @@ See [`/doc/architecture.md`](/doc/architecture.md) for the app's architecture, W
 - **E2E tests**: Playwright — `npm run test:e2e`
 - Run `npm run format` to format, `npm run lint` to lint, `npm run check` to type-check (svelte-check + TypeScript).
 - The user runs verification (`npm run verify` — lint, check, unit tests, e2e tests) themselves. Do not run full test suites, lint, or type-check after every edit; only run a narrowly-targeted check (e.g. one test file, `lsp diagnostics` on the file you touched) when you need to verify a specific change, and let the user run `npm run verify` for overall confidence. Remind the user to run the tests if the code change would require the verification.
-
-### Code Intelligence (LSP)
-
-Prefer LSP over grep.
-Reserve Grep/Glob for text/pattern searches (comments, strings, config values) where LSP doesn't help.
-
-Before renaming or changing a function signature, find all call sites via LSP first.
-After writing or editing code, check diagnostics before moving on. Fix any type errors or missing imports immediately.
