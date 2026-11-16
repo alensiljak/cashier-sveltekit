@@ -14,7 +14,7 @@
  * Note the `quotes` parameter name (`symbols` returns HTTP 422).
  */
 
-import type { FetchedQuotes, PriceProvider } from './priceProvider';
+import type { FetchedQuotes, PriceProvider, PriceSpec } from './priceProvider';
 
 /**
  * Currencies the ECB publishes daily reference rates for (EUR-base). BGN is
@@ -101,6 +101,22 @@ export function parseEcbResponse(body: unknown, requested: string[]): FetchedQuo
 	return { source: 'ecb', asOf, quotes, missing };
 }
 
+/**
+ * Book-driven `price` meta check for EUR-based providers: the commodity must be
+ * a published currency and the symbol must name the pair `COMMODITY-QUOTE`
+ * (e.g. `AUD-EUR`). The rate itself is looked up by commodity, never by the
+ * symbol. Exported for the direct ECB provider.
+ */
+export function validateEcbSpec(commodity: string, spec: PriceSpec): string | null {
+	if (!COVERED.has(commodity) && commodity !== 'EUR') {
+		return `${commodity} is not an ECB-published currency`;
+	}
+	if (spec.symbol !== `${commodity}-${spec.quote}`) {
+		return `symbol "${spec.symbol}" does not match ${commodity}-${spec.quote}`;
+	}
+	return null;
+}
+
 export const ecbPriceProvider: PriceProvider = {
 	id: 'ecb-frankfurter',
 	name: 'ECB reference rates (via Frankfurter)',
@@ -109,6 +125,7 @@ export const ecbPriceProvider: PriceProvider = {
 	covers(symbol) {
 		return COVERED.has(symbol);
 	},
+	validateSpec: validateEcbSpec,
 	async fetchLatest(symbols) {
 		const covered = symbols.filter((s) => COVERED.has(s));
 		if (covered.length === 0) {

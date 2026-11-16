@@ -115,7 +115,13 @@ export const SettingKeys = {
 	priceProvider: 'prices.provider',
 	priceTargetFile: 'prices.targetFile',
 	priceWriteMode: 'prices.writeMode',
-	priceSymbols: 'prices.symbols'
+	priceSymbols: 'prices.symbols',
+	// Book-driven price download (doc/projects/2026-11-16_book-driven-price-download.md).
+	// nicknames: Record<string, providerId> — maps the `source` part of a commodity's
+	// Beancount `price` meta (`QUOTE:source/SYMBOL`) to a registered provider id.
+	// ignored: string[] — commodities acknowledged as deliberately not priced.
+	priceNicknames: 'prices.nicknames',
+	priceIgnored: 'prices.ignored'
 };
 
 /** Settings specific to this device (not exported). */

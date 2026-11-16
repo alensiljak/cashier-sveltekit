@@ -11,7 +11,7 @@
  *     <Cube currency='USD' rate='1.0812'/> ...
  */
 
-import { ECB_SYMBOLS } from './ecbPriceProvider';
+import { ECB_SYMBOLS, validateEcbSpec } from './ecbPriceProvider';
 import type { FetchedQuotes, PriceProvider } from './priceProvider';
 import { proxyFetch } from './proxyFetch';
 
@@ -56,6 +56,7 @@ export const ecbDirectPriceProvider: PriceProvider = {
 	covers(symbol) {
 		return COVERED.has(symbol);
 	},
+	validateSpec: validateEcbSpec,
 	async fetchLatest(symbols) {
 		const covered = symbols.filter((s) => COVERED.has(s));
 		if (covered.length === 0) {

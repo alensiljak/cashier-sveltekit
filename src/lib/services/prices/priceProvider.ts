@@ -56,6 +56,17 @@ export interface FetchedQuotes {
 	missing: string[];
 }
 
+/** A parsed Beancount `price` meta entry: `QUOTE:source/SYMBOL` (`^SYMBOL` = inverted). */
+export interface PriceSpec {
+	/** Currency the price is quoted in. */
+	quote: string;
+	/** Downloader module/class as written in the book — mapped to a provider by nickname. */
+	source: string;
+	/** Source-specific symbol, without the `^` prefix. Each provider decides what it means. */
+	symbol: string;
+	inverted: boolean;
+}
+
 export interface PriceProvider {
 	id: string;
 	/** Shown in the provider dropdown. */
@@ -72,6 +83,13 @@ export interface PriceProvider {
 	 * `fetchLatest`.
 	 */
 	resolveCovered?(commodities: DeclaredCommodity[]): Promise<string[]>;
+	/**
+	 * Book-driven mode: decide whether this provider can serve `commodity` for
+	 * the `price` meta entry `spec`. Return a reason string when it cannot, or
+	 * null when it can. Omit to accept anything `covers`/`resolveCovered` serves
+	 * (providers that match by metadata ignore the spec's symbol).
+	 */
+	validateSpec?(commodity: string, spec: PriceSpec): string | null;
 	/** Fetch the latest prices for `symbols` (all must be covered). */
 	fetchLatest(symbols: string[]): Promise<FetchedQuotes>;
 }
