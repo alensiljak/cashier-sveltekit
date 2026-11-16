@@ -73,6 +73,50 @@ test.describe('price download', () => {
 		);
 	});
 
+	test('downloads only the selected symbols and remembers the choice', async ({
+		demoPage: page
+	}) => {
+		const requests: string[] = [];
+		await page.route('**/api.frankfurter.dev/**', async (route) => {
+			requests.push(route.request().url());
+			const quotes = new URL(route.request().url()).searchParams.get('quotes')?.split(',') ?? [];
+			await route.fulfill({
+				json: quotes.map((quote) => ({
+					date: '2026-01-05',
+					base: 'EUR',
+					quote,
+					rate: quote === 'AUD' ? 1.6111 : 1.1052
+				}))
+			});
+		});
+
+		await page.goto('/prices/download');
+
+		const usd = page.getByRole('checkbox', { name: 'EUR → USD' });
+		await expect(usd).toBeChecked();
+		await usd.uncheck();
+		await expect(page.getByText('1 of 2 selected')).toBeVisible();
+
+		// The choice is a shared setting, so it survives a reload.
+		await page.waitForTimeout(500);
+		await page.reload();
+		await expect(page.getByRole('checkbox', { name: 'EUR → USD' })).not.toBeChecked();
+		await expect(page.getByText('1 of 2 selected')).toBeVisible();
+
+		await page.getByRole('button', { name: 'Download latest prices' }).click();
+		await expect(page.locator('.card.bg-base-200')).toContainText('1 line added', {
+			timeout: 10_000
+		});
+
+		expect(requests).toHaveLength(1);
+		expect(requests[0]).toContain('quotes=AUD');
+		expect(requests[0]).not.toContain('USD');
+		expect(await readOpfsFile(page, DEFAULT_DESTINATION)).toBe(
+			'; ECB reference rates (via Frankfurter) — latest fixing: 2026-01-05\n' +
+				'2026-01-05 price EUR 1.6111 AUD\n'
+		);
+	});
+
 	test('writes to a user-chosen destination file in append mode', async ({ demoPage: page }) => {
 		await mockFixing(page, '2026-01-05', '1.6111');
 

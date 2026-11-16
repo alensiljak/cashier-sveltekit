@@ -36,18 +36,30 @@ import { buildPriceFile, mergePriceFile, parsePriceFile, toDirectives } from './
 
 export type PriceWriteMode = 'overwrite' | 'append';
 
+/** Symbols chosen per provider; a missing provider entry means "all candidates". */
+export type PriceSymbolSelections = Record<string, string[]>;
+
 export interface PriceDownloadConfig {
 	providerId: string;
 	targetFile: string;
 	writeMode: PriceWriteMode;
+	/**
+	 * Symbols to download, or `null` for every book-relevant candidate.
+	 * Persisted per provider under `SettingKeys.priceSymbols`.
+	 */
+	symbols: string[] | null;
 }
 
 export interface PriceDownloadPlan {
 	provider: PriceProvider;
 	config: PriceDownloadConfig;
-	/** Symbols written in the provider's native direction (provider.base → symbol). */
+	/** Every native-direction candidate, before the user's selection is applied. */
+	availableSymbols: string[];
+	/** Every inverted candidate, before the user's selection is applied. */
+	availableInvertedSymbols: string[];
+	/** Selected symbols written in the provider's native direction (provider.base → symbol). */
 	symbols: string[];
-	/** Symbols written inverted (symbol → provider.base), in the book's series direction. */
+	/** Selected symbols written inverted (symbol → provider.base), in the book's series direction. */
 	invertedSymbols: string[];
 	/** Currency candidates without a provider rate. */
 	skippedUnsupported: string[];
@@ -165,25 +177,61 @@ export async function isTargetIncluded(targetFile: string): Promise<boolean | nu
 	return false;
 }
 
+function normalizeSelections(value: unknown): PriceSymbolSelections {
+	if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+	const selections: PriceSymbolSelections = {};
+	for (const [providerId, symbols] of Object.entries(value as Record<string, unknown>)) {
+		if (Array.isArray(symbols)) {
+			selections[providerId] = symbols.filter((s): s is string => typeof s === 'string');
+		}
+	}
+	return selections;
+}
+
+/** The stored symbol selection for a provider; `null` means all candidates. */
+export async function getSymbolSelection(providerId: string): Promise<string[] | null> {
+	const stored = await settings.get<unknown>(SettingKeys.priceSymbols);
+	return normalizeSelections(stored)[providerId] ?? null;
+}
+
 export async function resolveConfig(): Promise<PriceDownloadConfig> {
-	const [providerId, targetFile, writeMode] = await Promise.all([
+	const [providerId, targetFile, writeMode, storedSelections] = await Promise.all([
 		settings.get<string>(SettingKeys.priceProvider),
 		settings.get<string>(SettingKeys.priceTargetFile),
-		settings.get<PriceWriteMode>(SettingKeys.priceWriteMode)
+		settings.get<PriceWriteMode>(SettingKeys.priceWriteMode),
+		settings.get<unknown>(SettingKeys.priceSymbols)
 	]);
+	const id = providerId ?? defaultPriceProvider().id;
 	return {
-		providerId: providerId ?? defaultPriceProvider().id,
+		providerId: id,
 		targetFile: targetFile ?? PRICES_DEFAULT_DESTINATION,
-		writeMode: writeMode === 'append' ? 'append' : 'overwrite'
+		writeMode: writeMode === 'append' ? 'append' : 'overwrite',
+		symbols: normalizeSelections(storedSelections)[id] ?? null
 	};
 }
 
-export async function saveConfig(config: PriceDownloadConfig): Promise<void> {
-	await Promise.all([
-		settings.set(SettingKeys.priceProvider, config.providerId),
-		settings.set(SettingKeys.priceTargetFile, config.targetFile),
-		settings.set(SettingKeys.priceWriteMode, config.writeMode)
-	]);
+// Symbol checkboxes save on every click; serialize the read-modify-write of
+// the per-provider map so a fast second click cannot resurrect the first one's
+// stale snapshot.
+let configWrites: Promise<void> = Promise.resolve();
+
+export function saveConfig(config: PriceDownloadConfig): Promise<void> {
+	// A failed write must not poison the queue for later clicks.
+	configWrites = configWrites
+		.catch(() => {})
+		.then(async () => {
+			const stored = await settings.get<unknown>(SettingKeys.priceSymbols);
+			const selections = normalizeSelections(stored);
+			if (config.symbols === null) delete selections[config.providerId];
+			else selections[config.providerId] = config.symbols;
+			await Promise.all([
+				settings.set(SettingKeys.priceProvider, config.providerId),
+				settings.set(SettingKeys.priceTargetFile, config.targetFile),
+				settings.set(SettingKeys.priceWriteMode, config.writeMode),
+				settings.set(SettingKeys.priceSymbols, selections)
+			]);
+		});
+	return configWrites;
 }
 
 /** Compute what a download run would do right now, without fetching anything. */
@@ -248,7 +296,21 @@ export async function planDownload(configArg?: PriceDownloadConfig): Promise<Pri
 					covers: (symbol) => provider.covers(symbol)
 				});
 
-	return { provider, config, ...plan };
+	// `null` (the default) keeps every candidate; an explicit list is an
+	// allowlist, so an empty list means "download nothing".
+	const selected = config.symbols == null ? null : new Set(config.symbols);
+	const keep = (symbols: string[]) =>
+		selected === null ? symbols : symbols.filter((s) => selected.has(s));
+
+	return {
+		provider,
+		config,
+		...plan,
+		availableSymbols: plan.symbols,
+		availableInvertedSymbols: plan.invertedSymbols,
+		symbols: keep(plan.symbols),
+		invertedSymbols: keep(plan.invertedSymbols)
+	};
 }
 
 export async function getDownloadStatus(): Promise<PriceDownloadStatus | null> {

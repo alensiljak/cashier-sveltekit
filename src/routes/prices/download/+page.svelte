@@ -6,6 +6,7 @@
 	import {
 		resolveConfig,
 		saveConfig,
+		getSymbolSelection,
 		planDownload,
 		downloadPrices,
 		validateTargetFile,
@@ -37,7 +38,8 @@
 	let config = $state<PriceDownloadConfig>({
 		providerId: defaultProvider.id,
 		targetFile: PRICES_DEFAULT_DESTINATION,
-		writeMode: 'overwrite'
+		writeMode: 'overwrite',
+		symbols: null
 	});
 	let loaded = $state(false);
 	let targetError = $state<string | null>(null);
@@ -54,6 +56,26 @@
 	let proxyKeyModalOpen = $state(false);
 
 	const provider = $derived(plan?.provider ?? providers.find((p) => p.id === config.providerId));
+
+	/** Every selectable candidate, in display order. */
+	const symbolOptions = $derived(
+		plan
+			? [
+					...plan.availableSymbols.map((symbol) => ({ symbol, inverted: false })),
+					...plan.availableInvertedSymbols.map((symbol) => ({ symbol, inverted: true }))
+				]
+			: []
+	);
+
+	/** `null` in the config means every candidate is selected. */
+	const selectedSymbols = $derived.by(() => {
+		const stored = config.symbols === null ? null : new Set(config.symbols);
+		return new Set(
+			symbolOptions
+				.filter((option) => stored === null || stored.has(option.symbol))
+				.map((option) => option.symbol)
+		);
+	});
 
 	// The ledger reloads in the background after a download (and after any
 	// file change); refresh the preview whenever it finishes.
@@ -120,6 +142,31 @@
 		await refreshPlan();
 	}
 
+	/** Each provider keeps its own selection; switching loads that one. */
+	async function changeProvider(providerId: string) {
+		const symbols = await getSymbolSelection(providerId);
+		config = { ...config, providerId, symbols };
+		await checkTarget();
+		await saveConfig(config);
+		await refreshPlan();
+	}
+
+	async function setSymbols(symbols: string[] | null) {
+		config = { ...config, symbols };
+		await saveConfig(config);
+		await refreshPlan();
+	}
+
+	function toggleSymbol(symbol: string, checked: boolean) {
+		const selected = new Set(selectedSymbols);
+		if (checked) selected.add(symbol);
+		else selected.delete(symbol);
+		const next = symbolOptions.map((option) => option.symbol).filter((s) => selected.has(s));
+		// Selecting every candidate stores `null`, so a currency the book starts
+		// using later is downloaded without revisiting this page.
+		void setSymbols(next.length === symbolOptions.length ? null : next);
+	}
+
 	function pickTargetFile() {
 		void goto(
 			`/opfs/file-picker?returnSetting=${SettingKeys.priceTargetFile}&returnTo=${encodeURIComponent('/prices/download')}&allowNew=1&ext=.bean`
@@ -176,7 +223,7 @@
 						value={provider?.name ?? ''}
 						onchange={(name) => {
 							const found = providers.find((p) => p.name === name);
-							if (found) void updateConfig({ providerId: found.id });
+							if (found) void changeProvider(found.id);
 						}}
 					/>
 				</label>
@@ -243,7 +290,7 @@
 		<!-- ── Preview ────────────────────────────────────────────── -->
 		{#if plan}
 			<div class="card bg-base-100 rounded-lg">
-				<div class="bg-primary rounded-t-lg px-3 py-2 text-lg">Prices to fetch</div>
+				<div class="bg-primary rounded-t-lg px-3 py-2 text-lg">Symbols to download</div>
 				<div class="card-body py-3 px-3 space-y-3">
 					{#if plan.provider.kind === 'securities'}
 						<p class="text-xs opacity-60">Prices are quoted in each fund's own currency.</p>
@@ -251,37 +298,67 @@
 						<p class="text-xs opacity-60">Pairs are published as {plan.provider.base}-base.</p>
 					{/if}
 
-					{#if plan.symbols.length > 0}
-						<div class="flex flex-wrap gap-1">
-							{#each plan.symbols as symbol (symbol)}
-								<span class="badge badge-outline">
-									{#if plan.provider.kind === 'securities'}
-										{symbol}
-									{:else}
-										{plan.provider.base} → {symbol}
-									{/if}
-								</span>
-							{/each}
+					{#if symbolOptions.length > 0}
+						<div class="flex items-center justify-between gap-2">
+							<p class="text-xs opacity-60">
+								{selectedSymbols.size} of {symbolOptions.length} selected
+							</p>
+							<div class="flex gap-1">
+								<button
+									type="button"
+									class="btn btn-ghost btn-xs rounded"
+									onclick={() => void setSymbols(null)}>All</button
+								>
+								<button
+									type="button"
+									class="btn btn-ghost btn-xs rounded"
+									onclick={() => void setSymbols([])}>None</button
+								>
+							</div>
 						</div>
-					{/if}
 
-					{#if plan.invertedSymbols.length > 0}
 						<div class="flex flex-wrap gap-1">
-							{#each plan.invertedSymbols as symbol (symbol)}
-								<span
-									class="badge badge-ghost"
+							{#each plan.availableSymbols as symbol (symbol)}
+								<label class="badge badge-outline h-auto cursor-pointer gap-1.5 py-1.5">
+									<input
+										type="checkbox"
+										class="checkbox checkbox-xs"
+										checked={selectedSymbols.has(symbol)}
+										onchange={(e) => toggleSymbol(symbol, e.currentTarget.checked)}
+									/>
+									<span>
+										{#if plan.provider.kind === 'securities'}
+											{symbol}
+										{:else}
+											{plan.provider.base} → {symbol}
+										{/if}
+									</span>
+								</label>
+							{/each}
+
+							{#each plan.availableInvertedSymbols as symbol (symbol)}
+								<label
+									class="badge badge-ghost h-auto cursor-pointer gap-1.5 py-1.5"
 									title="Your book already keeps this pair — the prices extend that series, in its own direction."
 								>
-									{symbol} → {plan.provider.base} (your series)
-								</span>
+									<input
+										type="checkbox"
+										class="checkbox checkbox-xs"
+										checked={selectedSymbols.has(symbol)}
+										onchange={(e) => toggleSymbol(symbol, e.currentTarget.checked)}
+									/>
+									<span>{symbol} → {plan.provider.base} (your series)</span>
+								</label>
 							{/each}
 						</div>
-					{/if}
-
-					{#if plan.symbols.length + plan.invertedSymbols.length === 0}
+					{:else}
 						<p class="text-sm opacity-70">
 							Nothing to fetch — the provider cannot serve any of the commodities your book uses.
 						</p>
+					{/if}
+
+					{#if symbolOptions.length > 0 && plan.symbols.length + plan.invertedSymbols.length === 0}
+						<p class="text-sm opacity-70">No symbols selected — pick at least one above.</p>
 					{/if}
 				</div>
 			</div>

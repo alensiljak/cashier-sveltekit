@@ -109,9 +109,13 @@ export const SettingKeys = {
 	// provider: registry id ('ecb-frankfurter'); default: first registered.
 	// targetFile: OPFS path, default PRICES_DEFAULT_DESTINATION.
 	// writeMode: 'overwrite' | 'append', default 'overwrite'.
+	// symbols: Record<providerId, string[]> — the symbols the user chose to
+	// download for that provider. A missing provider entry means "all
+	// book-relevant candidates".
 	priceProvider: 'prices.provider',
 	priceTargetFile: 'prices.targetFile',
-	priceWriteMode: 'prices.writeMode'
+	priceWriteMode: 'prices.writeMode',
+	priceSymbols: 'prices.symbols'
 };
 
 /** Settings specific to this device (not exported). */

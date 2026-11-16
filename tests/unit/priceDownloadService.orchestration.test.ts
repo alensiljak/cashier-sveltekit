@@ -100,6 +100,7 @@ import {
 	downloadPrices,
 	getDownloadStatus,
 	isTargetIncluded,
+	planDownload,
 	resolveConfig,
 	saveConfig,
 	validateTargetFile,
@@ -112,6 +113,7 @@ const config = (patch: Partial<PriceDownloadConfig> = {}): PriceDownloadConfig =
 	providerId: 'test',
 	targetFile: PRICES_DEFAULT_DESTINATION,
 	writeMode: 'overwrite',
+	symbols: null,
 	...patch
 });
 
@@ -142,7 +144,8 @@ describe('config', () => {
 		expect(await resolveConfig()).toEqual({
 			providerId: 'test',
 			targetFile: PRICES_DEFAULT_DESTINATION,
-			writeMode: 'overwrite'
+			writeMode: 'overwrite',
+			symbols: null
 		});
 	});
 
@@ -150,21 +153,32 @@ describe('config', () => {
 		state.shared.set(SettingKeys.priceProvider, 'test');
 		state.shared.set(SettingKeys.priceTargetFile, 'prices/custom.bean');
 		state.shared.set(SettingKeys.priceWriteMode, 'append');
+		state.shared.set(SettingKeys.priceSymbols, { test: ['USD'] });
 		expect(await resolveConfig()).toEqual({
 			providerId: 'test',
 			targetFile: 'prices/custom.bean',
-			writeMode: 'append'
+			writeMode: 'append',
+			symbols: ['USD']
 		});
 
 		state.shared.set(SettingKeys.priceWriteMode, 'bogus');
 		expect((await resolveConfig()).writeMode).toBe('overwrite');
 	});
 
-	it('saves all three shared keys', async () => {
-		await saveConfig(config({ writeMode: 'append' }));
+	it('saves all shared keys, keeping other providers’ selections', async () => {
+		state.shared.set(SettingKeys.priceSymbols, { other: ['CHF'] });
+		await saveConfig(config({ writeMode: 'append', symbols: ['USD'] }));
 		expect(state.shared.get(SettingKeys.priceProvider)).toBe('test');
 		expect(state.shared.get(SettingKeys.priceTargetFile)).toBe(PRICES_DEFAULT_DESTINATION);
 		expect(state.shared.get(SettingKeys.priceWriteMode)).toBe('append');
+		expect(state.shared.get(SettingKeys.priceSymbols)).toEqual({
+			other: ['CHF'],
+			test: ['USD']
+		});
+
+		// `null` means "all candidates", so the provider's entry is removed.
+		await saveConfig(config({ symbols: null }));
+		expect(state.shared.get(SettingKeys.priceSymbols)).toEqual({ other: ['CHF'] });
 	});
 });
 
@@ -209,6 +223,39 @@ describe('downloadPrices', () => {
 		expect(result).toMatchObject({ added: 0, updated: 0, unchanged: true });
 		expect(state.saveCalls).toEqual([]);
 		expect(state.reloadCalls).toBe(0);
+	});
+
+	it('fetches and writes only the selected symbols', async () => {
+		state.shared.set(SettingKeys.currency, 'USD');
+		state.operating = ['EUR', 'CHF'];
+		state.fetchLatest.mockResolvedValue({
+			source: 'test',
+			asOf: '2026-11-13',
+			quotes: [quote('CHF', 0.9266)],
+			missing: []
+		});
+
+		const plan = await planDownload(config({ symbols: ['CHF'] }));
+		expect(plan.availableSymbols).toEqual(['USD', 'CHF']);
+		expect(plan.symbols).toEqual(['CHF']);
+
+		const result = await downloadPrices(config({ symbols: ['CHF'] }));
+
+		expect(state.fetchLatest).toHaveBeenCalledWith(['CHF']);
+		expect(result).toMatchObject({ symbols: ['CHF'], invertedSymbols: [] });
+		expect(state.files.get(PRICES_DEFAULT_DESTINATION)).toBe(
+			'; Test rates — latest fixing: 2026-11-13\n2026-11-13 price EUR 0.9266 CHF\n'
+		);
+	});
+
+	it('downloads nothing when every symbol is deselected', async () => {
+		state.shared.set(SettingKeys.currency, 'USD');
+
+		const result = await downloadPrices(config({ symbols: [] }));
+
+		expect(state.fetchLatest).not.toHaveBeenCalled();
+		expect(result).toMatchObject({ fixingDate: '', added: 0, symbols: [] });
+		expect(state.saveCalls).toEqual([]);
 	});
 
 	it('writes inverted into the book’s series direction and drops the opposite series', async () => {
