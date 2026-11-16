@@ -148,7 +148,7 @@ Entry points: a row in Settings, and a "rates may be stale" hint on the currency
 
 - **Unit** (formatting and merge logic as pure functions): directive formatting emits the native pair verbatim; overwrite mode output; append mode adds/dedupes/replaces and preserves foreign lines; deterministic ordering and formatting (same input → same bytes); response validator against fixture JSON including malformed cases; symbol-set derivation (incl. the inverse-direction skip); skip-with-warning path.
 - **Engine integration** (exists: `tests/unit/priceConversion.test.ts`): a `CONVERT` query through the low-level `rustledger` helpers resolves a fetched pair in _both_ directions off native-direction directives, chains a commodity leg through an inverted FX leg (`AAPL → USD → EUR`), and exercises the nested `prices/prices.current.bean` include resolution. It also pins a subtlety the feature must respect: when no price path exists, `CONVERT` does **not** return null — it falls back to the unchanged amount in its original currency. Any UI that must know whether a real conversion happened (e.g. showing which pairs a downloaded file can now convert) has to compare the returned currency, not check for null.
-- **E2E** on demo data: Playwright route interception returns a canned Frankfurter response; the run is asserted via the status card, and the destination file exists in OPFS afterwards.
+- **E2E** on demo data: Playwright route interception returns a canned Frankfurter response; the run is asserted via the status card, and the destination file's exact content is read back from OPFS. Covers overwrite, append to a user-chosen destination (through the OPFS picker), and the unchanged re-run.
 - Verify nothing regressed with `npm run verify` — after implementation run the new unit suites plus one e2e against the demo book.
 
 ## Out of scope (later, in rough order of value)
@@ -165,7 +165,11 @@ Review of `f72cfa42` (`feat: price downloaders concept`). Four behaviors below w
 
 ### Status (updated after the fix pass)
 
-Items 1–8 and all nits are fixed except the header attribution (the provider name already says "via Frankfurter"; left as is). Beyond the list: the destination is chosen with the shared OPFS file picker (new file and new folder supported) and validated (`validateTargetFile`); a failed run keeps the previous successful status; "nothing to fetch" is recorded; the page warns when the main book has no direct `include` of the destination; the status card shows lines in file, skipped, securities and missing symbols; the currency converter links here and says when no rate path exists. Item 6 is implemented as: append mode drops the destination's opposite-direction lines for pairs written this run, reported as "N opposite-direction removed". BGN was removed from the ECB list (euro member since 2026-01-01). Remaining: service-level tests for the orchestration (only the pure helpers are covered).
+Items 1–3, 5–8 and the applicable nits are fixed. Item 4 is mitigated rather than implemented as originally suggested: the destination picker still lists every `.bean` file, but `validateTargetFile` rejects the main book, everything under `DEMO_DIR`, absolute paths, `..` segments and non-`.bean` paths; the page shows the reason and disables the download, so the main book cannot be overwritten from this page. Header attribution is intentionally left as the provider name (`; ECB reference rates (via Frankfurter) — latest fixing: …`): the name already carries the source and the URL is not part of the file contract.
+
+Beyond the list: the destination is chosen with the shared OPFS file picker (new file and new folder supported); a failed run keeps the previous successful status; "nothing to fetch" is recorded; the page warns when the main book does not include the destination (nested includes are followed, glob patterns are not); the status card shows lines in file, skipped symbols and missing symbols — securities are classified out of the FX plan and no longer displayed; the currency converter links here and says when no rate path exists. Item 6 is implemented as: append mode drops the destination's opposite-direction lines for pairs written this run, reported as "N opposite-direction removed". BGN was removed from the ECB list (euro member since 2026-01-01).
+
+Tests: `tests/unit/priceDownloadService.orchestration.test.ts` covers shared config, device status, the fetch → write flow, unchanged re-runs, failure retention, missing symbols, direction handling and destination validation. `tests/e2e/price-download.spec.ts` covers the preview, overwrite and append writes to OPFS, the status card, a user-chosen destination via the picker, and the unchanged re-run.
 
 ### Confirmed bugs (original findings)
 
@@ -205,8 +209,8 @@ Items 1–8 and all nits are fixed except the header attribution (the provider n
 - `$effect(() => void load())` is a one-shot load; `onMount` is clearer.
 - `fetchLatest` abort check uses `err instanceof DOMException` (`ecbPriceProvider.ts:124`); `err.name === 'AbortError'` is more portable.
 - ECB list: verify `BGN` (Bulgaria adopts the euro in 2026) against the current publication set.
-- Header attribution lacks the provider id/URL the doc's example shows (`buildPriceFile`, `priceFileService.ts:122`).
-- No unit tests for `priceDownloadService` orchestration (config, status, direction priority); the pure parts are well covered.
+- Header attribution lacks the provider id/URL the doc's example shows (`buildPriceFile`, `priceFileService.ts:122`). Not implemented — the provider name already says "via Frankfurter"; see Status.
+- No unit tests for `priceDownloadService` orchestration (config, status, direction priority); the pure parts are well covered. Covered by `tests/unit/priceDownloadService.orchestration.test.ts`.
 - `priceFileService.test.ts` typo "dentro".
 
 ### Suggested order
