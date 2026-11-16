@@ -28,6 +28,7 @@
 	import { readFile } from '#lib/utils/opfslib';
 	import { deviceSettings, DeviceSettingKeys, SettingKeys } from '#lib/settings';
 	import { onMount } from 'svelte';
+	import { get } from 'svelte/store';
 	import { goto, replaceState } from '$app/navigation';
 	import { page } from '$app/state';
 	import DownloadIcon from '@lucide/svelte/icons/download';
@@ -55,6 +56,11 @@
 	let result = $state<PriceDownloadResult | null>(null);
 	/** Current contents of the destination file, shown after a run and on load. */
 	let written = $state<string | null>(null);
+	/**
+	 * Background ledger reload after a download that wrote new prices:
+	 * `null` = none triggered, `reloading` until the ledger version bumps.
+	 */
+	let reloadState = $state<'reloading' | 'done' | null>(null);
 	let running = $state(false);
 	let error = $state<string | null>(null);
 	let demoActive = $state(false);
@@ -91,6 +97,7 @@
 	const ledgerVersion = fullLedgerService.version;
 	$effect(() => {
 		void $ledgerVersion;
+		if (reloadState === 'reloading') reloadState = 'done';
 		if (loaded) void refreshPlan();
 	});
 
@@ -211,8 +218,15 @@
 		running = true;
 		error = null;
 		result = null;
+		reloadState = null;
+		const versionBefore = get(ledgerVersion);
 		try {
 			result = await downloadPrices(config);
+			// The service starts a background reload when it wrote a changed file.
+			// A tiny book may already have finished reloading by now.
+			if (!result.unchanged && result.fixingDate) {
+				reloadState = get(ledgerVersion) > versionBefore ? 'done' : 'reloading';
+			}
 			await refreshWritten();
 			status = await getDownloadStatus();
 			// The file write triggered a background ledger reload; the plan's
@@ -445,7 +459,15 @@
 							Nothing to fetch.
 						{/if}
 					</p>
-					{#if result.missing.length > 0}
+					{#if reloadState === 'reloading'}
+							<p class="flex items-center gap-2 text-sm opacity-70">
+								<span class="loading loading-spinner loading-xs"></span>
+								Reloading the book…
+							</p>
+						{:else if reloadState === 'done'}
+							<p class="text-sm text-success">Book reloaded — the new prices are in use.</p>
+						{/if}
+						{#if result.missing.length > 0}
 						<p class="text-sm text-warning">
 							Not in the provider's response, so not written: {result.missing.join(', ')}
 						</p>
