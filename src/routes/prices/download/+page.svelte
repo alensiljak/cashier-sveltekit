@@ -249,7 +249,7 @@
 				<div class="bg-primary rounded-t-lg px-3 py-2 text-lg">Prices to fetch</div>
 				<div class="card-body py-3 px-3 space-y-3">
 					{#if plan.provider.kind === 'securities'}
-						<p class="text-xs opacity-60">Prices are quoted in {plan.provider.base}.</p>
+						<p class="text-xs opacity-60">Prices are quoted in each fund's own currency.</p>
 					{:else if plan.provider.base !== 'EUR'}
 						<p class="text-xs opacity-60">Pairs are published as {plan.provider.base}-base.</p>
 					{/if}
@@ -259,7 +259,7 @@
 							{#each plan.symbols as symbol (symbol)}
 								<span class="badge badge-outline">
 									{#if plan.provider.kind === 'securities'}
-										{symbol} → {plan.provider.base}
+										{symbol}
 									{:else}
 										{plan.provider.base} → {symbol}
 									{/if}

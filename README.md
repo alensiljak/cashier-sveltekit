@@ -39,6 +39,14 @@ The end-to-end (E2E) tests are excluded and need to be run manually, separately.
 npm run test
 ```
 
+### Proxy Key
+
+To set the proxy key
+
+```sh
+npx wrangler secret put PROXY_KEY
+```
+
 ### CI/CD
 
 `.github/workflows/ci-deploy.yml` runs lint, type-check and unit tests on every PR and push to `main`.
