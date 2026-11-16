@@ -161,13 +161,14 @@ export function createAwarePriceProvider(
 		async fetchCatalogue() {
 			return (await fetchOptions()).map((o) => ({ portId: o.id, label: o.name }));
 		},
-		// Linking is by `price` meta, not by a user-picked selection: the book's
+		// Linking is by `price` meta, gated by the user's selection of active options: the book's
 		// commodities that name this source are the ones served.
-		async resolveCovered(commodities) {
+		async resolveCovered(commodities, selection) {
+				const active = new Set(selection.map((p) => p.portId));
 			resolved = new Map();
 			for (const commodity of commodities) {
 				const id = awareOptionId(commodity);
-				if (id) resolved.set(commodity.name, id);
+				if (id && active.has(id)) resolved.set(commodity.name, id);
 			}
 			return [...resolved.keys()];
 		},

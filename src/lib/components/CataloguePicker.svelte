@@ -71,7 +71,7 @@
 		const q = filter.trim().toLowerCase();
 		if (!q) return products;
 		return products.filter((p) =>
-			[p.label, p.apir, p.ticker].some((s) => s?.toLowerCase().includes(q))
+			[p.label, p.apir, p.ticker, p.portId].some((s) => s?.toLowerCase().includes(q))
 		);
 	});
 
@@ -140,7 +140,7 @@
 							onchange={(e) => void toggle(product, e.currentTarget.checked)}
 						/>
 						<span class="flex-1 min-w-0 truncate">{product.label}</span>
-						<span class="text-xs opacity-60 shrink-0">{product.ticker ?? product.apir}</span>
+						<span class="text-xs opacity-60 shrink-0">{product.ticker ?? product.apir ?? product.portId}</span>
 					</label>
 				</li>
 			{:else}

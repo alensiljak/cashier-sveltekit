@@ -91,7 +91,11 @@ describe('provider', () => {
 				{ name: 'AWARE_GONE', price: 'AUD:aware/99999999' },
 				{ name: 'VAN', price: 'AUD:vanguard/1' }
 			],
-			[]
+			[
+				{ portId: '42000100', label: 'High Growth' },
+				{ portId: '42000096', label: 'Cash' },
+				{ portId: '99999999', label: 'Gone' }
+			]
 		);
 		expect(covered).toEqual(['AWARE_HG', 'AWARE_CASH', 'AWARE_GONE']);
 
