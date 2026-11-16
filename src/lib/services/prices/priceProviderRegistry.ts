@@ -7,9 +7,14 @@
 
 import type { PriceProvider } from './priceProvider';
 import { ecbPriceProvider } from './ecbPriceProvider';
+import { ecbDirectPriceProvider } from './ecbDirectPriceProvider';
 import { vanguardAuPriceProvider } from './vanguardAuPriceProvider';
 
-const providers: PriceProvider[] = [ecbPriceProvider, vanguardAuPriceProvider];
+const providers: PriceProvider[] = [
+	ecbPriceProvider,
+	ecbDirectPriceProvider,
+	vanguardAuPriceProvider
+];
 
 export function listPriceProviders(): PriceProvider[] {
 	return providers;

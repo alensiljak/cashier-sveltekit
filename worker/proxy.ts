@@ -23,6 +23,7 @@ export { PROXY_KEY_HEADER, PROXY_PATH };
  * used as an open proxy.
  */
 export const ALLOWED_HOSTS: Record<string, true> = {
+	'www.ecb.europa.eu': true,
 	'www.vanguard.com.au': true
 };
 

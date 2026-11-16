@@ -2,11 +2,22 @@
 
 Downloads prices into a Beancount prices file of your choice, by default `prices/prices.current.bean` in the app's storage. Providers can serve exchange rates (ECB daily reference rates, served CORS-enabled by [Frankfurter](https://frankfurter.dev)) or security prices (fund NAVs and ETF prices).
 
+## Providers
+
+| Provider                                   | Serves                  | Needs the proxy? |
+| ------------------------------------------ | ----------------------- | ---------------- |
+| ECB reference rates (via Frankfurter)      | Currency rates (EUR)    | No               |
+| ECB reference rates (direct, via proxy)    | Currency rates (EUR)    | **Yes**          |
+| Vanguard Australia                         | Fund NAVs and ETFs      | **Yes**          |
+
+- **Via Frankfurter** works anywhere with no setup: [Frankfurter](https://frankfurter.dev) serves the same ECB fixings with CORS enabled, so the browser fetches them directly. It depends on that third-party service.
+- **Direct** reads the ECB's own XML feed, which sends no CORS headers, so it is fetched through the app's `/api/proxy` endpoint and needs the proxy deployed and the **Proxy key** set (see below). Use it as a fallback if Frankfurter is unavailable.
+
 ## Configuration
 
 - **Provider** — where the prices come from. The provider dropdown lists the registered sources. Currency providers publish rates in a base currency (ECB is EUR-base); securities providers publish a price per commodity in the fund's quote currency.
 - **Symbols** — the candidates the provider can serve from your book are listed with checkboxes. Untick any you do not want fetched or written; **All** restores the default (every book-relevant candidate, including ones the book starts using later), **None** fetches nothing. The selection is saved per provider alongside the other settings and shared between devices.
-- **Proxy key** — only needed when the deployment protects its CORS proxy. The key is stored on this device only and sent as the `X-Proxy-Key` header; it is never included in the app bundle or exported with settings. Leave it empty when the proxy is not protected.
+- **Proxy key** — only used by providers that need the proxy (see the table above), and only needed when the deployment protects its CORS proxy. The key is stored on this device only and sent as the `X-Proxy-Key` header; it is never included in the app bundle or exported with settings. Leave it empty when the proxy is not protected.
 - **Destination file** — any path in the app's storage; existing `.bean` files are offered as one-tap shortcuts. The app never edits your book — once the file exists, wire it into your book yourself with an `include` directive, e.g. `include "prices/prices.current.bean"` placed in your main book file.
 - **Append history** — off by default, the file is rewritten each run with just the latest prices ("current" prices). Turn it on to keep earlier downloaded prices and gradually build a price history; duplicates for the same date are deduplicated.
 

@@ -36,6 +36,7 @@ Current entries:
 
 | Host                  | Used by                     |
 | --------------------- | --------------------------- |
+| `www.ecb.europa.eu`   | ECB direct (XML feed)       |
 | `www.vanguard.com.au` | Vanguard AU fund/ETF prices |
 
 ### Request rules
