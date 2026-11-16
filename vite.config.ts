@@ -6,7 +6,12 @@ import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
-import { handleProxyRequest, PROXY_KEY_HEADER, PROXY_PATH } from './worker/proxy.ts';
+import {
+	handleProxyRequest,
+	PROXY_KEY_HEADER,
+	PROXY_PATH,
+	UPSTREAM_KEY_HEADER
+} from './worker/proxy.ts';
 
 // SvelteKit's default version is Date.now(). Any per-build value (timestamp, commit SHA) is
 // inlined into a shared chunk and into the `__sveltekit_<hash>` global of every prerendered
@@ -57,9 +62,13 @@ function corsProxy(): Plugin {
 			if (url.pathname !== PROXY_PATH) return next();
 
 			const key = req.headers[PROXY_KEY_HEADER.toLowerCase()];
+			const upstreamKey = req.headers[UPSTREAM_KEY_HEADER.toLowerCase()];
 			const request = new Request(url, {
 				method: req.method ?? 'GET',
-				headers: { [PROXY_KEY_HEADER]: typeof key === 'string' ? key : '' }
+				headers: {
+					[PROXY_KEY_HEADER]: typeof key === 'string' ? key : '',
+					...(typeof upstreamKey === 'string' && { [UPSTREAM_KEY_HEADER]: upstreamKey })
+				}
 			});
 			const requiredKey = process.env.PROXY_KEY;
 			void handleProxyRequest(request, { requiredKey, requireKey: Boolean(requiredKey) })

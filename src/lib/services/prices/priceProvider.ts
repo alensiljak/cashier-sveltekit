@@ -24,6 +24,8 @@ export interface DeclaredCommodity {
 	ticker?: string;
 	isin?: string;
 	apir?: string;
+	/** Raw `price` meta (`QUOTE:source/SYMBOL`), for providers that link through it. */
+	price?: string;
 }
 
 /** One product in a securities provider's catalogue. */

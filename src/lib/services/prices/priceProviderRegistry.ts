@@ -9,11 +9,13 @@ import type { PriceProvider } from './priceProvider';
 import { ecbPriceProvider } from './ecbPriceProvider';
 import { ecbDirectPriceProvider } from './ecbDirectPriceProvider';
 import { vanguardAuPriceProvider } from './vanguardAuPriceProvider';
+import { awarePriceProvider } from './awarePriceProvider';
 
 const providers: PriceProvider[] = [
 	ecbPriceProvider,
 	ecbDirectPriceProvider,
-	vanguardAuPriceProvider
+	vanguardAuPriceProvider,
+	awarePriceProvider
 ];
 
 export function listPriceProviders(): PriceProvider[] {

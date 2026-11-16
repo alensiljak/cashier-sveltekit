@@ -6,3 +6,8 @@
 
 export const PROXY_PATH = '/api/proxy';
 export const PROXY_KEY_HEADER = 'X-Proxy-Key';
+/**
+ * Client → proxy: an upstream API key. The proxy forwards it as `X-API-KEY`,
+ * and only to hosts listed in `UPSTREAM_KEY_HOSTS` (worker/proxy.ts).
+ */
+export const UPSTREAM_KEY_HEADER = 'X-Upstream-Key';

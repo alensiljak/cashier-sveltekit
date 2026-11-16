@@ -214,6 +214,9 @@ export const DeviceSettingKeys = {
 	// Shared key for the CORS proxy (worker/proxy.ts). Device-only: it is a
 	// credential and is not exported or synced.
 	proxyKey: 'proxy.key',
+	// Aware Super's site API key (sent as X-API-KEY via the proxy). Device-only
+	// credential, never exported or synced.
+	awareApiKey: 'prices.aware.api-key',
 	// Price download bookkeeping for this device. Shape: PriceDownloadStatus
 	// (see services/prices/priceDownloadService.ts): lastRun, fixingDate,
 	// written/added/updated counts, fetched and skipped symbols, lastError.

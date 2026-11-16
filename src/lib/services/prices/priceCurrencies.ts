@@ -176,6 +176,7 @@ export async function fetchDeclaredCommodities(): Promise<DeclaredCommodity[]> {
 		name: currency,
 		ticker: typeof meta?.ticker === 'string' ? meta.ticker : undefined,
 		isin: typeof meta?.isin === 'string' ? meta.isin : undefined,
-		apir: typeof meta?.apir === 'string' ? meta.apir : undefined
+		apir: typeof meta?.apir === 'string' ? meta.apir : undefined,
+		price: typeof meta?.price === 'string' ? meta.price : undefined
 	}));
 }

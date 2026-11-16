@@ -13,9 +13,13 @@
  * URL in every environment.
  */
 
-import { PROXY_KEY_HEADER, PROXY_PATH } from '../src/lib/services/prices/proxyProtocol.ts';
+import {
+	PROXY_KEY_HEADER,
+	PROXY_PATH,
+	UPSTREAM_KEY_HEADER
+} from '../src/lib/services/prices/proxyProtocol.ts';
 
-export { PROXY_KEY_HEADER, PROXY_PATH };
+export { PROXY_KEY_HEADER, PROXY_PATH, UPSTREAM_KEY_HEADER };
 
 /**
  * Hosts the proxy may fetch. Add a provider's source host here when adding a
@@ -24,7 +28,17 @@ export { PROXY_KEY_HEADER, PROXY_PATH };
  */
 export const ALLOWED_HOSTS: Record<string, true> = {
 	'www.ecb.europa.eu': true,
-	'www.vanguard.com.au': true
+	'www.vanguard.com.au': true,
+	'api.aware.com.au': true
+};
+
+/**
+ * Hosts that need an API key from the user. The client's `X-Upstream-Key`
+ * value is forwarded as `X-API-KEY` to these hosts only; for any other host
+ * it is dropped.
+ */
+export const UPSTREAM_KEY_HOSTS: Record<string, true> = {
+	'api.aware.com.au': true
 };
 
 const TIMEOUT_MS = 15_000;
@@ -148,14 +162,19 @@ export async function handleProxyRequest(
 	const controller = new AbortController();
 	const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
 	try {
+		// Never forward the browser's Origin/Referer/Cookie: several price
+		// sources reject foreign origins outright (Vanguard answers 500).
+		const upstreamHeaders: Record<string, string> = {
+			Accept: 'application/json, text/plain, */*',
+			'User-Agent': USER_AGENT
+		};
+		const upstreamKey = request.headers.get(UPSTREAM_KEY_HEADER);
+		if (upstreamKey && Object.hasOwn(UPSTREAM_KEY_HOSTS, target.hostname)) {
+			upstreamHeaders['X-API-KEY'] = upstreamKey;
+		}
 		const upstream = await fetchImpl(target, {
 			method: 'GET',
-			// Never forward the browser's Origin/Referer/Cookie: several price
-			// sources reject foreign origins outright (Vanguard answers 500).
-			headers: {
-				Accept: 'application/json, text/plain, */*',
-				'User-Agent': USER_AGENT
-			},
+			headers: upstreamHeaders,
 			redirect: 'manual',
 			signal: controller.signal
 		});

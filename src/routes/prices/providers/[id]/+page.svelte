@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import CataloguePicker from '#lib/components/CataloguePicker.svelte';
+	import AwareCatalogue from '#lib/components/AwareCatalogue.svelte';
 	import { hasCatalogue } from '#lib/services/prices/priceCatalogueService';
 	import { listPriceProviders } from '#lib/services/prices/priceProviderRegistry';
 	import {
@@ -203,7 +204,14 @@
 			</section>
 
 			<!-- Securities -->
-			{#if hasCatalogue(provider.id)}
+			{#if provider.id === 'aware'}
+				<section class="card bg-base-100 shadow-sm">
+					<div class="card-body gap-3 p-4">
+						<h2 class="card-title text-base">Investment options</h2>
+						<AwareCatalogue />
+					</div>
+				</section>
+			{:else if hasCatalogue(provider.id)}
 				<section class="card bg-base-100 shadow-sm">
 					<div class="card-body gap-3 p-4">
 						<h2 class="card-title text-base">Securities</h2>
