@@ -47,6 +47,6 @@ Some sources block browser requests with CORS. Those are fetched through the app
 
 ## Running it
 
-Press **Download latest prices**. The latest prices are written to the destination file and the ledger reloads in the background. The _Last run_ card shows the price date and counts.
+Press **Download latest prices**. The latest prices are written to the destination file and the ledger reloads in the background. The _Last run_ card shows the price date and counts; the _Output file_ card shows the destination file's current contents, so you can verify the exact price lines that were written.
 
 Two devices that download the same prices write byte-identical file content, so file sync (S3/WebDAV) transfers nothing; a device with older prices produces an ordinary file change that you resolve by keeping one side or re-running the download.

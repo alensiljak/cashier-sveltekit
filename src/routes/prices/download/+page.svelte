@@ -25,6 +25,7 @@
 	import demoDataService from '#lib/services/demoDataService';
 	import fullLedgerService from '#lib/services/ledgerWorkerClient';
 	import { PRICES_DEFAULT_DESTINATION } from '#lib/constants';
+	import { readFile } from '#lib/utils/opfslib';
 	import { deviceSettings, DeviceSettingKeys, SettingKeys } from '#lib/settings';
 	import { onMount } from 'svelte';
 	import { goto, replaceState } from '$app/navigation';
@@ -48,6 +49,8 @@
 	let plan = $state<PriceDownloadPlan | null>(null);
 	let status = $state<PriceDownloadStatus | null>(null);
 	let result = $state<PriceDownloadResult | null>(null);
+	/** Current contents of the destination file, shown after a run and on load. */
+	let written = $state<string | null>(null);
 	let running = $state(false);
 	let error = $state<string | null>(null);
 	let demoActive = $state(false);
@@ -91,6 +94,7 @@
 		config = await resolveConfig();
 		applyPickerReturn();
 		await checkTarget();
+		await refreshWritten();
 		await refreshPlan();
 		status = await getDownloadStatus();
 		demoActive = await demoDataService.isDemoActive();
@@ -124,6 +128,10 @@
 		included = targetError ? null : await isTargetIncluded(config.targetFile);
 	}
 
+	async function refreshWritten() {
+		written = (await readFile(config.targetFile)) ?? null;
+	}
+
 	async function refreshPlan() {
 		try {
 			plan = await planDownload(config);
@@ -138,6 +146,7 @@
 	async function updateConfig(patch: Partial<PriceDownloadConfig>) {
 		config = { ...config, ...patch };
 		await checkTarget();
+		await refreshWritten();
 		await saveConfig(config);
 		await refreshPlan();
 	}
@@ -179,6 +188,7 @@
 		result = null;
 		try {
 			result = await downloadPrices(config);
+			await refreshWritten();
 			status = await getDownloadStatus();
 			// The file write triggered a background ledger reload; the plan's
 			// book pairs may have grown, so recompute the preview.
@@ -408,6 +418,23 @@
 							Not in the provider's response, so not written: {result.missing.join(', ')}
 						</p>
 					{/if}
+				</div>
+			</div>
+		{/if}
+
+		<!-- ── Output ─────────────────────────────────────────────── -->
+		{#if written !== null && !targetError}
+			<div class="card bg-base-100 rounded-lg">
+				<div class="bg-primary rounded-t-lg px-3 py-2 text-lg">Output file</div>
+				<div class="card-body py-3 px-3 space-y-2">
+					<p class="text-xs opacity-60">
+						Current contents of <code>{config.targetFile}</code>.
+					</p>
+					<textarea
+						class="textarea textarea-bordered h-40 w-full font-mono text-xs"
+						readonly
+						aria-label="Prices written to the output file"
+						value={written}></textarea>
 				</div>
 			</div>
 		{/if}
