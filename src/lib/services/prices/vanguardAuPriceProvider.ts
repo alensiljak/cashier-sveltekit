@@ -10,8 +10,10 @@
  *   GET /personal/api/products/personal/fund/{portId}/prices?limit=1
  *     → { data: [{ navPrices: [{ asOfDate, currencyCode, price }] }] }
  *
- * The catalogue maps the book's commodity metadata (`apir` for managed funds,
- * `ticker` for ETFs) to a `portId`; the commodity name is never guessed. The
+ * The catalogue is downloaded only when the user asks (Price Download →
+ * catalogue) and the chosen products are remembered. They map the book's
+ * commodity metadata (`apir` for managed funds, `ticker` for ETFs) to a
+ * `portId`; the commodity name is never guessed. The
  * old Python downloader called `…/detail?limit=1` and hardcoded two fund ids;
  * `…/prices?limit=1` returns the same NAV fields in ~650 bytes instead of
  * ~1.1 MB.
@@ -20,7 +22,13 @@
  * every failure aborts the run before the destination file is written.
  */
 
-import type { DeclaredCommodity, FetchedQuotes, PriceProvider, PriceQuote } from './priceProvider';
+import type {
+	CatalogueProduct,
+	DeclaredCommodity,
+	FetchedQuotes,
+	PriceProvider,
+	PriceQuote
+} from './priceProvider';
 import { proxyFetch } from './proxyFetch';
 
 const CATALOGUE_URL = 'https://www.vanguard.com.au/personal/api/products/personal/funds/allfunds';
@@ -64,14 +72,20 @@ function bodyData(body: unknown, what: string): unknown[] {
 	return record.data;
 }
 
+/** A non-empty string, or undefined. */
+function text(value: unknown): string | undefined {
+	return typeof value === 'string' && value.trim() !== '' ? value.trim() : undefined;
+}
+
 /**
- * Parse the product catalogue into an identifier → portId map. Both APIR
- * (managed funds) and ASX ticker (ETFs) are indexed; products carrying
- * neither cannot be matched to a book commodity and are skipped.
+ * Parse the product catalogue into selectable products. A product is kept only
+ * when it carries an APIR (managed funds) or ASX ticker (ETFs): without one it
+ * can never be matched to a book commodity. The label is the product's name
+ * when the response has one (`name` / `fundName`), else its identifier.
  */
-export function parseVanguardCatalogue(body: unknown): Map<string, string> {
+export function parseVanguardCatalogue(body: unknown): CatalogueProduct[] {
 	const data = bodyData(body, 'product list');
-	const identifiers = new Map<string, string>();
+	const products: CatalogueProduct[] = [];
 	for (const [i, entry] of data.entries()) {
 		const product = recordOf(entry, `product list entry ${i}`);
 		const portId = product.portId;
@@ -81,14 +95,20 @@ export function parseVanguardCatalogue(body: unknown): Map<string, string> {
 		const symbols = product.tradingSymbols;
 		if (typeof symbols !== 'object' || symbols === null) continue;
 		const tradingSymbols = recordOf(symbols, `product list entry ${i} tradingSymbols`);
-		for (const id of [tradingSymbols.APIR, tradingSymbols.TICKER]) {
-			if (typeof id === 'string' && id !== '') identifiers.set(id, portId);
-		}
+		const apir = text(tradingSymbols.APIR);
+		const ticker = text(tradingSymbols.TICKER);
+		if (!apir && !ticker) continue;
+		products.push({
+			portId,
+			label: text(product.name) ?? text(product.fundName) ?? ticker ?? apir!,
+			...(apir && { apir }),
+			...(ticker && { ticker })
+		});
 	}
-	if (identifiers.size === 0) {
+	if (products.length === 0) {
 		throw new Error('Vanguard product list contains no APIR or ticker identifiers');
 	}
-	return identifiers;
+	return products;
 }
 
 /**
@@ -135,35 +155,37 @@ export interface VanguardResponse {
 
 export type VanguardFetch = (url: string) => Promise<VanguardResponse>;
 
-/** Securities providers always implement the optional catalogue hook. */
+/** Securities providers always implement the optional catalogue hooks. */
 export interface VanguardAuPriceProvider extends PriceProvider {
-	resolveCovered(commodities: DeclaredCommodity[]): Promise<string[]>;
+	fetchCatalogue(): Promise<CatalogueProduct[]>;
+	resolveCovered(
+		commodities: DeclaredCommodity[],
+		selection: CatalogueProduct[]
+	): Promise<string[]>;
 }
 
 /**
  * Create a provider with an injectable fetch (unit tests). The registered
  * singleton below uses `proxyFetch`, which adds the shared proxy key.
+ *
+ * The catalogue is fetched only by `fetchCatalogue` (a user action); planning
+ * and downloading work from the user's stored selection, so a routine run
+ * makes one request per selected product and nothing else.
  */
 export function createVanguardAuPriceProvider(
 	fetchImpl: VanguardFetch = proxyFetch
 ): VanguardAuPriceProvider {
-	let cataloguePromise: Promise<Map<string, string>> | null = null;
 	let resolved = new Map<string, string>();
 
-	async function catalogue(): Promise<Map<string, string>> {
-		cataloguePromise ??= (async () => {
-			const response = await fetchImpl(CATALOGUE_URL);
-			if (!response.ok) {
-				throw new Error(`Vanguard product list request failed: HTTP ${response.status}`);
+	/** Identifier → portId over the selected products only. */
+	function identifiersOf(selection: CatalogueProduct[]): Map<string, string> {
+		const identifiers = new Map<string, string>();
+		for (const product of selection) {
+			for (const id of [product.apir, product.ticker]) {
+				if (id) identifiers.set(id, product.portId);
 			}
-			return parseVanguardCatalogue(await response.json());
-		})().catch((err: unknown) => {
-			// A failed catalogue fetch must not poison later attempts (e.g. after
-			// the user fixes the proxy key).
-			cataloguePromise = null;
-			throw err;
-		});
-		return cataloguePromise;
+		}
+		return identifiers;
 	}
 
 	function portIdFor(
@@ -186,12 +208,15 @@ export function createVanguardAuPriceProvider(
 		covers(symbol) {
 			return resolved.has(symbol);
 		},
-		async resolveCovered(commodities) {
-			if (commodities.length === 0) {
-				resolved = new Map();
-				return [];
+		async fetchCatalogue() {
+			const response = await fetchImpl(CATALOGUE_URL);
+			if (!response.ok) {
+				throw new Error(`Vanguard product list request failed: HTTP ${response.status}`);
 			}
-			const identifiers = await catalogue();
+			return parseVanguardCatalogue(await response.json());
+		},
+		async resolveCovered(commodities, selection) {
+			const identifiers = identifiersOf(selection);
 			resolved = new Map();
 			const covered: string[] = [];
 			for (const commodity of commodities) {
@@ -203,7 +228,6 @@ export function createVanguardAuPriceProvider(
 			return covered;
 		},
 		async fetchLatest(symbols) {
-			await catalogue();
 			const products = symbols.map((symbol) => {
 				const portId = resolved.get(symbol);
 				if (!portId) throw new Error(`No Vanguard Australia product for ${symbol}`);

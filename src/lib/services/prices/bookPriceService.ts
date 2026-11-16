@@ -15,7 +15,7 @@ import fullLedgerService from '#lib/services/ledgerWorkerClient';
 import { reloadLedgerFromOpfs } from '#lib/services/ledgerReload';
 import { readFile, saveFile } from '#lib/utils/opfslib';
 import { buildBookPricePlan, type BookPricePlan } from './bookPricePlan';
-import { getIgnored, getNicknames, saveIgnored } from './priceNicknames';
+import { getDisabledProviders, getIgnored, getNicknames, saveIgnored } from './priceNicknames';
 import { resolveConfig, validateTargetFile } from './priceDownloadService';
 import { buildPriceFile, mergePriceFile, parsePriceFile, toDirectives } from './priceFileService';
 import type { PriceDirective } from './priceFileService';
@@ -23,11 +23,16 @@ import { getPriceProvider, listPriceProviders } from './priceProviderRegistry';
 
 export async function loadBookPlan(): Promise<BookPricePlan> {
 	await fullLedgerService.ensureLoaded();
-	const [commodities, nicknames, ignored] = await Promise.all([
+	const [commodities, allNicknames, ignored, disabled] = await Promise.all([
 		fullLedgerService.getCommodityDirectives(),
 		getNicknames(),
-		getIgnored()
+		getIgnored(),
+		getDisabledProviders()
 	]);
+	// A switched-off provider keeps its nicknames but takes no part in the plan:
+	// its sources read as unmapped until it is turned back on.
+	const off = new Set(disabled);
+	const nicknames = Object.fromEntries(Object.entries(allNicknames).filter(([, id]) => !off.has(id)));
 	return buildBookPricePlan({ commodities, nicknames, ignored, providers: listPriceProviders() });
 }
 

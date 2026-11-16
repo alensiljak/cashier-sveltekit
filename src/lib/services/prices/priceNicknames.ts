@@ -42,6 +42,19 @@ export async function saveIgnored(ignored: string[]): Promise<void> {
 	await settings.set(SettingKeys.priceIgnored, ignored);
 }
 
+/** Provider ids the user switched off. Everything else is enabled. */
+export async function getDisabledProviders(): Promise<string[]> {
+	const stored = await settings.get<unknown>(SettingKeys.priceDisabledProviders);
+	return Array.isArray(stored) ? stored.filter((s): s is string => typeof s === 'string') : [];
+}
+
+export async function setProviderEnabled(providerId: string, enabled: boolean): Promise<void> {
+	const disabled = new Set(await getDisabledProviders());
+	if (enabled) disabled.delete(providerId);
+	else disabled.add(providerId);
+	await settings.set(SettingKeys.priceDisabledProviders, [...disabled].sort());
+}
+
 export interface BookSource {
 	source: string;
 	/** Commodities whose (first) `price` entry uses this source. */

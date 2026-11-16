@@ -23,6 +23,7 @@ import { readFile, saveFile } from '#lib/utils/opfslib';
 import { reloadLedgerFromOpfs } from '#lib/services/ledgerReload';
 import type { PriceProvider } from './priceProvider';
 import { getPriceProvider, defaultPriceProvider } from './priceProviderRegistry';
+import { getCatalogueSelection } from './priceCatalogueService';
 import {
 	derivePriceSymbols,
 	deriveSecuritySymbols,
@@ -275,8 +276,12 @@ export async function planDownload(configArg?: PriceDownloadConfig): Promise<Pri
 		provider.kind === 'securities'
 			? deriveSecuritySymbols({
 					declaredCommodities,
+					// Local only: the user's stored catalogue selection, never a fetch.
 					covered: provider.resolveCovered
-						? await provider.resolveCovered(declaredCommodities)
+						? await provider.resolveCovered(
+								declaredCommodities,
+								await getCatalogueSelection(provider.id)
+							)
 						: declaredCommodities
 								.map((commodity) => commodity.name)
 								.filter((symbol) => provider.covers(symbol))

@@ -402,7 +402,13 @@
 						</div>
 					{:else}
 						<p class="text-sm opacity-70">
-							Nothing to fetch — the provider cannot serve any of the commodities your book uses.
+							{#if plan.provider.kind === 'securities'}
+								Nothing to fetch — select products in
+								<a class="link" href="/prices/providers/{plan.provider.id}">the provider's settings</a>
+								that match a commodity in your book (by <code>apir</code> or <code>ticker</code> meta).
+							{:else}
+								Nothing to fetch — the provider cannot serve any of the commodities your book uses.
+							{/if}
 						</p>
 					{/if}
 

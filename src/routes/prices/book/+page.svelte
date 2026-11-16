@@ -1,5 +1,7 @@
 <script lang="ts">
 	import Toolbar from '#lib/components/Toolbar.svelte';
+	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
+	import SettingsIcon from '@lucide/svelte/icons/settings';
 	import type { BookPricePlan, CommodityPlanEntry } from '#lib/services/prices/bookPricePlan';
 	import {
 		downloadAllFromBook,
@@ -75,7 +77,13 @@
 	}
 </script>
 
-<Toolbar title="Book Prices" />
+<Toolbar title="Book Prices">
+	{#snippet menuItems()}
+		<ToolbarMenuItem text="Price providers" Icon={SettingsIcon} targetNav="/prices/providers" />
+		<!-- Interim entry to the per-provider download page, until its place is decided. -->
+		<ToolbarMenuItem text="Provider download" Icon={DownloadIcon} targetNav="/prices/download" />
+	{/snippet}
+</Toolbar>
 
 <main class="flex flex-col flex-1">
 	<div class="flex flex-col gap-4 p-4 mx-auto max-w-2xl w-full">
@@ -97,7 +105,7 @@
 					<div class="flex items-center gap-2">
 						<h2 class="card-title text-base flex-1">Providers</h2>
 						<button class="btn btn-ghost btn-xs rounded" onclick={() => goto('/prices/providers')}>
-							Nicknames
+							Manage
 						</button>
 					</div>
 					<ul class="flex flex-col gap-2">
@@ -206,7 +214,7 @@
 			{@render group(
 				'Unmapped source',
 				unmapped,
-				'The price tag names a source with no provider. Map it on the Nicknames page.'
+				'The price tag names a source with no provider. Map it in the provider settings (and check the provider is switched on).'
 			)}
 			{@render group('Invalid', invalid, 'The price tag is malformed or the provider rejected it.')}
 			{@render group(

@@ -26,6 +26,18 @@ export interface DeclaredCommodity {
 	apir?: string;
 }
 
+/** One product in a securities provider's catalogue. */
+export interface CatalogueProduct {
+	/** Provider-internal id used to request the price. */
+	portId: string;
+	/** Display label: the product's name when published, else its identifier. */
+	label: string;
+	/** Managed-fund identifier, matched against a commodity's `apir` meta. */
+	apir?: string;
+	/** ASX ticker, matched against a commodity's `ticker` meta. */
+	ticker?: string;
+}
+
 export interface PriceQuote {
 	/** Currency/commodity being priced (the directive's base). */
 	base: string;
@@ -77,12 +89,22 @@ export interface PriceProvider {
 	/** Whether the provider can serve prices for `symbol`. */
 	covers(symbol: string): boolean;
 	/**
-	 * Securities providers that match by metadata override this: given every
-	 * declared commodity, return the names they can serve. Providers that match
-	 * by symbol alone can omit it and rely on `covers`. The result is cached for
-	 * `fetchLatest`.
+	 * Securities providers with a product catalogue implement this: download the
+	 * full list, on explicit user request only. Never called by planning or by a
+	 * routine download — those work from the stored `selection` alone.
 	 */
-	resolveCovered?(commodities: DeclaredCommodity[]): Promise<string[]>;
+	fetchCatalogue?(): Promise<CatalogueProduct[]>;
+	/**
+	 * Securities providers that match by metadata override this: given every
+	 * declared commodity and the products the user selected from the catalogue,
+	 * return the commodity names they can serve. Pure — no network. Providers
+	 * that match by symbol alone can omit it and rely on `covers`. The result is
+	 * remembered for `fetchLatest`.
+	 */
+	resolveCovered?(
+		commodities: DeclaredCommodity[],
+		selection: CatalogueProduct[]
+	): Promise<string[]>;
 	/**
 	 * Book-driven mode: decide whether this provider can serve `commodity` for
 	 * the `price` meta entry `spec`. Return a reason string when it cannot, or

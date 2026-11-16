@@ -116,16 +116,26 @@ export const SettingKeys = {
 	priceTargetFile: 'prices.targetFile',
 	priceWriteMode: 'prices.writeMode',
 	priceSymbols: 'prices.symbols',
+	// catalogueSelection: Record<providerId, CatalogueProduct[]> — the products the user
+	// picked from a securities provider's catalogue. Self-contained (id, label, identifiers)
+	// so a routine download never needs the catalogue itself.
+	priceCatalogueSelection: 'prices.catalogueSelection',
 	// Book-driven price download (doc/projects/2026-11-16_book-driven-price-download.md).
 	// nicknames: Record<string, providerId> — maps the `source` part of a commodity's
 	// Beancount `price` meta (`QUOTE:source/SYMBOL`) to a registered provider id.
 	// ignored: string[] — commodities acknowledged as deliberately not priced.
 	priceNicknames: 'prices.nicknames',
-	priceIgnored: 'prices.ignored'
+	priceIgnored: 'prices.ignored',
+	// disabledProviders: string[] — provider ids switched off on the Price Providers page.
+	// Disabled providers are skipped by the book-driven download. Default: none (all on).
+	priceDisabledProviders: 'prices.disabledProviders'
 };
 
 /** Settings specific to this device (not exported). */
 export const DeviceSettingKeys = {
+	// Downloaded provider catalogues: Record<providerId, { fetchedAt: ISO, products: CatalogueProduct[] }>.
+	// A cache for browsing the catalogue; refreshed only by an explicit button press.
+	priceCatalogues: 'prices.catalogues',
 	// Home screen cards: visible card names, in display order. Each device keeps its own layout.
 	// (Previously a shared setting under the same key; read as a fallback in appService.getVisibleCards.)
 	visibleCards: 'homeCardNames',

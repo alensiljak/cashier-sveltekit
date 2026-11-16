@@ -49,13 +49,18 @@ function stubFetch(prices: Record<string, unknown>) {
 }
 
 describe('parseVanguardCatalogue', () => {
-	it('maps APIR and ticker identifiers to port ids', () => {
-		expect(parseVanguardCatalogue(catalogue)).toEqual(
-			new Map([
-				['VAN0004AU', '8105'],
-				['VAF', '8207']
-			])
-		);
+	it('lists products that carry an APIR or ticker, skipping the rest', () => {
+		expect(parseVanguardCatalogue(catalogue)).toEqual([
+			{ portId: '8105', label: 'VAN0004AU', apir: 'VAN0004AU' },
+			{ portId: '8207', label: 'VAF', ticker: 'VAF' }
+		]);
+	});
+
+	it('labels a product with its published name when there is one', () => {
+		const body = {
+			data: [{ portId: '8207', name: 'Vanguard Australian Fixed Interest', tradingSymbols: { TICKER: 'VAF' } }]
+		};
+		expect(parseVanguardCatalogue(body)[0].label).toBe('Vanguard Australian Fixed Interest');
 	});
 
 	it('rejects a response without a data array', () => {
@@ -126,23 +131,41 @@ describe('parseVanguardPrice', () => {
 	});
 });
 
+/** The products a user would pick from the catalogue above. */
+const selection = parseVanguardCatalogue(catalogue);
+
 describe('Vanguard AU provider', () => {
-	it('matches commodities by APIR or ticker metadata', async () => {
+	it('matches commodities to the selection by APIR or ticker metadata', async () => {
+		const { fetchImpl, calls } = stubFetch({});
+		const provider = createVanguardAuPriceProvider(fetchImpl);
+		const covered = await provider.resolveCovered(
+			[
+				{ name: 'PROP', apir: 'VAN0004AU' },
+				{ name: 'VAF', ticker: 'VAF' },
+				{ name: 'VAN0004AU' },
+				{ name: 'VTI', ticker: 'VTI' }
+			],
+			selection
+		);
+		expect(covered).toEqual(['PROP', 'VAF']);
+		expect(calls).toEqual([]);
+	});
+
+	it('only covers products the user selected', async () => {
 		const { fetchImpl } = stubFetch({});
 		const provider = createVanguardAuPriceProvider(fetchImpl);
-		const covered = await provider.resolveCovered([
+		const commodities = [
 			{ name: 'PROP', apir: 'VAN0004AU' },
-			{ name: 'VAF', ticker: 'VAF' },
-			{ name: 'VAN0004AU' },
-			{ name: 'VTI', ticker: 'VTI' }
-		]);
-		expect(covered).toEqual(['PROP', 'VAF']);
+			{ name: 'VAF', ticker: 'VAF' }
+		];
+		expect(await provider.resolveCovered(commodities, [selection[1]])).toEqual(['VAF']);
+		expect(await provider.resolveCovered(commodities, [])).toEqual([]);
 	});
 
 	it('does not match a commodity by name alone', async () => {
 		const { fetchImpl } = stubFetch({});
 		const provider = createVanguardAuPriceProvider(fetchImpl);
-		expect(await provider.resolveCovered([{ name: 'VAN0004AU' }])).toEqual([]);
+		expect(await provider.resolveCovered([{ name: 'VAN0004AU' }], selection)).toEqual([]);
 	});
 
 	it('rejects a symbol that was not resolved', async () => {
@@ -153,11 +176,18 @@ describe('Vanguard AU provider', () => {
 		);
 	});
 
-	it('does not fetch the catalogue when nothing is declared', async () => {
+	it('downloads the catalogue only through fetchCatalogue', async () => {
 		const { fetchImpl, calls } = stubFetch({});
 		const provider = createVanguardAuPriceProvider(fetchImpl);
-		expect(await provider.resolveCovered([])).toEqual([]);
-		expect(calls).toEqual([]);
+		expect(await provider.fetchCatalogue()).toEqual(selection);
+		expect(calls).toHaveLength(1);
+		expect(calls[0]).toMatch(/\/funds\/allfunds$/);
+	});
+
+	it('fails fetchCatalogue on an HTTP error', async () => {
+		const fetchImpl: VanguardFetch = vi.fn(async () => response({}, 500));
+		const provider = createVanguardAuPriceProvider(fetchImpl);
+		await expect(provider.fetchCatalogue()).rejects.toThrow(/HTTP 500/);
 	});
 
 	it('fetches each product and keeps per-quote dates', async () => {
@@ -166,10 +196,13 @@ describe('Vanguard AU provider', () => {
 			'8207': priceBody(45.21, '2026-11-13')
 		});
 		const provider = createVanguardAuPriceProvider(fetchImpl);
-		await provider.resolveCovered([
-			{ name: 'PROP', apir: 'VAN0004AU' },
-			{ name: 'VAF', ticker: 'VAF' }
-		]);
+		await provider.resolveCovered(
+			[
+				{ name: 'PROP', apir: 'VAN0004AU' },
+				{ name: 'VAF', ticker: 'VAF' }
+			],
+			selection
+		);
 
 		const fetched = await provider.fetchLatest(['PROP', 'VAF']);
 		expect(fetched.source).toBe('vanguard-au');
@@ -179,17 +212,18 @@ describe('Vanguard AU provider', () => {
 			{ base: 'PROP', rate: 0.9736, quote: 'AUD', date: '2026-11-16' },
 			{ base: 'VAF', rate: 45.21, quote: 'AUD', date: '2026-11-13' }
 		]);
-		// One catalogue request + one per product.
-		expect(calls).toHaveLength(3);
+		// One request per product — the catalogue is never fetched.
+		expect(calls).toHaveLength(2);
+		expect(calls.some((url) => url.endsWith('/funds/allfunds'))).toBe(false);
 	});
 
-	it('caches the catalogue across plan and fetch calls', async () => {
+	it('requests a single selected product on its own', async () => {
 		const { fetchImpl, calls } = stubFetch({ '8105': priceBody(0.9736) });
 		const provider = createVanguardAuPriceProvider(fetchImpl);
-		await provider.resolveCovered([{ name: 'PROP', apir: 'VAN0004AU' }]);
-		await provider.resolveCovered([{ name: 'PROP', apir: 'VAN0004AU' }]);
+		await provider.resolveCovered([{ name: 'PROP', apir: 'VAN0004AU' }], selection);
 		await provider.fetchLatest(['PROP']);
-		expect(calls.filter((url) => url.endsWith('/funds/allfunds'))).toHaveLength(1);
+		expect(calls).toHaveLength(1);
+		expect(calls[0]).toMatch(/\/fund\/8105\/prices\?limit=1$/);
 	});
 
 	it('reports products without a NAV as missing', async () => {
@@ -198,10 +232,13 @@ describe('Vanguard AU provider', () => {
 			'8207': { data: [{ navPrices: [] }] }
 		});
 		const provider = createVanguardAuPriceProvider(fetchImpl);
-		await provider.resolveCovered([
-			{ name: 'PROP', apir: 'VAN0004AU' },
-			{ name: 'VAF', ticker: 'VAF' }
-		]);
+		await provider.resolveCovered(
+			[
+				{ name: 'PROP', apir: 'VAN0004AU' },
+				{ name: 'VAF', ticker: 'VAF' }
+			],
+			selection
+		);
 		const fetched = await provider.fetchLatest(['PROP', 'VAF']);
 		expect(fetched.quotes.map((q) => q.base)).toEqual(['PROP']);
 		expect(fetched.missing).toEqual(['VAF']);
@@ -210,30 +247,14 @@ describe('Vanguard AU provider', () => {
 	it('throws when no requested product returns a price', async () => {
 		const { fetchImpl } = stubFetch({ '8105': { data: [{ navPrices: [] }] } });
 		const provider = createVanguardAuPriceProvider(fetchImpl);
-		await provider.resolveCovered([{ name: 'PROP', apir: 'VAN0004AU' }]);
+		await provider.resolveCovered([{ name: 'PROP', apir: 'VAN0004AU' }], selection);
 		await expect(provider.fetchLatest(['PROP'])).rejects.toThrow(/no prices/);
 	});
 
 	it('throws on an HTTP failure instead of writing a partial run', async () => {
 		const { fetchImpl } = stubFetch({});
 		const provider = createVanguardAuPriceProvider(fetchImpl);
-		await provider.resolveCovered([{ name: 'PROP', apir: 'VAN0004AU' }]);
+		await provider.resolveCovered([{ name: 'PROP', apir: 'VAN0004AU' }], selection);
 		await expect(provider.fetchLatest(['PROP'])).rejects.toThrow(/HTTP 404/);
-	});
-
-	it('does not cache a failed catalogue request', async () => {
-		let attempts = 0;
-		const fetchImpl: VanguardFetch = vi.fn(async () => {
-			attempts++;
-			return attempts === 1 ? response({}, 500) : response(catalogue);
-		});
-		const provider = createVanguardAuPriceProvider(fetchImpl);
-		await expect(provider.resolveCovered([{ name: 'PROP', apir: 'VAN0004AU' }])).rejects.toThrow(
-			/HTTP 500/
-		);
-		await expect(provider.resolveCovered([{ name: 'PROP', apir: 'VAN0004AU' }])).resolves.toEqual([
-			'PROP'
-		]);
-		expect(attempts).toBe(2);
 	});
 });

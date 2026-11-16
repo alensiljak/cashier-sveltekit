@@ -405,14 +405,14 @@
 						</li>
 						<li>
 							<a
-								href="/prices/download"
-								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/prices/download'
+								href="/prices/book"
+								class="flex w-full items-center gap-2 py-2 {page.url.pathname === '/prices/book'
 									? 'active bg-secondary text-secondary-content'
 									: ''}"
 								onclick={closeDrawer}
 							>
 								<TrendingDownIcon />
-								<span>Price Download</span>
+								<span>Book Prices</span>
 							</a>
 						</li>
 						<!-- <li>
