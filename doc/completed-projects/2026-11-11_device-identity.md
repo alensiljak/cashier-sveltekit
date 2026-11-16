@@ -241,10 +241,6 @@ Sub-steps:
   - Limit: a record whose signer is not trusted on a device is ignored there, and stays in the bucket for other devices.
 - **6c. Group secret rotation: left out on purpose.** Devices mostly sync one to one, so the room is rarely shared by more than two, and the evicted device can only learn who is online, not read or write anything: trust is decided by keys, and the evicted key is refused everywhere. Rotation would need each device in two rooms for 30 days (or re-inviting devices that were offline), a lot of machinery for hiding presence. Revisit if groups of three or more become common, or if hiding presence from an evicted device matters.
 
-## Open questions
-
-- None open at the moment.
-
 ## Related
 
 - [peer-sync help](/doc/help/peer-sync.md)
