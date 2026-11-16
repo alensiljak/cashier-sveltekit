@@ -2,24 +2,26 @@
  * Derives the book-relevant set of symbols to fetch (Price Download design,
  * doc/completed-projects/2026-11-15_price-download.md).
  *
- * Candidates come from what the book actually uses: the app's default
- * currency, the ledger's operating currencies, both sides of existing price
- * directives, and the currencies of open accounts. They are then classified:
+ * Every commodity is declared explicitly in the book, currencies included. The
+ * declared `commodity` directives are therefore the single source of
+ * candidates; usage (existing price directives) is only consulted for the
+ * direction of a pair the book already maintains.
  *
- * - Non-monetary commodities (ticker/ISIN/APIR metadata or a non-ISO name)
- *   are irrelevant for FX and never listed as skips — they move to their own
- *   `securities` bucket.
- * - Currencies the provider cannot serve are skipped with a reason.
- * - For currency candidates whose EUR-pair the book already maintains, the
- *   download must NOT write a second, opposite-direction series: the ledger
- *   coalesces both directions of a pair (the denser series wins), so a fresh
- *   opposite-direction series would be silently ignored. Instead the new
- *   rates are written in the book's own series direction, extending it with
- *   new fixing dates.
+ * - A commodity carrying ticker/ISIN/APIR metadata is a security: the FX plan
+ *   moves it to the `securities` bucket, and a securities provider matches it
+ *   by that metadata (or by symbol, if it says so through `covers`).
+ * - A commodity without an identifier is a currency candidate for an FX
+ *   provider; `covers` decides whether the provider publishes it.
+ * - For a currency whose pair the book already maintains, the download must
+ *   NOT write a second, opposite-direction series: the ledger coalesces both
+ *   directions of a pair (the denser series wins), so a fresh
+ *   opposite-direction series would be silently ignored. Instead the new rates
+ *   are written in the book's own series direction, extending it with new
+ *   fixing dates.
  */
 
 import fullLedgerService from '#lib/services/ledgerWorkerClient';
-import type { DeclaredSecurity } from './priceProvider';
+import type { DeclaredCommodity } from './priceProvider';
 
 export interface PricePair {
 	base: string;
@@ -36,7 +38,7 @@ export interface SymbolPlan {
 	invertedSymbols: string[];
 	/** Currency candidates the provider cannot serve. */
 	skippedUnsupported: string[];
-	/** Non-monetary commodities among the candidates — not FX. */
+	/** Declared commodities carrying an identifier — not FX. */
 	securities: string[];
 }
 
@@ -68,20 +70,8 @@ function seriesDirection(
 	return native > inverted ? 'native' : 'inverted';
 }
 
-let isoCurrencies: Set<string> | null = null;
-
 /**
- * Beancount has no marker distinguishing currencies from other commodities
- * (lots `{}` and `@@` prices use the same namespace), so a commodity counts as
- * a monetary currency when its name is an ISO 4217 code.
- */
-export function isMonetaryCurrency(symbol: string): boolean {
-	isoCurrencies ??= new Set(Intl.supportedValuesOf('currency'));
-	return isoCurrencies.has(symbol);
-}
-
-/**
- * Pure core: classify candidates. Direction comes from the book's own series
+ * Pure core for FX providers. Direction comes from the book's own series
  * (`userPairs`, one entry per directive, destination file excluded) first; only
  * when the user keeps none for a pair do the destination file's earlier
  * downloads (`destinationPairs`) decide. Within a tier the denser direction wins.
@@ -89,36 +79,26 @@ export function isMonetaryCurrency(symbol: string): boolean {
 export function derivePriceSymbols(input: {
 	/** Provider's native base (candidates equal to it are meaningless). */
 	base: string;
-	defaultCurrency: string | null;
-	operatingCurrencies: string[];
-	pairCurrencies: string[];
-	accountCurrencies: string[];
+	/** Every declared commodity, the book's explicit vocabulary. */
+	declaredCommodities: DeclaredCommodity[];
 	/** The user's own price directives, one entry per directive (destination excluded). */
 	userPairs: PricePair[];
 	/** Price directives previously written to the destination file, one per directive. */
 	destinationPairs: PricePair[];
-	/** Declared commodities that a securities provider could price. */
-	declaredSecurities: string[];
 	covers: (symbol: string) => boolean;
 }): SymbolPlan {
-	const securities = new Set(input.declaredSecurities);
 	const symbols: string[] = [];
 	const invertedSymbols: string[] = [];
 	const skippedUnsupported: string[] = [];
 	const securitiesOut: string[] = [];
 	const seen = new Set<string>();
 
-	const candidates = [
-		input.defaultCurrency,
-		...input.operatingCurrencies,
-		...input.pairCurrencies,
-		...input.accountCurrencies
-	];
-	for (const candidate of candidates) {
+	for (const commodity of input.declaredCommodities) {
+		const candidate = commodity.name;
 		if (!candidate || candidate === input.base || seen.has(candidate)) continue;
 		seen.add(candidate);
 
-		if (securities.has(candidate) || !isMonetaryCurrency(candidate)) {
+		if (commodity.ticker || commodity.isin || commodity.apir) {
 			securitiesOut.push(candidate);
 			continue;
 		}
@@ -150,7 +130,7 @@ export function derivePriceSymbols(input: {
  * fund NAV or ETF price is always written as `commodity → quote currency`.
  */
 export function deriveSecuritySymbols(input: {
-	declaredSecurities: DeclaredSecurity[];
+	declaredCommodities: DeclaredCommodity[];
 	/** Commodity names the provider's catalogue covers. */
 	covered: string[];
 }): SymbolPlan {
@@ -158,11 +138,14 @@ export function deriveSecuritySymbols(input: {
 	const symbols: string[] = [];
 	const skippedUnsupported: string[] = [];
 	const seen = new Set<string>();
-	for (const security of input.declaredSecurities) {
-		if (seen.has(security.name)) continue;
-		seen.add(security.name);
-		if (coveredSet.has(security.name)) symbols.push(security.name);
-		else skippedUnsupported.push(security.name);
+	for (const commodity of input.declaredCommodities) {
+		const name = commodity.name;
+		if (!name || seen.has(name)) continue;
+		seen.add(name);
+		if (coveredSet.has(name)) symbols.push(name);
+		// Only an identifier-marked commodity is a security; an uncovered
+		// currency is not a "skipped security".
+		else if (commodity.ticker || commodity.isin || commodity.apir) skippedUnsupported.push(name);
 	}
 	return { symbols, invertedSymbols: [], skippedUnsupported, securities: [] };
 }
@@ -186,38 +169,13 @@ export async function fetchBookPricePairs(): Promise<PricePair[]> {
 	return pairs;
 }
 
-/** Currencies of open accounts (posting/commodity currencies included). */
-export async function fetchAccountCurrencies(): Promise<string[]> {
-	const accounts = await fullLedgerService.getAllAccounts();
-	const currencies = new Set<string>();
-	for (const account of accounts) {
-		for (const currency of account.currencies ?? []) currencies.add(currency);
-	}
-	return [...currencies];
-}
-
-/**
- * Commodities declared in the book that a securities provider could price:
- * every non-monetary commodity, plus any commodity carrying ticker/ISIN/APIR
- * metadata. Currencies are FX candidates and are excluded unless explicitly
- * tagged as securities.
- */
-export async function fetchDeclaredSecurities(): Promise<DeclaredSecurity[]> {
-	const directives = (await fullLedgerService.getDirectives()) as Array<{
-		type?: string;
-		currency?: unknown;
-		meta?: Record<string, unknown>;
-	}>;
-	const securities: DeclaredSecurity[] = [];
-	for (const directive of directives) {
-		if (directive.type !== 'commodity' || typeof directive.currency !== 'string') continue;
-		const meta = directive.meta ?? {};
-		const ticker = typeof meta.ticker === 'string' ? meta.ticker : undefined;
-		const isin = typeof meta.isin === 'string' ? meta.isin : undefined;
-		const apir = typeof meta.apir === 'string' ? meta.apir : undefined;
-		if (ticker || isin || apir || !isMonetaryCurrency(directive.currency)) {
-			securities.push({ name: directive.currency, ticker, isin, apir });
-		}
-	}
-	return securities;
+/** Every declared commodity, with the identifiers a provider may match on. */
+export async function fetchDeclaredCommodities(): Promise<DeclaredCommodity[]> {
+	const directives = await fullLedgerService.getCommodityDirectives();
+	return directives.map(({ currency, meta }) => ({
+		name: currency,
+		ticker: typeof meta?.ticker === 'string' ? meta.ticker : undefined,
+		isin: typeof meta?.isin === 'string' ? meta.isin : undefined,
+		apir: typeof meta?.apir === 'string' ? meta.apir : undefined
+	}));
 }

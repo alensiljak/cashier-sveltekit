@@ -12,63 +12,61 @@ const covers = (symbol: string) => ['USD', 'CHF', 'AUD', 'GBP'].includes(symbol)
 function plan(input: Partial<Parameters<typeof derivePriceSymbols>[0]> = {}) {
 	return derivePriceSymbols({
 		base: 'EUR',
-		defaultCurrency: 'EUR',
-		operatingCurrencies: ['EUR'],
-		pairCurrencies: [],
-		accountCurrencies: [],
+		declaredCommodities: [],
 		userPairs: [],
 		destinationPairs: [],
-		declaredSecurities: [],
 		covers,
 		...input
 	});
 }
 
 describe('derivePriceSymbols', () => {
-	it('collects default, operating, pair and account currencies, deduplicated', () => {
+	it('uses the declared commodities, deduplicated', () => {
 		expect(
 			plan({
-				defaultCurrency: 'USD',
-				operatingCurrencies: ['EUR', 'USD'],
-				pairCurrencies: ['CHF', 'USD', 'EUR'],
-				accountCurrencies: ['GBP', 'CHF']
+				declaredCommodities: [{ name: 'USD' }, { name: 'USD' }, { name: 'CHF' }, { name: 'EUR' }]
 			})
 		).toEqual({
-			symbols: ['USD', 'CHF', 'GBP'],
+			symbols: ['USD', 'CHF'],
 			invertedSymbols: [],
 			skippedUnsupported: [],
 			securities: []
 		});
 	});
 
-	it('excludes the provider base and empty candidates', () => {
-		const result = plan({ pairCurrencies: ['EUR', '', 'USD'] });
+	it('excludes the provider base and empty names', () => {
+		const result = plan({
+			declaredCommodities: [{ name: 'EUR' }, { name: '' }, { name: 'USD' }]
+		});
 		expect(result.symbols).toEqual(['USD']);
 	});
 
 	it('splits out currency candidates the provider cannot serve', () => {
-		const result = plan({ pairCurrencies: ['USD', 'TRY'], accountCurrencies: ['HUF'] });
+		const result = plan({
+			declaredCommodities: [{ name: 'USD' }, { name: 'TRY' }, { name: 'HUF' }]
+		});
 		expect(result.symbols).toEqual(['USD']);
 		expect(result.skippedUnsupported).toEqual(['TRY', 'HUF']);
 	});
 
-	it('does not list non-currency commodities as unsupported currencies', () => {
-		// HY, VTI-style tickers etc. are not ISO 4217 codes, even undeclared.
-		const result = plan({ pairCurrencies: ['USD', 'HY', 'WBCPD'], accountCurrencies: ['BAM'] });
-		expect(result.symbols).toEqual(['USD']);
-		expect(result.skippedUnsupported).toEqual(['BAM']);
-		expect(result.securities).toEqual(['HY', 'WBCPD']);
-	});
-
-	it('lists declared securities separately instead of as skips', () => {
+	it('moves identifier-marked commodities to the securities bucket', () => {
 		const result = plan({
-			pairCurrencies: ['VTI', 'USD'],
-			accountCurrencies: ['UBUD.DE'],
-			declaredSecurities: ['VTI', 'UBUD.DE']
+			declaredCommodities: [
+				{ name: 'VTI', ticker: 'VTI' },
+				{ name: 'UBUD.DE', isin: 'LU0000000000' },
+				{ name: 'USD' }
+			]
 		});
 		expect(result.symbols).toEqual(['USD']);
 		expect(result.securities).toEqual(['VTI', 'UBUD.DE']);
 		expect(result.skippedUnsupported).toEqual([]);
+	});
+
+	it('reports an untagged commodity the provider cannot serve as skipped', () => {
+		const result = plan({ declaredCommodities: [{ name: 'USD' }, { name: 'GOLD' }] });
+		expect(result.symbols).toEqual(['USD']);
+		expect(result.skippedUnsupported).toEqual(['GOLD']);
+		expect(result.securities).toEqual([]);
 	});
 
 	it('writes maintained reverse-direction series in the book own direction', () => {
@@ -77,8 +75,7 @@ describe('derivePriceSymbols', () => {
 		// would be ignored. The rates are fetched but written inverted,
 		// extending the user's USD → EUR series.
 		const result = plan({
-			defaultCurrency: 'CHF',
-			pairCurrencies: ['USD', 'EUR'],
+			declaredCommodities: [{ name: 'CHF' }, { name: 'USD' }],
 			userPairs: [{ base: 'USD', quote: 'EUR' }]
 		});
 		expect(result).toEqual({
@@ -93,7 +90,7 @@ describe('derivePriceSymbols', () => {
 		// The book keeps EUR→CHF prices itself: same direction as ours, which
 		// just extends the series.
 		const result = plan({
-			defaultCurrency: 'CHF',
+			declaredCommodities: [{ name: 'CHF' }],
 			userPairs: [{ base: 'EUR', quote: 'CHF' }]
 		});
 		expect(result.symbols).toEqual(['CHF']);
@@ -102,7 +99,7 @@ describe('derivePriceSymbols', () => {
 
 	it('prefers the book series direction over pairs the app downloaded earlier', () => {
 		const result = plan({
-			pairCurrencies: ['USD', 'EUR'],
+			declaredCommodities: [{ name: 'USD' }],
 			userPairs: [{ base: 'USD', quote: 'EUR' }], // user's series: USD → EUR
 			destinationPairs: [{ base: 'EUR', quote: 'USD' }] // app's earlier native download
 		});
@@ -114,12 +111,12 @@ describe('derivePriceSymbols', () => {
 		const eurUsd = { base: 'EUR', quote: 'USD' };
 		// First-seen is the sparse EUR → USD, but USD → EUR has more directives.
 		const inverted = plan({
-			pairCurrencies: ['USD'],
+			declaredCommodities: [{ name: 'USD' }],
 			userPairs: [eurUsd, usdEur, usdEur, usdEur]
 		});
 		expect(inverted.invertedSymbols).toEqual(['USD']);
 		const native = plan({
-			pairCurrencies: ['USD'],
+			declaredCommodities: [{ name: 'USD' }],
 			userPairs: [usdEur, eurUsd, eurUsd]
 		});
 		expect(native.symbols).toEqual(['USD']);
@@ -127,13 +124,13 @@ describe('derivePriceSymbols', () => {
 
 	it('uses the destination direction when the user keeps no series for the pair', () => {
 		const result = plan({
-			pairCurrencies: ['USD'],
+			declaredCommodities: [{ name: 'USD' }],
 			destinationPairs: [{ base: 'USD', quote: 'EUR' }]
 		});
 		expect(result.invertedSymbols).toEqual(['USD']);
 	});
 
-	it('returns empty sets when the book is EUR-only', () => {
+	it('returns empty sets when nothing is declared', () => {
 		const result = plan();
 		expect(result.symbols).toEqual([]);
 		expect(result.invertedSymbols).toEqual([]);
@@ -143,9 +140,9 @@ describe('derivePriceSymbols', () => {
 });
 
 describe('deriveSecuritySymbols', () => {
-	it('keeps covered commodities and reports the rest as skipped', () => {
+	it('keeps covered commodities and reports identifier-marked misses as skipped', () => {
 		const result = deriveSecuritySymbols({
-			declaredSecurities: [
+			declaredCommodities: [
 				{ name: 'VAN0004AU', apir: 'VAN0004AU' },
 				{ name: 'VTI', ticker: 'VTI' },
 				{ name: 'UNKNOWN', ticker: 'UNKNOWN' }
@@ -160,9 +157,22 @@ describe('deriveSecuritySymbols', () => {
 		});
 	});
 
+	it('does not report an uncovered currency as a skipped security', () => {
+		const result = deriveSecuritySymbols({
+			declaredCommodities: [
+				{ name: 'EUR' },
+				{ name: 'VTI', ticker: 'VTI' },
+				{ name: 'UNKNOWN', ticker: 'UNKNOWN' }
+			],
+			covered: ['VTI']
+		});
+		expect(result.symbols).toEqual(['VTI']);
+		expect(result.skippedUnsupported).toEqual(['UNKNOWN']);
+	});
+
 	it('deduplicates repeated commodity directives', () => {
 		const result = deriveSecuritySymbols({
-			declaredSecurities: [
+			declaredCommodities: [
 				{ name: 'VAN0004AU', apir: 'VAN0004AU' },
 				{ name: 'VAN0004AU', apir: 'VAN0004AU' }
 			],
@@ -172,7 +182,7 @@ describe('deriveSecuritySymbols', () => {
 	});
 
 	it('returns an empty plan when nothing is declared', () => {
-		expect(deriveSecuritySymbols({ declaredSecurities: [], covered: [] })).toEqual({
+		expect(deriveSecuritySymbols({ declaredCommodities: [], covered: [] })).toEqual({
 			symbols: [],
 			invertedSymbols: [],
 			skippedUnsupported: [],

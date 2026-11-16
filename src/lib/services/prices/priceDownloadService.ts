@@ -27,8 +27,7 @@ import {
 	derivePriceSymbols,
 	deriveSecuritySymbols,
 	fetchBookPricePairs,
-	fetchAccountCurrencies,
-	fetchDeclaredSecurities,
+	fetchDeclaredCommodities,
 	type PricePair,
 	type SymbolPlan
 } from './priceCurrencies';
@@ -240,14 +239,10 @@ export async function planDownload(configArg?: PriceDownloadConfig): Promise<Pri
 	const provider = getPriceProvider(config.providerId);
 
 	await fullLedgerService.ensureLoaded();
-	const [defaultCurrency, operating, bookPairs, accountCurrencies, declaredSecurities] =
-		await Promise.all([
-			settings.get<string>(SettingKeys.currency),
-			fullLedgerService.getOperatingCurrencies(),
-			fetchBookPricePairs(),
-			fetchAccountCurrencies(),
-			fetchDeclaredSecurities()
-		]);
+	const [declaredCommodities, bookPairs] = await Promise.all([
+		fetchDeclaredCommodities(),
+		fetchBookPricePairs()
+	]);
 
 	// Direction priority: the user's own series (outside the destination
 	// file) first, then pairs this app itself wrote earlier — so a
@@ -279,20 +274,18 @@ export async function planDownload(configArg?: PriceDownloadConfig): Promise<Pri
 	const plan: SymbolPlan =
 		provider.kind === 'securities'
 			? deriveSecuritySymbols({
-					declaredSecurities,
-					covered: provider.resolveSecurities
-						? await provider.resolveSecurities(declaredSecurities)
-						: declaredSecurities.map((s) => s.name).filter((s) => provider.covers(s))
+					declaredCommodities,
+					covered: provider.resolveCovered
+						? await provider.resolveCovered(declaredCommodities)
+						: declaredCommodities
+								.map((commodity) => commodity.name)
+								.filter((symbol) => provider.covers(symbol))
 				})
 			: derivePriceSymbols({
 					base: provider.base,
-					defaultCurrency,
-					operatingCurrencies: operating,
-					pairCurrencies: bookPairs.flatMap((p) => [p.base, p.quote]),
-					accountCurrencies,
+					declaredCommodities,
 					userPairs,
 					destinationPairs,
-					declaredSecurities: declaredSecurities.map((s) => s.name),
 					covers: (symbol) => provider.covers(symbol)
 				});
 

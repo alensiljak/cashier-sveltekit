@@ -460,14 +460,14 @@
 						{/if}
 					</p>
 					{#if reloadState === 'reloading'}
-							<p class="flex items-center gap-2 text-sm opacity-70">
-								<span class="loading loading-spinner loading-xs"></span>
-								Reloading the book…
-							</p>
-						{:else if reloadState === 'done'}
-							<p class="text-sm text-success">Book reloaded — the new prices are in use.</p>
-						{/if}
-						{#if result.missing.length > 0}
+						<p class="flex items-center gap-2 text-sm opacity-70">
+							<span class="loading loading-spinner loading-xs"></span>
+							Reloading the book…
+						</p>
+					{:else if reloadState === 'done'}
+						<p class="text-sm text-success">Book reloaded — the new prices are in use.</p>
+					{/if}
+					{#if result.missing.length > 0}
 						<p class="text-sm text-warning">
 							Not in the provider's response, so not written: {result.missing.join(', ')}
 						</p>

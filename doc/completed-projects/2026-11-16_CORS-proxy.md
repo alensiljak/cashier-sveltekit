@@ -87,9 +87,9 @@ Without it, the deployed Worker answers every `/api/proxy` request with `503` (f
 The price-download abstraction now supports both currency and securities providers:
 
 - `PriceProvider.kind` is `'fx' | 'securities'`.
-- `DeclaredSecurity` carries `name`, `ticker`, `isin` and `apir` from the book's `commodity` directives. A securities provider implements `resolveSecurities()` to map them to its own catalogue and caches that mapping for `fetchLatest()`.
+- `DeclaredCommodity` carries `name`, `ticker`, `isin` and `apir` from the book's `commodity` directives. A securities provider implements `resolveCovered()` to map them to its own catalogue and caches that mapping for `fetchLatest()`.
 - `PriceQuote.date` is optional and per-quote. FX fixings share one date (`FetchedQuotes.asOf`); fund NAVs do not, so a securities provider sets each quote's publication date.
-- The plan branches on `kind`: FX uses the existing currency derivation and direction handling; securities use `deriveSecuritySymbols()` and never invert (a fund NAV is always `commodity → quote currency`).
+- The plan branches on `kind`: both kinds start from the declared `commodity` directives; FX applies direction handling and `covers`, securities use `deriveSecuritySymbols()` and never invert (a fund NAV is always `commodity → quote currency`).
 - Append mode drops the opposite direction of every pair written in the run, derived from the incoming directives — correct for FX native, FX inverted and securities pairs.
 
 ## Security model

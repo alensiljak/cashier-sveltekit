@@ -13,8 +13,6 @@ const state = vi.hoisted(() => ({
 	shared: new Map<string, unknown>(),
 	device: new Map<string, unknown>(),
 	bookFilename: 'book.bean' as string | null,
-	operating: ['EUR'] as string[],
-	accounts: [] as Array<{ currencies?: string[] }>,
 	directives: [] as unknown[],
 	queryResult: { columns: ['currency', 'amount'], rows: [] as unknown[][] },
 	reloadCalls: 0,
@@ -37,10 +35,18 @@ vi.mock('#lib/services/appService', () => ({
 vi.mock('#lib/services/ledgerWorkerClient', () => ({
 	default: {
 		ensureLoaded: vi.fn(async () => {}),
-		getOperatingCurrencies: vi.fn(async () => state.operating),
 		query: vi.fn(async () => state.queryResult),
-		getAllAccounts: vi.fn(async () => state.accounts),
-		getDirectives: vi.fn(async () => state.directives)
+		getCommodityDirectives: vi.fn(async () =>
+			(
+				state.directives as Array<{
+					type?: string;
+					currency?: string;
+					meta?: Record<string, unknown>;
+				}>
+			)
+				.filter((d) => d.type === 'commodity' && typeof d.currency === 'string')
+				.map((d) => ({ currency: d.currency!, meta: d.meta }))
+		)
 	}
 }));
 
@@ -84,8 +90,8 @@ vi.mock('#lib/services/prices/priceProviderRegistry', () => {
 		kind: 'securities',
 		base: 'AUD',
 		covers: () => false,
-		resolveSecurities: async (securities: Array<{ name: string }>) =>
-			securities.map((s) => s.name).filter((name) => name !== 'UNKNOWN'),
+		resolveCovered: async (commodities: Array<{ name: string }>) =>
+			commodities.map((c) => c.name).filter((name) => name !== 'UNKNOWN'),
 		fetchLatest: (...args: unknown[]) => state.fetchLatest(...args)
 	};
 	const providers = [fxProvider, securitiesProvider];
@@ -119,13 +125,16 @@ const config = (patch: Partial<PriceDownloadConfig> = {}): PriceDownloadConfig =
 
 const quote = (quote: string, rate: number) => ({ base: 'EUR', rate, quote });
 
+/** Declare commodities the way the book does — the plan's only candidate source. */
+const declare = (...names: string[]) => {
+	state.directives = names.map((currency) => ({ type: 'commodity', currency }));
+};
+
 beforeEach(() => {
 	state.files.clear();
 	state.shared.clear();
 	state.device.clear();
 	state.bookFilename = 'book.bean';
-	state.operating = ['EUR'];
-	state.accounts = [];
 	state.directives = [];
 	state.queryResult = { columns: ['currency', 'amount'], rows: [] };
 	state.reloadCalls = 0;
@@ -184,7 +193,7 @@ describe('config', () => {
 
 describe('downloadPrices', () => {
 	it('fetches the planned symbols, writes the file, records status and reloads', async () => {
-		state.shared.set(SettingKeys.currency, 'USD');
+		declare('USD');
 
 		const result = await downloadPrices(config());
 
@@ -213,7 +222,7 @@ describe('downloadPrices', () => {
 	});
 
 	it('skips the write and reload when the file already has the same content', async () => {
-		state.shared.set(SettingKeys.currency, 'USD');
+		declare('USD');
 		await downloadPrices(config());
 		state.saveCalls.length = 0;
 		state.reloadCalls = 0;
@@ -226,8 +235,7 @@ describe('downloadPrices', () => {
 	});
 
 	it('fetches and writes only the selected symbols', async () => {
-		state.shared.set(SettingKeys.currency, 'USD');
-		state.operating = ['EUR', 'CHF'];
+		declare('USD', 'CHF');
 		state.fetchLatest.mockResolvedValue({
 			source: 'test',
 			asOf: '2026-11-13',
@@ -249,7 +257,7 @@ describe('downloadPrices', () => {
 	});
 
 	it('downloads nothing when every symbol is deselected', async () => {
-		state.shared.set(SettingKeys.currency, 'USD');
+		declare('USD');
 
 		const result = await downloadPrices(config({ symbols: [] }));
 
@@ -259,7 +267,7 @@ describe('downloadPrices', () => {
 	});
 
 	it('writes inverted into the book’s series direction and drops the opposite series', async () => {
-		state.shared.set(SettingKeys.currency, 'USD');
+		declare('USD');
 		// The user keeps USD → EUR, the opposite of the provider's native pair.
 		state.queryResult = {
 			columns: ['currency', 'amount'],
@@ -276,8 +284,7 @@ describe('downloadPrices', () => {
 	});
 
 	it('surfaces requested symbols missing from the response', async () => {
-		state.shared.set(SettingKeys.currency, 'USD');
-		state.operating = ['EUR', 'CHF'];
+		declare('USD', 'CHF');
 		state.fetchLatest.mockResolvedValue({
 			source: 'test',
 			asOf: '2026-11-13',
@@ -293,7 +300,7 @@ describe('downloadPrices', () => {
 	});
 
 	it('keeps the previous successful status when the fetch fails', async () => {
-		state.shared.set(SettingKeys.currency, 'USD');
+		declare('USD');
 		state.device.set(DeviceSettingKeys.priceDownloadStatus, {
 			lastRun: '2026-11-01T10:00:00.000Z',
 			fixingDate: '2026-11-01',

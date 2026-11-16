@@ -14,6 +14,7 @@ import { Account } from '#lib/data/model';
 import { settings, deviceSettings, DeviceSettingKeys } from '#lib/settings';
 import type {
 	AssertionFailure,
+	CommodityDirective,
 	WorkerRequestPayload,
 	WorkerResponse,
 	WorkerResponsePayload
@@ -225,6 +226,12 @@ class LedgerWorkerClient {
 	async getDirectives(): Promise<unknown[]> {
 		const resp = await this.send<'directives-done'>({ type: 'get-directives' });
 		return resp.directives;
+	}
+
+	/** Return only `commodity` directives (symbol + metadata), without cloning the whole ledger. */
+	async getCommodityDirectives(): Promise<CommodityDirective[]> {
+		const resp = await this.send<'commodity-directives-done'>({ type: 'get-commodity-directives' });
+		return resp.commodities;
 	}
 
 	/** Return all parse / validation errors. */

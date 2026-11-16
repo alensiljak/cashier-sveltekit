@@ -79,15 +79,12 @@ Adding to `SettingKeys` in `src/lib/settings.ts` follows the existing flat-key s
 
 ## Book-relevant symbols
 
-The requested symbol set is derived from the loaded ledger — a pure function over its inputs, unit-tested apart from the ledger. Inputs:
+Every commodity is declared explicitly in the book, currencies included. The declared `commodity` directives are therefore the single source of candidates — a pure function over them, unit-tested apart from the ledger. Inputs:
 
-- the app's default currency (settings key `currency`),
-- operating currencies (`fullLedgerService.getOperatingCurrencies()`),
-- both sides of existing price directives (`fetchBookPricePairs` — the BQL `prices` table),
-- the currencies of open accounts (`fetchAccountCurrencies`),
-- declared securities (`fetchDeclaredSecurities` — `commodity` directives with `ticker`/`isin` metadata, filtered out of the FX plan entirely),
+- every `commodity` directive (`fetchDeclaredCommodities` — symbol + `ticker`/`isin`/`apir` metadata),
+- both sides of existing price directives (`fetchBookPricePairs` — the BQL `prices` table), used only to choose the direction of a pair the book already maintains.
 
-minus the provider's base currency (EUR for ECB — its pairs are fetched natively). Coverage is checked first, so tickers land in the `securities` bucket instead of being reported as missing rates. For covered currencies whose EUR-pair the book already maintains, the plan returns them as **inverted symbols**: fetched natively, written in the book's series direction (see the coalescing caveat above). If the resulting set (native + inverted) is empty (EUR-only book, EUR default), the download button is disabled with an explanation — nothing to fetch. Currencies the provider does not cover (e.g. one the ECB does not publish) are listed as skipped; the rest is written.
+A commodity carrying `ticker`/`isin`/`apir` is a security: the FX plan moves it to the `securities` bucket, and a securities provider matches it by that metadata (`resolveCovered`) or by symbol (`covers`). A commodity without an identifier is a currency candidate for an FX provider; `covers` decides whether the provider publishes it. The provider's base currency (EUR for ECB) is excluded — its pairs are fetched natively. For covered currencies whose EUR-pair the book already maintains, the plan returns them as **inverted symbols**: fetched natively, written in the book's series direction (see the coalescing caveat above). If the resulting set (native + inverted) is empty (EUR-only book), the download button is disabled with an explanation — nothing to fetch. Currencies the provider does not cover are listed as skipped; the rest is written.
 
 ## Module layout
 

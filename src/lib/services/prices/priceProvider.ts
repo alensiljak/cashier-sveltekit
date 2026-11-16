@@ -17,8 +17,8 @@
 
 export type PriceProviderKind = 'fx' | 'securities';
 
-/** A `commodity` directive that may be priced by a securities provider. */
-export interface DeclaredSecurity {
+/** A declared `commodity` directive: the book's explicit vocabulary. */
+export interface DeclaredCommodity {
 	/** Commodity name — the `base` of the written price directive. */
 	name: string;
 	ticker?: string;
@@ -66,12 +66,12 @@ export interface PriceProvider {
 	/** Whether the provider can serve prices for `symbol`. */
 	covers(symbol: string): boolean;
 	/**
-	 * Securities providers: resolve which declared commodities can be priced.
-	 * Returns the commodity names the provider covers; the rest are reported as
-	 * skipped. Providers that need a product catalogue override this and cache
-	 * the commodity → product mapping for `fetchLatest`.
+	 * Securities providers that match by metadata override this: given every
+	 * declared commodity, return the names they can serve. Providers that match
+	 * by symbol alone can omit it and rely on `covers`. The result is cached for
+	 * `fetchLatest`.
 	 */
-	resolveSecurities?(securities: DeclaredSecurity[]): Promise<string[]>;
+	resolveCovered?(commodities: DeclaredCommodity[]): Promise<string[]>;
 	/** Fetch the latest prices for `symbols` (all must be covered). */
 	fetchLatest(symbols: string[]): Promise<FetchedQuotes>;
 }

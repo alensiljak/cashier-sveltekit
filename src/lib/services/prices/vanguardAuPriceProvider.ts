@@ -20,7 +20,7 @@
  * every failure aborts the run before the destination file is written.
  */
 
-import type { DeclaredSecurity, FetchedQuotes, PriceProvider, PriceQuote } from './priceProvider';
+import type { DeclaredCommodity, FetchedQuotes, PriceProvider, PriceQuote } from './priceProvider';
 import { proxyFetch } from './proxyFetch';
 
 const CATALOGUE_URL = 'https://www.vanguard.com.au/personal/api/products/personal/funds/allfunds';
@@ -137,7 +137,7 @@ export type VanguardFetch = (url: string) => Promise<VanguardResponse>;
 
 /** Securities providers always implement the optional catalogue hook. */
 export interface VanguardAuPriceProvider extends PriceProvider {
-	resolveSecurities(securities: DeclaredSecurity[]): Promise<string[]>;
+	resolveCovered(commodities: DeclaredCommodity[]): Promise<string[]>;
 }
 
 /**
@@ -167,10 +167,10 @@ export function createVanguardAuPriceProvider(
 	}
 
 	function portIdFor(
-		security: DeclaredSecurity,
+		commodity: DeclaredCommodity,
 		identifiers: Map<string, string>
 	): string | undefined {
-		for (const id of [security.apir, security.ticker]) {
+		for (const id of [commodity.apir, commodity.ticker]) {
 			if (!id) continue;
 			const portId = identifiers.get(id);
 			if (portId) return portId;
@@ -186,19 +186,19 @@ export function createVanguardAuPriceProvider(
 		covers(symbol) {
 			return resolved.has(symbol);
 		},
-		async resolveSecurities(securities) {
-			if (securities.length === 0) {
+		async resolveCovered(commodities) {
+			if (commodities.length === 0) {
 				resolved = new Map();
 				return [];
 			}
 			const identifiers = await catalogue();
 			resolved = new Map();
 			const covered: string[] = [];
-			for (const security of securities) {
-				const portId = portIdFor(security, identifiers);
+			for (const commodity of commodities) {
+				const portId = portIdFor(commodity, identifiers);
 				if (!portId) continue;
-				resolved.set(security.name, portId);
-				covered.push(security.name);
+				resolved.set(commodity.name, portId);
+				covered.push(commodity.name);
 			}
 			return covered;
 		},

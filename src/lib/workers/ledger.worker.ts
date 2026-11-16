@@ -266,6 +266,8 @@ export type WorkerRequestPayload =
 	  }
 	| { type: 'query'; bql: string }
 	| { type: 'get-directives' }
+	/** Only `commodity` directives, with their metadata — the price plan's input. */
+	| { type: 'get-commodity-directives' }
 	| { type: 'get-errors' }
 	/** Failed `balance` assertions, located in their source files. Free when none failed. */
 	| { type: 'get-assertion-failures' }
@@ -293,6 +295,7 @@ export type WorkerResponsePayload =
 	| { type: 'load-done'; directiveCount: number; errorCount: number; ms: number }
 	| { type: 'query-done'; columns: string[]; rows: unknown[][]; errors: unknown[] }
 	| { type: 'directives-done'; directives: unknown[] }
+	| { type: 'commodity-directives-done'; commodities: CommodityDirective[] }
 	| { type: 'errors-done'; errors: unknown[] }
 	| { type: 'assertion-failures-done'; failures: AssertionFailure[] }
 	| { type: 'state-done'; isLoaded: boolean }
@@ -307,6 +310,12 @@ export type WorkerResponsePayload =
 	| { type: 'error'; message: string };
 
 export type WorkerResponse = { id: number } & WorkerResponsePayload;
+
+/** A `commodity` directive as the price plan needs it: the symbol plus its metadata. */
+export interface CommodityDirective {
+	currency: string;
+	meta?: Record<string, unknown>;
+}
 
 /** A `balance` assertion the validator rejected, identified by its own date/account/amount. */
 export interface AssertionFailure {
@@ -540,6 +549,17 @@ async function handleMessage(e: MessageEvent<WorkerRequest>): Promise<void> {
 					type: 'directives-done',
 					directives: ledger ? ledger.getDirectives() : []
 				});
+				break;
+			}
+
+			case 'get-commodity-directives': {
+				const commodities: CommodityDirective[] = [];
+				for (const directive of ledger ? ledger.getDirectives() : []) {
+					if (directive.type === 'commodity') {
+						commodities.push({ currency: directive.currency, meta: directive.meta });
+					}
+				}
+				reply({ type: 'commodity-directives-done', commodities });
 				break;
 			}
 

@@ -130,7 +130,7 @@ describe('Vanguard AU provider', () => {
 	it('matches commodities by APIR or ticker metadata', async () => {
 		const { fetchImpl } = stubFetch({});
 		const provider = createVanguardAuPriceProvider(fetchImpl);
-		const covered = await provider.resolveSecurities([
+		const covered = await provider.resolveCovered([
 			{ name: 'PROP', apir: 'VAN0004AU' },
 			{ name: 'VAF', ticker: 'VAF' },
 			{ name: 'VAN0004AU' },
@@ -142,7 +142,7 @@ describe('Vanguard AU provider', () => {
 	it('does not match a commodity by name alone', async () => {
 		const { fetchImpl } = stubFetch({});
 		const provider = createVanguardAuPriceProvider(fetchImpl);
-		expect(await provider.resolveSecurities([{ name: 'VAN0004AU' }])).toEqual([]);
+		expect(await provider.resolveCovered([{ name: 'VAN0004AU' }])).toEqual([]);
 	});
 
 	it('rejects a symbol that was not resolved', async () => {
@@ -156,7 +156,7 @@ describe('Vanguard AU provider', () => {
 	it('does not fetch the catalogue when nothing is declared', async () => {
 		const { fetchImpl, calls } = stubFetch({});
 		const provider = createVanguardAuPriceProvider(fetchImpl);
-		expect(await provider.resolveSecurities([])).toEqual([]);
+		expect(await provider.resolveCovered([])).toEqual([]);
 		expect(calls).toEqual([]);
 	});
 
@@ -166,7 +166,7 @@ describe('Vanguard AU provider', () => {
 			'8207': priceBody(45.21, '2026-11-13')
 		});
 		const provider = createVanguardAuPriceProvider(fetchImpl);
-		await provider.resolveSecurities([
+		await provider.resolveCovered([
 			{ name: 'PROP', apir: 'VAN0004AU' },
 			{ name: 'VAF', ticker: 'VAF' }
 		]);
@@ -186,8 +186,8 @@ describe('Vanguard AU provider', () => {
 	it('caches the catalogue across plan and fetch calls', async () => {
 		const { fetchImpl, calls } = stubFetch({ '8105': priceBody(0.9736) });
 		const provider = createVanguardAuPriceProvider(fetchImpl);
-		await provider.resolveSecurities([{ name: 'PROP', apir: 'VAN0004AU' }]);
-		await provider.resolveSecurities([{ name: 'PROP', apir: 'VAN0004AU' }]);
+		await provider.resolveCovered([{ name: 'PROP', apir: 'VAN0004AU' }]);
+		await provider.resolveCovered([{ name: 'PROP', apir: 'VAN0004AU' }]);
 		await provider.fetchLatest(['PROP']);
 		expect(calls.filter((url) => url.endsWith('/funds/allfunds'))).toHaveLength(1);
 	});
@@ -198,7 +198,7 @@ describe('Vanguard AU provider', () => {
 			'8207': { data: [{ navPrices: [] }] }
 		});
 		const provider = createVanguardAuPriceProvider(fetchImpl);
-		await provider.resolveSecurities([
+		await provider.resolveCovered([
 			{ name: 'PROP', apir: 'VAN0004AU' },
 			{ name: 'VAF', ticker: 'VAF' }
 		]);
@@ -210,14 +210,14 @@ describe('Vanguard AU provider', () => {
 	it('throws when no requested product returns a price', async () => {
 		const { fetchImpl } = stubFetch({ '8105': { data: [{ navPrices: [] }] } });
 		const provider = createVanguardAuPriceProvider(fetchImpl);
-		await provider.resolveSecurities([{ name: 'PROP', apir: 'VAN0004AU' }]);
+		await provider.resolveCovered([{ name: 'PROP', apir: 'VAN0004AU' }]);
 		await expect(provider.fetchLatest(['PROP'])).rejects.toThrow(/no prices/);
 	});
 
 	it('throws on an HTTP failure instead of writing a partial run', async () => {
 		const { fetchImpl } = stubFetch({});
 		const provider = createVanguardAuPriceProvider(fetchImpl);
-		await provider.resolveSecurities([{ name: 'PROP', apir: 'VAN0004AU' }]);
+		await provider.resolveCovered([{ name: 'PROP', apir: 'VAN0004AU' }]);
 		await expect(provider.fetchLatest(['PROP'])).rejects.toThrow(/HTTP 404/);
 	});
 
@@ -228,12 +228,12 @@ describe('Vanguard AU provider', () => {
 			return attempts === 1 ? response({}, 500) : response(catalogue);
 		});
 		const provider = createVanguardAuPriceProvider(fetchImpl);
-		await expect(provider.resolveSecurities([{ name: 'PROP', apir: 'VAN0004AU' }])).rejects.toThrow(
+		await expect(provider.resolveCovered([{ name: 'PROP', apir: 'VAN0004AU' }])).rejects.toThrow(
 			/HTTP 500/
 		);
-		await expect(
-			provider.resolveSecurities([{ name: 'PROP', apir: 'VAN0004AU' }])
-		).resolves.toEqual(['PROP']);
+		await expect(provider.resolveCovered([{ name: 'PROP', apir: 'VAN0004AU' }])).resolves.toEqual([
+			'PROP'
+		]);
 		expect(attempts).toBe(2);
 	});
 });
