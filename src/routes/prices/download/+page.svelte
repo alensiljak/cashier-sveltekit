@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Toolbar from '#lib/components/Toolbar.svelte';
+	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
 	import HelpButton from '#lib/help/HelpButton.svelte';
 	import SearchableSelect from '#lib/components/SearchableSelect.svelte';
 	import {
@@ -28,6 +29,7 @@
 	import { goto, replaceState } from '$app/navigation';
 	import { page } from '$app/state';
 	import DownloadIcon from '@lucide/svelte/icons/download';
+	import KeyRoundIcon from '@lucide/svelte/icons/key-round';
 
 	const providers = listPriceProviders();
 	const defaultProvider = defaultPriceProvider();
@@ -48,6 +50,8 @@
 	let error = $state<string | null>(null);
 	let demoActive = $state(false);
 	let proxyKey = $state('');
+	let proxyKeyDraft = $state('');
+	let proxyKeyModalOpen = $state(false);
 
 	const provider = $derived(plan?.provider ?? providers.find((p) => p.id === config.providerId));
 
@@ -72,8 +76,15 @@
 		loaded = true;
 	}
 
+	function openProxyKeyModal() {
+		proxyKeyDraft = proxyKey;
+		proxyKeyModalOpen = true;
+	}
+
 	async function saveProxyKey() {
-		await deviceSettings.set(DeviceSettingKeys.proxyKey, proxyKey.trim());
+		proxyKey = proxyKeyDraft.trim();
+		await deviceSettings.set(DeviceSettingKeys.proxyKey, proxyKey);
+		proxyKeyModalOpen = false;
 	}
 
 	/** The OPFS file picker hands the chosen path back via the URL. */
@@ -120,7 +131,6 @@
 		error = null;
 		result = null;
 		try {
-			await saveProxyKey();
 			result = await downloadPrices(config);
 			status = await getDownloadStatus();
 			// The file write triggered a background ledger reload; the plan's
@@ -138,6 +148,9 @@
 <Toolbar title="Price Download">
 	{#snippet actions()}
 		<HelpButton topic="price-download" />
+	{/snippet}
+	{#snippet menuItems()}
+		<ToolbarMenuItem text="Proxy key" Icon={KeyRoundIcon} onclick={openProxyKeyModal} />
 	{/snippet}
 </Toolbar>
 
@@ -166,22 +179,6 @@
 							if (found) void updateConfig({ providerId: found.id });
 						}}
 					/>
-				</label>
-
-				<label class="form-control w-full">
-					<div class="label"><span class="label-text">Proxy key</span></div>
-					<input
-						type="password"
-						class="input input-bordered w-full"
-						autocomplete="off"
-						placeholder="Required when the server sets PROXY_KEY"
-						bind:value={proxyKey}
-						onchange={() => void saveProxyKey()}
-					/>
-					<p class="mt-1 text-xs opacity-60">
-						Stored on this device only and sent as the <code>X-Proxy-Key</code> header. Leave empty when
-						the proxy is not protected.
-					</p>
 				</label>
 
 				<div>
@@ -287,11 +284,6 @@
 						</p>
 					{/if}
 
-					{#if plan.skippedUnsupported.length > 0}
-						<p class="text-xs opacity-60">
-							No price from this provider: {plan.skippedUnsupported.join(', ')}
-						</p>
-					{/if}
 				</div>
 			</div>
 		{/if}
@@ -363,12 +355,6 @@
 							<span class="opacity-60">Lines in file:</span>
 							{status.directives ?? '—'}
 						</p>
-						{#if status.skippedUnsupported.length > 0}
-							<p>
-								<span class="opacity-60">No price from provider:</span>
-								{status.skippedUnsupported.join(', ')}
-							</p>
-						{/if}
 						{#if (status.missing ?? []).length > 0}
 							<p class="text-warning">
 								<span class="opacity-60">Missing from response:</span>
@@ -381,3 +367,34 @@
 		{/if}
 	</div>
 </main>
+
+<!-- Proxy key dialog -->
+<input type="checkbox" id="proxy-key-modal" class="modal-toggle" bind:checked={proxyKeyModalOpen} />
+<dialog class="modal">
+	<div class="modal-box">
+		<header class="flex justify-between">
+			<h2 class="text-lg font-bold">Proxy key</h2>
+		</header>
+		<article>
+			<p class="py-2 text-sm opacity-60">
+				Stored on this device only and sent as the <code>X-Proxy-Key</code> header. Leave empty when the
+				proxy is not protected.
+			</p>
+			<input
+				type="password"
+				class="input input-bordered w-full"
+				autocomplete="off"
+				placeholder="Required when the server sets PROXY_KEY"
+				bind:value={proxyKeyDraft}
+				onkeydown={(e) => e.key === 'Enter' && void saveProxyKey()}
+			/>
+		</article>
+		<footer class="flex justify-end gap-4 mt-4">
+			<button type="button" class="btn btn-ghost" onclick={() => (proxyKeyModalOpen = false)}
+				>Cancel</button
+			>
+			<button type="button" class="btn btn-primary" onclick={() => void saveProxyKey()}>Save</button
+			>
+		</footer>
+	</div>
+</dialog>

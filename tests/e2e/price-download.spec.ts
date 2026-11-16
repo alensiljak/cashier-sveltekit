@@ -150,6 +150,32 @@ test.describe('price download', () => {
 		expect(await readOpfsFile(page, DEFAULT_DESTINATION)).toBe(written);
 	});
 
+	test('proxy key is set from the toolbar menu dialog', async ({ demoPage: page }) => {
+		await page.goto('/prices/download');
+
+		// The key is not part of the configuration card anymore.
+		await expect(page.locator('.card', { hasText: 'Configuration' })).not.toContainText(
+			'Proxy key'
+		);
+
+		const openProxyKey = async () => {
+			await page.locator('.navbar .dropdown-end > button').click();
+			await page.getByRole('menuitem', { name: 'Proxy key' }).click();
+		};
+		const dialog = page.locator('dialog.modal');
+		await openProxyKey();
+		await expect(dialog).toBeVisible();
+
+		const input = dialog.locator('input[type="password"]');
+		await input.fill('e2e-proxy-key');
+		await dialog.getByRole('button', { name: 'Save' }).click();
+		await expect(dialog).not.toBeVisible();
+
+		// Reopening shows the saved key, not the draft that was typed.
+		await openProxyKey();
+		await expect(input).toHaveValue('e2e-proxy-key');
+	});
+
 	test('proxy requires the key and rejects hosts outside its allowlist', async ({ request }) => {
 		const target = encodeURIComponent('https://example.com/');
 
