@@ -77,7 +77,7 @@
 		if (key !== SettingKeys.priceTargetFile || !value) return;
 		config = { ...config, targetFile: value };
 		void saveConfig(config);
-		replaceState('', {});
+		replaceState(page.url.pathname, {});
 	}
 
 	async function checkTarget() {
