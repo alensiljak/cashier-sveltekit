@@ -6,9 +6,8 @@
  * `BookPricePlan`, and runs "Download all": one fetch per participating
  * provider, one combined write to the configured destination file.
  *
- * v1 scope: `fx` providers only. Mapped commodities served by a securities
- * provider are reported, not downloaded. Rates are written verbatim in the
- * provider's published direction (no inversion).
+ * Every enabled provider takes part, `fx` and securities alike. Rates are
+ * written verbatim in the provider's published direction (no inversion).
  */
 
 import fullLedgerService from '#lib/services/ledgerWorkerClient';
@@ -20,6 +19,8 @@ import { resolveConfig, validateTargetFile } from './priceDownloadService';
 import { buildPriceFile, mergePriceFile, parsePriceFile, toDirectives } from './priceFileService';
 import type { PriceDirective } from './priceFileService';
 import { getPriceProvider, listPriceProviders } from './priceProviderRegistry';
+import { getCatalogueSelection } from './priceCatalogueService';
+import { fetchDeclaredCommodities } from './priceCurrencies';
 
 export async function loadBookPlan(): Promise<BookPricePlan> {
 	await fullLedgerService.ensureLoaded();
@@ -54,18 +55,48 @@ export interface BookDownloadResult {
 	unchanged: boolean;
 }
 
-/** Commodities `Download all` would fetch, grouped by `fx` provider. */
-export function downloadGroups(plan: BookPricePlan): Map<string, string[]> {
-	const groups = new Map<string, string[]>();
+export interface BookDownloadPlan {
+	/** What `Download all` will fetch, per provider (insertion order = registry order of first use). */
+	groups: Map<string, string[]>;
+	/** Mapped to a provider that cannot serve them (e.g. a fund with no APIR, or not in the Vanguard selection). */
+	uncovered: { commodity: string; providerId: string }[];
+}
+
+/**
+ * Resolve the mapped commodities against each provider. Local only (the stored
+ * catalogue selection and the book's metadata, never a fetch). Securities
+ * providers must be resolved before `fetchLatest`, which relies on the result.
+ */
+export async function planBookDownload(plan: BookPricePlan): Promise<BookDownloadPlan> {
+	const mappedBy = new Map<string, string[]>();
 	for (const entry of plan.entries) {
 		if (entry.state !== 'mapped' || !entry.providerId) continue;
-		const provider = getPriceProvider(entry.providerId);
-		if (provider.kind !== 'fx' || !provider.covers(entry.commodity)) continue;
-		const list = groups.get(provider.id) ?? [];
+		const list = mappedBy.get(entry.providerId) ?? [];
 		list.push(entry.commodity);
-		groups.set(provider.id, list);
+		mappedBy.set(entry.providerId, list);
 	}
-	return groups;
+
+	const groups = new Map<string, string[]>();
+	const uncovered: BookDownloadPlan['uncovered'] = [];
+	if (mappedBy.size === 0) return { groups, uncovered };
+
+	const declared = await fetchDeclaredCommodities();
+	for (const [providerId, names] of mappedBy) {
+		const provider = getPriceProvider(providerId);
+		let covered: Set<string>;
+		if (provider.resolveCovered) {
+			const selection = provider.fetchCatalogue ? await getCatalogueSelection(providerId) : [];
+			covered = new Set(await provider.resolveCovered(declared, selection));
+		} else {
+			covered = new Set(names.filter((n) => provider.covers(n)));
+		}
+		const served = names.filter((n) => covered.has(n));
+		if (served.length > 0) groups.set(providerId, served);
+		for (const commodity of names) {
+			if (!covered.has(commodity)) uncovered.push({ commodity, providerId });
+		}
+	}
+	return { groups, uncovered };
 }
 
 /**
@@ -78,8 +109,9 @@ export async function downloadAllFromBook(plan?: BookPricePlan): Promise<BookDow
 	const invalid = await validateTargetFile(config.targetFile);
 	if (invalid) throw new Error(invalid);
 
-	const groups = downloadGroups(plan ?? (await loadBookPlan()));
-	if (groups.size === 0) throw new Error('No mapped currencies to download.');
+	// Always re-resolved: securities providers remember it for `fetchLatest`.
+	const { groups } = await planBookDownload(plan ?? (await loadBookPlan()));
+	if (groups.size === 0) throw new Error('No mapped commodities to download.');
 
 	const incoming: PriceDirective[] = [];
 	const perProvider: BookDownloadResult['providers'] = [];

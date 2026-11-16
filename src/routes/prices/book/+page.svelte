@@ -5,13 +5,14 @@
 	import type { BookPricePlan, CommodityPlanEntry } from '#lib/services/prices/bookPricePlan';
 	import {
 		downloadAllFromBook,
-		downloadGroups,
 		loadBookPlan,
+		planBookDownload,
+		type BookDownloadPlan,
 		setCommodityIgnored,
 		type BookDownloadResult
 	} from '#lib/services/prices/bookPriceService';
 	import { describeError } from '#lib/services/prices/priceDownloadService';
-	import { getPriceProvider, listPriceProviders } from '#lib/services/prices/priceProviderRegistry';
+	import { listPriceProviders } from '#lib/services/prices/priceProviderRegistry';
 	import fullLedgerService from '#lib/services/ledgerWorkerClient';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
@@ -28,15 +29,16 @@
 
 	const of = (state: CommodityPlanEntry['state']) =>
 		plan?.entries.filter((e) => e.state === state) ?? [];
-	const mapped = $derived(of('mapped'));
 	const unmapped = $derived(of('unmapped-source'));
 	const invalid = $derived(of('invalid'));
 	const untagged = $derived(of('untagged'));
 	const ignored = $derived(of('ignored'));
-	/** Mapped, but served by a provider this mode does not download yet. */
-	const unsupported = $derived(mapped.filter((e) => getPriceProvider(e.providerId!).kind !== 'fx'));
-	const groups = $derived(plan ? downloadGroups(plan) : new Map<string, string[]>());
+	let download_plan = $state<BookDownloadPlan>({ groups: new Map(), uncovered: [] });
+	const groups = $derived(download_plan.groups);
+	const uncovered = $derived(download_plan.uncovered);
 	const downloadCount = $derived([...groups.values()].reduce((n, g) => n + g.length, 0));
+	/** Only providers that take part: at least one enabled nickname maps to them. */
+	const activeProviders = $derived(plan?.providers.filter((p) => p.included) ?? []);
 
 	// Re-plan whenever the ledger (re)loads, e.g. after a download.
 	$effect(() => {
@@ -47,7 +49,9 @@
 
 	async function refresh() {
 		try {
-			plan = await loadBookPlan();
+			const next = await loadBookPlan();
+			download_plan = await planBookDownload(next);
+			plan = next;
 			error = null;
 		} catch (e) {
 			error = describeError(e);
@@ -89,7 +93,7 @@
 	<div class="flex flex-col gap-4 p-4 mx-auto max-w-2xl w-full">
 		<p class="text-sm opacity-70">
 			Prices for commodities tagged with a Beancount <code>price</code> meta, downloaded through the
-			providers mapped to their sources. Currencies only for now.
+			providers mapped to their sources.
 		</p>
 
 		{#if error}
@@ -109,18 +113,20 @@
 						</button>
 					</div>
 					<ul class="flex flex-col gap-2">
-						{#each plan.providers as p (p.providerId)}
+						{#each activeProviders as p (p.providerId)}
+							{@const count = groups.get(p.providerId)?.length ?? 0}
 							<li class="flex items-center gap-2 text-sm">
 								<span class="flex-1">{providerNames.get(p.providerId)}</span>
-								{#if p.included}
-									<span class="badge badge-success badge-sm">
-										{p.commodities.length} commodit{p.commodities.length === 1 ? 'y' : 'ies'}
-									</span>
-								{:else}
-									<span class="badge badge-ghost badge-sm">not included</span>
-								{/if}
+								<span class="badge badge-sm {count > 0 ? 'badge-success' : 'badge-ghost'}">
+									{count} commodit{count === 1 ? 'y' : 'ies'}
+								</span>
 							</li>
 						{/each}
+						{#if activeProviders.length === 0}
+							<li class="text-sm opacity-60">
+								No provider enabled. Enable and map providers in the provider settings.
+							</li>
+						{/if}
 					</ul>
 				</div>
 			</section>
@@ -129,11 +135,17 @@
 			<section class="card bg-base-100 shadow-sm">
 				<div class="card-body gap-2 p-4">
 					<h2 class="card-title text-base">Download</h2>
+					<p class="text-xs opacity-60">
+						{downloadCount} commodit{downloadCount === 1 ? 'y' : 'ies'} from {groups.size}
+						provider{groups.size === 1 ? '' : 's'}.
+					</p>
 					{#each groups as [providerId, symbols] (providerId)}
-						<p class="text-sm">
-							<span class="font-medium">{providerNames.get(providerId)}:</span>
-							{symbols.join(', ')}
-						</p>
+						<details class="rounded bg-base-200" open={symbols.length <= 8}>
+							<summary class="cursor-pointer px-3 py-2 text-sm font-medium">
+								{providerNames.get(providerId)} ({symbols.length})
+							</summary>
+							<p class="px-3 pb-2 text-sm break-words">{symbols.join(', ')}</p>
+						</details>
 					{/each}
 					{#if groups.size === 0}
 						<p class="text-sm opacity-60">Nothing mapped to download.</p>
@@ -180,9 +192,9 @@
 						</summary>
 						<div class="collapse-content flex flex-col gap-2">
 							<p class="text-xs opacity-60">{hint}</p>
-							<ul class="flex flex-col gap-1">
+							<ul class="flex flex-col">
 								{#each rows as e (e.commodity)}
-									<li class="flex items-center gap-2 text-sm">
+									<li class="flex items-center gap-2 rounded px-2 py-1.5 text-sm even:bg-base-200">
 										<span class="font-medium">{e.commodity}</span>
 										<span class="flex-1 text-xs opacity-60 break-all">
 											{e.reason ?? (e.source ? `source: ${e.source}` : '')}
@@ -217,11 +229,27 @@
 				'The price tag names a source with no provider. Map it in the provider settings (and check the provider is switched on).'
 			)}
 			{@render group('Invalid', invalid, 'The price tag is malformed or the provider rejected it.')}
-			{@render group(
-				'Not downloaded yet',
-				unsupported,
-				'Mapped to a provider that this mode does not download yet (currencies only).'
-			)}
+			{#if uncovered.length > 0}
+				<details class="collapse collapse-arrow bg-base-100 shadow-sm" open={uncovered.length <= 5}>
+					<summary class="collapse-title text-base font-semibold">
+						Not covered ({uncovered.length})
+					</summary>
+					<div class="collapse-content flex flex-col gap-2">
+						<p class="text-xs opacity-60">
+							Tagged for a provider that cannot serve them: a currency it does not publish, or a
+							fund missing its APIR/ticker or not in the provider's catalogue selection.
+						</p>
+						<ul class="flex flex-col">
+							{#each uncovered as u (u.commodity)}
+								<li class="flex items-center gap-2 rounded px-2 py-1.5 text-sm even:bg-base-200">
+									<span class="font-medium">{u.commodity}</span>
+									<span class="flex-1 text-xs opacity-60">{providerNames.get(u.providerId)}</span>
+								</li>
+							{/each}
+						</ul>
+					</div>
+				</details>
+			{/if}
 
 			{#if ignored.length > 0}
 				<details class="collapse collapse-arrow bg-base-100 shadow-sm">
@@ -229,9 +257,9 @@
 						Ignored ({ignored.length})
 					</summary>
 					<div class="collapse-content">
-						<ul class="flex flex-col gap-1">
+						<ul class="flex flex-col">
 							{#each ignored as e (e.commodity)}
-								<li class="flex items-center gap-2 text-sm">
+								<li class="flex items-center gap-2 rounded px-2 py-1.5 text-sm even:bg-base-200">
 									<span class="flex-1 font-medium">{e.commodity}</span>
 									<button
 										class="btn btn-ghost btn-xs rounded"
