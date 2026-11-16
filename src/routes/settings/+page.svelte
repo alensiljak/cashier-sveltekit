@@ -468,6 +468,36 @@
 				Open
 			</button>
 		</div>
+
+		<div class="flex items-center gap-3">
+			<div class="min-w-0 flex-1">
+				<p class="text-sm font-medium">Book prices</p>
+				<p class="text-xs opacity-60">Download prices for commodities tagged in your book.</p>
+			</div>
+			<button
+				class="btn btn-primary btn-xs rounded"
+				type="button"
+				onclick={() => goto('/prices/book')}
+			>
+				Open
+			</button>
+		</div>
+
+		<div class="flex items-center gap-3">
+			<div class="min-w-0 flex-1">
+				<p class="text-sm font-medium">Provider nicknames</p>
+				<p class="text-xs opacity-60">
+					Map the <code>price</code> tags in your book to price providers.
+				</p>
+			</div>
+			<button
+				class="btn btn-primary btn-xs rounded"
+				type="button"
+				onclick={() => goto('/prices/providers')}
+			>
+				Open
+			</button>
+		</div>
 	</CashierCardTemplate>
 
 	<!-- ── Asset Allocation ────────────────────────────────── -->
