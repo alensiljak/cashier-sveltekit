@@ -158,3 +158,58 @@ Entry points: a row in Settings, and a "rates may be stale" hint on the currency
 3. Toggle to fetch the provider's full symbol set instead of the book-relevant one.
 4. Auto-refresh-on-open with a staleness threshold.
 5. Self-hosted CF Worker proxy over the raw ECB XML, replacing the Frankfurter dependency with the same interface.
+
+## Review findings (2026-11-16)
+
+Review of `f72cfa42` (`feat: price downloaders concept`). Four behaviors below were confirmed with throwaway Vitest probes against the real functions (probe file deleted; no code changes). Ordered by risk.
+
+### Confirmed bugs
+
+1. **Append mode rewrites the user's own price lines — data corruption.** `mergePriceFile` (`src/lib/services/prices/priceFileService.ts:143-171`) re-renders every parsed directive through `renderDirectives`, not just incoming keys. `parsePriceLine` strips quotes (`:53-56`), `formatRate` caps at 6 decimals (`:42-48`), and the renderer never re-quotes (`:97-110`). Confirmed:
+   - `2026-01-01 price "VTI " 202.50 EUR` → `2026-01-01 price VTI  202.5 EUR` — a different commodity, invalid directive.
+   - `202.123456789` → `202.123457`.
+   - Trailing `; comment` dropped; every directive moved below the foreign lines.
+
+   This contradicts the append-mode description above ("existing content passes through untouched") and the module comment ("foreign lines pass through verbatim"). Fix: merge in place — keep every existing line verbatim, replace only lines whose `(date, base, quote)` key is in `incoming`, append new keys; render only incoming lines. Update the `canonicalizes recognized user price lines` test.
+
+2. **A zero-rate line crashes append mode.** `parsePriceLine` accepts `0` (`priceFileService.ts:55`); `mergePriceFile` then calls `formatRate(0)` via `renderDirectives` (`:164`), which throws (`:43-45`). Confirmed. Fix: return `null` for `rate <= 0` (treat as foreign), and/or stop rendering untouched lines.
+
+3. **Silent partial success on a missing quote.** `parseEcbResponse` validates every returned quote was requested (`ecbPriceProvider.ts:85`) but never that every requested quote was returned. Confirmed: requested `['USD','CHF']` with a response containing only `USD` yields one quote and no error. The run writes a subset while the plan/status still list the symbol. Fix: return `missing` from `fetchLatest` and surface it (or throw); update the e2e mock to return all requested symbols.
+
+### Data-loss risk
+
+4. **Destination chips offer every `.bean` file, including the main book.** `src/routes/prices/download/+page.svelte:53-57` lists all `.bean` files from `listFileTree()`; one click plus overwrite mode replaces that file. `book.bean` is one click away. Fix: exclude `USER_BOOK_FILENAME` and `DEMO_DIR/*` from the chips, and/or confirm before overwriting an existing file that is not the current destination.
+
+### Correctness gaps
+
+5. **Direction choice ignores series density.** `priceCurrencies.ts:88` uses `.find`, so when both directions exist the first file-order pair wins. The engine coalesces both directions and the denser series wins, so the app can write into the sparser series, which is then ignored. Fix: count occurrences per direction within each priority tier (user pairs before destination pairs) and pick the denser; add a unit test for the both-directions case.
+
+6. **Old opposite-direction lines can outvote a direction change.** Append mode never removes the destination's previous direction for a pair. If the user's series flips direction and the old downloaded series is denser, the new lines lose the engine's coalescing. Fix: when the plan's direction differs from the destination's, drop the opposite-direction directives for that pair in append mode (or force overwrite / warn).
+
+7. **Post-download preview races the reload.** `priceDownloadService.ts:210` fires `void reloadLedgerFromOpfs()`, then the page immediately calls `refreshPlan()` (`+page.svelte:83`). `ensureLoaded()` returns early while `_isReloading`, and `query()` returns empty when not loaded (`ledgerWorkerClient.ts:170,219`), so `fetchBookPricePairs()` can return `[]`; the version bump never re-triggers the page. Fix: subscribe to `fullLedgerService.version` in the page (pattern: `FavouritesCard.svelte:51-56`) and refresh on bump; optionally await the reload in `downloadPrices`.
+
+8. **Idempotent re-runs still write and reload.** `downloadPrices` always `saveFile`s and reloads even when `existing === text`. The deterministic output makes this cheap to detect. Fix: skip the write/reload when unchanged and report "no changes" instead of "N lines added".
+
+### Nits
+
+- `formatRate` can round a tiny positive rate to `0` (`toFixed(6)` → `"0.000000"` → `"0"`), producing an invalid Beancount price. Guard.
+- `isIsoDate` (`priceFileService.ts:37`) is exported but unused; `ISO_DATE` exists only for it. Delete.
+- `renderDirectives` comparator returns `1` for equal keys (`priceFileService.ts:99-110`); return `0` to keep the sort consistent if duplicates ever reach it.
+- `saveConfig` writes three settings sequentially (`priceDownloadService.ts:95-99`); `Promise.all`.
+- `refreshPlan` doesn't clear `error` on success (`+page.svelte:61-69`), so a transient plan error sticks.
+- Page initial `targetFile` hardcodes the default path; use `PRICES_DEFAULT_DESTINATION`.
+- `$effect(() => void load())` is a one-shot load; `onMount` is clearer.
+- `fetchLatest` abort check uses `err instanceof DOMException` (`ecbPriceProvider.ts:124`); `err.name === 'AbortError'` is more portable.
+- ECB list: verify `BGN` (Bulgaria adopts the euro in 2026) against the current publication set.
+- Header attribution lacks the provider id/URL the doc's example shows (`buildPriceFile`, `priceFileService.ts:122`).
+- No unit tests for `priceDownloadService` orchestration (config, status, direction priority); the pure parts are well covered.
+- `priceFileService.test.ts` typo "dentro".
+
+### Suggested order
+
+1. Items 1, 2, 4 — data safety.
+2. Item 3 — missing symbols, plus the e2e mock update.
+3. Items 5, 6 — direction correctness, with unit tests.
+4. Item 7 — reload race and version subscription.
+5. Item 8 — skip unchanged writes.
+6. Nits.
