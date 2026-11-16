@@ -179,8 +179,10 @@
 		const symbols = await getSymbolSelection(providerId);
 		if (config.providerId !== providerId) return; // a newer switch won
 		config = { ...config, symbols };
-		void saveConfig(config); // persistence must not delay the preview
+		// Persist alongside the preview, not before it.
+		const saving = saveConfig(config);
 		await refreshPlan();
+		await saving;
 	}
 
 	async function setSymbols(symbols: string[] | null) {
