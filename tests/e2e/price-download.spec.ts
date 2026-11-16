@@ -26,10 +26,13 @@ async function readOpfsFile(page: Page, path: string): Promise<string | null> {
 	}, path);
 }
 
-async function mockFixing(page: Page, date: string, rate: string) {
+async function mockFixing(page: Page, date: string, audRate: string, usdRate = '1.1052') {
 	await page.route('**/api.frankfurter.dev/**', async (route) => {
 		await route.fulfill({
-			json: [{ date, base: 'EUR', quote: 'AUD', rate: Number(rate) }]
+			json: [
+				{ date, base: 'EUR', quote: 'AUD', rate: Number(audRate) },
+				{ date, base: 'EUR', quote: 'USD', rate: Number(usdRate) }
+			]
 		});
 	});
 }
@@ -53,10 +56,10 @@ test.describe('price download', () => {
 		await expect(download).toBeEnabled();
 		await download.click();
 
-		// Result card: fixing date echoed, one line written.
+		// Result card: fixing date echoed, both requested symbols written.
 		const resultCard = page.locator('.card.bg-base-200');
 		await expect(resultCard).toContainText('2026-01-05', { timeout: 10_000 });
-		await expect(resultCard).toContainText('1 line added');
+		await expect(resultCard).toContainText('2 lines added');
 
 		// Status card and the destination file in OPFS.
 		const statusCard = page.locator('.card', { hasText: 'Last run' });
@@ -65,7 +68,8 @@ test.describe('price download', () => {
 		await expect(statusCard).toContainText('Lines in file:');
 		expect(await readOpfsFile(page, DEFAULT_DESTINATION)).toBe(
 			'; ECB reference rates (via Frankfurter) — latest fixing: 2026-01-05\n' +
-				'2026-01-05 price EUR 1.6111 AUD\n'
+				'2026-01-05 price EUR 1.6111 AUD\n' +
+				'2026-01-05 price EUR 1.1052 USD\n'
 		);
 	});
 
@@ -88,9 +92,9 @@ test.describe('price download', () => {
 
 		const resultCard = page.locator('.card.bg-base-200');
 		await expect(resultCard).toContainText('2026-01-05', { timeout: 10_000 });
-		await expect(resultCard).toContainText('1 line added');
+		await expect(resultCard).toContainText('2 lines added');
 		expect(await readOpfsFile(page, 'prices/e2e-test.bean')).toBe(
-			'2026-01-05 price EUR 1.6111 AUD\n'
+			'2026-01-05 price EUR 1.6111 AUD\n2026-01-05 price EUR 1.1052 USD\n'
 		);
 		// The default destination was not touched.
 		expect(await readOpfsFile(page, DEFAULT_DESTINATION)).toBeNull();
@@ -99,9 +103,10 @@ test.describe('price download', () => {
 		await mockFixing(page, '2026-01-06', '1.6222');
 		await page.getByRole('button', { name: 'Download latest rates' }).click();
 		await expect(resultCard).toContainText('2026-01-06', { timeout: 10_000 });
-		await expect(resultCard).toContainText('2 lines in file');
+		await expect(resultCard).toContainText('4 lines in file');
 		expect(await readOpfsFile(page, 'prices/e2e-test.bean')).toBe(
-			'2026-01-05 price EUR 1.6111 AUD\n2026-01-06 price EUR 1.6222 AUD\n'
+			'2026-01-05 price EUR 1.6111 AUD\n2026-01-05 price EUR 1.1052 USD\n' +
+				'2026-01-06 price EUR 1.6222 AUD\n2026-01-06 price EUR 1.1052 USD\n'
 		);
 	});
 
@@ -109,7 +114,7 @@ test.describe('price download', () => {
 		await mockFixing(page, '2026-01-05', '1.6111');
 		await page.goto('/prices/download');
 		await page.getByRole('button', { name: 'Download latest rates' }).click();
-		await expect(page.locator('.card.bg-base-200')).toContainText('1 line added', {
+		await expect(page.locator('.card.bg-base-200')).toContainText('2 lines added', {
 			timeout: 10_000
 		});
 
@@ -121,7 +126,8 @@ test.describe('price download', () => {
 
 		expect(await readOpfsFile(page, DEFAULT_DESTINATION)).toBe(
 			'; ECB reference rates (via Frankfurter) — latest fixing: 2026-01-06\n' +
-				'2026-01-06 price EUR 1.6222 AUD\n'
+				'2026-01-06 price EUR 1.6222 AUD\n' +
+				'2026-01-06 price EUR 1.1052 USD\n'
 		);
 	});
 
@@ -131,7 +137,7 @@ test.describe('price download', () => {
 		await mockFixing(page, '2026-01-05', '1.6111');
 		await page.goto('/prices/download');
 		await page.getByRole('button', { name: 'Download latest rates' }).click();
-		await expect(page.locator('.card.bg-base-200')).toContainText('1 line added', {
+		await expect(page.locator('.card.bg-base-200')).toContainText('2 lines added', {
 			timeout: 10_000
 		});
 		const written = await readOpfsFile(page, DEFAULT_DESTINATION);
