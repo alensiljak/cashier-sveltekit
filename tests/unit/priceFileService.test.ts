@@ -1,6 +1,6 @@
 /*
     Tests for the price file service: fixed formatting, parsing, overwrite
-    output, and the append merge (dentro key collisions, foreign lines,
+    output, and the append merge (key collisions, foreign lines,
     determinism). The output must converge to identical bytes for identical
     input so the S3/WebDAV file sync sees "equivalent" content.
 */
@@ -41,6 +41,7 @@ describe('formatRate', () => {
 		expect(() => formatRate(0)).toThrow();
 		expect(() => formatRate(-1)).toThrow();
 		expect(() => formatRate(Number.NaN)).toThrow();
+		expect(() => formatRate(1e-9)).toThrow();
 	});
 });
 
@@ -68,6 +69,7 @@ describe('parsePriceLine', () => {
 		expect(parsePriceLine('2026-01-01 open Assets:Cash EUR')).toBeNull();
 		expect(parsePriceLine('2026-13-45 price EUR 1 USD')).toBeNull();
 		expect(parsePriceLine('')).toBeNull();
+		expect(parsePriceLine('2026-01-01 price XYZ 0 EUR')).toBeNull();
 	});
 });
 
@@ -141,10 +143,28 @@ describe('mergePriceFile (append mode)', () => {
 		expect(merged.text).not.toContain('1.1051');
 	});
 
-	it('canonicalizes recognized user price lines but keeps their values', () => {
-		const existing = '2026-01-01 price VTI 202.50 EUR\n';
+	it('leaves the user’s own price lines byte for byte untouched', () => {
+		const existing =
+			'2026-01-01 price "VTI " 202.50 EUR ; manual\n2026-01-02 price ABC 202.123456789 EUR\n';
 		const merged = mergePriceFile(existing, [d('2026-11-13', 'EUR', 1.1052, 'USD')]);
-		expect(merged.text).toContain('2026-01-01 price VTI 202.5 EUR');
+		expect(merged.text).toBe(existing + '2026-11-13 price EUR 1.1052 USD\n');
+	});
+
+	it('does not crash on a zero-rate line and keeps it verbatim', () => {
+		const existing = '2026-01-01 price XYZ 0 EUR\n';
+		const merged = mergePriceFile(existing, [d('2026-11-13', 'EUR', 1.1052, 'USD')]);
+		expect(merged.text).toBe(existing + '2026-11-13 price EUR 1.1052 USD\n');
+	});
+
+	it('replaces only the changed line, keeping everything else in place', () => {
+		const existing = '2026-11-13 price EUR 1.1051 USD ; old\n; tail\n';
+		const merged = mergePriceFile(existing, [d('2026-11-13', 'EUR', 1.1052, 'USD')]);
+		expect(merged.text).toBe('2026-11-13 price EUR 1.1052 USD\n; tail\n');
+	});
+
+	it('preserves CRLF line endings', () => {
+		const merged = mergePriceFile('; c\r\n', [d('2026-11-13', 'EUR', 1.1052, 'USD')]);
+		expect(merged.text).toBe('; c\r\n2026-11-13 price EUR 1.1052 USD\r\n');
 	});
 
 	it('is deterministic regardless of input order', () => {
@@ -202,7 +222,7 @@ describe('parsePriceFile round-trip', () => {
 		const merged = mergePriceFile('; note\n', incoming);
 		const parsed = parsePriceFile(merged.text);
 		expect(parsed.directives.size).toBe(2);
-		// The blank junction line and the trailing split '' are foreign content.
-		expect(parsed.foreignLines).toEqual(['; note', '', '']);
+		// The trailing split '' is foreign content.
+		expect(parsed.foreignLines).toEqual(['; note', '']);
 	});
 });

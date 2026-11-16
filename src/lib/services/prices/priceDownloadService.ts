@@ -15,7 +15,8 @@
  * new fixing dates rather than fighting it.
  */
 
-import { PRICES_DEFAULT_DESTINATION } from '#lib/constants';
+import { DEMO_DIR, PRICES_DEFAULT_DESTINATION } from '#lib/constants';
+import appService from '#lib/services/appService';
 import { settings, deviceSettings, SettingKeys, DeviceSettingKeys } from '#lib/settings';
 import fullLedgerService from '#lib/services/ledgerWorkerClient';
 import { readFile, saveFile } from '#lib/utils/opfslib';
@@ -61,6 +62,8 @@ export interface PriceDownloadStatus {
 	invertedSymbols: string[];
 	skippedUnsupported: string[];
 	securities: string[];
+	/** Requested symbols the provider's response did not contain. */
+	missing: string[];
 	targetFile: string;
 	writeMode: PriceWriteMode;
 	lastError: string | null;
@@ -77,6 +80,31 @@ export interface PriceDownloadResult {
 	invertedSymbols: string[];
 	skippedUnsupported: string[];
 	securities: string[];
+	/** Requested symbols the provider's response did not contain. */
+	missing: string[];
+	/** True when the file already held exactly this content — nothing was written. */
+	unchanged: boolean;
+}
+
+/**
+ * Why `path` cannot be a download destination, or null when it can. The
+ * destination is rewritten (overwrite mode) so it must never be the user's
+ * main book, a demo file, or something outside OPFS's `.bean` files.
+ */
+export async function validateTargetFile(path: string): Promise<string | null> {
+	const p = path.trim();
+	if (p === '') return 'Choose a destination file.';
+	if (p.startsWith('/') || p.includes('\\') || p.split('/').some((s) => s === '..' || s === '')) {
+		return 'The destination must be a relative OPFS path.';
+	}
+	if (!p.endsWith('.bean')) return 'The destination must be a .bean file.';
+	if (p === DEMO_DIR || p.startsWith(`${DEMO_DIR}/`)) {
+		return 'Demo files are read-only reference data.';
+	}
+	if (p === (await appService.readBookFilename())) {
+		return 'That is your main book — pick a separate prices file.';
+	}
+	return null;
 }
 
 export async function resolveConfig(): Promise<PriceDownloadConfig> {
@@ -93,9 +121,11 @@ export async function resolveConfig(): Promise<PriceDownloadConfig> {
 }
 
 export async function saveConfig(config: PriceDownloadConfig): Promise<void> {
-	await settings.set(SettingKeys.priceProvider, config.providerId);
-	await settings.set(SettingKeys.priceTargetFile, config.targetFile);
-	await settings.set(SettingKeys.priceWriteMode, config.writeMode);
+	await Promise.all([
+		settings.set(SettingKeys.priceProvider, config.providerId),
+		settings.set(SettingKeys.priceTargetFile, config.targetFile),
+		settings.set(SettingKeys.priceWriteMode, config.writeMode)
+	]);
 }
 
 /** Compute what a download run would do right now, without fetching anything. */
@@ -156,6 +186,9 @@ export async function downloadPrices(
 	const config = configArg ?? (await resolveConfig());
 	const provider = getPriceProvider(config.providerId);
 	try {
+		const invalid = await validateTargetFile(config.targetFile);
+		if (invalid) throw new Error(invalid);
+
 		const plan = await planDownload(config);
 		const toFetch = [...plan.symbols, ...plan.invertedSymbols];
 		if (toFetch.length === 0) {
@@ -180,7 +213,15 @@ export async function downloadPrices(
 			added = merged.added;
 			updated = merged.updated;
 		}
-		await saveFile(config.targetFile, text);
+		// Output is deterministic, so a re-run for the same fixing is detectable:
+		// skip the write and the ledger reload.
+		const unchanged = existing === text;
+		if (unchanged) {
+			added = 0;
+			updated = 0;
+		} else {
+			await saveFile(config.targetFile, text);
+		}
 		const directives =
 			config.writeMode === 'overwrite'
 				? incoming.length
@@ -196,18 +237,22 @@ export async function downloadPrices(
 			symbols: plan.symbols,
 			invertedSymbols: plan.invertedSymbols,
 			skippedUnsupported: plan.skippedUnsupported,
-			securities: plan.securities
+			securities: plan.securities,
+			missing: fetched.missing,
+			unchanged
 		};
 
+		const { unchanged: _unchanged, ...statusFields } = result;
 		await deviceSettings.set(DeviceSettingKeys.priceDownloadStatus, {
 			lastRun: new Date().toISOString(),
-			...result,
+			...statusFields,
 			lastError: null
 		} satisfies PriceDownloadStatus);
 
 		// Standard file-mutation pattern: reload in the background so queries,
-		// reports and the staleness indicator pick up the new prices.
-		void reloadLedgerFromOpfs();
+		// reports and the staleness indicator pick up the new prices. The page
+		// follows `fullLedgerService.version` to refresh its preview afterwards.
+		if (!unchanged) void reloadLedgerFromOpfs();
 
 		return result;
 	} catch (err) {
@@ -221,6 +266,7 @@ export async function downloadPrices(
 			invertedSymbols: [],
 			skippedUnsupported: [],
 			securities: [],
+			missing: [],
 			targetFile: config.targetFile,
 			writeMode: config.writeMode,
 			lastError: String(err)
@@ -247,6 +293,8 @@ function planToResult(
 		symbols: plan.symbols,
 		invertedSymbols: plan.invertedSymbols,
 		skippedUnsupported: plan.skippedUnsupported,
-		securities: plan.securities
+		securities: plan.securities,
+		missing: [],
+		unchanged: false
 	};
 }

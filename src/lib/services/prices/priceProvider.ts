@@ -28,6 +28,8 @@ export interface FetchedQuotes {
 	asOf: string;
 	/** Pairs in the provider's published direction, verbatim. */
 	quotes: PriceQuote[];
+	/** Requested symbols the response did not contain (not written). */
+	missing: string[];
 }
 
 export interface PriceProvider {

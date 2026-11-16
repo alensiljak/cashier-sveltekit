@@ -94,7 +94,9 @@ export function parseEcbResponse(body: unknown, requested: string[]): FetchedQuo
 		}
 		return { base: 'EUR', rate, quote };
 	});
-	return { source: 'ecb', asOf, quotes };
+	const returned = new Set(quotes.map((q) => q.quote));
+	const missing = requested.filter((s) => !returned.has(s));
+	return { source: 'ecb', asOf, quotes, missing };
 }
 
 export const ecbPriceProvider: PriceProvider = {
@@ -121,7 +123,7 @@ export const ecbPriceProvider: PriceProvider = {
 			}
 			return parseEcbResponse(await response.json(), covered);
 		} catch (err) {
-			if (err instanceof DOMException && err.name === 'AbortError') {
+			if (err instanceof Error && err.name === 'AbortError') {
 				throw new Error(`ECB rates request timed out after ${TIMEOUT_MS / 1000}s`);
 			}
 			throw err;

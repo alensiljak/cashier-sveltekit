@@ -7,6 +7,7 @@
 		saveConfig,
 		planDownload,
 		downloadPrices,
+		validateTargetFile,
 		getDownloadStatus,
 		type PriceDownloadConfig,
 		type PriceDownloadPlan,
@@ -18,7 +19,12 @@
 		defaultPriceProvider
 	} from '#lib/services/prices/priceProviderRegistry';
 	import demoDataService from '#lib/services/demoDataService';
-	import { listFileTree } from '#lib/utils/opfslib';
+	import fullLedgerService from '#lib/services/ledgerWorkerClient';
+	import { PRICES_DEFAULT_DESTINATION } from '#lib/constants';
+	import { SettingKeys } from '#lib/settings';
+	import { onMount } from 'svelte';
+	import { goto, replaceState } from '$app/navigation';
+	import { page } from '$app/state';
 	import DownloadIcon from '@lucide/svelte/icons/download';
 
 	const providers = listPriceProviders();
@@ -26,10 +32,11 @@
 
 	let config = $state<PriceDownloadConfig>({
 		providerId: defaultProvider.id,
-		targetFile: 'prices/prices.current.bean',
+		targetFile: PRICES_DEFAULT_DESTINATION,
 		writeMode: 'overwrite'
 	});
-	let beanFiles = $state<string[]>([]);
+	let loaded = $state(false);
+	let targetError = $state<string | null>(null);
 	let plan = $state<PriceDownloadPlan | null>(null);
 	let status = $state<PriceDownloadStatus | null>(null);
 	let result = $state<PriceDownloadResult | null>(null);
@@ -39,28 +46,40 @@
 
 	const provider = $derived(plan?.provider ?? providers.find((p) => p.id === config.providerId));
 
+	// The ledger reloads in the background after a download (and after any
+	// file change); refresh the preview whenever it finishes.
+	const ledgerVersion = fullLedgerService.version;
 	$effect(() => {
-		void load();
+		void $ledgerVersion;
+		if (loaded) void refreshPlan();
 	});
+
+	onMount(load);
 
 	async function load() {
 		config = await resolveConfig();
+		applyPickerReturn();
+		targetError = await validateTargetFile(config.targetFile);
 		await refreshPlan();
 		status = await getDownloadStatus();
 		demoActive = await demoDataService.isDemoActive();
-		try {
-			const tree = await listFileTree();
-			beanFiles = tree
-				.filter((e) => e.kind === 'file' && e.path.endsWith('.bean'))
-				.map((e) => e.path);
-		} catch {
-			beanFiles = [];
-		}
+		loaded = true;
+	}
+
+	/** The OPFS file picker hands the chosen path back via the URL. */
+	function applyPickerReturn() {
+		const key = page.url.searchParams.get('settingKey');
+		const value = page.url.searchParams.get('settingValue');
+		if (key !== SettingKeys.priceTargetFile || !value) return;
+		config = { ...config, targetFile: value };
+		void saveConfig(config);
+		replaceState('', {});
 	}
 
 	async function refreshPlan() {
 		try {
 			plan = await planDownload(config);
+			error = null;
 		} catch (e) {
 			plan = null;
 			error = String(e);
@@ -70,8 +89,15 @@
 	/** Persist on change and keep the preview in sync. */
 	async function updateConfig(patch: Partial<PriceDownloadConfig>) {
 		config = { ...config, ...patch };
+		targetError = await validateTargetFile(config.targetFile);
 		await saveConfig(config);
 		await refreshPlan();
+	}
+
+	function pickTargetFile() {
+		void goto(
+			`/opfs/file-picker?returnSetting=${SettingKeys.priceTargetFile}&returnTo=${encodeURIComponent('/prices/download')}`
+		);
 	}
 
 	async function runDownload() {
@@ -126,36 +152,36 @@
 					/>
 				</label>
 
-				<label class="form-control w-full">
-					<div class="label"><span class="label-text">Destination file (OPFS path)</span></div>
-					<input
-						type="text"
-						class="input input-bordered w-full"
-						bind:value={config.targetFile}
-						onchange={() => void updateConfig({})}
-					/>
-					{#if beanFiles.length > 0}
-						<div class="label">
-							<span class="label-text-alt opacity-60">Existing files:</span>
+				<div>
+					<div class="flex items-center gap-3">
+						<div class="min-w-0 flex-1">
+							<p class="text-sm font-medium">Destination file</p>
+							<p class="truncate text-xs opacity-60">{config.targetFile}</p>
 						</div>
-						<div class="flex flex-wrap gap-1">
-							{#each beanFiles as file (file)}
+						<div class="flex shrink-0 items-center gap-1">
+							{#if config.targetFile !== PRICES_DEFAULT_DESTINATION}
 								<button
 									type="button"
-									class="btn btn-xs btn-outline"
-									onclick={() => void updateConfig({ targetFile: file })}>{file}</button
+									class="btn btn-ghost btn-xs rounded"
+									onclick={() => void updateConfig({ targetFile: PRICES_DEFAULT_DESTINATION })}
 								>
-							{/each}
+									Default
+								</button>
+							{/if}
+							<button class="btn btn-primary btn-xs rounded" type="button" onclick={pickTargetFile}>
+								Select
+							</button>
 						</div>
-					{/if}
-					<div class="label">
-						<span class="label-text-alt opacity-60">
-							The app does not edit your book — wire the file in yourself with<code class="mx-1"
-								>include "{config.targetFile}"</code
-							>.
-						</span>
 					</div>
-				</label>
+					{#if targetError}
+						<p class="mt-1 text-xs text-error">{targetError}</p>
+					{/if}
+					<p class="mt-1 text-xs opacity-60">
+						The app does not edit your book — wire the file in yourself with<code class="mx-1"
+							>include "{config.targetFile}"</code
+						>.
+					</p>
+				</div>
 
 				<div class="flex items-center justify-between gap-3">
 					<div class="flex-1">
@@ -234,7 +260,10 @@
 		<button
 			type="button"
 			class="btn btn-primary"
-			disabled={running || !plan || plan.symbols.length + plan.invertedSymbols.length === 0}
+			disabled={running ||
+				!!targetError ||
+				!plan ||
+				plan.symbols.length + plan.invertedSymbols.length === 0}
 			onclick={() => void runDownload()}
 		>
 			{#if running}
@@ -253,7 +282,9 @@
 			<div class="card bg-base-200 rounded-lg">
 				<div class="card-body py-3 px-3">
 					<p class="text-sm">
-						{#if result.fixingDate}
+						{#if result.fixingDate && result.unchanged}
+							The {result.fixingDate} fixing is already in <code>{result.targetFile}</code> — no changes.
+						{:else if result.fixingDate}
 							Downloaded the {result.fixingDate} fixing into
 							<code>{result.targetFile}</code>
 							— {result.added}
@@ -264,6 +295,11 @@
 							Nothing to fetch.
 						{/if}
 					</p>
+					{#if result.missing.length > 0}
+						<p class="text-sm text-warning">
+							Not in the provider's response, so not written: {result.missing.join(', ')}
+						</p>
+					{/if}
 				</div>
 			</div>
 		{/if}

@@ -33,6 +33,15 @@ describe('ecbPriceProvider.covers', () => {
 	});
 });
 
+describe('parseEcbResponse missing symbols', () => {
+	it('reports requested symbols absent from the response', () => {
+		const one = [{ date: '2026-11-13', base: 'EUR', quote: 'USD', rate: 1.1052 }];
+		const parsed = parseEcbResponse(one, ['USD', 'CHF']);
+		expect(parsed.quotes).toHaveLength(1);
+		expect(parsed.missing).toEqual(['CHF']);
+	});
+});
+
 describe('parseEcbResponse', () => {
 	it('maps a valid response to EUR-base quotes with the response date', () => {
 		const parsed = parseEcbResponse(fixing, ['USD', 'CHF']);

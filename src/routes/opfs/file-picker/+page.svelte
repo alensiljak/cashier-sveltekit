@@ -10,12 +10,17 @@
 	let showCheckboxes = $state(false);
 
 	const returnSetting = $derived(page.url.searchParams.get('returnSetting'));
+	/** Page to hand the selection back to (defaults to Settings). Internal paths only. */
+	const returnTo = $derived.by(() => {
+		const target = page.url.searchParams.get('returnTo');
+		return target && target.startsWith('/') && !target.startsWith('//') ? target : '/settings';
+	});
 
 	function onFabClick() {
 		if (returnSetting) {
 			if (selectedFile) {
 				goto(
-					`/settings?settingKey=${encodeURIComponent(returnSetting)}&settingValue=${encodeURIComponent(selectedFile)}`
+					`${returnTo}?settingKey=${encodeURIComponent(returnSetting)}&settingValue=${encodeURIComponent(selectedFile)}`
 				);
 			}
 			return;

@@ -5,8 +5,8 @@
  * The output is fully deterministic — fixed directive order, fixed number
  * formatting — so two devices that fetch the same fixing write byte-identical
  * files and the S3/WebDAV per-file sync sees "equivalent" and transfers
- * nothing. Anything else in the file (comments, the user's own directives)
- * counts as a foreign line and passes through verbatim in append mode.
+ * nothing. In append mode every existing line passes through verbatim except
+ * a price line whose key is re-downloaded with a different rate.
  */
 
 export interface PriceDirective {
@@ -25,18 +25,11 @@ export interface ParsedPriceFile {
 
 /**
  * A `price` directive line, e.g. `2026-11-13 price EUR 1.1052 USD`.
- * Trailing comments are tolerated when parsing (they are dropped when the
- * line is rewritten — the file is machine-managed).
+ * Trailing comments are tolerated when parsing.
  */
-const ISO_DATE = /\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])/;
 const PRICE_LINE = new RegExp(
 	`^\\s*(\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01]))\\s+price\\s+("[^"]*"|\\S+)\\s+([\\d.,]+)\\s+("[^"]*"|\\S+)\\s*(?:;.*)?$`
 );
-
-/** True for calendar-valid ISO dates (rejects e.g. `2026-13-45`). */
-export function isIsoDate(date: string): boolean {
-	return ISO_DATE.test(date);
-}
 
 /** Deterministic rate rendering: at most 6 decimals, trailing zeros trimmed. */
 export function formatRate(rate: number): string {
@@ -44,7 +37,11 @@ export function formatRate(rate: number): string {
 		throw new Error(`Cannot format non-positive rate: ${rate}`);
 	}
 	const fixed = rate.toFixed(6);
-	return fixed.replace(/0+$/, '').replace(/\.$/, '');
+	const trimmed = fixed.replace(/0+$/, '').replace(/\.$/, '');
+	if (trimmed === '0') {
+		throw new Error(`Rate ${rate} is too small to render at 6 decimals`);
+	}
+	return trimmed;
 }
 
 export function parsePriceLine(line: string): PriceDirective | null {
@@ -53,7 +50,9 @@ export function parsePriceLine(line: string): PriceDirective | null {
 	const base = m[2].replace(/^"|"$/g, '');
 	const quote = m[4].replace(/^"|"$/g, '');
 	const rate = Number(m[3].replace(/,/g, ''));
-	if (!Number.isFinite(rate)) return null;
+	// A non-positive rate is not a valid price: treat the line as foreign so
+	// it passes through untouched instead of crashing the renderer.
+	if (!Number.isFinite(rate) || rate <= 0) return null;
 	return { date: m[1], base, rate, quote };
 }
 
@@ -96,15 +95,12 @@ export function parsePriceFile(text: string): ParsedPriceFile {
 /** Sorted, rendered directive lines: (date, base, quote), fixed formatting. */
 export function renderDirectives(directives: Iterable<PriceDirective>): string[] {
 	return [...directives]
-		.sort((a, b) =>
-			a.date < b.date
-				? -1
-				: a.date > b.date
-					? 1
-					: `${a.base}/${a.quote}` < `${b.base}/${b.quote}`
-						? -1
-						: 1
-		)
+		.sort((a, b) => {
+			if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+			const pa = `${a.base}/${a.quote}`;
+			const pb = `${b.base}/${b.quote}`;
+			return pa === pb ? 0 : pa < pb ? -1 : 1;
+		})
 		.map((d) => `${d.date} price ${d.base} ${formatRate(d.rate)} ${d.quote}`);
 }
 
@@ -134,37 +130,39 @@ export interface MergeResult {
 }
 
 /**
- * Append mode: foreign lines are preserved verbatim and in order; price
- * directives merge by `date|base|quote` with the incoming value winning on
- * collision (a corrected fixing converges on every device). All directive
- * lines are rewritten through the fixed formatter so the file converges to
- * canonical bytes.
+ * Append mode: merge in place. Every existing line passes through byte for
+ * byte (user directives, comments, quoting, precision) except a price line
+ * whose `date|base|quote` key is in `incoming` *and* carries a different
+ * rate — that one line is replaced by the incoming value (a corrected fixing
+ * converges on every device). Keys not yet in the file are appended, sorted,
+ * at the end. Line endings of the existing file are kept.
  */
 export function mergePriceFile(existing: string, incoming: PriceDirective[]): MergeResult {
-	const parsed = parsePriceFile(existing);
-	let added = 0;
+	const eol = existing.includes('\r\n') ? '\r\n' : '\n';
+	const lines = existing.split(/\r?\n/);
+	// A file ending in a newline splits to a trailing ''; the final newline is
+	// re-added below.
+	if (lines[lines.length - 1] === '') lines.pop();
+
+	const pending = new Map<string, PriceDirective>();
+	for (const d of incoming) pending.set(priceKey(d), d);
+
+	const seen = new Set<string>();
 	let updated = 0;
-	for (const d of incoming) {
-		const key = priceKey(d);
-		const existingDirective = parsed.directives.get(key);
-		if (!existingDirective) {
-			added++;
-		} else if (formatRate(existingDirective.rate) !== formatRate(d.rate)) {
-			updated++;
+	for (let i = 0; i < lines.length; i++) {
+		const parsed = parsePriceLine(lines[i]);
+		if (!parsed) continue;
+		const key = priceKey(parsed);
+		const wanted = pending.get(key);
+		if (!wanted) continue;
+		if (formatRate(parsed.rate) !== formatRate(wanted.rate)) {
+			lines[i] = renderDirectives([wanted])[0];
+			if (!seen.has(key)) updated++;
 		}
-		parsed.directives.set(key, d);
+		seen.add(key);
 	}
 
-	// Foreign lines first (unchanged), a single blank line, then the canonical
-	// directive block. The split of a file ending in '\n' leaves trailing ''
-	// entries in the foreign lines — trim them; the final newline is appended
-	// below.
-	const foreign = [...parsed.foreignLines];
-	while (foreign.length > 0 && foreign[foreign.length - 1] === '') foreign.pop();
-	const rendered = renderDirectives(parsed.directives.values());
-	const lines =
-		foreign.length > 0 && rendered.length > 0
-			? [...foreign, '', ...rendered]
-			: [...foreign, ...rendered];
-	return { text: lines.join('\n') + '\n', added, updated };
+	const fresh = [...pending].filter(([key]) => !seen.has(key)).map(([, d]) => d);
+	lines.push(...renderDirectives(fresh));
+	return { text: lines.join(eol) + eol, added: fresh.length, updated };
 }
