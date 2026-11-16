@@ -10,12 +10,34 @@ Downloads prices into a Beancount prices file of your choice, by default `prices
 - **Destination file** — any path in the app's storage; existing `.bean` files are offered as one-tap shortcuts. The app never edits your book — once the file exists, wire it into your book yourself with an `include` directive, e.g. `include "prices/prices.current.bean"` placed in your main book file.
 - **Append history** — off by default, the file is rewritten each run with just the latest prices ("current" prices). Turn it on to keep earlier downloaded prices and gradually build a price history; duplicates for the same date are deduplicated.
 
+Provider, destination, write mode and symbol selections are **shared across your devices**. The proxy key and the last-run status are per-device.
+
 ## What gets fetched
 
 The provider determines the candidate set:
 
 - **Currency providers** fetch only currencies relevant to your book: your default currency, the ledger's operating currencies, and the currencies appearing in your price directives and accounts. Securities declared in your book are not exchange rates and are left alone; currencies the provider does not serve are listed under the preview.
 - **Securities providers** fetch the commodities declared in your book (`commodity` directives, with `ticker`, `isin` or `apir` metadata when the source needs it). Each price is written as `price <commodity> <rate> <quote currency>`; securities are never inverted.
+
+## Vanguard Australia
+
+Vanguard Australia identifies its products by **APIR** (managed funds) or **ASX ticker** (ETFs). The catalogue publishes no ISIN for managed funds, so `isin:` cannot be used to match them.
+
+Link each commodity to its Vanguard product explicitly with `apir:` or `ticker:`:
+
+```beancount
+2020-01-01 commodity VAN0004AU
+  name: "Vanguard Australian Property Securities Index Fund"
+  apir: "VAN0004AU"
+
+2020-01-01 commodity VAS
+  name: "Vanguard Australian Shares Index ETF"
+  ticker: "VAS"
+```
+
+The commodity name is the base of the downloaded price (`2026-11-16 price VAN0004AU 0.9736 AUD`); the metadata is the identifier Vanguard's catalogue is searched by. A commodity with neither `apir:` nor `ticker:` is listed as skipped, even when its name looks like a Vanguard code. Codes are matched exactly as published (uppercase).
+
+The provider downloads the fund's published NAV, not the ASX market price, so ETF quotes may differ slightly from the exchange close.
 
 If your book already keeps prices for a currency pair — say a `price USD 0.9 EUR` history — the new rates are written **in your series' direction**, extending it with new dates. Writing the opposite direction instead would be ignored by the ledger: for one pair it keeps only one of the two directions (the denser series wins), so this way your data stays the authority and the downloads stay effective.
 

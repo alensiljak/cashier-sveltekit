@@ -5,15 +5,16 @@
  * https://www.vanguard.com.au`), so every request goes through the app's
  * same-origin CORS proxy (`worker/proxy.ts`). Two endpoints are used:
  *
- *   GET /personal/api/products/personal/funds/managed+fund
+ *   GET /personal/api/products/personal/funds/allfunds
  *     → { data: [{ portId, tradingSymbols: { APIR, TICKER }, … }] }
  *   GET /personal/api/products/personal/fund/{portId}/prices?limit=1
  *     → { data: [{ navPrices: [{ asOfDate, currencyCode, price }] }] }
  *
- * The catalogue maps the book's commodity metadata (`apir`, `ticker`, or the
- * commodity name itself) to a `portId`. The old Python downloader called
- * `…/detail?limit=1` and hardcoded two fund ids; `…/prices?limit=1` returns
- * the same NAV fields in ~650 bytes instead of ~1.1 MB.
+ * The catalogue maps the book's commodity metadata (`apir` for managed funds,
+ * `ticker` for ETFs) to a `portId`; the commodity name is never guessed. The
+ * old Python downloader called `…/detail?limit=1` and hardcoded two fund ids;
+ * `…/prices?limit=1` returns the same NAV fields in ~650 bytes instead of
+ * ~1.1 MB.
  *
  * This is an undocumented API. The provider is deliberately a thin parser:
  * every failure aborts the run before the destination file is written.
@@ -22,8 +23,7 @@
 import type { DeclaredSecurity, FetchedQuotes, PriceProvider, PriceQuote } from './priceProvider';
 import { proxyFetch } from './proxyFetch';
 
-const CATALOGUE_URL =
-	'https://www.vanguard.com.au/personal/api/products/personal/funds/managed+fund';
+const CATALOGUE_URL = 'https://www.vanguard.com.au/personal/api/products/personal/funds/allfunds';
 
 function pricesUrl(portId: string): string {
 	return `https://www.vanguard.com.au/personal/api/products/personal/fund/${portId}/prices?limit=1`;
@@ -170,7 +170,7 @@ export function createVanguardAuPriceProvider(
 		security: DeclaredSecurity,
 		identifiers: Map<string, string>
 	): string | undefined {
-		for (const id of [security.apir, security.ticker, security.name]) {
+		for (const id of [security.apir, security.ticker]) {
 			if (!id) continue;
 			const portId = identifiers.get(id);
 			if (portId) return portId;
@@ -203,9 +203,9 @@ export function createVanguardAuPriceProvider(
 			return covered;
 		},
 		async fetchLatest(symbols) {
-			const identifiers = await catalogue();
+			await catalogue();
 			const products = symbols.map((symbol) => {
-				const portId = resolved.get(symbol) ?? identifiers.get(symbol);
+				const portId = resolved.get(symbol);
 				if (!portId) throw new Error(`No Vanguard Australia product for ${symbol}`);
 				return { symbol, portId };
 			});

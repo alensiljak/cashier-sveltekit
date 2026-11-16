@@ -450,7 +450,7 @@
 	<!-- ── Price Download ───────────────────────────────────────── -->
 	<CashierCardTemplate heading="Price Download" Icon={TrendingDownIcon} bodyClass="space-y-2 px-3">
 		{#snippet description()}
-			Download exchange-rate reference prices (ECB) into a prices file of your choice.
+			Download exchange rates and security prices into a prices file of your choice.
 		{/snippet}
 
 		<div class="flex items-center gap-3">

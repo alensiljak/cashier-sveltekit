@@ -40,7 +40,7 @@ function stubFetch(prices: Record<string, unknown>) {
 	const calls: string[] = [];
 	const fetchImpl: VanguardFetch = vi.fn(async (url: string) => {
 		calls.push(url);
-		if (url.endsWith('/funds/managed+fund')) return response(catalogue);
+		if (url.endsWith('/funds/allfunds')) return response(catalogue);
 		const portId = /\/fund\/([^/]+)\/prices/.exec(url)?.[1];
 		if (portId && portId in prices) return response(prices[portId]);
 		return response({ message: 'Not found' }, 404);
@@ -127,7 +127,7 @@ describe('parseVanguardPrice', () => {
 });
 
 describe('Vanguard AU provider', () => {
-	it('matches commodities by APIR, ticker, or commodity name', async () => {
+	it('matches commodities by APIR or ticker metadata', async () => {
 		const { fetchImpl } = stubFetch({});
 		const provider = createVanguardAuPriceProvider(fetchImpl);
 		const covered = await provider.resolveSecurities([
@@ -136,7 +136,21 @@ describe('Vanguard AU provider', () => {
 			{ name: 'VAN0004AU' },
 			{ name: 'VTI', ticker: 'VTI' }
 		]);
-		expect(covered).toEqual(['PROP', 'VAF', 'VAN0004AU']);
+		expect(covered).toEqual(['PROP', 'VAF']);
+	});
+
+	it('does not match a commodity by name alone', async () => {
+		const { fetchImpl } = stubFetch({});
+		const provider = createVanguardAuPriceProvider(fetchImpl);
+		expect(await provider.resolveSecurities([{ name: 'VAN0004AU' }])).toEqual([]);
+	});
+
+	it('rejects a symbol that was not resolved', async () => {
+		const { fetchImpl } = stubFetch({});
+		const provider = createVanguardAuPriceProvider(fetchImpl);
+		await expect(provider.fetchLatest(['VAN0004AU'])).rejects.toThrow(
+			/No Vanguard Australia product/
+		);
 	});
 
 	it('does not fetch the catalogue when nothing is declared', async () => {
@@ -175,7 +189,7 @@ describe('Vanguard AU provider', () => {
 		await provider.resolveSecurities([{ name: 'PROP', apir: 'VAN0004AU' }]);
 		await provider.resolveSecurities([{ name: 'PROP', apir: 'VAN0004AU' }]);
 		await provider.fetchLatest(['PROP']);
-		expect(calls.filter((url) => url.endsWith('/funds/managed+fund'))).toHaveLength(1);
+		expect(calls.filter((url) => url.endsWith('/funds/allfunds'))).toHaveLength(1);
 	});
 
 	it('reports products without a NAV as missing', async () => {
