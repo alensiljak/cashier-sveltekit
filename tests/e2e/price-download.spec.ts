@@ -162,7 +162,9 @@ test.describe('price download', () => {
 			await page.locator('.navbar .dropdown-end > button').click();
 			await page.getByRole('menuitem', { name: 'Proxy key' }).click();
 		};
-		const dialog = page.locator('dialog.modal');
+		const dialog = page
+			.locator('dialog.modal')
+			.filter({ has: page.getByRole('heading', { name: 'Proxy key' }) });
 		await openProxyKey();
 		await expect(dialog).toBeVisible();
 

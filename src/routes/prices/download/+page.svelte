@@ -283,7 +283,6 @@
 							Nothing to fetch — the provider cannot serve any of the commodities your book uses.
 						</p>
 					{/if}
-
 				</div>
 			</div>
 		{/if}
@@ -384,6 +383,7 @@
 				type="password"
 				class="input input-bordered w-full"
 				autocomplete="off"
+				aria-label="Proxy key"
 				placeholder="Required when the server sets PROXY_KEY"
 				bind:value={proxyKeyDraft}
 				onkeydown={(e) => e.key === 'Enter' && void saveProxyKey()}
