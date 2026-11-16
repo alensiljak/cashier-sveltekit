@@ -47,6 +47,10 @@
 	/** Whether the main book includes the destination; null = unknown. */
 	let included = $state<boolean | null>(null);
 	let plan = $state<PriceDownloadPlan | null>(null);
+	/** True while `refreshPlan` is in flight; drives the placeholder card. */
+	let planLoading = $state(false);
+	/** Monotonic token: a stale plan response must not overwrite a newer one. */
+	let planRequest = 0;
 	let status = $state<PriceDownloadStatus | null>(null);
 	let result = $state<PriceDownloadResult | null>(null);
 	/** Current contents of the destination file, shown after a run and on load. */
@@ -58,7 +62,9 @@
 	let proxyKeyDraft = $state('');
 	let proxyKeyModalOpen = $state(false);
 
-	const provider = $derived(plan?.provider ?? providers.find((p) => p.id === config.providerId));
+	// From the config, not the plan: the plan lags a provider switch by a full
+	// book scan, and the select must show the provider the user just picked.
+	const provider = $derived(providers.find((p) => p.id === config.providerId) ?? plan?.provider);
 
 	/** Every selectable candidate, in display order. */
 	const symbolOptions = $derived(
@@ -111,6 +117,10 @@
 		proxyKey = proxyKeyDraft.trim();
 		await deviceSettings.set(DeviceSettingKeys.proxyKey, proxyKey);
 		proxyKeyModalOpen = false;
+		// A missing/wrong key is the likely cause of the current error; retry
+		// the preview so a successful plan clears it.
+		error = null;
+		await refreshPlan();
 	}
 
 	/** The OPFS file picker hands the chosen path back via the URL. */
@@ -133,12 +143,20 @@
 	}
 
 	async function refreshPlan() {
+		const request = ++planRequest;
+		const snapshot = config;
+		planLoading = true;
 		try {
-			plan = await planDownload(config);
+			const next = await planDownload(snapshot);
+			if (request !== planRequest) return;
+			plan = next;
 			error = null;
 		} catch (e) {
+			if (request !== planRequest) return;
 			plan = null;
 			error = describeError(e);
+		} finally {
+			if (request === planRequest) planLoading = false;
 		}
 	}
 
@@ -153,10 +171,15 @@
 
 	/** Each provider keeps its own selection; switching loads that one. */
 	async function changeProvider(providerId: string) {
+		// Drop the old provider's symbol list before the first await, otherwise
+		// it stays on screen for the whole plan recomputation. The destination
+		// is unchanged, so `checkTarget` is not needed here.
+		config = { ...config, providerId };
+		plan = null;
 		const symbols = await getSymbolSelection(providerId);
-		config = { ...config, providerId, symbols };
-		await checkTarget();
-		await saveConfig(config);
+		if (config.providerId !== providerId) return; // a newer switch won
+		config = { ...config, symbols };
+		void saveConfig(config); // persistence must not delay the preview
 		await refreshPlan();
 	}
 
@@ -370,6 +393,13 @@
 					{#if symbolOptions.length > 0 && plan.symbols.length + plan.invertedSymbols.length === 0}
 						<p class="text-sm opacity-70">No symbols selected — pick at least one above.</p>
 					{/if}
+				</div>
+			</div>
+		{:else if planLoading}
+			<div class="card bg-base-100 rounded-lg">
+				<div class="card-body flex-row items-center gap-2 py-3 px-3 text-sm opacity-60">
+					<span class="loading loading-spinner loading-sm"></span>
+					Computing symbols…
 				</div>
 			</div>
 		{/if}
