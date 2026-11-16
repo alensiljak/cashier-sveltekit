@@ -134,16 +134,33 @@ export function resolveIncludes(bookPath: string, text: string): string[] {
 }
 
 /**
- * Whether the main book directly includes `targetFile`. `null` when it cannot
- * be told (no book file set). Nested includes are not followed, so `false`
- * means "not found in the main book", which the page words as a hint.
+ * Whether the main book includes `targetFile`, directly or through nested
+ * includes (cycle-safe). `null` when it cannot be told (no book file set).
+ * Glob patterns in include paths are not expanded, so `false` means "not
+ * found", which the page words as a hint.
  */
 export async function isTargetIncluded(targetFile: string): Promise<boolean | null> {
 	const bookPath = await appService.readBookFilename();
 	if (!bookPath) return null;
 	const text = await readFile(bookPath);
 	if (text === undefined) return null;
-	return resolveIncludes(bookPath, text).includes(targetFile);
+
+	const visited = new Set<string>([bookPath]);
+	const queue = resolveIncludes(bookPath, text);
+	while (queue.length > 0) {
+		const path = queue.shift()!;
+		if (path === targetFile) return true;
+		if (visited.has(path)) continue;
+		visited.add(path);
+		let included: string | undefined;
+		try {
+			included = await readFile(path);
+		} catch {
+			continue; // missing/unreadable file — skip
+		}
+		if (included !== undefined) queue.push(...resolveIncludes(path, included));
+	}
+	return false;
 }
 
 export async function resolveConfig(): Promise<PriceDownloadConfig> {

@@ -47,9 +47,17 @@ describe('derivePriceSymbols', () => {
 	});
 
 	it('splits out currency candidates the provider cannot serve', () => {
-		const result = plan({ pairCurrencies: ['USD', 'HRK'], accountCurrencies: ['ROL'] });
+		const result = plan({ pairCurrencies: ['USD', 'TRY'], accountCurrencies: ['HUF'] });
 		expect(result.symbols).toEqual(['USD']);
-		expect(result.skippedUnsupported).toEqual(['HRK', 'ROL']);
+		expect(result.skippedUnsupported).toEqual(['TRY', 'HUF']);
+	});
+
+	it('does not list non-currency commodities as unsupported currencies', () => {
+		// HY, VTI-style tickers etc. are not ISO 4217 codes, even undeclared.
+		const result = plan({ pairCurrencies: ['USD', 'HY', 'WBCPD'], accountCurrencies: ['BAM'] });
+		expect(result.symbols).toEqual(['USD']);
+		expect(result.skippedUnsupported).toEqual(['BAM']);
+		expect(result.securities).toEqual(['HY', 'WBCPD']);
 	});
 
 	it('lists declared securities separately instead of as skips', () => {

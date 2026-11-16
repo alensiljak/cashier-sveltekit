@@ -188,7 +188,7 @@
 					{#if included === false && !demoActive}
 						<p class="mt-1 text-xs text-warning">
 							Your main book has no <code>include "{config.targetFile}"</code> line, so these prices
-							will have no effect until you add one (nested includes are not checked).
+							will have no effect until you add one (nested includes are followed, but glob patterns are not expanded).
 						</p>
 					{:else}
 						<p class="mt-1 text-xs opacity-60">
@@ -258,14 +258,6 @@
 					{#if plan.skippedUnsupported.length > 0}
 						<p class="text-xs opacity-60">
 							No rate from this provider: {plan.skippedUnsupported.join(', ')}
-						</p>
-					{/if}
-					{#if plan.securities.length > 0}
-						<p class="text-xs opacity-60">
-							Securities in the book are not exchange rates:{plan.securities
-								.slice()
-								.sort()
-								.join(', ')}
 						</p>
 					{/if}
 				</div>
@@ -343,12 +335,6 @@
 							<p>
 								<span class="opacity-60">No rate from provider:</span>
 								{status.skippedUnsupported.join(', ')}
-							</p>
-						{/if}
-						{#if status.securities.length > 0}
-							<p>
-								<span class="opacity-60">Securities (not FX):</span>
-								{status.securities.join(', ')}
 							</p>
 						{/if}
 						{#if (status.missing ?? []).length > 0}

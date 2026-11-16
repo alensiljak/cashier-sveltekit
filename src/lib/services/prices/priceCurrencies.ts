@@ -67,6 +67,18 @@ function seriesDirection(
 	return native > inverted ? 'native' : 'inverted';
 }
 
+let isoCurrencies: Set<string> | null = null;
+
+/**
+ * Beancount has no marker distinguishing currencies from other commodities
+ * (lots `{}` and `@@` prices use the same namespace), so a commodity counts as
+ * a monetary currency when its name is an ISO 4217 code.
+ */
+export function isMonetaryCurrency(symbol: string): boolean {
+	isoCurrencies ??= new Set(Intl.supportedValuesOf('currency'));
+	return isoCurrencies.has(symbol);
+}
+
 /**
  * Pure core: classify candidates. Direction comes from the book's own series
  * (`userPairs`, one entry per directive, destination file excluded) first; only
@@ -105,7 +117,7 @@ export function derivePriceSymbols(input: {
 		if (!candidate || candidate === input.base || seen.has(candidate)) continue;
 		seen.add(candidate);
 
-		if (securities.has(candidate)) {
+		if (securities.has(candidate) || !isMonetaryCurrency(candidate)) {
 			securitiesOut.push(candidate);
 			continue;
 		}
