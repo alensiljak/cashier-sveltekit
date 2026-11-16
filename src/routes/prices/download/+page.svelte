@@ -240,7 +240,7 @@
 						<div class="flex flex-wrap gap-1">
 							{#each plan.invertedSymbols as symbol (symbol)}
 								<span
-									class="badge badge-outline badge-neutral"
+									class="badge badge-ghost"
 									title="Your book already keeps this pair — the rates extend that series, in its own direction."
 								>
 									{symbol} → {plan.provider.base} (your series)

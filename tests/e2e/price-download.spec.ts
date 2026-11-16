@@ -49,7 +49,7 @@ test.describe('price download', () => {
 		// securities (VTI, BND, RING, UBUD.DE) are not exchange rates and are
 		// classified out of the FX plan entirely.
 		await expect(page.getByText('EUR → AUD', { exact: true })).toBeVisible();
-		await expect(page.locator('.badge-neutral', { hasText: 'your series' })).toHaveCount(0);
+		await expect(page.locator('.badge-ghost', { hasText: 'your series' })).toHaveCount(0);
 		await expect(page.getByText('Securities in the book are not exchange rates')).toHaveCount(0);
 
 		const download = page.getByRole('button', { name: 'Download latest rates' });
