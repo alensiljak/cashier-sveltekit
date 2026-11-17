@@ -32,10 +32,10 @@
 	import { PRICES_DEFAULT_DESTINATION } from '#lib/constants';
 	import { readFile } from '#lib/utils/opfslib';
 	import { deviceSettings, DeviceSettingKeys, SettingKeys } from '#lib/settings';
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { fade } from 'svelte/transition';
 	import { disintegrate } from '#lib/utils/disintegrate';
-	import { goto, replaceState } from '$app/navigation';
+	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import DownloadIcon from '@lucide/svelte/icons/download';
 	import KeyRoundIcon from '@lucide/svelte/icons/key-round';
@@ -123,9 +123,20 @@
 		if (loaded) void refresh();
 	});
 
+	// The picker's result arrives in the URL, which may land after mount on a
+	// client-side navigation, so react to it rather than checking once.
+	let configReady = $state(false);
+	let appliedPickerValue: string | null = null;
+	$effect(() => {
+		const key = page.url.searchParams.get('settingKey');
+		const value = page.url.searchParams.get('settingValue');
+		const pathname = page.url.pathname;
+		if (configReady) untrack(() => applyPickerReturn(key, value, pathname));
+	});
+
 	onMount(async () => {
 		config = await resolveConfig();
-		applyPickerReturn();
+		configReady = true;
 		skipped = new Set(await getSkippedProviders());
 		demoActive = await demoDataService.isDemoActive();
 		proxyKey = (await deviceSettings.get<string>(DeviceSettingKeys.proxyKey)) ?? '';
@@ -170,13 +181,16 @@
 	}
 
 	/** The OPFS file picker hands the chosen path back via the URL. */
-	function applyPickerReturn() {
-		const key = page.url.searchParams.get('settingKey');
-		const value = page.url.searchParams.get('settingValue');
+	function applyPickerReturn(key: string | null, value: string | null, pathname: string) {
 		if (key !== SettingKeys.priceTargetFile || !value) return;
+		if (appliedPickerValue === value) return;
+		appliedPickerValue = value;
 		config = { ...config, targetFile: value };
 		void saveConfig(config);
-		replaceState(page.url.pathname, {});
+		void checkTarget().then(refreshWritten);
+		// goto (unlike shallow replaceState) is safe while the initial navigation is
+		// still settling, and it actually updates the URL and `page.url`.
+		void goto(pathname, { replaceState: true });
 	}
 
 	function pickTargetFile() {

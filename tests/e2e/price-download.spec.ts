@@ -37,12 +37,13 @@ test.describe('price download', () => {
 		await page.locator('#new-file-path').fill('prices/e2e-test.bean');
 		await page.locator('button.btn-circle.btn-xl').click();
 		await expect(page).toHaveURL('/prices/download');
-		await expect(page.getByText('prices/e2e-test.bean', { exact: true })).toBeVisible();
+		const destination = page.locator('p.truncate', { hasText: 'prices/e2e-test.bean' });
+		await expect(destination).toBeVisible();
 
 		await page.getByRole('checkbox', { name: 'Append history' }).check();
 		await page.waitForTimeout(500);
 		await page.reload();
-		await expect(page.getByText('prices/e2e-test.bean', { exact: true })).toBeVisible();
+		await expect(destination).toBeVisible();
 		await expect(page.getByRole('checkbox', { name: 'Append history' })).toBeChecked();
 	});
 	test('proxy key is set from the toolbar menu dialog', async ({ demoPage: page }) => {
