@@ -1,128 +1,35 @@
 /**
- * Price download e2e against the demo book, with the Frankfurter endpoint
- * mocked via a Playwright route (no network) — the demo book gives a real
- * book-relevant symbol plan: EUR operating currency, VTI/BND commodities
- * (classified out, not exchange rates) and the AUD quote side of the RING
- * prices.
+ * Price Download page e2e against the demo book. The demo fixtures carry no
+ * `price:` tags yet, so the download itself cannot be exercised here until
+ * they are extended; the page layout, remembered state and proxy key can.
  */
-import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 
-const DEFAULT_DESTINATION = 'prices/prices.current.bean';
-
-/** Read a file straight from OPFS; null when it does not exist. */
-async function readOpfsFile(page: Page, path: string): Promise<string | null> {
-	return page.evaluate(async (p) => {
-		const parts = p.split('/');
-		const name = parts.pop()!;
-		let dir = await navigator.storage.getDirectory();
-		try {
-			for (const part of parts) dir = await dir.getDirectoryHandle(part);
-			const handle = await dir.getFileHandle(name);
-			return (await handle.getFile()).text();
-		} catch {
-			return null;
-		}
-	}, path);
-}
-
-async function mockFixing(page: Page, date: string, audRate: string, usdRate = '1.1052') {
-	await page.route('**/api.frankfurter.dev/**', async (route) => {
-		await route.fulfill({
-			json: [
-				{ date, base: 'EUR', quote: 'AUD', rate: Number(audRate) },
-				{ date, base: 'EUR', quote: 'USD', rate: Number(usdRate) }
-			]
-		});
-	});
-}
-
 test.describe('price download', () => {
-	test('previews book-relevant symbols and writes the latest fixing', async ({
+	test('shows the book-driven layout; untagged commodities start collapsed', async ({
 		demoPage: page
 	}) => {
-		await mockFixing(page, '2026-01-05', '1.6111');
-
 		await page.goto('/prices/download');
 
-		// Preview: AUD is book-relevant (RING is quoted in AUD). The declared
-		// securities (VTI, BND, RING, UBUD.DE) are not exchange rates and are
-		// classified out of the FX plan entirely.
-		await expect(page.getByText('EUR → AUD', { exact: true })).toBeVisible();
-		await expect(page.locator('.badge-ghost', { hasText: 'your series' })).toHaveCount(0);
-		await expect(page.getByText('Securities in the book are not exchange rates')).toHaveCount(0);
+		// The demo book has no `price` tags, so nothing is downloadable yet.
+		await expect(page.getByRole('heading', { name: 'Providers' })).toBeVisible();
+		await expect(page.getByRole('button', { name: 'Nothing selected' })).toBeDisabled();
 
-		const download = page.getByRole('button', { name: 'Download latest prices' });
-		await expect(download).toBeEnabled();
-		await download.click();
-
-		// Result card: fixing date echoed, both requested symbols written.
-		const resultCard = page.locator('.card.bg-base-200');
-		await expect(resultCard).toContainText('2026-01-05', { timeout: 10_000 });
-		await expect(resultCard).toContainText('2 lines added');
-
-		// Status card and the destination file in OPFS.
-		const statusCard = page.locator('.card', { hasText: 'Last run' });
-		await expect(statusCard).toContainText('2026-01-05');
-		await expect(statusCard).toContainText(DEFAULT_DESTINATION);
-		await expect(statusCard).toContainText('Lines in file:');
-		expect(await readOpfsFile(page, DEFAULT_DESTINATION)).toBe(
-			'; ECB reference rates (via Frankfurter) — latest fixing: 2026-01-05\n' +
-				'2026-01-05 price EUR 1.6111 AUD\n' +
-				'2026-01-05 price EUR 1.1052 USD\n'
-		);
-	});
-
-	test('downloads only the selected symbols and remembers the choice', async ({
-		demoPage: page
-	}) => {
-		const requests: string[] = [];
-		await page.route('**/api.frankfurter.dev/**', async (route) => {
-			requests.push(route.request().url());
-			const quotes = new URL(route.request().url()).searchParams.get('quotes')?.split(',') ?? [];
-			await route.fulfill({
-				json: quotes.map((quote) => ({
-					date: '2026-01-05',
-					base: 'EUR',
-					quote,
-					rate: quote === 'AUD' ? 1.6111 : 1.1052
-				}))
-			});
-		});
-
-		await page.goto('/prices/download');
-
-		const usd = page.getByRole('checkbox', { name: 'EUR → USD' });
-		await expect(usd).toBeChecked();
-		await usd.uncheck();
-		await expect(page.getByText('1 of 2 selected')).toBeVisible();
-
-		// The choice is a shared setting, so it survives a reload.
-		await page.waitForTimeout(500);
+		// Sections are collapsed by default and the open state is remembered.
+		const untagged = page.locator('details', { hasText: 'Untagged' });
+		await expect(untagged).toBeVisible();
+		await expect(untagged).not.toHaveAttribute('open', '');
+		await untagged.locator('summary').click();
+		await expect(untagged).toHaveAttribute('open', '');
 		await page.reload();
-		await expect(page.getByRole('checkbox', { name: 'EUR → USD' })).not.toBeChecked();
-		await expect(page.getByText('1 of 2 selected')).toBeVisible();
-
-		await page.getByRole('button', { name: 'Download latest prices' }).click();
-		await expect(page.locator('.card.bg-base-200')).toContainText('1 line added', {
-			timeout: 10_000
-		});
-
-		expect(requests).toHaveLength(1);
-		expect(requests[0]).toContain('quotes=AUD');
-		expect(requests[0]).not.toContain('USD');
-		expect(await readOpfsFile(page, DEFAULT_DESTINATION)).toBe(
-			'; ECB reference rates (via Frankfurter) — latest fixing: 2026-01-05\n' +
-				'2026-01-05 price EUR 1.6111 AUD\n'
-		);
+		await expect(page.locator('details', { hasText: 'Untagged' })).toHaveAttribute('open', '');
 	});
 
-	test('writes to a user-chosen destination file in append mode', async ({ demoPage: page }) => {
-		await mockFixing(page, '2026-01-05', '1.6111');
-
+	test('destination and append mode are chosen on the page and remembered', async ({
+		demoPage: page
+	}) => {
 		await page.goto('/prices/download');
 
-		// Choose a fresh destination through the shared OPFS picker.
 		await page.getByRole('button', { name: 'Select' }).click();
 		await expect(page).toHaveURL(/\/opfs\/file-picker/);
 		await page.locator('#new-file-path').fill('prices/e2e-test.bean');
@@ -130,77 +37,14 @@ test.describe('price download', () => {
 		await expect(page).toHaveURL('/prices/download');
 		await expect(page.getByText('prices/e2e-test.bean', { exact: true })).toBeVisible();
 
-		await page.locator('input[type="checkbox"].toggle').click();
-
-		await page.getByRole('button', { name: 'Download latest prices' }).click();
-
-		const resultCard = page.locator('.card.bg-base-200');
-		await expect(resultCard).toContainText('2026-01-05', { timeout: 10_000 });
-		await expect(resultCard).toContainText('2 lines added');
-		expect(await readOpfsFile(page, 'prices/e2e-test.bean')).toBe(
-			'2026-01-05 price EUR 1.6111 AUD\n2026-01-05 price EUR 1.1052 USD\n'
-		);
-		// The default destination was not touched.
-		expect(await readOpfsFile(page, DEFAULT_DESTINATION)).toBeNull();
-
-		// Run again with the next fixing: the file keeps both dates (append).
-		await mockFixing(page, '2026-01-06', '1.6222');
-		await page.getByRole('button', { name: 'Download latest prices' }).click();
-		await expect(resultCard).toContainText('2026-01-06', { timeout: 10_000 });
-		await expect(resultCard).toContainText('4 lines in file');
-		expect(await readOpfsFile(page, 'prices/e2e-test.bean')).toBe(
-			'2026-01-05 price EUR 1.6111 AUD\n2026-01-05 price EUR 1.1052 USD\n' +
-				'2026-01-06 price EUR 1.6222 AUD\n2026-01-06 price EUR 1.1052 USD\n'
-		);
+		await page.getByRole('checkbox', { name: 'Append history' }).check();
+		await page.waitForTimeout(500);
+		await page.reload();
+		await expect(page.getByText('prices/e2e-test.bean', { exact: true })).toBeVisible();
+		await expect(page.getByRole('checkbox', { name: 'Append history' })).toBeChecked();
 	});
-
-	test('overwrite mode replaces the file with the latest fixing', async ({ demoPage: page }) => {
-		await mockFixing(page, '2026-01-05', '1.6111');
-		await page.goto('/prices/download');
-		await page.getByRole('button', { name: 'Download latest prices' }).click();
-		await expect(page.locator('.card.bg-base-200')).toContainText('2 lines added', {
-			timeout: 10_000
-		});
-
-		await mockFixing(page, '2026-01-06', '1.6222');
-		await page.getByRole('button', { name: 'Download latest prices' }).click();
-		await expect(page.locator('.card.bg-base-200')).toContainText('2026-01-06', {
-			timeout: 10_000
-		});
-
-		expect(await readOpfsFile(page, DEFAULT_DESTINATION)).toBe(
-			'; ECB reference rates (via Frankfurter) — latest fixing: 2026-01-06\n' +
-				'2026-01-06 price EUR 1.6222 AUD\n' +
-				'2026-01-06 price EUR 1.1052 USD\n'
-		);
-	});
-
-	test('re-running the same fixing reports no changes and leaves the file untouched', async ({
-		demoPage: page
-	}) => {
-		await mockFixing(page, '2026-01-05', '1.6111');
-		await page.goto('/prices/download');
-		await page.getByRole('button', { name: 'Download latest prices' }).click();
-		await expect(page.locator('.card.bg-base-200')).toContainText('2 lines added', {
-			timeout: 10_000
-		});
-		const written = await readOpfsFile(page, DEFAULT_DESTINATION);
-
-		await page.getByRole('button', { name: 'Download latest prices' }).click();
-		await expect(page.locator('.card.bg-base-200')).toContainText('already in', {
-			timeout: 10_000
-		});
-		await expect(page.locator('.card.bg-base-200')).toContainText('no changes');
-		expect(await readOpfsFile(page, DEFAULT_DESTINATION)).toBe(written);
-	});
-
 	test('proxy key is set from the toolbar menu dialog', async ({ demoPage: page }) => {
 		await page.goto('/prices/download');
-
-		// The key is not part of the configuration card anymore.
-		await expect(page.locator('.card', { hasText: 'Configuration' })).not.toContainText(
-			'Proxy key'
-		);
 
 		const openProxyKey = async () => {
 			await page.locator('.navbar .dropdown-end > button').click();

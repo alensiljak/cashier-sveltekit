@@ -450,20 +450,21 @@
 	<!-- ── Price Download ───────────────────────────────────────── -->
 	<CashierCardTemplate heading="Price Download" Icon={TrendingDownIcon} bodyClass="space-y-2 px-3">
 		{#snippet description()}
-			Configuration for price downloads. Downloading itself is under Data → Book Prices.
+			Configuration for price downloads. Downloading itself is under Data → Price Download.
 		{/snippet}
 
 		<div class="flex items-center gap-3">
 			<div class="min-w-0 flex-1">
 				<p class="text-sm font-medium">Price Providers</p>
 				<p class="text-xs opacity-60">
-					Map the <code>price</code> tags in your book to price providers.
+					Enable providers and map the <code>price</code> tags in your book — use the gear icons on the
+					Price Download page.
 				</p>
 			</div>
 			<button
 				class="btn btn-primary btn-xs rounded"
 				type="button"
-				onclick={() => goto('/prices/providers')}
+				onclick={() => goto('/prices/download')}
 			>
 				Open
 			</button>

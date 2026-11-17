@@ -7,8 +7,10 @@
 	import {
 		DEFAULT_NICKNAMES,
 		fetchBookSources,
+		getDisabledProviders,
 		getNicknames,
 		saveNicknames,
+		setProviderEnabled,
 		type BookSource,
 		type PriceNicknames
 	} from '#lib/services/prices/priceNicknames';
@@ -22,6 +24,7 @@
 
 	let nicknames = $state<PriceNicknames>({});
 	let bookSources = $state<BookSource[]>([]);
+	let disabled = $state<Set<string>>(new Set());
 	let loaded = $state(false);
 	let error = $state<string | null>(null);
 	let newNickname = $state('');
@@ -56,7 +59,14 @@
 
 	onMount(async () => {
 		try {
-			[nicknames, bookSources] = await Promise.all([getNicknames(), fetchBookSources()]);
+			const [nicks, sources, off] = await Promise.all([
+				getNicknames(),
+				fetchBookSources(),
+				getDisabledProviders()
+			]);
+			nicknames = nicks;
+			bookSources = sources;
+			disabled = new Set(off);
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
 		}
@@ -82,6 +92,21 @@
 		return persist(next);
 	}
 
+	async function setEnabled(enabled: boolean) {
+		const previous = disabled;
+		const next = new Set(disabled);
+		if (enabled) next.delete(providerId);
+		else next.add(providerId);
+		disabled = next;
+		try {
+			await setProviderEnabled(providerId, enabled);
+			error = null;
+		} catch (e) {
+			disabled = previous;
+			error = e instanceof Error ? e.message : String(e);
+		}
+	}
+
 	function addNickname() {
 		if (newInvalid) return;
 		const nick = trimmedNew;
@@ -104,6 +129,27 @@
 			{#if error}
 				<div class="alert alert-error text-sm"><span>{error}</span></div>
 			{/if}
+
+			<!-- Enabled -->
+			<section class="card bg-base-100 shadow-sm">
+				<div class="card-body p-4">
+					<label class="flex cursor-pointer items-center gap-3">
+						<span class="min-w-0 flex-1">
+							<span class="block text-sm font-medium">Enabled</span>
+							<span class="block text-xs opacity-60">
+								Off keeps the nicknames but takes the provider out of the price download.
+							</span>
+						</span>
+						<input
+							type="checkbox"
+							class="toggle toggle-success bg-transparent bg-none"
+							aria-label="Enable {provider.name}"
+							checked={!disabled.has(providerId)}
+							onchange={(e) => void setEnabled(e.currentTarget.checked)}
+						/>
+					</label>
+				</div>
+			</section>
 
 			<!-- Nicknames -->
 			<section class="card bg-base-100 shadow-sm">

@@ -57,6 +57,12 @@ export interface BookDownloadResult {
 	unchanged: boolean;
 }
 
+/** Reported while a download runs: one event per provider step, then `writing`. */
+export type DownloadProgress =
+	| { providerId: string; step: 'fetching' | 'failed' }
+	| { providerId: string; step: 'done'; missing: number }
+	| { providerId?: undefined; step: 'writing' };
+
 export interface BookDownloadPlan {
 	/** What `Download all` will fetch, per provider (insertion order = registry order of first use). */
 	groups: Map<string, string[]>;
@@ -106,13 +112,19 @@ export async function planBookDownload(plan: BookPricePlan): Promise<BookDownloa
  * before writing if the destination is invalid or any provider fails — never
  * a partial write.
  */
-export async function downloadAllFromBook(plan?: BookPricePlan): Promise<BookDownloadResult> {
+export async function downloadAllFromBook(
+	plan?: BookPricePlan,
+	/** Restrict the run to these providers; omitted = every participating provider. */
+	only?: string[],
+	onProgress?: (event: DownloadProgress) => void
+): Promise<BookDownloadResult> {
 	const config = await resolveConfig();
 	const invalid = await validateTargetFile(config.targetFile);
 	if (invalid) throw new Error(invalid);
 
 	// Always re-resolved: securities providers remember it for `fetchLatest`.
-	const { groups } = await planBookDownload(plan ?? (await loadBookPlan()));
+	const { groups: all } = await planBookDownload(plan ?? (await loadBookPlan()));
+	const groups = only ? new Map([...all].filter(([id]) => only.includes(id))) : all;
 	if (groups.size === 0) throw new Error('No mapped commodities to download.');
 
 	const incoming: PriceDirective[] = [];
@@ -121,7 +133,15 @@ export async function downloadAllFromBook(plan?: BookPricePlan): Promise<BookDow
 	let latest = '';
 	for (const [providerId, symbols] of groups) {
 		const provider = getPriceProvider(providerId);
-		const fetched = await provider.fetchLatest(symbols);
+		onProgress?.({ providerId, step: 'fetching' });
+		let fetched;
+		try {
+			fetched = await provider.fetchLatest(symbols);
+		} catch (e) {
+			onProgress?.({ providerId, step: 'failed' });
+			throw e;
+		}
+		onProgress?.({ providerId, step: 'done', missing: fetched.missing.length });
 		incoming.push(...toDirectives(fetched, [], provider.base));
 		perProvider.push({
 			providerId,
@@ -133,6 +153,7 @@ export async function downloadAllFromBook(plan?: BookPricePlan): Promise<BookDow
 		if (fetched.asOf > latest) latest = fetched.asOf;
 	}
 
+	onProgress?.({ step: 'writing' });
 	const existing = await readFile(config.targetFile);
 	let text: string;
 	let added: number;

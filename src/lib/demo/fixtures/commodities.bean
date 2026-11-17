@@ -16,9 +16,11 @@
 
 2020-01-01 commodity USD
   name: "US Dollar"
+  price: "EUR:ecbrates/USD-EUR"
 
 2020-01-01 commodity AUD
   name: "Australian Dollar"
+  price: "EUR:ecbrates/AUD-EUR"
 
 2020-01-01 commodity RING
   name: "VanEck Gold Miners ETF"

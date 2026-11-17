@@ -13,22 +13,21 @@ Downloads prices into a Beancount prices file of your choice, by default `prices
 - **Via Frankfurter** works anywhere with no setup: [Frankfurter](https://frankfurter.dev) serves the same ECB fixings with CORS enabled, so the browser fetches them directly. It depends on that third-party service.
 - **Direct** reads the ECB's own XML feed, which sends no CORS headers, so it is fetched through the app's `/api/proxy` endpoint and needs the proxy deployed and the **Proxy key** set (see below). Use it as a fallback if Frankfurter is unavailable.
 
-## Configuration
+## How it works
 
-- **Provider** — where the prices come from. The provider dropdown lists the registered sources. Currency providers publish rates in a base currency (ECB is EUR-base); securities providers publish a price per commodity in the fund's quote currency.
-- **Symbols** — the candidates the provider can serve from your book are listed with checkboxes. Untick any you do not want fetched or written; **All** restores the default (every book-relevant candidate, including ones the book starts using later), **None** fetches nothing. The selection is saved per provider alongside the other settings and shared between devices.
-- **Proxy key** — only used by providers that need the proxy (see the table above), and only needed when the deployment protects its CORS proxy. The key is stored on this device only and sent as the `X-Proxy-Key` header; it is never included in the app bundle or exported with settings. Leave it empty when the proxy is not protected.
-- **Destination file** — any path in the app's storage; existing `.bean` files are offered as one-tap shortcuts. The app never edits your book — once the file exists, wire it into your book yourself with an `include` directive, e.g. `include "prices/prices.current.bean"` placed in your main book file.
-- **Append history** — off by default, the file is rewritten each run with just the latest prices ("current" prices). Turn it on to keep earlier downloaded prices and gradually build a price history; duplicates for the same date are deduplicated.
+Prices are **book-driven**: each `commodity` directive in your book names its source with a Beancount `price` meta tag (`price: "AUD:yahoo/ASX:VHY"`), and the source name (its _nickname_) maps to a provider. Open a provider's **gear** icon to switch it on or off and manage its nicknames, source mapping and (for securities providers) the funds it prices. Disabled providers are hidden to keep the list short; choose **Show disabled providers** in the toolbar menu to list them, each with a switch to enable it again. Enabled providers without a nickname are always listed, greyed out. Nothing about which symbols are fetched is configured on the download page itself.
 
-Provider, destination, write mode and symbol selections are **shared across your devices**. The proxy key and the last-run status are per-device.
+## The page
 
-## What gets fetched
+- **Providers** — every provider that has a nickname mapped to it, each with a checkbox. Tick the ones to download; their prices are combined into one file. **All** / **None** toggle every provider. Tap a provider's name to see which commodities it will fetch; the gear opens its settings. The selection is remembered.
+- **Destination file** — any `.bean` path in the app's storage (not your main book). The app never edits your book — wire the file in yourself with an `include` directive, e.g. `include "prices/prices.current.bean"`.
+- **Append history** — off by default: the file is rewritten with only the latest prices of the _ticked_ providers. Turn it on to keep earlier downloaded prices and build a history; duplicates for the same date are deduplicated.
+- **Download** — each ticked provider shows its progress (waiting, fetching, done or failed), then the file is written and the ledger reloads in the background. **Preview output file** shows the destination's current contents, with a shortcut to open it in the file editor.
+- **Needs attention** — Untagged, Unmapped source, Invalid and Not covered commodities, plus Ignored ones. These sections start collapsed and remember whether you opened them.
 
-The provider determines the candidate set:
+Destination, write mode, provider selection and nickname mappings are **shared across your devices**. The proxy key is per-device. Set it from the toolbar menu; it is sent as the `X-Proxy-Key` header and is only needed for providers that use the proxy.
 
-- **Currency providers** fetch only currencies relevant to your book: your default currency, the ledger's operating currencies, and the currencies appearing in your price directives and accounts. Securities declared in your book are not exchange rates and are left alone; currencies the provider does not serve are listed under the preview.
-- **Securities providers** fetch the commodities declared in your book (`commodity` directives, with `ticker`, `isin` or `apir` metadata when the source needs it). Each price is written as `price <commodity> <rate> <quote currency>`; securities are never inverted.
+Rates are written verbatim in each provider's published direction (ECB: `price EUR 1.61 AUD`).
 
 ## Vanguard Australia
 
@@ -50,14 +49,6 @@ The commodity name is the base of the downloaded price (`2026-11-16 price VAN000
 
 The provider downloads the fund's published NAV, not the ASX market price, so ETF quotes may differ slightly from the exchange close.
 
-If your book already keeps prices for a currency pair — say a `price USD 0.9 EUR` history — the new rates are written **in your series' direction**, extending it with new dates. Writing the opposite direction instead would be ignored by the ledger: for one pair it keeps only one of the two directions (the denser series wins), so this way your data stays the authority and the downloads stay effective.
-
-The **Symbols** checkboxes narrow the candidate set before anything is fetched: only ticked symbols are requested from the provider and written to the destination file. The choice is stored per provider, so switching providers restores each one's own selection.
-
 Some sources block browser requests with CORS. Those are fetched through the app's same-origin `/api/proxy` endpoint; the proxy only allows the source hosts the app's providers use.
-
-## Running it
-
-Press **Download latest prices**. The latest prices are written to the destination file and the ledger reloads in the background. The _Last run_ card shows the price date and counts; the _Output file_ card shows the destination file's current contents, so you can verify the exact price lines that were written.
 
 Two devices that download the same prices write byte-identical file content, so file sync (S3/WebDAV) transfers nothing; a device with older prices produces an ordinary file change that you resolve by keeping one side or re-running the download.

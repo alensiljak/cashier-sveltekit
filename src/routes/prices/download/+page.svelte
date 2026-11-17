@@ -2,132 +2,195 @@
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
 	import HelpButton from '#lib/help/HelpButton.svelte';
-	import SearchableSelect from '#lib/components/SearchableSelect.svelte';
+	import type { CommodityPlanEntry } from '#lib/services/prices/bookPricePlan';
+	import {
+		downloadAllFromBook,
+		loadBookPlan,
+		planBookDownload,
+		setCommodityIgnored,
+		type BookDownloadPlan,
+		type BookDownloadResult
+	} from '#lib/services/prices/bookPriceService';
+	import type { BookPricePlan } from '#lib/services/prices/bookPricePlan';
 	import {
 		resolveConfig,
 		saveConfig,
-		getSymbolSelection,
-		planDownload,
-		downloadPrices,
 		validateTargetFile,
 		isTargetIncluded,
 		describeError,
-		getDownloadStatus,
-		type PriceDownloadConfig,
-		type PriceDownloadPlan,
-		type PriceDownloadResult,
-		type PriceDownloadStatus
+		type PriceDownloadConfig
 	} from '#lib/services/prices/priceDownloadService';
 	import {
-		listPriceProviders,
-		defaultPriceProvider
-	} from '#lib/services/prices/priceProviderRegistry';
+		getDisabledProviders,
+		getSkippedProviders,
+		setProviderEnabled,
+		setProviderSkipped
+	} from '#lib/services/prices/priceNicknames';
+	import { listPriceProviders } from '#lib/services/prices/priceProviderRegistry';
 	import demoDataService from '#lib/services/demoDataService';
 	import fullLedgerService from '#lib/services/ledgerWorkerClient';
 	import { PRICES_DEFAULT_DESTINATION } from '#lib/constants';
 	import { readFile } from '#lib/utils/opfslib';
 	import { deviceSettings, DeviceSettingKeys, SettingKeys } from '#lib/settings';
 	import { onMount } from 'svelte';
-	import { get } from 'svelte/store';
+	import { fade } from 'svelte/transition';
+	import { cubicInOut } from 'svelte/easing';
 	import { goto, replaceState } from '$app/navigation';
 	import { page } from '$app/state';
 	import DownloadIcon from '@lucide/svelte/icons/download';
 	import KeyRoundIcon from '@lucide/svelte/icons/key-round';
+	import SettingsIcon from '@lucide/svelte/icons/settings';
+	import EyeIcon from '@lucide/svelte/icons/eye';
+	import EyeOffIcon from '@lucide/svelte/icons/eye-off';
+	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
 
-	const providers = listPriceProviders();
-	const defaultProvider = defaultPriceProvider();
+	const providerNames = new Map(listPriceProviders().map((p) => [p.id, p.name]));
+	const ledgerVersion = fullLedgerService.version;
 
 	let config = $state<PriceDownloadConfig>({
-		providerId: defaultProvider.id,
+		providerId: '',
 		targetFile: PRICES_DEFAULT_DESTINATION,
 		writeMode: 'overwrite',
 		symbols: null
 	});
+	let plan = $state<BookPricePlan | null>(null);
+	let downloadPlan = $state<BookDownloadPlan>({ groups: new Map(), uncovered: [] });
+	let skipped = $state<Set<string>>(new Set());
+	/** Providers switched off on their settings page. */
+	let disabledIds = $state<Set<string>>(new Set());
+	/** Providers whose commodity list is unfolded. */
+	let expanded = $state<Set<string>>(new Set());
 	let loaded = $state(false);
+	let running = $state(false);
+	let error = $state<string | null>(null);
+	let result = $state<BookDownloadResult | null>(null);
 	let targetError = $state<string | null>(null);
 	/** Whether the main book includes the destination; null = unknown. */
 	let included = $state<boolean | null>(null);
-	let plan = $state<PriceDownloadPlan | null>(null);
-	/** True while `refreshPlan` is in flight; drives the placeholder card. */
-	let planLoading = $state(false);
-	/** Monotonic token: a stale plan response must not overwrite a newer one. */
-	let planRequest = 0;
-	let status = $state<PriceDownloadStatus | null>(null);
-	let result = $state<PriceDownloadResult | null>(null);
-	/** Current contents of the destination file, shown after a run and on load. */
+	/** Current contents of the destination file. */
 	let written = $state<string | null>(null);
-	/**
-	 * Background ledger reload after a download that wrote new prices:
-	 * `null` = none triggered, `reloading` until the ledger version bumps.
-	 */
-	let reloadState = $state<'reloading' | 'done' | null>(null);
-	let running = $state(false);
-	let error = $state<string | null>(null);
+	/** Per-provider state of the current/last run. */
+	let progress = $state<Record<string, 'pending' | 'fetching' | 'done' | 'failed'>>({});
+	let writing = $state(false);
+	let previewOpen = $state(false);
 	let demoActive = $state(false);
 	let proxyKey = $state('');
 	let proxyKeyDraft = $state('');
 	let proxyKeyModalOpen = $state(false);
 
-	// From the config, not the plan: the plan lags a provider switch by a full
-	// book scan, and the select must show the provider the user just picked.
-	const provider = $derived(providers.find((p) => p.id === config.providerId) ?? plan?.provider);
+	// ── Remembered open/closed state of the collapsible sections (per browser) ──
+	const SECTIONS_KEY = 'prices.download.openSections';
+	function loadSections(): Record<string, boolean> {
+		try {
+			return JSON.parse(localStorage.getItem(SECTIONS_KEY) ?? '{}');
+		} catch {
+			return {};
+		}
+	}
+	let openSections = $state<Record<string, boolean>>(loadSections());
+	function rememberSection(key: string, open: boolean) {
+		openSections[key] = open;
+		try {
+			localStorage.setItem(SECTIONS_KEY, JSON.stringify(openSections));
+		} catch {
+			/* storage unavailable — the state just isn't remembered */
+		}
+	}
 
-	/** Every selectable candidate, in display order. */
-	const symbolOptions = $derived(
-		plan
-			? [
-					...plan.availableSymbols.map((symbol) => ({ symbol, inverted: false })),
-					...plan.availableInvertedSymbols.map((symbol) => ({ symbol, inverted: true }))
-				]
-			: []
+	/** Whether switched-off providers are listed (hidden by default to keep the list short). */
+	let showDisabled = $state(openSections.showDisabled ?? false);
+
+	/**
+	 * Outro for a row that leaves a list (e.g. a commodity being ignored): it
+	 * blurs, spreads and drifts away, then its height collapses so the rows
+	 * below slide up into the gap. Skipped under `prefers-reduced-motion`.
+	 */
+	function disintegrate(node: HTMLElement) {
+		const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+		const height = node.offsetHeight;
+		const style = getComputedStyle(node);
+		const padding = parseFloat(style.paddingTop);
+		return {
+			duration: reduce ? 0 : 600,
+			easing: cubicInOut,
+			css: (t: number, u: number) => {
+				const collapse = t < 0.5 ? t * 2 : 1;
+				return (
+					`overflow:hidden;opacity:${t};filter:blur(${u * 6}px);letter-spacing:${u * 0.35}em;` +
+					`transform:translateX(${u * 28}px) scale(${1 - u * 0.08});` +
+					`height:${height * collapse}px;padding-block:${padding * collapse}px;`
+				);
+			}
+		};
+	}
+
+	const of = (state: CommodityPlanEntry['state']) =>
+		plan?.entries.filter((e) => e.state === state) ?? [];
+	const unmapped = $derived(of('unmapped-source'));
+	const invalid = $derived(of('invalid'));
+	const untagged = $derived(of('untagged'));
+	const ignored = $derived(of('ignored'));
+	const groups = $derived(downloadPlan.groups);
+	const uncovered = $derived(downloadPlan.uncovered);
+	/** Providers that take part: at least one enabled nickname maps to them. */
+	const activeProviders = $derived(plan?.providers.filter((p) => p.included) ?? []);
+	/** What the download will fetch: ticked providers that serve something. */
+	const selectedGroups = $derived([...groups].filter(([id]) => !skipped.has(id)));
+	const selectedCount = $derived(selectedGroups.reduce((n, [, symbols]) => n + symbols.length, 0));
+	const hasProblems = $derived(
+		untagged.length + unmapped.length + invalid.length + uncovered.length > 0
 	);
 
-	/** `null` in the config means every candidate is selected. */
-	const selectedSymbols = $derived.by(() => {
-		const stored = config.symbols === null ? null : new Set(config.symbols);
-		return new Set(
-			symbolOptions
-				.filter((option) => stored === null || stored.has(option.symbol))
-				.map((option) => option.symbol)
-		);
-	});
-
-	// The ledger reloads in the background after a download (and after any
-	// file change); refresh the preview whenever it finishes.
-	const ledgerVersion = fullLedgerService.version;
+	// Re-plan whenever the ledger (re)loads, e.g. after a download.
 	$effect(() => {
 		void $ledgerVersion;
-		if (reloadState === 'reloading') reloadState = 'done';
-		if (loaded) void refreshPlan();
+		if (loaded) void refresh();
 	});
 
-	onMount(load);
-
-	async function load() {
+	onMount(async () => {
 		config = await resolveConfig();
 		applyPickerReturn();
-		await checkTarget();
-		await refreshWritten();
-		await refreshPlan();
-		status = await getDownloadStatus();
+		skipped = new Set(await getSkippedProviders());
 		demoActive = await demoDataService.isDemoActive();
 		proxyKey = (await deviceSettings.get<string>(DeviceSettingKeys.proxyKey)) ?? '';
+		await checkTarget();
+		await refresh();
 		loaded = true;
+	});
+
+	/** Monotonic token: a stale plan must not overwrite a newer one. */
+	let request = 0;
+	async function refresh() {
+		const mine = ++request;
+		try {
+			const next = await loadBookPlan();
+			const nextDownload = await planBookDownload(next);
+			if (mine !== request) return;
+			disabledIds = new Set(await getDisabledProviders());
+			plan = next;
+			downloadPlan = nextDownload;
+			error = null;
+		} catch (e) {
+			if (mine === request) error = describeError(e);
+		}
+		await refreshWritten();
 	}
 
-	function openProxyKeyModal() {
-		proxyKeyDraft = proxyKey;
-		proxyKeyModalOpen = true;
+	async function refreshWritten() {
+		written = targetError ? null : ((await readFile(config.targetFile)) ?? null);
 	}
 
-	async function saveProxyKey() {
-		proxyKey = proxyKeyDraft.trim();
-		await deviceSettings.set(DeviceSettingKeys.proxyKey, proxyKey);
-		proxyKeyModalOpen = false;
-		// A missing/wrong key is the likely cause of the current error; retry
-		// the preview so a successful plan clears it.
-		error = null;
-		await refreshPlan();
+	async function checkTarget() {
+		targetError = await validateTargetFile(config.targetFile);
+		included = targetError ? null : await isTargetIncluded(config.targetFile);
+	}
+
+	/** Persist a destination/mode change. */
+	async function updateConfig(patch: Partial<PriceDownloadConfig>) {
+		config = { ...config, ...patch };
+		await saveConfig(config);
+		await checkTarget();
+		await refreshWritten();
 	}
 
 	/** The OPFS file picker hands the chosen path back via the URL. */
@@ -140,104 +203,103 @@
 		replaceState(page.url.pathname, {});
 	}
 
-	async function checkTarget() {
-		targetError = await validateTargetFile(config.targetFile);
-		included = targetError ? null : await isTargetIncluded(config.targetFile);
-	}
-
-	async function refreshWritten() {
-		written = (await readFile(config.targetFile)) ?? null;
-	}
-
-	async function refreshPlan() {
-		const request = ++planRequest;
-		const snapshot = config;
-		planLoading = true;
-		try {
-			const next = await planDownload(snapshot);
-			if (request !== planRequest) return;
-			plan = next;
-			error = null;
-		} catch (e) {
-			if (request !== planRequest) return;
-			plan = null;
-			error = describeError(e);
-		} finally {
-			if (request === planRequest) planLoading = false;
-		}
-	}
-
-	/** Persist on change and keep the preview in sync. */
-	async function updateConfig(patch: Partial<PriceDownloadConfig>) {
-		config = { ...config, ...patch };
-		await checkTarget();
-		await refreshWritten();
-		await saveConfig(config);
-		await refreshPlan();
-	}
-
-	/** Each provider keeps its own selection; switching loads that one. */
-	async function changeProvider(providerId: string) {
-		// Drop the old provider's symbol list before the first await, otherwise
-		// it stays on screen for the whole plan recomputation. The destination
-		// is unchanged, so `checkTarget` is not needed here.
-		config = { ...config, providerId };
-		plan = null;
-		const symbols = await getSymbolSelection(providerId);
-		if (config.providerId !== providerId) return; // a newer switch won
-		config = { ...config, symbols };
-		// Persist alongside the preview, not before it.
-		const saving = saveConfig(config);
-		await refreshPlan();
-		await saving;
-	}
-
-	async function setSymbols(symbols: string[] | null) {
-		config = { ...config, symbols };
-		await saveConfig(config);
-		await refreshPlan();
-	}
-
-	function toggleSymbol(symbol: string, checked: boolean) {
-		const selected = new Set(selectedSymbols);
-		if (checked) selected.add(symbol);
-		else selected.delete(symbol);
-		const next = symbolOptions.map((option) => option.symbol).filter((s) => selected.has(s));
-		// Selecting every candidate stores `null`, so a currency the book starts
-		// using later is downloaded without revisiting this page.
-		void setSymbols(next.length === symbolOptions.length ? null : next);
-	}
-
 	function pickTargetFile() {
 		void goto(
 			`/opfs/file-picker?returnSetting=${SettingKeys.priceTargetFile}&returnTo=${encodeURIComponent('/prices/download')}&allowNew=1&ext=.bean`
 		);
 	}
 
-	async function runDownload() {
+	async function toggleProvider(providerId: string, checked: boolean) {
+		const next = new Set(skipped);
+		if (checked) next.delete(providerId);
+		else next.add(providerId);
+		skipped = next;
+		await setProviderSkipped(providerId, !checked);
+	}
+
+	async function selectAll(all: boolean) {
+		const ids = [...groups.keys()];
+		skipped = new Set(all ? [] : ids);
+		await Promise.all(ids.map((id) => setProviderSkipped(id, !all)));
+	}
+
+	async function enableProvider(providerId: string) {
+		try {
+			await setProviderEnabled(providerId, true);
+			await refresh();
+		} catch (e) {
+			error = describeError(e);
+		}
+	}
+
+	function toggleShowDisabled() {
+		showDisabled = !showDisabled;
+		rememberSection('showDisabled', showDisabled);
+	}
+
+	function toggleExpanded(providerId: string) {
+		const next = new Set(expanded);
+		if (!next.delete(providerId)) next.add(providerId);
+		expanded = next;
+	}
+
+	async function download() {
 		running = true;
 		error = null;
 		result = null;
-		reloadState = null;
-		const versionBefore = get(ledgerVersion);
+		writing = false;
+		progress = Object.fromEntries(selectedGroups.map(([id]) => [id, 'pending' as const]));
 		try {
-			result = await downloadPrices(config);
-			// The service starts a background reload when it wrote a changed file.
-			// A tiny book may already have finished reloading by now.
-			if (!result.unchanged && result.fixingDate) {
-				reloadState = get(ledgerVersion) > versionBefore ? 'done' : 'reloading';
-			}
+			result = await downloadAllFromBook(
+				plan ?? undefined,
+				selectedGroups.map(([id]) => id),
+				(event) => {
+					if (event.step === 'writing') writing = true;
+					else progress = { ...progress, [event.providerId]: event.step };
+				}
+			);
 			await refreshWritten();
-			status = await getDownloadStatus();
-			// The file write triggered a background ledger reload; the plan's
-			// book pairs may have grown, so recompute the preview.
-			await refreshPlan();
 		} catch (e) {
 			error = describeError(e);
-			status = await getDownloadStatus();
-		} finally {
-			running = false;
 		}
+		writing = false;
+		running = false;
+	}
+
+	function openPreview() {
+		void refreshWritten();
+		previewOpen = true;
+	}
+
+	async function toggleIgnored(commodity: string, value: boolean) {
+		// Move the row right away so its exit animation starts at the click; the
+		// re-plan afterwards confirms (or corrects) the state.
+		if (plan) {
+			plan = {
+				...plan,
+				entries: plan.entries.map((e) =>
+					e.commodity === commodity ? { ...e, state: value ? 'ignored' : 'untagged' } : e
+				)
+			};
+		}
+		try {
+			await setCommodityIgnored(commodity, value);
+			await refresh();
+		} catch (e) {
+			error = describeError(e);
+		}
+	}
+
+	function openProxyKeyModal() {
+		proxyKeyDraft = proxyKey;
+		proxyKeyModalOpen = true;
+	}
+
+	async function saveProxyKey() {
+		proxyKey = proxyKeyDraft.trim();
+		await deviceSettings.set(DeviceSettingKeys.proxyKey, proxyKey);
+		proxyKeyModalOpen = false;
+		error = null;
 	}
 </script>
 
@@ -246,6 +308,11 @@
 		<HelpButton topic="price-download" />
 	{/snippet}
 	{#snippet menuItems()}
+		<ToolbarMenuItem
+			text={showDisabled ? 'Hide disabled providers' : 'Show disabled providers'}
+			Icon={showDisabled ? EyeOffIcon : EyeIcon}
+			onclick={toggleShowDisabled}
+		/>
 		<ToolbarMenuItem text="Proxy key" Icon={KeyRoundIcon} onclick={openProxyKeyModal} />
 	{/snippet}
 </Toolbar>
@@ -261,23 +328,127 @@
 			</div>
 		{/if}
 
-		<!-- ── Configuration ─────────────────────────────────────── -->
-		<div class="card bg-base-100 rounded-lg">
-			<div class="bg-primary rounded-t-lg px-3 py-2 text-lg">Configuration</div>
-			<div class="card-body py-3 px-3 space-y-4">
-				<label class="form-control w-full">
-					<div class="label"><span class="label-text">Provider</span></div>
-					<SearchableSelect
-						options={providers.map((p) => p.name)}
-						value={provider?.name ?? ''}
-						onchange={(name) => {
-							const found = providers.find((p) => p.name === name);
-							if (found) void changeProvider(found.id);
-						}}
-					/>
-				</label>
+		{#if error}
+			<div class="alert alert-error text-sm"><span>{error}</span></div>
+		{/if}
 
-				<div>
+		{#if !loaded}
+			<span class="loading loading-spinner loading-sm"></span>
+		{:else if plan}
+			<!-- ── Providers ──────────────────────────────────────── -->
+			<section class="card bg-base-100 shadow-sm">
+				<div class="card-body gap-2 p-4">
+					<div class="flex items-center gap-2">
+						<h2 class="card-title text-base flex-1">Providers</h2>
+						{#if groups.size > 1}
+							<button
+								type="button"
+								class="btn btn-ghost btn-xs rounded"
+								onclick={() => void selectAll(true)}>All</button
+							>
+							<button
+								type="button"
+								class="btn btn-ghost btn-xs rounded"
+								onclick={() => void selectAll(false)}>None</button
+							>
+						{/if}
+					</div>
+
+					<ul class="flex flex-col divide-y divide-base-200">
+						{#each activeProviders as p (p.providerId)}
+							{@const symbols = groups.get(p.providerId) ?? []}
+							{@const open = expanded.has(p.providerId)}
+							<li class="py-1.5">
+								<div class="flex items-center gap-2">
+									<input
+										type="checkbox"
+										class="checkbox checkbox-sm checkbox-success"
+										aria-label="Download {providerNames.get(p.providerId)}"
+										disabled={symbols.length === 0}
+										checked={symbols.length > 0 && !skipped.has(p.providerId)}
+										onchange={(e) => void toggleProvider(p.providerId, e.currentTarget.checked)}
+									/>
+									<button
+										type="button"
+										class="flex flex-1 items-center gap-1 text-left text-sm min-w-0"
+										aria-expanded={open}
+										disabled={symbols.length === 0}
+										onclick={() => toggleExpanded(p.providerId)}
+									>
+										<ChevronRightIcon
+											size={14}
+											class="shrink-0 transition-transform {open ? 'rotate-90' : ''} {symbols.length ===
+											0
+												? 'opacity-30'
+												: ''}"
+										/>
+										<span class="truncate">{providerNames.get(p.providerId)}</span>
+									</button>
+									{#if progress[p.providerId] === 'fetching'}
+										<span class="loading loading-spinner loading-xs" aria-label="Fetching"></span>
+									{:else if progress[p.providerId] === 'done'}
+										<span class="badge badge-sm badge-success" title="Fetched">✓ {symbols.length}</span>
+									{:else if progress[p.providerId] === 'failed'}
+										<span class="badge badge-sm badge-error" title="Failed">✕</span>
+									{:else if progress[p.providerId] === 'pending'}
+										<span class="badge badge-sm badge-ghost">waiting</span>
+									{:else}
+										<span
+											class="badge badge-sm {symbols.length > 0 ? 'badge-success' : 'badge-ghost'}"
+										>
+											{symbols.length}
+										</span>
+									{/if}
+									<button
+										type="button"
+										class="btn btn-ghost btn-xs btn-circle"
+										aria-label="Settings for {providerNames.get(p.providerId)}"
+										onclick={() => goto(`/prices/providers/${p.providerId}`)}
+									>
+										<SettingsIcon size={16} />
+									</button>
+								</div>
+								{#if open}
+									<p class="pl-12 pt-1 text-xs opacity-70 break-words">{symbols.join(', ')}</p>
+								{/if}
+							</li>
+						{/each}
+						<!-- Enabled but unmapped providers always show; disabled ones only on request. -->
+						{#each plan.providers.filter((p) => !p.included && (showDisabled || !disabledIds.has(p.providerId))) as p (p.providerId)}
+							{@const off = disabledIds.has(p.providerId)}
+							<li class="flex items-center gap-2 py-1.5">
+								{#if off}
+									<input
+										type="checkbox"
+										class="toggle toggle-success toggle-sm bg-transparent bg-none"
+										aria-label="Enable {providerNames.get(p.providerId)}"
+										checked={false}
+										onchange={() => void enableProvider(p.providerId)}
+									/>
+								{:else}
+									<span class="w-8"></span>
+								{/if}
+								<span class="flex-1 truncate text-sm opacity-60">
+									{providerNames.get(p.providerId)}
+								</span>
+								<span class="text-xs opacity-60">{off ? 'disabled' : 'not mapped'}</span>
+								<button
+									type="button"
+									class="btn btn-ghost btn-xs btn-circle"
+									aria-label="Settings for {providerNames.get(p.providerId)}"
+									onclick={() => goto(`/prices/providers/${p.providerId}`)}
+								>
+									<SettingsIcon size={16} />
+								</button>
+							</li>
+						{/each}
+					</ul>
+				</div>
+			</section>
+
+			<!-- ── Destination + mode ─────────────────────────────── -->
+			<section class="card bg-base-100 shadow-sm">
+				<div class="card-body gap-3 p-4">
 					<div class="flex items-center gap-3">
 						<div class="min-w-0 flex-1">
 							<p class="text-sm font-medium">Destination file</p>
@@ -299,241 +470,194 @@
 						</div>
 					</div>
 					{#if targetError}
-						<p class="mt-1 text-xs text-error">{targetError}</p>
-					{/if}
-					{#if included === false && !demoActive}
-						<p class="mt-1 text-xs text-warning">
+						<p class="text-xs text-error">{targetError}</p>
+					{:else if included === false && !demoActive}
+						<p class="text-xs text-warning">
 							Your main book has no <code>include "{config.targetFile}"</code> line, so these prices will
-							have no effect until you add one (nested includes are followed, but glob patterns are not
-							expanded).
-						</p>
-					{:else}
-						<p class="mt-1 text-xs opacity-60">
-							The app does not edit your book — wire the file in yourself with<code class="mx-1"
-								>include "{config.targetFile}"</code
-							>.
+							have no effect until you add one.
 						</p>
 					{/if}
-				</div>
 
-				<div class="flex items-center justify-between gap-3">
-					<div class="flex-1">
-						<p class="text-sm font-medium">Append history</p>
-						<p class="text-xs opacity-60">
-							{config.writeMode === 'append'
-								? 'New fixing dates are added; earlier downloaded rates are kept.'
-								: 'Off — the file is rewritten with the latest rates only. Anything else in the file is lost.'}
-						</p>
-					</div>
-					<input
-						type="checkbox"
-						class="toggle toggle-success bg-transparent bg-none"
-						checked={config.writeMode === 'append'}
-						onchange={(e) =>
-							void updateConfig({ writeMode: e.currentTarget.checked ? 'append' : 'overwrite' })}
-					/>
-				</div>
-			</div>
-		</div>
-
-		<!-- ── Preview ────────────────────────────────────────────── -->
-		{#if plan}
-			<div class="card bg-base-100 rounded-lg">
-				<div class="bg-primary rounded-t-lg px-3 py-2 text-lg">Symbols to download</div>
-				<div class="card-body py-3 px-3 space-y-3">
-					{#if plan.provider.kind === 'securities'}
-						<p class="text-xs opacity-60">Prices are quoted in each fund's own currency.</p>
-					{:else if plan.provider.base !== 'EUR'}
-						<p class="text-xs opacity-60">Pairs are published as {plan.provider.base}-base.</p>
-					{/if}
-
-					{#if symbolOptions.length > 0}
-						<div class="flex items-center justify-between gap-2">
+					<div class="flex items-center justify-between gap-3">
+						<div class="flex-1">
+							<p class="text-sm font-medium">Append history</p>
 							<p class="text-xs opacity-60">
-								{selectedSymbols.size} of {symbolOptions.length} selected
+								{#if config.writeMode === 'append'}
+									New fixing dates are added; earlier downloaded prices are kept.
+								{:else}
+									Off — the file is rewritten with only the latest prices of the selected providers.
+								{/if}
 							</p>
-							<div class="flex gap-1">
-								<button
-									type="button"
-									class="btn btn-ghost btn-xs rounded"
-									onclick={() => void setSymbols(null)}>All</button
-								>
-								<button
-									type="button"
-									class="btn btn-ghost btn-xs rounded"
-									onclick={() => void setSymbols([])}>None</button
-								>
-							</div>
 						</div>
+						<input
+							type="checkbox"
+							class="toggle toggle-success bg-transparent bg-none"
+							aria-label="Append history"
+							checked={config.writeMode === 'append'}
+							onchange={(e) =>
+								void updateConfig({ writeMode: e.currentTarget.checked ? 'append' : 'overwrite' })}
+						/>
+					</div>
 
-						<div class="flex flex-wrap gap-1">
-							{#each plan.availableSymbols as symbol (symbol)}
-								<label class="badge badge-outline h-auto cursor-pointer gap-1.5 py-1.5">
-									<input
-										type="checkbox"
-										class="checkbox checkbox-xs"
-										checked={selectedSymbols.has(symbol)}
-										onchange={(e) => toggleSymbol(symbol, e.currentTarget.checked)}
-									/>
-									<span>
-										{#if plan.provider.kind === 'securities'}
-											{symbol}
-										{:else}
-											{plan.provider.base} → {symbol}
-										{/if}
-									</span>
-								</label>
-							{/each}
-
-							{#each plan.availableInvertedSymbols as symbol (symbol)}
-								<label
-									class="badge badge-ghost h-auto cursor-pointer gap-1.5 py-1.5"
-									title="Your book already keeps this pair — the prices extend that series, in its own direction."
-								>
-									<input
-										type="checkbox"
-										class="checkbox checkbox-xs"
-										checked={selectedSymbols.has(symbol)}
-										onchange={(e) => toggleSymbol(symbol, e.currentTarget.checked)}
-									/>
-									<span>{symbol} → {plan.provider.base} (your series)</span>
-								</label>
-							{/each}
-						</div>
-					{:else}
-						<p class="text-sm opacity-70">
-							{#if plan.provider.kind === 'securities' && !plan.provider.fetchCatalogue}
-								Nothing to fetch — no <code>commodity</code> directive in your book has a
-								<code>price</code> meta entry naming this provider's source, e.g.
-								<code>price: "AUD:yahoo/ASX:VHY"</code>.
-							{:else if plan.provider.kind === 'securities'}
-								Nothing to fetch — select products in
-								<a class="link" href="/prices/providers/{plan.provider.id}">the provider's settings</a>
-								that match a commodity in your book (by <code>apir</code> or <code>ticker</code> meta).
-							{:else}
-								Nothing to fetch — the provider cannot serve any of the commodities your book uses.
-							{/if}
-						</p>
-					{/if}
-
-					{#if symbolOptions.length > 0 && plan.symbols.length + plan.invertedSymbols.length === 0}
-						<p class="text-sm opacity-70">No symbols selected — pick at least one above.</p>
-					{/if}
-				</div>
-			</div>
-		{:else if planLoading}
-			<div class="card bg-base-100 rounded-lg">
-				<div class="card-body flex-row items-center gap-2 py-3 px-3 text-sm opacity-60">
-					<span class="loading loading-spinner loading-sm"></span>
-					Computing symbols…
-				</div>
-			</div>
-		{/if}
-
-		<!-- ── Download ───────────────────────────────────────────── -->
-		<button
-			type="button"
-			class="btn btn-primary"
-			disabled={running ||
-				!!targetError ||
-				!plan ||
-				plan.symbols.length + plan.invertedSymbols.length === 0}
-			onclick={() => void runDownload()}
-		>
-			{#if running}
-				<span class="loading loading-spinner loading-sm"></span>
-			{:else}
-				<DownloadIcon size={16} />
-			{/if}
-			{running ? 'Downloading…' : 'Download latest prices'}
-		</button>
-
-		{#if error}
-			<div class="alert alert-error text-sm"><span>{error}</span></div>
-		{/if}
-
-		{#if result}
-			<div class="card bg-base-200 rounded-lg">
-				<div class="card-body py-3 px-3">
-					<p class="text-sm">
-						{#if result.fixingDate && result.unchanged}
-							The {result.fixingDate} prices are already in <code>{result.targetFile}</code> — no changes.
-						{:else if result.fixingDate}
-							Downloaded the {result.fixingDate} prices into
-							<code>{result.targetFile}</code>
-							— {result.added}
-							{result.added === 1 ? 'line' : 'lines'} added{result.writeMode === 'append'
-								? `, ${result.updated} updated${result.removed > 0 ? `, ${result.removed} opposite-direction removed` : ''}, ${result.directives} lines in file`
-								: ''}.
+					<button
+						class="btn btn-primary"
+						type="button"
+						disabled={running || !!targetError || selectedCount === 0}
+						onclick={() => void download()}
+					>
+						{#if running}
+							<span class="loading loading-spinner loading-sm"></span>
 						{:else}
-							Nothing to fetch.
+							<DownloadIcon size={16} />
 						{/if}
-					</p>
-					{#if reloadState === 'reloading'}
-						<p class="flex items-center gap-2 text-sm opacity-70">
-							<span class="loading loading-spinner loading-xs"></span>
-							Reloading the book…
-						</p>
-					{:else if reloadState === 'done'}
-						<p class="text-sm text-success">Book reloaded — the new prices are in use.</p>
-					{/if}
-					{#if result.missing.length > 0}
-						<p class="text-sm text-warning">
-							Not in the provider's response, so not written: {result.missing.join(', ')}
-						</p>
-					{/if}
-				</div>
-			</div>
-		{/if}
-
-		<!-- ── Output ─────────────────────────────────────────────── -->
-		{#if written !== null && !targetError}
-			<div class="card bg-base-100 rounded-lg">
-				<div class="bg-primary rounded-t-lg px-3 py-2 text-lg">Output file</div>
-				<div class="card-body py-3 px-3 space-y-2">
-					<p class="text-xs opacity-60">
-						Current contents of <code>{config.targetFile}</code>.
-					</p>
-					<textarea
-						class="textarea textarea-bordered h-40 w-full font-mono text-xs"
-						readonly
-						aria-label="Prices written to the output file"
-						value={written}></textarea>
-				</div>
-			</div>
-		{/if}
-
-		<!-- ── Status ─────────────────────────────────────────────── -->
-		{#if status}
-			<div class="card bg-base-100 rounded-lg">
-				<div class="bg-primary rounded-t-lg px-3 py-2 text-lg">Last run</div>
-				<div class="card-body py-3 px-3 text-sm space-y-1">
-					{#if status.lastError}
-						<p class="text-error">{status.lastError}</p>
-					{/if}
-					<p><span class="opacity-60">When:</span> {new Date(status.lastRun).toLocaleString()}</p>
-					{#if status.fixingDate}
-						<p><span class="opacity-60">Last price date:</span> {status.fixingDate}</p>
-						<p>
-							<span class="opacity-60">Destination:</span>
-							{status.targetFile} ({status.writeMode})
-						</p>
-						<p>
-							<span class="opacity-60">Lines in file:</span>
-							{status.directives ?? '—'}
-						</p>
-						{#if (status.missing ?? []).length > 0}
-							<p class="text-warning">
-								<span class="opacity-60">Missing from response:</span>
-								{(status.missing ?? []).join(', ')}
-							</p>
+						{#if running}
+							{writing ? 'Writing file…' : 'Downloading…'}
+						{:else if selectedCount === 0}
+							Nothing selected
+						{:else}
+							Download {selectedCount} price{selectedCount === 1 ? '' : 's'}
+							<span class="opacity-70 font-normal">
+								· {selectedGroups.length} provider{selectedGroups.length === 1 ? '' : 's'}
+							</span>
 						{/if}
+					</button>
+
+					{#if result}
+						<div class="alert alert-success text-sm">
+							<span>
+								{#if result.unchanged}
+									Already up to date.
+								{:else}
+									Wrote {result.added} new, {result.updated} updated
+								{/if}
+								({result.directives} price{result.directives === 1 ? '' : 's'} in
+								<code>{result.targetFile}</code>).
+								{#each result.providers.filter((p) => p.missing.length) as p (p.providerId)}
+									<br />Missing from {providerNames.get(p.providerId)}: {p.missing.join(', ')}.
+								{/each}
+							</span>
+						</div>
+					{/if}
+					{#if written !== null && !targetError}
+						<button type="button" class="btn btn-ghost btn-sm rounded self-start" onclick={openPreview}>
+							<EyeIcon size={16} /> Preview output file
+						</button>
 					{/if}
 				</div>
-			</div>
+			</section>
+
+			<!-- ── Details (collapsed by default, remembered) ─────── -->
+			{#snippet section(
+				key: string,
+				title: string,
+				count: number,
+				hint: string,
+				rows: { commodity: string; note?: string; action?: 'ignore' | 'unignore' }[]
+			)}
+				{#if count > 0}
+					<details
+						class="collapse collapse-arrow bg-base-100 shadow-sm"
+						open={openSections[key] ?? false}
+						ontoggle={(e) => rememberSection(key, e.currentTarget.open)}
+					>
+						<summary class="collapse-title text-base font-semibold">{title} ({count})</summary>
+						<div class="collapse-content flex flex-col gap-2">
+							{#if hint}<p class="text-xs opacity-60">{hint}</p>{/if}
+							<ul class="flex flex-col">
+								{#each rows as r (r.commodity)}
+									<li
+										class="flex items-center gap-2 rounded px-2 py-1.5 text-sm even:bg-base-200"
+										out:disintegrate|global
+										in:fade|global={{ duration: 250 }}
+									>
+										<span class="font-medium">{r.commodity}</span>
+										<span class="flex-1 text-xs opacity-60 break-all">{r.note ?? ''}</span>
+										{#if r.action}
+											<button
+												class="btn btn-ghost btn-xs rounded"
+												onclick={() => toggleIgnored(r.commodity, r.action === 'ignore')}
+											>
+												{r.action === 'ignore' ? 'Ignore' : 'Unignore'}
+											</button>
+										{/if}
+									</li>
+								{/each}
+							</ul>
+						</div>
+					</details>
+				{/if}
+			{/snippet}
+
+			{#if hasProblems}
+				<p class="-mb-2 text-xs font-medium uppercase tracking-wide opacity-50">Needs attention</p>
+			{/if}
+			{@render section(
+				'untagged',
+				'Untagged',
+				untagged.length,
+				'No price tag, so no prices are downloaded. Tag the commodity in the book, or ignore it if that is intended.',
+				untagged.map((e) => ({ commodity: e.commodity, action: 'ignore' as const }))
+			)}
+			{@render section(
+				'unmapped',
+				'Unmapped source',
+				unmapped.length,
+				'The price tag names a source with no provider. Add the nickname in a provider’s settings (gear icon above) and check the provider is switched on.',
+				unmapped.map((e) => ({ commodity: e.commodity, note: `source: ${e.source}` }))
+			)}
+			{@render section(
+				'invalid',
+				'Invalid',
+				invalid.length,
+				'The price tag is malformed or the provider rejected it.',
+				invalid.map((e) => ({ commodity: e.commodity, note: e.reason }))
+			)}
+			{@render section(
+				'uncovered',
+				'Not covered',
+				uncovered.length,
+				"Tagged for a provider that cannot serve them: a currency it does not publish, or a fund missing its APIR/ticker or not in the provider's catalogue selection.",
+				uncovered.map((u) => ({ commodity: u.commodity, note: providerNames.get(u.providerId) }))
+			)}
+			{@render section(
+				'ignored',
+				'Ignored',
+				ignored.length,
+				'',
+				ignored.map((e) => ({ commodity: e.commodity, action: 'unignore' as const }))
+			)}
+
 		{/if}
 	</div>
 </main>
+
+<!-- Output file preview -->
+<input type="checkbox" class="modal-toggle" aria-hidden="true" bind:checked={previewOpen} />
+<dialog class="modal" aria-label="Output file preview">
+	<div class="modal-box max-w-2xl">
+		<h2 class="text-lg font-bold">Output file</h2>
+		<p class="py-1 text-xs opacity-60">
+			Current contents of <code>{config.targetFile}</code>{written === '' ? ' (empty)' : ''}.
+		</p>
+		<textarea
+			class="textarea textarea-bordered h-72 w-full font-mono text-xs"
+			readonly
+			aria-label="Prices written to the output file"
+			value={written ?? ''}></textarea>
+		<footer class="mt-4 flex justify-end gap-2">
+			<button
+				type="button"
+				class="btn btn-ghost"
+				onclick={() => goto(`/opfs/edit-file?file=${encodeURIComponent(config.targetFile)}`)}
+				>Open in editor</button
+			>
+			<button type="button" class="btn btn-primary" onclick={() => (previewOpen = false)}
+				>Close</button
+			>
+		</footer>
+	</div>
+	<form method="dialog" class="modal-backdrop"><button onclick={() => (previewOpen = false)}>close</button></form>
+</dialog>
 
 <!-- Proxy key dialog -->
 <input type="checkbox" id="proxy-key-modal" class="modal-toggle" bind:checked={proxyKeyModalOpen} />

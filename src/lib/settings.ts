@@ -126,9 +126,12 @@ export const SettingKeys = {
 	// ignored: string[] — commodities acknowledged as deliberately not priced.
 	priceNicknames: 'prices.nicknames',
 	priceIgnored: 'prices.ignored',
-	// disabledProviders: string[] — provider ids switched off on the Price Providers page.
+	// disabledProviders: string[] — provider ids switched off on a provider's settings page.
 	// Disabled providers are skipped by the book-driven download. Default: none (all on).
-	priceDisabledProviders: 'prices.disabledProviders'
+	priceDisabledProviders: 'prices.disabledProviders',
+	// skippedProviders: string[] — providers unticked on the Price Download page. They stay
+	// enabled and mapped, but are left out of the next download. Default: none (all included).
+	priceSkippedProviders: 'prices.skippedProviders'
 };
 
 /** Settings specific to this device (not exported). */

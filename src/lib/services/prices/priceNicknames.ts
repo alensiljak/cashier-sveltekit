@@ -60,6 +60,19 @@ export async function setProviderEnabled(providerId: string, enabled: boolean): 
 	await settings.set(SettingKeys.priceDisabledProviders, [...disabled].sort());
 }
 
+/** Provider ids unticked on the Price Download page (left out of the download, not switched off). */
+export async function getSkippedProviders(): Promise<string[]> {
+	const stored = await settings.get<unknown>(SettingKeys.priceSkippedProviders);
+	return Array.isArray(stored) ? stored.filter((s): s is string => typeof s === 'string') : [];
+}
+
+export async function setProviderSkipped(providerId: string, skipped: boolean): Promise<void> {
+	const set = new Set(await getSkippedProviders());
+	if (skipped) set.add(providerId);
+	else set.delete(providerId);
+	await settings.set(SettingKeys.priceSkippedProviders, [...set].sort());
+}
+
 export interface BookSource {
 	source: string;
 	/** Commodities whose (first) `price` entry uses this source. */
