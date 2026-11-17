@@ -76,9 +76,12 @@
 						<data class={`text-right ${Formatter.getAmountColour(total.quantity)}`}>
 							{Formatter.formatAmount(total.quantity)}
 						</data>
-						<data class={`font-mono ${Formatter.getAmountColour(total.quantity)}`}>
+						<a
+							href={`/commodities/detail?symbol=${encodeURIComponent(total.currency)}`}
+							class={`link font-mono ${Formatter.getAmountColour(total.quantity)}`}
+						>
 							{total.currency}
-						</data>
+						</a>
 					{/each}
 				</div>
 			</div>
