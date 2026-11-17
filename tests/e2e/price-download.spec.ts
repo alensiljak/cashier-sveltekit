@@ -1,7 +1,7 @@
 /**
- * Price Download page e2e against the demo book. The demo fixtures carry no
- * `price:` tags yet, so the download itself cannot be exercised here until
- * they are extended; the page layout, remembered state and proxy key can.
+ * Price Download page e2e against the demo book. The demo book tags USD and
+ * AUD with `EUR:ecbrates/…`, so the ECB provider has prices to download; the
+ * page layout, remembered state and proxy key are exercised here.
  */
 import { expect, test } from './fixtures';
 
@@ -11,9 +11,11 @@ test.describe('price download', () => {
 	}) => {
 		await page.goto('/prices/download');
 
-		// The demo book has no `price` tags, so nothing is downloadable yet.
+		// USD and AUD are tagged `EUR:ecbrates/…`, so the ECB provider is selected.
 		await expect(page.getByRole('heading', { name: 'Providers' })).toBeVisible();
-		await expect(page.getByRole('button', { name: 'Nothing selected' })).toBeDisabled();
+		const download = page.getByRole('button', { name: /Download 2 prices/ });
+		await expect(download).toBeEnabled();
+		await expect(download).toContainText('1 provider');
 
 		// Sections are collapsed by default and the open state is remembered.
 		const untagged = page.locator('details', { hasText: 'Untagged' });
