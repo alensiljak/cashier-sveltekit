@@ -261,9 +261,17 @@
 		previewOpen = true;
 	}
 
+	/** True only while an Ignore/Unignore click is in flight, so rows explode on that
+	 * click and not when the whole page is torn down on navigation. */
+	let explodeRows = false;
+	function rowExit(node: HTMLElement) {
+		return explodeRows ? disintegrate(node) : { duration: 0 };
+	}
+
 	async function toggleIgnored(commodity: string, value: boolean) {
 		// Move the row right away so its exit animation starts at the click; the
 		// re-plan afterwards confirms (or corrects) the state.
+		explodeRows = true;
 		if (plan) {
 			plan = {
 				...plan,
@@ -277,6 +285,8 @@
 			await refresh();
 		} catch (e) {
 			error = describeError(e);
+		} finally {
+			explodeRows = false;
 		}
 	}
 
@@ -557,7 +567,7 @@
 								{#each rows as r (r.commodity)}
 									<li
 										class="flex items-center gap-2 rounded px-2 py-1.5 text-sm even:bg-base-200"
-										out:disintegrate|global
+										out:rowExit|global
 										in:fade|global={{ duration: 250 }}
 									>
 										<span class="font-medium">{r.commodity}</span>
