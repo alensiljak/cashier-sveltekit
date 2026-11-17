@@ -34,7 +34,7 @@
 	import { deviceSettings, DeviceSettingKeys, SettingKeys } from '#lib/settings';
 	import { onMount } from 'svelte';
 	import { fade } from 'svelte/transition';
-	import { cubicInOut } from 'svelte/easing';
+	import { disintegrate } from '#lib/utils/disintegrate';
 	import { goto, replaceState } from '$app/navigation';
 	import { page } from '$app/state';
 	import DownloadIcon from '@lucide/svelte/icons/download';
@@ -99,30 +99,6 @@
 
 	/** Whether switched-off providers are listed (hidden by default to keep the list short). */
 	let showDisabled = $state(openSections.showDisabled ?? false);
-
-	/**
-	 * Outro for a row that leaves a list (e.g. a commodity being ignored): it
-	 * blurs, spreads and drifts away, then its height collapses so the rows
-	 * below slide up into the gap. Skipped under `prefers-reduced-motion`.
-	 */
-	function disintegrate(node: HTMLElement) {
-		const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-		const height = node.offsetHeight;
-		const style = getComputedStyle(node);
-		const padding = parseFloat(style.paddingTop);
-		return {
-			duration: reduce ? 0 : 600,
-			easing: cubicInOut,
-			css: (t: number, u: number) => {
-				const collapse = t < 0.5 ? t * 2 : 1;
-				return (
-					`overflow:hidden;opacity:${t};filter:blur(${u * 6}px);letter-spacing:${u * 0.35}em;` +
-					`transform:translateX(${u * 28}px) scale(${1 - u * 0.08});` +
-					`height:${height * collapse}px;padding-block:${padding * collapse}px;`
-				);
-			}
-		};
-	}
 
 	const of = (state: CommodityPlanEntry['state']) =>
 		plan?.entries.filter((e) => e.state === state) ?? [];
