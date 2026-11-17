@@ -16,7 +16,12 @@ describe('parsePriceMeta', () => {
 			'AUD:alens.pricedl.beanprice.vanguard_au_detail/PROP, USD:yahoo/^AUDUSD=X'
 		);
 		expect(r.specs).toEqual([
-			{ quote: 'AUD', source: 'alens.pricedl.beanprice.vanguard_au_detail', symbol: 'PROP', inverted: false },
+			{
+				quote: 'AUD',
+				source: 'alens.pricedl.beanprice.vanguard_au_detail',
+				symbol: 'PROP',
+				inverted: false
+			},
 			{ quote: 'USD', source: 'yahoo', symbol: 'AUDUSD=X', inverted: true }
 		]);
 	});

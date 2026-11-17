@@ -33,7 +33,9 @@ describe('toYahooSymbol', () => {
 		expect(toYahooSymbol('AUDUSD=X')).toBe('AUDUSD=X');
 	});
 	it('url-encodes the symbol', () => {
-		expect(yahooChartUrl('^GSPC')).toBe('https://query1.finance.yahoo.com/v8/finance/chart/%5EGSPC');
+		expect(yahooChartUrl('^GSPC')).toBe(
+			'https://query1.finance.yahoo.com/v8/finance/chart/%5EGSPC'
+		);
 	});
 });
 
@@ -117,10 +119,20 @@ describe('yahoo provider', () => {
 	it('rejects inverted specs', () => {
 		const provider = createYahooPriceProvider(async () => json({}));
 		expect(
-			provider.validateSpec!('X', { quote: 'USD', source: 'yahoo', symbol: 'AUDUSD=X', inverted: true })
+			provider.validateSpec!('X', {
+				quote: 'USD',
+				source: 'yahoo',
+				symbol: 'AUDUSD=X',
+				inverted: true
+			})
 		).toMatch(/inverted/);
 		expect(
-			provider.validateSpec!('X', { quote: 'AUD', source: 'yahoo', symbol: 'ASX:VHY', inverted: false })
+			provider.validateSpec!('X', {
+				quote: 'AUD',
+				source: 'yahoo',
+				symbol: 'ASX:VHY',
+				inverted: false
+			})
 		).toBeNull();
 	});
 });

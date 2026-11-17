@@ -76,7 +76,9 @@ export function toYahooSymbol(symbol: string): string {
 	if (i < 0) return symbol;
 	const namespace = symbol.slice(0, i);
 	const mnemonic = symbol.slice(i + 1);
-	const suffix = Object.hasOwn(NAMESPACE_SUFFIX, namespace) ? NAMESPACE_SUFFIX[namespace] : namespace;
+	const suffix = Object.hasOwn(NAMESPACE_SUFFIX, namespace)
+		? NAMESPACE_SUFFIX[namespace]
+		: namespace;
 	return suffix ? `${mnemonic}.${suffix}` : mnemonic;
 }
 
@@ -191,7 +193,9 @@ export function createYahooPriceProvider(fetchImpl: YahooFetch = proxyFetch): Pr
 					const response = await fetchImpl(yahooChartUrl(yahoo));
 					if (response.status === 404) return { symbol, price: null };
 					if (!response.ok) {
-						throw new Error(`Yahoo request for ${symbol} (${yahoo}) failed: HTTP ${response.status}`);
+						throw new Error(
+							`Yahoo request for ${symbol} (${yahoo}) failed: HTTP ${response.status}`
+						);
 					}
 					try {
 						return { symbol, price: parseYahooPrice(await response.json()) };

@@ -113,7 +113,10 @@ export function buildBookPricePlan(input: BookPriceInput): BookPricePlan {
 					reason: `malformed price tag: ${malformed.join(', ')}`
 				});
 			} else {
-				entries.push({ commodity: currency, state: ignored.has(currency) ? 'ignored' : 'untagged' });
+				entries.push({
+					commodity: currency,
+					state: ignored.has(currency) ? 'ignored' : 'untagged'
+				});
 			}
 			continue;
 		}
@@ -130,7 +133,13 @@ export function buildBookPricePlan(input: BookPriceInput): BookPricePlan {
 
 		const reason = provider.validateSpec?.(currency, spec) ?? null;
 		if (reason) {
-			entries.push({ commodity: currency, state: 'invalid', spec, providerId: provider.id, reason });
+			entries.push({
+				commodity: currency,
+				state: 'invalid',
+				spec,
+				providerId: provider.id,
+				reason
+			});
 			continue;
 		}
 		entries.push({ commodity: currency, state: 'mapped', spec, providerId: provider.id });

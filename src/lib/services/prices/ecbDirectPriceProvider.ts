@@ -30,7 +30,9 @@ export function parseEcbXml(xml: string, requested: string[]): FetchedQuotes {
 	}
 
 	const rates = new Map<string, number>();
-	for (const m of xml.matchAll(/<Cube\s+currency=["']([A-Z]{3})["']\s+rate=["']([^"']+)["']\s*\/?>/g)) {
+	for (const m of xml.matchAll(
+		/<Cube\s+currency=["']([A-Z]{3})["']\s+rate=["']([^"']+)["']\s*\/?>/g
+	)) {
 		const rate = Number(m[2]);
 		if (!Number.isFinite(rate) || rate <= 0) {
 			throw new Error(`ECB feed has an invalid rate for ${m[1]}`);

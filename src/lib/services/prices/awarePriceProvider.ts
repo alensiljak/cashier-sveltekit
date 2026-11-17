@@ -68,13 +68,15 @@ function recordOf(value: unknown, what: string): Record<string, unknown> {
  */
 export function parseAwareOptions(body: unknown): AwareOption[] {
 	const list = recordOf(body, 'unit prices response').investmentOptions;
-	if (!Array.isArray(list)) throw new Error('Aware unit prices response has no investmentOptions list');
+	if (!Array.isArray(list))
+		throw new Error('Aware unit prices response has no investmentOptions list');
 
 	const options: AwareOption[] = [];
 	for (const [i, entry] of list.entries()) {
 		const option = recordOf(entry, `investment option ${i}`);
 		const { investmentOptionId, investmentOptionName, unitPrices } = option;
-		const id = typeof investmentOptionId === 'number' ? String(investmentOptionId) : investmentOptionId;
+		const id =
+			typeof investmentOptionId === 'number' ? String(investmentOptionId) : investmentOptionId;
 		if (typeof id !== 'string' || !OPTION_ID.test(id)) {
 			throw new Error(`Aware investment option ${i} has no valid investmentOptionId`);
 		}
@@ -102,7 +104,8 @@ export function parseAwareOptions(body: unknown): AwareOption[] {
 		}
 		options.push({ id, name, latest });
 	}
-	if (options.length === 0) throw new Error('Aware unit prices response lists no investment options');
+	if (options.length === 0)
+		throw new Error('Aware unit prices response lists no investment options');
 	return options;
 }
 
@@ -164,7 +167,7 @@ export function createAwarePriceProvider(
 		// Linking is by `price` meta, gated by the user's selection of active options: the book's
 		// commodities that name this source are the ones served.
 		async resolveCovered(commodities, selection) {
-				const active = new Set(selection.map((p) => p.portId));
+			const active = new Set(selection.map((p) => p.portId));
 			resolved = new Map();
 			for (const commodity of commodities) {
 				const id = awareOptionId(commodity);

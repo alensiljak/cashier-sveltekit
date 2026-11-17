@@ -33,7 +33,9 @@ export async function loadBookPlan(): Promise<BookPricePlan> {
 	// A switched-off provider keeps its nicknames but takes no part in the plan:
 	// its sources read as unmapped until it is turned back on.
 	const off = new Set(disabled);
-	const nicknames = Object.fromEntries(Object.entries(allNicknames).filter(([, id]) => !off.has(id)));
+	const nicknames = Object.fromEntries(
+		Object.entries(allNicknames).filter(([, id]) => !off.has(id))
+	);
 	return buildBookPricePlan({ commodities, nicknames, ignored, providers: listPriceProviders() });
 }
 
@@ -121,7 +123,12 @@ export async function downloadAllFromBook(plan?: BookPricePlan): Promise<BookDow
 		const provider = getPriceProvider(providerId);
 		const fetched = await provider.fetchLatest(symbols);
 		incoming.push(...toDirectives(fetched, [], provider.base));
-		perProvider.push({ providerId, asOf: fetched.asOf, requested: symbols, missing: fetched.missing });
+		perProvider.push({
+			providerId,
+			asOf: fetched.asOf,
+			requested: symbols,
+			missing: fetched.missing
+		});
 		names.push(provider.name);
 		if (fetched.asOf > latest) latest = fetched.asOf;
 	}

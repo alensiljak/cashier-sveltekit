@@ -4,11 +4,11 @@ Downloads prices into a Beancount prices file of your choice, by default `prices
 
 ## Providers
 
-| Provider                                   | Serves                  | Needs the proxy? |
-| ------------------------------------------ | ----------------------- | ---------------- |
-| ECB reference rates (via Frankfurter)      | Currency rates (EUR)    | No               |
-| ECB reference rates (direct, via proxy)    | Currency rates (EUR)    | **Yes**          |
-| Vanguard Australia                         | Fund NAVs and ETFs      | **Yes**          |
+| Provider                                | Serves               | Needs the proxy? |
+| --------------------------------------- | -------------------- | ---------------- |
+| ECB reference rates (via Frankfurter)   | Currency rates (EUR) | No               |
+| ECB reference rates (direct, via proxy) | Currency rates (EUR) | **Yes**          |
+| Vanguard Australia                      | Fund NAVs and ETFs   | **Yes**          |
 
 - **Via Frankfurter** works anywhere with no setup: [Frankfurter](https://frankfurter.dev) serves the same ECB fixings with CORS enabled, so the browser fetches them directly. It depends on that third-party service.
 - **Direct** reads the ECB's own XML feed, which sends no CORS headers, so it is fetched through the app's `/api/proxy` endpoint and needs the proxy deployed and the **Proxy key** set (see below). Use it as a fallback if Frankfurter is unavailable.

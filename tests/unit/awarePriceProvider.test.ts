@@ -53,12 +53,16 @@ describe('parseAwareOptions', () => {
 		);
 		expect(() =>
 			parseAwareOptions({
-				investmentOptions: [{ investmentOptionId: '1', unitPrices: [{ date: '2026-11-13', value: 0 }] }]
+				investmentOptions: [
+					{ investmentOptionId: '1', unitPrices: [{ date: '2026-11-13', value: 0 }] }
+				]
 			})
 		).toThrow(/valid value/);
 		expect(() =>
 			parseAwareOptions({
-				investmentOptions: [{ investmentOptionId: '1', unitPrices: [{ date: '13/11/2026', value: 1 }] }]
+				investmentOptions: [
+					{ investmentOptionId: '1', unitPrices: [{ date: '13/11/2026', value: 1 }] }
+				]
 			})
 		).toThrow(/valid date/);
 	});
@@ -142,7 +146,10 @@ describe('proxy upstream key', () => {
 		await handleProxyRequest(proxied('https://api.aware.com.au/x'), { fetchImpl: like });
 		await handleProxyRequest(proxied('https://www.vanguard.com.au/x'), { fetchImpl: like });
 		const sent = (n: number) =>
-			(fetchImpl.mock.calls[n] as unknown as [unknown, RequestInit])[1].headers as Record<string, string>;
+			(fetchImpl.mock.calls[n] as unknown as [unknown, RequestInit])[1].headers as Record<
+				string,
+				string
+			>;
 		expect(sent(0)['X-API-KEY']).toBe('k');
 		expect(sent(1)['X-API-KEY']).toBeUndefined();
 	});

@@ -58,7 +58,13 @@ describe('parseVanguardCatalogue', () => {
 
 	it('labels a product with its published name when there is one', () => {
 		const body = {
-			data: [{ portId: '8207', name: 'Vanguard Australian Fixed Interest', tradingSymbols: { TICKER: 'VAF' } }]
+			data: [
+				{
+					portId: '8207',
+					name: 'Vanguard Australian Fixed Interest',
+					tradingSymbols: { TICKER: 'VAF' }
+				}
+			]
 		};
 		expect(parseVanguardCatalogue(body)[0].label).toBe('Vanguard Australian Fixed Interest');
 	});

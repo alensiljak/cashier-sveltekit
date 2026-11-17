@@ -2,129 +2,112 @@
 
 ## Context
 
-Cashier is a data-dependent, GUI-heavy PWA (67 routes, ~28k LOC) built on
-browser-only APIs — OPFS, IndexedDB (Dexie), File System Access, Web Workers,
-WASM (rustledger). There's comparatively little "business logic" in the
-traditional sense, but there's a meaningful amount of pure logic (parsers,
-formatters, sync/merge rules) where a silent bug means **wrong money or lost
-data** — that's the highest-value thing to guard.
+Cashier is a data-dependent, GUI-heavy PWA (~110 routes) built on browser-only
+APIs — OPFS, IndexedDB (Dexie), File System Access, Web Workers, WASM
+(rustledger). Little traditional business logic, but a meaningful amount of
+pure logic (parsers, formatters, sync/merge rules, importers, CRDT stores)
+where a silent bug means **wrong money or lost data** — that's what to guard.
 
-The pyramid is shaped for that risk profile: heavier on unit + service layers
-than a typical CRUD app, thin at the top (critical journeys only, no visual
-regression — DaisyUI/Tailwind styling churn would make screenshot baselines
-high-maintenance for low signal).
+The pyramid is heavy on unit + service tests, thin at the top (critical
+journeys only, no visual regression — DaisyUI/Tailwind churn makes screenshot
+baselines high-maintenance for low signal).
 
 ```
-Unit (Vitest, pure fns)  →  Service (Vitest, fakes)  →  Component (targeted)  →  E2E (critical journeys)
+Unit/Service (Vitest)  →  Component (targeted)  →  E2E (Playwright, demo book)
 ```
 
 ## Layers
 
-### 1. Unit — `tests/unit/*.test.ts`, Vitest, Node/jsdom environment
+### 1. Unit + service — `tests/unit/*.test.ts` (Vitest, jsdom)
 
-Pure functions only: parsers (`beancountParser`, `ledgerParser`,
-`rledgerParser`, `transactionParser`), `voiceNlp`, `numberUtils`, `formatter`,
-`sync-queries`, `scheduledTransactions`, asset-allocation validation/
-serialization. No mocking of app internals — if a function needs a fake to
-test, it belongs in the service layer instead.
+Pure functions (parsers, formatters, price providers, sync/merge, importers,
+reports) are tested directly. Services that orchestrate storage (`appService`,
+`backupService`, `cloudBackupService`, WebDAV/S3 sync, CRDT stores, …) are
+tested against fakes at existing seams:
 
-Config: `vitest.config.ts` (separate from `vite.config.ts` — the PWA/dev-server
-plugins there don't apply to tests and fight Vitest's transform pipeline).
-`tests/setup.ts` stubs three things modules rely on at import time that
-don't exist (or don't perform) in Vitest's Node/jsdom environment:
+- `tests/helpers/memoryBackend.ts` — in-memory `storageBackend` instead of OPFS.
+- `fake-indexeddb` — real in-memory IndexedDB for Dexie code.
+- Other helpers in `tests/helpers/`: `factories`, `demoFixtures`, `queryMock`,
+  `beancountExpected`.
 
-- `Worker` — `LedgerWorkerClient` spawns one eagerly in its constructor;
-  tests that only need the module graph to load (not run a real worker) get
-  a no-op stub.
-- WASM asset fetch — `@rustledger/wasm` inits via `fetch(wasmUrl)`; Vite's
-  `?url` import resolves to a path Node's `fetch` can't dereference directly.
-  The setup intercepts `.wasm` requests and serves the real bytes from disk,
-  so `rustledger.ts` tests exercise the **actual WASM parser**, not a mock —
-  this is a real integration test running fast inside the unit layer.
-- `@lucide/svelte` — always use deep imports
-  (`import X from '@lucide/svelte/icons/circle-alert'`), never the package
-  barrel. The barrel re-exports ~1700 icon components and, per
-  [lucide-icons/lucide#2806](https://github.com/lucide-icons/lucide/issues/2806),
-  importing even one forces evaluation of all of them: 10x dev-server reload
-  slowdown, and 30s+ per import under Vitest (no pre-bundling). Barrel imports
-  are blocked by the `no-restricted-imports` rule in `eslint.config.js` and
-  `.oxlintrc.json`. Icons are rendered for real in tests (no global mock).
+Keep them fast and hermetic. If a test needs a real browser API with no
+practical fake, it's an E2E concern.
 
-Run: `npm run test:unit` (or `test:unit:watch` while iterating).
+Config: `vitest.config.ts` (separate from `vite.config.ts`, whose PWA/dev-server
+plugins fight Vitest). `tests/setup.ts` stubs what doesn't exist in the test
+environment:
 
-### 2. Service — same Vitest config, `tests/unit/*.test.ts`
+- `Worker` — no-op stub (`LedgerWorkerClient` spawns one in its constructor).
+- WASM fetch — `.wasm` requests are served from disk, so `rustledger` tests run
+  the **real WASM parser**, not a mock.
+- `indexedDB` — `fake-indexeddb/auto`.
 
-Services that orchestrate storage (`appService`, `accountsService`,
-`backupService`, `cloudBackupService`) get tested against fakes at the
-existing seams, not real OPFS/IndexedDB:
+**Lucide icons:** always deep-import (`@lucide/svelte/icons/circle-alert`),
+never the barrel — it forces evaluation of ~1700 components (10x dev reload
+slowdown, 30s+ per import under Vitest; see
+[lucide#2806](https://github.com/lucide-icons/lucide/issues/2806)). Enforced by
+`no-restricted-imports` in `eslint.config.js` and `.oxlintrc.json`. Icons render
+for real in tests.
 
-- `storageBackend.ts` is already an interface over OPFS — implement an
-  in-memory fake for tests instead of hitting real File System Access APIs.
-- Dexie/IndexedDB access → `fake-indexeddb` (not yet installed; add when the
-  first service test needs it — don't install speculatively).
+Run: `npm run test:unit` (`test:unit:watch` while iterating, `test:coverage`
+for a v8 coverage report).
 
-Keep these fast and hermetic. If a test needs a real browser API with no
-practical fake, it's an E2E concern, not a service test.
+### 2. Component — `tests/components/*.test.ts` (`@testing-library/svelte`)
 
-### 3. Component — targeted only, `@testing-library/svelte`
+Targeted only: components with real interactive state/logic. Currently
+`PostingEditor` and `SearchableSelect`; candidates: `XactEditor`,
+`ScheduleEditor`, `DragReorderList`. Skip pure-display components — the E2E
+route sweep covers them.
 
-Not every component gets a test. Write one only for components with real
-interactive state/logic, e.g. `XactEditor`, `PostingEditor`, `ScheduleEditor`,
-`SearchableSelect`, `DragReorderList`. Skip pure-display components (cards,
-rows, badges) — they're cheaply covered by the E2E smoke tests that render
-the pages containing them.
+Pattern (see `PostingEditor.test.ts`): seed `mainStore` stores in `beforeEach`
+(components read/write them directly rather than via props),
+`vi.mock('$app/navigation')` for `goto`, assert on DOM and store state.
 
-Location: `tests/components/ComponentName.test.ts`. See
-`tests/components/PostingEditor.test.ts` for the established pattern: seed
-the relevant `mainStore` stores in `beforeEach` (components read/write them
-directly rather than taking data as props), `vi.mock('$app/navigation')` for
-any `goto` calls, assert on both DOM state and resulting store state.
+### 3. E2E — `tests/e2e/*.spec.ts` (Playwright)
 
-### 4. E2E — `tests/e2e/*.spec.ts`, Playwright, critical journeys only
+Runs against a production build (`npm run build && npm run preview`, port 4173;
+`PROXY_KEY` is set by the config). No visual regression.
 
-Scope is deliberately narrow: verify the app shell and critical pages render
-against a real production build (`npm run build && npm run preview`), plus
-a handful of full user journeys end to end. No per-route exhaustive coverage,
-no visual regression.
+`tests/e2e/fixtures.ts` provides:
 
-Current critical journeys (`tests/e2e/critical-journeys.spec.ts`):
+- `demoPage` — a page with the built-in demo book loaded via onboarding (fresh
+  OPFS/IndexedDB per test), so pages are exercised with real data.
+- `errors` (auto) — fails any test that hits an uncaught page error or console
+  error.
 
-- Home page renders (toolbar + quick-entry FAB)
-- Quick-entry FAB → transaction search navigation
-- Journal, Reports, Settings, Accounts, Scheduled Transactions, Favourites
-  pages render their toolbar title
+Specs: `critical-journeys` (app shell + route sweep + asset allocation),
+`user-flows` (home overview, persistence across reload, device-transaction
+edit/delete, scheduled transactions, search/BQL), `transaction-entry`,
+`reconcile`, `backup-restore`, `sync-hub`, `price-download`,
+`currency-converter`.
 
-**Not yet covered** (needs seeded OPFS/IndexedDB fixture data — add as a
-follow-up once a fixture-seeding helper exists, don't fake it with an empty
-ledger):
-
-- OPFS import/sync round-trip
-- WebDAV backup/restore round-trip
-- Full quick-transaction-entry → journal-shows-it flow
-- Scheduled transaction execution
+**Not yet covered:** OPFS import/sync round-trip; WebDAV/S3 round-trips against
+a real server.
 
 Run: `npm run test:e2e`.
 
 ## Conventions
 
-- Test files under `tests/unit/` and `tests/components/` are Vitest
-  (`*.test.ts`); files under `tests/e2e/` are Playwright (`*.spec.ts`).
-  `vitest.config.ts` excludes `tests/e2e/**`; `playwright.config.ts` points
-  `testDir` at `tests/e2e`.
-- Fixture `.bean` files live in `tests/data/`.
-- A bug fix gets a regression test at the layer closest to where the bug
-  actually lived (parser bug → unit test; storage bug → service test with a
-  fake; only a rendering/navigation bug goes to E2E).
-- No CI yet. `npm run verify` chains `lint → check → test:unit → test:e2e`.
-  `npm run publish` runs `verify` then `deploy` — that's now the actual
-  gate: use `publish` to ship, not `deploy` directly. `deploy` remains the
-  raw Cloudflare push for cases where you deliberately want to skip the gate.
+- `tests/unit/` and `tests/components/` are Vitest (`*.test.ts`); `tests/e2e/`
+  is Playwright (`*.spec.ts`). `vitest.config.ts` excludes `tests/e2e/**`;
+  `playwright.config.ts` sets `testDir: 'tests/e2e'`.
+- Fixture data lives in `tests/data/` (`.bean` files, IBKR Flex XML + expected
+  output).
+- A bug fix gets a regression test at the layer closest to the bug (parser →
+  unit; storage → service with a fake; only rendering/navigation → E2E).
 
-## Deliberately out of scope (for now)
+## Verification & CI
 
-- CI/GitHub Actions — revisit once the suite is established and stable.
-- Visual regression testing — DaisyUI/Tailwind styling churn makes
-  screenshot baselines high-maintenance for the signal they'd provide here.
-- Broad component-test coverage — targeted only, see Layer 3.
-- Exhaustive per-route E2E smoke tests — critical journeys only; the 60+
-  routes not covered are a known gap, not an oversight.
+- `npm run verify` = `lint → check → test:unit → test:e2e`.
+- `npm run publish` = `lint → check → test:unit → deploy` (no E2E; `deploy` is
+  the raw `build && wrangler deploy`).
+- GitHub Actions (`.github/workflows/ci-deploy.yml`): on PRs to `main` runs
+  lint, check and unit tests (no E2E); manual `workflow_dispatch` deploys to
+  Cloudflare after those pass.
+
+## Out of scope
+
+- Visual regression testing.
+- Broad component-test coverage — targeted only.
+- Exhaustive per-route E2E — the route sweep checks render + no errors only.
+- E2E in CI — currently run locally via `verify`.
