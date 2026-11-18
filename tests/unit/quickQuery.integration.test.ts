@@ -90,4 +90,33 @@ describe('quick query against the demo book', () => {
 	it('assert executes', () => {
 		run('assert');
 	});
+
+	it('single quotes in account and @payee filters are escaped and still parse', () => {
+		// Bypasses the CLI tokenizer to inject a raw quote into the options.
+		const bql = buildQuery(
+			'register',
+			{
+				account: ["Joe's", "@O'Brien's"],
+				currency: [],
+				total: false,
+				hierarchy: false,
+				zero: false,
+				closedAccounts: false
+			},
+			{
+				account: [],
+				currency: [],
+				average: false,
+				active: true,
+				showAll: false,
+				closed: false
+			}
+		);
+
+		expect(bql).toContain("account ~ 'Joe''s'");
+		expect(bql).toContain("description ~ 'O''Brien''s'");
+
+		const result = queryMultiFile(demoFixtures, 'book.bean', bql);
+		expect(result.errors, bql).toEqual([]);
+	});
 });

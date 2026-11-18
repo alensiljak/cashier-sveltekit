@@ -115,7 +115,7 @@ function parseAccountParams(tokens: string[]): AccountParams {
 				i++;
 			}
 		} else if (current.startsWith('@')) {
-			whereClauses.push(`description ~ '${current.slice(1)}'`);
+			whereClauses.push(`description ~ ${bqlString(current.slice(1))}`);
 		} else {
 			accountRegexes.push(current);
 		}
@@ -126,6 +126,11 @@ function parseAccountParams(tokens: string[]): AccountParams {
 }
 
 // --- Helpers ---
+
+// BQL string literals escape a single quote by doubling it (SQL convention).
+function bqlString(s: string): string {
+	return `'${s.replace(/'/g, "''")}'`;
+}
 
 function normalizeCurrencies(currencies: string[]): string[] {
 	return currencies
@@ -167,17 +172,18 @@ function addDateClauses(
 function addAccountClauses(tokens: string[], whereClauses: string[]) {
 	const params = parseAccountParams(tokens);
 	for (const clause of params.whereClauses) whereClauses.push(clause);
-	for (const pattern of params.accountRegexes) whereClauses.push(`account ~ '${pattern}'`);
+	for (const pattern of params.accountRegexes)
+		whereClauses.push(`account ~ ${bqlString(pattern)}`);
 	for (const pattern of params.excludedAccountRegexes)
-		whereClauses.push(`NOT (account ~ '${pattern}')`);
+		whereClauses.push(`NOT (account ~ ${bqlString(pattern)})`);
 }
 
 function addCurrencyClauses(currencies: string[], whereClauses: string[]) {
 	const normalized = normalizeCurrencies(currencies);
 	if (normalized.length === 1) {
-		whereClauses.push(`currency = '${normalized[0]}'`);
+		whereClauses.push(`currency = ${bqlString(normalized[0])}`);
 	} else if (normalized.length > 1) {
-		whereClauses.push(`currency IN ('${normalized.join("', '")}')`);
+		whereClauses.push(`currency IN (${normalized.map(bqlString).join(', ')})`);
 	}
 }
 
@@ -197,7 +203,7 @@ export function buildBalanceQuery(opts: CommonOptions): string {
 
 	const exchange = opts.exchange?.toUpperCase();
 	const selectClause = exchange
-		? `SELECT account, units(sum(position)) as Balance, convert(sum(position), '${exchange}') as Converted`
+		? `SELECT account, units(sum(position)) as Balance, convert(sum(position), ${bqlString(exchange)}) as Converted`
 		: `SELECT account, units(sum(position)) as Balance`;
 
 	let query =
@@ -221,7 +227,7 @@ export function buildRegisterQuery(opts: CommonOptions): string {
 
 	const exchange = opts.exchange?.toUpperCase();
 	let query = exchange
-		? `SELECT date, account, payee, narration, position, convert(position, '${exchange}') as Converted`
+		? `SELECT date, account, payee, narration, position, convert(position, ${bqlString(exchange)}) as Converted`
 		: `SELECT date, account, payee, narration, position`;
 
 	if (whereClauses.length > 0) query += ` WHERE ${whereClauses.join(' AND ')}`;
@@ -239,9 +245,9 @@ export function buildLotsQuery(opts: LotsOptions): string {
 
 	const normalizedCurrencies = normalizeCurrencies(opts.currency);
 	if (normalizedCurrencies.length === 1) {
-		whereClauses.push(`currency = '${normalizedCurrencies[0]}'`);
+		whereClauses.push(`currency = ${bqlString(normalizedCurrencies[0])}`);
 	} else if (normalizedCurrencies.length > 1) {
-		whereClauses.push(`currency IN ('${normalizedCurrencies.join("', '")}')`);
+		whereClauses.push(`currency IN (${normalizedCurrencies.map(bqlString).join(', ')})`);
 	}
 
 	whereClauses.push('cost_number IS NOT NULL');
@@ -254,26 +260,26 @@ export function buildLotsQuery(opts: LotsOptions): string {
 
 	if (opts.average) {
 		let sel = `SELECT MAX(date) as date, account, currency(units(position)) as symbol, SUM(units(position)) as quantity, SUM(cost_number * number(units(position))) as total_weighted_cost, SUM(number(units(position))) as total_quantity, cost(SUM(position)) as total_cost, value(SUM(position)) as value`;
-		if (exchange) sel += `, convert(value(SUM(position)), '${exchange}') as converted_value`;
+		if (exchange) sel += `, convert(value(SUM(position)), ${bqlString(exchange)}) as converted_value`;
 		selectClause = sel;
 		groupBy = ['account', 'currency(units(position))'];
 		havingClause = 'HAVING SUM(number(units(position))) > 0';
 	} else if (opts.closed) {
 		let sel = `SELECT MAX(date) as date, account, currency(units(position)) as symbol, SUM(units(position)) as quantity, cost_number as price, cost(SUM(position)) as cost, value(SUM(position)) as value`;
-		if (exchange) sel += `, convert(value(SUM(position)), '${exchange}') as converted_value`;
+		if (exchange) sel += `, convert(value(SUM(position)), ${bqlString(exchange)}) as converted_value`;
 		selectClause = sel;
 		groupBy = ['account', 'currency(units(position))', 'cost_number', 'cost_currency'];
 		havingClause = 'HAVING SUM(number(units(position))) <= 0';
 	} else if (opts.showAll) {
 		let sel = `SELECT date, account, currency(units(position)) as symbol, units(position) as quantity, cost_number as price, cost(position) as cost, value(position) as value`;
-		if (exchange) sel += `, convert(value(position), '${exchange}') as converted_value`;
+		if (exchange) sel += `, convert(value(position), ${bqlString(exchange)}) as converted_value`;
 		selectClause = sel;
 		groupBy = null;
 		havingClause = null;
 	} else {
 		// active (default)
 		let sel = `SELECT MAX(date) as date, account, currency(units(position)) as symbol, SUM(units(position)) as quantity, cost_number as price, cost(SUM(position)) as cost, value(SUM(position)) as value`;
-		if (exchange) sel += `, convert(value(SUM(position)), '${exchange}') as converted_value`;
+		if (exchange) sel += `, convert(value(SUM(position)), ${bqlString(exchange)}) as converted_value`;
 		selectClause = sel;
 		groupBy = ['account', 'currency(units(position))', 'cost_number', 'cost_currency'];
 		havingClause = 'HAVING SUM(number(units(position))) > 0';
@@ -306,9 +312,9 @@ export function buildAssertQuery(opts: CommonOptions): string {
 
 	const normalized = normalizeCurrencies(opts.currency);
 	if (normalized.length === 1) {
-		whereClauses.push(`amount.currency = '${normalized[0]}'`);
+		whereClauses.push(`amount.currency = ${bqlString(normalized[0])}`);
 	} else if (normalized.length > 1) {
-		whereClauses.push(`amount.currency IN (${normalized.map((c) => `'${c}'`).join(', ')})`);
+		whereClauses.push(`amount.currency IN (${normalized.map(bqlString).join(', ')})`);
 	}
 
 	let query = `SELECT date, account, amount FROM #balances`;
@@ -325,9 +331,9 @@ export function buildPriceQuery(opts: CommonOptions): string {
 	// For price, account tokens are commodity filters (OR logic)
 	const commodities = opts.account.map((a) => a.toUpperCase());
 	if (commodities.length === 1) {
-		whereClauses.push(`currency ~ '${commodities[0]}'`);
+		whereClauses.push(`currency ~ ${bqlString(commodities[0])}`);
 	} else if (commodities.length > 1) {
-		whereClauses.push(`(${commodities.map((c) => `currency ~ '${c}'`).join(' OR ')})`);
+		whereClauses.push(`(${commodities.map((c) => `currency ~ ${bqlString(c)}`).join(' OR ')})`);
 	}
 
 	addDateClauses(opts, whereClauses);

@@ -267,12 +267,29 @@ describe('buildLotsQuery', () => {
 	});
 });
 
-// TODO: the builder interpolates user text straight into '...' BQL literals (account/@payee
-// patterns, currencies, exchange), so a single quote breaks the query. Harmless (own data,
-// own device) but should be escaped or rejected; then replace this with real tests.
+// The builder interpolates user text into '...' BQL literals, so single quotes are
+// escaped by doubling (SQL convention). quickQuery.integration.test.ts proves the
+// escaped queries still parse in the real ledger engine.
 describe('quoting of user input', () => {
-	it.todo('escapes or rejects a single quote in an account pattern, e.g. "Joe\'s"');
-	it.todo('escapes or rejects a single quote in an @payee filter');
+	it('escapes a single quote in an account pattern, e.g. "Joe\'s"', () => {
+		expect(buildBalanceQuery(common({ account: ["Joe's"] }))).toContain("account ~ 'Joe''s'");
+	});
+
+	it('escapes a single quote in an @payee filter', () => {
+		expect(buildRegisterQuery(common({ account: ["@Joe's Diner"] }))).toContain(
+			"description ~ 'Joe''s Diner'"
+		);
+	});
+
+	it('escapes single quotes in excluded patterns, currencies and exchange', () => {
+		const query = buildBalanceQuery(
+			common({ account: ['not', "O'Brien"], currency: ["X'Y"], exchange: "Z'W" })
+		);
+
+		expect(query).toContain("NOT (account ~ 'O''Brien')");
+		expect(query).toContain("currency = 'X''Y'");
+		expect(query).toContain("convert(sum(position), 'Z''W') as Converted");
+	});
 });
 
 describe('buildQuery', () => {
