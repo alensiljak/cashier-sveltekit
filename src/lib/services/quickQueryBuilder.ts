@@ -172,8 +172,7 @@ function addDateClauses(
 function addAccountClauses(tokens: string[], whereClauses: string[]) {
 	const params = parseAccountParams(tokens);
 	for (const clause of params.whereClauses) whereClauses.push(clause);
-	for (const pattern of params.accountRegexes)
-		whereClauses.push(`account ~ ${bqlString(pattern)}`);
+	for (const pattern of params.accountRegexes) whereClauses.push(`account ~ ${bqlString(pattern)}`);
 	for (const pattern of params.excludedAccountRegexes)
 		whereClauses.push(`NOT (account ~ ${bqlString(pattern)})`);
 }
@@ -260,13 +259,15 @@ export function buildLotsQuery(opts: LotsOptions): string {
 
 	if (opts.average) {
 		let sel = `SELECT MAX(date) as date, account, currency(units(position)) as symbol, SUM(units(position)) as quantity, SUM(cost_number * number(units(position))) as total_weighted_cost, SUM(number(units(position))) as total_quantity, cost(SUM(position)) as total_cost, value(SUM(position)) as value`;
-		if (exchange) sel += `, convert(value(SUM(position)), ${bqlString(exchange)}) as converted_value`;
+		if (exchange)
+			sel += `, convert(value(SUM(position)), ${bqlString(exchange)}) as converted_value`;
 		selectClause = sel;
 		groupBy = ['account', 'currency(units(position))'];
 		havingClause = 'HAVING SUM(number(units(position))) > 0';
 	} else if (opts.closed) {
 		let sel = `SELECT MAX(date) as date, account, currency(units(position)) as symbol, SUM(units(position)) as quantity, cost_number as price, cost(SUM(position)) as cost, value(SUM(position)) as value`;
-		if (exchange) sel += `, convert(value(SUM(position)), ${bqlString(exchange)}) as converted_value`;
+		if (exchange)
+			sel += `, convert(value(SUM(position)), ${bqlString(exchange)}) as converted_value`;
 		selectClause = sel;
 		groupBy = ['account', 'currency(units(position))', 'cost_number', 'cost_currency'];
 		havingClause = 'HAVING SUM(number(units(position))) <= 0';
@@ -279,7 +280,8 @@ export function buildLotsQuery(opts: LotsOptions): string {
 	} else {
 		// active (default)
 		let sel = `SELECT MAX(date) as date, account, currency(units(position)) as symbol, SUM(units(position)) as quantity, cost_number as price, cost(SUM(position)) as cost, value(SUM(position)) as value`;
-		if (exchange) sel += `, convert(value(SUM(position)), ${bqlString(exchange)}) as converted_value`;
+		if (exchange)
+			sel += `, convert(value(SUM(position)), ${bqlString(exchange)}) as converted_value`;
 		selectClause = sel;
 		groupBy = ['account', 'currency(units(position))', 'cost_number', 'cost_currency'];
 		havingClause = 'HAVING SUM(number(units(position))) > 0';
