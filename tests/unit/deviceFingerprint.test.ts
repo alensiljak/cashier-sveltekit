@@ -83,6 +83,57 @@ describe('assessHello fingerprint', () => {
 	});
 });
 
+describe('hello from a trusted peer', () => {
+	beforeEach(async () => {
+		await db.peers.clear();
+	});
+
+	it('keeps fields written to the record after the trusted list was cached', async () => {
+		const key = await generateDeviceKey();
+		const id = await deviceIdFromPublicKey(key.publicKey);
+		await db.peers.put(
+			Object.assign(new TrustedPeer(), {
+				id,
+				name: 'Phone',
+				announcedName: 'Phone',
+				publicKey: key.publicKey
+			})
+		);
+		const presence = new PeerPresence();
+		await presence.reloadTrustedPeers();
+		// Pairing seeds the Beancount baseline after the cache was loaded, writing straight to the DB.
+		await db.peers.update(id, { fileSyncInitializedAt: '2026-01-01T00:00:00.000Z' });
+
+		const sdp = (fp: string) => `a=fingerprint:sha-256 ${fp}`;
+		const sig = await signHello(key.privateKey, {
+			id,
+			name: 'Phone 2',
+			signerFp: 'AA:AA',
+			receiverFp: 'BB:BB'
+		});
+		(presence as unknown as { room: unknown }).room = {
+			getPeers: () => ({
+				t1: {
+					connection: {
+						localDescription: { sdp: sdp('BB:BB') },
+						remoteDescription: { sdp: sdp('AA:AA') }
+					}
+				}
+			})
+		};
+		await (
+			presence as unknown as {
+				handleHello(data: unknown, trysteroId: string): Promise<void>;
+			}
+		).handleHello({ id, name: 'Phone 2', publicKey: key.publicKey, sig }, 't1');
+
+		const stored = await db.peers.get(id);
+		expect(stored.announcedName, 'the hello was handled as a trusted peer').toBe('Phone 2');
+		expect(stored.lastSeen).toBeTruthy();
+		expect(stored.fileSyncInitializedAt).toBe('2026-01-01T00:00:00.000Z');
+	});
+});
+
 describe('peer names', () => {
 	beforeEach(async () => {
 		await db.peers.clear();

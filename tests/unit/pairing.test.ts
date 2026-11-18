@@ -13,6 +13,7 @@ import {
 import { parseInvite } from '#lib/sync/invite';
 import { InviteSession, JoinSession, type PairingHost } from '#lib/sync/pairing.svelte';
 import { buildHello, type HelloMessage, type RelayStrategy } from '#lib/sync/peerPresence.svelte';
+import type { FileFingerprint } from '#lib/sync/SyncSource';
 import { generateGroupSecret } from '#lib/sync/syncGroup';
 
 // ─── an in-memory network ────────────────────────────────────────────────────────────────────
@@ -137,6 +138,8 @@ interface TestHost extends PairingHost {
 	trustedPeers: TrustedPeer[];
 	secret: string | null;
 	key: DeviceKey;
+	files: FileFingerprint[];
+	fileSyncSeeds: { peerId: string; remote: FileFingerprint[] }[];
 }
 
 async function device(net: FakeNet, name: string, id = `${name}-uuid`): Promise<TestHost> {
@@ -148,10 +151,16 @@ async function device(net: FakeNet, name: string, id = `${name}-uuid`): Promise<
 		trustedPeers: [],
 		secret: null,
 		key,
+		files: [],
+		fileSyncSeeds: [],
 		getKey: async () => key,
 		ensureGroupSecret: async () => (host.secret ??= generateGroupSecret()),
 		adoptGroupSecret: async (secret) => {
 			host.secret = secret;
+		},
+		listFileFingerprints: async () => host.files,
+		initializeFileSync: async (peerId, remote) => {
+			host.fileSyncSeeds.push({ peerId, remote });
 		},
 		joinPairingRoom: async ({ roomId, password }) => net.join(roomId, password) as unknown as Room,
 		trustVerified: async (peer) => {
@@ -178,10 +187,18 @@ async function until(check: () => boolean, what: string) {
 }
 
 /** Inviter A has opened an invite; joiner B has opened its link and is in the room. */
-async function setup(opts: { alter?: (link: string) => string } = {}) {
+async function setup(
+	opts: {
+		alter?: (link: string) => string;
+		inviterFiles?: FileFingerprint[];
+		joinerFiles?: FileFingerprint[];
+	} = {}
+) {
 	const net = new FakeNet();
 	const a = await device(net, 'Laptop');
 	const b = await device(net, 'Anna phone');
+	a.files = opts.inviterFiles ?? [];
+	b.files = opts.joinerFiles ?? [];
 	const invite = new InviteSession(a, { ackTimeoutMs: 100 });
 	await invite.start('https://cashier.test');
 	const parsed = parseInvite(opts.alter ? opts.alter(invite.link) : invite.link);
@@ -220,6 +237,23 @@ describe('pairing by invite', () => {
 		]);
 		expect(a.secret).toBeTruthy();
 		expect(b.secret).toBe(a.secret);
+	});
+
+	it('exchanges file hashes so both devices can seed the starting sync baseline', async () => {
+		const inviterFiles = [{ path: 'laptop.beancount', hash: 'hash-laptop' }];
+		const joinerFiles = [{ path: 'phone.beancount', hash: 'hash-phone' }];
+		const { a, b, invite, join } = await setup({ inviterFiles, joinerFiles });
+
+		await until(() => invite.candidates.length === 1, 'the joiner to show up');
+		await invite.approve(invite.candidates[0].trysteroId);
+		await until(() => join.status === 'approved', 'the joiner to be approved');
+		await until(
+			() => a.fileSyncSeeds.length === 1 && b.fileSyncSeeds.length === 1,
+			'both devices to seed their baseline'
+		);
+
+		expect(b.fileSyncSeeds).toEqual([{ peerId: a.myId, remote: inviterFiles }]);
+		expect(a.fileSyncSeeds).toEqual([{ peerId: b.myId, remote: joinerFiles }]);
 	});
 
 	it('does not trust the joiner before the inviter approves', async () => {
@@ -389,7 +423,7 @@ describe('pairing by invite', () => {
 			publicKey: (await generateDeviceKey()).publicKey
 		});
 		b.trustedPeers = [known];
-		const invite = new InviteSession(a);
+		const invite = new InviteSession(a, { ackTimeoutMs: 100 });
 		await invite.start('https://cashier.test');
 		const parsed = parseInvite(invite.link);
 		if (!parsed.ok) throw new Error('bad link');

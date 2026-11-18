@@ -25,6 +25,16 @@ export interface SyncEntry {
 }
 
 /**
+ * The part of a `SyncEntry` a sync baseline needs: which file and its content
+ * hash. Pairing exchanges these between devices (see pairing.svelte.ts) so the
+ * starting baseline can be recorded without transferring sizes or mtimes.
+ */
+export interface FileFingerprint {
+	path: string;
+	hash: string;
+}
+
+/**
  * One side of a two-peer sync. `listTree` never transmits file content —
  * only metadata and a content hash — so a remote peer can be compared
  * without pulling anything. `writeFile`/`deleteFile` apply an accepted pull

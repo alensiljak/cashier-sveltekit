@@ -7,8 +7,8 @@
 	multiple peers. See doc/projects/2026-07-02_beancount-peer-sync.md.
 */
 import db from '#lib/data/db';
-import { PeerSyncBaseline } from '#lib/data/model';
-import type { SyncAnnouncement, SyncEntry } from './SyncSource';
+import { PeerSyncBaseline, type TrustedPeer } from '#lib/data/model';
+import type { FileFingerprint, SyncAnnouncement, SyncEntry } from './SyncSource';
 
 /** All baseline rows for one endpoint, keyed by path. */
 export async function getBaseline(endpointId: string): Promise<Map<string, PeerSyncBaseline>> {
@@ -21,6 +21,62 @@ export interface BaselineEntry {
 	path: string;
 	local: SyncEntry;
 	remote: SyncEntry;
+}
+
+/**
+ * Seeds the starting baseline for a newly paired endpoint from both devices'
+ * current file hashes. Without this, every file the two devices already hold
+ * with different content reads as 'differs' forever (no common ancestor) until
+ * the user resolves it file by file; with it, later edits are classified
+ * against the state at pairing and only real changes need a decision.
+ *
+ * Only paths this device has get a row. A path only the peer has must keep its
+ * no-baseline 'remote-newer' reading, or a new device would never pull the
+ * book. A path only this device has is recorded with a `null` remote half, so
+ * the peer creating it later is a one-sided change rather than an unrelated
+ * conflict.
+ *
+ * No-op after the first successful call (marker on `TrustedPeer`); only
+ * trusted peers are seeded. Existing rows are left alone so a sync that raced
+ * pairing is never overwritten.
+ */
+export async function initializePeerBaseline(
+	endpointId: string,
+	local: FileFingerprint[],
+	remote: FileFingerprint[]
+): Promise<void> {
+	const peer: TrustedPeer | undefined = await db.peers.get(endpointId);
+	if (!peer || peer.fileSyncInitializedAt) return;
+
+	const remoteHashByPath = new Map(remote.map((e) => [e.path, e.hash]));
+	const syncedAt = new Date().toISOString();
+	const rows: PeerSyncBaseline[] = local.map((e) =>
+		Object.assign(new PeerSyncBaseline(), {
+			endpointId,
+			path: e.path,
+			localHash: e.hash,
+			remoteHash: remoteHashByPath.get(e.path) ?? null,
+			syncedAt
+		})
+	);
+
+	await db.transaction('rw', db.peers, db.peerSyncBaseline, async () => {
+		// Re-read inside the transaction: two scans (or both pairing ends) can
+		// reach here at once, and only the first may seed.
+		const fresh: TrustedPeer | undefined = await db.peers.get(endpointId);
+		if (!fresh || fresh.fileSyncInitializedAt) return;
+
+		const existing: PeerSyncBaseline[] = await db.peerSyncBaseline
+			.where('endpointId')
+			.equals(endpointId)
+			.toArray();
+		const known = new Set(existing.map((row) => row.path));
+		const missing = rows.filter((row) => !known.has(row.path));
+		if (missing.length) await db.peerSyncBaseline.bulkPut(missing);
+
+		fresh.fileSyncInitializedAt = syncedAt;
+		await db.peers.put(fresh);
+	});
 }
 
 /** Records (or updates) the baseline for the given paths as just synced. */

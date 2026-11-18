@@ -2,6 +2,8 @@
 
 Open Beancount Sync compares your device's full ledger book — every `*.bean`/`*.toml` file — against a trusted peer's copy, file by file, and lets you pull the peer's changes.
 
+Pairing the devices records the files both already hold as the starting point for change detection. A file that differs only because the two devices had never synced is therefore not a conflict: later edits are classified as **Local newer** or **Remote newer** against the state at pairing. A file only the peer has is left out of that starting point, so it still appears as **Remote newer** and can be pulled on the first sync.
+
 ## Prerequisites
 
 You need a trusted peer, and you need to be **connected** — toggle **Connect** on the **Peer Sync** page first (device name, pairing by invite link) if you haven't already; this page reuses the same room connection and trust list, but doesn't join on its own. Until you're connected, this page shows a **Connect via Peer Sync** prompt instead of a peer list.

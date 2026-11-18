@@ -191,6 +191,11 @@ export class TrustedPeer {
 	lastSeen?: string;
 	/** The peer may pull our data, but nothing it sends (live updates, sync pushes, its WebDAV file) is merged here. */
 	readOnly?: boolean;
+	/**
+	 * When the Beancount file-sync baseline was first seeded for this peer (at pairing; see
+	 * syncBaseline.ts `initializePeerBaseline`). Absent for peers paired before this existed.
+	 */
+	fileSyncInitializedAt?: string;
 }
 
 /**
@@ -264,7 +269,8 @@ export class Revocation {
 export class PeerSyncBaseline {
 	endpointId: string = '';
 	path: string = '';
-	localHash: string = '';
-	remoteHash: string = '';
+	localHash: string | null = null;
+	/** `null` while this device has the file but the peer did not at the last sync/pairing. */
+	remoteHash: string | null = null;
 	syncedAt: string = '';
 }

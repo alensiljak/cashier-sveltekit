@@ -15,6 +15,7 @@
 import type { MessageAction, Room } from '@trystero-p2p/core';
 import type { TrustedPeer } from '#lib/data/model';
 import { deviceIdFromPublicKey, type DeviceKey } from '#lib/sync/deviceKey';
+import type { FileFingerprint } from '#lib/sync/SyncSource';
 import {
 	deriveInvitePassword,
 	deriveInviteRoom,
@@ -31,8 +32,8 @@ import {
 } from '#lib/sync/peerPresence.svelte';
 import { isValidGroupSecret } from '#lib/sync/syncGroup';
 
-/** How long the inviter waits for the joiner to confirm it has the secret before it leaves. */
-const ACK_TIMEOUT_MS = 8000;
+/** How long the inviter waits for the joiner to confirm it has the secret and send its file hashes before it leaves. */
+const ACK_TIMEOUT_MS = 20_000;
 
 /** What a pairing session needs from this device. `PeerPresence` implements it; tests supply their own. */
 export interface PairingHost {
@@ -56,13 +57,54 @@ export interface PairingHost {
 		publicKey: string;
 		readmit?: boolean;
 	}): Promise<TrustedPeer>;
+	/**
+	 * The Beancount files this device holds, sent to the other end during pairing so both can record
+	 * the starting sync baseline. Omitted by hosts without file sync.
+	 */
+	listFileFingerprints?(): Promise<FileFingerprint[]>;
+	/** Records the paired device's files as this device's starting baseline. Best effort. */
+	initializeFileSync?(peerId: string, remote: FileFingerprint[]): Promise<void>;
 }
 
-type ApproveMsg = { secret: string };
+type ApproveMsg = { secret: string; files?: FileFingerprint[] };
+type AckMsg = { v: 1; files?: FileFingerprint[] };
 type NoticeMsg = { v: 1 };
 
+interface PairingActions {
+	room: Room;
+	hello: MessageAction<HelloMessage>;
+	approve: MessageAction<ApproveMsg>;
+	reject: MessageAction<NoticeMsg>;
+	ack: MessageAction<AckMsg>;
+}
+
+/** The other end's files, or undefined when it has no file-sync hooks or listing failed. */
+async function fileFingerprints(host: PairingHost): Promise<FileFingerprint[] | undefined> {
+	if (!host.listFileFingerprints) return undefined;
+	try {
+		return await host.listFileFingerprints();
+	} catch (e) {
+		console.warn('Could not list Beancount files for the sync baseline', e);
+		return undefined;
+	}
+}
+
+/** Seeds the starting baseline; a failure must never fail the pairing itself. */
+async function seedFileSync(
+	host: PairingHost,
+	peerId: string,
+	remote: FileFingerprint[] | undefined
+): Promise<void> {
+	if (!remote || !host.initializeFileSync) return;
+	try {
+		await host.initializeFileSync(peerId, remote);
+	} catch (e) {
+		console.warn('Could not initialize the Beancount sync baseline', e);
+	}
+}
+
 /** The room's actions, with this device's signed hello sent to every peer that joins. */
-async function openPairingRoom(host: PairingHost, payload: InvitePayload) {
+async function openPairingRoom(host: PairingHost, payload: InvitePayload): Promise<PairingActions> {
 	const room = await host.joinPairingRoom({
 		strategy: payload.strategy,
 		roomId: await deriveInviteRoom(payload.seed),
@@ -72,7 +114,7 @@ async function openPairingRoom(host: PairingHost, payload: InvitePayload) {
 	const hello = room.makeAction('hello') as unknown as MessageAction<HelloMessage>;
 	const approve = room.makeAction('pair-approve') as unknown as MessageAction<ApproveMsg>;
 	const reject = room.makeAction('pair-reject') as unknown as MessageAction<NoticeMsg>;
-	const ack = room.makeAction('pair-ack') as unknown as MessageAction<NoticeMsg>;
+	const ack = room.makeAction('pair-ack') as unknown as MessageAction<AckMsg>;
 
 	room.onPeerJoin(({ peerId }) => {
 		void (async () => {
@@ -129,9 +171,12 @@ export class InviteSession {
 	approvedName = $state('');
 
 	private room: Room | null = null;
-	private actions: Awaited<ReturnType<typeof openPairingRoom>> | null = null;
+	private actions: PairingActions | null = null;
 	private timer: ReturnType<typeof setTimeout> | null = null;
-	private ackWaiter: { peerId: string; resolve: () => void } | null = null;
+	private ackWaiter: {
+		peerId: string;
+		resolve: (files: FileFingerprint[] | undefined) => void;
+	} | null = null;
 
 	private now: () => number;
 	private ackTimeoutMs: number;
@@ -167,8 +212,8 @@ export class InviteSession {
 			this.actions = actions;
 			this.room = actions.room;
 			actions.hello.onMessage((data, { peerId }) => this.onHello(data, peerId));
-			actions.ack.onMessage((_data, { peerId }) => {
-				if (this.ackWaiter?.peerId === peerId) this.ackWaiter.resolve();
+			actions.ack.onMessage((data, { peerId }) => {
+				if (this.ackWaiter?.peerId === peerId) this.ackWaiter.resolve(data?.files);
 			});
 			actions.room.onPeerLeave(({ peerId }) => {
 				this.candidates = this.candidates.filter((c) => c.trysteroId !== peerId);
@@ -228,14 +273,17 @@ export class InviteSession {
 				publicKey: candidate.publicKey,
 				readmit: true
 			});
+			// Hashed only now: a candidate that is rejected or never approved costs nothing.
+			const files = await fileFingerprints(this.host);
 			const secret = await this.host.ensureGroupSecret();
-			const acked = new Promise<void>((resolve) => {
-				this.ackWaiter = { peerId: trysteroId, resolve };
-			});
-			await this.actions.approve.send({ secret }, { target: trysteroId });
-			let giveUp: ReturnType<typeof setTimeout> | undefined;
-			await Promise.race([acked, new Promise((r) => (giveUp = setTimeout(r, this.ackTimeoutMs)))]);
+			const acked = Promise.withResolvers<FileFingerprint[] | undefined>();
+			this.ackWaiter = { peerId: trysteroId, resolve: acked.resolve };
+			await this.actions.approve.send({ secret, files }, { target: trysteroId });
+			const timeout = Promise.withResolvers<undefined>();
+			const giveUp = setTimeout(() => timeout.resolve(undefined), this.ackTimeoutMs);
+			const ackedFiles = await Promise.race([acked.promise, timeout.promise]);
 			clearTimeout(giveUp);
+			await seedFileSync(this.host, candidate.id, ackedFiles);
 		} catch (e) {
 			this.error = e instanceof Error ? e.message : String(e);
 			this.status = 'error';
@@ -271,7 +319,7 @@ export class InviteSession {
 	private async leaveRoom(): Promise<void> {
 		if (this.timer) clearTimeout(this.timer);
 		this.timer = null;
-		this.ackWaiter?.resolve();
+		this.ackWaiter?.resolve(undefined);
 		this.ackWaiter = null;
 		const room = this.room;
 		this.room = null;
@@ -296,12 +344,16 @@ export class JoinSession {
 	inviterName = $state('');
 
 	private room: Room | null = null;
-	private actions: Awaited<ReturnType<typeof openPairingRoom>> | null = null;
+	private actions: PairingActions | null = null;
 	private timer: ReturnType<typeof setTimeout> | null = null;
 	private inviter: { trysteroId: string; id: string; name: string; publicKey: string } | null =
 		null;
 	/** An approval can arrive before the inviter's hello has been checked. */
-	private earlyApproval: { peerId: string; secret: string } | null = null;
+	private earlyApproval: {
+		peerId: string;
+		secret: string;
+		files?: FileFingerprint[];
+	} | null = null;
 	private finishing = false;
 
 	private now: () => number;
@@ -371,21 +423,21 @@ export class JoinSession {
 		this.inviterName = data.name;
 		this.status = 'waiting';
 		const early = this.earlyApproval;
-		if (early && early.peerId === peerId) await this.finish(early.secret);
+		if (early && early.peerId === peerId) await this.finish(early.secret, early.files);
 	}
 
 	private async onApprove(data: ApproveMsg, peerId: string): Promise<void> {
 		if (this.status !== 'connecting' && this.status !== 'waiting') return;
 		if (!this.inviter) {
-			this.earlyApproval = { peerId, secret: data?.secret };
+			this.earlyApproval = { peerId, secret: data?.secret, files: data?.files };
 			return;
 		}
 		if (peerId !== this.inviter.trysteroId) return;
-		await this.finish(data?.secret);
+		await this.finish(data?.secret, data?.files);
 	}
 
 	/** The inviter approved: trust it, take over the group secret and confirm. */
-	private async finish(secret: unknown): Promise<void> {
+	private async finish(secret: unknown, remoteFiles?: FileFingerprint[]): Promise<void> {
 		const inviter = this.inviter;
 		if (!inviter || this.finishing) return;
 		this.finishing = true;
@@ -399,8 +451,10 @@ export class JoinSession {
 				readmit: true
 			});
 			await this.host.adoptGroupSecret(secret);
+			const files = await fileFingerprints(this.host);
 			this.status = 'approved';
-			await this.actions?.ack.send({ v: 1 }, { target: inviter.trysteroId });
+			await this.actions?.ack.send({ v: 1, files }, { target: inviter.trysteroId });
+			await seedFileSync(this.host, inviter.id, remoteFiles);
 		} catch (e) {
 			this.error = e instanceof Error ? e.message : String(e);
 			this.status = 'error';

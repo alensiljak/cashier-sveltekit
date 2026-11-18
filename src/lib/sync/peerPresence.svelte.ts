@@ -50,6 +50,9 @@ import {
 } from '#lib/sync/deviceKey';
 import { matchLegacy, peerOf, replaceTrustedRecord } from '#lib/sync/identityMigration';
 import { isDerivedId } from '#lib/sync/signedObjects';
+import { OpfsSource } from '#lib/sync/OpfsSource';
+import type { FileFingerprint } from '#lib/sync/SyncSource';
+import { clearBaseline, initializePeerBaseline } from '#lib/sync/syncBaseline';
 import { getDeviceId } from '#lib/sync/ydocDevices';
 import {
 	deriveSyncPassword,
@@ -504,7 +507,9 @@ export class PeerPresence {
 				tp.lastSeen = new Date().toISOString();
 				// The peer's own name is kept next to the label this device gave it.
 				tp.announcedName = data.name;
-				await db.peers.put(tp);
+				// Update just these fields: `tp` is a cached copy, and writing it back whole would
+				// erase fields set directly in the DB since (e.g. `fileSyncInitializedAt`).
+				await db.peers.update(tp.id, { lastSeen: tp.lastSeen, announcedName: tp.announcedName });
 			}
 			void this.shareIntroductions(trysteroId, data.id);
 			void this.shareRevocations(trysteroId);
@@ -771,6 +776,16 @@ export class PeerPresence {
 		return getDeviceKey();
 	}
 
+	/** Beancount files this device holds, exchanged during pairing to seed both sync baselines. */
+	async listFileFingerprints(): Promise<FileFingerprint[]> {
+		return await new OpfsSource().listTree();
+	}
+
+	/** Records the paired device's file hashes as this device's starting baseline for Beancount sync. */
+	async initializeFileSync(peerId: string, remote: FileFingerprint[]): Promise<void> {
+		await initializePeerBaseline(peerId, await new OpfsSource().listTree(), remote);
+	}
+
 	async ensureGroupSecret(): Promise<string> {
 		const secret = await ensureGroupSecret();
 		this.hasGroup = true;
@@ -841,6 +856,7 @@ export class PeerPresence {
 		tp.lastSeen = now;
 		tp.readOnly = existing?.readOnly;
 		tp.legacyIds = existing?.legacyIds;
+		tp.fileSyncInitializedAt = sameKey ? existing.fileSyncInitializedAt : undefined;
 		// Pairing directly is a stronger basis than an introduction, so it clears `addedBy`.
 		tp.addedBy = peer.addedBy ?? (sameKey ? existing.addedBy : undefined);
 		await db.peers.put(tp);
@@ -884,7 +900,13 @@ export class PeerPresence {
 	}
 
 	async removeTrust(persistentId: string): Promise<void> {
-		await db.peers.delete(persistentId);
+		// Without clearBaseline, pairing again would inherit a baseline from before the
+		// devices diverged and none of their real differences would show up.
+		// One transaction: a record without its baseline (or vice versa) must never be left behind.
+		await db.transaction('rw', db.peers, db.peerSyncBaseline, async () => {
+			await db.peers.delete(persistentId);
+			await clearBaseline(persistentId);
+		});
 		this.trustedPeers = await db.peers.toArray();
 		const updated = { ...this.peersMap };
 		for (const [tid, p] of Object.entries(updated)) {

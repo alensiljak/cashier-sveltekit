@@ -12,7 +12,7 @@ Devices meet in a **private room** that only paired devices know, so strangers n
 
 1. On the first device, tap **Invite a device**. Send the link it shows to the other device (any chat will do). The link works once and expires after 10 minutes.
 2. On the other device, open the link, or paste it into **Paste invite link** on the Peer Sync page, and tap **Join**. If the app is not set up on that device yet, finish setup first and then paste the link.
-3. The first device shows `Anna's phone · 7KQ2-M9XA wants to join`. Check that it is the device you invited, then tap **Approve**. Both devices now trust each other, and the second joins the first one's private room.
+3. The first device shows `Anna's phone · 7KQ2-M9XA wants to join`. Check that it is the device you invited, then tap **Approve**. Both devices now trust each other, and the second joins the first one's private room. Pairing also records the Beancount files both devices already hold as the starting point for [Beancount Sync](/help/beancount-sync), so they don't show as conflicts just because they were never synced before.
 
 Someone who gets hold of the link can only ask to join; nothing is trusted until you tap **Approve**, and an unexpected name or fingerprint shows up on that screen. If you are unsure, tap **Reject**.
 
