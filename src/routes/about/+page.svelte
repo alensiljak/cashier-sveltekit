@@ -137,11 +137,6 @@
 			<li>
 				<a class="link" href="/ledger/journal">Full Journal</a>
 			</li>
-			<li>
-				<a class="link inline-flex items-center gap-1" href="/tools/voice-entry">
-					<MicIcon size={16} /> Voice Entry
-				</a>
-			</li>
 		</ul>
 	</section>
 </main>

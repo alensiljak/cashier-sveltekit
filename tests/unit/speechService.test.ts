@@ -39,15 +39,20 @@ import {
 	DEFAULT_SPEECH_ENGINE,
 	MISTRAL_TRANSCRIPTION_MODEL,
 	MISTRAL_TRANSCRIPTION_URL,
+	VOXTRAL_MODELS,
 	extensionForMimeType,
 	getMistralApiKey,
 	getMistralModel,
 	getSpeechEngine,
 	getSpeechLanguage,
+	isKnownVoxtralModel,
+	isLanguageSupportedByModel,
+	languagesForModel,
 	mistralLanguageCode,
 	parseTranscriptionResponse,
 	setMistralApiKey,
 	setSpeechEngine,
+	speechLanguageOptions,
 	transcribeWithMistral
 } from '#lib/services/speechService';
 
@@ -78,6 +83,67 @@ describe('engine settings', () => {
 	it('trims the stored API key', async () => {
 		await setMistralApiKey('  key-123  ');
 		expect(await getMistralApiKey()).toBe('key-123');
+	});
+});
+
+describe('Voxtral models and their languages', () => {
+	it('offers only file-transcription models', () => {
+		expect(VOXTRAL_MODELS.map((model) => model.id)).toEqual([
+			'voxtral-mini-transcribe-3-0',
+			'voxtral-small-transcribe-3-0'
+		]);
+		expect(MISTRAL_TRANSCRIPTION_MODEL).toBe('voxtral-mini-transcribe-3-0');
+	});
+
+	it('lists the 53 languages Voxtral 3 file transcription supports', () => {
+		for (const model of VOXTRAL_MODELS) {
+			expect(model.languages).toHaveLength(53);
+			expect(model.languages.map((language) => language.code)).toContain('sl');
+			expect(model.languages.map((language) => language.code)).toContain('sr');
+			// Croatian is a TTS language only; the STT API rejects it.
+			expect(model.languages.map((language) => language.code)).not.toContain('hr');
+		}
+	});
+
+	it('recognises known model ids and falls back for manual ones', () => {
+		expect(isKnownVoxtralModel('voxtral-small-transcribe-3-0')).toBe(true);
+		expect(isKnownVoxtralModel(' voxtral-mini-transcribe-3-0 ')).toBe(true);
+		expect(isKnownVoxtralModel('voxtral-mini-tts-3-0')).toBe(false);
+		expect(languagesForModel('some-future-model')).toBe(VOXTRAL_MODELS[0]!.languages);
+	});
+
+	it('offers the full built-in list for the browser engine', () => {
+		const options = speechLanguageOptions('builtin', MISTRAL_TRANSCRIPTION_MODEL);
+		expect(options.map((option) => option.tag)).toContain('hr-HR');
+		expect(options.map((option) => option.tag)).toContain('sl-SI');
+	});
+
+	it('offers every language the Voxtral model supports', () => {
+		const options = speechLanguageOptions('mistral', MISTRAL_TRANSCRIPTION_MODEL);
+		const tags = options.map((option) => option.tag);
+		// The whole model list, not a subset of the browser's list.
+		expect(tags).toHaveLength(53);
+		expect(tags).toEqual(languagesForModel(MISTRAL_TRANSCRIPTION_MODEL).map((l) => l.code));
+		// Voxtral-only languages are reachable…
+		expect(tags).toContain('ar');
+		expect(tags).toContain('zh');
+		expect(tags).toContain('pl');
+		// …and the browser-only one is gone.
+		expect(tags).not.toContain('hr');
+		expect(tags).not.toContain('hr-HR');
+	});
+
+	it('uses the same list for both Voxtral models', () => {
+		const mini = speechLanguageOptions('mistral', 'voxtral-mini-transcribe-3-0');
+		const small = speechLanguageOptions('mistral', 'voxtral-small-transcribe-3-0');
+		expect(small).toEqual(mini);
+	});
+
+	it('checks a tag against the model', () => {
+		expect(isLanguageSupportedByModel('sl-SI', MISTRAL_TRANSCRIPTION_MODEL)).toBe(true);
+		expect(isLanguageSupportedByModel('hr-HR', MISTRAL_TRANSCRIPTION_MODEL)).toBe(false);
+		// No two-letter subtag: the field is omitted and Voxtral detects the language.
+		expect(isLanguageSupportedByModel('not-a-code!', MISTRAL_TRANSCRIPTION_MODEL)).toBe(true);
 	});
 });
 
@@ -127,6 +193,14 @@ describe('transcribeWithMistral', () => {
 		const [{ init }] = state.proxyCalls;
 		const form = init?.body as FormData;
 		expect(form.get('language')).toBeNull();
+	});
+
+	it('refuses a language the model does not support, before calling the API', async () => {
+		state.store.set('speech.mistral.api-key', 'key');
+		state.store.set('speech.language', 'hr-HR');
+
+		await expect(transcribeWithMistral(clip)).rejects.toThrow(/does not support the language/);
+		expect(state.proxyCalls).toHaveLength(0);
 	});
 
 	it('refuses to call the API without a key', async () => {

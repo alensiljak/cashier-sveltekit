@@ -19,9 +19,9 @@ The engine choice and the language are stored on this device.
 ## Configuration page
 
 - **Transcription engine** — built-in or Mistral Voxtral.
-- **Language** — the language you speak, used by both engines. The built-in engine gets the full tag (`en-US`); Mistral gets only the two-letter ISO 639-1 code (`en`), because its API rejects anything else with HTTP 422.
+- **Language** — the language you speak, used by both engines. The built-in engine gets the full tag (`en-US`); Mistral gets only the two-letter ISO 639-1 code (`en`), because its API rejects anything else with HTTP 422. Each engine lists its own languages in full: the browser's list for the built-in engine, and every language the selected Voxtral model supports for Mistral. Switching engines keeps the language where the two lists overlap (`sl-SI` becomes `sl`).
 - **API key** — your Mistral API key. It is stored on this device only and is never exported or synced. Create one in the [Mistral console](https://console.mistral.ai/api-keys).
-- **Model** — the Voxtral transcription model id; the default is `voxtral-mini-latest`.
+- **Model** — the Voxtral transcription model, picked from a list: `voxtral-mini-transcribe-3-0` (the default) or `voxtral-small-transcribe-3-0` (higher quality, slightly more expensive). Only file-transcription models work here; the TTS and realtime models answer on other endpoints. Tick **Enter the model id manually** to type an id instead — the language list is only known for the listed models, so a manual id uses the default model's list. The supported languages were taken from [Mistral's language page](https://docs.mistral.ai/studio/audio/specs-and-limits/languages) on 2026-11-19.
 - **Proxy key** — the app's own proxy carries the request to Mistral, because Mistral's API sends no CORS headers for the app's origin. Set this only when the server requires it; it is the same key used by [Price Download](/help/price-download).
 - **Test transcription** — records a short clip and transcribes it with the settings currently on the page, without saving them first.
 

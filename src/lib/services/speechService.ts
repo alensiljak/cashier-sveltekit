@@ -31,17 +31,20 @@ export type SpeechEngine = 'builtin' | 'mistral';
 /** Default engine: the browser's own speech recognition. */
 export const DEFAULT_SPEECH_ENGINE: SpeechEngine = 'builtin';
 
-/** Default Voxtral model. */
-export const MISTRAL_TRANSCRIPTION_MODEL = 'voxtral-mini-latest';
-
 /** Voxtral transcription endpoint. */
 export const MISTRAL_TRANSCRIPTION_URL = 'https://api.mistral.ai/v1/audio/transcriptions';
 
 /** Default recognition language when none is configured. */
 export const DEFAULT_SPEECH_LANGUAGE = 'en-US';
 
-/** Languages offered on the configuration page (BCP-47 tags). */
-export const SPEECH_LANGUAGES: ReadonlyArray<{ tag: string; label: string }> = [
+/**
+ * Languages offered for the built-in engine (BCP-47 tags).
+ *
+ * This list is the browser's constraint, not Voxtral's: the Web Speech API
+ * accepts full tags and its coverage differs from Mistral's. Voxtral has its
+ * own list per model, below.
+ */
+export const BUILTIN_SPEECH_LANGUAGES: ReadonlyArray<{ tag: string; label: string }> = [
 	{ tag: 'en-US', label: 'English (US)' },
 	{ tag: 'en-GB', label: 'English (UK)' },
 	{ tag: 'en-AU', label: 'English (Australia)' },
@@ -55,6 +58,122 @@ export const SPEECH_LANGUAGES: ReadonlyArray<{ tag: string; label: string }> = [
 	{ tag: 'hr-HR', label: 'Croatian' },
 	{ tag: 'sr-RS', label: 'Serbian' }
 ];
+
+/**
+ * The 53 languages Voxtral 3 file transcription accepts, as ISO 639-1 codes.
+ *
+ * Transcribed from
+ * https://docs.mistral.ai/studio/audio/specs-and-limits/languages on
+ * 2026-11-19, for `voxtral-mini-transcribe-3-0` and
+ * `voxtral-small-transcribe-3-0` (both list the same 53). Re-check that page
+ * when adding a model or bumping a model id: the API rejects a code outside
+ * the model's list with HTTP 422.
+ */
+const VOXTRAL_3_STT_LANGUAGES: ReadonlyArray<{ code: string; label: string }> = [
+	{ code: 'ar', label: 'Arabic' },
+	{ code: 'bn', label: 'Bengali' },
+	{ code: 'bg', label: 'Bulgarian' },
+	{ code: 'my', label: 'Burmese' },
+	{ code: 'ca', label: 'Catalan' },
+	{ code: 'zh', label: 'Chinese' },
+	{ code: 'cs', label: 'Czech' },
+	{ code: 'da', label: 'Danish' },
+	{ code: 'nl', label: 'Dutch' },
+	{ code: 'en', label: 'English' },
+	{ code: 'et', label: 'Estonian' },
+	{ code: 'tl', label: 'Filipino' },
+	{ code: 'fi', label: 'Finnish' },
+	{ code: 'fr', label: 'French' },
+	{ code: 'de', label: 'German' },
+	{ code: 'el', label: 'Greek' },
+	{ code: 'gu', label: 'Gujarati' },
+	{ code: 'hi', label: 'Hindi' },
+	{ code: 'hu', label: 'Hungarian' },
+	{ code: 'is', label: 'Icelandic' },
+	{ code: 'id', label: 'Indonesian' },
+	{ code: 'it', label: 'Italian' },
+	{ code: 'ja', label: 'Japanese' },
+	{ code: 'kn', label: 'Kannada' },
+	{ code: 'km', label: 'Khmer' },
+	{ code: 'ko', label: 'Korean' },
+	{ code: 'lv', label: 'Latvian' },
+	{ code: 'lt', label: 'Lithuanian' },
+	{ code: 'lb', label: 'Luxembourgish' },
+	{ code: 'mk', label: 'Macedonian' },
+	{ code: 'ms', label: 'Malay' },
+	{ code: 'ml', label: 'Malayalam' },
+	{ code: 'mt', label: 'Maltese' },
+	{ code: 'mr', label: 'Marathi' },
+	{ code: 'no', label: 'Norwegian' },
+	{ code: 'or', label: 'Odia' },
+	{ code: 'fa', label: 'Persian' },
+	{ code: 'pl', label: 'Polish' },
+	{ code: 'pt', label: 'Portuguese' },
+	{ code: 'pa', label: 'Punjabi' },
+	{ code: 'ro', label: 'Romanian' },
+	{ code: 'ru', label: 'Russian' },
+	{ code: 'sr', label: 'Serbian' },
+	{ code: 'sk', label: 'Slovak' },
+	{ code: 'sl', label: 'Slovenian' },
+	{ code: 'es', label: 'Spanish' },
+	{ code: 'sv', label: 'Swedish' },
+	{ code: 'ta', label: 'Tamil' },
+	{ code: 'te', label: 'Telugu' },
+	{ code: 'th', label: 'Thai' },
+	{ code: 'tr', label: 'Turkish' },
+	{ code: 'uk', label: 'Ukrainian' },
+	{ code: 'vi', label: 'Vietnamese' }
+];
+
+/** A Voxtral file-transcription model and the languages it accepts. */
+export interface VoxtralModel {
+	/** Model id sent in the `model` field. */
+	id: string;
+	label: string;
+	/** ISO 639-1 codes accepted in the `language` field. */
+	languages: ReadonlyArray<{ code: string; label: string }>;
+}
+
+/**
+ * Voxtral file-transcription models offered on the configuration page.
+ *
+ * Only transcribe models belong here: the TTS model (`voxtral-mini-tts-3-0`)
+ * and the realtime model answer on other endpoints and would fail here.
+ */
+export const VOXTRAL_MODELS: ReadonlyArray<VoxtralModel> = [
+	{
+		id: 'voxtral-mini-transcribe-3-0',
+		label: 'Voxtral Mini Transcribe 3 (default)',
+		languages: VOXTRAL_3_STT_LANGUAGES
+	},
+	{
+		id: 'voxtral-small-transcribe-3-0',
+		label: 'Voxtral Small Transcribe 3 (higher quality)',
+		languages: VOXTRAL_3_STT_LANGUAGES
+	}
+];
+
+/** Default Voxtral model. */
+export const MISTRAL_TRANSCRIPTION_MODEL = VOXTRAL_MODELS[0]!.id;
+
+/** The known model with this id, or undefined for a manually entered one. */
+export function findVoxtralModel(id: string): VoxtralModel | undefined {
+	const trimmed = id.trim();
+	return VOXTRAL_MODELS.find((model) => model.id === trimmed);
+}
+
+/**
+ * The languages to offer for a model id. A manually entered id has no known
+ * list, so the default model's list is offered as the best guess.
+ */
+export function languagesForModel(id: string): ReadonlyArray<{ code: string; label: string }> {
+	return (findVoxtralModel(id) ?? VOXTRAL_MODELS[0]!).languages;
+}
+
+/** Whether a model id is one of the known Voxtral transcription models. */
+export function isKnownVoxtralModel(id: string): boolean {
+	return findVoxtralModel(id) !== undefined;
+}
 
 /** Whether the browser has the Web Speech API (Chrome, Edge, Safari). */
 export function isBuiltinSpeechSupported(): boolean {
@@ -92,6 +211,40 @@ export async function getSpeechLanguage(): Promise<string> {
 
 export async function setSpeechLanguage(language: string): Promise<void> {
 	await deviceSettings.set(DeviceSettingKeys.speechLanguage, language.trim());
+}
+
+/**
+ * The language options to show for an engine.
+ *
+ * The stored setting is a BCP-47 tag shared by both engines (option A): the
+ * built-in engine gets the full tag, Voxtral gets its primary subtag.
+ *
+ * Each engine therefore offers its own list in full. The built-in engine shows
+ * the tags the browser knows; Voxtral shows every language the selected model
+ * accepts, as a `code` tag (`sl`, `zh`, …) — a superset of the browser's list,
+ * so Croatian (browser-only) disappears and Arabic, Chinese or Polish (Voxtral
+ * only) become reachable.
+ */
+export function speechLanguageOptions(
+	engine: SpeechEngine,
+	model: string
+): ReadonlyArray<{ tag: string; label: string }> {
+	if (engine === 'builtin') return BUILTIN_SPEECH_LANGUAGES;
+	return languagesForModel(model).map((language) => ({
+		tag: language.code,
+		label: language.label
+	}));
+}
+
+/**
+ * Whether the stored tag can be sent to this model. A tag with no two-letter
+ * primary subtag is allowed: the `language` field is then omitted and Voxtral
+ * detects the language itself.
+ */
+export function isLanguageSupportedByModel(tag: string, model: string): boolean {
+	const code = mistralLanguageCode(tag);
+	if (!code) return true;
+	return languagesForModel(model).some((language) => language.code === code);
 }
 
 /** Configured Voxtral model id, or the default when unset. */
@@ -264,7 +417,16 @@ export async function transcribeWithMistral(
 		throw new Error('Enter the Mistral API key on the Speech Entry configuration page first.');
 	}
 	const model = (options.model ?? (await getMistralModel())).trim() || MISTRAL_TRANSCRIPTION_MODEL;
-	const language = mistralLanguageCode(options.language ?? (await getSpeechLanguage()));
+	const tag = options.language ?? (await getSpeechLanguage());
+	const language = mistralLanguageCode(tag);
+
+	// Fail with a readable message instead of Mistral's opaque 422.
+	if (language && !isLanguageSupportedByModel(tag, model)) {
+		const name = languagesForModel(model).find((entry) => entry.code === language)?.label;
+		throw new Error(
+			`${model} does not support the language "${tag}"${name ? ` (${name})` : ''}. Pick another language on the configuration page, or leave it empty to let Voxtral detect it.`
+		);
+	}
 
 	const form = new FormData();
 	form.append('file', clip.blob, clip.fileName);
