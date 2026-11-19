@@ -204,6 +204,18 @@ export function extensionForMimeType(mimeType: string): string {
 	}
 }
 
+/**
+ * The ISO 639-1 alpha-2 code Mistral's `language` field expects (`en-US` →
+ * `en`). The API rejects any other format with HTTP 422, so the BCP-47 tag
+ * stored for the built-in engine is shortened here. Returns '' when the tag
+ * has no two-letter primary subtag; the field is then omitted and the model
+ * detects the language.
+ */
+export function mistralLanguageCode(tag: string): string {
+	const match = /^([a-z]{2})(?:[-_]|$)/i.exec(tag.trim());
+	return match ? match[1]!.toLowerCase() : '';
+}
+
 /** The `text` field of a Voxtral transcription response. Throws on a changed shape. */
 export function parseTranscriptionResponse(body: unknown): string {
 	if (typeof body !== 'object' || body === null || Array.isArray(body)) {
@@ -252,7 +264,7 @@ export async function transcribeWithMistral(
 		throw new Error('Enter the Mistral API key on the Speech Entry configuration page first.');
 	}
 	const model = (options.model ?? (await getMistralModel())).trim() || MISTRAL_TRANSCRIPTION_MODEL;
-	const language = (options.language ?? (await getSpeechLanguage())).trim();
+	const language = mistralLanguageCode(options.language ?? (await getSpeechLanguage()));
 
 	const form = new FormData();
 	form.append('file', clip.blob, clip.fileName);

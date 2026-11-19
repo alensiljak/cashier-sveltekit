@@ -44,6 +44,7 @@ import {
 	getMistralModel,
 	getSpeechEngine,
 	getSpeechLanguage,
+	mistralLanguageCode,
 	parseTranscriptionResponse,
 	setMistralApiKey,
 	setSpeechEngine,
@@ -97,7 +98,8 @@ describe('transcribeWithMistral', () => {
 		expect(init?.upstreamBearer).toBe('key-123');
 		const form = init?.body as FormData;
 		expect(form.get('model')).toBe(MISTRAL_TRANSCRIPTION_MODEL);
-		expect(form.get('language')).toBe('de-DE');
+		// Mistral expects a two-letter ISO 639-1 code, not the BCP-47 tag.
+		expect(form.get('language')).toBe('de');
 		expect(form.get('file')).toBeInstanceOf(Blob);
 	});
 
@@ -114,7 +116,17 @@ describe('transcribeWithMistral', () => {
 		expect(init?.upstreamBearer).toBe('draft-key');
 		const form = init?.body as FormData;
 		expect(form.get('model')).toBe('voxtral-mini-2507');
-		expect(form.get('language')).toBe('fr-FR');
+		expect(form.get('language')).toBe('fr');
+	});
+
+	it('omits the language field when the tag has no two-letter code', async () => {
+		state.proxyResponse = async () => new Response(JSON.stringify({ text: 'ok' }), { status: 200 });
+
+		await transcribeWithMistral(clip, { apiKey: 'key', language: 'not-a-code!' });
+
+		const [{ init }] = state.proxyCalls;
+		const form = init?.body as FormData;
+		expect(form.get('language')).toBeNull();
 	});
 
 	it('refuses to call the API without a key', async () => {
@@ -133,6 +145,23 @@ describe('transcribeWithMistral', () => {
 		state.proxyResponse = async () =>
 			new Response(JSON.stringify({ message: 'model not found' }), { status: 422 });
 		await expect(transcribeWithMistral(clip)).rejects.toThrow(/HTTP 422 — model not found/);
+	});
+});
+
+describe('mistralLanguageCode', () => {
+	it('shortens BCP-47 tags to the ISO 639-1 alpha-2 code', () => {
+		expect(mistralLanguageCode('en-US')).toBe('en');
+		expect(mistralLanguageCode('de-DE')).toBe('de');
+		expect(mistralLanguageCode('sl-SI')).toBe('sl');
+		expect(mistralLanguageCode('zh-Hans-CN')).toBe('zh');
+		expect(mistralLanguageCode('en')).toBe('en');
+		expect(mistralLanguageCode('  FR-fr ')).toBe('fr');
+	});
+
+	it('returns an empty string when there is no two-letter primary subtag', () => {
+		expect(mistralLanguageCode('')).toBe('');
+		expect(mistralLanguageCode('eng')).toBe('');
+		expect(mistralLanguageCode('not-a-code!')).toBe('');
 	});
 });
 
