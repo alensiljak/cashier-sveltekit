@@ -19,7 +19,7 @@ The engine choice and the language are stored on this device.
 ## Configuration page
 
 - **Transcription engine** — built-in or Mistral Voxtral.
-- **Language** — the language you speak, used by both engines.
+- **Language** — the language you speak, used by both engines. The built-in engine gets the full tag (`en-US`); Mistral gets only the two-letter ISO 639-1 code (`en`), because its API rejects anything else with HTTP 422.
 - **API key** — your Mistral API key. It is stored on this device only and is never exported or synced. Create one in the [Mistral console](https://console.mistral.ai/api-keys).
 - **Model** — the Voxtral transcription model id; the default is `voxtral-mini-latest`.
 - **Proxy key** — the app's own proxy carries the request to Mistral, because Mistral's API sends no CORS headers for the app's origin. Set this only when the server requires it; it is the same key used by [Price Download](/help/price-download).
