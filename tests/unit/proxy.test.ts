@@ -11,6 +11,7 @@ import {
 	PROXY_KEY_HEADER,
 	ProxyRequestError,
 	resolveProxyTarget,
+	UPSTREAM_BEARER_HEADER,
 	type FetchLike
 } from '../../worker/proxy';
 
@@ -84,8 +85,14 @@ describe('proxy key', () => {
 });
 
 describe('handleProxyRequest', () => {
-	it('rejects non-GET requests', async () => {
+	it('rejects POST for hosts that are GET-only', async () => {
 		const response = await handleProxyRequest(proxyRequest(ALLOWED, { method: 'POST' }));
+		expect(response.status).toBe(405);
+		expect(await response.text()).toContain('POST is not allowed');
+	});
+
+	it('rejects methods other than GET and POST', async () => {
+		const response = await handleProxyRequest(proxyRequest(ALLOWED, { method: 'DELETE' }));
 		expect(response.status).toBe(405);
 	});
 
@@ -190,5 +197,74 @@ describe('handleProxyRequest', () => {
 		});
 		expect(response.status).toBe(403);
 		expect(fetchImpl).not.toHaveBeenCalled();
+	});
+});
+
+describe('POST uploads (Mistral Voxtral)', () => {
+	const MISTRAL = 'https://api.mistral.ai/v1/audio/transcriptions';
+
+	function uploadRequest(headers: Record<string, string> = {}): Request {
+		const form = new FormData();
+		form.append('file', new Blob(['audio'], { type: 'audio/webm' }), 'speech.webm');
+		form.append('model', 'voxtral-mini-latest');
+		return proxyRequest(MISTRAL, { method: 'POST', headers, body: form });
+	}
+
+	it('forwards the body and content type, and the bearer token as Authorization', async () => {
+		let seen: { input: RequestInfo | URL; init?: RequestInit } | undefined;
+		const fetchImpl: FetchLike = async (input, init) => {
+			seen = { input, init };
+			return new Response(JSON.stringify({ text: 'hello' }), {
+				headers: { 'content-type': 'application/json' }
+			});
+		};
+
+		const response = await handleProxyRequest(
+			uploadRequest({ [UPSTREAM_BEARER_HEADER]: 'key-123' }),
+			{ fetchImpl }
+		);
+
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual({ text: 'hello' });
+		expect(String(seen?.input)).toBe(MISTRAL);
+		expect(seen?.init?.method).toBe('POST');
+		const headers = seen?.init?.headers as Record<string, string>;
+		expect(headers['Authorization']).toBe('Bearer key-123');
+		expect(headers['Content-Type']).toContain('multipart/form-data');
+		expect(headers['X-Upstream-Authorization']).toBeUndefined();
+		expect(seen?.init?.body).toBeInstanceOf(ArrayBuffer);
+	});
+
+	it('drops the bearer token for hosts that do not take one', async () => {
+		let seen: RequestInit | undefined;
+		const fetchImpl: FetchLike = async (_input, init) => {
+			seen = init;
+			return new Response('{}', { headers: { 'content-type': 'application/json' } });
+		};
+		const authorization = () =>
+			(seen?.headers as Record<string, string> | undefined)?.['Authorization'];
+
+		await handleProxyRequest(uploadRequest({ [UPSTREAM_BEARER_HEADER]: 'key-123' }), {
+			fetchImpl
+		});
+		expect(authorization()).toBe('Bearer key-123');
+
+		// A GET to a price host never carries the token.
+		await handleProxyRequest(
+			proxyRequest(ALLOWED, { headers: { [UPSTREAM_BEARER_HEADER]: 'key-123' } }),
+			{ fetchImpl }
+		);
+		expect(authorization()).toBeUndefined();
+	});
+
+	it('caps oversized uploads', async () => {
+		const response = await handleProxyRequest(
+			proxyRequest(MISTRAL, {
+				method: 'POST',
+				body: new Uint8Array(25 * 1024 * 1024 + 1)
+			}),
+			{ fetchImpl: stubFetch(new Response('{}')) }
+		);
+		expect(response.status).toBe(413);
 	});
 });

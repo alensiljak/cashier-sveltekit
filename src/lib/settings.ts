@@ -223,7 +223,18 @@ export const DeviceSettingKeys = {
 	// Price download bookkeeping for this device. Shape: PriceDownloadStatus
 	// (see services/prices/priceDownloadService.ts): lastRun, fixingDate,
 	// written/added/updated counts, fetched and skipped symbols, lastError.
-	priceDownloadStatus: 'prices.download.status'
+	priceDownloadStatus: 'prices.download.status',
+	// Speech Entry transcription engine: 'builtin' (the browser's Web Speech API,
+	// the default) or 'mistral' (Mistral Voxtral, see services/speechService.ts).
+	speechEngine: 'speech.engine',
+	// BCP-47 language tag for transcription ('en-US', 'de-DE', …). Empty: the
+	// engine's own default.
+	speechLanguage: 'speech.language',
+	// Mistral API key for Voxtral transcription. Device-only: it is a credential
+	// and is never exported or synced.
+	mistralApiKey: 'speech.mistral.api-key',
+	// Voxtral model id used for transcription. Default: MISTRAL_TRANSCRIPTION_MODEL.
+	mistralTranscriptionModel: 'speech.mistral.model'
 };
 
 class UserSettings {

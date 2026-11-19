@@ -10,6 +10,7 @@ import {
 	handleProxyRequest,
 	PROXY_KEY_HEADER,
 	PROXY_PATH,
+	UPSTREAM_BEARER_HEADER,
 	UPSTREAM_KEY_HEADER
 } from './worker/proxy.ts';
 
@@ -51,24 +52,53 @@ function staticRevisions(): Record<string, string> {
 }
 
 /**
+ * Read a request body into an ArrayBuffer (null when there is none). Used by
+ * the dev proxy for POST uploads; GET requests have no body.
+ */
+function readRequestBody(req: Connect.IncomingMessage): Promise<ArrayBuffer | null> {
+	if ((req.method ?? 'GET').toUpperCase() !== 'POST') return Promise.resolve(null);
+	return new Promise((resolve, reject) => {
+		const chunks: Buffer[] = [];
+		req.on('data', (chunk: Buffer) => chunks.push(chunk));
+		req.on('end', () => {
+			const body = Buffer.concat(chunks);
+			resolve(body.buffer.slice(body.byteOffset, body.byteOffset + body.byteLength) as ArrayBuffer);
+		});
+		req.on('error', reject);
+	});
+}
+
+/**
  * Serve the same `/api/proxy` handler in `vite dev` and `vite preview` as the
  * deployed Worker, so providers use one URL in every environment.
  */
 function corsProxy(): Plugin {
 	const attach = (middlewares: Connect.Server) => {
-		middlewares.use((req, res, next) => {
+		middlewares.use(async (req, res, next) => {
 			if (!req.url) return next();
 			const url = new URL(req.url, 'http://localhost');
 			if (url.pathname !== PROXY_PATH) return next();
 
 			const key = req.headers[PROXY_KEY_HEADER.toLowerCase()];
 			const upstreamKey = req.headers[UPSTREAM_KEY_HEADER.toLowerCase()];
+			const upstreamBearer = req.headers[UPSTREAM_BEARER_HEADER.toLowerCase()];
+			const contentType = req.headers['content-type'];
+			const method = (req.method ?? 'GET').toUpperCase();
+
+			// POST bodies (multipart uploads, e.g. Voxtral transcription) are read
+			// before the handler runs; GET requests carry none.
+			const body = await readRequestBody(req);
 			const request = new Request(url, {
-				method: req.method ?? 'GET',
+				method,
 				headers: {
 					[PROXY_KEY_HEADER]: typeof key === 'string' ? key : '',
-					...(typeof upstreamKey === 'string' && { [UPSTREAM_KEY_HEADER]: upstreamKey })
-				}
+					...(typeof upstreamKey === 'string' && { [UPSTREAM_KEY_HEADER]: upstreamKey }),
+					...(typeof upstreamBearer === 'string' && {
+						[UPSTREAM_BEARER_HEADER]: upstreamBearer
+					}),
+					...(typeof contentType === 'string' && { 'Content-Type': contentType })
+				},
+				...(body && { body })
 			});
 			const requiredKey = process.env.PROXY_KEY;
 			void handleProxyRequest(request, { requiredKey, requireKey: Boolean(requiredKey) })

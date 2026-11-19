@@ -1,25 +1,27 @@
 /**
- * Generic same-origin CORS proxy for price sources that do not send
+ * Generic same-origin CORS proxy for upstream APIs that do not send
  * `Access-Control-Allow-Origin` for the app's origin
- * (doc/projects/2026-11-16_CORS-proxy.md).
+ * (doc/completed-projects/2026-11-16_CORS-proxy.md).
  *
- * The proxy is deliberately narrow: GET only, HTTPS only, exact-host
- * allowlist, no client headers forwarded (Origin/Referer/Cookie in particular
- * make some upstreams reject the request), redirects rejected, a 15 s timeout
- * and a response-size cap. It is not an open relay.
+ * The proxy is deliberately narrow: GET (plus POST for the few hosts that need
+ * it), HTTPS only, exact-host allowlist, no client headers forwarded
+ * (Origin/Referer/Cookie in particular make some upstreams reject the request),
+ * redirects rejected, a 15 s timeout and a response-size cap. It is not an open
+ * relay.
  *
  * The same handler runs in the Cloudflare Worker (`worker/index.ts`) and in
- * Vite's dev/preview middleware (see `vite.config.ts`), so providers see one
+ * Vite's dev/preview middleware (see `vite.config.ts`), so callers see one
  * URL in every environment.
  */
 
 import {
 	PROXY_KEY_HEADER,
 	PROXY_PATH,
+	UPSTREAM_BEARER_HEADER,
 	UPSTREAM_KEY_HEADER
 } from '../src/lib/services/prices/proxyProtocol.ts';
 
-export { PROXY_KEY_HEADER, PROXY_PATH, UPSTREAM_KEY_HEADER };
+export { PROXY_KEY_HEADER, PROXY_PATH, UPSTREAM_BEARER_HEADER, UPSTREAM_KEY_HEADER };
 
 /**
  * Hosts the proxy may fetch. Add a provider's source host here when adding a
@@ -30,7 +32,9 @@ export const ALLOWED_HOSTS: Record<string, true> = {
 	'www.ecb.europa.eu': true,
 	'www.vanguard.com.au': true,
 	'api.aware.com.au': true,
-	'query1.finance.yahoo.com': true
+	'query1.finance.yahoo.com': true,
+	// Mistral Voxtral transcription (Speech Entry, src/lib/services/speechService.ts)
+	'api.mistral.ai': true
 };
 
 /** Hosts that reject the proxy's own User-Agent; they get a browser one instead. */
@@ -49,8 +53,27 @@ export const UPSTREAM_KEY_HOSTS: Record<string, true> = {
 	'api.aware.com.au': true
 };
 
+/**
+ * Hosts that need a bearer token from the user. The client's
+ * `X-Upstream-Authorization` value is forwarded as `Authorization: Bearer …`
+ * to these hosts only; for any other host it is dropped.
+ */
+export const UPSTREAM_BEARER_HOSTS: Record<string, true> = {
+	'api.mistral.ai': true
+};
+
+/**
+ * Hosts that accept a POST body (multipart uploads). Every other host is
+ * GET-only, so the proxy cannot be used to write to arbitrary APIs.
+ */
+export const POST_HOSTS: Record<string, true> = {
+	'api.mistral.ai': true
+};
+
 const TIMEOUT_MS = 15_000;
 const MAX_RESPONSE_BYTES = 5 * 1024 * 1024;
+/** Upload cap for POST bodies (a Voxtral clip is far smaller). */
+const MAX_REQUEST_BYTES = 25 * 1024 * 1024;
 const USER_AGENT = 'Cashier price proxy (+https://cashier.alensiljak.cc)';
 
 export class ProxyRequestError extends Error {
@@ -100,7 +123,7 @@ function errorResponse(status: number, message: string): Response {
 	});
 }
 
-/** Only pass through content types a price downloader can actually consume. */
+/** Only pass through content types a caller can actually consume. */
 function responseContentType(upstream: Response): string {
 	const type = upstream.headers.get('content-type') ?? '';
 	if (/^(application\/(json|xml)|text\/)/i.test(type)) return type;
@@ -136,9 +159,9 @@ function keysMatch(provided: string, expected: string): boolean {
 }
 
 /**
- * Handle `GET /api/proxy?url=<absolute https URL>`. The fetch and key policy
- * are injectable so the unit tests exercise the real handler without touching
- * the network.
+ * Handle `GET /api/proxy?url=<absolute https URL>` (and POST for the hosts in
+ * `POST_HOSTS`). The fetch and key policy are injectable so the unit tests
+ * exercise the real handler without touching the network.
  */
 export async function handleProxyRequest(
 	request: Request,
@@ -154,8 +177,9 @@ export async function handleProxyRequest(
 		}
 	}
 
-	if (request.method !== 'GET') {
-		return errorResponse(405, 'Only GET requests are allowed');
+	const method = request.method.toUpperCase();
+	if (method !== 'GET' && method !== 'POST') {
+		return errorResponse(405, 'Only GET and POST requests are allowed');
 	}
 
 	let target: URL;
@@ -164,6 +188,10 @@ export async function handleProxyRequest(
 	} catch (err) {
 		if (err instanceof ProxyRequestError) return errorResponse(err.status, err.message);
 		throw err;
+	}
+
+	if (method === 'POST' && !Object.hasOwn(POST_HOSTS, target.hostname)) {
+		return errorResponse(405, `POST is not allowed for ${target.hostname}`);
 	}
 
 	const fetchImpl = options.fetchImpl ?? fetch;
@@ -182,9 +210,27 @@ export async function handleProxyRequest(
 		if (upstreamKey && Object.hasOwn(UPSTREAM_KEY_HOSTS, target.hostname)) {
 			upstreamHeaders['X-API-KEY'] = upstreamKey;
 		}
+		const bearer = request.headers.get(UPSTREAM_BEARER_HEADER);
+		if (bearer && Object.hasOwn(UPSTREAM_BEARER_HOSTS, target.hostname)) {
+			upstreamHeaders['Authorization'] = `Bearer ${bearer}`;
+		}
+
+		let body: ArrayBuffer | undefined;
+		if (method === 'POST') {
+			body = await request.arrayBuffer();
+			if (body.byteLength > MAX_REQUEST_BYTES) {
+				return errorResponse(413, `Request body exceeds ${MAX_REQUEST_BYTES} bytes`);
+			}
+			// The body is forwarded as-is, so its type must be too (multipart
+			// boundaries live in the content type).
+			const contentType = request.headers.get('content-type');
+			if (contentType) upstreamHeaders['Content-Type'] = contentType;
+		}
+
 		const upstream = await fetchImpl(target, {
-			method: 'GET',
+			method,
 			headers: upstreamHeaders,
+			...(body ? { body } : {}),
 			redirect: 'manual',
 			signal: controller.signal
 		});
@@ -193,14 +239,14 @@ export async function handleProxyRequest(
 			return errorResponse(502, 'Upstream redirected; redirects are not followed');
 		}
 
-		const body = await upstream.arrayBuffer();
-		if (body.byteLength > MAX_RESPONSE_BYTES) {
+		const responseBody = await upstream.arrayBuffer();
+		if (responseBody.byteLength > MAX_RESPONSE_BYTES) {
 			return errorResponse(502, `Upstream response exceeds ${MAX_RESPONSE_BYTES} bytes`);
 		}
 
 		// 204/205/304 must not carry a body; constructing a Response with one throws.
 		const nullBody = upstream.status === 204 || upstream.status === 205 || upstream.status === 304;
-		return new Response(nullBody ? null : body, {
+		return new Response(nullBody ? null : responseBody, {
 			status: upstream.status,
 			headers: {
 				'Content-Type': responseContentType(upstream),

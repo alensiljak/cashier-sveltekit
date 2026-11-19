@@ -27,6 +27,7 @@
 	import FlaskConicalIcon from '@lucide/svelte/icons/flask-conical';
 	import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
 	import SlidersHorizontalIcon from '@lucide/svelte/icons/sliders-horizontal';
+	import MicIcon from '@lucide/svelte/icons/mic';
 	import SmartphoneIcon from '@lucide/svelte/icons/smartphone';
 	import TrendingDownIcon from '@lucide/svelte/icons/trending-down';
 	import { syncOptions, type SyncOption } from '#lib/services/syncOptions.svelte';
@@ -403,6 +404,7 @@
 	{#snippet menuItems()}
 		<ToolbarMenuItem text="OPFS Storage" Icon={BoxIcon} onclick={onOpfsClick} />
 		<ToolbarMenuItem text="JSON Editor" Icon={FileBraces} targetNav="/settings/json-editor" />
+		<ToolbarMenuItem text="Speech Entry" Icon={MicIcon} targetNav="/tools/voice-entry/config" />
 	{/snippet}
 </Toolbar>
 

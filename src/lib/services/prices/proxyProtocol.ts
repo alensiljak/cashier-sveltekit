@@ -11,3 +11,9 @@ export const PROXY_KEY_HEADER = 'X-Proxy-Key';
  * and only to hosts listed in `UPSTREAM_KEY_HOSTS` (worker/proxy.ts).
  */
 export const UPSTREAM_KEY_HEADER = 'X-Upstream-Key';
+/**
+ * Client → proxy: an upstream bearer token. The proxy forwards it as
+ * `Authorization: Bearer <token>`, and only to hosts listed in
+ * `UPSTREAM_BEARER_HOSTS` (worker/proxy.ts).
+ */
+export const UPSTREAM_BEARER_HEADER = 'X-Upstream-Authorization';
