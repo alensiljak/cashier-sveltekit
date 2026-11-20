@@ -102,12 +102,6 @@
 			device and store them into your ledger files.
 		</p>
 
-		<h3 class="text-3xl font-semibold">Links</h3>
-		<p>
-			Repository: at
-			<a class="link link-primary" href="https://github.com/alensiljak/cashier-svelte">GitHub</a>
-		</p>
-
 		<h3 class="text-3xl font-semibold">Version</h3>
 		<p>
 			Build: <code>{buildTimestamp}</code>
@@ -122,21 +116,11 @@
 			</button>
 		</div>
 
-		<h3 class="text-3xl font-semibold">Experiments</h3>
+				<h3 class="text-3xl font-semibold">Links</h3>
+		<p>
+			Repository: at
+			<a class="link link-primary" href="https://github.com/alensiljak/cashier-svelte">GitHub</a>
+		</p>
 
-		<ul>
-			<li>
-				<a class="link" href="/demo/rledger">RustLedger demo</a>
-			</li>
-			<li>
-				<a class="link" href="/ledger">Parsed Ledger</a>
-			</li>
-			<li>
-				<a class="link" href="/ledger/multi">Parsed Multi Ledger</a>
-			</li>
-			<li>
-				<a class="link" href="/ledger/journal">Full Journal</a>
-			</li>
-		</ul>
 	</section>
 </main>
