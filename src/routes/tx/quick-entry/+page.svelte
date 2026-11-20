@@ -3,7 +3,6 @@
 	import { onMount, tick } from 'svelte';
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
-	import AccordionSection from '#lib/components/AccordionSection.svelte';
 	import JournalXactRow from '#lib/components/JournalXactRow.svelte';
 	import { Xact, Posting } from '#lib/data/model';
 	import { xact as xactStore, xactId } from '#lib/data/mainStore';
@@ -51,7 +50,6 @@
 		await goto('/note');
 	}
 
-	const ACCOUNT_TYPES = ['Assets', 'Liabilities', 'Income', 'Expenses', 'Equity'] as const;
 	const MAX_RESULTS = 10;
 	const ID_FETCH_CAP = 150;
 	const MIN_QUERY_LENGTH = 2;
@@ -59,7 +57,6 @@
 	let searchText = $state('');
 	let isLoading = $state(false);
 	let isSelecting = $state(false);
-	let filtersExpanded = $state(false);
 	let templates = $state<Xact[]>([]);
 	let visibleResultsCount = $state(MAX_RESULTS);
 	let hasSearched = $state(false);
@@ -74,11 +71,6 @@
 	let nlpXact = $state<Xact | null>(null);
 	/** The book's operating currency, assumed when the phrase names none. */
 	let defaultCurrency = $state('EUR');
-
-	// Filters (all off by default)
-	let filterDateFrom = $state('');
-	let filterDateTo = $state('');
-	let filterAccountType = $state('');
 
 	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 	let lastQuery = $state('');
@@ -201,26 +193,10 @@
 		}
 	});
 
-	// Re-run search (and re-refine the suggestion) when filters change while there is active search text
-	$effect(() => {
-		// touch reactive filter values so the effect re-runs when they change
-		void filterDateFrom;
-		void filterDateTo;
-		void filterAccountType;
-		if (searchText.trim().length >= MIN_QUERY_LENGTH) {
-			if (debounceTimer) clearTimeout(debounceTimer);
-			debounceTimer = setTimeout(() => void runSearchAndParse(), 400);
-		}
-	});
-
 	/** Runs a single "any posting/payee/narration in this transaction satisfies `clause`" query,
 	 *  returning its matching transaction ids in date-descending row order (deduped). */
 	async function idsMatchingClause(clause: string): Promise<number[]> {
-		const whereParts = [clause];
-		if (filterDateFrom) whereParts.push(`date >= ${filterDateFrom}`);
-		if (filterDateTo) whereParts.push(`date <= ${filterDateTo}`);
-
-		const query = `SELECT id WHERE ${whereParts.join(' AND ')} ORDER BY date DESC`;
+		const query = `SELECT id WHERE ${clause} ORDER BY date DESC`;
 		const result = await fullLedgerService.query(query);
 		if (result.errors?.length) {
 			throw new Error((result.errors[0] as { message: string }).message);
@@ -252,7 +228,6 @@
 		const terms = parseEntitySearchTerms(text);
 		const categories = terms.map((t) => t.category);
 		const clauses = buildLooseTransactionConditions(terms, categories);
-		if (filterAccountType) clauses.push(`account ~ "^${filterAccountType}:"`);
 		if (clauses.length === 0) return [];
 
 		const idSets = await Promise.all(clauses.map((clause) => idsMatchingClause(clause)));
@@ -494,70 +469,6 @@
 			<div class="alert alert-error mx-auto w-11/12 max-w-2xl text-sm">{voiceError}</div>
 		{/if}
 
-		<!-- Optional filters -->
-		<AccordionSection
-			title="Filters"
-			expanded={filtersExpanded}
-			onToggle={() => (filtersExpanded = !filtersExpanded)}
-		>
-			<div class="flex flex-col gap-3">
-				<!-- Date range -->
-				<div class="flex gap-2">
-					<div class="flex flex-1 flex-col gap-1">
-						<label class="label py-0 text-xs font-semibold text-base-content/60" for="date-from">
-							From
-						</label>
-						<input
-							id="date-from"
-							type="date"
-							class="input input-bordered input-sm w-full"
-							bind:value={filterDateFrom}
-						/>
-					</div>
-					<div class="flex flex-1 flex-col gap-1">
-						<label class="label py-0 text-xs font-semibold text-base-content/60" for="date-to">
-							To
-						</label>
-						<input
-							id="date-to"
-							type="date"
-							class="input input-bordered input-sm w-full"
-							bind:value={filterDateTo}
-						/>
-					</div>
-				</div>
-
-				<!-- Account type -->
-				<div class="flex flex-col gap-1">
-					<span class="label py-0 text-xs font-semibold text-base-content/60">Account type</span>
-					<div class="flex flex-wrap gap-2">
-						<label class="flex items-center gap-1 cursor-pointer">
-							<input
-								type="radio"
-								class="radio radio-sm"
-								name="acct-type"
-								value=""
-								bind:group={filterAccountType}
-							/>
-							<span class="text-sm">All</span>
-						</label>
-						{#each ACCOUNT_TYPES as type}
-							<label class="flex items-center gap-1 cursor-pointer">
-								<input
-									type="radio"
-									class="radio radio-sm"
-									name="acct-type"
-									value={type}
-									bind:group={filterAccountType}
-								/>
-								<span class="text-sm">{type}</span>
-							</label>
-						{/each}
-					</div>
-				</div>
-			</div>
-		</AccordionSection>
-
 		{#if searchText.trim().length < MIN_QUERY_LENGTH}
 			<!-- Instructions -->
 			<div class="card bg-base-200 shadow">
@@ -591,9 +502,9 @@
 		{:else}
 			<!-- Suggested new transaction -->
 			{#if parseResult && nlpXact}
-				<div class="flex flex-col gap-1">
+				<div class="flex flex-col gap-1 rounded-box border-2 border-primary/60 bg-primary/10 p-2 shadow-sm">
 					<div class="flex items-center justify-between">
-						<span class="text-xs font-semibold uppercase tracking-wide text-base-content/60">
+						<span class="text-xs font-semibold uppercase tracking-wide text-primary">
 							Suggested new transaction
 						</span>
 						{#if parseResult.needsReview}
