@@ -38,6 +38,17 @@ export const MISTRAL_TRANSCRIPTION_URL = 'https://api.mistral.ai/v1/audio/transc
 export const DEFAULT_SPEECH_LANGUAGE = 'en-US';
 
 /**
+ * The Voxtral "auto" choice: the `language` field is omitted and the model
+ * detects the language itself. Useful for languages the model does not
+ * officially list (e.g. Bosnian). Not offered for the built-in engine, which
+ * has no detection — it always needs a concrete tag.
+ *
+ * `mistralLanguageCode` maps this tag to '', which makes
+ * `transcribeWithMistral` drop the `language` field.
+ */
+export const AUTO_SPEECH_LANGUAGE = 'auto';
+
+/**
  * Languages offered for the built-in engine (BCP-47 tags).
  *
  * This list is the browser's constraint, not Voxtral's: the Web Speech API
@@ -220,20 +231,23 @@ export async function setSpeechLanguage(language: string): Promise<void> {
  * built-in engine gets the full tag, Voxtral gets its primary subtag.
  *
  * Each engine therefore offers its own list in full. The built-in engine shows
- * the tags the browser knows; Voxtral shows every language the selected model
- * accepts, as a `code` tag (`sl`, `zh`, …) — a superset of the browser's list,
- * so Croatian (browser-only) disappears and Arabic, Chinese or Polish (Voxtral
- * only) become reachable.
+ * the tags the browser knows; Voxtral shows an auto-detect choice first, then
+ * every language the selected model accepts, as a `code` tag (`sl`, `zh`, …) —
+ * a superset of the browser's list, so Croatian (browser-only) disappears and
+ * Arabic, Chinese or Polish (Voxtral only) become reachable.
  */
 export function speechLanguageOptions(
 	engine: SpeechEngine,
 	model: string
 ): ReadonlyArray<{ tag: string; label: string }> {
 	if (engine === 'builtin') return BUILTIN_SPEECH_LANGUAGES;
-	return languagesForModel(model).map((language) => ({
-		tag: language.code,
-		label: language.label
-	}));
+	return [
+		{ tag: AUTO_SPEECH_LANGUAGE, label: 'Auto-detect' },
+		...languagesForModel(model).map((language) => ({
+			tag: language.code,
+			label: language.label
+		}))
+	];
 }
 
 /**

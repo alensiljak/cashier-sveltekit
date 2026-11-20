@@ -14,6 +14,8 @@
 	} from '#lib/utils/nlpEntry';
 	import fullLedgerService from '#lib/services/ledgerWorkerClient';
 	import {
+		AUTO_SPEECH_LANGUAGE,
+		DEFAULT_SPEECH_LANGUAGE,
 		MicrophoneRecorder,
 		describeSpeechError,
 		getMistralApiKey,
@@ -61,6 +63,9 @@
 	async function loadEngine() {
 		engine = await getSpeechEngine();
 		language = await getSpeechLanguage();
+		// 'auto' is a Voxtral-only choice (the language field is omitted); the
+		// Web Speech API needs a concrete tag, so fall back to the default.
+		if (language === AUTO_SPEECH_LANGUAGE) language = DEFAULT_SPEECH_LANGUAGE;
 		hasApiKey = engine === 'mistral' ? Boolean(await getMistralApiKey()) : true;
 		supported = engine === 'mistral' ? isRecordingSupported() : isBuiltinSpeechSupported();
 		engineLoaded = true;

@@ -263,7 +263,9 @@
 				<p class="text-sm opacity-70">
 					The language you speak. Both engines use it; leave it on the default if unsure.
 					{#if engine === 'mistral'}
-						All languages the selected Voxtral model supports are listed.
+						All languages the selected Voxtral model supports are listed. <strong>Auto-detect</strong>
+						leaves the language to the model — try it for languages not on the list (e.g. Bosnian),
+						but a pinned language is more reliable on short recordings.
 					{/if}
 				</p>
 				<select class="select select-bordered w-full" bind:value={language}>

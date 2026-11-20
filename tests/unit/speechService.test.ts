@@ -36,6 +36,7 @@ vi.mock('#lib/services/prices/proxyFetch', () => ({
 }));
 
 import {
+	AUTO_SPEECH_LANGUAGE,
 	DEFAULT_SPEECH_ENGINE,
 	MISTRAL_TRANSCRIPTION_MODEL,
 	MISTRAL_TRANSCRIPTION_URL,
@@ -118,12 +119,16 @@ describe('Voxtral models and their languages', () => {
 		expect(options.map((option) => option.tag)).toContain('sl-SI');
 	});
 
-	it('offers every language the Voxtral model supports', () => {
+	it('offers every language the Voxtral model supports, plus auto-detect', () => {
 		const options = speechLanguageOptions('mistral', MISTRAL_TRANSCRIPTION_MODEL);
 		const tags = options.map((option) => option.tag);
-		// The whole model list, not a subset of the browser's list.
-		expect(tags).toHaveLength(53);
-		expect(tags).toEqual(languagesForModel(MISTRAL_TRANSCRIPTION_MODEL).map((l) => l.code));
+		// Auto-detect first, then the whole model list — not a subset of the
+		// browser's list.
+		expect(tags).toHaveLength(53 + 1);
+		expect(tags[0]).toBe(AUTO_SPEECH_LANGUAGE);
+		expect(tags.slice(1)).toEqual(
+			languagesForModel(MISTRAL_TRANSCRIPTION_MODEL).map((l) => l.code)
+		);
 		// Voxtral-only languages are reachable…
 		expect(tags).toContain('ar');
 		expect(tags).toContain('zh');
@@ -131,6 +136,13 @@ describe('Voxtral models and their languages', () => {
 		// …and the browser-only one is gone.
 		expect(tags).not.toContain('hr');
 		expect(tags).not.toContain('hr-HR');
+	});
+
+	it('offers no auto-detect for the built-in engine', () => {
+		const tags = speechLanguageOptions('builtin', MISTRAL_TRANSCRIPTION_MODEL).map(
+			(option) => option.tag
+		);
+		expect(tags).not.toContain(AUTO_SPEECH_LANGUAGE);
 	});
 
 	it('uses the same list for both Voxtral models', () => {
@@ -189,6 +201,16 @@ describe('transcribeWithMistral', () => {
 		state.proxyResponse = async () => new Response(JSON.stringify({ text: 'ok' }), { status: 200 });
 
 		await transcribeWithMistral(clip, { apiKey: 'key', language: 'not-a-code!' });
+
+		const [{ init }] = state.proxyCalls;
+		const form = init?.body as FormData;
+		expect(form.get('language')).toBeNull();
+	});
+
+	it('omits the language field for the auto tag', async () => {
+		state.proxyResponse = async () => new Response(JSON.stringify({ text: 'ok' }), { status: 200 });
+
+		await transcribeWithMistral(clip, { apiKey: 'key', language: AUTO_SPEECH_LANGUAGE });
 
 		const [{ init }] = state.proxyCalls;
 		const form = init?.body as FormData;
