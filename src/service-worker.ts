@@ -6,7 +6,12 @@ import {
 	precacheAndRoute
 } from 'workbox-precaching';
 import { NavigationRoute, registerRoute } from 'workbox-routing';
-import { SHARE_FIELD, SHARE_TARGET_PATH, storeSharedFiles } from '#lib/services/sharedFiles';
+import {
+	MAX_SHARED_BYTES,
+	SHARE_FIELD,
+	SHARE_TARGET_PATH,
+	storeSharedFiles
+} from '#lib/services/sharedFiles';
 
 declare const self: ServiceWorkerGlobalScope;
 
@@ -49,11 +54,20 @@ registerRoute(new NavigationRoute(createHandlerBoundToURL(SHELL)));
 // Web Share Target: the OS POSTs shared files (multipart/form-data) to /share-target. There is no
 // server, so stash the files and redirect (303 turns the POST into a GET) to the page that reads them.
 registerRoute(
-	({ url }) => url.pathname === SHARE_TARGET_PATH,
+	// Same-origin only: without the origin check this also hijacks cross-origin POSTs to
+	// any /share-target path made from pages this worker controls.
+	({ url }) => url.origin === self.location.origin && url.pathname === SHARE_TARGET_PATH,
 	async ({ request }) => {
 		try {
+			// Reject oversized shares. Content-Length (when present) is checked before buffering
+			// the body; fetch/OS share POSTs may be chunked, so the parsed files' total is the
+			// backstop that keeps them out of the cache.
+			const length = Number(request.headers.get('content-length') ?? 0);
+			if (length > MAX_SHARED_BYTES) throw new Error(`Shared payload too large: ${length} bytes`);
 			const form = await request.formData();
 			const files = form.getAll(SHARE_FIELD).filter((v): v is File => v instanceof File);
+			const total = files.reduce((sum, f) => sum + f.size, 0);
+			if (total > MAX_SHARED_BYTES) throw new Error(`Shared files too large: ${total} bytes`);
 			await storeSharedFiles(files);
 			return Response.redirect(SHARE_TARGET_PATH, 303);
 		} catch (err) {
