@@ -98,6 +98,6 @@
 		"core-js@3.50.0": true,
 		"esbuild@0.28.2": true,
 		"agent-browser@0.43.0": true,
-		"workerd@1.20261116.1": true
+		"workerd@1.20261119.1": true
 	}
 }
