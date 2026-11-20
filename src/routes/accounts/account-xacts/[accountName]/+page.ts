@@ -5,7 +5,7 @@
 import { Account, Money } from '#lib/data/model.js';
 import { getXactStore } from '#lib/storage/xactStoreRegistry';
 import fullLedgerService from '#lib/services/ledgerWorkerClient';
-import { mergeUnifiedRows, type UnifiedXact } from '#lib/utils/unifiedXacts';
+import { markLatestAssertions, mergeUnifiedRows, type UnifiedXact } from '#lib/utils/unifiedXacts';
 import { lastAssertionDate } from '#lib/reconciliation/reconciliation';
 import type { MetaValueJson } from '@rustledger/wasm';
 import type { PageLoad } from './$types';
@@ -120,6 +120,10 @@ WHERE account = '${params.accountName}'`;
 		[...deviceRows, ...deviceAssertionRows],
 		[...ledgerNormalized, ...ledgerAssertionRows]
 	);
+
+	// Flag the newest assertion per currency so the list can draw a "last reconciled"
+	// divider there; every row above it is not yet reconciled.
+	markLatestAssertions(unifiedRows);
 
 	// Flag the assertions the validator rejected. Only asked when there are assertions to check.
 	if (unifiedRows.some((r) => r.isAssertion)) {

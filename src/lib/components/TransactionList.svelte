@@ -94,6 +94,17 @@
 
 <div>
 	{#each visibleRows as row, i (row)}
+		{#if row.isLastAssertion}
+			<!-- Divider on the newest balance assertion per currency: in this newest-first
+			     list, everything above the line is not yet reconciled. -->
+			<div
+				class="flex items-center gap-2 px-2 pt-1.5 pb-0.5 text-[0.65rem] font-medium uppercase tracking-wider text-base-content/50"
+			>
+				<hr class="grow border-base-content/25" />
+				<span>last reconciled</span>
+				<hr class="grow border-base-content/25" />
+			</div>
+		{/if}
 		<div
 			class="flex flex-row px-2 py-1 cursor-pointer {row.isDevice
 				? 'border-l-2 border-amber-400 bg-amber-50/60 dark:bg-amber-950/25'

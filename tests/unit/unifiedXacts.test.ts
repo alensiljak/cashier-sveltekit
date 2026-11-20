@@ -15,6 +15,7 @@ import { xact, xactId } from '#lib/data/mainStore';
 import {
 	buildHighlightParams,
 	findHighlightedRow,
+	markLatestAssertions,
 	mergeUnifiedRows,
 	openXactDetails,
 	type UnifiedXact
@@ -82,6 +83,56 @@ describe('mergeUnifiedRows', () => {
 		expect(mergeUnifiedRows([], [])).toEqual([]);
 		expect(mergeUnifiedRows([], [row()])).toHaveLength(1);
 		expect(mergeUnifiedRows([row({ isDevice: true, id: 'd' })], [])).toHaveLength(1);
+	});
+});
+
+describe('markLatestAssertions', () => {
+	const assertion = (date: string, currency = 'EUR'): UnifiedXact =>
+		row({ isAssertion: true, date, currency, payee: '', narration: '' });
+
+	it('marks only the newest assertion, leaving older ones and xacts unmarked', () => {
+		const rows = [
+			row({ date: '2025-08-20' }),
+			assertion('2025-08-15'),
+			row({ date: '2025-08-10' }),
+			assertion('2025-08-01')
+		];
+
+		markLatestAssertions(rows);
+
+		expect(rows.map((r) => !!r.isLastAssertion)).toEqual([false, true, false, false]);
+	});
+
+	it('marks one assertion per currency', () => {
+		const rows = [assertion('2025-08-15', 'EUR'), assertion('2025-08-10', 'USD'), assertion('2025-08-01', 'EUR')];
+
+		markLatestAssertions(rows);
+
+		expect(rows.map((r) => !!r.isLastAssertion)).toEqual([true, true, false]);
+	});
+
+	it('marks exactly one row when two assertions share the newest date and currency', () => {
+		const rows = [assertion('2025-08-15'), assertion('2025-08-15'), assertion('2025-08-01')];
+
+		markLatestAssertions(rows);
+
+		expect(rows.map((r) => !!r.isLastAssertion)).toEqual([true, false, false]);
+	});
+
+	it('does nothing when there are no assertions', () => {
+		const rows = [row({ date: '2025-08-20' }), row({ date: '2025-08-10' })];
+
+		markLatestAssertions(rows);
+
+		expect(rows.some((r) => r.isLastAssertion)).toBe(false);
+	});
+
+	it('works regardless of input order', () => {
+		const rows = [assertion('2025-08-01'), row({ date: '2025-08-20' }), assertion('2025-08-15')];
+
+		markLatestAssertions(rows);
+
+		expect(rows.map((r) => !!r.isLastAssertion)).toEqual([false, false, true]);
 	});
 });
 

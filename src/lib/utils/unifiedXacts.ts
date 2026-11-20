@@ -27,6 +27,8 @@ export type UnifiedXact = {
 	isDevice: boolean;
 	/** A `balance` assertion rather than a transaction; `amount`/`currency` hold the asserted balance. */
 	isAssertion?: boolean;
+	/** Set on the newest assertion row per currency (see markLatestAssertions): the list draws a divider there. */
+	isLastAssertion?: boolean;
 	/** Set on an assertion the validator rejected: the balance the book actually holds. */
 	actualBalance?: number;
 	/** Transaction flag from the full ledger ('*' or '!'). Device rows carry it on `xact` instead. */
@@ -76,6 +78,28 @@ export function mergeUnifiedRows(
  */
 function compareUnifiedDesc(a: UnifiedXact, b: UnifiedXact): number {
 	return b.date.localeCompare(a.date) || Number(!!a.isAssertion) - Number(!!b.isAssertion);
+}
+
+/**
+ * Flag the newest assertion row per currency with `isLastAssertion`, so the list can draw
+ * a divider there: in the newest-first list, everything above that row is dated on or
+ * after the assertion and is therefore not yet reconciled. Exactly one row per currency
+ * is marked, whichever order `rows` is in. Non-assertion rows are never touched.
+ */
+export function markLatestAssertions(rows: UnifiedXact[]): void {
+	const latestDate = new Map<string, string>();
+	for (const row of rows) {
+		if (!row.isAssertion) continue;
+		const current = latestDate.get(row.currency);
+		if (!current || row.date > current) latestDate.set(row.currency, row.date);
+	}
+	const marked = new Set<string>();
+	for (const row of rows) {
+		if (!row.isAssertion || marked.has(row.currency)) continue;
+		if (row.date !== latestDate.get(row.currency)) continue;
+		row.isLastAssertion = true;
+		marked.add(row.currency);
+	}
 }
 
 /**
