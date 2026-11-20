@@ -3,6 +3,7 @@ import {
 	buildTransaction,
 	formatBeancount,
 	parseAmountToken,
+	parseNumberWords,
 	parseTranscript,
 	pickBestMatch,
 	refineFromMatches
@@ -322,4 +323,171 @@ test('with no options the parser keeps its EUR default', () => {
 
 	expect(result.currency).toBe('EUR');
 	expect(buildTransaction(result).postings[0]?.currency).toBe('EUR');
+});
+
+// --- Number words ---
+
+test('parseNumberWords reads units, teens and tens', () => {
+	expect(parseNumberWords('five')).toBe(5);
+	expect(parseNumberWords('thirteen')).toBe(13);
+	expect(parseNumberWords('twenty')).toBe(20);
+});
+
+test('parseNumberWords joins hyphenated and spaced tens', () => {
+	expect(parseNumberWords('twenty-five')).toBe(25);
+	expect(parseNumberWords('twenty five')).toBe(25);
+	expect(parseNumberWords('ninety-nine')).toBe(99);
+});
+
+test('parseNumberWords handles hundreds and thousands', () => {
+	expect(parseNumberWords('one hundred')).toBe(100);
+	expect(parseNumberWords('a hundred')).toBe(100);
+	expect(parseNumberWords('one hundred and five')).toBe(105);
+	expect(parseNumberWords('two hundred fifty')).toBe(250);
+	expect(parseNumberWords('two thousand')).toBe(2000);
+	expect(parseNumberWords('two thousand five hundred')).toBe(2500);
+	expect(parseNumberWords('one thousand two hundred and thirty-four')).toBe(1234);
+});
+
+test('parseNumberWords returns undefined when there is no numeric word', () => {
+	expect(parseNumberWords('billa')).toBeUndefined();
+	expect(parseNumberWords('')).toBeUndefined();
+});
+
+test('a spoken amount with a currency word is parsed', () => {
+	const result = parseTranscript('paid twenty-five euros at billa');
+
+	expect(result.amount).toBe(25);
+	expect(result.currency).toBe('EUR');
+	expect(result.payee).toBe('Billa');
+});
+
+test('a spoken amount with no currency word is accepted when it stands alone', () => {
+	const result = parseTranscript('twenty-five at billa', { defaultCurrency: 'USD' });
+
+	expect(result.amount).toBe(25);
+	expect(result.currency).toBe('USD');
+});
+
+test('a number word quantifying a noun is not read as the amount', () => {
+	// "one coffee" is a quantity, not a price — the amount stays unknown.
+	const result = parseTranscript('bought one coffee at billa');
+
+	expect(result.amount).toBeUndefined();
+});
+
+test('a number word quantifying a noun does not override a real amount', () => {
+	const result = parseTranscript('paid 15 euros for two tickets at billa');
+
+	expect(result.amount).toBe(15);
+});
+
+test('a number word inside a payee name is not read as the amount', () => {
+	const result = parseTranscript('paid 15 euros at One Stop');
+
+	expect(result.amount).toBe(15);
+	expect(result.payee).toBe('One Stop');
+});
+
+test('a bare number word with no currency and no other content word is accepted', () => {
+	const result = parseTranscript('twenty-five');
+
+	expect(result.amount).toBe(25);
+});
+
+test('number words are not folded into the payee', () => {
+	const result = parseTranscript('paid five hundred euros rent');
+
+	expect(result.amount).toBe(500);
+	expect(result.payee).not.toContain('Five');
+	expect(result.payee).not.toContain('Hundred');
+});
+
+test('a spoken amount with a dollar word is parsed', () => {
+	const result = parseTranscript('spent a hundred dollars at billa');
+
+	expect(result.amount).toBe(100);
+	expect(result.currency).toBe('USD');
+});
+
+test('an explicit numeral wins over a number word in the same phrase', () => {
+	const result = parseTranscript('paid 12 euros for two coffees at billa');
+
+	expect(result.amount).toBe(12);
+});
+
+test('a quantifier before the priced number is skipped', () => {
+	const result = parseTranscript('two coffees for twenty euros');
+
+	expect(result.amount).toBe(20);
+	expect(result.currency).toBe('EUR');
+});
+
+test('a spoken priced amount outranks a bare numeral quantity', () => {
+	const result = parseTranscript('2 coffees for twenty euros at billa');
+
+	expect(result.amount).toBe(20);
+	expect(result.payee).toBe('Billa');
+});
+
+test('a hyphenated number word is not folded into the payee', () => {
+	const result = parseTranscript('twenty-five euros rent');
+
+	expect(result.amount).toBe(25);
+	expect(result.payee).toBe('Rent');
+});
+
+test('"and" only joins number words after a scale word', () => {
+	expect(parseTranscript('coffee and two euros').amount).toBe(2);
+	expect(parseTranscript('one hundred and five euros at billa').amount).toBe(105);
+	// "two and five" is not a compound number.
+	expect(parseTranscript('two and five euros').amount).toBe(5);
+});
+
+test('spoken cents after the currency word', () => {
+	expect(parseTranscript('twenty-five euros fifty at billa').amount).toBe(25.5);
+	expect(parseTranscript('twenty euros and fifty cents at billa').amount).toBe(20.5);
+	expect(parseTranscript('five euros five cents at billa').amount).toBe(5.05);
+});
+
+test('cents words are consumed and do not leak into the note or payee', () => {
+	const result = parseTranscript('twenty-five euros fifty at billa');
+
+	expect(result.note).toBeUndefined();
+	expect(result.payee).toBe('Billa');
+});
+
+test('digit amounts take a cents part too', () => {
+	expect(parseTranscript('12 euros 50 at billa').amount).toBe(12.5);
+	expect(parseTranscript('12 euros and 5 cents at billa').amount).toBe(12.05);
+});
+
+test('a number after the currency that quantifies something is not cents', () => {
+	expect(parseTranscript('twenty euros two coffees').amount).toBe(20);
+	expect(parseTranscript('20 euros 2 coffees').amount).toBe(20);
+});
+
+test('a scale word after a digit amount multiplies it', () => {
+	expect(parseTranscript('2 thousand euros rent').amount).toBe(2000);
+	expect(parseTranscript('1.5 million dollars').amount).toBe(1500000);
+	expect(parseTranscript('2 thousand at billa').amount).toBe(2000);
+});
+
+test('a lone spoken number may be followed by a preposition-like word', () => {
+	const result = parseTranscript('twenty-five on groceries');
+
+	expect(result.amount).toBe(25);
+});
+
+test('a spoken kuna amount maps to HRK', () => {
+	const result = parseTranscript('fifty kunas at konzum');
+
+	expect(result.amount).toBe(50);
+	expect(result.currency).toBe('HRK');
+});
+
+test('number words are consumed so they do not leak into the note', () => {
+	const result = parseTranscript('twenty-five euros at billa');
+
+	expect(result.note).toBeUndefined();
 });

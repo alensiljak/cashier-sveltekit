@@ -80,6 +80,7 @@ const CURRENCY_MAP: Record<string, string> = {
 	franc: 'CHF',
 	francs: 'CHF',
 	kuna: 'HRK',
+	kunas: 'HRK',
 	kune: 'HRK'
 };
 
@@ -181,6 +182,253 @@ export function parseAmountToken(raw: string): number | undefined {
 	return parseFloat(`${whole}.${fraction}`);
 }
 
+/** Spoken number words, as they appear in dictation. */
+const NUMBER_WORDS: Record<string, number> = {
+	zero: 0,
+	one: 1,
+	two: 2,
+	three: 3,
+	four: 4,
+	five: 5,
+	six: 6,
+	seven: 7,
+	eight: 8,
+	nine: 9,
+	ten: 10,
+	eleven: 11,
+	twelve: 12,
+	thirteen: 13,
+	fourteen: 14,
+	fifteen: 15,
+	sixteen: 16,
+	seventeen: 17,
+	eighteen: 18,
+	nineteen: 19,
+	twenty: 20,
+	thirty: 30,
+	forty: 40,
+	fifty: 50,
+	sixty: 60,
+	seventy: 70,
+	eighty: 80,
+	ninety: 90
+};
+
+/** Multipliers that scale the number accumulated so far. */
+const NUMBER_SCALES: Record<string, number> = {
+	hundred: 100,
+	thousand: 1000,
+	million: 1000000
+};
+
+/** Words that may join number words without breaking the run ("twenty-five", "one hundred and five"). */
+const NUMBER_JOINERS = new Set(['and']);
+
+/** True when the word is a number word or scale word ("five", "hundred"). */
+function isNumberWord(word: string): boolean {
+	const norm = normalizeWord(word);
+	if (norm.length === 0) return false;
+	// Hyphenated forms ("twenty-five", "one-hundred") count when every part is a number word.
+	return norm
+		.split('-')
+		.every((part) => part.length > 0 && (part in NUMBER_WORDS || part in NUMBER_SCALES));
+}
+
+/**
+ * Matches a run of spoken number words, e.g. "twenty-five", "one hundred and five",
+ * "two thousand five hundred". Deliberately conservative: it only matches words that are
+ * unambiguously numeric, so a payee like "One Stop" is not swallowed as an amount.
+ */
+const NUMBER_WORD_RUN_SOURCE = (() => {
+	const nums = Object.keys(NUMBER_WORDS).join('|');
+	const scales = Object.keys(NUMBER_SCALES).join('|');
+	// "and" is only a joiner right after a scale word and before another number word
+	// ("one hundred and five"); anywhere else ("two and five", "coffee and two") it ends the run.
+	const unit = String.raw`(?:(?:${scales})(?:[\s-]+and(?=[\s-]+(?:${nums}|${scales})\b))?|${nums})`;
+	return String.raw`${unit}(?:[\s-]+${unit}){0,6}`;
+})();
+const NUMBER_WORD_RUN = new RegExp(String.raw`\b(${NUMBER_WORD_RUN_SOURCE})\b`, 'gi');
+
+/** Scale words that may follow a digit amount ("2 thousand euros", "1.5 million"). */
+const SCALE_WORD_SOURCE = Object.keys(NUMBER_SCALES).join('|');
+
+/**
+ * Converts a run of spoken number words to a number, or undefined when the run holds no
+ * numeric word. Handles the additive/multiplicative shape of English number words:
+ * "twenty-five" -> 25, "one hundred and five" -> 105, "two thousand five hundred" -> 2500.
+ *
+ * A trailing "hundred"/"thousand" with nothing after it still counts ("a hundred" -> 100).
+ */
+export function parseNumberWords(phrase: string): number | undefined {
+	const words = phrase
+		.toLowerCase()
+		.split(/[\s-]+/)
+		.filter((w) => w.length > 0 && !NUMBER_JOINERS.has(w));
+	// "a hundred" / "an hundred": the article stands in for "one" before a scale word.
+	if (words.length > 1 && (words[0] === 'a' || words[0] === 'an')) words.shift();
+	if (words.length === 0) return undefined;
+
+	let total = 0;
+	// The part of the number below the last scale word ("two thousand five hundred" -> 500).
+	let current = 0;
+	let sawNumber = false;
+
+	for (const word of words) {
+		const value = NUMBER_WORDS[word];
+		if (value !== undefined) {
+			current += value;
+			sawNumber = true;
+			continue;
+		}
+
+		const scale = NUMBER_SCALES[word];
+		if (scale !== undefined) {
+			sawNumber = true;
+			// "a hundred" / "hundred" with no leading number means one of them.
+			current = (current || 1) * scale;
+			if (scale >= 1000) {
+				total += current;
+				current = 0;
+			}
+			continue;
+		}
+
+		// A non-number word inside the run ends it; ignore the rest.
+		break;
+	}
+
+	if (!sawNumber) return undefined;
+	return total + current;
+}
+
+/** The currency words recognised after an amount, shared by the digit and spoken-number paths. */
+const CURRENCY_WORD_ALTERNATION =
+	'euros?|dollars?|pounds?|yen|francs?|kunas?|kune|usd|eur|gbp|chf|hrk|jpy';
+/** Currency words that may follow an amount ("twenty-five euros"). Unanchored: callers add `^`. */
+const CURRENCY_WORD_SOURCE = String.raw`(${CURRENCY_WORD_ALTERNATION})\b`;
+
+/** Sentence-joining words that are not stop words elsewhere but never name a thing either. */
+const FUNCTION_WORDS = new Set([
+	'on',
+	'in',
+	'with',
+	'of',
+	'by',
+	'via',
+	'into',
+	'using',
+	'is',
+	'was'
+]);
+
+/**
+ * True when `word` is a content word — something that names a thing rather than joining a
+ * sentence. Used to tell a price ("twenty-five euros") from a quantifier ("one coffee").
+ */
+function isContentWord(word: string): boolean {
+	const norm = normalizeWord(word);
+	return (
+		norm.length > 0 &&
+		!STOP_WORDS.has(norm) &&
+		!NUMBER_JOINERS.has(norm) &&
+		!FUNCTION_WORDS.has(norm)
+	);
+}
+
+/**
+ * Reads a fractional "cents" part right after a currency word: "twenty-five euros fifty",
+ * "twenty euros and fifty cents", "12 euros 50". Returns the cents (0-99) and the words used.
+ *
+ * A bare number after the currency could be a quantity ("20 euros 2 coffees"), so without an
+ * explicit "cents" word it only counts when nothing that names a thing follows it.
+ */
+function parseCentsSuffix(after: string): { cents: number; words: string[] } | undefined {
+	const m = after.match(
+		new RegExp(
+			String.raw`^\s+(?:and\s+)?(?:(\d{1,2})|(${NUMBER_WORD_RUN_SOURCE}))(?:\s+(cents?))?\b`,
+			'i'
+		)
+	);
+	if (!m) return undefined;
+
+	const cents = m[1] !== undefined ? parseInt(m[1], 10) : parseNumberWords(m[2]!);
+	if (cents === undefined || cents > 99) return undefined;
+
+	if (!m[3]) {
+		const nextWord = after.slice(m[0].length).trim().split(/\s+/)[0];
+		if (nextWord && isContentWord(nextWord)) return undefined;
+	}
+
+	return {
+		cents,
+		words: m[0]
+			.trim()
+			.split(/\s+/)
+			.filter((w) => !NUMBER_JOINERS.has(w.toLowerCase()))
+	};
+}
+
+/** Adds a cents part to a whole amount without floating-point residue. */
+function withCents(amount: number, cents: number): number {
+	return Math.round(amount * 100 + cents) / 100;
+}
+
+/**
+ * Finds a spoken amount ("twenty-five euros", "a hundred dollars") and its currency.
+ * Only consulted when no digit amount was found, so an explicit numeral always wins.
+ *
+ * A spoken number is only read as a price when it is unambiguous, because number words are
+ * also ordinary English quantifiers and name parts ("one coffee", "at One Stop"). It counts
+ * when a currency word follows it, or when it is the only content word in the phrase. A
+ * content word after it means it is quantifying that word, so it is left alone.
+ */
+function parseNumberWordAmount(
+	text: string,
+	defaultCurrency: string,
+	mode: 'currency-only' | 'any'
+): { amount?: number; currency: string; matchedWords: string[] } | undefined {
+	// Every run is considered, not just the first: "two coffees for twenty euros" must skip the
+	// quantifier "two" and find the priced "twenty". A run followed by a currency word wins
+	// outright; otherwise the first run that passes the lone-number check is the fallback.
+	let loneCandidate: { amount: number; matchedWords: string[] } | undefined;
+
+	for (const m of text.matchAll(NUMBER_WORD_RUN)) {
+		const amount = parseNumberWords(m[1]);
+		if (amount === undefined) continue;
+
+		const after = text.slice(m.index + m[0].length);
+		const currencyMatch = after.match(new RegExp(String.raw`^\s*${CURRENCY_WORD_SOURCE}`, 'i'));
+
+		if (currencyMatch) {
+			const key = currencyMatch[1]!.toLowerCase();
+			const matchedWords = [...m[0].split(/\s+/), ...currencyMatch[0].trim().split(/\s+/)];
+			const centsPart = parseCentsSuffix(after.slice(currencyMatch[0].length));
+			if (centsPart) matchedWords.push(...centsPart.words);
+			return {
+				amount: centsPart ? withCents(amount, centsPart.cents) : amount,
+				currency: CURRENCY_MAP[key] ?? key.toUpperCase(),
+				matchedWords
+			};
+		}
+
+		if (mode === 'currency-only' || loneCandidate) continue;
+
+		// No currency word: the number must stand alone. Any content word after it means it is
+		// quantifying that word ("one coffee", "two tickets") or naming something ("One Stop").
+		const nextWord = after.trim().split(/\s+/)[0];
+		if (nextWord && isContentWord(nextWord)) continue;
+		// Content words before it are fine ("paid twenty-five"), but a name before it is not:
+		// "at One Stop" has the number inside the name, so require the number to be the only
+		// content word in the whole phrase.
+		const before = text.slice(0, m.index);
+		if (before.split(/\s+/).some(isContentWord)) continue;
+
+		loneCandidate = { amount, matchedWords: m[0].split(/\s+/) };
+	}
+
+	return loneCandidate && { ...loneCandidate, currency: defaultCurrency };
+}
+
 function parseCurrency(
 	text: string,
 	defaultCurrency: string
@@ -192,8 +440,9 @@ function parseCurrency(
 	const patterns = [
 		new RegExp(String.raw`([€$£¥])\s*(${AMOUNT_TOKEN})`),
 		new RegExp(String.raw`(${AMOUNT_TOKEN})\s*([€$£¥])`),
+		// Optional scale word between amount and currency: "2 thousand euros".
 		new RegExp(
-			String.raw`(${AMOUNT_TOKEN})\s+(euros?|dollars?|pounds?|yen|francs?|kunas?|kune|usd|eur|gbp|chf|hrk)`,
+			String.raw`(${AMOUNT_TOKEN})(?:\s+(${SCALE_WORD_SOURCE}))?\s+(${CURRENCY_WORD_ALTERNATION})\b`,
 			'i'
 		)
 	];
@@ -208,31 +457,62 @@ function parseCurrency(
 		if (re === patterns[0]) {
 			rawCurrency = m[1];
 			rawAmount = m[2];
-		} else {
+		} else if (re === patterns[1]) {
 			rawAmount = m[1];
 			rawCurrency = m[2];
+		} else {
+			rawAmount = m[1];
+			rawCurrency = m[3];
 		}
 
-		const amount = parseAmountToken(rawAmount);
+		let amount = parseAmountToken(rawAmount);
 		if (amount === undefined) continue;
+		const matchedWords = m[0].split(/\s+/);
+		if (re === patterns[2]) {
+			if (m[2]) amount *= NUMBER_SCALES[m[2].toLowerCase()]!;
+			const centsPart = parseCentsSuffix(text.slice(m.index! + m[0].length));
+			if (centsPart) {
+				amount = withCents(amount, centsPart.cents);
+				matchedWords.push(...centsPart.words);
+			}
+		}
 		const symbolMap: Record<string, string> = { '€': 'EUR', $: 'USD', '£': 'GBP', '¥': 'JPY' };
 		const currency =
 			symbolMap[rawCurrency] ??
 			CURRENCY_MAP[rawCurrency.toLowerCase()] ??
 			rawCurrency.toUpperCase();
 
-		return { amount, currency, matchedWords: m[0].split(/\s+/) };
+		return { amount, currency, matchedWords };
 	}
+
+	// A spoken number followed by a currency word is an explicit price, so it outranks a bare
+	// numeral that is more likely a quantity ("2 coffees for twenty euros" -> 20, not 2).
+	const pricedWords = parseNumberWordAmount(text, defaultCurrency, 'currency-only');
+	if (pricedWords) return pricedWords;
 
 	// Only a standalone numeric token counts as a bare amount — skip digits embedded in an
 	// alphanumeric word like "n26" (an account name fragment), which isn't an amount.
 	const numMatch = text.match(new RegExp(String.raw`(?:^|\s)(${AMOUNT_TOKEN})(?=\s|$)`));
 	if (numMatch) {
-		const amount = parseAmountToken(numMatch[1]);
+		let amount = parseAmountToken(numMatch[1]);
 		if (amount !== undefined) {
-			return { amount, currency: defaultCurrency, matchedWords: [numMatch[1]] };
+			const matchedWords = [numMatch[1]];
+			// "2 thousand at billa": a scale word right after the numeral multiplies it.
+			const scale = text
+				.slice(numMatch.index! + numMatch[0].length)
+				.match(new RegExp(String.raw`^\s+(${SCALE_WORD_SOURCE})\b`, 'i'));
+			if (scale) {
+				amount *= NUMBER_SCALES[scale[1]!.toLowerCase()]!;
+				matchedWords.push(scale[1]!);
+			}
+			return { amount, currency: defaultCurrency, matchedWords };
 		}
 	}
+
+	// No numeral and no priced number word — accept a lone spoken number ("twenty-five at billa").
+	// Checked last so an explicit numeral always wins over a word that happens to be numeric.
+	const wordAmount = parseNumberWordAmount(text, defaultCurrency, 'any');
+	if (wordAmount) return wordAmount;
 
 	return { currency: defaultCurrency, matchedWords: [] };
 }
@@ -329,7 +609,11 @@ function extractPayee(text: string): {
 	}
 
 	const words = vendorText.split(/\s+/);
-	const payeeWords = words.filter((w) => !STOP_WORDS.has(normalizeWord(w)) && /^[a-zA-Z]/.test(w));
+	// Number words are amounts or quantifiers, never part of a counterparty's name — without
+	// this, "paid five hundred euros rent" yields the payee "Five Hundred Rent".
+	const payeeWords = words.filter(
+		(w) => !STOP_WORDS.has(normalizeWord(w)) && !isNumberWord(w) && /^[a-zA-Z]/.test(w)
+	);
 	if (payeeWords.length > 0) {
 		return {
 			payee: payeeWords.map((w) => toPayeeName(w.toLowerCase())).join(' '),

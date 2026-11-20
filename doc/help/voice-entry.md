@@ -41,4 +41,10 @@ If the "from" account is only a partial name, tap **Resolve** to look it up in t
 
 Amounts are read in either decimal convention, so both "25,50" and "25.50" mean twenty-five fifty. Thousands separators are understood too: "1.500,50" and "1,500.50" both parse as 1500.50, and a lone group of three digits ("1.500") is read as 1500 rather than 1.5.
 
+Amounts can also be spoken as words: "twenty-five euros", "a hundred dollars", "two thousand five hundred". A digit amount with a currency wins over spoken numbers, so "12 euros for two coffees" takes 12. A spoken amount with a currency word beats a bare digit quantity, so "2 coffees for twenty euros" takes 20.
+
+Cents can follow the currency word, in words or digits: "twenty-five euros fifty", "twenty euros and fifty cents" and "12 euros 50" all give the expected decimal amount. A number after the currency that looks like a quantity ("20 euros 2 coffees") is not treated as cents. A scale word after a digit amount multiplies it: "2 thousand euros" is 2000.
+
+Because number words are also ordinary words, a spoken number only counts as the amount when it is unambiguous — when a currency word follows it ("twenty-five euros") or when it is the only thing in the phrase ("twenty-five at Billa"). A number word that describes something else is left alone: "one coffee" and "two tickets" are quantities, and "at One Stop" is part of the payee.
+
 When the phrase names no currency ("50 at Billa"), the amount uses the book's operating currency — the `operating_currency` option in your Beancount file. Naming a currency ("50 euros", "$50") always overrides it.
