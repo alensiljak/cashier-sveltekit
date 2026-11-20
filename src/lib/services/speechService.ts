@@ -1,8 +1,8 @@
 /**
- * Speech Entry transcription engines.
+ * Speech transcription engines for Quick Entry.
  *
- * Two engines can turn speech into text for the Speech Entry page
- * (`src/routes/tools/voice-entry`):
+ * Two engines can turn speech into text for Quick Entry's Voice mode
+ * (`VoiceInputButton.svelte`; configured at `src/routes/tools/voice-entry/config`):
  *
  * - `builtin` — the browser's Web Speech API (`SpeechRecognition`), which
  *   transcribes live while the user speaks. It is the default and needs no
@@ -10,7 +10,7 @@
  *   network connection and is unavailable in some browsers.
  * - `mistral` — Mistral's Voxtral transcription API. The page records the
  *   microphone with `MediaRecorder` and the clip is uploaded once, when the
- *   user stops. The API key is entered on the Speech Entry configuration page
+ *   user stops. The API key is entered in Speech Settings
  *   and kept in device settings only (it is a credential).
  *
  * The engine choice, language and model are device settings
@@ -25,7 +25,7 @@
 import { deviceSettings, DeviceSettingKeys } from '#lib/settings';
 import { proxyFetch } from './prices/proxyFetch';
 
-/** The transcription engines the Speech Entry page can use. */
+/** The transcription engines Quick Entry can use. */
 export type SpeechEngine = 'builtin' | 'mistral';
 
 /** Default engine: the browser's own speech recognition. */
@@ -212,6 +212,15 @@ export async function getSpeechEngine(): Promise<SpeechEngine> {
 
 export async function setSpeechEngine(engine: SpeechEngine): Promise<void> {
 	await deviceSettings.set(DeviceSettingKeys.speechEngine, engine);
+}
+
+/** Whether Quick Entry shows the microphone button (the toolbar's Voice mode toggle). */
+export async function getVoiceMode(): Promise<boolean> {
+	return (await deviceSettings.get<boolean>(DeviceSettingKeys.speechVoiceMode)) === true;
+}
+
+export async function setVoiceMode(enabled: boolean): Promise<void> {
+	await deviceSettings.set(DeviceSettingKeys.speechVoiceMode, enabled);
 }
 
 /** Configured language tag, or the default when unset. */
@@ -428,7 +437,7 @@ export async function transcribeWithMistral(
 ): Promise<string> {
 	const apiKey = (options.apiKey ?? (await getMistralApiKey())).trim();
 	if (!apiKey) {
-		throw new Error('Enter the Mistral API key on the Speech Entry configuration page first.');
+		throw new Error('Enter the Mistral API key in Speech Settings first.');
 	}
 	const model = (options.model ?? (await getMistralModel())).trim() || MISTRAL_TRANSCRIPTION_MODEL;
 	const tag = options.language ?? (await getSpeechLanguage());

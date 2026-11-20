@@ -1,5 +1,14 @@
 # Voice Entry Improvements
 
+Contents:
+
+- Context
+- How it works today
+- Gaps and next-project ideas
+- Status
+- Decisions
+- Implementation order
+
 ## Context
 
 Found the key files. Let me look at the voice entry page, the NLP parser, and the speech service.
@@ -25,8 +34,44 @@ It's well built: clean separation of transcription/parsing/UI, solid unit tests 
 3. ✅ **Number words and locale-aware amounts.** Only digit tokens are parsed (`nlpEntry.ts:158`); "twenty-five euros" from Voxtral yields no amount. Also "1.500,50" style thousands separators get misread as decimals by `\d+(?:[.,]\d+)?`.
 4. ❌ **Date/time expressions.** `buildTransaction` always stamps today (`nlpEntry.ts:493`). "yesterday", "last Friday" are natural voice input and currently land in the note.
 5. ✅ **Editable transcript + re-parse, and live interim parsing.** The built-in engine only parses the final result (`voice-entry/+page.svelte:104`), and once parsed the transcript can't be corrected before "Open in Editor" — a misheard word forces a full redo. Making the transcript editable with re-parse (and parsing interim results) would smooth the loop.
-6. **Split/multi-transaction utterances.** "60 euros at Lidl and 20 at the pharmacy" parses as one garbled transaction; detecting conjunctions and offering multiple entries is a natural voice feature.
-7. **Correction learning.** When the user edits a parsed transaction in the editor, recording the correction (spoken fragment → actual payee/account) would let `refineFromMatches` improve over time.
-8. **On-device STT option.** The built-in engine sends audio to Google servers; a local Whisper/WASM engine would be the privacy play if that matters to you.
+6. ❌ **Split/multi-transaction utterances.** "60 euros at Lidl and 20 at the pharmacy" parses as one garbled transaction; detecting conjunctions and offering multiple entries is a natural voice feature.
+7. ❌ **Correction learning.** When the user edits a parsed transaction in the editor, recording the correction (spoken fragment → actual payee/account) would let `refineFromMatches` improve over time.
+8. ❌ **On-device STT option.** The built-in engine sends audio to Google servers; a local Whisper/WASM engine would be the privacy play if that matters to you.
 
-My recommendation for the next project: **#1 (ledger-aware resolution auto-applied on the voice page) + #2/#3 for the configured language** — they're the highest-friction gaps today and reuse the search/refine machinery that already exists in quick-entry. #4 is small and high-value on top of that.
+Recommendation for the next project: **#1 (ledger-aware resolution auto-applied on the voice page) + #2/#3 for the configured language** — they're the highest-friction gaps today and reuse the search/refine machinery that already exists in quick-entry. #4 is small and high-value on top of that.
+
+
+## Status
+
+Done: #2 (multilingual), #3 (number words/amounts), #5 (editable transcript). Deferred (rare use): #4, #6-#8.
+In progress: #1, ledger-aware entity resolution, plus merging Voice Entry into Quick Entry.
+
+## Decisions
+
+**Merge Voice Entry into Quick Entry.** Both run the same pipeline (text -> parse -> editor); voice only changes how the text is produced, and Quick Entry already has search, templates and refinement. Voice becomes a mic button in the Quick Entry input row, shown when **Voice mode** is toggled on in the toolbar menu (device setting). The `/tools/voice-entry` page and its navigation link are removed; only the engine/language/key config page stays (reached from Settings and the menu).
+
+**BQL on demand, no precomputed vocabulary.** The ledger is in memory and BQL is fast, so there is no cache to invalidate. BQL cannot fuzzy-match ("Rewe" heard as "Reve"), so BQL narrows the data and JS ranks it:
+
+1. `SELECT DISTINCT payee` -> fuzzy-match the spoken payee in JS (token windows, prefix, edit distance; unmatched words go to the note).
+2. For the matched payee only, fetch its postings (`account, date, number`) restricted to Expenses/Assets/Liabilities and aggregate in JS. Small result, always fresh. (Raw rows rather than `GROUP BY`, so nothing depends on aggregate support in the engine.)
+
+Device-only (unsynced) transactions are invisible to BQL, so their payees/postings are merged in from the xact store.
+
+**Account scope.** Expense side: `Expenses`. Paid-with side: `Assets` and `Liabilities`. Income and transfers keep the parser's existing detection; transfers only get account-name matching.
+
+**Payee and narration stay separate.** Payee = who (matched against history). Narration = what for (never matched; used only as context to pick an account). `COALESCE(payee, narration)` from `/payees` is not reused.
+
+**Payee -> account is one-to-many** (Lidl -> Groceries and Auto:Electricity). Per payee, accounts are ranked:
+
+1. Words in the utterance matching an account name segment win ("for electricity").
+2. Otherwise frequency x recency, nudged by closeness to the account's typical amount.
+3. If the leader holds under ~70% of the weight, mark it *ambiguous*, keep the top pick, set needs-review and show the alternatives as tappable chips.
+
+The paid-with account is resolved the same way; an account explicitly named in the phrase beats history.
+
+## Implementation order
+
+1. `utils/entityResolution.ts` (pure matcher/ranker + unit tests) and `services/entityResolutionService.ts` (BQL lookups).
+2. Wire into Quick Entry; `refineFromMatches` stays as fallback.
+3. `VoiceInputButton` + Voice mode toggle; delete the Voice Entry page and nav link; update help docs.
+4. Latency of the distinct-payee query on a large book is unmeasured. Check it; add a cache only if slow.

@@ -31,7 +31,7 @@ These apply only to this device and aren't included in exports or in the setting
 
 - **OPFS Storage** — opens [File Storage](/help/opfs-file-storage) to browse the app's private storage directly.
 - **JSON Editor** — edits the raw settings as JSON, for advanced or bulk changes.
-- **Speech Entry** — opens the [Speech Entry](/help/voice-entry) configuration: the transcription engine (built-in browser recognition or Mistral Voxtral), the language, and the Mistral API key.
+- **Speech Settings** — opens the [speech configuration](/help/voice-entry) used by Quick Entry's Voice mode: the transcription engine (built-in browser recognition or Mistral Voxtral), the language, and the Mistral API key.
 - **WebDAV Config** — sets the WebDAV folder URL and credentials used by [WebDAV Backup](/help/webdav-backup).
 
 Tap the checkmark button to save your changes.

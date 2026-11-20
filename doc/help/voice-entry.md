@@ -1,10 +1,10 @@
-# Speech Entry
+# Speech Settings
 
-Speak a transaction instead of typing it. The page turns your speech into text, parses the amount, payee and accounts out of it, and shows a Beancount preview you can open in the transaction editor.
+Speak a transaction instead of typing it. Turn on **Voice mode** in the [Quick Entry](/help/quick-entry) menu to get a microphone button next to the text box; what you say is transcribed into that box and handled exactly like typed text.
 
 ## Engines
 
-Two transcription engines are available; choose one on the **configuration** page (toolbar menu → **Configuration**, or `/tools/voice-entry/config`).
+Two transcription engines are available; choose one on the **configuration** page (Settings → **Speech Settings**, or Quick Entry's menu → **Speech settings**).
 
 | Engine                 | How it works                                                                                                 | Needs               |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------- |
@@ -27,15 +27,13 @@ The engine choice and the language are stored on this device.
 
 Tap **Save** to keep the changes.
 
-## Using the page
+## Using voice mode
 
-1. Tap the microphone button and speak, e.g. "Paid 25 euros at Starbucks".
-2. With the built-in engine, tap again to stop; with Mistral, tap the stop button and wait for the transcription.
-3. Check the parsed fields and the transaction preview, then **Open in Editor** to adjust and save it.
+1. In Quick Entry, open the menu (⋮) and switch **Voice mode** on. The choice is remembered on this device.
+2. Tap the microphone button and speak, e.g. "Paid 25 euros at Starbucks".
+3. With the built-in engine, tap again to stop; with Mistral, tap the stop button and wait for the transcription.
 
-You can also type a phrase into the text field and tap **Parse** — useful when the microphone is unavailable. The example phrases fill the field for you.
-
-If the "from" account is only a partial name, tap **Resolve** to look it up in the ledger.
+The transcript lands in the text box, where you can correct it; the suggestion updates as you edit.
 
 ## Amounts
 

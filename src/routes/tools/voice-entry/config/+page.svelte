@@ -180,7 +180,7 @@
 	<HelpButton topic="voice-entry" variant="menu-item" />
 {/snippet}
 
-<Toolbar title="Speech Entry Configuration" {menuItems} />
+<Toolbar title="Speech Settings" {menuItems} />
 
 <main class="mx-auto w-full max-w-2xl space-y-4 p-4 pb-24">
 	{#if !loaded}
@@ -193,8 +193,8 @@
 			<div class="card-body gap-3 p-4">
 				<h2 class="card-title text-lg">Transcription engine</h2>
 				<p class="text-sm opacity-70">
-					Which service turns your speech into text on the
-					<a class="link link-primary" href="/tools/voice-entry">Speech Entry</a> page.
+					Which service turns your speech into text in
+					<a class="link link-primary" href="/tx/quick-entry">Quick Entry</a>'s Voice mode.
 				</p>
 
 				<label

@@ -230,6 +230,8 @@ export const DeviceSettingKeys = {
 	// BCP-47 language tag for transcription ('en-US', 'de-DE', …). Empty: the
 	// engine's own default.
 	speechLanguage: 'speech.language',
+	// Whether Quick Entry shows the microphone button (Voice mode). Boolean; default off.
+	speechVoiceMode: 'speech.voice-mode',
 	// Mistral API key for Voxtral transcription. Device-only: it is a credential
 	// and is never exported or synced.
 	mistralApiKey: 'speech.mistral.api-key',

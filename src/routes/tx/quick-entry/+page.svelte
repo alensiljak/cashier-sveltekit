@@ -11,13 +11,21 @@
 	import fullLedgerService from '#lib/services/ledgerWorkerClient';
 	import { parseEntitySearchTerms } from '#lib/utils/entitySearch';
 	import { buildLooseTransactionConditions } from '#lib/services/entitySearchService';
+	import { resolveAgainstLedger } from '#lib/services/entityResolutionService';
+	import { applyAlternative } from '#lib/utils/entityResolution';
+	import { getVoiceMode, setVoiceMode } from '#lib/services/speechService';
+	import VoiceInputButton from '#lib/components/VoiceInputButton.svelte';
 	import {
 		type ParseResult,
+		type ResolvableField,
 		parseTranscript,
 		buildTransaction,
 		refineFromMatches
 	} from '#lib/utils/nlpEntry';
 	import CodeIcon from '@lucide/svelte/icons/code';
+	import MicIcon from '@lucide/svelte/icons/mic';
+	import MicOffIcon from '@lucide/svelte/icons/mic-off';
+	import SettingsIcon from '@lucide/svelte/icons/settings';
 	import FilePlusIcon from '@lucide/svelte/icons/file-plus';
 	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
 	import HelpButton from '#lib/help/HelpButton.svelte';
@@ -69,7 +77,14 @@
 
 	let searchRequestId = 0;
 
-	function runParse() {
+	let parseRequestId = 0;
+
+	/**
+	 * Parses the phrase, resolves payee/accounts against the ledger (payee history, account
+	 * names), then lets the search results refine whatever is still unresolved.
+	 */
+	async function runParse() {
+		const requestId = ++parseRequestId;
 		const text = searchText.trim();
 		if (text.length < MIN_QUERY_LENGTH) {
 			parseResult = null;
@@ -77,9 +92,42 @@
 			return;
 		}
 		const result = parseTranscript(text, { defaultCurrency });
+		await resolveAgainstLedger(result, text);
+		if (requestId !== parseRequestId) return;
 		refineFromMatches(result, templates);
 		parseResult = result;
 		nlpXact = buildTransaction(result, { defaultCurrency });
+	}
+
+	const RESOLVABLE_FIELDS: Array<{ field: ResolvableField; label: string }> = [
+		{ field: 'payee', label: 'Payee' },
+		{ field: 'toAccount', label: 'Account' },
+		{ field: 'fromAccount', label: 'Paid with' }
+	];
+
+	function chooseAlternative(field: ResolvableField, value: string) {
+		if (!parseResult) return;
+		applyAlternative(parseResult, field, value);
+		nlpXact = buildTransaction(parseResult, { defaultCurrency });
+	}
+
+	// --- Voice mode ---
+
+	let voiceMode = $state(false);
+	let voiceInterim = $state('');
+	let voiceError = $state('');
+
+	function toggleVoiceMode() {
+		voiceMode = !voiceMode;
+		voiceError = '';
+		voiceInterim = '';
+		void setVoiceMode(voiceMode);
+	}
+
+	function onVoiceTranscript(text: string) {
+		voiceInterim = '';
+		searchText = text;
+		void runSearchAndParse();
 	}
 
 	// Runs the loose multi-term search, then refines the NLP suggestion from its results
@@ -88,7 +136,7 @@
 		const requestId = ++searchRequestId;
 		await runSearch();
 		if (requestId !== searchRequestId) return;
-		runParse();
+		await runParse();
 	}
 
 	function useExample(phrase: string) {
@@ -134,6 +182,7 @@
 	 * Best-effort: with no book loaded (or a ledger error) the parser's EUR default stands.
 	 */
 	onMount(async () => {
+		voiceMode = await getVoiceMode().catch(() => false);
 		try {
 			const currencies = await fullLedgerService.getOperatingCurrencies();
 			if (currencies[0]) defaultCurrency = currencies[0];
@@ -399,20 +448,41 @@
 			<HelpButton topic="quick-entry" />
 		{/snippet}
 		{#snippet menuItems()}
+			<ToolbarMenuItem
+				text={voiceMode ? 'Voice mode: on' : 'Voice mode: off'}
+				Icon={voiceMode ? MicIcon : MicOffIcon}
+				onclick={toggleVoiceMode}
+			/>
+			<ToolbarMenuItem text="Speech settings" Icon={SettingsIcon} targetNav="/tools/voice-entry/config" />
 			<ToolbarMenuItem text="Show Query" Icon={CodeIcon} onclick={() => queryDialog?.showModal()} />
 		{/snippet}
 	</Toolbar>
 
 	<section class="flex flex-1 flex-col gap-3 overflow-y-auto touch-pan-y p-3">
 		<!-- Entry input -->
-		<input
-			class="input mx-auto w-11/12 max-w-2xl rounded-full border-2 border-primary bg-primary/5 shadow-none focus:outline-none"
-			type="search"
-			placeholder="e.g. 10 euros for Decathlon, t-shirt"
-			use:focusOnMount
-			bind:value={searchText}
-			oninput={onInput}
-		/>
+		<div class="mx-auto flex w-11/12 max-w-2xl items-center gap-2">
+			<input
+				class="input min-w-0 flex-1 rounded-full border-2 border-primary bg-primary/5 shadow-none focus:outline-none"
+				type="search"
+				placeholder="e.g. 10 euros for Decathlon, t-shirt"
+				use:focusOnMount
+				bind:value={searchText}
+				oninput={onInput}
+			/>
+			{#if voiceMode}
+				<VoiceInputButton
+					onTranscript={onVoiceTranscript}
+					bind:interim={voiceInterim}
+					bind:error={voiceError}
+				/>
+			{/if}
+		</div>
+		{#if voiceMode && voiceInterim}
+			<p class="mx-auto w-11/12 max-w-2xl text-sm italic opacity-50">{voiceInterim}</p>
+		{/if}
+		{#if voiceMode && voiceError}
+			<div class="alert alert-error mx-auto w-11/12 max-w-2xl text-sm">{voiceError}</div>
+		{/if}
 
 		<!-- Optional filters -->
 		<AccordionSection
@@ -518,6 +588,23 @@
 					<div class:pointer-events-none={isSelecting} class:opacity-50={isSelecting}>
 						<JournalXactRow xact={nlpXact} onclick={selectNlpXact} />
 					</div>
+					{#each RESOLVABLE_FIELDS as { field, label } (field)}
+						{@const resolution = parseResult.resolution?.[field]}
+						{#if resolution?.kind === 'ambiguous'}
+							<div class="flex flex-wrap items-center gap-1 text-xs">
+								<span class="opacity-60">{label}?</span>
+								{#each resolution.alternatives as alternative (alternative)}
+									<button
+										type="button"
+										class="btn btn-outline btn-xs h-auto break-all py-1 text-left font-normal normal-case"
+										onclick={() => chooseAlternative(field, alternative)}
+									>
+										{alternative}
+									</button>
+								{/each}
+							</div>
+						{/if}
+					{/each}
 				</div>
 
 				<div class="divider my-0 text-xs text-base-content/50">existing transactions</div>

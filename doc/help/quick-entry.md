@@ -6,9 +6,13 @@ Type a description and Quick Entry does two things at once:
    guessed expense/income account are extracted and shown as a "Suggested new transaction"
    at the top. Anything it had to guess (e.g. the counter-account) is flagged with
    `!` and the suggestion is marked **needs review**; tap it to open the result in
-   the editor with today's date, ready to adjust and save. Once a search below
-   returns matches, the suggestion is refined using the accounts from your most
-   frequently matching past transactions.
+   the editor with today's date, ready to adjust and save. The payee is matched
+   against the payees in your book (a misheard "Reve" finds "Rewe") and the accounts come from
+   that payee's history. A payee used for several accounts (Lidl for groceries and electricity)
+   is resolved by what you said — "for electricity" picks the electricity account — and
+   otherwise by how often and how recently each was used. When no account is clearly ahead,
+   tappable alternatives appear under the suggestion and it stays marked **needs review**.
+   Anything still unresolved is refined from your most frequently matching past transactions.
 2. **Searches your existing transactions** for reuse as a template — see below.
 
 ## Wording
@@ -28,6 +32,10 @@ Beancount splits a transaction description in two: the **payee** is _who_ you pa
   sides are your own accounts.
 
 Try phrases like "10 euros for tickets at Brumby's" or "Received 500 euros salary".
+
+## Voice mode
+
+The menu (⋮) has a **Voice mode** switch. When on, a microphone button appears beside the text box and your speech is transcribed into it. Engine, language and API key are under **Speech settings** — see [Speech Settings](/help/voice-entry).
 
 ## Search
 

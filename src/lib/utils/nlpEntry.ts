@@ -1,7 +1,20 @@
 import { Xact, Posting } from '#lib/data/model';
 
+/** How a field was resolved against the ledger (see `entityResolution.ts`). */
+export type ResolutionKind = 'exact' | 'fuzzy' | 'guessed' | 'ambiguous';
+
+export interface FieldResolution {
+	kind: ResolutionKind;
+	/** Other plausible values, best first; tappable when `kind` is `ambiguous`. */
+	alternatives: string[];
+}
+
+export type ResolvableField = 'payee' | 'toAccount' | 'fromAccount';
+
 export interface ParseResult {
 	payee?: string;
+	/** Filled by `resolveEntities`: how each field was matched against the ledger. */
+	resolution?: Partial<Record<ResolvableField, FieldResolution>>;
 	amount?: number;
 	currency?: string;
 	fromAccount?: string;

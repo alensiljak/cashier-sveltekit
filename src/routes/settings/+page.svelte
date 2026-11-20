@@ -404,7 +404,7 @@
 	{#snippet menuItems()}
 		<ToolbarMenuItem text="OPFS Storage" Icon={BoxIcon} onclick={onOpfsClick} />
 		<ToolbarMenuItem text="JSON Editor" Icon={FileBraces} targetNav="/settings/json-editor" />
-		<ToolbarMenuItem text="Speech Entry" Icon={MicIcon} targetNav="/tools/voice-entry/config" />
+		<ToolbarMenuItem text="Speech Settings" Icon={MicIcon} targetNav="/tools/voice-entry/config" />
 	{/snippet}
 </Toolbar>
 
