@@ -132,15 +132,70 @@ function guessAccount(
 	return undefined;
 }
 
-function parseCurrency(text: string): {
+/**
+ * A numeric amount token: digits with optional `.`/`,` separator groups. Both separators are
+ * allowed and may repeat, so locale-grouped amounts ("1.500,50", "1,500.50", "1.500.000")
+ * arrive here whole instead of being truncated at the first separator.
+ */
+const AMOUNT_TOKEN = String.raw`\d+(?:[.,]\d+)*`;
+
+/**
+ * Turns a raw amount token into a number, deciding which separator is the decimal point from
+ * the token's shape rather than assuming a locale — speech input mixes both conventions.
+ *
+ * - both `.` and `,` present: the LAST one is the decimal separator, the other groups thousands
+ *   ("1.500,50" -> 1500.5, "1,500.50" -> 1500.5)
+ * - one separator kind, repeated: it groups thousands ("1.500.000" -> 1500000)
+ * - one separator, exactly three digits after it, no leading zero: groups thousands
+ *   ("1.500" -> 1500, "1,500" -> 1500) — the ambiguous case, resolved the way people speak
+ * - otherwise: it is the decimal separator ("25,50" -> 25.5, "0.500" -> 0.5)
+ *
+ * Returns undefined for a token with no digits.
+ */
+export function parseAmountToken(raw: string): number | undefined {
+	const token = raw.trim();
+	if (!/\d/.test(token)) return undefined;
+
+	const lastDot = token.lastIndexOf('.');
+	const lastComma = token.lastIndexOf(',');
+
+	if (lastDot !== -1 && lastComma !== -1) {
+		const decimalSep = lastDot > lastComma ? '.' : ',';
+		const groupSep = decimalSep === '.' ? ',' : '.';
+		const normalized = token.split(groupSep).join('').replace(decimalSep, '.');
+		return parseFloat(normalized);
+	}
+
+	const sep = lastDot !== -1 ? '.' : lastComma !== -1 ? ',' : '';
+	if (!sep) return parseFloat(token);
+
+	const parts = token.split(sep);
+	// A repeated separator can only be grouping ("1.500.000").
+	if (parts.length > 2) return parseFloat(parts.join(''));
+
+	const [whole, fraction] = parts as [string, string];
+	// "1.500" / "1,500": three trailing digits and no leading zero reads as a thousands group.
+	if (fraction.length === 3 && whole !== '0' && !whole.startsWith('0')) {
+		return parseFloat(whole + fraction);
+	}
+	return parseFloat(`${whole}.${fraction}`);
+}
+
+function parseCurrency(
+	text: string,
+	defaultCurrency: string
+): {
 	amount?: number;
 	currency: string;
 	matchedWords: string[];
 } {
 	const patterns = [
-		/([€$£¥])\s*(\d+(?:[.,]\d+)?)/,
-		/(\d+(?:[.,]\d+)?)\s*([€$£¥])/,
-		/(\d+(?:[.,]\d+)?)\s+(euros?|dollars?|pounds?|yen|francs?|kunas?|kune|usd|eur|gbp|chf|hrk)/i
+		new RegExp(String.raw`([€$£¥])\s*(${AMOUNT_TOKEN})`),
+		new RegExp(String.raw`(${AMOUNT_TOKEN})\s*([€$£¥])`),
+		new RegExp(
+			String.raw`(${AMOUNT_TOKEN})\s+(euros?|dollars?|pounds?|yen|francs?|kunas?|kune|usd|eur|gbp|chf|hrk)`,
+			'i'
+		)
 	];
 
 	for (const re of patterns) {
@@ -158,7 +213,8 @@ function parseCurrency(text: string): {
 			rawCurrency = m[2];
 		}
 
-		const amount = parseFloat(rawAmount.replace(',', '.'));
+		const amount = parseAmountToken(rawAmount);
+		if (amount === undefined) continue;
 		const symbolMap: Record<string, string> = { '€': 'EUR', $: 'USD', '£': 'GBP', '¥': 'JPY' };
 		const currency =
 			symbolMap[rawCurrency] ??
@@ -170,16 +226,15 @@ function parseCurrency(text: string): {
 
 	// Only a standalone numeric token counts as a bare amount — skip digits embedded in an
 	// alphanumeric word like "n26" (an account name fragment), which isn't an amount.
-	const numMatch = text.match(/(?:^|\s)(\d+(?:[.,]\d+)?)(?=\s|$)/);
+	const numMatch = text.match(new RegExp(String.raw`(?:^|\s)(${AMOUNT_TOKEN})(?=\s|$)`));
 	if (numMatch) {
-		return {
-			amount: parseFloat(numMatch[1].replace(',', '.')),
-			currency: 'EUR',
-			matchedWords: [numMatch[1]]
-		};
+		const amount = parseAmountToken(numMatch[1]);
+		if (amount !== undefined) {
+			return { amount, currency: defaultCurrency, matchedWords: [numMatch[1]] };
+		}
 	}
 
-	return { currency: 'EUR', matchedWords: [] };
+	return { currency: defaultCurrency, matchedWords: [] };
 }
 
 /*
@@ -297,13 +352,23 @@ function computeLeftover(text: string, consumed: Set<string>): string[] {
 		});
 }
 
-export function parseTranscript(text: string): ParseResult {
+/** Options for `parseTranscript`. */
+export interface ParseOptions {
+	/**
+	 * Currency to assume when the utterance names none ("50 at billa"). Defaults to EUR so the
+	 * parser stays pure and synchronous; callers with a loaded book pass its operating currency.
+	 */
+	defaultCurrency?: string;
+}
+
+export function parseTranscript(text: string, options: ParseOptions = {}): ParseResult {
 	const lower = text.toLowerCase();
 	const matched: string[] = [];
 	let confidence = 0;
 	const consumedWords = new Set<string>();
+	const defaultCurrency = options.defaultCurrency?.trim().toUpperCase() || 'EUR';
 
-	const { amount, currency, matchedWords: amountWords } = parseCurrency(text);
+	const { amount, currency, matchedWords: amountWords } = parseCurrency(text, defaultCurrency);
 	amountWords.forEach((w) => consumedWords.add(normalizeWord(w)));
 	if (amount !== undefined) {
 		matched.push(`amount: ${amount} ${currency}`);
@@ -497,7 +562,7 @@ export function refineFromMatches(result: ParseResult, matches: Xact[]): void {
 	result.needsReview = !result.payee || result.amount === undefined;
 }
 
-export function buildTransaction(result: ParseResult): Xact {
+export function buildTransaction(result: ParseResult, options: ParseOptions = {}): Xact {
 	const xact = new Xact();
 	xact.date = new Date().toISOString().substring(0, 10);
 	// Transfers have no counterparty; everything else gets a visible placeholder to fix up.
@@ -508,7 +573,7 @@ export function buildTransaction(result: ParseResult): Xact {
 	const posting1 = new Posting();
 	posting1.account = result.toAccount ?? 'Expenses:Unknown';
 	posting1.amount = result.amount ?? 0;
-	posting1.currency = result.currency ?? 'EUR';
+	posting1.currency = result.currency ?? options.defaultCurrency?.trim().toUpperCase() ?? 'EUR';
 
 	const posting2 = new Posting();
 	posting2.account = result.fromAccount ?? 'Assets:Unknown';

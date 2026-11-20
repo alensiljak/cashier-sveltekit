@@ -2,6 +2,7 @@ import { expect, test } from 'vitest';
 import {
 	buildTransaction,
 	formatBeancount,
+	parseAmountToken,
 	parseTranscript,
 	pickBestMatch,
 	refineFromMatches
@@ -230,4 +231,95 @@ test('a query with no search matches still builds a follow-up transaction carryi
 	expect(xact.payee).toBe('Decathlon');
 	expect(xact.note).toBe('t-shirt');
 	expect(xact.flag).toBe('!');
+});
+
+// --- Locale-aware amounts ---
+
+test('parseAmountToken reads a plain integer and a plain decimal', () => {
+	expect(parseAmountToken('25')).toBe(25);
+	expect(parseAmountToken('25.50')).toBe(25.5);
+	expect(parseAmountToken('25,50')).toBe(25.5);
+});
+
+test('parseAmountToken treats the last separator as decimal when both are present', () => {
+	// Continental grouping: dots group, comma is the decimal point.
+	expect(parseAmountToken('1.500,50')).toBe(1500.5);
+	// Anglo grouping: commas group, dot is the decimal point.
+	expect(parseAmountToken('1,500.50')).toBe(1500.5);
+	expect(parseAmountToken('1.234.567,89')).toBe(1234567.89);
+});
+
+test('parseAmountToken treats a repeated separator as grouping', () => {
+	expect(parseAmountToken('1.500.000')).toBe(1500000);
+	expect(parseAmountToken('1,500,000')).toBe(1500000);
+});
+
+test('parseAmountToken reads a lone three-digit group as thousands, not a decimal', () => {
+	expect(parseAmountToken('1.500')).toBe(1500);
+	expect(parseAmountToken('1,500')).toBe(1500);
+});
+
+test('parseAmountToken keeps a leading-zero fraction as a decimal', () => {
+	expect(parseAmountToken('0.500')).toBe(0.5);
+	expect(parseAmountToken('0,500')).toBe(0.5);
+});
+
+test('parseAmountToken returns undefined for a token with no digits', () => {
+	expect(parseAmountToken('euros')).toBeUndefined();
+});
+
+test('a thousands-separated amount is not truncated at the first separator', () => {
+	const result = parseTranscript('paid 1.500,50 euros at billa');
+
+	expect(result.amount).toBe(1500.5);
+	expect(result.currency).toBe('EUR');
+	expect(result.payee).toBe('Billa');
+});
+
+test('an anglo-grouped amount with a currency symbol parses whole', () => {
+	const result = parseTranscript('paid $1,500.50 at billa');
+
+	expect(result.amount).toBe(1500.5);
+	expect(result.currency).toBe('USD');
+});
+
+test('a bare grouped amount is not truncated either', () => {
+	const result = parseTranscript('billa 1.500');
+
+	expect(result.amount).toBe(1500);
+});
+
+// --- Default currency ---
+
+test('an amount with no currency word uses the caller default', () => {
+	const result = parseTranscript('50 at billa', { defaultCurrency: 'USD' });
+
+	expect(result.amount).toBe(50);
+	expect(result.currency).toBe('USD');
+});
+
+test('an explicit currency word still wins over the caller default', () => {
+	const result = parseTranscript('50 euros at billa', { defaultCurrency: 'USD' });
+
+	expect(result.currency).toBe('EUR');
+});
+
+test('the default currency is normalised to upper case', () => {
+	const result = parseTranscript('50 at billa', { defaultCurrency: ' usd ' });
+
+	expect(result.currency).toBe('USD');
+});
+
+test('the default currency reaches the built transaction posting', () => {
+	const result = parseTranscript('50 at billa', { defaultCurrency: 'USD' });
+	const xact = buildTransaction(result, { defaultCurrency: 'USD' });
+
+	expect(xact.postings[0]?.currency).toBe('USD');
+});
+
+test('with no options the parser keeps its EUR default', () => {
+	const result = parseTranscript('50 at billa');
+
+	expect(result.currency).toBe('EUR');
+	expect(buildTransaction(result).postings[0]?.currency).toBe('EUR');
 });

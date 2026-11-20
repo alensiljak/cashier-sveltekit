@@ -51,6 +51,8 @@
 	let transaction = $state<Xact | null>(null);
 	let errorMsg = $state('');
 	let resolvingFrom = $state(false);
+	/** The book's operating currency, assumed when the utterance names none. */
+	let defaultCurrency = $state('EUR');
 
 	/** (Re)parses the phrase and rebuilds the transaction. */
 	function reparse(text: string) {
@@ -59,8 +61,8 @@
 			transaction = null;
 			return;
 		}
-		parseResult = parseTranscript(text);
-		transaction = buildTransaction(parseResult);
+		parseResult = parseTranscript(text, { defaultCurrency });
+		transaction = buildTransaction(parseResult, { defaultCurrency });
 	}
 
 	/** Puts recognised text into the input box and parses it. */
@@ -82,10 +84,24 @@
 		engineLoaded = true;
 	}
 
+	/**
+	 * Reads the book's operating currency so a bare "50 at billa" lands in the right commodity.
+	 * Best-effort: with no book loaded (or a ledger error) the parser's EUR default stands.
+	 */
+	async function loadDefaultCurrency() {
+		try {
+			const currencies = await fullLedgerService.getOperatingCurrencies();
+			if (currencies[0]) defaultCurrency = currencies[0];
+		} catch {
+			// No book yet — keep the default.
+		}
+	}
+
 	// Runs once on mount; the configuration page is a separate route, so the
 	// engine is read again whenever this page is opened.
 	onMount(() => {
 		void loadEngine();
+		void loadDefaultCurrency();
 	});
 
 	// --- Built-in engine (Web Speech API) ---

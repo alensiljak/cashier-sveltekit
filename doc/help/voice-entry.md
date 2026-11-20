@@ -36,3 +36,9 @@ Tap **Save** to keep the changes.
 You can also type a phrase into the text field and tap **Parse** — useful when the microphone is unavailable. The example phrases fill the field for you.
 
 If the "from" account is only a partial name, tap **Resolve** to look it up in the ledger.
+
+## Amounts
+
+Amounts are read in either decimal convention, so both "25,50" and "25.50" mean twenty-five fifty. Thousands separators are understood too: "1.500,50" and "1,500.50" both parse as 1500.50, and a lone group of three digits ("1.500") is read as 1500 rather than 1.5.
+
+When the phrase names no currency ("50 at Billa"), the amount uses the book's operating currency — the `operating_currency` option in your Beancount file. Naming a currency ("50 euros", "$50") always overrides it.

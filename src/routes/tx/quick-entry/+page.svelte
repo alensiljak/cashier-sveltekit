@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { tick } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
 	import AccordionSection from '#lib/components/AccordionSection.svelte';
@@ -54,6 +54,8 @@
 
 	let parseResult = $state<ParseResult | null>(null);
 	let nlpXact = $state<Xact | null>(null);
+	/** The book's operating currency, assumed when the phrase names none. */
+	let defaultCurrency = $state('EUR');
 
 	// Filters (all off by default)
 	let filterDateFrom = $state('');
@@ -74,10 +76,10 @@
 			nlpXact = null;
 			return;
 		}
-		const result = parseTranscript(text);
+		const result = parseTranscript(text, { defaultCurrency });
 		refineFromMatches(result, templates);
 		parseResult = result;
-		nlpXact = buildTransaction(result);
+		nlpXact = buildTransaction(result, { defaultCurrency });
 	}
 
 	// Runs the loose multi-term search, then refines the NLP suggestion from its results
@@ -126,6 +128,19 @@
 			void runSearchAndParse();
 		}, 400);
 	}
+
+	/**
+	 * Reads the book's operating currency so a bare "50 at billa" lands in the right commodity.
+	 * Best-effort: with no book loaded (or a ledger error) the parser's EUR default stands.
+	 */
+	onMount(async () => {
+		try {
+			const currencies = await fullLedgerService.getOperatingCurrencies();
+			if (currencies[0]) defaultCurrency = currencies[0];
+		} catch {
+			// No book yet — keep the default.
+		}
+	});
 
 	// Re-run search (and re-refine the suggestion) when filters change while there is active search text
 	$effect(() => {
