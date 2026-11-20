@@ -90,10 +90,10 @@ describe('engine settings', () => {
 describe('Voxtral models and their languages', () => {
 	it('offers only file-transcription models', () => {
 		expect(VOXTRAL_MODELS.map((model) => model.id)).toEqual([
-			'voxtral-mini-transcribe-3-0',
-			'voxtral-small-transcribe-3-0'
+			'voxtral-mini-transcribe-3',
+			'voxtral-small-transcribe-3'
 		]);
-		expect(MISTRAL_TRANSCRIPTION_MODEL).toBe('voxtral-mini-transcribe-3-0');
+		expect(MISTRAL_TRANSCRIPTION_MODEL).toBe('voxtral-mini-transcribe-3');
 	});
 
 	it('lists the 53 languages Voxtral 3 file transcription supports', () => {
@@ -107,8 +107,8 @@ describe('Voxtral models and their languages', () => {
 	});
 
 	it('recognises known model ids and falls back for manual ones', () => {
-		expect(isKnownVoxtralModel('voxtral-small-transcribe-3-0')).toBe(true);
-		expect(isKnownVoxtralModel(' voxtral-mini-transcribe-3-0 ')).toBe(true);
+		expect(isKnownVoxtralModel('voxtral-small-transcribe-3')).toBe(true);
+		expect(isKnownVoxtralModel(' voxtral-mini-transcribe-3 ')).toBe(true);
 		expect(isKnownVoxtralModel('voxtral-mini-tts-3-0')).toBe(false);
 		expect(languagesForModel('some-future-model')).toBe(VOXTRAL_MODELS[0]!.languages);
 	});
@@ -146,8 +146,8 @@ describe('Voxtral models and their languages', () => {
 	});
 
 	it('uses the same list for both Voxtral models', () => {
-		const mini = speechLanguageOptions('mistral', 'voxtral-mini-transcribe-3-0');
-		const small = speechLanguageOptions('mistral', 'voxtral-small-transcribe-3-0');
+		const mini = speechLanguageOptions('mistral', 'voxtral-mini-transcribe-3');
+		const small = speechLanguageOptions('mistral', 'voxtral-small-transcribe-3');
 		expect(small).toEqual(mini);
 	});
 

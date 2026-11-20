@@ -206,7 +206,7 @@ describe('POST uploads (Mistral Voxtral)', () => {
 	function uploadRequest(headers: Record<string, string> = {}): Request {
 		const form = new FormData();
 		form.append('file', new Blob(['audio'], { type: 'audio/webm' }), 'speech.webm');
-		form.append('model', 'voxtral-mini-transcribe-3-0');
+		form.append('model', 'voxtral-mini-transcribe-3');
 		return proxyRequest(MISTRAL, { method: 'POST', headers, body: form });
 	}
 

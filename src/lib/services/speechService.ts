@@ -75,8 +75,8 @@ export const BUILTIN_SPEECH_LANGUAGES: ReadonlyArray<{ tag: string; label: strin
  *
  * Transcribed from
  * https://docs.mistral.ai/studio/audio/specs-and-limits/languages on
- * 2026-11-19, for `voxtral-mini-transcribe-3-0` and
- * `voxtral-small-transcribe-3-0` (both list the same 53). Re-check that page
+ * 2026-11-19, for `voxtral-mini-transcribe-3` and
+ * `voxtral-small-transcribe-3` (both list the same 53). Re-check that page
  * when adding a model or bumping a model id: the API rejects a code outside
  * the model's list with HTTP 422.
  */
@@ -150,15 +150,18 @@ export interface VoxtralModel {
  *
  * Only transcribe models belong here: the TTS model (`voxtral-mini-tts-3-0`)
  * and the realtime model answer on other endpoints and would fail here.
+ *
+ * The ids are Mistral's major-version aliases (`-3`), which follow the 3.x
+ * minor releases, so they need no change per release.
  */
 export const VOXTRAL_MODELS: ReadonlyArray<VoxtralModel> = [
 	{
-		id: 'voxtral-mini-transcribe-3-0',
+		id: 'voxtral-mini-transcribe-3',
 		label: 'Voxtral Mini Transcribe 3 (default)',
 		languages: VOXTRAL_3_STT_LANGUAGES
 	},
 	{
-		id: 'voxtral-small-transcribe-3-0',
+		id: 'voxtral-small-transcribe-3',
 		label: 'Voxtral Small Transcribe 3 (higher quality)',
 		languages: VOXTRAL_3_STT_LANGUAGES
 	}
