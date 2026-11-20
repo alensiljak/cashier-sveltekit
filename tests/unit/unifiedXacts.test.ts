@@ -104,7 +104,11 @@ describe('markLatestAssertions', () => {
 	});
 
 	it('marks one assertion per currency', () => {
-		const rows = [assertion('2025-08-15', 'EUR'), assertion('2025-08-10', 'USD'), assertion('2025-08-01', 'EUR')];
+		const rows = [
+			assertion('2025-08-15', 'EUR'),
+			assertion('2025-08-10', 'USD'),
+			assertion('2025-08-01', 'EUR')
+		];
 
 		markLatestAssertions(rows);
 
