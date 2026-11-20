@@ -40,7 +40,6 @@ It's well built: clean separation of transcription/parsing/UI, solid unit tests 
 
 Recommendation for the next project: **#1 (ledger-aware resolution auto-applied on the voice page) + #2/#3 for the configured language** — they're the highest-friction gaps today and reuse the search/refine machinery that already exists in quick-entry. #4 is small and high-value on top of that.
 
-
 ## Status
 
 Done: #2 (multilingual), #3 (number words/amounts), #5 (editable transcript). Deferred (rare use): #4, #6-#8.
@@ -65,7 +64,7 @@ Device-only (unsynced) transactions are invisible to BQL, so their payees/postin
 
 1. Words in the utterance matching an account name segment win ("for electricity").
 2. Otherwise frequency x recency, nudged by closeness to the account's typical amount.
-3. If the leader holds under ~70% of the weight, mark it *ambiguous*, keep the top pick, set needs-review and show the alternatives as tappable chips.
+3. If the leader holds under ~70% of the weight, mark it _ambiguous_, keep the top pick, set needs-review and show the alternatives as tappable chips.
 
 The paid-with account is resolved the same way; an account explicitly named in the phrase beats history.
 

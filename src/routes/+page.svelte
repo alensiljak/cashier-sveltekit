@@ -1,13 +1,10 @@
 <script lang="ts">
 	import JournalCard from '#lib/components/JournalCard.svelte';
 	import CircleAlert from '@lucide/svelte/icons/circle-alert';
-	import FilePlusIcon from '@lucide/svelte/icons/file-plus';
-	import FileTextIcon from '@lucide/svelte/icons/file-text';
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
 	import ScanSearchIcon from '@lucide/svelte/icons/scan-search';
 	import SettingsIcon from '@lucide/svelte/icons/settings';
-	import ZapIcon from '@lucide/svelte/icons/zap';
 	import Toolbar from '../lib/components/Toolbar.svelte';
 	import { goto } from '$app/navigation';
 	import { xact } from '#lib/data/mainStore';
@@ -20,7 +17,7 @@
 	import BudgetCard from '#lib/components/BudgetCard.svelte';
 	import NetWorthCard from '#lib/components/NetWorthCard.svelte';
 	import { onMount, type Component } from 'svelte';
-	import HomeSpeedDialFab from '#lib/components/HomeSpeedDialFab.svelte';
+	import Fab from '#lib/components/FAB.svelte';
 	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
 	import { HomeCardNames } from '#lib/enums';
 	import appService from '#lib/services/appService';
@@ -97,18 +94,9 @@
 		return unsubscribe;
 	});
 
-	async function onNewBlank() {
-		xact.set(Xact.create());
-		await goto('/tx');
-	}
-
 	async function onQuickEntry() {
 		xact.set(Xact.create());
 		await goto('/tx/quick-entry');
-	}
-
-	async function onNote() {
-		await goto('/note');
 	}
 
 	async function handleManualCheck() {
@@ -169,15 +157,7 @@
 		{/each}
 
 		<!-- FAB -->
-		<HomeSpeedDialFab
-			ariaLabel="Add"
-			Icon={PlusIcon}
-			actions={[
-				{ icon: FileTextIcon, label: 'Note', onclick: onNote },
-				{ icon: FilePlusIcon, label: 'Blank transaction', onclick: onNewBlank },
-				{ icon: ZapIcon, label: 'Quick entry', onclick: onQuickEntry }
-			]}
-		/>
+		<Fab Icon={PlusIcon} ariaLabel="Add" onclick={onQuickEntry} />
 	</section>
 
 	{#if showStaleDialog}

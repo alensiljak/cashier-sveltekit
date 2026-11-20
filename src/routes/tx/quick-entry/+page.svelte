@@ -5,7 +5,6 @@
 	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
 	import AccordionSection from '#lib/components/AccordionSection.svelte';
 	import JournalXactRow from '#lib/components/JournalXactRow.svelte';
-	import Fab from '#lib/components/FAB.svelte';
 	import { Xact, Posting } from '#lib/data/model';
 	import { xact as xactStore, xactId } from '#lib/data/mainStore';
 	import fullLedgerService from '#lib/services/ledgerWorkerClient';
@@ -27,6 +26,7 @@
 	import MicOffIcon from '@lucide/svelte/icons/mic-off';
 	import SettingsIcon from '@lucide/svelte/icons/settings';
 	import FilePlusIcon from '@lucide/svelte/icons/file-plus';
+	import FileTextIcon from '@lucide/svelte/icons/file-text';
 	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
 	import HelpButton from '#lib/help/HelpButton.svelte';
 
@@ -40,6 +40,16 @@
 		'Received 500 euros salary',
 		'Transferred 100 euros from checking to savings'
 	];
+
+	async function onBlankXact() {
+		xactStore.set(Xact.create());
+		xactId.set(undefined);
+		await goto('/tx', { replace: true });
+	}
+
+	async function onNote() {
+		await goto('/note');
+	}
 
 	const ACCOUNT_TYPES = ['Assets', 'Liabilities', 'Income', 'Expenses', 'Equity'] as const;
 	const MAX_RESULTS = 10;
@@ -567,6 +577,15 @@
 							</li>
 						{/each}
 					</ul>
+					<div class="divider my-1 text-xs text-base-content/50">or start from scratch</div>
+					<div class="flex gap-4">
+						<button type="button" class="btn btn-outline h-14 flex-1" onclick={onBlankXact}>
+							<FilePlusIcon class="size-4" /> Blank transaction
+						</button>
+						<button type="button" class="btn btn-outline h-14 flex-1" onclick={onNote}>
+							<FileTextIcon class="size-4" /> Note
+						</button>
+					</div>
 				</div>
 			</div>
 		{:else}
@@ -646,8 +665,6 @@
 			{/if}
 		{/if}
 	</section>
-
-	<Fab Icon={FilePlusIcon} ariaLabel="New transaction" onclick={() => goto('/tx')} />
 
 	<!-- BQL query debug dialog -->
 	<dialog bind:this={queryDialog} class="modal">

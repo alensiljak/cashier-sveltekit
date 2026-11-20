@@ -196,10 +196,17 @@ function matchesContext(account: string, context: string[]): boolean {
  * Finds the account a short spoken/parsed name refers to ("savings", "n26 savings",
  * "Groceries"), among `accounts`. Every word of the name must hit some account word.
  */
-export function matchAccountName(name: string, accounts: string[]): FieldResolution & {
-	account: string;
-} | undefined {
-	const tokens = normalizeName(name).split(' ').filter((t) => t.length >= 2);
+export function matchAccountName(
+	name: string,
+	accounts: string[]
+):
+	| (FieldResolution & {
+			account: string;
+	  })
+	| undefined {
+	const tokens = normalizeName(name)
+		.split(' ')
+		.filter((t) => t.length >= 2);
 	if (tokens.length === 0) return undefined;
 
 	const scored: Array<{ account: string; score: number }> = [];
@@ -434,7 +441,11 @@ export async function resolveEntities(
 	} else if (result.isIncome) {
 		// fromAccount = the income source, toAccount = where the money lands.
 		const source = aggregateAccounts(history, INCOME);
-		if (isFallback(result.fromAccount) || !result.fromAccountResolved || !result.fromAccount?.includes(':')) {
+		if (
+			isFallback(result.fromAccount) ||
+			!result.fromAccountResolved ||
+			!result.fromAccount?.includes(':')
+		) {
 			const pick = rankAccounts(source, { context, amount: result.amount, now });
 			if (pick) {
 				result.fromAccount = pick.account;

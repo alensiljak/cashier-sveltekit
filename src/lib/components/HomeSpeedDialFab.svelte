@@ -1,3 +1,9 @@
+<!--
+	NOTE: currently UNUSED. Kept as a sample/reference implementation of a speed-dial FAB.
+	(Home now uses a plain FAB that opens Quick Entry.)
+
+	Speed-dial FAB for Home: one main button expanding into labeled action mini-FABs.
+-->
 <!-- Speed-dial FAB for Home: one main button expanding into labeled action mini-FABs. -->
 <script lang="ts">
 	import { fade, fly } from 'svelte/transition';
