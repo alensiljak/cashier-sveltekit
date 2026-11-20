@@ -20,6 +20,20 @@ test('currency word is not picked as payee', () => {
 	expect(result.currency).toBe('EUR');
 });
 
+test('two spoken numbers with no currency word read as whole and cents', () => {
+	const result = parseTranscript('Lidl, forty-six, forty-eight.');
+
+	expect(result.payee).toBe('Lidl');
+	expect(result.amount).toBe(46.48);
+	expect(result.note).toBeFalsy();
+});
+
+test('a spoken number pair followed by a content word stays a quantity', () => {
+	const result = parseTranscript('two, three coffees at billa');
+
+	expect(result.amount).not.toBe(2.03);
+});
+
 test('expense category keyword sets toAccount, not fromAccount', () => {
 	const result = parseTranscript('15 euro groceries at billa');
 

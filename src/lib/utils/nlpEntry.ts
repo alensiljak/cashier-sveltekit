@@ -424,7 +424,25 @@ function parseNumberWordAmount(
 			};
 		}
 
-		if (mode === 'currency-only' || loneCandidate) continue;
+		if (mode === 'currency-only') continue;
+
+		// "Lidl, forty-six, forty-eight": two spoken numbers in a row, no currency word, read as
+		// whole and cents (46.48). Only a comma/space-separated pair with nothing content-like
+		// after it counts, so "two, three coffees" stays a quantity.
+		const pair = after.match(new RegExp(String.raw`^[\s,]+(${NUMBER_WORD_RUN_SOURCE})\b`, 'i'));
+		if (pair) {
+			const cents = parseNumberWords(pair[1]);
+			const nextWord = after.slice(pair[0].length).trim().split(/\s+/)[0];
+			if (cents !== undefined && cents <= 99 && !(nextWord && isContentWord(nextWord))) {
+				return {
+					amount: withCents(amount, cents),
+					currency: defaultCurrency,
+					matchedWords: [...m[0].split(/\s+/), ...pair[1].split(/\s+/)]
+				};
+			}
+		}
+
+		if (loneCandidate) continue;
 
 		// No currency word: the number must stand alone. Any content word after it means it is
 		// quantifying that word ("one coffee", "two tickets") or naming something ("One Stop").
@@ -629,7 +647,10 @@ function extractPayee(text: string): {
 	);
 	if (payeeWords.length > 0) {
 		return {
-			payee: payeeWords.map((w) => toPayeeName(w.toLowerCase())).join(' '),
+			// Dictation adds punctuation ("Lidl, ..."), which is not part of the name.
+			payee: payeeWords
+				.map((w) => toPayeeName(w.toLowerCase().replace(/[,;:!?]+$/, '')))
+				.join(' '),
 			consumedWords: payeeWords,
 			narrationWords
 		};
