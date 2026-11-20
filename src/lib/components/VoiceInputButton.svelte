@@ -24,13 +24,21 @@
 		type SpeechEngine,
 		type SpeechRecognitionLike
 	} from '#lib/services/speechService';
+	import { deviceSettings, DeviceSettingKeys } from '#lib/settings';
 
 	type Props = {
 		onTranscript: (text: string) => void;
 		interim?: string;
 		error?: string;
+		/** Persistent "missing configuration" message (empty when set up), for the host to show with a link. */
+		setupNotice?: string;
 	};
-	let { onTranscript, interim = $bindable(''), error = $bindable('') }: Props = $props();
+	let {
+		onTranscript,
+		interim = $bindable(''),
+		error = $bindable(''),
+		setupNotice = $bindable('')
+	}: Props = $props();
 
 	let engine = $state<SpeechEngine>('builtin');
 	let language = $state(DEFAULT_SPEECH_LANGUAGE);
@@ -53,8 +61,16 @@
 				engine === 'mistral'
 					? 'This browser cannot record audio, so the Mistral engine is unavailable. Try another browser or switch engines in Speech settings.'
 					: 'Speech recognition is not supported in this browser. Try Chrome or Edge, or switch to Mistral in Speech settings.';
-		} else if (engine === 'mistral' && !(await getMistralApiKey())) {
-			error = 'No Mistral API key is set. Add one in Speech settings.';
+		} else if (engine === 'mistral') {
+			// Persistent (not a transient error): Voxtral needs the Mistral key, and the proxy
+			// key when the server protects the proxy.
+			const missing: string[] = [];
+			if (!(await getMistralApiKey())) missing.push('Mistral API key');
+			if (!((await deviceSettings.get<string>(DeviceSettingKeys.proxyKey)) ?? '').trim())
+				missing.push('proxy key');
+			setupNotice = missing.length
+				? `Voxtral needs a ${missing.join(' and a ')}${missing.includes('proxy key') ? ' (the proxy key is only optional if the proxy is unprotected)' : ''}.`
+				: '';
 		}
 	}
 

@@ -118,6 +118,7 @@
 	let voiceMode = $state(false);
 	let voiceInterim = $state('');
 	let voiceError = $state('');
+	let voiceSetupNotice = $state('');
 
 	function toggleVoiceMode() {
 		voiceMode = !voiceMode;
@@ -459,9 +460,16 @@
 					onTranscript={onVoiceTranscript}
 					bind:interim={voiceInterim}
 					bind:error={voiceError}
+					bind:setupNotice={voiceSetupNotice}
 				/>
 			{/if}
 		</div>
+		{#if voiceMode && voiceSetupNotice}
+			<div class="alert alert-warning mx-auto w-11/12 max-w-2xl text-sm">
+				<span>{voiceSetupNotice}</span>
+				<a class="btn btn-sm" href="/tools/voice-entry/config">Open Speech settings</a>
+			</div>
+		{/if}
 		{#if voiceMode && voiceInterim}
 			<p class="mx-auto w-11/12 max-w-2xl text-sm italic opacity-50">{voiceInterim}</p>
 		{/if}
