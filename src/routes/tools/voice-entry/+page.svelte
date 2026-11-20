@@ -44,18 +44,29 @@
 
 	let isListening = $state(false);
 	let isTranscribing = $state(false);
-	let transcript = $state('');
+	/** The editable phrase: filled by speech, examples, or typing. */
+	let textInput = $state('');
 	let interimTranscript = $state('');
 	let parseResult = $state<ParseResult | null>(null);
 	let transaction = $state<Xact | null>(null);
 	let errorMsg = $state('');
 	let resolvingFrom = $state(false);
 
-	function handleTranscript(text: string) {
-		transcript = text;
-		if (!text.trim()) return;
+	/** (Re)parses the phrase and rebuilds the transaction. */
+	function reparse(text: string) {
+		if (!text.trim()) {
+			parseResult = null;
+			transaction = null;
+			return;
+		}
 		parseResult = parseTranscript(text);
 		transaction = buildTransaction(parseResult);
+	}
+
+	/** Puts recognised text into the input box and parses it. */
+	function handleTranscript(text: string) {
+		textInput = text;
+		reparse(text);
 	}
 
 	// --- Engine selection ---
@@ -133,9 +144,7 @@
 		try {
 			recognition.start();
 			isListening = true;
-			transcript = '';
-			parseResult = null;
-			transaction = null;
+			handleTranscript('');
 		} catch (e) {
 			errorMsg = String(e);
 		}
@@ -175,10 +184,8 @@
 			recorder = new MicrophoneRecorder();
 			await recorder.start();
 			isListening = true;
-			transcript = '';
 			interimTranscript = '';
-			parseResult = null;
-			transaction = null;
+			handleTranscript('');
 		} catch (err) {
 			recorder = null;
 			errorMsg = `Could not open the microphone: ${(err as Error).message}`;
@@ -192,18 +199,8 @@
 
 	// --- Text input ---
 
-	let textInput = $state('');
-
-	function submitTextInput() {
-		if (!textInput.trim()) return;
-		handleTranscript(textInput.trim());
-		transcript = textInput.trim();
-	}
-
 	function useExample(phrase: string) {
-		textInput = phrase;
 		handleTranscript(phrase);
-		transcript = phrase;
 	}
 
 	function openInEditor() {
@@ -232,11 +229,8 @@
 	}
 
 	function clearAll() {
-		transcript = '';
 		interimTranscript = '';
-		textInput = '';
-		parseResult = null;
-		transaction = null;
+		handleTranscript('');
 		errorMsg = '';
 	}
 
@@ -306,37 +300,20 @@
 			</span>
 		</div>
 
-		<!-- Text input fallback -->
-		<form
-			class="flex gap-2"
-			onsubmit={(e) => {
-				e.preventDefault();
-				submitTextInput();
-			}}
-		>
-			<input
-				class="input input-bordered flex-1 text-sm"
-				type="text"
-				placeholder="Or type a phrase…"
+		<!-- Editable phrase: receives the transcript; edits re-parse the transaction -->
+		<div class="flex flex-col gap-1">
+			<textarea
+				class="textarea textarea-bordered w-full text-base"
+				rows="5"
+				placeholder="Speak, or type a phrase…"
+				aria-label="Phrase"
 				bind:value={textInput}
-			/>
-			<button class="btn btn-primary btn-sm" type="submit">Parse</button>
-		</form>
-
-		<!-- Transcript display -->
-		{#if transcript || interimTranscript}
-			<div class="card bg-base-200 shadow">
-				<div class="card-body gap-1 p-4">
-					<h3 class="card-title text-sm">Transcript</h3>
-					<p class="text-base">
-						{transcript}
-						{#if interimTranscript}
-							<span class="opacity-40 italic">{interimTranscript}</span>
-						{/if}
-					</p>
-				</div>
-			</div>
-		{/if}
+				oninput={() => reparse(textInput)}
+			></textarea>
+			{#if interimTranscript}
+				<span class="text-sm opacity-40 italic">{interimTranscript}</span>
+			{/if}
+		</div>
 
 		<!-- Parse results -->
 		{#if parseResult}
@@ -404,7 +381,7 @@
 		{/if}
 
 		<!-- Example phrases -->
-		{#if !transcript && !isListening}
+		{#if !textInput.trim() && !isListening}
 			<div class="card bg-base-200 shadow">
 				<div class="card-body gap-2 p-4">
 					<h3 class="card-title text-sm">Example phrases</h3>
@@ -425,7 +402,7 @@
 		{/if}
 
 		<!-- Clear -->
-		{#if transcript}
+		{#if textInput}
 			<button class="btn btn-ghost btn-sm self-center" onclick={clearAll}>Clear</button>
 		{/if}
 	</section>
