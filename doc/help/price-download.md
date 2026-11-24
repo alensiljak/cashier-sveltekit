@@ -25,7 +25,7 @@ Prices are **book-driven**: each `commodity` directive in your book names its so
 - **Download** — each ticked provider shows its progress (waiting, fetching, done or failed), then the file is written and the ledger reloads in the background. **Preview output file** shows the destination's current contents, with a shortcut to open it in the file editor.
 - **Needs attention** — Untagged, Unmapped source, Invalid and Not covered commodities, plus Ignored ones. These sections start collapsed and remember whether you opened them.
 
-Destination, write mode, provider selection and nickname mappings are **shared across your devices**. The proxy key is per-device. Set it from the toolbar menu; it is sent as the `X-Proxy-Key` header and is only needed for providers that use the proxy.
+Destination, write mode, provider selection and nickname mappings are **shared across your devices**. The proxy URL and key are per-device: set them in [Settings](/help/settings) → Device Settings → **HTTP Proxy**. The key is sent as the `X-Proxy-Key` header and is only needed for providers that use the proxy.
 
 Rates are written verbatim in each provider's published direction (ECB: `price EUR 1.61 AUD`).
 
@@ -49,6 +49,6 @@ The commodity name is the base of the downloaded price (`2026-11-16 price VAN000
 
 The provider downloads the fund's published NAV, not the ASX market price, so ETF quotes may differ slightly from the exchange close.
 
-Some sources block browser requests with CORS. Those are fetched through the app's same-origin `/api/proxy` endpoint; the proxy only allows the source hosts the app's providers use.
+Some sources block browser requests with CORS. Those are fetched through a proxy — by default the app's same-origin `/api/proxy` endpoint, or the custom **Proxy URL** from Settings → Device Settings → **HTTP Proxy**. The proxy only allows the source hosts the app's providers use.
 
 Two devices that download the same prices write byte-identical file content, so file sync (S3/WebDAV) transfers nothing; a device with older prices produces an ordinary file change that you resolve by keeping one side or re-running the download.

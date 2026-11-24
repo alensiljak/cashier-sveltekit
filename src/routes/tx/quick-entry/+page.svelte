@@ -467,7 +467,11 @@
 		{#if voiceMode && voiceSetupNotice}
 			<div class="alert alert-warning mx-auto w-11/12 max-w-2xl text-sm">
 				<span>{voiceSetupNotice}</span>
-				<a class="btn btn-sm" href="/tools/voice-entry/config">Open Speech settings</a>
+				{#if voiceSetupNotice.includes('proxy key')}
+					<a class="btn btn-sm" href="/settings#device-settings">Open Settings</a>
+				{:else}
+					<a class="btn btn-sm" href="/tools/voice-entry/config">Open Speech settings</a>
+				{/if}
 			</div>
 		{/if}
 		{#if voiceMode && voiceInterim}

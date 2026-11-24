@@ -27,6 +27,7 @@
 	import FlaskConicalIcon from '@lucide/svelte/icons/flask-conical';
 	import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
 	import SlidersHorizontalIcon from '@lucide/svelte/icons/sliders-horizontal';
+	import GlobeIcon from '@lucide/svelte/icons/globe';
 	import MicIcon from '@lucide/svelte/icons/mic';
 	import SmartphoneIcon from '@lucide/svelte/icons/smartphone';
 	import TrendingDownIcon from '@lucide/svelte/icons/trending-down';
@@ -89,6 +90,8 @@
 	let shortDateFormat = $state<string>(SHORT_DATE_FORMAT_DEFAULT);
 	let notificationsEnabled = $state<boolean>(false);
 	let notificationTime = $state<string>(NOTIFICATION_TIME_DEFAULT);
+	let proxyUrl = $state('');
+	let proxyKey = $state('');
 	let loaded = $state(false);
 	let demoActive = $state(false);
 	let showDemoLoadConfirm = $state(false);
@@ -176,6 +179,8 @@
 	let savedRootInvestmentAccount = $state<string | undefined>(undefined);
 	let savedDateFormat = $state<string>(DATE_FORMAT_DEFAULT);
 	let savedShortDateFormat = $state<string>(SHORT_DATE_FORMAT_DEFAULT);
+	let savedProxyUrl = $state('');
+	let savedProxyKey = $state('');
 
 	// Dirty flags — only meaningful after initial load
 	let currencyDirty = $derived(loaded && currency !== savedCurrency);
@@ -188,6 +193,8 @@
 	);
 	let dateFormatDirty = $derived(loaded && dateFormat !== savedDateFormat);
 	let shortDateFormatDirty = $derived(loaded && shortDateFormat !== savedShortDateFormat);
+	let proxyUrlDirty = $derived(loaded && proxyUrl !== savedProxyUrl);
+	let proxyKeyDirty = $derived(loaded && proxyKey !== savedProxyKey);
 
 	// Save form state before navigating away (e.g. to file picker)
 	beforeNavigate(() => {
@@ -278,6 +285,11 @@
 		notificationTime =
 			(await deviceSettings.get<string>(DeviceSettingKeys.notificationTime)) ??
 			NOTIFICATION_TIME_DEFAULT;
+
+		savedProxyUrl = (await deviceSettings.get<string>(DeviceSettingKeys.proxyUrl)) ?? '';
+		savedProxyKey = (await deviceSettings.get<string>(DeviceSettingKeys.proxyKey)) ?? '';
+		proxyUrl = savedProxyUrl;
+		proxyKey = savedProxyKey;
 
 		demoActive = await demoDataService.isDemoActive();
 		await syncOptions.load();
@@ -378,6 +390,13 @@
 		// A changed time should be able to fire again today.
 		await deviceSettings.set(DeviceSettingKeys.notificationLastShown, null);
 		scheduleNotificationCheck();
+
+		proxyUrl = proxyUrl.trim();
+		proxyKey = proxyKey.trim();
+		savedProxyUrl = proxyUrl;
+		savedProxyKey = proxyKey;
+		await deviceSettings.set(DeviceSettingKeys.proxyUrl, proxyUrl);
+		await deviceSettings.set(DeviceSettingKeys.proxyKey, proxyKey);
 		ShortDateFormatStore.set(shortDateFormat);
 		DateFormatStore.set(dateFormat);
 
@@ -659,6 +678,67 @@
 				bind:checked={ledgerCacheEnabled}
 			/>
 		</div>
+	</CashierCardTemplate>
+
+	<!-- ── HTTP Proxy ──────────────────────────────────────── -->
+	<CashierCardTemplate heading="HTTP Proxy" Icon={GlobeIcon} bodyClass="space-y-3 px-3">
+		{#snippet description()}
+			Sources that block browser requests with CORS — some price providers and the Mistral
+			transcription API — are fetched through this proxy. Leave the URL empty to use the app's own
+			same-origin <code>/api/proxy</code> endpoint. Stored on this device only.
+		{/snippet}
+
+		<div class="flex items-center gap-3">
+			<label for="proxy-url" class="flex-1 text-sm font-medium">Proxy URL</label>
+			<div class="flex shrink-0 items-center gap-1">
+				<input
+					id="proxy-url"
+					class="input input-sm w-52 rounded sm:w-72"
+					type="text"
+					inputmode="url"
+					autocomplete="off"
+					placeholder="https://…/api/proxy"
+					bind:value={proxyUrl}
+				/>
+				{#if proxyUrlDirty}
+					<button
+						type="button"
+						class="btn btn-ghost btn-xs btn-square"
+						title="Revert"
+						onclick={() => (proxyUrl = savedProxyUrl)}
+					>
+						<RotateCcw size={14} />
+					</button>
+				{/if}
+			</div>
+		</div>
+
+		<div class="flex items-center gap-3">
+			<label for="proxy-api-key" class="flex-1 text-sm font-medium">API key</label>
+			<div class="flex shrink-0 items-center gap-1">
+				<input
+					id="proxy-api-key"
+					class="input input-sm w-52 rounded sm:w-72"
+					type="password"
+					autocomplete="off"
+					placeholder="Only when the proxy is protected"
+					bind:value={proxyKey}
+				/>
+				{#if proxyKeyDirty}
+					<button
+						type="button"
+						class="btn btn-ghost btn-xs btn-square"
+						title="Revert"
+						onclick={() => (proxyKey = savedProxyKey)}
+					>
+						<RotateCcw size={14} />
+					</button>
+				{/if}
+			</div>
+		</div>
+		<p class="text-xs opacity-60">
+			The key is sent as the <code>X-Proxy-Key</code> header and is never exported or synced.
+		</p>
 	</CashierCardTemplate>
 
 	<!-- ── Backup & Sync ───────────────────────────────────── -->

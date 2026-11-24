@@ -65,11 +65,11 @@
 			// Persistent (not a transient error): Voxtral needs the Mistral key, and the proxy
 			// key when the server protects the proxy.
 			const missing: string[] = [];
-			if (!(await getMistralApiKey())) missing.push('Mistral API key');
+			if (!(await getMistralApiKey())) missing.push('a Mistral API key (Speech Settings)');
 			if (!((await deviceSettings.get<string>(DeviceSettingKeys.proxyKey)) ?? '').trim())
-				missing.push('proxy key');
+				missing.push('a proxy key (Settings → Device Settings)');
 			setupNotice = missing.length
-				? `Voxtral needs a ${missing.join(' and a ')}${missing.includes('proxy key') ? ' (the proxy key is only optional if the proxy is unprotected)' : ''}.`
+				? `Voxtral needs ${missing.join(' and ')}${missing.some((m) => m.startsWith('a proxy key')) ? ' — the proxy key is only needed when the proxy is protected' : ''}.`
 				: '';
 		}
 	}

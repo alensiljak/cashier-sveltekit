@@ -197,5 +197,7 @@ Price providers need a CORS-free path to their sources. A Cloudflare Worker
 same-origin with the app (`run_worker_first: ["/api/*"]` in `wrangler.jsonc`). It
 only fetches hosts in the static `ALLOWED_HOSTS` allowlist (add a provider's host
 there) and requires the `PROXY_KEY` secret. Client side:
-`src/lib/services/prices/proxyFetch.ts`. Design:
+`src/lib/services/prices/proxyFetch.ts` — the proxy base URL and key come from
+the device-only `proxy.url` / `proxy.key` settings (Settings → Device Settings →
+HTTP Proxy); an empty URL falls back to the same-origin `/api/proxy`. Design:
 `doc/completed-projects/2026-11-16_CORS-proxy.md`.

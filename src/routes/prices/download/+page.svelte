@@ -31,14 +31,13 @@
 	import fullLedgerService from '#lib/services/ledgerWorkerClient';
 	import { PRICES_DEFAULT_DESTINATION } from '#lib/constants';
 	import { readFile } from '#lib/utils/opfslib';
-	import { deviceSettings, DeviceSettingKeys, SettingKeys } from '#lib/settings';
+	import { SettingKeys } from '#lib/settings';
 	import { onMount, untrack } from 'svelte';
 	import { fade } from 'svelte/transition';
 	import { disintegrate } from '#lib/utils/disintegrate';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import DownloadIcon from '@lucide/svelte/icons/download';
-	import KeyRoundIcon from '@lucide/svelte/icons/key-round';
 	import SettingsIcon from '@lucide/svelte/icons/settings';
 	import EyeIcon from '@lucide/svelte/icons/eye';
 	import EyeOffIcon from '@lucide/svelte/icons/eye-off';
@@ -74,9 +73,6 @@
 	let writing = $state(false);
 	let previewOpen = $state(false);
 	let demoActive = $state(false);
-	let proxyKey = $state('');
-	let proxyKeyDraft = $state('');
-	let proxyKeyModalOpen = $state(false);
 
 	// ── Remembered open/closed state of the collapsible sections (per browser) ──
 	const SECTIONS_KEY = 'prices.download.openSections';
@@ -139,7 +135,6 @@
 		configReady = true;
 		skipped = new Set(await getSkippedProviders());
 		demoActive = await demoDataService.isDemoActive();
-		proxyKey = (await deviceSettings.get<string>(DeviceSettingKeys.proxyKey)) ?? '';
 		await checkTarget();
 		await refresh();
 		loaded = true;
@@ -290,17 +285,6 @@
 		}
 	}
 
-	function openProxyKeyModal() {
-		proxyKeyDraft = proxyKey;
-		proxyKeyModalOpen = true;
-	}
-
-	async function saveProxyKey() {
-		proxyKey = proxyKeyDraft.trim();
-		await deviceSettings.set(DeviceSettingKeys.proxyKey, proxyKey);
-		proxyKeyModalOpen = false;
-		error = null;
-	}
 </script>
 
 <Toolbar title="Price Download">
@@ -313,7 +297,6 @@
 			Icon={showDisabled ? EyeOffIcon : EyeIcon}
 			onclick={toggleShowDisabled}
 		/>
-		<ToolbarMenuItem text="Proxy key" Icon={KeyRoundIcon} onclick={openProxyKeyModal} />
 	{/snippet}
 </Toolbar>
 
@@ -657,36 +640,4 @@
 		</footer>
 	</div>
 	<form method="dialog" class="modal-backdrop"><button onclick={() => (previewOpen = false)}>close</button></form>
-</dialog>
-
-<!-- Proxy key dialog -->
-<input type="checkbox" id="proxy-key-modal" class="modal-toggle" bind:checked={proxyKeyModalOpen} />
-<dialog class="modal">
-	<div class="modal-box">
-		<header class="flex justify-between">
-			<h2 class="text-lg font-bold">Proxy key</h2>
-		</header>
-		<article>
-			<p class="py-2 text-sm opacity-60">
-				Stored on this device only and sent as the <code>X-Proxy-Key</code> header. Leave empty when the
-				proxy is not protected.
-			</p>
-			<input
-				type="password"
-				class="input input-bordered w-full"
-				autocomplete="off"
-				aria-label="Proxy key"
-				placeholder="Required when the server sets PROXY_KEY"
-				bind:value={proxyKeyDraft}
-				onkeydown={(e) => e.key === 'Enter' && void saveProxyKey()}
-			/>
-		</article>
-		<footer class="flex justify-end gap-4 mt-4">
-			<button type="button" class="btn btn-ghost" onclick={() => (proxyKeyModalOpen = false)}
-				>Cancel</button
-			>
-			<button type="button" class="btn btn-primary" onclick={() => void saveProxyKey()}>Save</button
-			>
-		</footer>
-	</div>
 </dialog>

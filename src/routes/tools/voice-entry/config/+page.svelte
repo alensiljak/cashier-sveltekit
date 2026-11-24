@@ -3,7 +3,6 @@
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import HelpButton from '#lib/help/HelpButton.svelte';
 	import Notifier from '#lib/utils/notifier';
-	import { deviceSettings, DeviceSettingKeys } from '#lib/settings';
 	import {
 		DEFAULT_SPEECH_LANGUAGE,
 		MISTRAL_TRANSCRIPTION_MODEL,
@@ -38,7 +37,6 @@
 	let model = $state(MISTRAL_TRANSCRIPTION_MODEL);
 	/** True when the model field is a free-text id instead of the dropdown. */
 	let manualModel = $state(false);
-	let proxyKey = $state('');
 	let loaded = $state(false);
 	let saving = $state(false);
 
@@ -103,7 +101,6 @@
 		apiKey = await getMistralApiKey();
 		model = await getMistralModel();
 		manualModel = !isKnownVoxtralModel(model);
-		proxyKey = (await deviceSettings.get<string>(DeviceSettingKeys.proxyKey)) ?? '';
 		loaded = true;
 	});
 
@@ -122,11 +119,9 @@
 			await setSpeechLanguage(normalizedLanguage());
 			await setMistralApiKey(apiKey);
 			await setMistralModel(model);
-			await deviceSettings.set(DeviceSettingKeys.proxyKey, proxyKey.trim());
 			language = normalizedLanguage();
 			model = model.trim() || MISTRAL_TRANSCRIPTION_MODEL;
 			apiKey = apiKey.trim();
-			proxyKey = proxyKey.trim();
 			Notifier.success('Speech settings saved');
 		} catch (err) {
 			Notifier.error(`Could not save the speech settings: ${(err as Error).message}`);
@@ -346,22 +341,14 @@
 					</label>
 				</div>
 
-				<div class="space-y-1">
-					<label class="text-sm font-medium" for="proxy-key">Proxy key</label>
-					<input
-						id="proxy-key"
-						type="password"
-						class="input input-bordered w-full"
-						autocomplete="off"
-						placeholder="Required when the server sets PROXY_KEY"
-						bind:value={proxyKey}
-					/>
-					<p class="text-xs opacity-60">
-						The app's own proxy carries the request to Mistral (it sends no CORS headers). Leave
-						empty when the proxy is not protected. The same key is used by
-						<a class="link link-primary" href="/prices/download">Price Download</a>.
-					</p>
-				</div>
+				<p class="text-xs opacity-60">
+					The request to Mistral goes through the app's HTTP proxy (Mistral sends no CORS headers).
+					Set the proxy URL and its key in
+					<a class="link link-primary" href="/settings#device-settings"
+						>Settings → Device Settings → HTTP Proxy</a
+					>. The same settings are used by
+					<a class="link link-primary" href="/prices/download">Price Download</a>.
+				</p>
 
 				<div class="divider my-1"></div>
 

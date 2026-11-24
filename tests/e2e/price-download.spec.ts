@@ -1,9 +1,9 @@
 /**
  * Price Download page e2e against the demo book. The demo book tags USD and
  * AUD with `EUR:ecbrates/…`, so the ECB provider has prices to download; the
- * page layout, remembered state and proxy key are exercised here.
+ * page layout, remembered state and the proxy settings are exercised here.
  */
-import { expect, test } from './fixtures';
+import { expect, fab, test } from './fixtures';
 
 test.describe('price download', () => {
 	test('shows the book-driven layout; untagged commodities start collapsed', async ({
@@ -46,27 +46,21 @@ test.describe('price download', () => {
 		await expect(destination).toBeVisible();
 		await expect(page.getByRole('checkbox', { name: 'Append history' })).toBeChecked();
 	});
-	test('proxy key is set from the toolbar menu dialog', async ({ demoPage: page }) => {
-		await page.goto('/prices/download');
+	test('proxy URL and key are set in Settings → Device Settings and remembered', async ({
+		demoPage: page
+	}) => {
+		await page.goto('/settings');
 
-		const openProxyKey = async () => {
-			await page.locator('.navbar .dropdown-end > button').click();
-			await page.getByRole('menuitem', { name: 'Proxy key' }).click();
-		};
-		const dialog = page
-			.locator('dialog.modal')
-			.filter({ has: page.getByRole('heading', { name: 'Proxy key' }) });
-		await openProxyKey();
-		await expect(dialog).toBeVisible();
+		await page.locator('#proxy-url').fill('https://proxy.example.com/api/proxy');
+		await page.locator('#proxy-api-key').fill('e2e-proxy-key');
+		await fab(page).click();
+		// Saving leaves the settings page for home.
+		await expect(page).toHaveURL('/');
 
-		const input = dialog.locator('input[type="password"]');
-		await input.fill('e2e-proxy-key');
-		await dialog.getByRole('button', { name: 'Save' }).click();
-		await expect(dialog).not.toBeVisible();
-
-		// Reopening shows the saved key, not the draft that was typed.
-		await openProxyKey();
-		await expect(input).toHaveValue('e2e-proxy-key');
+		// Reopening shows the saved values, not empty fields.
+		await page.goto('/settings');
+		await expect(page.locator('#proxy-url')).toHaveValue('https://proxy.example.com/api/proxy');
+		await expect(page.locator('#proxy-api-key')).toHaveValue('e2e-proxy-key');
 	});
 
 	test('proxy requires the key and rejects hosts outside its allowlist', async ({ request }) => {

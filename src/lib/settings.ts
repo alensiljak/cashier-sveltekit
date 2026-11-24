@@ -214,6 +214,10 @@ export const DeviceSettingKeys = {
 	syncChannelLastSync: 'sync.channel.last-sync',
 	// Days without a completed sync before the Sync page warns. Number; default 7.
 	syncStaleDays: 'sync.stale-days',
+	// Base URL of the CORS proxy (worker/proxy.ts), e.g.
+	// 'https://your-worker.workers.dev/api/proxy'. Empty: the app's own
+	// same-origin '/api/proxy'. Device-only, not exported or synced.
+	proxyUrl: 'proxy.url',
 	// Shared key for the CORS proxy (worker/proxy.ts). Device-only: it is a
 	// credential and is not exported or synced.
 	proxyKey: 'proxy.key',
