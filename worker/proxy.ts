@@ -3,11 +3,11 @@
  * `Access-Control-Allow-Origin` for the app's origin
  * (doc/completed-projects/2026-11-16_CORS-proxy.md).
  *
- * The proxy is deliberately narrow: GET (plus POST for the few hosts that need
- * it), HTTPS only, exact-host allowlist, no client headers forwarded
- * (Origin/Referer/Cookie in particular make some upstreams reject the request),
- * redirects rejected, a 15 s timeout and a response-size cap. It is not an open
- * relay.
+ * The proxy is deliberately narrow: GET (plus POST/DELETE for the few hosts
+ * that need them), HTTPS only, exact-host allowlist, no client headers
+ * forwarded (Origin/Referer/Cookie in particular make some upstreams reject
+ * the request), redirects rejected, a 15 s timeout and a response-size cap.
+ * It is not an open relay.
  *
  * The same handler runs in the Cloudflare Worker (`worker/index.ts`) and in
  * Vite's dev/preview middleware (see `vite.config.ts`), so callers see one
@@ -45,7 +45,9 @@ export const ALLOWED_HOSTS: Record<string, true> = {
 	// Mistral Voxtral transcription (Speech Entry, src/lib/services/speechService.ts)
 	'api.mistral.ai': true,
 	// Scalable Capital MCP (Scalable importer, src/lib/importers/scalable/)
-	'mcp.scalable.capital': true
+	'mcp.scalable.capital': true,
+	// Enable Banking API (Enable Banking importer, src/lib/importers/enablebanking/)
+	'api.enablebanking.com': true
 };
 
 /** Hosts that reject the proxy's own User-Agent; they get a browser one instead. */
@@ -71,16 +73,27 @@ export const UPSTREAM_KEY_HOSTS: Record<string, true> = {
  */
 export const UPSTREAM_BEARER_HOSTS: Record<string, true> = {
 	'api.mistral.ai': true,
-	'mcp.scalable.capital': true
+	'mcp.scalable.capital': true,
+	'api.enablebanking.com': true
 };
 
 /**
- * Hosts that accept a POST body (multipart uploads, JSON-RPC). Every other
- * host is GET-only, so the proxy cannot be used to write to arbitrary APIs.
+ * Hosts that accept a POST body (multipart uploads, JSON-RPC, OAuth-style
+ * form posts). Every other host is GET-only, so the proxy cannot be used to
+ * write to arbitrary APIs.
  */
 export const POST_HOSTS: Record<string, true> = {
 	'api.mistral.ai': true,
-	'mcp.scalable.capital': true
+	'mcp.scalable.capital': true,
+	'api.enablebanking.com': true
+};
+
+/**
+ * Hosts that accept DELETE (revoking an Enable Banking session). Every other
+ * host rejects it, so the proxy cannot be used to delete on arbitrary APIs.
+ */
+export const DELETE_HOSTS: Record<string, true> = {
+	'api.enablebanking.com': true
 };
 
 /**
@@ -185,9 +198,10 @@ function keysMatch(provided: string, expected: string): boolean {
 }
 
 /**
- * Handle `GET /api/proxy?url=<absolute https URL>` (and POST for the hosts in
- * `POST_HOSTS`). The fetch and key policy are injectable so the unit tests
- * exercise the real handler without touching the network.
+ * Handle `GET /api/proxy?url=<absolute https URL>` (plus POST for the hosts in
+ * `POST_HOSTS` and DELETE for the hosts in `DELETE_HOSTS`). The fetch and key
+ * policy are injectable so the unit tests exercise the real handler without
+ * touching the network.
  */
 export async function handleProxyRequest(
 	request: Request,
@@ -204,8 +218,8 @@ export async function handleProxyRequest(
 	}
 
 	const method = request.method.toUpperCase();
-	if (method !== 'GET' && method !== 'POST') {
-		return errorResponse(405, 'Only GET and POST requests are allowed');
+	if (method !== 'GET' && method !== 'POST' && method !== 'DELETE') {
+		return errorResponse(405, 'Only GET, POST and DELETE requests are allowed');
 	}
 
 	let target: URL;
@@ -218,6 +232,9 @@ export async function handleProxyRequest(
 
 	if (method === 'POST' && !Object.hasOwn(POST_HOSTS, target.hostname)) {
 		return errorResponse(405, `POST is not allowed for ${target.hostname}`);
+	}
+	if (method === 'DELETE' && !Object.hasOwn(DELETE_HOSTS, target.hostname)) {
+		return errorResponse(405, `DELETE is not allowed for ${target.hostname}`);
 	}
 
 	const fetchImpl = options.fetchImpl ?? fetch;

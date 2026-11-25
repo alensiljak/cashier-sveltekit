@@ -244,7 +244,15 @@ export const DeviceSettingKeys = {
 	// Scalable Capital tokens pasted from scripts/scalable_token.py (Scalable
 	// importer, src/lib/importers/scalable/auth.ts). Device-only: credentials
 	// are never exported or synced.
-	scalableTokens: 'importer.scalable.tokens'
+	scalableTokens: 'importer.scalable.tokens',
+	// Enable Banking app credentials (application ID + private key PEM, Enable
+	// Banking importer, src/lib/importers/enablebanking/auth.ts). Device-only:
+	// the private key is a credential and is never exported or synced.
+	enableBankingCredentials: 'importer.enablebanking.credentials',
+	// Enable Banking sessions created on this device (consent references +
+	// account lists, src/lib/importers/enablebanking/sessions.ts). Device-only:
+	// they are only usable together with this device's private key.
+	enableBankingSessions: 'importer.enablebanking.sessions'
 };
 
 class UserSettings {

@@ -96,9 +96,18 @@ The Scalable Capital importer is not file-based: it reads your account live from
 3. If your account has several broker portfolios, pick the one to read.
 4. Once configured, the card's **View data** button opens the Scalable view: total value, performance by timeframe, cash and buying power, holdings with gains, and the transaction list (tap a row for its details, **Load more** to page through).
 
+## Enable Banking
+
+The Enable Banking importer is not file-based either: it reads your bank accounts live through the [Enable Banking](https://enablebanking.com) API (`https://api.enablebanking.com`, open banking aggregator for European banks).
+
+1. Register an application in the Enable Banking Control Panel (choose the **Sandbox** environment for testing — sandbox apps are activated automatically). In the app's settings, whitelist the redirect URL Cashier shows on the importer's card (it ends in `/importers/enable-banking/callback`; whitelist both the deployed site's and `http://localhost:5173/...` for local development). Download the private key file (`<app-id>.pem`).
+2. On the importer's card, tap **Configure** and paste the **application ID** (the UUID of the app) and the **private key PEM**. Tap **Save credentials** — Cashier verifies them against the API. Every API request is a JWT signed in your browser with that key; the key is stored **on this device only** — never part of a backup or the settings sync. (Enable Banking advises keeping private keys out of client apps; for your own app on your own device this is the same trust level as the other credentials stored here.) **Disconnect** revokes the connected sessions and deletes the credentials.
+3. Pick a **bank (ASPSP)** — in the sandbox, the _Mock ASPSP_ needs no login — and tap **Connect**. You are redirected to Enable Banking and the bank to grant access, then returned to Cashier automatically; the connected bank appears in the list. **Check status** refreshes a session, **Remove** revokes it.
+4. Once configured, the card's **View data** button opens the Enable Banking view: connected banks, their accounts with balances, and per-account transactions (date range, search, **Load more** pages, tap a row for the raw record).
+
 ## Settings
 
-**Edit** on an importer's card shows its settings as JSON (for Scalable Capital, a form). **Load defaults** puts the template back. **Reset** deletes the importer's settings, including its rules — for Scalable Capital it also clears the stored tokens. Settings are stored with the other app settings, so they are part of a [backup](/help/backup) and of the settings sync between devices; credentials like the Scalable tokens are not.
+**Edit** on an importer's card shows its settings as JSON (for Scalable Capital and Enable Banking, a form). **Load defaults** puts the template back. **Reset** deletes the importer's settings, including its rules — for Scalable Capital it also clears the stored tokens, for Enable Banking the app credentials and connected sessions. Settings are stored with the other app settings, so they are part of a [backup](/help/backup) and of the settings sync between devices; credentials like the Scalable tokens and the Enable Banking private key are not.
 
 | Key                                | Meaning                                                                      |
 | ---------------------------------- | ---------------------------------------------------------------------------- |

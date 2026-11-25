@@ -11,6 +11,10 @@
 	import ScalableConfigForm from '#lib/importers/scalable/ScalableConfigForm.svelte';
 	import type { ScalableConfig } from '#lib/importers/scalable/config';
 	import { clearAuth } from '#lib/importers/scalable/auth';
+	import EnableBankingConfigForm from '#lib/importers/enablebanking/EnableBankingConfigForm.svelte';
+	import type { EnableBankingConfig } from '#lib/importers/enablebanking/config';
+	import { clearCredentials } from '#lib/importers/enablebanking/auth';
+	import { clearSessions } from '#lib/importers/enablebanking/sessions';
 	import { savePendingImport } from '#lib/importers/pendingImport';
 	import {
 		loadImporterConfig,
@@ -27,7 +31,7 @@
 	let error = $state('');
 
 	/** Importers with a form editor; the others are edited as JSON. */
-	const FORM_IMPORTERS = ['ibkr', 'scalable'];
+	const FORM_IMPORTERS = ['ibkr', 'scalable', 'enablebanking'];
 	let jsonMode = $state(false);
 	/** Bumped to remount the form after the text changed from outside it (defaults, JSON). */
 	let formKey = $state(0);
@@ -135,6 +139,10 @@
 		await resetImporterConfig(id);
 		// API importers keep credentials in device-only settings; reset clears those too.
 		if (id === 'scalable') await clearAuth();
+		if (id === 'enablebanking') {
+			await clearCredentials();
+			await clearSessions();
+		}
 		delete configs[id];
 		if (editingId === id) editingId = null;
 	}
@@ -194,6 +202,13 @@
 							{#key formKey}
 								<ScalableConfigForm
 									value={draftConfig<ScalableConfig>() ?? importer.defaultConfig}
+									onchange={(c) => (editorText = JSON.stringify(c, null, 2))}
+								/>
+							{/key}
+						{:else if !jsonMode && importer.id === 'enablebanking'}
+							{#key formKey}
+								<EnableBankingConfigForm
+									value={draftConfig<EnableBankingConfig>() ?? importer.defaultConfig}
 									onchange={(c) => (editorText = JSON.stringify(c, null, 2))}
 								/>
 							{/key}

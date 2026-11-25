@@ -7,6 +7,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
 	ALLOWED_HOSTS,
+	DELETE_HOSTS,
 	handleProxyRequest,
 	MCP_SESSION_HEADER,
 	PROXY_KEY_HEADER,
@@ -93,9 +94,10 @@ describe('handleProxyRequest', () => {
 		expect(await response.text()).toContain('POST is not allowed');
 	});
 
-	it('rejects methods other than GET and POST', async () => {
+	it('rejects DELETE for hosts that are not in DELETE_HOSTS', async () => {
 		const response = await handleProxyRequest(proxyRequest(ALLOWED, { method: 'DELETE' }));
 		expect(response.status).toBe(405);
+		expect(await response.text()).toContain('DELETE is not allowed');
 	});
 
 	it('forwards only the proxy headers, never Origin, Referer or Cookie', async () => {
@@ -328,5 +330,80 @@ describe('MCP host (mcp.scalable.capital)', () => {
 	it('keeps POST GET-only rules for non-MCP hosts', async () => {
 		const response = await handleProxyRequest(proxyRequest(ALLOWED, { method: 'POST' }));
 		expect(response.status).toBe(405);
+	});
+});
+
+describe('Enable Banking host (api.enablebanking.com)', () => {
+	const EB = 'https://api.enablebanking.com/accounts/acc-1/transactions';
+
+	it('is allowlisted for GET, POST and DELETE', async () => {
+		expect(Object.hasOwn(ALLOWED_HOSTS, 'api.enablebanking.com')).toBe(true);
+		expect(Object.hasOwn(DELETE_HOSTS, 'api.enablebanking.com')).toBe(true);
+		const fetchImpl: FetchLike = async () =>
+			new Response('{}', { headers: { 'content-type': 'application/json' } });
+		expect((await handleProxyRequest(proxyRequest(EB), { fetchImpl })).status).toBe(200);
+		expect(
+			(
+				await handleProxyRequest(
+					proxyRequest('https://api.enablebanking.com/auth', {
+						method: 'POST',
+						headers: { 'content-type': 'application/json' },
+						body: '{}'
+					}),
+					{ fetchImpl }
+				)
+			).status
+		).toBe(200);
+		expect(
+			(
+				await handleProxyRequest(
+					proxyRequest('https://api.enablebanking.com/sessions/sess-1', { method: 'DELETE' }),
+					{ fetchImpl }
+				)
+			).status
+		).toBe(200);
+	});
+
+	it('forwards the client bearer as Authorization to the EB host only', async () => {
+		let seen: RequestInit | undefined;
+		const fetchImpl: FetchLike = async (_input, init) => {
+			seen = init;
+			return new Response('{}', { headers: { 'content-type': 'application/json' } });
+		};
+
+		const headers = (): Record<string, string> => (seen?.headers ?? {}) as Record<string, string>;
+
+		await handleProxyRequest(
+			proxyRequest(EB, { headers: { [UPSTREAM_BEARER_HEADER]: 'jwt-token' } }),
+			{ fetchImpl }
+		);
+		expect(headers()['Authorization']).toBe('Bearer jwt-token');
+
+		await handleProxyRequest(
+			proxyRequest(ALLOWED, { headers: { [UPSTREAM_BEARER_HEADER]: 'jwt-token' } }),
+			{ fetchImpl }
+		);
+		expect(headers()['Authorization']).toBeUndefined();
+	});
+
+	it('forwards the POST body and its content type', async () => {
+		let seen: RequestInit | undefined;
+		const fetchImpl: FetchLike = async (_input, init) => {
+			seen = init;
+			return new Response('{}', { headers: { 'content-type': 'application/json' } });
+		};
+		await handleProxyRequest(
+			proxyRequest('https://api.enablebanking.com/sessions', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ code: 'abc' })
+			}),
+			{ fetchImpl }
+		);
+		const headers = (seen?.headers ?? {}) as Record<string, string>;
+		expect(headers['Content-Type']).toBe('application/json');
+		expect(new TextDecoder().decode((seen?.body ?? new ArrayBuffer(0)) as ArrayBuffer)).toBe(
+			'{"code":"abc"}'
+		);
 	});
 });

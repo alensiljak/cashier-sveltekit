@@ -1,13 +1,19 @@
 import { n26Importer } from './n26';
 import { ibkrImporter } from './ibkr/ibkr';
 import { scalableImporter } from './scalable/scalable';
+import { enableBankingImporter } from './enablebanking/enablebanking';
 import type { Importer } from './types';
 
 export type { Importer, DedupResult } from './types';
 export { findDuplicates } from './dedup';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const importers: Importer<any>[] = [n26Importer, ibkrImporter, scalableImporter];
+const importers: Importer<any>[] = [
+	n26Importer,
+	ibkrImporter,
+	scalableImporter,
+	enableBankingImporter
+];
 
 export function listImporters() {
 	return importers;
