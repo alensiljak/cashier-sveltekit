@@ -25,6 +25,12 @@ Add an Enable Banking source to the Importers page. Unlike the file importers, i
 - Test bank: **Mock ASPSP** (all countries, no credentials); transactions arrive in batches of 10 via `continuation_key`.
 - Dev server `http://localhost:5173` serves the same `/api/proxy` handler as the deployed Worker (vite middleware in `vite.config.ts`), so no proxy config is needed locally.
 
+## Production notes (learned from the Control Panel)
+
+- Sandbox and production are **separate applications** (own ID + key each, not transferable). The environment is decided by the app ID pasted into Cashier — sandbox app for testing, production app for real accounts.
+- A production app starts **restricted**: the Control Panel's "Linked accounts" list is the allowlist of accounts the app may access ("Only linked accounts can be accessed"). Do not unlink accounts you want Cashier to read. The API does not expose this list and has no list-sessions call — sessions must be created through Cashier's Connect flow (`POST /auth` → redirect → `POST /sessions`); in restricted mode the session then returns only the linked accounts.
+- Accounts linked through Enable Banking's own web UI belong to Enable Banking's web application; a session is only readable with the JWT of the app that initiated it (the FAQ: the token "identifies the application … all sessions initiated by the application").
+
 ## Tests
 
 - `tests/unit/enableBankingJwt.test.ts` — real keypair: RS256 sign/verify, claims (kid/iss/aud/iat/exp), TTL clamp, PKCS#8 + PKCS#1 PEM handling (PKCS#1→PKCS#8 rewrap verified byte-for-byte), PEM errors.
