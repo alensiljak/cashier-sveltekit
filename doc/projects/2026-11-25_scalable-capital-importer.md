@@ -1,5 +1,11 @@
 # Scalable Capital importer (MCP)
 
+## Status (2026-11-25)
+
+- Done: MCP connection end-to-end — the JSON-RPC client (`src/lib/importers/scalable/mcp.ts`) talks to `https://mcp.scalable.capital/mcp` through the same-origin proxy (`/api/proxy`), the importer is registered as an API source on the Importers page, and the live data view at `/importers/scalable` shows overview, cash & buying power, holdings and the transaction list. Unit tests cover the handshake, session handling, auth and the proxy MCP path (see Tests).
+- Done, with a caveat: authentication. The initial in-PWA OAuth flow (callback route `src/routes/importers/scalable/callback/+page.svelte` + `oauth.ts`) was removed — a hosted PWA cannot receive the `http://localhost` redirect, so Cashier cannot authenticate with Scalable directly. The shipped flow is the localhost Python script: the user runs `scripts/scalable_token.py`, pastes the printed token JSON into the config form, and the tokens are stored device-only and refreshed via the `refresh_token` grant. See [Authentication for the Scalable Capital MCP endpoint](#authentication-for-the-scalable-capital-mcp-endpoint).
+- Next: import the MCP transactions into the ledger through the review flow (option 2 under "Showing data / reports"), so the existing Reports cover Scalable automatically.
+
 ## Goal
 
 Add a Scalable Capital source to the Importers page. Unlike the file-based importers (N26 CSV, IBKR Flex XML), it reads the account live from Scalable's official MCP endpoint. Authentication happens outside the PWA: a small Python script run on localhost performs the OAuth login and prints tokens that the user pastes into Cashier; the tokens are stored locally (device-only) and never synced or exported.
@@ -16,6 +22,17 @@ Add a Scalable Capital source to the Importers page. Unlike the file-based impor
 - **Credentials**: tokens live in device-only settings — the same pattern as the Mistral API key. The synced importer config (`importer.scalable`, `config.ts`) holds only `portfolioId`.
 - **Importer registration**: `scalableImporter` in `scalable.ts`, registered in `src/lib/importers/index.ts`. The `Importer` interface gained `source: 'file' | 'api'` and `viewRoute`; the Importers page shows **View data** (→ `/importers/scalable`) instead of **Import file** for API importers, and a form editor (`ScalableConfigForm.svelte`) with the script viewer/copy button, the token-paste field, and a portfolio picker.
 - **Data view**: `src/routes/importers/scalable/+page.svelte` — portfolio overview (valuation, performance by timeframe), cash & buying power, holdings table (price, value, FIFO, gain), and a filterable, paginated transaction list with per-transaction details.
+
+### Authentication for the Scalable Capital MCP endpoint
+
+The first MCP-backed source (Scalable Capital)
+cannot authenticate from inside the PWA: OAuth 2.0 Authorization Code + PKCE needs a
+`http://localhost` redirect, which a hosted page cannot receive. Workaround: the user runs
+`scripts/scalable_token.py` on their computer (the app offers it via a **Copy script** button),
+which does the loopback login and prints the tokens as JSON; the user pastes that JSON into
+Cashier, where it is stored device-only and refreshed via the `refresh_token` grant.
+If a future standard (e.g. a PWA-compatible browser flow or device-code grant) fits better,
+re-evaluate here.
 
 ## Showing data / reports — options considered
 
