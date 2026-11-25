@@ -12,6 +12,7 @@
 		addSession,
 		clearSessions,
 		loadSessions,
+		mergeSessionAccounts,
 		removeSession,
 		savePendingAuth,
 		type StoredSession
@@ -187,7 +188,10 @@
 			const live = await client().getSession(session.sessionId);
 			sessionStatus[session.sessionId] = live.status ?? 'unknown';
 			if (live.accounts) {
-				sessions = await addSession({ ...session, accounts: live.accounts });
+				sessions = await addSession({
+					...session,
+					accounts: mergeSessionAccounts(session.accounts ?? [], live.accounts)
+				});
 			}
 		} catch (e) {
 			sessionStatus[session.sessionId] =

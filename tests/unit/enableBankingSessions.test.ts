@@ -23,6 +23,8 @@ import {
 	clearSessions,
 	loadPendingAuth,
 	loadSessions,
+	mergeSessionAccounts,
+	normalizeSessionAccounts,
 	removeSession,
 	savePendingAuth,
 	type StoredSession
@@ -77,6 +79,30 @@ describe('stored sessions (device-only settings)', () => {
 		expect((await loadSessions()).map((s) => s.sessionId)).toEqual(['s2']);
 		await clearSessions();
 		expect(await loadSessions()).toEqual([]);
+	});
+});
+
+describe('session account lists (POST /sessions vs GET /sessions/{id})', () => {
+	const rich = [
+		{ uid: 'u1', name: 'Main', account_id: { iban: 'DE00 1' } },
+		{ uid: 'u2', name: 'Savings' }
+	];
+
+	it('normalizes a string list (GET /sessions/{id}) to account objects', () => {
+		expect(normalizeSessionAccounts(['u1', 'u2'])).toEqual([{ uid: 'u1' }, { uid: 'u2' }]);
+		expect(normalizeSessionAccounts([{ uid: 'u1', name: 'Main' }])).toEqual([
+			{ uid: 'u1', name: 'Main' }
+		]);
+		expect(normalizeSessionAccounts(undefined)).toEqual([]);
+		expect(normalizeSessionAccounts(['', 42 as unknown as string])).toEqual([]);
+	});
+
+	it('merge keeps the rich stored account for known uids and keeps unknown uids as { uid }', () => {
+		// GET /sessions/{id} returns ids only; POST /sessions details must not be lost.
+		expect(mergeSessionAccounts(rich, ['u1', 'u2'])).toEqual(rich);
+		expect(mergeSessionAccounts(rich, ['u2', 'u3'])).toEqual([rich[1], { uid: 'u3' }]);
+		expect(mergeSessionAccounts(rich, [])).toEqual(rich);
+		expect(mergeSessionAccounts(rich, undefined)).toEqual(rich);
 	});
 });
 

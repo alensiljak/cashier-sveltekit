@@ -12,7 +12,12 @@
 		type EbSessionAccount,
 		type EbTransaction
 	} from '#lib/importers/enablebanking/api';
-	import { addSession, loadSessions, type StoredSession } from '#lib/importers/enablebanking/sessions';
+	import {
+		addSession,
+		loadSessions,
+		mergeSessionAccounts,
+		type StoredSession
+	} from '#lib/importers/enablebanking/sessions';
 	import { formatAmount } from '#lib/utils/formatter';
 	import { formatDate } from '#lib/utils/dates';
 
@@ -90,8 +95,12 @@
 				try {
 					const live = await client.getSession(session.sessionId);
 					sessionStatus[session.sessionId] = live.status ?? 'unknown';
+					// GET /sessions/{id} returns account IDs only; keep the rich accounts from POST /sessions.
 					if (live.accounts) {
-						sessions = await addSession({ ...session, accounts: live.accounts });
+						sessions = await addSession({
+							...session,
+							accounts: mergeSessionAccounts(session.accounts ?? [], live.accounts)
+						});
 					}
 				} catch (e) {
 					sessionStatus[session.sessionId] =

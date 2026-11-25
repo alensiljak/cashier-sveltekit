@@ -30,6 +30,7 @@ Add an Enable Banking source to the Importers page. Unlike the file importers, i
 - Sandbox and production are **separate applications** (own ID + key each, not transferable). The environment is decided by the app ID pasted into Cashier — sandbox app for testing, production app for real accounts.
 - A production app starts **restricted**: the Control Panel's "Linked accounts" list is the allowlist of accounts the app may access ("Only linked accounts can be accessed"). Do not unlink accounts you want Cashier to read. The API does not expose this list and has no list-sessions call — sessions must be created through Cashier's Connect flow (`POST /auth` → redirect → `POST /sessions`); in restricted mode the session then returns only the linked accounts.
 - Accounts linked through Enable Banking's own web UI belong to Enable Banking's web application; a session is only readable with the JWT of the app that initiated it (the FAQ: the token "identifies the application … all sessions initiated by the application").
+- Schema gotcha (cost a 422 + `each_key_duplicate` on first connect): `POST /sessions` returns `accounts` as rich objects (shown only once), but `GET /sessions/{id}` returns `accounts` as a list of account-ID **strings**. `mergeSessionAccounts` (sessions.ts) merges the two, keeping the rich stored accounts; never store the raw `live.accounts`.
 
 ## Tests
 

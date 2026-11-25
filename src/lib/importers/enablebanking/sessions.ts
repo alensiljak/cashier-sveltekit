@@ -48,6 +48,32 @@ export async function clearSessions(): Promise<void> {
 }
 
 /**
+ * Normalize the `accounts` field of GET /sessions/{id}, which is a list of
+ * account-ID strings, to account objects ({ uid }). Object entries pass through.
+ */
+export function normalizeSessionAccounts(accounts: unknown): EbSessionAccount[] {
+	if (!Array.isArray(accounts)) return [];
+	return accounts
+		.map((a) => (typeof a === 'string' ? { uid: a } : (a as EbSessionAccount)))
+		.filter((a) => typeof a?.uid === 'string' && a.uid.length > 0);
+}
+
+/**
+ * Merge the id-only account list from GET /sessions/{id} with the rich accounts
+ * stored from POST /sessions (which shows details only once): stored accounts
+ * win for known uids, unknown uids are kept as { uid }.
+ */
+export function mergeSessionAccounts(
+	stored: EbSessionAccount[],
+	live: unknown
+): EbSessionAccount[] {
+	const liveAccounts = normalizeSessionAccounts(live);
+	if (!liveAccounts.length) return stored;
+	const storedByUid = new Map(stored.map((a) => [a.uid, a]));
+	return liveAccounts.map((a) => storedByUid.get(a.uid) ?? a);
+}
+
+/**
  * The authorization in progress while the browser is away at the bank:
  * started by POST /auth, completed by the callback route. Kept in
  * sessionStorage, which survives the full-page redirect to the bank and back

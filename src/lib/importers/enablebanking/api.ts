@@ -122,7 +122,11 @@ export interface EbSession {
 	session_id?: string;
 	id?: string;
 	status?: string;
-	accounts?: EbSessionAccount[];
+	/**
+	 * POST /sessions returns rich account objects here (shown only once);
+	 * GET /sessions/{id} returns just the accessed account IDs (strings).
+	 */
+	accounts?: (EbSessionAccount | string)[];
 	valid_until?: string;
 	psu_id_hash?: string;
 	[key: string]: unknown;
