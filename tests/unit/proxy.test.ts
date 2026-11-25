@@ -407,3 +407,44 @@ describe('Enable Banking host (api.enablebanking.com)', () => {
 		);
 	});
 });
+
+describe('PSU headers', () => {
+	async function forwarded(
+		target: string,
+		headers: Record<string, string>
+	): Promise<Record<string, string>> {
+		let seen: RequestInit | undefined;
+		await handleProxyRequest(proxyRequest(target, { headers }), {
+			fetchImpl: async (_input, init) => {
+				seen = init;
+				return new Response('{}');
+			}
+		});
+		return (seen?.headers ?? {}) as Record<string, string>;
+	}
+
+	const EB = 'https://api.enablebanking.com/accounts/a/balances';
+	const incoming = { 'CF-Connecting-IP': '203.0.113.7', 'User-Agent': 'Browser/1' };
+
+	it('fills in exactly the requested headers', async () => {
+		const headers = await forwarded(EB, {
+			...incoming,
+			'X-Upstream-Psu': 'Psu-Ip-Address,Psu-User-Agent'
+		});
+		expect(headers['Psu-Ip-Address']).toBe('203.0.113.7');
+		expect(headers['Psu-User-Agent']).toBe('Browser/1');
+	});
+
+	it('sends none unless all requested headers can be filled', async () => {
+		for (const requested of ['Psu-User-Agent,Psu-Geo-Location', 'Psu-User-Agent,Psu-Accept']) {
+			const headers = await forwarded(EB, { ...incoming, 'X-Upstream-Psu': requested });
+			expect(Object.keys(headers).filter((h) => h.startsWith('Psu-'))).toEqual([]);
+		}
+	});
+
+	it('sends none unasked, or to other hosts', async () => {
+		expect((await forwarded(EB, incoming))['Psu-Ip-Address']).toBeUndefined();
+		const other = await forwarded(ALLOWED, { ...incoming, 'X-Upstream-Psu': 'Psu-Ip-Address' });
+		expect(other['Psu-Ip-Address']).toBeUndefined();
+	});
+});

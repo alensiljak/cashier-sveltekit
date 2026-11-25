@@ -162,8 +162,10 @@ describe('fetchAllTransactions paging', () => {
 	it('stops at the page cap even if the key never disappears', async () => {
 		const page = txPage([{ transaction_id: 't' }], 'ck');
 		const { client, calls } = clientReturning([page]);
-		const all = await client.fetchAllTransactions('acc-1', {}, 5);
-		expect(all).toHaveLength(5);
+		// A partial list must not pass for a complete one.
+		await expect(client.fetchAllTransactions('acc-1', {}, 5)).rejects.toMatchObject({
+			code: 'PAGE_LIMIT'
+		});
 		expect(calls).toHaveLength(5);
 	});
 });

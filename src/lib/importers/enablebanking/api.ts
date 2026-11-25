@@ -67,6 +67,8 @@ export interface EbAspsp {
 	maximum_consent_validity?: number;
 	auth_methods?: EbAspspAuthMethod[];
 	payments?: unknown[];
+	/** PSU headers the bank needs: send all of them or no PSU header at all. */
+	required_psu_headers?: string[];
 }
 
 export interface EbAspspsResponse {
@@ -115,6 +117,8 @@ export interface EbSessionAccount {
 export interface EbAuthorizeSessionResponse {
 	session_id: string;
 	accounts: EbSessionAccount[];
+	/** The consent actually granted. */
+	access?: { valid_until?: string };
 }
 
 /** GET /sessions/{session_id}. */
@@ -127,8 +131,9 @@ export interface EbSession {
 	 * GET /sessions/{id} returns just the accessed account IDs (strings).
 	 */
 	accounts?: (EbSessionAccount | string)[];
-	valid_until?: string;
-	psu_id_hash?: string;
+	/** Per-account identifiers accompanying the ID list. */
+	accounts_data?: { uid?: string; identification_hash?: string }[];
+	access?: { valid_until?: string };
 	[key: string]: unknown;
 }
 
@@ -197,6 +202,12 @@ export interface EbClientOptions {
 	tokenSource?: { getToken(): Promise<string> };
 }
 
+/** Options of the account data endpoints. */
+export interface EbDataOptions {
+	/** The bank's `required_psu_headers`; the proxy fills them in. */
+	psuHeaders?: string[];
+}
+
 type Query = Record<string, string | undefined>;
 
 export class EnableBankingClient {
@@ -213,7 +224,7 @@ export class EnableBankingClient {
 	private async request<T>(
 		method: 'GET' | 'POST' | 'DELETE',
 		path: string,
-		opts: { query?: Query; body?: unknown } = {}
+		opts: { query?: Query; body?: unknown } & EbDataOptions = {}
 	): Promise<T> {
 		const url = new URL(this.baseUrl + path);
 		for (const [key, value] of Object.entries(opts.query ?? {})) {
@@ -223,7 +234,8 @@ export class EnableBankingClient {
 			method,
 			headers: opts.body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
 			body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
-			upstreamBearer: await this.tokenSource.getToken()
+			upstreamBearer: await this.tokenSource.getToken(),
+			upstreamPsuHeaders: opts.psuHeaders
 		});
 		if (!response.ok) {
 			const data = (await response.json().catch(() => ({}))) as {
@@ -272,20 +284,24 @@ export class EnableBankingClient {
 		return this.request('DELETE', `/sessions/${encodeURIComponent(sessionId)}`);
 	}
 
-	getBalances(accountUid: string): Promise<EbBalancesResponse> {
-		return this.request('GET', `/accounts/${encodeURIComponent(accountUid)}/balances`);
+	getBalances(accountUid: string, options: EbDataOptions = {}): Promise<EbBalancesResponse> {
+		return this.request('GET', `/accounts/${encodeURIComponent(accountUid)}/balances`, {
+			psuHeaders: options.psuHeaders
+		});
 	}
 
 	getTransactions(
 		accountUid: string,
-		query: EbTransactionsQuery = {}
+		query: EbTransactionsQuery = {},
+		options: EbDataOptions = {}
 	): Promise<EbTransactionsResponse> {
 		return this.request('GET', `/accounts/${encodeURIComponent(accountUid)}/transactions`, {
 			query: {
 				date_from: query.dateFrom,
 				date_to: query.dateTo,
 				continuation_key: query.continuationKey
-			}
+			},
+			psuHeaders: options.psuHeaders
 		});
 	}
 
@@ -298,7 +314,8 @@ export class EnableBankingClient {
 
 	/**
 	 * Fetch every transaction page in the range (following continuation_key,
-	 * capped so a pathological ASPSP cannot loop forever).
+	 * capped so a pathological ASPSP cannot loop forever). Hitting the cap is
+	 * an error: a silently partial list must never be imported.
 	 */
 	async fetchAllTransactions(
 		accountUid: string,
@@ -311,8 +328,12 @@ export class EnableBankingClient {
 			const response = await this.getTransactions(accountUid, { ...query, continuationKey });
 			all.push(...(response.transactions ?? []));
 			continuationKey = response.continuation_key;
-			if (!continuationKey) break;
+			if (!continuationKey) return all;
 		}
-		return all;
+		throw new EbError(
+			null,
+			'PAGE_LIMIT',
+			`More than ${maxPages} transaction pages — choose a shorter date range`
+		);
 	}
 }

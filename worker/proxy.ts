@@ -16,10 +16,13 @@
 
 import {
 	MCP_SESSION_HEADER,
+	PROXY_ERROR_BAD_KEY,
+	PROXY_ERROR_NOT_CONFIGURED,
 	PROXY_KEY_HEADER,
 	PROXY_PATH,
 	UPSTREAM_BEARER_HEADER,
 	UPSTREAM_KEY_HEADER,
+	UPSTREAM_PSU_HEADER,
 	UPSTREAM_SESSION_HEADER
 } from '../src/lib/services/prices/proxyProtocol.ts';
 
@@ -29,6 +32,7 @@ export {
 	PROXY_PATH,
 	UPSTREAM_BEARER_HEADER,
 	UPSTREAM_KEY_HEADER,
+	UPSTREAM_PSU_HEADER,
 	UPSTREAM_SESSION_HEADER
 };
 
@@ -95,6 +99,44 @@ export const POST_HOSTS: Record<string, true> = {
 export const DELETE_HOSTS: Record<string, true> = {
 	'api.enablebanking.com': true
 };
+
+/**
+ * Hosts that take PSU (end user) headers. The client names the ones the bank
+ * requires in `X-Upstream-Psu`.
+ */
+export const PSU_HOSTS: Record<string, true> = {
+	'api.enablebanking.com': true
+};
+
+/** PSU header (lower case) → the incoming request header that supplies it. */
+const PSU_HEADER_SOURCES: Record<string, { name: string; source: string }> = {
+	// Set by Cloudflare; absent in the Vite dev/preview middleware.
+	'psu-ip-address': { name: 'Psu-Ip-Address', source: 'CF-Connecting-IP' },
+	'psu-user-agent': { name: 'Psu-User-Agent', source: 'User-Agent' },
+	'psu-accept': { name: 'Psu-Accept', source: 'Accept' },
+	'psu-accept-encoding': { name: 'Psu-Accept-Encoding', source: 'Accept-Encoding' },
+	'psu-accept-language': { name: 'Psu-Accept-Language', source: 'Accept-Language' }
+};
+
+/**
+ * The requested PSU headers, or none: the API rejects a partial set of a
+ * bank's required headers, while sending no PSU header at all is accepted.
+ */
+function psuHeaders(request: Request): Record<string, string> {
+	const requested = (request.headers.get(UPSTREAM_PSU_HEADER) ?? '')
+		.split(',')
+		.map((name) => name.trim().toLowerCase())
+		.filter(Boolean);
+	const headers: Record<string, string> = {};
+	for (const key of requested) {
+		if (!Object.hasOwn(PSU_HEADER_SOURCES, key)) return {};
+		const { name, source } = PSU_HEADER_SOURCES[key];
+		const value = request.headers.get(source);
+		if (!value) return {};
+		headers[name] = value;
+	}
+	return headers;
+}
 
 /**
  * Hosts speaking the MCP Streamable HTTP transport. For these the proxy sends
@@ -209,11 +251,11 @@ export async function handleProxyRequest(
 ): Promise<Response> {
 	if (options.requireKey || options.requiredKey !== undefined) {
 		if (!options.requiredKey) {
-			return errorResponse(503, 'Proxy key is not configured');
+			return errorResponse(503, PROXY_ERROR_NOT_CONFIGURED);
 		}
 		const provided = request.headers.get(PROXY_KEY_HEADER) ?? '';
 		if (!keysMatch(provided, options.requiredKey)) {
-			return errorResponse(401, 'Invalid proxy key');
+			return errorResponse(401, PROXY_ERROR_BAD_KEY);
 		}
 	}
 
@@ -261,6 +303,9 @@ export async function handleProxyRequest(
 		const sessionId = request.headers.get(UPSTREAM_SESSION_HEADER);
 		if (sessionId && isMcp) {
 			upstreamHeaders[MCP_SESSION_HEADER] = sessionId;
+		}
+		if (Object.hasOwn(PSU_HOSTS, target.hostname)) {
+			Object.assign(upstreamHeaders, psuHeaders(request));
 		}
 
 		let body: ArrayBuffer | undefined;

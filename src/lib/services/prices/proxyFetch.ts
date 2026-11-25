@@ -18,10 +18,13 @@
 
 import { deviceSettings, DeviceSettingKeys } from '#lib/settings';
 import {
+	PROXY_ERROR_BAD_KEY,
+	PROXY_ERROR_NOT_CONFIGURED,
 	PROXY_KEY_HEADER,
 	PROXY_PATH,
 	UPSTREAM_BEARER_HEADER,
 	UPSTREAM_KEY_HEADER,
+	UPSTREAM_PSU_HEADER,
 	UPSTREAM_SESSION_HEADER
 } from './proxyProtocol';
 
@@ -60,10 +63,22 @@ export interface ProxyFetchOptions extends RequestInit {
 	upstreamBearer?: string;
 	/** Forwarded to MCP hosts as `Mcp-Session-Id` (only for hosts in `MCP_HOSTS`). */
 	upstreamSessionId?: string;
+	/** PSU header names the proxy should fill in (only for hosts in `PSU_HOSTS`). */
+	upstreamPsuHeaders?: string[];
+}
+
+/** The `error` text of a JSON error response, read without consuming the body. */
+async function errorText(response: Response): Promise<unknown> {
+	try {
+		return ((await response.clone().json()) as { error?: unknown } | null)?.error;
+	} catch {
+		return undefined;
+	}
 }
 
 export async function proxyFetch(target: string, init: ProxyFetchOptions = {}): Promise<Response> {
-	const { upstreamKey, upstreamBearer, upstreamSessionId, ...requestInit } = init;
+	const { upstreamKey, upstreamBearer, upstreamSessionId, upstreamPsuHeaders, ...requestInit } =
+		init;
 	const [key, url] = await Promise.all([
 		deviceSettings.get<string>(DeviceSettingKeys.proxyKey),
 		proxyUrl(target)
@@ -73,14 +88,16 @@ export async function proxyFetch(target: string, init: ProxyFetchOptions = {}): 
 	if (upstreamKey) headers.set(UPSTREAM_KEY_HEADER, upstreamKey);
 	if (upstreamBearer) headers.set(UPSTREAM_BEARER_HEADER, upstreamBearer);
 	if (upstreamSessionId) headers.set(UPSTREAM_SESSION_HEADER, upstreamSessionId);
+	if (upstreamPsuHeaders?.length) headers.set(UPSTREAM_PSU_HEADER, upstreamPsuHeaders.join(','));
 
 	const response = await fetch(url, { ...requestInit, headers });
-	if (response.status === 401) {
+	// Only the proxy's own errors are rewritten; an upstream 401/503 reaches the caller.
+	if (response.status === 401 && (await errorText(response)) === PROXY_ERROR_BAD_KEY) {
 		throw new Error(
 			'Proxy key is missing or invalid — set it in Settings → Device Settings (HTTP Proxy).'
 		);
 	}
-	if (response.status === 503) {
+	if (response.status === 503 && (await errorText(response)) === PROXY_ERROR_NOT_CONFIGURED) {
 		throw new Error('The price proxy is not configured on the server (PROXY_KEY is missing).');
 	}
 	return response;

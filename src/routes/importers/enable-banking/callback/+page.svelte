@@ -9,7 +9,7 @@
 	import {
 		addSession,
 		clearPendingAuth,
-		loadPendingAuth
+		findPendingAuth
 	} from '#lib/importers/enablebanking/sessions';
 
 	/**
@@ -23,26 +23,23 @@
 
 	onMount(async () => {
 		const params = page.url.searchParams;
+		const state = params.get('state');
+		const pending = await findPendingAuth(state);
 		const errorParam = params.get('error');
 		if (errorParam) {
 			const description = params.get('error_description');
 			status = 'error';
 			message = `Enable Banking returned an error: ${errorParam}${description ? ` — ${description}` : ''}`;
-			clearPendingAuth();
+			// Only a redirect carrying the right state ends the pending connection.
+			if (pending) await clearPendingAuth(pending.state);
 			return;
 		}
 		const code = params.get('code');
-		const state = params.get('state');
-		const pending = loadPendingAuth();
 		const credentials = await loadCredentials();
-		if (!pending || !credentials) {
+		if (!pending || !credentials || !code) {
 			status = 'error';
-			message = 'No pending bank connection on this device — start it from the Importers page.';
-			return;
-		}
-		if (!code || state !== pending.state) {
-			status = 'error';
-			message = 'The redirect does not match the pending connection (state mismatch) — start again.';
+			message =
+				'No pending bank connection on this device matches this redirect (it may have expired) — start it from the Importers page.';
 			return;
 		}
 		try {
@@ -52,16 +49,17 @@
 				sessionId: session.session_id,
 				aspsp: pending.aspsp,
 				createdAt: new Date().toISOString(),
-				validUntil: pending.validUntil,
+				validUntil: session.access?.valid_until ?? pending.validUntil,
+				requiredPsuHeaders: pending.requiredPsuHeaders,
 				accounts: session.accounts ?? []
 			});
-			clearPendingAuth();
+			await clearPendingAuth(pending.state);
 			status = 'done';
 			await goto('/importers/enable-banking', { replaceState: true });
 		} catch (e) {
 			status = 'error';
 			message = e instanceof Error ? e.message : String(e);
-			clearPendingAuth();
+			await clearPendingAuth(pending.state);
 		}
 	});
 </script>

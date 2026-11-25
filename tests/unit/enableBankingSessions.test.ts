@@ -1,8 +1,8 @@
 // @vitest-environment node
 /*
     Tests for the Enable Banking session store (src/lib/importers/enablebanking/sessions.ts):
-    device-only storage of connected sessions and the pending-authorization record that
-    survives the redirect to the bank and back (sessionStorage, stubbed here).
+    device-only storage of connected sessions and the pending-authorization records that
+    survive the redirect to the bank and back.
 */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -14,35 +14,27 @@ vi.mock('#lib/settings', () => ({
 		set: vi.fn(async (key: string, value: unknown) => void store.settings.set(key, value)),
 		delete: vi.fn(async (key: string) => void store.settings.delete(key))
 	},
-	DeviceSettingKeys: { enableBankingSessions: 'importer.enablebanking.sessions' }
+	DeviceSettingKeys: {
+		enableBankingSessions: 'importer.enablebanking.sessions',
+		enableBankingPendingAuth: 'importer.enablebanking.pendingAuth'
+	}
 }));
 
 import {
 	addSession,
 	clearPendingAuth,
 	clearSessions,
-	loadPendingAuth,
+	findPendingAuth,
 	loadSessions,
 	mergeSessionAccounts,
 	normalizeSessionAccounts,
 	removeSession,
 	savePendingAuth,
+	sessionStatus,
+	updateSession,
+	PENDING_AUTH_TTL_MS,
 	type StoredSession
 } from '#lib/importers/enablebanking/sessions';
-
-function memoryStorage(): Storage {
-	const map = new Map<string, string>();
-	return {
-		getItem: (k) => map.get(k) ?? null,
-		setItem: (k, v) => void map.set(k, v),
-		removeItem: (k) => void map.delete(k),
-		clear: () => map.clear(),
-		key: () => null,
-		get length() {
-			return map.size;
-		}
-	} as Storage;
-}
 
 function session(id: string): StoredSession {
 	return {
@@ -106,28 +98,74 @@ describe('session account lists (POST /sessions vs GET /sessions/{id})', () => {
 	});
 });
 
-describe('pending authorization (survives the redirect round trip)', () => {
-	const pending = {
-		state: 'state-1',
-		aspsp: { name: 'Mock ASPSP', country: 'DE' },
-		validUntil: '2027-02-23T09:00:00.000Z',
-		redirectUrl: 'http://localhost:5173/importers/enable-banking/callback',
-		psuType: 'personal'
-	};
-
-	it('round-trips through storage', () => {
-		const storage = memoryStorage();
-		savePendingAuth(pending, storage);
-		expect(loadPendingAuth(storage)).toEqual(pending);
-		clearPendingAuth(storage);
-		expect(loadPendingAuth(storage)).toBeNull();
+describe('stored session upkeep', () => {
+	it('repairs accounts stored as ID strings, dropping repeats', async () => {
+		store.settings.set('importer.enablebanking.sessions', [
+			{ ...session('s1'), accounts: ['u1', 'u2', 'u1'] }
+		]);
+		expect((await loadSessions())[0].accounts).toEqual([{ uid: 'u1' }, { uid: 'u2' }]);
 	});
 
-	it('returns null for corrupt or incomplete records', () => {
-		const storage = memoryStorage();
-		storage.setItem('cashier.enablebanking.pending', '{not json');
-		expect(loadPendingAuth(storage)).toBeNull();
-		storage.setItem('cashier.enablebanking.pending', JSON.stringify({ state: 42 }));
-		expect(loadPendingAuth(storage)).toBeNull();
+	it('keeps the order when a session is replaced or updated', async () => {
+		await addSession(session('s1'));
+		await addSession(session('s2'));
+		await addSession(session('s1'));
+		await updateSession('s1', (s) => ({ ...s, status: 'AUTHORIZED' }));
+		expect((await loadSessions()).map((s) => s.sessionId)).toEqual(['s1', 's2']);
+	});
+
+	it('does not lose parallel updates or re-add a removed session', async () => {
+		await addSession(session('s1'));
+		await addSession(session('s2'));
+		await Promise.all(
+			['s1', 's2', 'gone'].map((id) => updateSession(id, (s) => ({ ...s, status: id })))
+		);
+		expect((await loadSessions()).map((s) => s.status)).toEqual(['s1', 's2']);
+	});
+
+	it('fills in identification hashes from accounts_data', () => {
+		expect(
+			mergeSessionAccounts([{ uid: 'u1' }], ['u1'], [{ uid: 'u1', identification_hash: 'h1' }])
+		).toEqual([{ uid: 'u1', identification_hash: 'h1' }]);
+	});
+
+	it('reports a session past its consent date as expired', () => {
+		const before = Date.parse('2026-12-01T00:00:00Z');
+		const after = Date.parse('2027-03-01T00:00:00Z');
+		const authorized = { ...session('s1'), status: 'AUTHORIZED' };
+		expect(sessionStatus(authorized, before)).toBe('AUTHORIZED');
+		expect(sessionStatus(authorized, after)).toBe('EXPIRED');
+		expect(sessionStatus({ ...authorized, status: 'REVOKED' }, after)).toBe('REVOKED');
+	});
+});
+
+describe('pending authorization (survives the redirect round trip)', () => {
+	const now = Date.parse('2026-11-25T09:00:00.000Z');
+	const pending = (state: string) => ({
+		state,
+		aspsp: { name: 'Mock ASPSP', country: 'DE' },
+		validUntil: '2027-02-23T09:00:00.000Z',
+		createdAt: '2026-11-25T09:00:00.000Z'
+	});
+
+	it('is found and cleared by its state, leaving the others', async () => {
+		await savePendingAuth(pending('a'), now);
+		await savePendingAuth(pending('b'), now);
+		expect(await findPendingAuth('a', now)).toEqual(pending('a'));
+		expect(await findPendingAuth('unknown', now)).toBeNull();
+		expect(await findPendingAuth(null, now)).toBeNull();
+		await clearPendingAuth('a', now);
+		expect(await findPendingAuth('a', now)).toBeNull();
+		expect(await findPendingAuth('b', now)).toEqual(pending('b'));
+	});
+
+	it('expires', async () => {
+		await savePendingAuth(pending('a'), now);
+		expect(await findPendingAuth('a', now + PENDING_AUTH_TTL_MS)).toBeNull();
+	});
+
+	it('ignores corrupt records', async () => {
+		store.settings.set('importer.enablebanking.pendingAuth', 'garbage');
+		expect(await findPendingAuth('a', now)).toBeNull();
 	});
 });

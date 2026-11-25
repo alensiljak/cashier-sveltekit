@@ -8,8 +8,11 @@
  * sessions.ts) and are never exported or synced.
  */
 export interface EnableBankingConfig {
-	/** Account UIDs shown on the operations page; absent/empty means all. */
-	accounts?: string[];
+	/**
+	 * The account last selected on the operations page: its identification_hash
+	 * (stable across sessions and devices), or the session's uid without one.
+	 */
+	selectedAccount?: string;
 	/** How many days of transactions to load by default. Default 90. */
 	daysBack?: number;
 	/** PSU type used when connecting a bank ('personal' or 'business'). */

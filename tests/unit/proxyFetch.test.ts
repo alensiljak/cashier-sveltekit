@@ -92,16 +92,31 @@ describe('proxyFetch', () => {
 	});
 
 	it('turns 401 and 503 into actionable errors', async () => {
-		vi.stubGlobal(
-			'fetch',
-			vi.fn(async () => new Response('', { status: 401 }))
-		);
+		const reply = (status: number, error: string) =>
+			vi.stubGlobal(
+				'fetch',
+				vi.fn(async () => new Response(JSON.stringify({ error }), { status }))
+			);
+
+		reply(401, 'Invalid proxy key');
 		await expect(proxyFetch('https://www.vanguard.com.au/a')).rejects.toThrow(/Proxy key/);
 
-		vi.stubGlobal(
-			'fetch',
-			vi.fn(async () => new Response('', { status: 503 }))
-		);
+		reply(503, 'Proxy key is not configured');
 		await expect(proxyFetch('https://www.vanguard.com.au/a')).rejects.toThrow(/PROXY_KEY/);
+	});
+
+	it('returns upstream 401 and 503 responses with an unread body', async () => {
+		for (const [status, body] of [
+			[401, '{"error":"UNAUTHORIZED"}'],
+			[503, 'bank unavailable']
+		] as const) {
+			vi.stubGlobal(
+				'fetch',
+				vi.fn(async () => new Response(body, { status }))
+			);
+			const response = await proxyFetch('https://api.enablebanking.com/application');
+			expect(response.status).toBe(status);
+			expect(await response.text()).toBe(body);
+		}
 	});
 });

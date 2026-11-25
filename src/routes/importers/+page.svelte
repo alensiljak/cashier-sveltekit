@@ -13,8 +13,12 @@
 	import { clearAuth } from '#lib/importers/scalable/auth';
 	import EnableBankingConfigForm from '#lib/importers/enablebanking/EnableBankingConfigForm.svelte';
 	import type { EnableBankingConfig } from '#lib/importers/enablebanking/config';
-	import { clearCredentials } from '#lib/importers/enablebanking/auth';
-	import { clearSessions } from '#lib/importers/enablebanking/sessions';
+	import { loadCredentials } from '#lib/importers/enablebanking/auth';
+	import { EnableBankingClient } from '#lib/importers/enablebanking/api';
+	import {
+		describeFailures,
+		disconnectEnableBanking
+	} from '#lib/importers/enablebanking/connection';
 	import { savePendingImport } from '#lib/importers/pendingImport';
 	import {
 		loadImporterConfig,
@@ -136,15 +140,30 @@
 	async function reset() {
 		const id = resetId;
 		if (!id) return;
+		error = '';
+		// First, because a consent that cannot be revoked aborts the reset.
+		if (id === 'enablebanking' && !(await disconnectBanks())) return;
 		await resetImporterConfig(id);
 		// API importers keep credentials in device-only settings; reset clears those too.
 		if (id === 'scalable') await clearAuth();
-		if (id === 'enablebanking') {
-			await clearCredentials();
-			await clearSessions();
-		}
 		delete configs[id];
 		if (editingId === id) editingId = null;
+	}
+
+	/** Revoke the bank consents and delete the Enable Banking device data. */
+	async function disconnectBanks(): Promise<boolean> {
+		try {
+			const credentials = await loadCredentials();
+			const failures = await disconnectEnableBanking(
+				credentials ? new EnableBankingClient({ credentials }) : null
+			);
+			if (!failures.length) return true;
+			error = describeFailures(failures);
+		} catch (e) {
+			error = e instanceof Error ? e.message : String(e);
+		}
+		formKey++; // Some sessions may be gone: reload the form.
+		return false;
 	}
 </script>
 
@@ -165,8 +184,8 @@
 
 	<div class="flex-1 overflow-y-auto touch-pan-y p-4 flex flex-col gap-4">
 		<p class="text-sm opacity-70">
-			Bank statement formats Cashier can import — the format is recognised from the file's
-			content — and live sources that are read through their API.
+			Bank statement formats Cashier can import — the format is recognised from the file's content —
+			and live sources that are read through their API.
 		</p>
 
 		{#each importers as importer (importer.id)}
@@ -181,13 +200,17 @@
 									<button
 										class="btn btn-xs join-item"
 										class:btn-active={!jsonMode}
-										onclick={showForm}>Form</button
+										onclick={showForm}
 									>
+										Form
+									</button>
 									<button
 										class="btn btn-xs join-item"
 										class:btn-active={jsonMode}
-										onclick={() => (jsonMode = true)}>JSON</button
+										onclick={() => (jsonMode = true)}
 									>
+										JSON
+									</button>
 								</div>
 							{/if}
 						</div>
@@ -264,10 +287,7 @@
 								{#if importer.source === 'api' && importer.viewRoute}
 									<a class="btn btn-primary shrink-0" href={importer.viewRoute}>View data</a>
 								{:else}
-									<button
-										class="btn btn-primary shrink-0"
-										onclick={() => pickFile(importer.id)}
-									>
+									<button class="btn btn-primary shrink-0" onclick={() => pickFile(importer.id)}>
 										Import file
 									</button>
 								{/if}

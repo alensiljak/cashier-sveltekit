@@ -26,3 +26,16 @@ export const UPSTREAM_BEARER_HEADER = 'X-Upstream-Authorization';
 export const UPSTREAM_SESSION_HEADER = 'X-Upstream-Session-Id';
 /** Upstream response header the proxy passes through for MCP hosts. */
 export const MCP_SESSION_HEADER = 'Mcp-Session-Id';
+/**
+ * Client → proxy: comma-separated names of the PSU headers a bank requires
+ * (Enable Banking `required_psu_headers`). The proxy fills them from the
+ * incoming request, for hosts in `PSU_HOSTS` only (worker/proxy.ts).
+ */
+export const UPSTREAM_PSU_HEADER = 'X-Upstream-Psu';
+
+/**
+ * `error` texts of the proxy's own 401/503 responses. Upstream statuses are
+ * passed through, so the client needs these to tell the two apart.
+ */
+export const PROXY_ERROR_BAD_KEY = 'Invalid proxy key';
+export const PROXY_ERROR_NOT_CONFIGURED = 'Proxy key is not configured';

@@ -252,7 +252,11 @@ export const DeviceSettingKeys = {
 	// Enable Banking sessions created on this device (consent references +
 	// account lists, src/lib/importers/enablebanking/sessions.ts). Device-only:
 	// they are only usable together with this device's private key.
-	enableBankingSessions: 'importer.enablebanking.sessions'
+	enableBankingSessions: 'importer.enablebanking.sessions',
+	// Bank authorizations in progress (keyed by `state`, expiring), and the last
+	// fetched account balances. Device-only, like the sessions they belong to.
+	enableBankingPendingAuth: 'importer.enablebanking.pendingAuth',
+	enableBankingBalances: 'importer.enablebanking.balances'
 };
 
 class UserSettings {

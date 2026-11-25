@@ -2,21 +2,20 @@
 	import { onMount } from 'svelte';
 	import type { EnableBankingConfig } from './config';
 	import {
-		clearCredentials,
 		loadCredentials,
 		saveCredentialsInput,
 		EbAuthError,
 		type StoredCredentials
 	} from './auth';
+	import { loadSessions, savePendingAuth, sessionStatus, type StoredSession } from './sessions';
 	import {
-		addSession,
-		clearSessions,
-		loadSessions,
-		mergeSessionAccounts,
-		removeSession,
-		savePendingAuth,
-		type StoredSession
-	} from './sessions';
+		describeFailures,
+		disconnectEnableBanking,
+		forgetSession,
+		revokeSession,
+		syncSession
+	} from './connection';
+	import ConfirmDialog from '#lib/components/ConfirmDialog.svelte';
 	import {
 		EnableBankingClient,
 		EbError,
@@ -43,8 +42,14 @@
 	let callbackUrl = $state('');
 
 	let sessions = $state<StoredSession[]>([]);
-	let sessionStatus = $state<Record<string, string>>({});
+	/** The error of the last status check, per session. */
+	let checkErrors = $state<Record<string, string>>({});
 	let removingSession = $state<string | null>(null);
+	/** Sessions whose revocation failed; these may be forgotten locally. */
+	let revokeFailed = $state<Record<string, boolean>>({});
+	let confirmDisconnect = $state(false);
+	/** Bumped by every bank list load; older responses are discarded. */
+	let aspspGeneration = 0;
 
 	let aspsps = $state<EbAspsp[]>([]);
 	let loadingAspsps = $state(false);
@@ -57,9 +62,7 @@
 	const countries = $derived(
 		[...new Set(aspsps.map((a) => a.country))].sort((a, b) => a.localeCompare(b))
 	);
-	const visibleAspsps = $derived(
-		country ? aspsps.filter((a) => a.country === country) : aspsps
-	);
+	const visibleAspsps = $derived(country ? aspsps.filter((a) => a.country === country) : aspsps);
 	const aspspOptions = $derived(visibleAspsps.map(aspspLabelOf));
 	const selectedAspsp = $derived(visibleAspsps.find((a) => aspspLabelOf(a) === aspspLabel));
 	const maxValidityDays = $derived(
@@ -80,7 +83,7 @@
 		if (credentials) {
 			appId = credentials.appId;
 			await verify();
-			await loadAspsps();
+			if (app) await loadAspsps();
 		}
 	});
 
@@ -106,7 +109,7 @@
 			credentials = await saveCredentialsInput(appId, privateKeyPem);
 			privateKeyPem = '';
 			await verify();
-			await loadAspsps();
+			if (app) await loadAspsps();
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
 		} finally {
@@ -118,35 +121,35 @@
 		checking = true;
 		error = '';
 		try {
-			for (const session of sessions) {
-				try {
-					await client().deleteSession(session.sessionId);
-				} catch {
-					// Best effort: an expired/revoked session is gone server-side anyway.
-				}
+			const failures = await disconnectEnableBanking(client());
+			sessions = await loadSessions();
+			if (failures.length) {
+				for (const { session } of failures) revokeFailed[session.sessionId] = true;
+				error = describeFailures(failures);
+				return;
 			}
-			await clearSessions();
-			await clearCredentials();
-			sessions = [];
 			credentials = null;
 			app = null;
 			aspsps = [];
 			appId = '';
+		} catch (e) {
+			error = e instanceof Error ? e.message : String(e);
 		} finally {
 			checking = false;
 		}
 	}
 
-	async function loadAspsps() {
+	async function loadAspsps(psuType: 'personal' | 'business' = value.psuType ?? 'personal') {
+		const generation = ++aspspGeneration;
 		loadingAspsps = true;
 		error = '';
 		try {
-			const response = await client().listAspsps({ psuType: value.psuType ?? 'personal' });
-			aspsps = response.aspsps ?? [];
+			const response = await client().listAspsps({ psuType });
+			if (generation === aspspGeneration) aspsps = response.aspsps ?? [];
 		} catch (e) {
-			error = e instanceof Error ? e.message : String(e);
+			if (generation === aspspGeneration) error = e instanceof Error ? e.message : String(e);
 		} finally {
-			loadingAspsps = false;
+			if (generation === aspspGeneration) loadingAspsps = false;
 		}
 	}
 
@@ -166,14 +169,14 @@
 				redirect_url: callbackUrl,
 				psu_type: value.psuType ?? 'personal'
 			});
-			// The browser leaves for the bank/Enable Banking page; sessionStorage
-			// carries the pending authorization across the round trip.
-			savePendingAuth({
+			// The browser leaves for the bank/Enable Banking page; the callback
+			// route picks up the stored pending authorization.
+			await savePendingAuth({
 				state,
 				aspsp: { name: aspsp.name, country: aspsp.country },
 				validUntil,
-				redirectUrl: callbackUrl,
-				psuType: value.psuType ?? 'personal'
+				requiredPsuHeaders: aspsp.required_psu_headers && [...aspsp.required_psu_headers],
+				createdAt: new Date().toISOString()
 			});
 			window.location.href = response.url;
 		} catch (e) {
@@ -185,16 +188,10 @@
 	async function checkSession(session: StoredSession) {
 		error = '';
 		try {
-			const live = await client().getSession(session.sessionId);
-			sessionStatus[session.sessionId] = live.status ?? 'unknown';
-			if (live.accounts) {
-				sessions = await addSession({
-					...session,
-					accounts: mergeSessionAccounts(session.accounts ?? [], live.accounts)
-				});
-			}
+			sessions = await syncSession(client(), session.sessionId);
+			delete checkErrors[session.sessionId];
 		} catch (e) {
-			sessionStatus[session.sessionId] =
+			checkErrors[session.sessionId] =
 				e instanceof EbError && e.code ? e.code : e instanceof Error ? e.message : String(e);
 		}
 	}
@@ -203,16 +200,22 @@
 		removingSession = session.sessionId;
 		error = '';
 		try {
-			await client().deleteSession(session.sessionId);
+			sessions = await revokeSession(client(), session.sessionId);
 		} catch (e) {
-			// Local removal still applies; the consent may already be gone server-side.
-			if (!(e instanceof EbError && e.status === 404)) {
-				error = e instanceof Error ? e.message : String(e);
-			}
+			revokeFailed[session.sessionId] = true;
+			error = `Could not revoke the consent, so the session was kept: ${e instanceof Error ? e.message : String(e)}`;
+		} finally {
+			removingSession = null;
 		}
-		sessions = await removeSession(session.sessionId);
-		delete sessionStatus[session.sessionId];
-		removingSession = null;
+	}
+
+	async function forget(session: StoredSession) {
+		error = '';
+		try {
+			sessions = await forgetSession(session.sessionId);
+		} catch (e) {
+			error = e instanceof Error ? e.message : String(e);
+		}
 	}
 
 	async function copyCallbackUrl() {
@@ -226,6 +229,11 @@
 
 	function setPsuType(psuType: 'personal' | 'business') {
 		onchange({ ...value, psuType });
+		// The bank list depends on the user type.
+		aspsps = [];
+		aspspLabel = '';
+		country = '';
+		if (credentials) loadAspsps(psuType);
 	}
 </script>
 
@@ -254,8 +262,7 @@
 …
 -----END PRIVATE KEY-----"
 				spellcheck="false"
-				bind:value={privateKeyPem}
-			></textarea>
+				bind:value={privateKeyPem}></textarea>
 			<div class="flex gap-2 flex-wrap">
 				<button
 					class="btn btn-primary btn-sm"
@@ -271,7 +278,11 @@
 				<button class="btn btn-sm" disabled={checking} onclick={verify}>
 					{checking ? 'Checking…' : 'Re-check'}
 				</button>
-				<button class="btn btn-ghost btn-sm text-error" disabled={checking} onclick={disconnect}>
+				<button
+					class="btn btn-ghost btn-sm text-error"
+					disabled={checking}
+					onclick={() => (confirmDisconnect = true)}
+				>
 					Disconnect
 				</button>
 			</div>
@@ -281,8 +292,8 @@
 	{#if app}
 		<div class="alert alert-success py-2 text-sm">
 			<span>
-				Connected to Enable Banking as “{app.name ?? app.id ?? 'the app'}”
-				({app.environment ?? 'unknown environment'}).
+				Connected to Enable Banking as “{app.name ?? app.id ?? 'the app'}” ({app.environment ??
+					'unknown environment'}).
 			</span>
 		</div>
 	{:else if checking}
@@ -290,10 +301,8 @@
 			<span class="loading loading-spinner loading-sm"></span>
 			<span>Verifying the credentials against api.enablebanking.com…</span>
 		</div>
-	{:else if error && credentials}
-		<div class="alert alert-error py-2 text-sm">{error}</div>
 	{/if}
-	{#if error && !credentials}<div class="alert alert-error py-2 text-sm">{error}</div>{/if}
+	{#if error && !checking}<div class="alert alert-error py-2 text-sm">{error}</div>{/if}
 
 	<div class="flex flex-col gap-1">
 		<span class="text-sm">Redirect URL</span>
@@ -345,7 +354,8 @@
 				</label>
 				<label class="form-control">
 					<span class="text-xs opacity-70">
-						Consent days{#if maxValidityDays !== null} (max {maxValidityDays}){/if}
+						Consent days{#if maxValidityDays !== null}
+							(max {maxValidityDays}){/if}
 					</span>
 					<input
 						type="number"
@@ -362,10 +372,10 @@
 					<span>Loading the bank list…</span>
 				</div>
 			{:else if !aspsps.length}
-					<button class="btn btn-outline btn-sm self-start" onclick={loadAspsps}>
-						Load bank list
-					</button>
-				{/if}
+				<button class="btn btn-outline btn-sm self-start" onclick={() => loadAspsps()}>
+					Load bank list
+				</button>
+			{/if}
 			<div class="flex gap-2 flex-wrap">
 				<button
 					class="btn btn-primary btn-sm"
@@ -395,8 +405,10 @@
 									{session.accounts.length}
 									{session.accounts.length === 1 ? 'account' : 'accounts'}
 								</span>
-								{#if sessionStatus[session.sessionId]}
-									<span class="badge badge-sm badge-outline">{sessionStatus[session.sessionId]}</span>
+								{#if checkErrors[session.sessionId] ?? sessionStatus(session)}
+									<span class="badge badge-sm badge-outline">
+										{checkErrors[session.sessionId] ?? sessionStatus(session)}
+									</span>
 								{/if}
 								<span class="flex-1"></span>
 								<button class="btn btn-ghost btn-xs" onclick={() => checkSession(session)}>
@@ -409,6 +421,15 @@
 								>
 									Remove
 								</button>
+								{#if revokeFailed[session.sessionId]}
+									<button
+										class="btn btn-ghost btn-xs"
+										title="Delete from this device without revoking the consent"
+										onclick={() => forget(session)}
+									>
+										Forget locally
+									</button>
+								{/if}
 							</div>
 							<span class="text-xs opacity-60">
 								connected {new Date(session.createdAt).toLocaleDateString('en-GB')}
@@ -423,3 +444,10 @@
 		{/if}
 	{/if}
 </div>
+
+<ConfirmDialog
+	bind:open={confirmDisconnect}
+	title="Disconnect Enable Banking"
+	message="Revoke all connected bank consents and delete the application credentials from this device?"
+	onconfirm={disconnect}
+/>
