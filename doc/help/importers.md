@@ -92,13 +92,13 @@ Cash dividends and interest from an investment account are recognised by the ISI
 The Scalable Capital importer is not file-based: it reads your account live from Scalable's MCP endpoint (`https://mcp.scalable.capital/mcp`).
 
 1. Make sure MCP access (**Agentic Investing**) is enabled for your Scalable account in the Scalable app/web under **Profile → Settings → Security**.
-2. On the importer's card, tap **Configure**, then **Connect with Scalable Capital**. Your browser opens Scalable's login and consent page ("Connect Cashier to Scalable MCP?"); log in and approve. Cashier then exchanges the code for a token and stores it **on this device only** — it is never part of a backup or of the settings sync. **Disconnect** removes it. Expired tokens are refreshed automatically via the stored refresh token.
+2. A PWA cannot complete Scalable's OAuth login by itself (no localhost redirect), so the login runs on your computer: on the importer's card, tap **Configure**, then **Show the Python script** → **Copy script**. Save it as `scalable_token.py` and run it — `python3 scalable_token.py` (or `uv run scalable_token.py`). It opens Scalable's login and consent page ("Connect Cashier to Scalable MCP?") in your browser; log in and approve, and the script prints the tokens as JSON. Paste that JSON into the form and tap **Save tokens**. Cashier stores the tokens **on this device only** — they are never part of a backup or of the settings sync. **Disconnect** removes them. Expired access tokens are refreshed automatically via the stored refresh token; when the refresh token expires too, run the script again and paste the new JSON.
 3. If your account has several broker portfolios, pick the one to read.
 4. Once configured, the card's **View data** button opens the Scalable view: total value, performance by timeframe, cash and buying power, holdings with gains, and the transaction list (tap a row for its details, **Load more** to page through).
 
 ## Settings
 
-**Edit** on an importer's card shows its settings as JSON (for Scalable Capital, a form). **Load defaults** puts the template back. **Reset** deletes the importer's settings, including its rules — for Scalable Capital it also clears the stored login. Settings are stored with the other app settings, so they are part of a [backup](/help/backup) and of the settings sync between devices; credentials like the Scalable login are not.
+**Edit** on an importer's card shows its settings as JSON (for Scalable Capital, a form). **Load defaults** puts the template back. **Reset** deletes the importer's settings, including its rules — for Scalable Capital it also clears the stored tokens. Settings are stored with the other app settings, so they are part of a [backup](/help/backup) and of the settings sync between devices; credentials like the Scalable tokens are not.
 
 | Key                                | Meaning                                                                      |
 | ---------------------------------- | ---------------------------------------------------------------------------- |

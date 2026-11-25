@@ -1,16 +1,13 @@
 // @vitest-environment node
 /*
-    Tests for the Scalable Capital OAuth flow (src/lib/importers/scalable/oauth.ts
-    and auth.ts): dynamic client registration, the authorize URL, PKCE, the code
-    exchange and refresh — all with an injected/stubbed transport, no network.
+    Tests for the pasted-token authentication (src/lib/importers/scalable/token.ts
+    and auth.ts): parsing the JSON printed by scripts/scalable_token.py, storing
+    it device-only, and the refresh_token grant that keeps the access token
+    alive — all with an injected/stubbed transport, no network.
 */
-import { createHash } from 'node:crypto';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const store = vi.hoisted(() => ({
-	settings: new Map<string, unknown>(),
-	local: new Map<string, string>()
-}));
+const store = vi.hoisted(() => ({ settings: new Map<string, unknown>() }));
 
 vi.mock('#lib/settings', () => ({
 	deviceSettings: {
@@ -18,43 +15,26 @@ vi.mock('#lib/settings', () => ({
 		set: vi.fn(async (key: string, value: unknown) => void store.settings.set(key, value)),
 		delete: vi.fn(async (key: string) => void store.settings.delete(key))
 	},
-	DeviceSettingKeys: { scalableOAuth: 'importer.scalable.oauth' }
+	DeviceSettingKeys: { scalableTokens: 'importer.scalable.tokens' }
 }));
 
 import {
-	authorizeUrl,
-	callbackUrl,
-	createPkce,
-	exchangeCode,
-	OAuthError,
 	refreshTokens,
-	registerClient,
-	SC_AUTHORIZE_URL,
-	SC_REGISTER_URL,
 	SC_RESOURCE,
-	SC_TOKEN_URL
-} from '#lib/importers/scalable/oauth';
+	SC_TOKEN_URL,
+	TokenError
+} from '#lib/importers/scalable/token';
 import {
 	clearAuth,
-	completeAuthorization,
 	loadAuth,
-	ScalableAuth,
-	startAuthorization
+	parsePastedTokens,
+	savePastedTokens,
+	ScalableAuth
 } from '#lib/importers/scalable/auth';
-
-function b64urlSha256(s: string): string {
-	return createHash('sha256').update(s).digest('base64url');
-}
 
 beforeEach(() => {
 	store.settings.clear();
-	store.local.clear();
 	vi.unstubAllGlobals();
-	vi.stubGlobal('localStorage', {
-		getItem: (k: string) => store.local.get(k) ?? null,
-		setItem: (k: string, v: string) => void store.local.set(k, v),
-		removeItem: (k: string) => void store.local.delete(k)
-	});
 });
 
 /** The app calls upstreams through the proxy, so the target URL arrives encoded. */
@@ -66,220 +46,165 @@ function fetchReturning(response: Response) {
 	return vi.fn(async (..._args: unknown[]) => response);
 }
 
-describe('registerClient', () => {
-	it('POSTs the dynamic registration and returns the client_id', async () => {
-		const fetchImpl = fetchReturning(
-			new Response(JSON.stringify({ client_id: 'cid-1', client_id_issued_at: 1 }), { status: 201 })
-		);
-		const clientId = await registerClient(
-			'http://localhost:5173/importers/scalable/callback',
-			fetchImpl as never
-		);
-		expect(clientId).toBe('cid-1');
-		const [url, init] = fetchImpl.mock.calls[0] as unknown as [
-			string,
-			{ method: string; body: string; headers: Record<string, string> }
-		];
-		expect(url).toBe(SC_REGISTER_URL);
-		expect(init.method).toBe('POST');
-		const body = JSON.parse(init.body);
-		expect(body.token_endpoint_auth_method).toBe('none');
-		expect(body.redirect_uris).toEqual(['http://localhost:5173/importers/scalable/callback']);
+/** What scripts/scalable_token.py prints at the end. */
+const SCRIPT_JSON = JSON.stringify({
+	client_id: 'cid-1',
+	access_token: 'AT',
+	refresh_token: 'RT',
+	expires_in: 3600,
+	token_type: 'Bearer',
+	scope: 'openid profile offline_access'
+});
+
+describe('parsePastedTokens (the script output)', () => {
+	it('parses the JSON the script prints and computes the expiry', () => {
+		const before = Date.now();
+		const auth = parsePastedTokens(SCRIPT_JSON);
+		expect(auth.clientId).toBe('cid-1');
+		expect(auth.accessToken).toBe('AT');
+		expect(auth.refreshToken).toBe('RT');
+		expect(auth.expiresAt).toBeGreaterThanOrEqual(before + 3_600_000);
+		expect(auth.expiresAt).toBeLessThanOrEqual(Date.now() + 3_600_000);
 	});
 
-	it('throws an OAuthError on failure', async () => {
-		const fetchImpl = fetchReturning(new Response('nope', { status: 400 }));
-		await expect(
-			registerClient('http://localhost:5173/importers/scalable/callback', fetchImpl as never)
-		).rejects.toThrow(OAuthError);
+	it('accepts expires_at (epoch seconds) instead of expires_in', () => {
+		const at = Math.floor(Date.now() / 1000) + 600;
+		const auth = parsePastedTokens(
+			JSON.stringify({ client_id: 'c', access_token: 'a', expires_at: at })
+		);
+		expect(auth.expiresAt).toBe(at * 1000);
+		expect(auth.refreshToken).toBeUndefined();
+	});
+
+	it('defaults expires_in to one hour', () => {
+		const before = Date.now();
+		const auth = parsePastedTokens(JSON.stringify({ client_id: 'c', access_token: 'a' }));
+		expect(auth.expiresAt).toBeGreaterThanOrEqual(before + 3_600_000);
+	});
+
+	it('rejects non-JSON input', () => {
+		expect(() => parsePastedTokens('not json')).toThrow(TokenError);
+		expect(() => parsePastedTokens('not json')).toThrow(/not valid JSON/);
+	});
+
+	it('rejects JSON without access_token or client_id', () => {
+		expect(() => parsePastedTokens(JSON.stringify({ client_id: 'c' }))).toThrow(/access_token/);
+		expect(() => parsePastedTokens(JSON.stringify({ access_token: 'a' }))).toThrow(/client_id/);
 	});
 });
 
-describe('PKCE and authorize URL', () => {
-	it('creates an S256 pair that matches', async () => {
-		const { verifier, challenge } = await createPkce();
-		expect(verifier).toMatch(/^[A-Za-z0-9_-]{43}$/);
-		expect(challenge).toBe(b64urlSha256(verifier));
+describe('storage (device-only settings)', () => {
+	it('savePastedTokens stores the parsed tokens and loadAuth reads them back', async () => {
+		await savePastedTokens(SCRIPT_JSON);
+		const auth = await loadAuth();
+		expect(auth?.accessToken).toBe('AT');
+		expect(auth?.clientId).toBe('cid-1');
+		expect(store.settings.get('importer.scalable.tokens')).toBeTruthy();
 	});
 
-	it('builds the authorize URL with all required parameters', () => {
-		const url = new URL(
-			authorizeUrl({
-				clientId: 'cid',
-				redirectUri: 'https://app.example/importers/scalable/callback',
-				state: 'st',
-				challenge: 'ch'
-			})
-		);
-		expect(url.origin + url.pathname).toBe(SC_AUTHORIZE_URL);
-		expect(url.searchParams.get('response_type')).toBe('code');
-		expect(url.searchParams.get('client_id')).toBe('cid');
-		expect(url.searchParams.get('code_challenge_method')).toBe('S256');
-		expect(url.searchParams.get('resource')).toBe(SC_RESOURCE);
-		expect(url.searchParams.get('scope')).toContain('openid');
-	});
-
-	it('maps the origin to the callback URL', () => {
-		expect(callbackUrl('https://cashier.example')).toBe(
-			'https://cashier.example/importers/scalable/callback'
-		);
+	it('clearAuth removes the stored tokens', async () => {
+		await savePastedTokens(SCRIPT_JSON);
+		await clearAuth();
+		expect(await loadAuth()).toBeNull();
 	});
 });
 
-describe('token endpoint', () => {
-	it('exchanges the code as form-urlencoded with the resource indicator', async () => {
+describe('refreshTokens (token endpoint, refresh_token grant)', () => {
+	it('POSTs the form-encoded grant with client_id and the resource indicator', async () => {
 		const fetchImpl = fetchReturning(
-			new Response(JSON.stringify({ access_token: 'at', refresh_token: 'rt', expires_in: 3600 }), {
+			new Response(JSON.stringify({ access_token: 'at2', expires_in: 3600 }), {
 				status: 200,
 				headers: { 'Content-Type': 'application/json' }
 			})
 		);
-		const tokens = await exchangeCode(
-			'cid',
-			'https://app/cb',
-			'code1',
-			'verifier1',
-			fetchImpl as never
-		);
-		expect(tokens.access_token).toBe('at');
+		const tokens = await refreshTokens('cid-1', 'rt-1', fetchImpl as never);
+		expect(tokens.access_token).toBe('at2');
 		const [url, init] = fetchImpl.mock.calls[0] as unknown as [
 			string,
-			{ body: string; headers: Record<string, string> }
+			{ method: string; body: string; headers: Record<string, string> }
 		];
 		expect(url).toBe(SC_TOKEN_URL);
+		expect(init.method).toBe('POST');
 		expect(init.headers['Content-Type']).toBe('application/x-www-form-urlencoded');
 		const params = new URLSearchParams(init.body);
-		expect(params.get('grant_type')).toBe('authorization_code');
-		expect(params.get('code')).toBe('code1');
-		expect(params.get('code_verifier')).toBe('verifier1');
-		expect(params.get('client_id')).toBe('cid');
+		expect(params.get('grant_type')).toBe('refresh_token');
+		expect(params.get('refresh_token')).toBe('rt-1');
+		expect(params.get('client_id')).toBe('cid-1');
 		expect(params.get('resource')).toBe(SC_RESOURCE);
-	});
-
-	it('refreshes with the refresh_token grant', async () => {
-		const fetchImpl = fetchReturning(
-			new Response(JSON.stringify({ access_token: 'at2', expires_in: 3600 }), { status: 200 })
-		);
-		const tokens = await refreshTokens('cid', 'rt', fetchImpl as never);
-		expect(tokens.access_token).toBe('at2');
-		const [, init] = fetchImpl.mock.calls[0] as unknown as [string, { body: string }];
-		expect(new URLSearchParams(init.body).get('grant_type')).toBe('refresh_token');
 	});
 
 	it('surfaces the provider error description', async () => {
 		const fetchImpl = fetchReturning(
-			new Response(JSON.stringify({ error: 'invalid_grant', error_description: 'code expired' }), {
-				status: 400
-			})
+			new Response(
+				JSON.stringify({ error: 'invalid_grant', error_description: 'refresh token revoked' }),
+				{ status: 400 }
+			)
 		);
-		await expect(
-			exchangeCode('cid', 'https://app/cb', 'x', 'v', fetchImpl as never)
-		).rejects.toThrow(/code expired/);
+		await expect(refreshTokens('cid', 'rt', fetchImpl as never)).rejects.toThrow(
+			/refresh token revoked/
+		);
 	});
 });
 
-describe('authorization flow (auth.ts)', () => {
-	it('startAuthorization registers once, stashes PKCE, and returns the login URL', async () => {
-		const registerFetch = fetchReturning(
-			new Response(JSON.stringify({ client_id: 'cid-9' }), { status: 201 })
-		);
-		vi.stubGlobal(
-			'fetch',
-			vi.fn(async (url: string, init?: RequestInit) => {
-				if (proxyUrlIncludes(SC_REGISTER_URL)(String(url))) return registerFetch(url, init);
-				throw new Error('unexpected ' + url);
-			})
-		);
-		const url = await startAuthorization('http://localhost:5173');
-		expect(url.startsWith(SC_AUTHORIZE_URL)).toBe(true);
-		const pending = JSON.parse(store.local.get('cashier.scalable.oauth.pending')!);
-		expect(pending.clientId).toBe('cid-9');
-		expect(new URL(url).searchParams.get('state')).toBe(pending.state);
-		expect(new URL(url).searchParams.get('code_challenge')).toBe(b64urlSha256(pending.verifier));
+describe('ScalableAuth (McpTokenSource)', () => {
+	it('throws a helpful error when nothing was pasted yet', async () => {
+		await expect(new ScalableAuth().getToken()).rejects.toThrow(/scalable_token\.py/);
 	});
 
-	it('completeAuthorization rejects a state mismatch', async () => {
-		store.local.set(
-			'cashier.scalable.oauth.pending',
-			JSON.stringify({ state: 'a', verifier: 'v', clientId: 'c', redirectUri: 'https://app/cb' })
-		);
-		await expect(
-			completeAuthorization(new URLSearchParams({ code: 'x', state: 'b' }))
-		).rejects.toThrow(/state mismatch/);
-	});
-
-	it('completeAuthorization rejects a provider error', async () => {
-		await expect(
-			completeAuthorization(new URLSearchParams({ error: 'access_denied' }))
-		).rejects.toThrow(/access_denied/);
-	});
-
-	it('completeAuthorization exchanges the code and stores the tokens device-only', async () => {
-		store.local.set(
-			'cashier.scalable.oauth.pending',
-			JSON.stringify({
-				state: 's1',
-				verifier: 'v1',
-				clientId: 'cid',
-				redirectUri: 'https://app/cb'
-			})
-		);
-		vi.stubGlobal(
-			'fetch',
-			vi.fn(async (url: string) => {
-				expect(proxyUrlIncludes(SC_TOKEN_URL)(String(url))).toBe(true);
-				return new Response(
-					JSON.stringify({ access_token: 'AT', refresh_token: 'RT', expires_in: 3600 }),
-					{ status: 200, headers: { 'Content-Type': 'application/json' } }
-				);
-			})
-		);
-		await completeAuthorization(new URLSearchParams({ code: 'c1', state: 's1' }));
-		const auth = await loadAuth();
-		expect(auth?.accessToken).toBe('AT');
-		expect(auth?.refreshToken).toBe('RT');
-		expect(auth?.clientId).toBe('cid');
-		expect(store.local.has('cashier.scalable.oauth.pending')).toBe(false);
-	});
-
-	it('ScalableAuth returns a fresh token and refreshes an expired one', async () => {
-		store.settings.set('importer.scalable.oauth', {
+	it('returns the stored token while it is valid', async () => {
+		store.settings.set('importer.scalable.tokens', {
 			clientId: 'cid',
-			redirectUri: 'https://app/cb',
+			accessToken: 'valid',
+			refreshToken: 'rt',
+			expiresAt: Date.now() + 3_600_000
+		});
+		expect(await new ScalableAuth().getToken()).toBe('valid');
+	});
+
+	it('refreshes an expired token through the proxy and persists the new one', async () => {
+		store.settings.set('importer.scalable.tokens', {
+			clientId: 'cid',
 			accessToken: 'old',
 			refreshToken: 'rt',
 			expiresAt: Date.now() - 1000
 		});
 		vi.stubGlobal(
 			'fetch',
-			vi.fn(
-				async () =>
-					new Response(JSON.stringify({ access_token: 'new', expires_in: 3600 }), {
-						status: 200,
-						headers: { 'Content-Type': 'application/json' }
-					})
-			)
+			vi.fn(async (url: string, init?: RequestInit) => {
+				expect(proxyUrlIncludes(SC_TOKEN_URL)(String(url))).toBe(true);
+				expect(new URLSearchParams(String(init?.body)).get('refresh_token')).toBe('rt');
+				return new Response(
+					JSON.stringify({ access_token: 'new', refresh_token: 'rt2', expires_in: 3600 }),
+					{ status: 200, headers: { 'Content-Type': 'application/json' } }
+				);
+			})
 		);
-		const auth = new ScalableAuth();
-		expect(await auth.getToken()).toBe('new');
-		expect((await loadAuth())?.accessToken).toBe('new');
+		expect(await new ScalableAuth().getToken()).toBe('new');
+		const auth = await loadAuth();
+		expect(auth?.accessToken).toBe('new');
+		expect(auth?.refreshToken).toBe('rt2');
 	});
 
-	it('ScalableAuth returns the stored token while it is valid', async () => {
-		store.settings.set('importer.scalable.oauth', {
+	it('reports re-login needed when the refresh fails', async () => {
+		store.settings.set('importer.scalable.tokens', {
 			clientId: 'cid',
-			redirectUri: 'https://app/cb',
-			accessToken: 'valid',
-			expiresAt: Date.now() + 3_600_000
+			accessToken: 'old',
+			refreshToken: 'rt',
+			expiresAt: Date.now() - 1000
 		});
-		expect(await new ScalableAuth().getToken()).toBe('valid');
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(async () => new Response('revoked', { status: 400 }))
+		);
+		await expect(new ScalableAuth().getToken()).rejects.toThrow(/expired/);
 	});
 
-	it('clearAuth removes the stored tokens and pending flow', async () => {
-		store.settings.set('importer.scalable.oauth', { clientId: 'c', accessToken: 'a' });
-		store.local.set('cashier.scalable.oauth.pending', '{}');
-		await clearAuth();
-		expect(await loadAuth()).toBeNull();
-		expect(store.local.has('cashier.scalable.oauth.pending')).toBe(false);
+	it('reports re-login needed when there is no refresh token', async () => {
+		store.settings.set('importer.scalable.tokens', {
+			clientId: 'cid',
+			accessToken: 'old',
+			expiresAt: Date.now() - 1000
+		});
+		await expect(new ScalableAuth().getToken()).rejects.toThrow(/expired/);
 	});
 });

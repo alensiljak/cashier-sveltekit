@@ -241,9 +241,10 @@ export const DeviceSettingKeys = {
 	mistralApiKey: 'speech.mistral.api-key',
 	// Voxtral model id used for transcription. Default: MISTRAL_TRANSCRIPTION_MODEL.
 	mistralTranscriptionModel: 'speech.mistral.model',
-	// Scalable Capital OAuth tokens (Scalable importer, src/lib/importers/scalable/auth.ts).
-	// Device-only: credentials are never exported or synced.
-	scalableOAuth: 'importer.scalable.oauth'
+	// Scalable Capital tokens pasted from scripts/scalable_token.py (Scalable
+	// importer, src/lib/importers/scalable/auth.ts). Device-only: credentials
+	// are never exported or synced.
+	scalableTokens: 'importer.scalable.tokens'
 };
 
 class UserSettings {

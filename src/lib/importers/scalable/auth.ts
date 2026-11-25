@@ -1,135 +1,102 @@
 import { deviceSettings, DeviceSettingKeys } from '#lib/settings';
 import type { McpTokenSource } from './mcp';
-import {
-	authorizeUrl,
-	callbackUrl,
-	createPkce,
-	createState,
-	exchangeCode,
-	OAuthError,
-	refreshTokens,
-	registerClient,
-	type TokenResponse
-} from './oauth';
+import { refreshTokens, TokenError, type TokenResponse } from './token';
 
 /**
- * OAuth credentials for the Scalable MCP endpoint. Stored in device-only
- * settings — a credential is never exported with backups or synced.
+ * Scalable Capital credentials. A PWA cannot complete the OAuth login itself
+ * (no localhost redirect), so the user runs `scripts/scalable_token.py` on
+ * their computer and pastes the JSON it prints into the importer form. The
+ * tokens are stored in device-only settings — a credential is never exported
+ * with backups or synced.
  */
 export interface StoredAuth {
+	/** Public OAuth client the localhost script registered (needed to refresh). */
 	clientId: string;
-	redirectUri: string;
 	accessToken: string;
 	refreshToken?: string;
 	/** Epoch ms when the access token expires. */
 	expiresAt: number;
 }
 
-/** In-flight authorization (survives the full-page redirect to Scalable's login). */
-interface PendingAuth {
-	state: string;
-	verifier: string;
-	clientId: string;
-	redirectUri: string;
+/** The JSON shape printed by scripts/scalable_token.py. */
+export interface PastedTokens {
+	client_id: string;
+	access_token: string;
+	refresh_token?: string;
+	expires_in?: number;
+	/** Alternative to expires_in: epoch seconds or milliseconds. */
+	expires_at?: number;
 }
 
-const PENDING_KEY = 'cashier.scalable.oauth.pending';
-
-export { OAuthError };
+export { TokenError };
 
 export async function loadAuth(): Promise<StoredAuth | null> {
-	return deviceSettings.get<StoredAuth>(DeviceSettingKeys.scalableOAuth);
+	return deviceSettings.get<StoredAuth>(DeviceSettingKeys.scalableTokens);
 }
 
 export async function saveAuth(auth: StoredAuth): Promise<void> {
-	await deviceSettings.set(DeviceSettingKeys.scalableOAuth, auth);
+	await deviceSettings.set(DeviceSettingKeys.scalableTokens, auth);
 }
 
 export async function clearAuth(): Promise<void> {
-	await deviceSettings.delete(DeviceSettingKeys.scalableOAuth);
-	try {
-		localStorage.removeItem(PENDING_KEY);
-	} catch {
-		// Storage unavailable: the pending flow just won't complete.
-	}
-}
-
-function fromTokenResponse(
-	clientId: string,
-	redirectUri: string,
-	tokens: TokenResponse
-): StoredAuth {
-	return {
-		clientId,
-		redirectUri,
-		accessToken: tokens.access_token,
-		refreshToken: tokens.refresh_token,
-		expiresAt: Date.now() + (tokens.expires_in ?? 3600) * 1000
-	};
+	await deviceSettings.delete(DeviceSettingKeys.scalableTokens);
 }
 
 /**
- * Start the browser login: register this origin as an OAuth client (once),
- * stash the PKCE verifier + state, and return the Scalable URL to open.
- * The caller navigates to it; the callback route finishes the flow.
+ * Parse and validate the JSON printed by scripts/scalable_token.py.
+ * Accepts `expires_in` (seconds from now) or `expires_at` (epoch s/ms).
  */
-export async function startAuthorization(origin: string = location.origin): Promise<string> {
-	const redirectUri = callbackUrl(origin);
-	const existing = await loadAuth();
-	let clientId = existing?.clientId;
-	// The client registration is bound to its redirect URI; re-register on a new origin.
-	if (!clientId || existing?.redirectUri !== redirectUri) {
-		clientId = await registerClient(redirectUri);
+export function parsePastedTokens(text: string): StoredAuth {
+	let data: PastedTokens;
+	try {
+		data = JSON.parse(text) as PastedTokens;
+	} catch {
+		throw new TokenError('That is not valid JSON — paste the whole JSON block the script printed.');
 	}
-	const { verifier, challenge } = await createPkce();
-	const state = createState();
-	const pending: PendingAuth = { state, verifier, clientId, redirectUri };
-	localStorage.setItem(PENDING_KEY, JSON.stringify(pending));
-	return authorizeUrl({ clientId, redirectUri, state, challenge });
+	if (typeof data?.client_id !== 'string' || !data.client_id) {
+		throw new TokenError('The JSON has no "client_id" — run scripts/scalable_token.py again.');
+	}
+	if (typeof data?.access_token !== 'string' || !data.access_token) {
+		throw new TokenError('The JSON has no "access_token" — run scripts/scalable_token.py again.');
+	}
+	let expiresAt: number;
+	if (typeof data.expires_at === 'number' && data.expires_at > 0) {
+		expiresAt = data.expires_at > 1e12 ? data.expires_at : data.expires_at * 1000;
+	} else {
+		const expiresIn = typeof data.expires_in === 'number' ? data.expires_in : 3600;
+		expiresAt = Date.now() + expiresIn * 1000;
+	}
+	return {
+		clientId: data.client_id,
+		accessToken: data.access_token,
+		refreshToken:
+			typeof data.refresh_token === 'string' && data.refresh_token ? data.refresh_token : undefined,
+		expiresAt
+	};
 }
 
-/** Finish the browser login on the callback route: verify state, exchange the code. */
-export async function completeAuthorization(searchParams: {
-	get(name: string): string | null;
-}): Promise<void> {
-	const providerError = searchParams.get('error');
-	if (providerError) {
-		throw new OAuthError(`Scalable Capital did not grant access: ${providerError}`);
-	}
-	const code = searchParams.get('code');
-	const state = searchParams.get('state');
-	let pending: PendingAuth | null = null;
-	try {
-		pending = JSON.parse(localStorage.getItem(PENDING_KEY) ?? 'null') as PendingAuth | null;
-	} catch {
-		pending = null;
-	}
-	if (!pending || !code || !state || state !== pending.state) {
-		throw new OAuthError(
-			'The login callback did not match the pending connection (state mismatch). Start the connection again.'
-		);
-	}
-	const tokens = await exchangeCode(pending.clientId, pending.redirectUri, code, pending.verifier);
-	await saveAuth(fromTokenResponse(pending.clientId, pending.redirectUri, tokens));
-	try {
-		localStorage.removeItem(PENDING_KEY);
-	} catch {
-		// Storage unavailable: the pending entry is harmless.
-	}
+/** Validate pasted JSON and store it device-only. Returns the stored record. */
+export async function savePastedTokens(text: string): Promise<StoredAuth> {
+	const auth = parsePastedTokens(text);
+	await saveAuth(auth);
+	return auth;
 }
 
 /** Token source for McpClient: returns a valid access token, refreshing it when expired. */
 export class ScalableAuth implements McpTokenSource {
 	async getToken(): Promise<string> {
 		const auth = await loadAuth();
-		if (!auth)
-			throw new OAuthError(
-				'Not connected to Scalable Capital yet — use Connect on the Importers page.'
+		if (!auth) {
+			throw new TokenError(
+				'Not connected to Scalable Capital yet — run scripts/scalable_token.py on your computer and paste the tokens on the Importers page.'
 			);
+		}
 		if (auth.expiresAt - 60_000 > Date.now()) return auth.accessToken;
 		const refreshed = await this.refresh();
 		if (!refreshed) {
-			throw new OAuthError('The Scalable session expired — connect again on the Importers page.');
+			throw new TokenError(
+				'The Scalable session expired — run scripts/scalable_token.py again and paste the new tokens on the Importers page.'
+			);
 		}
 		return refreshed;
 	}
@@ -139,7 +106,7 @@ export class ScalableAuth implements McpTokenSource {
 		const auth = await loadAuth();
 		if (!auth?.refreshToken) return null;
 		try {
-			const tokens = await refreshTokens(auth.clientId, auth.refreshToken);
+			const tokens: TokenResponse = await refreshTokens(auth.clientId, auth.refreshToken);
 			const next: StoredAuth = {
 				...auth,
 				accessToken: tokens.access_token,

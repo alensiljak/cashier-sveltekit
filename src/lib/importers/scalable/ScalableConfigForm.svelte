@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import type { ScalableConfig } from './config';
-	import { clearAuth, loadAuth, startAuthorization, ScalableAuth } from './auth';
+	import { clearAuth, loadAuth, savePastedTokens, ScalableAuth } from './auth';
 	import { McpClient, McpError } from './mcp';
+	import { SCALABLE_TOKEN_SCRIPT, SCALABLE_TOKEN_SCRIPT_NAME } from './tokenScript';
 	import {
 		getAccountProfile,
 		listAccessiblePortfolios,
@@ -10,6 +11,7 @@
 		type ScPortfolio,
 		type ScProfile
 	} from './api';
+	import Notifier from '#lib/utils/notifier';
 
 	interface Props {
 		value: ScalableConfig;
@@ -22,10 +24,18 @@
 	let error = $state('');
 	let profile = $state<ScProfile | null>(null);
 	let portfolios = $state<ScPortfolio[]>([]);
+	let tokenJson = $state('');
+	let expiresAt = $state<number | null>(null);
+	let showScript = $state(false);
+	let scriptArea = $state<HTMLTextAreaElement>();
 
 	onMount(async () => {
-		// Already authenticated on this device: verify the session and load the portfolios.
-		if (await loadAuth()) await verify();
+		// Tokens already pasted on this device: verify the session and load the portfolios.
+		const auth = await loadAuth();
+		if (auth) {
+			expiresAt = auth.expiresAt;
+			await verify();
+		}
 	});
 
 	async function verify() {
@@ -54,16 +64,19 @@
 		}
 	}
 
-	/** Send the user to Scalable's login/consent page in the browser. */
-	async function connect() {
+	/** Save the JSON printed by the token script, then verify the connection. */
+	async function saveTokens() {
 		checking = true;
 		error = '';
 		try {
-			const url = await startAuthorization();
-			window.location.assign(url);
+			const auth = await savePastedTokens(tokenJson);
+			expiresAt = auth.expiresAt;
+			tokenJson = '';
+			await verify();
 		} catch (e) {
-			checking = false;
 			error = e instanceof Error ? e.message : String(e);
+		} finally {
+			checking = false;
 		}
 	}
 
@@ -72,7 +85,20 @@
 		connected = false;
 		profile = null;
 		portfolios = [];
+		expiresAt = null;
 		error = '';
+	}
+
+	async function copyScript() {
+		try {
+			await navigator.clipboard.writeText(SCALABLE_TOKEN_SCRIPT);
+			Notifier.success(`Copied — save it as ${SCALABLE_TOKEN_SCRIPT_NAME} on your computer`);
+		} catch {
+			// Clipboard API unavailable (e.g. insecure context): select the code for Ctrl+C.
+			scriptArea?.focus();
+			scriptArea?.select();
+			Notifier.info('Clipboard blocked — the script is selected, press Ctrl+C');
+		}
 	}
 
 	function selectPortfolio(id: string) {
@@ -85,24 +111,61 @@
 		<span class="text-sm">
 			Authentication
 			<span class="opacity-50 text-xs">
-				opens Scalable Capital in your browser to log in and approve access; the token is stored
-				on this device only — never synced or exported
+				a PWA cannot complete Scalable's OAuth login by itself — run the Python script on your
+				computer (localhost) and paste the JSON it prints below; tokens are stored on this device
+				only — never synced or exported
 			</span>
 		</span>
-		<div class="flex gap-2 flex-wrap">
-			{#if connected}
+		{#if !connected}
+			<div class="flex flex-col gap-2">
+				<div class="flex gap-2 flex-wrap items-center">
+					<button class="btn btn-outline btn-sm" onclick={() => (showScript = !showScript)}>
+						{showScript ? 'Hide' : 'Show'} the Python script
+					</button>
+					{#if showScript}
+						<button class="btn btn-primary btn-sm" onclick={copyScript}>Copy script</button>
+					{/if}
+				</div>
+				{#if showScript}
+					<textarea
+						class="textarea textarea-bordered w-full font-mono text-xs h-48"
+						readonly
+						bind:this={scriptArea}
+						value={SCALABLE_TOKEN_SCRIPT}
+					></textarea>
+					<p class="text-xs opacity-70">
+						Save it as <code class="font-mono">{SCALABLE_TOKEN_SCRIPT_NAME}</code> and run it on your
+						computer: <code class="font-mono">python3 {SCALABLE_TOKEN_SCRIPT_NAME}</code> (or
+						<code class="font-mono">uv run {SCALABLE_TOKEN_SCRIPT_NAME}</code>). It opens Scalable's
+						login in your browser and prints the tokens as JSON.
+					</p>
+				{/if}
+				<textarea
+					class="textarea textarea-bordered w-full font-mono text-xs h-28"
+					placeholder={'{\n  "client_id": "…",\n  "access_token": "…",\n  "refresh_token": "…",\n  "expires_in": 3600\n}'}
+					spellcheck="false"
+					bind:value={tokenJson}
+				></textarea>
+				<div class="flex gap-2 flex-wrap">
+					<button
+						class="btn btn-primary btn-sm"
+						disabled={checking || !tokenJson.trim()}
+						onclick={saveTokens}
+					>
+						{checking ? 'Saving…' : 'Save tokens'}
+					</button>
+				</div>
+			</div>
+		{:else}
+			<div class="flex gap-2 flex-wrap">
 				<button class="btn btn-ghost btn-sm text-error" onclick={disconnect}>
 					Disconnect
 				</button>
 				<button class="btn btn-sm" disabled={checking} onclick={verify}>
 					{checking ? 'Checking…' : 'Re-check'}
 				</button>
-			{:else}
-				<button class="btn btn-primary btn-sm" disabled={checking} onclick={connect}>
-					{checking ? 'Opening Scalable…' : 'Connect with Scalable Capital'}
-				</button>
-			{/if}
-		</div>
+			</div>
+		{/if}
 	</div>
 
 	{#if connected && profile}
@@ -113,6 +176,10 @@
 					'the account holder'}
 				({portfolios.length}
 				{portfolios.length === 1 ? 'portfolio' : 'portfolios'}).
+				{#if expiresAt}
+					Access token expires {new Date(expiresAt).toLocaleString('en-GB')} — refreshed
+					automatically while the refresh token is valid.
+				{/if}
 			</span>
 		</div>
 	{:else if checking}

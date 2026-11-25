@@ -202,8 +202,9 @@
 			<div class="card bg-base-200">
 				<div class="card-body p-4 gap-3">
 					<p class="text-sm">
-						Not connected to Scalable Capital on this device yet. Connect on the Importers page
-						first — it opens Scalable's login in your browser.
+						Not connected to Scalable Capital on this device yet. Run
+						<code class="font-mono text-xs">scripts/scalable_token.py</code> on your computer and paste
+						the tokens on the Importers page first.
 					</p>
 					<a class="btn btn-primary btn-sm self-start" href="/importers">Go to Importers</a>
 				</div>

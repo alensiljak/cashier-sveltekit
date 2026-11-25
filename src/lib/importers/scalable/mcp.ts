@@ -42,7 +42,7 @@ interface JsonRpcResponse {
 
 /**
  * Supplies the bearer token for MCP calls. `refresh` is called on a 401 so the
- * client can retry once with a fresh token (see auth.ts for the OAuth-backed one).
+ * client can retry once with a fresh token (see auth.ts for the pasted-token one).
  */
 export interface McpTokenSource {
 	/** A currently valid access token (refreshing proactively if expired). */
@@ -144,13 +144,13 @@ export class McpClient {
 			if (fresh) return this.post(message, isNotification, false);
 			throw new McpError(
 				response.status,
-				'Scalable Capital rejected the token (401/403) and it could not be refreshed — connect again on the Importers page.'
+				'Scalable Capital rejected the token (401/403) and it could not be refreshed — paste fresh tokens from scripts/scalable_token.py on the Importers page.'
 			);
 		}
 		if (response.status === 401 || response.status === 403) {
 			throw new McpError(
 				response.status,
-				'Scalable Capital rejected the token (401/403) — connect again on the Importers page.'
+				'Scalable Capital rejected the token (401/403) — paste fresh tokens from scripts/scalable_token.py on the Importers page.'
 			);
 		}
 		if (!response.ok) {

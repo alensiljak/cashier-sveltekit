@@ -4,8 +4,10 @@ import { scalableDefaultConfig, type ScalableConfig } from './config';
 /**
  * Scalable Capital (MCP). Not a file importer: it reads the account live from
  * Scalable's MCP endpoint (https://mcp.scalable.capital/mcp) with the user's
- * access token, stored device-only (see token.ts). The Importers page shows
- * the importer's data view (viewRoute) instead of a file picker.
+ * access token. A PWA cannot run the OAuth login itself, so the tokens are
+ * pasted in from scripts/scalable_token.py and stored device-only (see
+ * auth.ts). The Importers page shows the importer's data view (viewRoute)
+ * instead of a file picker.
  */
 export const scalableImporter: Importer<ScalableConfig> = {
 	id: 'scalable',
