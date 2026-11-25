@@ -648,9 +648,7 @@ function extractPayee(text: string): {
 	if (payeeWords.length > 0) {
 		return {
 			// Dictation adds punctuation ("Lidl, ..."), which is not part of the name.
-			payee: payeeWords
-				.map((w) => toPayeeName(w.toLowerCase().replace(/[,;:!?]+$/, '')))
-				.join(' '),
+			payee: payeeWords.map((w) => toPayeeName(w.toLowerCase().replace(/[,;:!?]+$/, ''))).join(' '),
 			consumedWords: payeeWords,
 			narrationWords
 		};

@@ -15,13 +15,22 @@
  */
 
 import {
+	MCP_SESSION_HEADER,
 	PROXY_KEY_HEADER,
 	PROXY_PATH,
 	UPSTREAM_BEARER_HEADER,
-	UPSTREAM_KEY_HEADER
+	UPSTREAM_KEY_HEADER,
+	UPSTREAM_SESSION_HEADER
 } from '../src/lib/services/prices/proxyProtocol.ts';
 
-export { PROXY_KEY_HEADER, PROXY_PATH, UPSTREAM_BEARER_HEADER, UPSTREAM_KEY_HEADER };
+export {
+	MCP_SESSION_HEADER,
+	PROXY_KEY_HEADER,
+	PROXY_PATH,
+	UPSTREAM_BEARER_HEADER,
+	UPSTREAM_KEY_HEADER,
+	UPSTREAM_SESSION_HEADER
+};
 
 /**
  * Hosts the proxy may fetch. Add a provider's source host here when adding a
@@ -34,7 +43,9 @@ export const ALLOWED_HOSTS: Record<string, true> = {
 	'api.aware.com.au': true,
 	'query1.finance.yahoo.com': true,
 	// Mistral Voxtral transcription (Speech Entry, src/lib/services/speechService.ts)
-	'api.mistral.ai': true
+	'api.mistral.ai': true,
+	// Scalable Capital MCP (Scalable importer, src/lib/importers/scalable/)
+	'mcp.scalable.capital': true
 };
 
 /** Hosts that reject the proxy's own User-Agent; they get a browser one instead. */
@@ -59,16 +70,31 @@ export const UPSTREAM_KEY_HOSTS: Record<string, true> = {
  * to these hosts only; for any other host it is dropped.
  */
 export const UPSTREAM_BEARER_HOSTS: Record<string, true> = {
-	'api.mistral.ai': true
+	'api.mistral.ai': true,
+	'mcp.scalable.capital': true
 };
 
 /**
- * Hosts that accept a POST body (multipart uploads). Every other host is
- * GET-only, so the proxy cannot be used to write to arbitrary APIs.
+ * Hosts that accept a POST body (multipart uploads, JSON-RPC). Every other
+ * host is GET-only, so the proxy cannot be used to write to arbitrary APIs.
  */
 export const POST_HOSTS: Record<string, true> = {
-	'api.mistral.ai': true
+	'api.mistral.ai': true,
+	'mcp.scalable.capital': true
 };
+
+/**
+ * Hosts speaking the MCP Streamable HTTP transport. For these the proxy sends
+ * the MCP `Accept` header upstream, forwards the client's
+ * `X-Upstream-Session-Id` as `Mcp-Session-Id`, and passes an upstream
+ * `Mcp-Session-Id` response header back to the client.
+ */
+export const MCP_HOSTS: Record<string, true> = {
+	'mcp.scalable.capital': true
+};
+
+/** The Accept header MCP servers require on POSTs (JSON-RPC or SSE responses). */
+const MCP_ACCEPT = 'application/json, text/event-stream';
 
 const TIMEOUT_MS = 15_000;
 const MAX_RESPONSE_BYTES = 5 * 1024 * 1024;
@@ -200,8 +226,9 @@ export async function handleProxyRequest(
 	try {
 		// Never forward the browser's Origin/Referer/Cookie: several price
 		// sources reject foreign origins outright (Vanguard answers 500).
+		const isMcp = Object.hasOwn(MCP_HOSTS, target.hostname);
 		const upstreamHeaders: Record<string, string> = {
-			Accept: 'application/json, text/plain, */*',
+			Accept: isMcp ? MCP_ACCEPT : 'application/json, text/plain, */*',
 			'User-Agent': Object.hasOwn(BROWSER_UA_HOSTS, target.hostname)
 				? BROWSER_USER_AGENT
 				: USER_AGENT
@@ -213,6 +240,10 @@ export async function handleProxyRequest(
 		const bearer = request.headers.get(UPSTREAM_BEARER_HEADER);
 		if (bearer && Object.hasOwn(UPSTREAM_BEARER_HOSTS, target.hostname)) {
 			upstreamHeaders['Authorization'] = `Bearer ${bearer}`;
+		}
+		const sessionId = request.headers.get(UPSTREAM_SESSION_HEADER);
+		if (sessionId && isMcp) {
+			upstreamHeaders[MCP_SESSION_HEADER] = sessionId;
 		}
 
 		let body: ArrayBuffer | undefined;
@@ -246,14 +277,17 @@ export async function handleProxyRequest(
 
 		// 204/205/304 must not carry a body; constructing a Response with one throws.
 		const nullBody = upstream.status === 204 || upstream.status === 205 || upstream.status === 304;
-		return new Response(nullBody ? null : responseBody, {
-			status: upstream.status,
-			headers: {
-				'Content-Type': responseContentType(upstream),
-				'Cache-Control': 'no-store',
-				'X-Content-Type-Options': 'nosniff'
-			}
-		});
+		const headers: Record<string, string> = {
+			'Content-Type': responseContentType(upstream),
+			'Cache-Control': 'no-store',
+			'X-Content-Type-Options': 'nosniff'
+		};
+		// MCP session id: let the client continue the session on later calls.
+		if (isMcp) {
+			const sid = upstream.headers.get(MCP_SESSION_HEADER);
+			if (sid) headers[MCP_SESSION_HEADER] = sid;
+		}
+		return new Response(nullBody ? null : responseBody, { status: upstream.status, headers });
 	} catch (err) {
 		if (err instanceof Error && err.name === 'AbortError') {
 			return errorResponse(504, `Upstream timed out after ${TIMEOUT_MS / 1000}s`);

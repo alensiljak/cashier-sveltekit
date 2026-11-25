@@ -87,9 +87,18 @@ Cash dividends and interest from an investment account are recognised by the ISI
 - The payee comes from `dividendPayee` (default `{symbol} distribution`), the account from `dividendAccount` (default `Income:Dividends:{symbol}`). The account template does not have to contain `{symbol}` — the `isin` tag on the transaction identifies the security.
 - The card statement does not say if the payer paid in another currency. If the payment was converted, the original amount only exists in your broker's report.
 
+## Scalable Capital (MCP)
+
+The Scalable Capital importer is not file-based: it reads your account live from Scalable's MCP endpoint (`https://mcp.scalable.capital/mcp`).
+
+1. Make sure MCP access (**Agentic Investing**) is enabled for your Scalable account in the Scalable app/web under **Profile → Settings → Security**.
+2. On the importer's card, tap **Configure**, then **Connect with Scalable Capital**. Your browser opens Scalable's login and consent page ("Connect Cashier to Scalable MCP?"); log in and approve. Cashier then exchanges the code for a token and stores it **on this device only** — it is never part of a backup or of the settings sync. **Disconnect** removes it. Expired tokens are refreshed automatically via the stored refresh token.
+3. If your account has several broker portfolios, pick the one to read.
+4. Once configured, the card's **View data** button opens the Scalable view: total value, performance by timeframe, cash and buying power, holdings with gains, and the transaction list (tap a row for its details, **Load more** to page through).
+
 ## Settings
 
-**Edit** on an importer's card shows its settings as JSON. **Load defaults** puts the template back. **Reset** deletes the importer's settings, including its rules. Settings are stored with the other app settings, so they are part of a [backup](/help/backup) and of the settings sync between devices.
+**Edit** on an importer's card shows its settings as JSON (for Scalable Capital, a form). **Load defaults** puts the template back. **Reset** deletes the importer's settings, including its rules — for Scalable Capital it also clears the stored login. Settings are stored with the other app settings, so they are part of a [backup](/help/backup) and of the settings sync between devices; credentials like the Scalable login are not.
 
 | Key                                | Meaning                                                                      |
 | ---------------------------------- | ---------------------------------------------------------------------------- |

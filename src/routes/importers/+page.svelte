@@ -8,6 +8,9 @@
 	import { listImporters } from '#lib/importers';
 	import IbkrConfigForm from '#lib/importers/ibkr/IbkrConfigForm.svelte';
 	import type { IbkrConfig } from '#lib/importers/ibkr/config';
+	import ScalableConfigForm from '#lib/importers/scalable/ScalableConfigForm.svelte';
+	import type { ScalableConfig } from '#lib/importers/scalable/config';
+	import { clearAuth } from '#lib/importers/scalable/auth';
 	import { savePendingImport } from '#lib/importers/pendingImport';
 	import {
 		loadImporterConfig,
@@ -24,7 +27,7 @@
 	let error = $state('');
 
 	/** Importers with a form editor; the others are edited as JSON. */
-	const FORM_IMPORTERS = ['ibkr'];
+	const FORM_IMPORTERS = ['ibkr', 'scalable'];
 	let jsonMode = $state(false);
 	/** Bumped to remount the form after the text changed from outside it (defaults, JSON). */
 	let formKey = $state(0);
@@ -130,6 +133,8 @@
 		const id = resetId;
 		if (!id) return;
 		await resetImporterConfig(id);
+		// API importers keep credentials in device-only settings; reset clears those too.
+		if (id === 'scalable') await clearAuth();
 		delete configs[id];
 		if (editingId === id) editingId = null;
 	}
@@ -152,7 +157,8 @@
 
 	<div class="flex-1 overflow-y-auto touch-pan-y p-4 flex flex-col gap-4">
 		<p class="text-sm opacity-70">
-			Bank statement formats Cashier can import. The format is recognised from the file's content.
+			Bank statement formats Cashier can import — the format is recognised from the file's
+			content — and live sources that are read through their API.
 		</p>
 
 		{#each importers as importer (importer.id)}
@@ -181,6 +187,13 @@
 							{#key formKey}
 								<IbkrConfigForm
 									value={draftConfig<IbkrConfig>() ?? importer.defaultConfig}
+									onchange={(c) => (editorText = JSON.stringify(c, null, 2))}
+								/>
+							{/key}
+						{:else if !jsonMode && importer.id === 'scalable'}
+							{#key formKey}
+								<ScalableConfigForm
+									value={draftConfig<ScalableConfig>() ?? importer.defaultConfig}
 									onchange={(c) => (editorText = JSON.stringify(c, null, 2))}
 								/>
 							{/key}
@@ -233,9 +246,16 @@
 								</div>
 							</div>
 							{#if configured}
-								<button class="btn btn-primary shrink-0" onclick={() => pickFile(importer.id)}>
-									Import file
-								</button>
+								{#if importer.source === 'api' && importer.viewRoute}
+									<a class="btn btn-primary shrink-0" href={importer.viewRoute}>View data</a>
+								{:else}
+									<button
+										class="btn btn-primary shrink-0"
+										onclick={() => pickFile(importer.id)}
+									>
+										Import file
+									</button>
+								{/if}
 							{/if}
 						</div>
 					{/if}

@@ -8,10 +8,12 @@ import { describe, expect, it, vi } from 'vitest';
 import {
 	ALLOWED_HOSTS,
 	handleProxyRequest,
+	MCP_SESSION_HEADER,
 	PROXY_KEY_HEADER,
 	ProxyRequestError,
 	resolveProxyTarget,
 	UPSTREAM_BEARER_HEADER,
+	UPSTREAM_SESSION_HEADER,
 	type FetchLike
 } from '../../worker/proxy';
 
@@ -266,5 +268,65 @@ describe('POST uploads (Mistral Voxtral)', () => {
 			{ fetchImpl: stubFetch(new Response('{}')) }
 		);
 		expect(response.status).toBe(413);
+	});
+});
+
+describe('MCP host (mcp.scalable.capital)', () => {
+	const MCP = 'https://mcp.scalable.capital/mcp';
+
+	function mcpPost(headers: Record<string, string> = {}): Request {
+		return proxyRequest(MCP, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json', ...headers },
+			body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'ping' })
+		});
+	}
+
+	it('is allowlisted for POST with a bearer token', async () => {
+		expect(Object.hasOwn(ALLOWED_HOSTS, 'mcp.scalable.capital')).toBe(true);
+		let seen: RequestInit | undefined;
+		const fetchImpl: FetchLike = async (_input, init) => {
+			seen = init;
+			return new Response('{"jsonrpc":"2.0","id":1,"result":{}}', {
+				headers: { 'content-type': 'application/json', [MCP_SESSION_HEADER]: 'sess-9' }
+			});
+		};
+
+		const response = await handleProxyRequest(mcpPost({ [UPSTREAM_BEARER_HEADER]: 'tok' }), {
+			fetchImpl
+		});
+
+		expect(response.status).toBe(200);
+		const headers = seen?.headers as Record<string, string>;
+		expect(headers['Authorization']).toBe('Bearer tok');
+		// MCP servers require this Accept; SSE responses stay readable through text/*.
+		expect(headers['Accept']).toBe('application/json, text/event-stream');
+		// The session id comes back to the client so it can continue the session.
+		expect(response.headers.get(MCP_SESSION_HEADER)).toBe('sess-9');
+	});
+
+	it('forwards the client session id as Mcp-Session-Id, and only for MCP hosts', async () => {
+		let seen: RequestInit | undefined;
+		const fetchImpl: FetchLike = async (_input, init) => {
+			seen = init;
+			return new Response('{}', { headers: { 'content-type': 'application/json' } });
+		};
+
+		const sessionHeader = () =>
+			(seen?.headers as Record<string, string> | undefined)?.['Mcp-Session-Id'];
+
+		await handleProxyRequest(mcpPost({ [UPSTREAM_SESSION_HEADER]: 'sess-1' }), { fetchImpl });
+		expect(sessionHeader()).toBe('sess-1');
+
+		await handleProxyRequest(
+			proxyRequest(ALLOWED, { headers: { [UPSTREAM_SESSION_HEADER]: 'sess-1' } }),
+			{ fetchImpl }
+		);
+		expect(sessionHeader()).toBeUndefined();
+	});
+
+	it('keeps POST GET-only rules for non-MCP hosts', async () => {
+		const response = await handleProxyRequest(proxyRequest(ALLOWED, { method: 'POST' }));
+		expect(response.status).toBe(405);
 	});
 });

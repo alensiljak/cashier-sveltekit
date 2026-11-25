@@ -240,7 +240,10 @@ export const DeviceSettingKeys = {
 	// and is never exported or synced.
 	mistralApiKey: 'speech.mistral.api-key',
 	// Voxtral model id used for transcription. Default: MISTRAL_TRANSCRIPTION_MODEL.
-	mistralTranscriptionModel: 'speech.mistral.model'
+	mistralTranscriptionModel: 'speech.mistral.model',
+	// Scalable Capital OAuth tokens (Scalable importer, src/lib/importers/scalable/auth.ts).
+	// Device-only: credentials are never exported or synced.
+	scalableOAuth: 'importer.scalable.oauth'
 };
 
 class UserSettings {
@@ -300,6 +303,10 @@ class DeviceSettings {
 		const setting = new Setting(key, jsonValue);
 
 		await db.deviceSettings.put(setting);
+	}
+
+	async delete(key: string) {
+		await db.deviceSettings.delete(key);
 	}
 }
 

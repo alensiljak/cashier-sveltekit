@@ -12,6 +12,15 @@ export interface Importer<TConfig = unknown> {
 	readonly id: string;
 	/** Display name. */
 	readonly name: string;
+	/**
+	 * 'file' (default) importers read an exported statement file; 'api' importers
+	 * fetch from a live endpoint instead. For 'api' importers the Importers page
+	 * offers the data view (`viewRoute`) instead of a file picker, and
+	 * `identify`/`extract` are never called (they return nothing).
+	 */
+	readonly source?: 'file' | 'api';
+	/** Route of the data/reports view, for `source: 'api'`. */
+	readonly viewRoute?: string;
 	/** Whether the config holds a `rules` list (see rules.ts), so the review screen can offer rule editing. */
 	readonly usesRules?: boolean;
 	/** Template shown when the importer is configured for the first time. */

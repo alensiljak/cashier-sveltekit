@@ -17,3 +17,12 @@ export const UPSTREAM_KEY_HEADER = 'X-Upstream-Key';
  * `UPSTREAM_BEARER_HOSTS` (worker/proxy.ts).
  */
 export const UPSTREAM_BEARER_HEADER = 'X-Upstream-Authorization';
+/**
+ * Client → proxy: an MCP session id. The proxy forwards it as
+ * `Mcp-Session-Id`, and only to hosts listed in `MCP_HOSTS`
+ * (worker/proxy.ts). The proxy also passes an upstream `Mcp-Session-Id`
+ * response header back to the client (see MCP_SESSION_HEADER).
+ */
+export const UPSTREAM_SESSION_HEADER = 'X-Upstream-Session-Id';
+/** Upstream response header the proxy passes through for MCP hosts. */
+export const MCP_SESSION_HEADER = 'Mcp-Session-Id';

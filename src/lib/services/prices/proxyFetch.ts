@@ -21,7 +21,8 @@ import {
 	PROXY_KEY_HEADER,
 	PROXY_PATH,
 	UPSTREAM_BEARER_HEADER,
-	UPSTREAM_KEY_HEADER
+	UPSTREAM_KEY_HEADER,
+	UPSTREAM_SESSION_HEADER
 } from './proxyProtocol';
 
 /**
@@ -57,10 +58,12 @@ export interface ProxyFetchOptions extends RequestInit {
 	upstreamKey?: string;
 	/** Forwarded to the upstream as `Authorization: Bearer <token>`. */
 	upstreamBearer?: string;
+	/** Forwarded to MCP hosts as `Mcp-Session-Id` (only for hosts in `MCP_HOSTS`). */
+	upstreamSessionId?: string;
 }
 
 export async function proxyFetch(target: string, init: ProxyFetchOptions = {}): Promise<Response> {
-	const { upstreamKey, upstreamBearer, ...requestInit } = init;
+	const { upstreamKey, upstreamBearer, upstreamSessionId, ...requestInit } = init;
 	const [key, url] = await Promise.all([
 		deviceSettings.get<string>(DeviceSettingKeys.proxyKey),
 		proxyUrl(target)
@@ -69,6 +72,7 @@ export async function proxyFetch(target: string, init: ProxyFetchOptions = {}): 
 	if (key) headers.set(PROXY_KEY_HEADER, key);
 	if (upstreamKey) headers.set(UPSTREAM_KEY_HEADER, upstreamKey);
 	if (upstreamBearer) headers.set(UPSTREAM_BEARER_HEADER, upstreamBearer);
+	if (upstreamSessionId) headers.set(UPSTREAM_SESSION_HEADER, upstreamSessionId);
 
 	const response = await fetch(url, { ...requestInit, headers });
 	if (response.status === 401) {
