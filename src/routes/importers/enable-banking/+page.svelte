@@ -9,9 +9,13 @@
 	import {
 		EnableBankingClient,
 		type EbBalance,
-		type EbTransaction,
-		type EbTransactionsQuery
+		type EbTransaction
 	} from '#lib/importers/enablebanking/api';
+	import {
+		recallTransactions,
+		rememberTransactions,
+		type TxRequest
+	} from '#lib/importers/enablebanking/transactionCache';
 	import {
 		loadSessions,
 		sessionStatus,
@@ -50,13 +54,6 @@
 		tx: EbTransaction;
 	}
 
-	/** The request that "Load more" continues. */
-	interface TxRequest {
-		uid: string;
-		query: EbTransactionsQuery;
-		psuHeaders?: string[];
-	}
-
 	let credentials = $state<StoredCredentials | null>(null);
 	let client: EnableBankingClient | null = null;
 	let config = $state<EnableBankingConfig>({});
@@ -70,6 +67,7 @@
 	let selectedKey = $state<string | null>(null);
 	let txRows = $state<TxRow[]>([]);
 	let continuationKey = $state<string | null>(null);
+	let txFetchedAt = $state<string | null>(null);
 	let txsLoading = $state(false);
 	let loadingMore = $state(false);
 	let txError = $state('');
@@ -138,9 +136,8 @@
 
 	/**
 	 * Bring the page up to date. Banks limit how often account data may be
-	 * read, so a visit fetches only the selected account's transactions and
-	 * whatever is not stored yet; Refresh (`all`) fetches every status and
-	 * balance again.
+	 * read, so a visit fetches only what is not stored yet; Refresh (`all`)
+	 * fetches every status, balance and the transactions again.
 	 */
 	async function update(all: boolean) {
 		if (!client) return;
@@ -150,7 +147,7 @@
 			ensureSelection();
 			// Transactions do not wait for statuses and balances.
 			const initialKey = selectedKey;
-			const firstLoad = loadTransactions();
+			const firstLoad = !all && restoreTransactions() ? undefined : loadTransactions();
 			await syncStatuses(sessions.filter((s) => all || !s.status));
 			ensureSelection();
 			await Promise.all([
@@ -233,10 +230,39 @@
 		return (transactions ?? []).map((tx) => ({ key: nextTxKey++, tx }));
 	}
 
+	/** Show the kept transactions if they are the selected account's. */
+	function restoreTransactions(): boolean {
+		const cached = recallTransactions();
+		if (
+			!cached ||
+			cached.request.accountKey !== selectedKey ||
+			cached.request.daysBack !== config.daysBack
+		) {
+			return false;
+		}
+		dateFrom = cached.request.query.dateFrom ?? '';
+		dateTo = cached.request.query.dateTo ?? '';
+		txRows = toRows(cached.transactions);
+		continuationKey = cached.continuationKey;
+		txFetchedAt = cached.fetchedAt;
+		activeRequest = cached.request;
+		return true;
+	}
+
+	function keepTransactions(request: TxRequest, fetchedAt: string) {
+		rememberTransactions({
+			request,
+			transactions: txRows.map(({ tx }) => $state.snapshot(tx)),
+			continuationKey,
+			fetchedAt
+		});
+	}
+
 	async function loadTransactions() {
 		const generation = ++txGeneration;
 		txRows = [];
 		continuationKey = null;
+		txFetchedAt = null;
 		openTxKey = null;
 		txError = '';
 		loadingMore = false;
@@ -247,6 +273,8 @@
 			return;
 		}
 		const request: TxRequest = {
+			accountKey: row.key,
+			daysBack: config.daysBack,
 			uid: row.account.uid,
 			query: { dateFrom: dateFrom || undefined, dateTo: dateTo || undefined },
 			psuHeaders: row.session.requiredPsuHeaders && [...row.session.requiredPsuHeaders]
@@ -260,6 +288,8 @@
 			if (generation !== txGeneration) return;
 			txRows = toRows(response.transactions);
 			continuationKey = response.continuation_key ?? null;
+			txFetchedAt = new Date().toISOString();
+			keepTransactions(request, txFetchedAt);
 		} catch (e) {
 			if (generation === txGeneration) txError = errorMessage(e);
 		} finally {
@@ -282,6 +312,7 @@
 			if (generation !== txGeneration) return;
 			txRows = [...txRows, ...toRows(response.transactions)];
 			continuationKey = response.continuation_key ?? null;
+			if (txFetchedAt) keepTransactions(request, txFetchedAt);
 		} catch (e) {
 			if (generation === txGeneration) txError = errorMessage(e);
 		} finally {
@@ -455,6 +486,9 @@
 						<div class="flex flex-wrap items-center gap-2">
 							<span class="font-medium">Transactions</span>
 							<span class="text-xs opacity-60">{filteredTxs.length} of {txRows.length} loaded</span>
+							{#if txFetchedAt}
+								<span class="text-xs opacity-40">updated {fmtTime(txFetchedAt)}</span>
+							{/if}
 							<span class="flex-1"></span>
 							<label class="flex items-center gap-1 text-xs opacity-70">
 								from
