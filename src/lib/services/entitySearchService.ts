@@ -10,12 +10,8 @@ import { STOP_WORDS } from '#lib/utils/nlpEntry';
 import { getXactStore } from '#lib/storage/xactStoreRegistry';
 import { Xact, Posting } from '#lib/data/model';
 import type { XactId } from '#lib/storage/crdtXactStore';
-import {
-	symbolsMatchingMeta,
-	type EntityCategory,
-	type EntitySearchTerm,
-	type SearchableCommodity
-} from '#lib/utils/entitySearch';
+import { bqlStringLiteral, bqlStringLiteralOrNeverMatch, escapeRegExp } from '#lib/utils/bql';
+import type { EntityCategory, EntitySearchTerm } from '#lib/utils/entitySearch';
 
 const FIELD_FOR_CATEGORY: Record<Exclude<EntityCategory, 'any'>, string> = {
 	payee: 'payee',
@@ -29,24 +25,28 @@ const FIELD_FOR_CATEGORY: Record<Exclude<EntityCategory, 'any'>, string> = {
  * explicit category (an @/#/~/$ prefix) if it has one, otherwise to `targetCategory` — so
  * an unprefixed term adapts to whichever entity section is currently being queried, while
  * an explicit prefix keeps filtering on its own field across every section (cross-entity AND).
- * A commodity term matches the symbol or any metadata value declared in `commodities`.
+ * A commodity term also matches the symbols whose metadata matched it, looked up per term
+ * value in `symbolsByTerm` (see `symbolsMatchingMeta` in utils/entitySearch).
  */
 export function buildConditions(
 	terms: EntitySearchTerm[],
 	categories: EntityCategory[],
 	targetCategory: Exclude<EntityCategory, 'any'>,
-	commodities: SearchableCommodity[] = []
+	symbolsByTerm: ReadonlyMap<string, string[]> = new Map()
 ): string[] {
 	return terms.map((term, i) => {
 		const category = categories[i] === 'any' ? targetCategory : categories[i];
 		const field = FIELD_FOR_CATEGORY[category as Exclude<EntityCategory, 'any'>];
-		const escaped = term.value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-		const condition = `${field} ~ "(?i)${escaped}"`;
+		// Search terms are literal text, while `~` takes a regex.
+		const pattern = `(?i)${escapeRegExp(term.value)}`;
+		const condition = `${field} ~ ${bqlStringLiteralOrNeverMatch(pattern)}`;
 		if (category !== 'commodity') return condition;
 
-		const symbols = symbolsMatchingMeta(commodities, term.value);
-		if (symbols.length === 0) return condition;
-		return `(${condition} OR currency IN (${symbols.map((s) => `'${s}'`).join(', ')}))`;
+		const literals = (symbolsByTerm.get(term.value) ?? [])
+			.map(bqlStringLiteral)
+			.filter((literal): literal is string => literal !== null);
+		if (literals.length === 0) return condition;
+		return `(${condition} OR currency IN (${literals.join(', ')}))`;
 	});
 }
 
@@ -82,13 +82,13 @@ export function buildLooseTransactionConditions(
 			const normalized = term.value.replace(/^[^a-z0-9]+|[^a-z0-9]+$/gi, '');
 			if (AMOUNT_TERM.test(normalized) || STOP_WORDS.has(normalized)) return;
 		}
-		const escaped = term.value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+		const literal = bqlStringLiteralOrNeverMatch(`(?i)${escapeRegExp(term.value)}`);
 		if (category !== 'any') {
-			clauses.push(`${FIELD_FOR_CATEGORY[category]} ~ "(?i)${escaped}"`);
+			clauses.push(`${FIELD_FOR_CATEGORY[category]} ~ ${literal}`);
 			return;
 		}
 		const fields = ['payee', 'narration', 'account'];
-		clauses.push('(' + fields.map((f) => `${f} ~ "(?i)${escaped}"`).join(' OR ') + ')');
+		clauses.push('(' + fields.map((f) => `${f} ~ ${literal}`).join(' OR ') + ')');
 	});
 	return clauses;
 }
@@ -110,16 +110,29 @@ export interface TransactionResult {
 	id?: XactId;
 }
 
+/** One search term as the device-row filter sees it. */
+export interface DeviceSearchTerm {
+	value: string;
+	/**
+	 * Set (possibly to an empty array) for commodity terms: the symbols whose metadata
+	 * matched the term, so device rows can be matched by posting currency the same way
+	 * the BQL condition does.
+	 */
+	commoditySymbols?: string[];
+}
+
 /**
  * Full transactions (grouped postings) matching `conditions`, merged with on-device rows
  * from the live working set (which carry an editable store ID) — mirrors the
- * payee-xacts page's device/ledger merge. `termValues` approximates the same AND filter
- * against device rows, which aren't queryable via BQL, by substring-matching the term
- * values against each device xact's payee/narration/account text.
+ * payee-xacts page's device/ledger merge. `terms` approximates the same AND filter
+ * against device rows, which aren't queryable via BQL: non-commodity terms by
+ * substring-matching against each device xact's payee/narration/account text, commodity
+ * terms by matching the postings' currencies (symbol substring, or a metadata-matched
+ * symbol) — mirroring the `currency ~ term OR currency IN (...)` BQL condition.
  */
 export async function searchTransactions(
 	conditions: string[],
-	termValues: string[]
+	terms: DeviceSearchTerm[]
 ): Promise<TransactionResult[]> {
 	if (conditions.length === 0) return [];
 
@@ -130,7 +143,17 @@ export async function searchTransactions(
 				.filter(Boolean)
 				.join(' ')
 				.toLowerCase();
-			return termValues.every((term) => haystack.includes(term));
+			return terms.every((term) => {
+				const symbols = term.commoditySymbols;
+				if (symbols) {
+					return (xact.postings ?? []).some(
+						(p) =>
+							(p.currency ?? '').toLowerCase().includes(term.value) ||
+							symbols.includes(p.currency ?? '')
+					);
+				}
+				return haystack.includes(term.value);
+			});
 		})
 		.map(({ xact, id }) => ({ xact, id }));
 

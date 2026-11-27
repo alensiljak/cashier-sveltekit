@@ -6,6 +6,7 @@
 	import { openXactDetails } from '#lib/utils/unifiedXacts';
 	import JournalXactRow from '#lib/components/JournalXactRow.svelte';
 	import fullLedgerService from '#lib/services/ledgerWorkerClient';
+	import { bqlStringLiteralOrNeverMatch } from '#lib/utils/bql';
 	import HelpButton from '#lib/help/HelpButton.svelte';
 	import { Xact, Posting } from '#lib/data/model';
 
@@ -26,15 +27,22 @@
 
 	onMount(() => {
 		const params = page.url.searchParams;
-		const paramAccount = params.get('account');
-		const paramQuery = params.get('q');
-		const paramCommodity = params.get('commodity');
+		// A repeated parameter adds a condition each: the first value fills the
+		// field's input, the rest are listed as removable extra filters.
+		const [paramAccount, ...moreAccounts] = params.getAll('account').filter(Boolean);
+		const [paramQuery, ...moreQueries] = params.getAll('q').filter(Boolean);
+		const [paramCommodity, ...moreCommodities] = params.getAll('commodity').filter(Boolean);
 		const paramDateFrom = params.get('dateFrom');
 		const paramDateTo = params.get('dateTo');
 		if (paramAccount || paramQuery || paramCommodity || paramDateFrom || paramDateTo) {
 			if (paramAccount) account = paramAccount;
 			if (paramQuery) payeeNarration = paramQuery;
 			if (paramCommodity) commodity = paramCommodity;
+			extraFilters = [
+				...moreQueries.map((pattern) => ({ field: 'q' as const, pattern })),
+				...moreAccounts.map((pattern) => ({ field: 'account' as const, pattern })),
+				...moreCommodities.map((pattern) => ({ field: 'commodity' as const, pattern }))
+			];
 			if (paramDateFrom) dateFrom = paramDateFrom;
 			if (paramDateTo) dateTo = paramDateTo;
 			filtersExpanded = false;
@@ -47,22 +55,35 @@
 	let amountOp = $state<'>' | '<' | '='>('=');
 	let amountValue = $state('');
 
+	type FilterField = 'q' | 'account' | 'commodity';
+	const FIELD_LABELS: Record<FilterField, string> = {
+		q: 'Payee / Narration',
+		account: 'Account',
+		commodity: 'Commodity'
+	};
+	/** Conditions beyond the one per input field, from repeated URL parameters. */
+	let extraFilters = $state<{ field: FilterField; pattern: string }[]>([]);
+
+	/** The input's value followed by the extra patterns for `field`. */
+	function patternsFor(field: FilterField, inputValue: string): string[] {
+		const extras = extraFilters.filter((f) => f.field === field).map((f) => f.pattern);
+		return [inputValue, ...extras].filter(Boolean);
+	}
+
 	function buildQuery(): string {
 		const conditions: string[] = [];
 
 		if (dateFrom) conditions.push(`date >= ${dateFrom}`);
 		if (dateTo) conditions.push(`date <= ${dateTo}`);
-		if (payeeNarration) {
-			const esc = payeeNarration.replace(/"/g, '\\"');
-			conditions.push(`(payee ~ "${esc}" OR narration ~ "${esc}")`);
+		for (const pattern of patternsFor('q', payeeNarration)) {
+			const lit = bqlStringLiteralOrNeverMatch(pattern);
+			conditions.push(`(payee ~ ${lit} OR narration ~ ${lit})`);
 		}
-		if (account) {
-			const esc = account.replace(/"/g, '\\"');
-			conditions.push(`account ~ "${esc}"`);
+		for (const pattern of patternsFor('account', account)) {
+			conditions.push(`account ~ ${bqlStringLiteralOrNeverMatch(pattern)}`);
 		}
-		if (commodity) {
-			const esc = commodity.replace(/"/g, '\\"');
-			conditions.push(`currency ~ "${esc}"`);
+		for (const pattern of patternsFor('commodity', commodity)) {
+			conditions.push(`currency ~ ${bqlStringLiteralOrNeverMatch(pattern)}`);
 		}
 		if (amountValue !== '') {
 			const val = parseFloat(amountValue);
@@ -82,6 +103,7 @@
 		payeeNarration = '';
 		account = '';
 		commodity = '';
+		extraFilters = [];
 		amountOp = '=';
 		amountValue = '';
 		hasSearched = false;
@@ -306,6 +328,25 @@
 						bind:value={commodity}
 					/>
 				</div>
+
+				<!-- Extra filters -->
+				{#if extraFilters.length > 0}
+					<div class="flex flex-wrap items-center gap-2 sm:col-span-2">
+						<span class="text-xs font-semibold text-base-content/60">And also</span>
+						{#each extraFilters as filter, i (i)}
+							<button
+								type="button"
+								class="btn btn-xs btn-soft normal-case"
+								aria-label="Remove {FIELD_LABELS[filter.field]} filter {filter.pattern}"
+								onclick={() => (extraFilters = extraFilters.filter((_, j) => j !== i))}
+							>
+								{FIELD_LABELS[filter.field]}:
+								<span class="font-mono">{filter.pattern}</span>
+								<span aria-hidden="true">✕</span>
+							</button>
+						{/each}
+					</div>
+				{/if}
 
 				<!-- Amount -->
 				<div class="flex flex-col gap-1 sm:col-span-2">

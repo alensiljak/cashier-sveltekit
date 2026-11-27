@@ -4,6 +4,7 @@
 	import PillToggle from '#lib/components/PillToggle.svelte';
 	import JournalXactRow from '#lib/components/JournalXactRow.svelte';
 	import { onMount } from 'svelte';
+	import { get } from 'svelte/store';
 	import HelpButton from '#lib/help/HelpButton.svelte';
 	import { goto } from '$app/navigation';
 	import fullLedgerService from '#lib/services/ledgerWorkerClient';
@@ -20,10 +21,12 @@
 		matchingMeta,
 		searchDeclaredCommodities,
 		symbolsMatchingMeta,
+		txSearchParams,
 		type EntityCategory,
 		type EntitySearchTerm,
 		type SearchableCommodity
 	} from '#lib/utils/entitySearch';
+	import { escapeRegExp } from '#lib/utils/bql';
 	import {
 		buildConditions,
 		searchPayees,
@@ -65,7 +68,7 @@
 	let payeeResults: string[] = $state([]);
 	let accountResults: string[] = $state([]);
 	let commodityResults: string[] = $state([]);
-	/** `commodity` directives, for metadata search. Loaded once, so not reactive. */
+	/** `commodity` directives, for metadata search. Reloaded when the ledger reloads. */
 	let commodityDirectives: SearchableCommodity[] = [];
 	const commodityBySymbol = new Map<string, SearchableCommodity>();
 	let transactionResults: TransactionResult[] = $state([]);
@@ -87,21 +90,48 @@
 		void init();
 	});
 
-	async function init() {
-		await fullLedgerService.ensureLoaded();
-		commodityDirectives = await fullLedgerService.getCommodityDirectives();
-		for (const commodity of commodityDirectives) {
+	const ledgerVersion = fullLedgerService.version;
+	/** Ledger version the commodity directives were loaded for. */
+	let directivesVersion = -1;
+
+	/**
+	 * (Re)loads the `commodity` directives and the symbol lookup map for `version`.
+	 * Returns false if a newer ledger load superseded this one before it finished.
+	 */
+	async function reloadCommodityDirectives(version: number): Promise<boolean> {
+		const directives = await fullLedgerService.getCommodityDirectives();
+		if (version !== get(ledgerVersion)) return false;
+		commodityDirectives = directives;
+		commodityBySymbol.clear();
+		for (const commodity of directives) {
 			commodityBySymbol.set(commodity.currency, commodity);
 		}
+		return true;
+	}
+
+	async function init() {
+		await fullLedgerService.ensureLoaded();
+		directivesVersion = get(ledgerVersion);
+		await reloadCommodityDirectives(directivesVersion);
 		ledgerLoaded = true;
 		void runSearch();
 	}
 
-	// Re-run whenever the search term or scope changes (typing, or switching the pill toggle).
+	// Re-run whenever the search term or scope changes (typing, or switching the pill toggle),
+	// and reload the commodity metadata when the ledger itself is reloaded.
 	$effect(() => {
 		void $EntitySearchTermStore;
 		void $EntitySearchScopeStore;
-		if (ledgerLoaded) void runSearch();
+		const version = $ledgerVersion;
+		if (!ledgerLoaded) return;
+		if (version !== directivesVersion) {
+			directivesVersion = version;
+			void reloadCommodityDirectives(version).then((ok) => {
+				if (ok) void runSearch();
+			});
+		} else {
+			void runSearch();
+		}
 	});
 
 	let requestId = 0;
@@ -126,8 +156,12 @@
 		const activeEntities: Exclude<EntityCategory, 'any'>[] =
 			scope === 'all' ? ['payee', 'account', 'narration', 'commodity'] : [SCOPE_TO_CATEGORY[scope]];
 
+		// Metadata-matched symbols per term value, computed once for all entity targets.
+		const symbolsByTerm = new Map(
+			terms.map((term) => [term.value, symbolsMatchingMeta(commodityDirectives, term.value)])
+		);
 		const conditionsFor = (target: Exclude<EntityCategory, 'any'>) =>
-			buildConditions(terms, categories, target, commodityDirectives);
+			buildConditions(terms, categories, target, symbolsByTerm);
 		// Declared but unused commodities can only be listed if no term needs a posting to match.
 		const declaredMatches =
 			activeEntities.includes('commodity') &&
@@ -154,7 +188,12 @@
 				activeEntities.includes('narration')
 					? searchTransactions(
 							conditionsFor('narration'),
-							terms.map((term) => term.value)
+							terms.map((term, i) => ({
+								value: term.value,
+								// Only explicit $ terms filter on currency in transaction search.
+								commoditySymbols:
+									categories[i] === 'commodity' ? symbolsByTerm.get(term.value) : undefined
+							}))
 						)
 					: Promise.resolve([])
 			]);
@@ -189,37 +228,10 @@
 		goto('/commodities/detail?symbol=' + encodeURIComponent(symbol));
 	}
 
-	/**
-	 * Builds the /reports/tx-search URL for the current transaction query, splitting terms into
-	 * that page's account/payee-narration/commodity fields (an 'any' term maps to narration,
-	 * same as the BQL field this page uses for it).
-	 */
+	/** The /reports/tx-search URL for the current transaction query. */
 	function txSearchUrl(): string {
-		const params = new URLSearchParams();
-		const textTerms: string[] = [];
-		const accountTerms: string[] = [];
-		const commodityTerms: string[] = [];
-		for (const { term, category } of transactionTerms) {
-			const resolved = category === 'any' ? 'narration' : category;
-			if (resolved === 'account') accountTerms.push(term.value);
-			else if (resolved === 'commodity') commodityTerms.push(term.value);
-			else if (resolved === 'payee' || resolved === 'narration') textTerms.push(term.value);
-		}
-		if (textTerms.length > 0) params.set('q', textTerms.join(' '));
-		if (accountTerms.length > 0) params.set('account', accountTerms.join(' '));
-		if (commodityTerms.length > 0) {
-			// That page takes a single case-sensitive regex, so add the symbols found through metadata.
-			const pattern = commodityTerms.join(' ');
-			const symbols =
-				commodityTerms.length === 1 ? symbolsMatchingMeta(commodityDirectives, pattern) : [];
-			params.set(
-				'commodity',
-				symbols.length > 0
-					? `(?i)${pattern}|^(${symbols.map(escapeRegExp).join('|')})$`
-					: pattern
-			);
-		}
-		return `/reports/tx-search?${params}`;
+		const terms = transactionTerms.map(({ term, category }) => ({ value: term.value, category }));
+		return `/reports/tx-search?${txSearchParams(terms, commodityDirectives)}`;
 	}
 
 	// Same destination as tapping a transaction on the Payee Transactions page.
@@ -227,10 +239,6 @@
 		xactStore.set(result.xact);
 		xactId.set(result.id);
 		await goto('/xact-actions');
-	}
-
-	function escapeRegExp(value: string): string {
-		return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 	}
 
 	interface TextSegment {

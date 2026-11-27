@@ -4,6 +4,7 @@
 	which does plain-text grepping over OPFS files for /search/full-text.
 */
 import type { EntitySearchScope } from '#lib/data/mainStore';
+import { escapeRegExp } from '#lib/utils/bql';
 
 /** A single search category a term can be pinned to. 'any' means "let the radio scope decide". */
 export type EntityCategory = 'payee' | 'account' | 'narration' | 'commodity' | 'any';
@@ -108,6 +109,35 @@ export function searchDeclaredCommodities(
 			)
 		)
 		.map((c) => c.currency);
+}
+
+/**
+ * Query parameters for /reports/tx-search, repeating the current transaction search.
+ * Each term gets its own parameter (`q`, `account` or `commodity`), because that page
+ * ANDs one condition per value. Its values are regexes, so the terms are escaped.
+ * A commodity term also matches the symbols whose metadata matched it. An 'any' term
+ * goes to `q`, which searches the payee as well as the narration.
+ */
+export function txSearchParams(
+	terms: { value: string; category: EntityCategory }[],
+	commodities: SearchableCommodity[]
+): URLSearchParams {
+	const params = new URLSearchParams();
+	for (const { value, category } of terms) {
+		const pattern = escapeRegExp(value);
+		if (category === 'account') {
+			params.append('account', pattern);
+		} else if (category === 'commodity') {
+			const symbols = symbolsMatchingMeta(commodities, value).map(escapeRegExp);
+			params.append(
+				'commodity',
+				symbols.length > 0 ? `${pattern}|^(${symbols.join('|')})$` : pattern
+			);
+		} else {
+			params.append('q', pattern);
+		}
+	}
+	return params;
 }
 
 /**
