@@ -17,8 +17,12 @@
 	import {
 		parseEntitySearchTerms,
 		resolveTermCategories,
+		matchingMeta,
+		searchDeclaredCommodities,
+		symbolsMatchingMeta,
 		type EntityCategory,
-		type EntitySearchTerm
+		type EntitySearchTerm,
+		type SearchableCommodity
 	} from '#lib/utils/entitySearch';
 	import {
 		buildConditions,
@@ -61,6 +65,9 @@
 	let payeeResults: string[] = $state([]);
 	let accountResults: string[] = $state([]);
 	let commodityResults: string[] = $state([]);
+	/** `commodity` directives, for metadata search. Loaded once, so not reactive. */
+	let commodityDirectives: SearchableCommodity[] = [];
+	const commodityBySymbol = new Map<string, SearchableCommodity>();
 	let transactionResults: TransactionResult[] = $state([]);
 	/** Terms/categories behind the current transactionResults, kept to build the Transaction Search link. */
 	let transactionTerms: { term: EntitySearchTerm; category: EntityCategory }[] = $state([]);
@@ -82,6 +89,10 @@
 
 	async function init() {
 		await fullLedgerService.ensureLoaded();
+		commodityDirectives = await fullLedgerService.getCommodityDirectives();
+		for (const commodity of commodityDirectives) {
+			commodityBySymbol.set(commodity.currency, commodity);
+		}
 		ledgerLoaded = true;
 		void runSearch();
 	}
@@ -115,22 +126,34 @@
 		const activeEntities: Exclude<EntityCategory, 'any'>[] =
 			scope === 'all' ? ['payee', 'account', 'narration', 'commodity'] : [SCOPE_TO_CATEGORY[scope]];
 
+		const conditionsFor = (target: Exclude<EntityCategory, 'any'>) =>
+			buildConditions(terms, categories, target, commodityDirectives);
+		// Declared but unused commodities can only be listed if no term needs a posting to match.
+		const declaredMatches =
+			activeEntities.includes('commodity') &&
+			categories.every((category) => category === 'any' || category === 'commodity')
+				? searchDeclaredCommodities(
+						commodityDirectives,
+						terms.map((term) => term.value)
+					)
+				: [];
+
 		const id = ++requestId;
 		loading = true;
 		try {
 			const [payees, accounts, commodities, transactions] = await Promise.all([
 				activeEntities.includes('payee')
-					? searchPayees(buildConditions(terms, categories, 'payee'))
+					? searchPayees(conditionsFor('payee'))
 					: Promise.resolve([]),
 				activeEntities.includes('account')
-					? searchAccounts(buildConditions(terms, categories, 'account'))
+					? searchAccounts(conditionsFor('account'))
 					: Promise.resolve([]),
 				activeEntities.includes('commodity')
-					? searchCommodities(buildConditions(terms, categories, 'commodity'))
+					? searchCommodities(conditionsFor('commodity'))
 					: Promise.resolve([]),
 				activeEntities.includes('narration')
 					? searchTransactions(
-							buildConditions(terms, categories, 'narration'),
+							conditionsFor('narration'),
 							terms.map((term) => term.value)
 						)
 					: Promise.resolve([])
@@ -139,7 +162,7 @@
 
 			payeeResults = payees;
 			accountResults = accounts;
-			commodityResults = commodities;
+			commodityResults = [...new Set([...commodities, ...declaredMatches])].sort();
 			transactionResults = transactions;
 		} finally {
 			if (id === requestId) loading = false;
@@ -184,7 +207,18 @@
 		}
 		if (textTerms.length > 0) params.set('q', textTerms.join(' '));
 		if (accountTerms.length > 0) params.set('account', accountTerms.join(' '));
-		if (commodityTerms.length > 0) params.set('commodity', commodityTerms.join(' '));
+		if (commodityTerms.length > 0) {
+			// That page takes a single case-sensitive regex, so add the symbols found through metadata.
+			const pattern = commodityTerms.join(' ');
+			const symbols =
+				commodityTerms.length === 1 ? symbolsMatchingMeta(commodityDirectives, pattern) : [];
+			params.set(
+				'commodity',
+				symbols.length > 0
+					? `(?i)${pattern}|^(${symbols.map(escapeRegExp).join('|')})$`
+					: pattern
+			);
+		}
 		return `/reports/tx-search?${params}`;
 	}
 
@@ -209,6 +243,17 @@
 		if (terms.length === 0) return [{ text, hit: false }];
 		const pattern = new RegExp(`(${terms.map(escapeRegExp).join('|')})`, 'gi');
 		return text.split(pattern).map((part, i) => ({ text: part, hit: i % 2 === 1 }));
+	}
+
+	/** The commodity's name, followed by any other metadata that matched the search. */
+	function commodityDetails(symbol: string, terms: string[]): string[] {
+		const commodity = commodityBySymbol.get(symbol);
+		if (!commodity) return [];
+		const name = commodity.meta?.['name'];
+		const matches = matchingMeta(commodity, terms)
+			.filter(({ key }) => key !== 'name')
+			.map(({ key, value }) => `${key}: ${value}`);
+		return typeof name === 'string' ? [name, ...matches] : matches;
 	}
 </script>
 
@@ -322,13 +367,24 @@
 						role="listitem"
 					>
 						<CoinsIcon class="size-4 shrink-0 opacity-60" />
-						<span class="flex-1 truncate font-mono">
-							{#each highlight(commodity, highlightTerms) as segment, i (i)}
-								{#if segment.hit}<mark class="bg-primary/40 text-inherit rounded-none"
-										>{segment.text}</mark
-									>{:else}{segment.text}{/if}
+						<div class="min-w-0 flex-1">
+							<div class="truncate font-mono">
+								{#each highlight(commodity, highlightTerms) as segment, i (i)}
+									{#if segment.hit}<mark class="bg-primary/40 text-inherit rounded-none"
+											>{segment.text}</mark
+										>{:else}{segment.text}{/if}
+								{/each}
+							</div>
+							{#each commodityDetails(commodity, highlightTerms) as detail (detail)}
+								<div class="truncate text-xs opacity-60">
+									{#each highlight(detail, highlightTerms) as segment, i (i)}
+										{#if segment.hit}<mark class="bg-primary/40 text-inherit rounded-none"
+												>{segment.text}</mark
+											>{:else}{segment.text}{/if}
+									{/each}
+								</div>
 							{/each}
-						</span>
+						</div>
 						<span class="text-xs opacity-50 shrink-0">Commodity</span>
 					</div>
 				{/each}

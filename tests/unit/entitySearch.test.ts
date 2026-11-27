@@ -2,7 +2,36 @@
     Tests for the /search page's term parsing and scope resolution.
 */
 import { describe, expect, it } from 'vitest';
-import { parseEntitySearchTerms, resolveTermCategories } from '#lib/utils/entitySearch';
+import {
+	parseEntitySearchTerms,
+	resolveTermCategories,
+	searchDeclaredCommodities,
+	symbolsMatchingMeta
+} from '#lib/utils/entitySearch';
+
+describe('commodity metadata search', () => {
+	const commodities = [
+		{ currency: 'VTI', meta: { name: 'Vanguard Total Stock', isin: 'US9229087690' } },
+		{ currency: 'USD', meta: { name: 'US Dollar', price: 'EUR:ecbrates/USD-EUR' } },
+		{ currency: 'XYZ' }
+	];
+
+	it('matches metadata values case-insensitively, by substring', () => {
+		expect(symbolsMatchingMeta(commodities, 'us92290')).toEqual(['VTI']);
+	});
+
+	it('ignores key names and the price key', () => {
+		expect(symbolsMatchingMeta(commodities, 'isin')).toEqual([]);
+		expect(symbolsMatchingMeta(commodities, 'ecbrates')).toEqual([]);
+	});
+
+	it('requires every term to match the symbol or a metadata value', () => {
+		expect(searchDeclaredCommodities(commodities, ['vti', 'vanguard'])).toEqual(['VTI']);
+		expect(searchDeclaredCommodities(commodities, ['vanguard', 'dollar'])).toEqual([]);
+		expect(searchDeclaredCommodities(commodities, ['xy'])).toEqual(['XYZ']);
+		expect(searchDeclaredCommodities(commodities, [])).toEqual([]);
+	});
+});
 
 describe('parseEntitySearchTerms', () => {
 	it.each([

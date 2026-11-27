@@ -10,7 +10,12 @@ import { STOP_WORDS } from '#lib/utils/nlpEntry';
 import { getXactStore } from '#lib/storage/xactStoreRegistry';
 import { Xact, Posting } from '#lib/data/model';
 import type { XactId } from '#lib/storage/crdtXactStore';
-import type { EntityCategory, EntitySearchTerm } from '#lib/utils/entitySearch';
+import {
+	symbolsMatchingMeta,
+	type EntityCategory,
+	type EntitySearchTerm,
+	type SearchableCommodity
+} from '#lib/utils/entitySearch';
 
 const FIELD_FOR_CATEGORY: Record<Exclude<EntityCategory, 'any'>, string> = {
 	payee: 'payee',
@@ -24,17 +29,24 @@ const FIELD_FOR_CATEGORY: Record<Exclude<EntityCategory, 'any'>, string> = {
  * explicit category (an @/#/~/$ prefix) if it has one, otherwise to `targetCategory` — so
  * an unprefixed term adapts to whichever entity section is currently being queried, while
  * an explicit prefix keeps filtering on its own field across every section (cross-entity AND).
+ * A commodity term matches the symbol or any metadata value declared in `commodities`.
  */
 export function buildConditions(
 	terms: EntitySearchTerm[],
 	categories: EntityCategory[],
-	targetCategory: Exclude<EntityCategory, 'any'>
+	targetCategory: Exclude<EntityCategory, 'any'>,
+	commodities: SearchableCommodity[] = []
 ): string[] {
 	return terms.map((term, i) => {
-		const category = categories[i];
-		const field = FIELD_FOR_CATEGORY[category === 'any' ? targetCategory : category];
+		const category = categories[i] === 'any' ? targetCategory : categories[i];
+		const field = FIELD_FOR_CATEGORY[category as Exclude<EntityCategory, 'any'>];
 		const escaped = term.value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-		return `${field} ~ "(?i)${escaped}"`;
+		const condition = `${field} ~ "(?i)${escaped}"`;
+		if (category !== 'commodity') return condition;
+
+		const symbols = symbolsMatchingMeta(commodities, term.value);
+		if (symbols.length === 0) return condition;
+		return `(${condition} OR currency IN (${symbols.map((s) => `'${s}'`).join(', ')}))`;
 	});
 }
 

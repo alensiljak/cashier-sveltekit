@@ -21,6 +21,14 @@ Space separates multiple terms; every term must match (AND). A prefixed term fil
 
 Matching is case-insensitive and substring-based (not a whole-word match), matching every other search box in the app.
 
+## Commodity metadata
+
+A commodity term matches the symbol or any metadata value on its `commodity` directive, such as `name`, `isin` or `ticker`. For example, searching an ISIN finds the commodity, and `$gold` finds commodities with "gold" in their name. The `price` key is not searched, because it holds price-source settings. Only values are searched, not key names.
+
+This applies to unprefixed terms in the Commodities section, and to `$` terms and the **Commodities** scope. As with symbols, a `$` term also narrows the other sections to the matched commodities. Commodities that are declared but not used in any transaction are listed when all terms are commodity or unprefixed terms.
+
+Each commodity result shows its name and any other metadata that matched. Transaction metadata is not searched.
+
 ## Results
 
 Results are grouped into sections — Payees, Accounts, Commodities, Transactions — each shown only when it has matches, with the matched text highlighted.

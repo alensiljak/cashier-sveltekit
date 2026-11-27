@@ -48,6 +48,68 @@ const SCOPE_TO_CATEGORY: Record<Exclude<EntitySearchScope, 'all'>, EntityCategor
 	commodities: 'commodity'
 };
 
+/** The part of a `commodity` directive that search looks at. */
+export interface SearchableCommodity {
+	currency: string;
+	meta?: Record<string, unknown>;
+}
+
+/**
+ * Meta keys that are never searched. `price` is price-source configuration
+ * (e.g. "EUR:ecbrates/USD-EUR"), so searching "eur" would match every
+ * commodity quoted in EUR.
+ */
+const UNSEARCHED_META_KEYS = new Set(['price']);
+
+export interface MetaEntry {
+	key: string;
+	value: string;
+}
+
+/** The searchable metadata of a commodity, with values as text. */
+function searchableMeta(commodity: SearchableCommodity): MetaEntry[] {
+	return Object.entries(commodity.meta ?? {})
+		.filter(
+			([key, value]) =>
+				!UNSEARCHED_META_KEYS.has(key) && ['string', 'number', 'boolean'].includes(typeof value)
+		)
+		.map(([key, value]) => ({ key, value: String(value) }));
+}
+
+/** Metadata entries whose value contains any of the (lower-cased) term values. */
+export function matchingMeta(commodity: SearchableCommodity, termValues: string[]): MetaEntry[] {
+	return searchableMeta(commodity).filter(({ value }) => {
+		const lower = value.toLowerCase();
+		return termValues.some((term) => lower.includes(term));
+	});
+}
+
+/** Symbols of the commodities having a metadata value that contains `termValue`. */
+export function symbolsMatchingMeta(
+	commodities: SearchableCommodity[],
+	termValue: string
+): string[] {
+	return commodities.filter((c) => matchingMeta(c, [termValue]).length > 0).map((c) => c.currency);
+}
+
+/**
+ * Symbols of declared commodities where every term is found in the symbol or in a
+ * metadata value. Covers commodities which no posting uses, so BQL can't return them.
+ */
+export function searchDeclaredCommodities(
+	commodities: SearchableCommodity[],
+	termValues: string[]
+): string[] {
+	if (termValues.length === 0) return [];
+	return commodities
+		.filter((c) =>
+			termValues.every(
+				(term) => c.currency.toLowerCase().includes(term) || matchingMeta(c, [term]).length > 0
+			)
+		)
+		.map((c) => c.currency);
+}
+
 /**
  * Resolves each term's effective category: an explicit prefix always wins;
  * otherwise the term falls back to the radio group's scope ('all' keeps it
