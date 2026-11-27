@@ -17,7 +17,6 @@ test.describe('app shell', () => {
 
 	test('quick-entry FAB navigates to quick entry', async ({ demoPage: page }) => {
 		await page.getByRole('button', { name: 'Add', exact: true }).click();
-		await page.getByRole('button', { name: 'Quick entry' }).click();
 
 		await expect(page).toHaveURL(/\/tx\/quick-entry/);
 	});
