@@ -44,6 +44,10 @@ export interface PairingHost {
 	getKey(): Promise<DeviceKey>;
 	ensureGroupSecret(): Promise<string>;
 	adoptGroupSecret(secret: string): Promise<void>;
+	/** Records that the trusted device is in this device's group. */
+	markGroupMember(peerId: string): Promise<void>;
+	/** Saves the discovery network this device meets its group on. */
+	setStrategy(strategy: RelayStrategy): Promise<void>;
 	joinPairingRoom(opts: {
 		strategy: RelayStrategy;
 		roomId: string;
@@ -279,6 +283,7 @@ export class InviteSession {
 			const acked = Promise.withResolvers<FileFingerprint[] | undefined>();
 			this.ackWaiter = { peerId: trysteroId, resolve: acked.resolve };
 			await this.actions.approve.send({ secret, files }, { target: trysteroId });
+			await this.host.markGroupMember(candidate.id);
 			const timeout = Promise.withResolvers<undefined>();
 			const giveUp = setTimeout(() => timeout.resolve(undefined), this.ackTimeoutMs);
 			const ackedFiles = await Promise.race([acked.promise, timeout.promise]);
@@ -451,6 +456,9 @@ export class JoinSession {
 				readmit: true
 			});
 			await this.host.adoptGroupSecret(secret);
+			// The group meets on the inviter's network: on any other, the two would never see each other.
+			await this.host.setStrategy(this.invite.strategy);
+			await this.host.markGroupMember(inviter.id);
 			const files = await fileFingerprints(this.host);
 			this.status = 'approved';
 			await this.actions?.ack.send({ v: 1, files }, { target: inviter.trysteroId });

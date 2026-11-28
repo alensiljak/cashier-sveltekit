@@ -117,10 +117,10 @@
 				<div>
 					<span class="text-xs opacity-60">Fingerprint</span>
 					<p class="font-mono text-sm opacity-80">{fingerprint || '…'}</p>
-					<span class="text-xs opacity-50"
-						>Other devices show this next to your name, so you can tell devices with the same name
-						apart.</span
-					>
+					<span class="text-xs opacity-50">
+						Other devices show this next to your name, so you can tell devices with the same name
+						apart.
+					</span>
 				</div>
 				<button class="btn btn-success btn-sm" disabled={!dirty || saving} onclick={saveIdentity}>
 					{#if saving}<span class="loading loading-spinner loading-xs"></span>{/if}
@@ -132,12 +132,12 @@
 		<!-- Network -->
 		<div class="card bg-base-200 shadow-sm">
 			<div class="card-body gap-2 p-4">
-				<h2 class="card-title text-sm">Network</h2>
+				<h2 class="card-title text-sm">Discovery network</h2>
 				<p class="text-xs opacity-60">
-					Used to discover peers. Every device must pick the same network. Switching reconnects a
-					live room.
+					How devices find each other. Every device in the group must use the same one; joining a
+					group sets it from the invite. Switching reconnects a live room.
 				</p>
-				<div role="radiogroup" aria-label="Network" class="flex flex-col gap-1">
+				<div role="radiogroup" aria-label="Discovery network" class="flex flex-col gap-1">
 					{#each RELAY_STRATEGIES as s (s.value)}
 						<label class="flex cursor-pointer items-center gap-3 py-1">
 							<input

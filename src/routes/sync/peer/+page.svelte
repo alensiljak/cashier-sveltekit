@@ -338,13 +338,35 @@
 
 	onMount(async () => {
 		await peerConnection.ensureInit();
-		// Join the group's room automatically once there is one; the Connect button is for manual control.
-		if (presence.hasGroup && !presence.isInRoom) await joinPeerRoom(true);
+		await presence.reloadTrustedPeers();
+		// Join the group's room automatically once in a group; the toggle is for manual control.
+		if (presence.isInGroup && !presence.isInRoom) await joinPeerRoom(true);
 	});
 
 	// ─── Connection ─────────────────────────────────────────────────────────────
-	// Name and network are edited on /sync/peer/setup. The room is private to the devices that
-	// were paired with each other (see "Invite a device").
+	// Name and network are edited on /sync/peer/setup. The room is private to the devices of the
+	// sync group (see "Add a device").
+
+	/** Group members not in the room right now. */
+	let absentMembers = $derived(
+		presence.groupMembers.filter(
+			(m) => !presence.activePeerList.some((p) => p.isTrusted && p.persistentId === m.id)
+		)
+	);
+	let startingGroup = $state(false);
+
+	/** First device of a group: create the group, then invite the second one into it. */
+	async function startNewGroup() {
+		startingGroup = true;
+		try {
+			await peerConnection.startNewGroup();
+			inviting = true;
+		} catch (e) {
+			Notifier.error('Could not start a sync group: ' + (e as Error).message);
+		} finally {
+			startingGroup = false;
+		}
+	}
 
 	async function joinPeerRoom(silent = false) {
 		if (presence.isInRoom) return;
@@ -398,15 +420,15 @@
 	}
 
 	// ─── Pairing ─────────────────────────────────────────────────────────────────
-	// All pairing goes through an invite link: "Invite a device" here, or "Join" on the other
-	// device (the link opens /pair, or is pasted below).
+	// All pairing goes through an invite: "Add a device" (or "Start a new sync group") here, and
+	// "Join with invite code" on the other device. A shared invite link opens /pair directly.
 
 	let inviting = $state(false);
 	let joining = $state(false);
 	let pasted = $state('');
 	let pasteError = $state('');
 
-	function joinWithPastedLink() {
+	function joinWithPastedCode() {
 		const result = parseInvite(pasted);
 		if (!result.ok) {
 			pasteError =
@@ -414,7 +436,7 @@
 					? 'This invite has expired. Ask for a new one.'
 					: result.reason === 'unsupported'
 						? 'This invite needs a newer version of Cashier.'
-						: 'This is not an invite link.';
+						: 'This is not an invite code.';
 			return;
 		}
 		pasteError = '';
@@ -501,9 +523,12 @@
 	{:else if status === 'different'}
 		<span class="badge badge-warning badge-xs">Different</span>
 	{:else if status === 'error'}
-		<span class="badge badge-ghost badge-xs" title="Could not compare (peer offline or unreachable)"
-			>?</span
+		<span
+			class="badge badge-ghost badge-xs"
+			title="Could not compare (peer offline or unreachable)"
 		>
+			?
+		</span>
 	{/if}
 {/snippet}
 
@@ -520,9 +545,15 @@
 			</a>
 		{/snippet}
 		{#snippet menuItems()}
-			<ToolbarMenuItem text="Invite a device" Icon={UserPlusIcon} onclick={() => (inviting = true)} />
+			{#if presence.isInGroup}
+				<ToolbarMenuItem
+					text="Add a device"
+					Icon={UserPlusIcon}
+					onclick={() => (inviting = true)}
+				/>
+			{/if}
 			<ToolbarMenuItem
-				text="Join with invite link"
+				text="Join with invite code"
 				Icon={LinkIcon}
 				onclick={() => (joining = true)}
 			/>
@@ -530,136 +561,199 @@
 		{/snippet}
 	</Toolbar>
 	<section class="flex-1 space-y-3 overflow-y-auto touch-pan-y p-4">
-		<!-- Connection — identity, room status and peers in one card. The room is
-		     joined automatically on open; the button is for manual control. -->
-		<div class="card bg-base-200 shadow-sm">
-			<div class="card-body gap-3 p-4">
-				<div class="flex items-center gap-3">
-					{#if presence.isInRoom}
-						<PlugZap size={24} class="text-success shrink-0" />
-					{:else}
-						<Unplug size={24} class="text-warning shrink-0" />
-					{/if}
-					<div class="min-w-0 flex-1">
-						<div class="flex items-center gap-1 text-sm">
-							<span class="truncate">
-								<span class="font-semibold">{presence.myName || '…'}</span>
-							</span>
-						</div>
-						<div class="flex items-center gap-1 text-xs opacity-60">
-							{#if connecting}
-								{presence.isInRoom ? 'Disconnecting…' : 'Connecting…'}
-							{:else if presence.isInRoom}
-								Connected · {presence.activePeerList.length}
-								{presence.activePeerList.length === 1 ? 'peer' : 'peers'}
-								<button
-									class="btn btn-ghost btn-sm btn-square -my-1.5"
-									aria-label="Rescan for peers"
-									title="Rescan for peers"
-									disabled={rescanning}
-									onclick={rescanRoom}
-								>
-									<RefreshCwIcon size={16} class={rescanning ? 'animate-spin' : ''} />
-								</button>
-							{:else}
-								Not connected
-							{/if}
-						</div>
-					</div>
-					{#if connecting}
-						<span class="loading loading-spinner loading-md"></span>
-					{:else}
-						<input
-							type="checkbox"
-							class="toggle toggle-success toggle-lg bg-transparent bg-none"
-							checked={presence.isInRoom}
-							aria-label={presence.isInRoom ? 'Disconnect' : 'Connect'}
-							onchange={toggleConnection}
-						/>
-					{/if}
-				</div>
-
-				{#if !presence.hasGroup && !presence.isInRoom}
-					<p class="text-sm opacity-60">
-						Devices meet in a private room that only paired devices know. Use the menu to invite a
-						device and start, or to join another device's invite.
+		{#if !presence.loaded}
+			<span class="loading loading-spinner loading-sm"></span>
+		{:else if !presence.isInGroup}
+			<!-- Not in a group: nothing connects until the person picks one of these. -->
+			<div class="card bg-base-200 shadow-sm">
+				<div class="card-body gap-3 p-4">
+					<h2 class="card-title text-sm">Sync your devices</h2>
+					<p class="text-sm opacity-70">
+						This device is not in a sync group. Devices find each other only when they are in the
+						same group.
 					</p>
-				{/if}
+					<button class="btn btn-primary" disabled={startingGroup} onclick={startNewGroup}>
+						{#if startingGroup}<span class="loading loading-spinner loading-xs"></span>{/if}
+						Start a new sync group
+					</button>
+					<p class="-mt-1 text-xs opacity-60">
+						For your first device. You get an invite code for the next one.
+					</p>
+					<button class="btn" onclick={() => (joining = true)}>Join with invite code</button>
+					<p class="-mt-1 text-xs opacity-60">
+						Another device is already in a group. Choose "Add a device" there to get a code.
+					</p>
+				</div>
+			</div>
+		{:else}
+			<!-- Connection — group, room status and devices in one card. The room is
+		     joined automatically on open; the toggle is for manual control. -->
+			<div class="card bg-base-200 shadow-sm">
+				<div class="card-body gap-3 p-4">
+					<div class="flex items-center gap-3">
+						{#if presence.isInRoom}
+							<PlugZap size={24} class="text-success shrink-0" />
+						{:else}
+							<Unplug size={24} class="text-warning shrink-0" />
+						{/if}
+						<div class="min-w-0 flex-1">
+							<div class="text-sm">
+								<span class="font-semibold">Sync group</span>
+								<span class="font-mono" title="Devices in the same group show the same ID">
+									{presence.groupId}
+								</span>
+							</div>
+							<div class="truncate text-xs opacity-60">This device: {presence.myName}</div>
+							<div class="flex items-center gap-1 text-xs opacity-60">
+								{#if connecting}
+									{presence.isInRoom ? 'Disconnecting…' : 'Connecting…'}
+								{:else if presence.isInRoom}
+									Connected · {presence.activePeerList.length}
+									{presence.activePeerList.length === 1 ? 'peer' : 'peers'}
+									<button
+										class="btn btn-ghost btn-sm btn-square -my-1.5"
+										aria-label="Rescan for peers"
+										title="Rescan for peers"
+										disabled={rescanning}
+										onclick={rescanRoom}
+									>
+										<RefreshCwIcon size={16} class={rescanning ? 'animate-spin' : ''} />
+									</button>
+								{:else}
+									Not connected
+								{/if}
+							</div>
+						</div>
+						{#if connecting}
+							<span class="loading loading-spinner loading-md"></span>
+						{:else}
+							<input
+								type="checkbox"
+								class="toggle toggle-success toggle-lg bg-transparent bg-none"
+								checked={presence.isInRoom}
+								aria-label={presence.isInRoom ? 'Disconnect' : 'Connect'}
+								onchange={toggleConnection}
+							/>
+						{/if}
+					</div>
 
-				{#if presence.isInRoom}
-					{#if presence.activePeerList.length === 0}
-						<p class="text-sm opacity-50">Waiting for other devices…</p>
-					{:else}
-						<ul class="space-y-2" role="radiogroup" aria-label="Sync source">
-							{#each presence.activePeerList as peer (peer.trysteroId)}
-								{@const selected = peer.isTrusted && syncTargetId === peer.trysteroId}
-								<li>
-									{#if peer.isTrusted}
-										<button
-											type="button"
-											role="radio"
-											aria-checked={selected}
-											class="rounded-box flex w-full items-center gap-2 p-3 text-left transition-colors"
-											class:bg-primary={selected}
-											class:text-primary-content={selected}
-											class:bg-base-300={!selected}
-											onclick={() => (syncTargetId = peer.trysteroId)}
-										>
-											{#if selected}
-												<CircleCheck size={16} class="shrink-0" />
-											{:else}
-												<Circle size={16} class="shrink-0 opacity-40" />
-											{/if}
-											<span class="flex flex-1 items-baseline overflow-hidden font-semibold"
-												><DeviceLabel name={peer.name} fingerprint={peer.fingerprint} /></span
+					{#if presence.isInRoom}
+						{#if presence.activePeerList.length === 0}
+							<p class="text-sm opacity-60">
+								No other devices online. Open Peer Sync on another device in group
+								<span class="font-mono">{presence.groupId}</span>.
+							</p>
+						{:else}
+							<ul class="space-y-2" role="radiogroup" aria-label="Sync source">
+								{#each presence.activePeerList as peer (peer.trysteroId)}
+									{@const selected = peer.isTrusted && syncTargetId === peer.trysteroId}
+									<li>
+										{#if peer.isTrusted}
+											<button
+												type="button"
+												role="radio"
+												aria-checked={selected}
+												class="rounded-box flex w-full items-center gap-2 p-3 text-left transition-colors"
+												class:bg-primary={selected}
+												class:text-primary-content={selected}
+												class:bg-base-300={!selected}
+												onclick={() => (syncTargetId = peer.trysteroId)}
 											>
-											<span
-												class="badge badge-sm"
-												class:badge-success={!selected}
-												class:badge-outline={selected}>Trusted</span
-											>
-										</button>
-									{:else}
-										<div class="bg-base-300 rounded-box flex items-center gap-2 p-3">
-											<span class="flex flex-1 items-baseline overflow-hidden font-semibold"
-												><DeviceLabel name={peer.name} fingerprint={peer.fingerprint} /></span
-											>
-											{#if !peer.verified}
+												{#if selected}
+													<CircleCheck size={16} class="shrink-0" />
+												{:else}
+													<Circle size={16} class="shrink-0 opacity-40" />
+												{/if}
+												<span class="flex flex-1 items-baseline overflow-hidden font-semibold">
+													<DeviceLabel name={peer.name} fingerprint={peer.fingerprint} />
+												</span>
 												<span
-													class="badge badge-ghost badge-sm"
-													title="This device did not prove its identity. It may need an update."
-													>Unverified</span
+													class="badge badge-sm"
+													class:badge-success={!selected}
+													class:badge-outline={selected}
 												>
-											{:else if peer.trustIssue === 'key-mismatch'}
-												<span
-													class="badge badge-error badge-sm"
-													title="This device uses a different key than the trusted device with the same ID. Remove the trusted device to pair again."
-													>Key changed</span
-												>
-											{:else if peer.migration?.kind === 'approve'}
-												<button
-													class="btn btn-info btn-xs"
-													title="This device says it is a trusted device that was added without a key. If the name and fingerprint are right, replace that record with this one."
-													onclick={() => approveMigration(peer.trysteroId)}>Same device? Replace</button
-												>
-											{:else if peer.trustIssue === 'legacy-record'}
-												<span
-													class="badge badge-info badge-sm"
-													title="This device was trusted before devices proved their identity. Invite it again."
-													>Invite again</span
-												>
-											{:else}
-												<span class="badge badge-ghost badge-sm" title="Not paired with this device.">Not trusted</span>
-											{/if}
-										</div>
-									{/if}
+													Trusted
+												</span>
+											</button>
+										{:else}
+											<div class="bg-base-300 rounded-box flex items-center gap-2 p-3">
+												<span class="flex flex-1 items-baseline overflow-hidden font-semibold">
+													<DeviceLabel name={peer.name} fingerprint={peer.fingerprint} />
+												</span>
+												{#if !peer.verified}
+													<span
+														class="badge badge-ghost badge-sm"
+														title="This device did not prove its identity. It may need an update."
+													>
+														Unverified
+													</span>
+												{:else if peer.trustIssue === 'key-mismatch'}
+													<span
+														class="badge badge-error badge-sm"
+														title="This device uses a different key than the trusted device with the same ID. Remove the trusted device to pair again."
+													>
+														Key changed
+													</span>
+												{:else if peer.migration?.kind === 'approve'}
+													<button
+														class="btn btn-info btn-xs"
+														title="This device says it is a trusted device that was added without a key. If the name and fingerprint are right, replace that record with this one."
+														onclick={() => approveMigration(peer.trysteroId)}
+													>
+														Same device? Replace
+													</button>
+												{:else if peer.trustIssue === 'legacy-record'}
+													<span
+														class="badge badge-info badge-sm"
+														title="This device was trusted before devices proved their identity. Invite it again."
+													>
+														Invite again
+													</span>
+												{:else}
+													<span
+														class="badge badge-ghost badge-sm"
+														title="Not paired with this device."
+													>
+														Not trusted
+													</span>
+												{/if}
+											</div>
+										{/if}
+									</li>
+								{/each}
+							</ul>
+						{/if}
+					{/if}
+
+					{#if absentMembers.length > 0}
+						<ul class="space-y-2" aria-label="Devices not connected">
+							{#each absentMembers as member (member.id)}
+								<li class="border-base-300 rounded-box flex items-center gap-2 border p-3">
+									<Circle size={16} class="shrink-0 opacity-20" />
+									<div class="min-w-0 flex-1 opacity-60">
+										<span class="flex items-baseline overflow-hidden font-semibold">
+											<DeviceLabel name={member.name} fingerprint={member.fingerprint} />
+										</span>
+										{#if member.lastSeen}
+											<span class="text-xs">
+												Last seen {new Date(member.lastSeen).toLocaleString()}
+											</span>
+										{/if}
+									</div>
+									{#if presence.isInRoom}<span class="badge badge-ghost badge-sm">
+											Offline
+										</span>{/if}
 								</li>
 							{/each}
 						</ul>
 					{/if}
-				{/if}
+
+					<button class="btn btn-sm self-start" onclick={() => (inviting = true)}>
+						<UserPlusIcon size={16} /> Add a device
+					</button>
+				</div>
 			</div>
-		</div>
+		{/if}
 
 		<EvictionNotices {presence} />
 
@@ -848,24 +942,29 @@
 	<InviteDialog {presence} onclose={() => (inviting = false)} />
 {/if}
 
-<!-- ─── Join with invite link ──────────────────────────────────────────────── -->
+<!-- ─── Join with invite code ──────────────────────────────────────────────── -->
 {#if joining}
 	<div class="modal modal-open">
 		<div class="modal-box">
-			<h3 class="text-lg font-bold">Join with invite link</h3>
+			<h3 class="text-lg font-bold">Join with invite code</h3>
+			<p class="pt-2 text-sm opacity-70">
+				On a device that is in the group, open <strong>Peer Sync</strong>, choose
+				<strong>Add a device</strong> and copy the code. A device that isn't in a group yet chooses
+				<strong>Start a new sync group</strong>.
+			</p>
 			<form
 				class="flex flex-col gap-2 pt-4"
 				onsubmit={(e) => {
 					e.preventDefault();
-					joinWithPastedLink();
+					joinWithPastedCode();
 				}}
 			>
 				<input
 					type="text"
 					class="input input-bordered w-full"
 					class:input-error={pasteError}
-					placeholder="Paste invite link"
-					aria-label="Paste invite link"
+					placeholder="Paste invite code or link"
+					aria-label="Invite code"
 					autocomplete="off"
 					spellcheck="false"
 					bind:value={pasted}
@@ -880,8 +979,10 @@
 							joining = false;
 							pasted = '';
 							pasteError = '';
-						}}>Cancel</button
+						}}
 					>
+						Cancel
+					</button>
 					<button type="submit" class="btn btn-primary" disabled={!pasted.trim()}>Join</button>
 				</div>
 			</form>

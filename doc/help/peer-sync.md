@@ -6,19 +6,28 @@ Peer Sync transfers data directly between devices over a peer-to-peer connection
 
 Each device has an editable **Device Name** (on the Setup page) and a **fingerprint** such as `7KQ2-M9XA`, made from the device's secret key. Names are only labels and several devices can share one, so other devices show your name together with the fingerprint (`Anna's phone · 7KQ2-M9XA`).
 
-## Pairing a device
+## Sync groups
 
-Devices meet in a **private room** that only paired devices know, so strangers never see them. To pair two devices:
+Devices find each other only when they are in the same **sync group**. A group meets in a private room that only its devices know, so strangers never see them. Until a device is in a group, the Peer Sync page asks you to choose:
 
-1. On the first device, tap **Invite a device**. Send the link it shows to the other device (any chat will do). The link works once and expires after 10 minutes.
-2. On the other device, open the link, or paste it into **Paste invite link** on the Peer Sync page, and tap **Join**. If the app is not set up on that device yet, finish setup first and then paste the link.
-3. The first device shows `Anna's phone · 7KQ2-M9XA wants to join`. Check that it is the device you invited, then tap **Approve**. Both devices now trust each other, and the second joins the first one's private room. Pairing also records the Beancount files both devices already hold as the starting point for [Beancount Sync](/help/beancount-sync), so they don't show as conflicts just because they were never synced before.
+- **Start a new sync group** on your first device.
+- **Join with invite code** on a device that should join an existing group.
 
-Someone who gets hold of the link can only ask to join; nothing is trusted until you tap **Approve**, and an unexpected name or fingerprint shows up on that screen. If you are unsure, tap **Reject**.
+Each browser is a separate device: installing Cashier in a second browser means joining the group from that browser too.
+
+The page shows the group's ID, such as `A1B2-C3D4`, and its devices, including those that are not connected. Two devices that show different IDs are in different groups and will not see each other. The ID cannot be used to join.
+
+## Adding a device
+
+1. On a device in the group, tap **Add a device**. (**Start a new sync group** opens the same screen.) Tap **Copy code** and get the code to the other device (any chat will do). The code works once and expires after 10 minutes.
+2. On the other device, open Peer Sync, tap **Join with invite code**, paste the code and tap **Join**. If the app is not set up on that device yet, finish setup first. **Share link…** sends a link instead, which opens in the device's default browser; if that is not the browser you use Cashier in, paste the link or code there.
+3. The first device shows `Anna's phone · 7KQ2-M9XA wants to join`. Check that it is the device you invited, then tap **Approve**. Both devices now trust each other, and the second joins the group, using the same discovery network. Pairing also records the Beancount files both devices already hold as the starting point for [Beancount Sync](/help/beancount-sync), so they don't show as conflicts just because they were never synced before.
+
+Someone who gets hold of the code can only ask to join; nothing is trusted until you tap **Approve**, and an unexpected name or fingerprint shows up on that screen. If you are unsure, tap **Reject**.
 
 A device that was trusted before devices proved their identity (or was trusted through S3 or WebDAV only) shows **Invite again** until it is paired this way. A device that shows **Key changed** is using a different key than the trusted device with the same ID; remove the trusted device and pair again if you recognise it.
 
-If a device already belongs to a group of paired devices, joining another group replaces its group: the devices paired before have to be invited again.
+A device is in one group at a time. Joining another group moves it there: to sync with the devices of the old group again, they have to join the new one.
 
 ## Introduced devices
 

@@ -6,7 +6,7 @@ Pairing the devices records the files both already hold as the starting point fo
 
 ## Prerequisites
 
-You need a trusted peer, and you need to be **connected** — toggle **Connect** on the **Peer Sync** page first (device name, pairing by invite link) if you haven't already; this page reuses the same room connection and trust list, but doesn't join on its own. Until you're connected, this page shows a **Connect via Peer Sync** prompt instead of a peer list.
+You need a trusted peer, and you need to be **connected** — toggle **Connect** on the **Peer Sync** page first (after [joining a sync group](/help/peer-sync)) if you haven't already; this page reuses the same room connection and trust list, but doesn't join on its own. Until you're connected, this page shows a **Connect via Peer Sync** prompt instead of a peer list.
 
 ## Picking a peer
 

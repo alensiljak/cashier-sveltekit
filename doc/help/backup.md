@@ -38,7 +38,7 @@ After restoring on a new device:
 - Pick the import and export folders again (the browser does not keep access to a folder across devices); their pages mark them as required.
 - Reload the Asset Allocation definition file, if you use one (it's stored separately in OPFS and isn't included in the backup) — see [File Storage](/help/opfs-file-storage).
 - Re-run a sync or import to bring in the latest journal data — see [Sync OPFS ↔ Filesystem](/help/opfs-sync) or [Ledger Import](/help/ledger-import).
-- **Pair the device again.** A restored device is a new device with a key of its own, so the others do not trust it yet. Invite it from one of them (see [Peer Sync](/help/peer-sync)); that device then introduces it to the rest, which each ask you to approve it.
+- **Pair the device again.** A restored device is a new device with a key of its own, so the others do not trust it yet. Add it from one of them (see [Peer Sync](/help/peer-sync)); that device then introduces it to the rest, which each ask you to approve it.
 
 ### The old device
 

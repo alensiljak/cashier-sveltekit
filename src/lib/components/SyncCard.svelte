@@ -86,7 +86,9 @@
 </script>
 
 {#snippet peerSwitch()}
-	{#if connecting}
+	{#if !presence.isInGroup && !presence.isInRoom}
+		<!-- Nothing to connect to: the status line below links to the setup. -->
+	{:else if connecting}
 		<span class="loading loading-spinner loading-sm"></span>
 	{:else}
 		<input
@@ -209,16 +211,20 @@
 							peerSwitch
 						)}
 						<div class="pl-8 text-sm opacity-70">
-							{#if !presence.isInRoom}
+							{#if !presence.loaded}
+								Loading…
+							{:else if !presence.isInGroup && !presence.isInRoom}
+								Not in a sync group. <a href="/sync/peer" class="link">Set up</a>
+							{:else if !presence.isInRoom}
 								Peer sync is off.
 							{:else if presence.activePeerList.length === 0}
 								Looking for other devices…
 							{:else}
 								{#each presence.activePeerList as peer (peer.trysteroId)}
 									<div class="flex items-center gap-2">
-										<span class="flex grow items-baseline overflow-hidden"
-											><DeviceLabel name={peer.name} fingerprint={peer.fingerprint} /></span
-										>
+										<span class="flex grow items-baseline overflow-hidden">
+											<DeviceLabel name={peer.name} fingerprint={peer.fingerprint} />
+										</span>
 										{#if !peer.isTrusted}
 											<span class="badge badge-ghost badge-sm">Not paired</span>
 										{:else if peerStatusOf(peer.trysteroId) === 'differs'}

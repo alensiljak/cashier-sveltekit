@@ -157,6 +157,8 @@ export const DeviceSettingKeys = {
 	// Secret shared by the devices paired with each other (base64, 32 bytes). The Peer Sync room and
 	// its signaling password are derived from it (sync/syncGroup.ts). Device-only: it is a credential.
 	syncGroupSecret: 'syncGroupSecret',
+	// Set once the devices paired before `TrustedPeer.syncGroupId` existed have been given one.
+	syncGroupMembersMarked: 'syncGroupMembersMarked',
 	// Whether to automatically reload the ledger after a peer sync pull/merge (default: true)
 	peerAutoReload: 'peerAutoReload',
 	// TURN/ICE servers (JSON array) for peer connections that can't go direct. Device-only: holds credentials

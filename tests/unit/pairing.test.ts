@@ -139,6 +139,7 @@ interface TestHost extends PairingHost {
 	secret: string | null;
 	key: DeviceKey;
 	files: FileFingerprint[];
+	members: string[];
 	fileSyncSeeds: { peerId: string; remote: FileFingerprint[] }[];
 }
 
@@ -158,6 +159,13 @@ async function device(net: FakeNet, name: string, id = `${name}-uuid`): Promise<
 		adoptGroupSecret: async (secret) => {
 			host.secret = secret;
 		},
+		markGroupMember: async (peerId) => {
+			host.members.push(peerId);
+		},
+		setStrategy: async (strategy) => {
+			(host as { strategy: RelayStrategy }).strategy = strategy;
+		},
+		members: [],
 		listFileFingerprints: async () => host.files,
 		initializeFileSync: async (peerId, remote) => {
 			host.fileSyncSeeds.push({ peerId, remote });
@@ -237,6 +245,28 @@ describe('pairing by invite', () => {
 		]);
 		expect(a.secret).toBeTruthy();
 		expect(b.secret).toBe(a.secret);
+		expect(a.members).toEqual([b.myId]);
+		expect(b.members).toEqual([a.myId]);
+	});
+
+	it('moves the joiner to the discovery network named in the invite', async () => {
+		const net = new FakeNet();
+		const a = await device(net, 'Laptop');
+		const b = await device(net, 'Anna phone');
+		(a as { strategy: RelayStrategy }).strategy = 'mqtt';
+		const invite = new InviteSession(a, { ackTimeoutMs: 100 });
+		await invite.start('https://cashier.test');
+		const parsed = parseInvite(invite.link);
+		if (!parsed.ok) throw new Error('bad link');
+		const join = new JoinSession(b, parsed.payload);
+		await join.start();
+		await until(() => invite.candidates.length === 1, 'the joiner to show up');
+		expect(b.strategy).toBe('nostr');
+
+		await invite.approve(invite.candidates[0].trysteroId);
+		await until(() => join.status === 'approved', 'the joiner to be approved');
+
+		expect(b.strategy).toBe('mqtt');
 	});
 
 	it('exchanges file hashes so both devices can seed the starting sync baseline', async () => {

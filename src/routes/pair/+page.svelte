@@ -21,7 +21,7 @@
 	let myFingerprint = $state('');
 	let reconnected = $state(false);
 
-	let replacesGroup = $derived(presence.hasGroup && presence.trustedPeers.length > 0);
+	let replacesGroup = $derived(presence.isInGroup);
 
 	onMount(async () => {
 		await peerConnection.ensureInit();
@@ -78,7 +78,7 @@
 						{:else if problem === 'unsupported'}
 							This invite needs a newer version of Cashier.
 						{:else}
-							Open an invite link from another device, or paste it on the Peer Sync page.
+							Get an invite code from another device and paste it on the Peer Sync page.
 						{/if}
 					</p>
 					<a href="/sync/peer" class="btn btn-sm">Go to Peer Sync</a>
@@ -98,8 +98,9 @@
 					</p>
 					{#if replacesGroup}
 						<p class="text-warning text-xs">
-							This device is already paired with other devices. Joining switches it to the sync
-							group of "{invite.name}"; the devices paired before will have to be invited again.
+							This device is in sync group <span class="font-mono">{presence.groupId}</span>.
+							Joining moves it to the group of "{invite.name}"; to sync with the devices of the old
+							group again, they have to join the new one.
 						</p>
 					{/if}
 					<div class="flex gap-2">
@@ -116,7 +117,7 @@
 							<span class="loading loading-spinner loading-sm"></span> Looking for "{session.inviterName}"…
 						</p>
 						<p class="text-xs opacity-60">
-							Keep this page open. Both devices need to be online on the same network setting.
+							Keep this page open, and the invite open on the other device.
 						</p>
 					{:else if session.status === 'waiting'}
 						<p class="text-sm">
@@ -129,7 +130,8 @@
 						</p>
 					{:else if session.status === 'approved'}
 						<p class="text-success text-sm">
-							Paired with "{session.inviterName}". This device now shares its sync group.
+							Paired with "{session.inviterName}". This device is now in sync group
+							<span class="font-mono">{presence.groupId}</span>.
 						</p>
 						<a href="/sync/peer" class="btn btn-primary btn-sm">Open Peer Sync</a>
 					{:else if session.status === 'rejected'}

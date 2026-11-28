@@ -55,9 +55,11 @@ import type { FileFingerprint } from '#lib/sync/SyncSource';
 import { clearBaseline, initializePeerBaseline } from '#lib/sync/syncBaseline';
 import { getDeviceId } from '#lib/sync/ydocDevices';
 import {
+	deriveGroupId,
 	deriveSyncPassword,
 	deriveSyncRoom,
 	ensureGroupSecret,
+	generateGroupSecret,
 	getGroupSecret,
 	setGroupSecret
 } from '#lib/sync/syncGroup';
@@ -172,10 +174,13 @@ export async function joinTrysteroRoom(opts: {
 	iceServers: RTCIceServer[];
 }): Promise<Room> {
 	const { joinRoom } = await STRATEGY_LOADERS[opts.strategy]();
-	return joinRoom(
+	const room = joinRoom(
 		{ appId: APP_ID, password: opts.password, turnConfig: opts.iceServers },
 		opts.roomId
 	);
+	// Without a listener trystero drops these silently, e.g. a failed direct connection.
+	room.onError(({ code, message }) => console.warn(`Peer sync (${code}): ${message}`));
+	return room;
 }
 
 /** This device's hello for the connection with `fps`; unsigned when the fingerprints can't be read. */
@@ -276,8 +281,10 @@ export async function assessHello(
 export class PeerPresence {
 	myId = $state('');
 	myName = $state('');
-	/** This device has a sync group secret, so it has a private room to join. */
-	hasGroup = $state(false);
+	/** ID of this device's sync group, or '' when it has no group secret. */
+	groupId = $state('');
+	/** `init()` has finished, so `isInGroup` can be relied on. */
+	loaded = $state(false);
 	strategy = $state<RelayStrategy>('nostr');
 	/** Extra TURN/ICE servers (device-only setting); empty = direct connections and default STUN only. */
 	iceServers = $state<RTCIceServer[]>([]);
@@ -298,6 +305,18 @@ export class PeerPresence {
 	);
 
 	activePeerList = $derived(Object.values(this.peersMap));
+	/** The other devices known to be in this device's sync group, online or not. */
+	groupMembers = $derived(
+		this.groupId ? this.trustedPeers.filter((p) => p.syncGroupId === this.groupId) : []
+	);
+	/**
+	 * This device syncs with at least one other. A group secret alone doesn't count: a cancelled
+	 * invite leaves a group of one.
+	 */
+	isInGroup = $derived(this.groupMembers.length > 0);
+
+	/** ID of the group whose room is joined. */
+	private roomGroupId = '';
 
 	room: Room | null = null;
 	private helloAction: MessageAction<HelloMessage> | null = null;
@@ -315,7 +334,8 @@ export class PeerPresence {
 		const savedName = await deviceSettings.get<string>(DeviceSettingKeys.peerName);
 		this.myName = savedName ?? 'My Device';
 
-		this.hasGroup = !!(await getGroupSecret());
+		const secret = await getGroupSecret();
+		this.groupId = secret ? await deriveGroupId(secret) : '';
 
 		const savedStrategy = await settings.get<RelayStrategy>(SettingKeys.peerRelayStrategy);
 		if (savedStrategy) this.strategy = savedStrategy;
@@ -324,10 +344,34 @@ export class PeerPresence {
 			(await deviceSettings.get<RTCIceServer[]>(DeviceSettingKeys.peerIceServers)) ?? [];
 
 		await this.reloadTrustedPeers();
+		await this.markExistingMembers();
 		await this.reloadIntroductions();
 		await this.reloadRevocations();
 		// Evictions read from a bucket or folder change the trusted list behind this class's back.
 		this.unsubscribeBucketEvictions ??= onRevocationsApplied(() => void this.refreshEvictions());
+		this.loaded = true;
+	}
+
+	/**
+	 * Runs once: devices paired before membership was recorded are taken to be in the current group.
+	 * Records don't say how they were trusted, so this can include one trusted only for WebDAV/S3.
+	 */
+	private async markExistingMembers(): Promise<void> {
+		if (await deviceSettings.get<boolean>(DeviceSettingKeys.syncGroupMembersMarked)) return;
+		if (this.groupId) {
+			for (const tp of this.trustedPeers) {
+				if (!tp.publicKey || tp.readOnly || tp.syncGroupId) continue;
+				await db.peers.update(tp.id, { syncGroupId: this.groupId });
+			}
+			await this.reloadTrustedPeers();
+		}
+		await deviceSettings.set(DeviceSettingKeys.syncGroupMembersMarked, true);
+	}
+
+	/** Records that the trusted device is in this device's group. */
+	async markGroupMember(persistentId: string): Promise<void> {
+		await db.peers.update(persistentId, { syncGroupId: this.groupId });
+		await this.reloadTrustedPeers();
 	}
 
 	async reloadRevocations(): Promise<void> {
@@ -386,7 +430,7 @@ export class PeerPresence {
 
 	/**
 	 * Joins the group's private room: its name and signaling password come from the sync group
-	 * secret, created here if this device has none yet (a group of one, which others join by invite).
+	 * secret. Never creates a group; that takes an explicit `startNewGroup` or accepting an invite.
 	 */
 	join(): Promise<void> {
 		if (this.isInRoom) return Promise.resolve();
@@ -409,8 +453,9 @@ export class PeerPresence {
 			}
 			this.room = null;
 		}
-		const secret = await ensureGroupSecret();
-		this.hasGroup = true;
+		const secret = await getGroupSecret();
+		if (!secret) throw new Error('This device is not in a sync group yet.');
+		this.roomGroupId = await deriveGroupId(secret);
 		const room = await joinTrysteroRoom({
 			strategy: this.strategy,
 			roomId: await deriveSyncRoom(secret),
@@ -507,9 +552,16 @@ export class PeerPresence {
 				tp.lastSeen = new Date().toISOString();
 				// The peer's own name is kept next to the label this device gave it.
 				tp.announcedName = data.name;
+				// Only a holder of the group secret can be in this room.
+				const joinedGroup = tp.syncGroupId !== this.roomGroupId;
 				// Update just these fields: `tp` is a cached copy, and writing it back whole would
 				// erase fields set directly in the DB since (e.g. `fileSyncInitializedAt`).
-				await db.peers.update(tp.id, { lastSeen: tp.lastSeen, announcedName: tp.announcedName });
+				await db.peers.update(tp.id, {
+					lastSeen: tp.lastSeen,
+					announcedName: tp.announcedName,
+					syncGroupId: this.roomGroupId
+				});
+				if (joinedGroup) await this.reloadTrustedPeers();
 			}
 			void this.shareIntroductions(trysteroId, data.id);
 			void this.shareRevocations(trysteroId);
@@ -788,14 +840,22 @@ export class PeerPresence {
 
 	async ensureGroupSecret(): Promise<string> {
 		const secret = await ensureGroupSecret();
-		this.hasGroup = true;
+		this.groupId = await deriveGroupId(secret);
 		return secret;
 	}
 
 	/** Takes over another device's group secret. A live room keeps the old one until it is rejoined. */
 	async adoptGroupSecret(secret: string): Promise<void> {
 		await setGroupSecret(secret);
-		this.hasGroup = true;
+		this.groupId = await deriveGroupId(secret);
+	}
+
+	/**
+	 * Starts a new group with this device as its only member, dropping any earlier secret. A live
+	 * room keeps the old one, so leave it first.
+	 */
+	async startNewGroup(): Promise<void> {
+		await this.adoptGroupSecret(generateGroupSecret());
 	}
 
 	joinPairingRoom(opts: {
@@ -856,6 +916,11 @@ export class PeerPresence {
 		tp.lastSeen = now;
 		tp.readOnly = existing?.readOnly;
 		tp.legacyIds = existing?.legacyIds;
+		// A device that is in the group's room right now is a member of it.
+		const inRoom = Object.values(this.peersMap).some(
+			(p) => p.persistentId === peer.id && p.publicKey === peer.publicKey
+		);
+		tp.syncGroupId = inRoom ? this.roomGroupId : sameKey ? existing.syncGroupId : undefined;
 		tp.fileSyncInitializedAt = sameKey ? existing.fileSyncInitializedAt : undefined;
 		// Pairing directly is a stronger basis than an introduction, so it clears `addedBy`.
 		tp.addedBy = peer.addedBy ?? (sameKey ? existing.addedBy : undefined);

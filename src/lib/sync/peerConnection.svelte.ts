@@ -106,7 +106,7 @@ class PeerConnection {
 	 */
 	storeRevision = $state<Record<StoreKind, number>>({ ydoc: 0, scx: 0 });
 
-	private initialized = false;
+	private initPromise: Promise<void> | null = null;
 	private storeChangedAction: MessageAction<StoreKind> | null = null;
 	private syncRequestAction: MessageAction<SyncRequestMsg> | null = null;
 	private syncResponseAction: MessageAction<SyncResponseMsg> | null = null;
@@ -125,10 +125,12 @@ class PeerConnection {
 
 	/** Loads identity/room/trusted-peers from storage. Safe to call from every
 	 *  page's `onMount` — only runs once for the lifetime of the app. */
-	async ensureInit(): Promise<void> {
-		if (this.initialized) return;
-		this.initialized = true;
-		await this.presence.init();
+	ensureInit(): Promise<void> {
+		this.initPromise ??= this.presence.init().catch((e) => {
+			this.initPromise = null;
+			throw e;
+		});
+		return this.initPromise;
 	}
 
 	/** Joins the room (if not already joined) and registers both protocols. No-op if already connected. */
@@ -357,6 +359,13 @@ class PeerConnection {
 		if (!this.presence.isInRoom) return;
 		await this.disconnect();
 		await this.connect();
+	}
+
+	/** Leaves the current room, if any, and creates a new group with only this device in it. */
+	async startNewGroup(): Promise<void> {
+		await this.ensureInit();
+		await this.disconnect();
+		await this.presence.startNewGroup();
 	}
 
 	/** Reconnects with a different relay strategy (see PeerPresence.setStrategy). */

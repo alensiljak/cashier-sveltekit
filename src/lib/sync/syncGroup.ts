@@ -34,6 +34,17 @@ export async function deriveSyncPassword(secret: string): Promise<string> {
 	return toBase64(await hmacSha256(fromBase64(secret), 'password-v1'));
 }
 
+/**
+ * A short ID of the group (`A1B2-C3D4`), for people to check that two devices are in the same one.
+ * It does not reveal the secret and cannot be used to join.
+ */
+export async function deriveGroupId(secret: string): Promise<string> {
+	const head = toHex(await hmacSha256(fromBase64(secret), 'group-id-v1'))
+		.slice(0, 8)
+		.toUpperCase();
+	return `${head.slice(0, 4)}-${head.slice(4)}`;
+}
+
 export async function getGroupSecret(): Promise<string | null> {
 	const secret = await deviceSettings.get<string>(DeviceSettingKeys.syncGroupSecret);
 	return isValidGroupSecret(secret) ? secret : null;

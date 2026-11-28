@@ -188,6 +188,13 @@ export class TrustedPeer {
 	announcedName?: string;
 	/** Set when this device was trusted on the word of another trusted device (an approved introduction): that device's ID. Empty for devices paired directly. */
 	addedBy?: string;
+	/**
+	 * ID of the sync group this device is known to be a member of (see sync/syncGroup.ts
+	 * `deriveGroupId`): set at pairing, or when it proves its key in the group's room. Empty for
+	 * devices trusted only for WebDAV/S3. A value other than this device's group ID means a former
+	 * group.
+	 */
+	syncGroupId?: string;
 	lastSeen?: string;
 	/** The peer may pull our data, but nothing it sends (live updates, sync pushes, its WebDAV file) is merged here. */
 	readOnly?: boolean;

@@ -1,12 +1,14 @@
 <script lang="ts">
 	/**
-	 * "Invite a device": shows the invite link and lists the devices that opened it. Approving one
-	 * is what authenticates it, so the name and fingerprint it shows are what to check. A link works
-	 * once and expires after ten minutes (see sync/pairing.svelte.ts).
+	 * "Add a device": shows the invite code and lists the devices that used it. Approving one
+	 * is what authenticates it, so the name and fingerprint it shows are what to check. A code works
+	 * once and expires after ten minutes (see sync/pairing.svelte.ts). The code is the token of the
+	 * invite link; the link is there for sharing.
 	 */
 	import { onDestroy, onMount } from 'svelte';
 	import DeviceLabel from '#lib/components/DeviceLabel.svelte';
 	import { InviteSession } from '#lib/sync/pairing.svelte';
+	import { peerConnection } from '#lib/sync/peerConnection.svelte';
 	import type { PeerPresence } from '#lib/sync/peerPresence.svelte';
 	import Notifier from '#lib/utils/notifier';
 
@@ -35,13 +37,15 @@
 		void session.close();
 	});
 
+	let code = $derived(session.link.slice(session.link.indexOf('#') + 1));
+
 	async function copy() {
 		try {
-			await navigator.clipboard.writeText(session.link);
+			await navigator.clipboard.writeText(code);
 			copied = true;
 			setTimeout(() => (copied = false), 2000);
 		} catch {
-			Notifier.error('Could not copy. Select the link and copy it by hand.');
+			Notifier.error('Could not copy. Select the code and copy it by hand.');
 		}
 	}
 
@@ -57,7 +61,11 @@
 		busy = true;
 		try {
 			await session.approve(trysteroId);
-			if (session.status === 'approved') Notifier.success(`Paired with "${session.approvedName}"`);
+			// Meet the new device in the group's room right away.
+			if (session.status === 'approved') {
+				Notifier.success(`Paired with "${session.approvedName}"`);
+				await peerConnection.connect();
+			}
 		} catch (e) {
 			Notifier.error(e instanceof Error ? e.message : String(e));
 		} finally {
@@ -68,7 +76,7 @@
 
 <div class="modal modal-open">
 	<div class="modal-box">
-		<h3 class="text-lg font-bold">Invite a device</h3>
+		<h3 class="text-lg font-bold">Add a device</h3>
 
 		{#if session.status === 'starting' || session.status === 'idle'}
 			<p class="py-4 text-sm opacity-70">
@@ -76,27 +84,30 @@
 			</p>
 		{:else if session.status === 'waiting'}
 			<p class="py-2 text-sm opacity-70">
-				Send this link to the other device and open it there, or paste it into
-				<strong>Paste invite link</strong>. It works once and expires in
+				On the other device, open <strong>Peer Sync</strong>, choose
+				<strong>Join with invite code</strong> and paste this code. It works once and expires in
 				<strong class="font-mono">{clock}</strong>.
 			</p>
 			<input
 				type="text"
 				readonly
 				class="input input-bordered input-sm w-full font-mono text-xs"
-				aria-label="Invite link"
-				value={session.link}
+				aria-label="Invite code"
+				value={code}
 				onfocus={(e) => e.currentTarget.select()}
 			/>
 			<div class="mt-2 flex gap-2">
-				<button class="btn btn-sm" onclick={copy}>{copied ? 'Copied' : 'Copy link'}</button>
-				{#if canShare}<button class="btn btn-sm" onclick={share}>Share…</button>{/if}
+				<button class="btn btn-primary btn-sm" onclick={copy}>
+					{copied ? 'Copied' : 'Copy code'}
+				</button>
+				{#if canShare}<button class="btn btn-sm" onclick={share}>Share link…</button>{/if}
 			</div>
+			<p class="mt-1 text-xs opacity-50">A shared link opens in the device's default browser.</p>
 
 			<h4 class="mt-4 text-sm font-semibold">Devices asking to join</h4>
 			{#if session.candidates.length === 0}
 				<p class="py-2 text-sm opacity-50">
-					<span class="loading loading-dots loading-xs"></span> Waiting for a device to open the link…
+					<span class="loading loading-dots loading-xs"></span> Waiting for a device to use the code…
 				</p>
 			{:else}
 				<ul class="mt-2 space-y-2">
@@ -116,7 +127,11 @@
 								</p>
 							{/if}
 							<div class="mt-2 flex justify-end gap-2">
-								<button class="btn btn-ghost btn-sm" disabled={busy} onclick={() => session.reject(c.trysteroId)}>
+								<button
+									class="btn btn-ghost btn-sm"
+									disabled={busy}
+									onclick={() => session.reject(c.trysteroId)}
+								>
 									Reject
 								</button>
 								<button
