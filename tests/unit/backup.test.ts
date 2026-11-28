@@ -25,10 +25,11 @@ import {
 	createBackupFile,
 	getBackupFilename,
 	inspectBackup,
+	previewRestore,
 	restoreBackup,
 	type BackupOptions
 } from '#lib/services/backup';
-import { fromBase64 } from '#lib/services/s3Crypto';
+import { fromBase64, toBase64 } from '#lib/services/s3Crypto';
 import { loadImporterConfig, resetImporterConfig, saveImporterConfig } from '#lib/importers/config';
 import { getRestoreMissing } from '#lib/services/restoreMissing';
 import { getRestoredDevice } from '#lib/services/restoredDevice';
@@ -146,7 +147,7 @@ describe('restoreBackup', () => {
 		);
 
 		expect(result.restored).toEqual(['settings', 'scx']);
-		expect(await payees()).toEqual(['Old']);
+		expect(await payees()).toEqual(['Rent', 'Old', 'Gym']);
 	});
 
 	it('restores only the sections asked for', async () => {
@@ -175,11 +176,45 @@ describe('restoreBackup', () => {
 		]);
 	});
 
-	it('replaces existing records with those of an older file, which has a list', async () => {
-		await restoreBackup(JSON.stringify({ settings: [new Setting('a', '1')], scx: [scx('Only')] }));
+	it('adds only the missing entries of an older file, which has a list', async () => {
+		const [rent, gym] = await scxStore.list();
+		await scxStore.save({ ...rent, nextDate: '2026-03-01' });
+		await scxStore.remove(gym.id);
+		const phone = { ...scx('Phone', '2026-04-01'), id: 'phone' };
+		const file = JSON.stringify({ version: 2, scx: [rent, gym, phone, phone] });
 
-		expect((await db.settings.toArray()).map((s: Setting) => s.key)).toEqual(['a']);
-		expect(await payees()).toEqual(['Only']);
+		const result = await restoreBackup(file);
+
+		expect(result.stores.scx).toEqual({ added: 2, changed: 0, deleted: 0 });
+		expect((await scxStore.list()).map((s) => [s.transaction?.payee, s.nextDate])).toEqual([
+			['Gym', '2026-02-01'],
+			['Rent', '2026-03-01'],
+			['Phone', '2026-04-01']
+		]);
+		expect((await restoreBackup(file)).stores.scx).toEqual({ added: 0, changed: 0, deleted: 0 });
+	});
+
+	it('does not add a list entry without a store ID a second time', async () => {
+		const file = JSON.stringify({
+			settings: [new Setting('a', '1')],
+			scx: [{ id: 7, ...scx('Old') }]
+		});
+
+		expect((await restoreBackup(file)).stores.scx?.added).toBe(1);
+		expect((await restoreBackup(file)).stores.scx?.added).toBe(0);
+
+		expect(await payees()).toEqual(['Rent', 'Old', 'Gym']);
+	});
+
+	it('refuses to erase the settings with an empty list, before anything is written', async () => {
+		const file = JSON.stringify({ settings: [], scx: [scx('New')] });
+
+		await expect(restoreBackup(file)).rejects.toThrow('empty');
+
+		expect(await db.settings.count()).toBe(2);
+		expect(await payees()).toEqual(['Rent', 'Gym']);
+		await restoreBackup(file, { sections: ['scx'] });
+		expect(await payees()).toEqual(['Rent', 'New', 'Gym']);
 	});
 
 	it.each([
@@ -195,7 +230,16 @@ describe('restoreBackup', () => {
 		['a list where saved state belongs', JSON.stringify({ version: 3, settings: [], scx: [] })],
 		['a damaged state', JSON.stringify({ version: 3, settings: [], scx: 'AQIDBA==' })],
 		['a state that is not base64', JSON.stringify({ version: 3, settings: [], scx: '%%%' })],
-		['a damaged credentials block', JSON.stringify({ version: 2, settings: [], secrets: { v: 1 } })]
+		[
+			'a damaged credentials block',
+			JSON.stringify({ version: 2, settings: [], secrets: { v: 1 } })
+		],
+		['an invalid setting', JSON.stringify({ settings: [{ key: 'a' }], scx: [] })],
+		[
+			'a setting twice',
+			JSON.stringify({ settings: [new Setting('a', '1'), new Setting('a', '2')], scx: [] })
+		],
+		['an invalid list entry', JSON.stringify({ version: 2, scx: [scx('New'), null] })]
 	])('rejects %s and keeps the existing data', async (_name, content) => {
 		await expect(restoreBackup(content)).rejects.toThrow();
 
@@ -204,16 +248,65 @@ describe('restoreBackup', () => {
 	});
 
 	it('rolls everything back when a write fails part-way', async () => {
-		// Duplicate setting keys make bulkAdd fail after the tables were cleared.
-		const duplicate = JSON.stringify({
-			settings: [new Setting('dup', '1'), new Setting('dup', '2')],
-			scx: [scx('New')]
-		});
+		// Fails after the settings table was cleared.
+		vi.spyOn(db.settings, 'bulkAdd').mockRejectedValueOnce(new Error('disk full'));
+		const file = JSON.stringify({ settings: [new Setting('a', '1')], scx: [scx('New')] });
 
-		await expect(restoreBackup(duplicate)).rejects.toThrow();
+		await expect(restoreBackup(file)).rejects.toThrow('disk full');
 
 		expect((await db.settings.toArray()).map((s: Setting) => s.key)).toEqual(['currency', 'theme']);
 		expect(await payees()).toEqual(['Rent', 'Gym']);
+	});
+});
+
+describe('previewRestore', () => {
+	const only = (counts: Partial<{ added: number; changed: number; deleted: number }>) => ({
+		scx: { added: 0, changed: 0, deleted: 0, ...counts }
+	});
+
+	it('says what a restore would do, without doing it', async () => {
+		const file = await createBackup({ sections: ['scx'] });
+		await scxStore.destroy();
+
+		expect(await previewRestore(file)).toEqual(only({ added: 2 }));
+
+		expect(await payees()).toEqual([]);
+		expect((await restoreBackup(file)).stores).toEqual(only({ added: 2 }));
+	});
+
+	it('counts the missing entries of a list', async () => {
+		const [rent] = await scxStore.list();
+		const file = JSON.stringify({ version: 2, scx: [rent, { ...scx('New'), id: 'new' }] });
+
+		expect(await previewRestore(file)).toEqual(only({ added: 1 }));
+		expect(await payees()).toEqual(['Rent', 'Gym']);
+	});
+
+	it('says that a backup made before a reset is ignored', async () => {
+		const file = await createBackup({ sections: ['scx'] });
+		await scxStore.clear();
+		await scxStore.reset();
+		const ignored = { scx: { added: 0, changed: 0, deleted: 0, ignored: true } };
+
+		expect(await previewRestore(file)).toEqual(ignored);
+		expect((await restoreBackup(file)).stores).toEqual(ignored);
+		expect(await payees()).toEqual([]);
+	});
+
+	it('keeps what the other device had not seen when the backup holds a reset', async () => {
+		const other = new CrdtScxStore(`backup-test-other-${scxCounter++}`);
+		await other.importState(await scxStore.exportState());
+		await other.clear();
+		await other.reset();
+		const file = JSON.stringify({
+			version: 3,
+			scx: toBase64(await other.exportState())
+		});
+		await scxStore.addMany([scx('Unseen', '2026-04-01')]);
+
+		expect(await previewRestore(file)).toEqual(only({ deleted: 2 }));
+		expect((await restoreBackup(file)).stores).toEqual(only({ deleted: 2 }));
+		expect(await payees()).toEqual(['Unseen']);
 	});
 });
 
@@ -533,6 +626,49 @@ describe('device section', () => {
 		vi.mocked(getDeviceId).mockResolvedValue('this-device');
 	});
 
+	it.each([
+		['an S3 sync', () => deviceSettings.set(DeviceSettingKeys.s3LastSync, '2026-01-01')],
+		[
+			'a sync from the Sync page',
+			() => deviceSettings.set(DeviceSettingKeys.syncChannelLastSync, { peer: '2026-01-01' })
+		],
+		[
+			'uploaded changes',
+			() => deviceSettings.set(`${DeviceSettingKeys.deltaSyncState}:xacts:b`, { nextSeq: 2 })
+		],
+		['pairing', () => db.peers.add({ id: 'p', fileSyncInitializedAt: '2026-01-01' } as never)]
+	])('records no previous device after %s', async (_name, sync) => {
+		const text = await createBackup({ sections: ['device'] });
+		await db.deviceSettings.clear();
+		await db.peers.clear();
+		await sync();
+		const { getDeviceId } = await import('#lib/sync/ydocDevices');
+		vi.mocked(getDeviceId).mockResolvedValueOnce('new-device');
+
+		const result = await restoreBackup(text);
+
+		expect(result.predecessor).toBeUndefined();
+		expect(await getRestoredDevice()).toBeNull();
+		expect(await deviceSettings.get(DeviceSettingKeys.peerName)).toBe('Phone');
+		await db.peers.clear();
+	});
+
+	it('records the previous device when changes only wait for a first sync', async () => {
+		const text = await createBackup({ sections: ['device'] });
+		await db.deviceSettings.clear();
+		await db.peers.clear();
+		await deviceSettings.set(`${DeviceSettingKeys.deltaSyncState}:xacts:b`, {
+			nextSeq: 1,
+			snapId: null,
+			applied: {},
+			outbox: 'AAA='
+		});
+		const { getDeviceId } = await import('#lib/sync/ydocDevices');
+		vi.mocked(getDeviceId).mockResolvedValueOnce('new-device');
+
+		expect((await restoreBackup(text)).predecessor).toBe('this-device');
+	});
+
 	it('restoring on the same device sets no previous device', async () => {
 		const text = await createBackup({ sections: ['device'] });
 
@@ -589,6 +725,16 @@ describe('trusted devices', () => {
 		expect((await db.peers.get('a'))!.name).toBe('Renamed here');
 	});
 
+	it('are added without the mark of a file-sync baseline, which is not restored', async () => {
+		await db.peers.add(peer('a', { fileSyncInitializedAt: '2026-01-02' }) as never);
+		const text = await createBackup({ sections: ['peers'] });
+		await db.peers.clear();
+
+		await restoreBackup(text);
+
+		expect(await db.peers.get('a')).toEqual(peer('a'));
+	});
+
 	it('do not bring back a device that was evicted, here or in the backup', async () => {
 		await db.peers.bulkAdd([peer('a'), peer('b'), peer('c', { legacyIds: ['c-old'] })] as never);
 		await db.revocations.add(eviction('b') as never);
@@ -622,7 +768,8 @@ describe('working set', () => {
 		doc.getMap('xacts').set('a', { id: 'a' });
 		const state = Y.encodeStateAsUpdate(doc);
 		const importState = vi.fn(async () => []);
-		setXactStore({ exportState: async () => state, importState } as never);
+		const wouldIgnore = async () => false;
+		setXactStore({ exportState: async () => state, importState, wouldIgnore } as never);
 
 		const text = await createBackup({ sections: ['workingSet'] });
 		const result = await restoreBackup(text);

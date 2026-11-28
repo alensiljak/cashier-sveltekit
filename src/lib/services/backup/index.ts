@@ -6,14 +6,26 @@
 	reader (readers/), which validates the file and converts it into `BackupData` (model.ts).
 	Writing (write.ts, latest version only) and restoring (apply.ts) exist once.
 */
-import { applyBackup, type RestoreOptions, type RestoreResult } from './apply';
+import {
+	applyBackup,
+	previewStores,
+	type RestoreOptions,
+	type RestoreResult,
+	type StoreOutcomes
+} from './apply';
 import { ALL_SECTIONS, type BackupData, type BackupSection } from './model';
 import { readV1 } from './readers/v1';
 import { readV2 } from './readers/v2';
 import { readV3 } from './readers/v3';
 import { BACKUP_VERSION } from './write';
 
-export type { RestoreOptions, RestoreResult } from './apply';
+export type {
+	RestoreOptions,
+	RestoreResult,
+	StoreOutcome,
+	StoreOutcomes,
+	StoreSection
+} from './apply';
 export { ALL_SECTIONS, type BackupSection } from './model';
 export {
 	exportSettingsJson,
@@ -88,6 +100,11 @@ export function inspectBackup(content: string): BackupInfo {
 			peers: data.peers?.peers.length ?? 0
 		}
 	};
+}
+
+/** What restoring a backup file would do to each transaction store it holds. */
+export async function previewRestore(content: string): Promise<StoreOutcomes> {
+	return previewStores(readBackup(content));
 }
 
 /**

@@ -18,9 +18,6 @@ Each is removed from this list when its step is done.
 
 | Problem                                                                                                                               | Step |
 | ------------------------------------------------------------------------------------------------------------------------------------- | ---- |
-| Restoring scheduled transactions replaces the list. The deletions can then sync to other devices                                      | 5    |
-| Restored trusted devices keep `fileSyncInitializedAt` without the file-sync baseline                                                  | 5    |
-| A restore records the backup's device as the previous device even on a device that has been in use                                    | 5    |
 | The proxy URL and key, other API keys, importer tokens, Enable Banking data, speech settings and stale-sync setting are not backed up | 6    |
 | Folder names are restored although folder access is not                                                                               | 6    |
 | Notifications can be restored as enabled without browser permission                                                                   | 6    |
@@ -69,13 +66,18 @@ Done.
 
 ## Step 5: restore fixes
 
-For older files too.
+Done. For older files too.
 
-- [ ] Merge only; lists add the missing entries and delete nothing
-- [ ] Destroy on the restore page, reusing the dialog
-- [ ] Preview of added, changed and deleted records; report a restore that adds nothing
-- [ ] Remove `fileSyncInitializedAt` from restored trusted devices
-- [ ] Record the previous device only on a device that has never synced
+- [x] Restoring shared settings rejects an empty list, as a sync import does, so that it cannot erase the settings. Invalid entries and duplicate keys are rejected too, before anything is written
+- [x] Warn on the restore page that scheduled transactions from a list can undo newer changes after a sync
+- [x] Update the e2e tests in `tests/e2e/backup-restore.spec.ts` that relied on a list replacing the records, and add one for destroy and restore
+- [x] Merge only; lists add the missing entries and delete nothing
+- [x] Destroy on the restore page, reusing the dialog. The file selection moved from a modal onto the page
+- [x] Preview of added, changed and deleted records; report a restore that adds nothing
+- [x] Remove `fileSyncInitializedAt` from restored trusted devices
+- [x] Record the previous device only on a device that has never synced
+- [x] Fix: adopting a reset dropped unseen records whose Yjs client had also written records the resetting device had seen. This affected sync too
+- [ ] By hand: the restore page on a phone, with an older file and with a current one
 
 ## Step 6: consolidated format
 

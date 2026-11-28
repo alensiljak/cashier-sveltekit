@@ -35,7 +35,7 @@ Resets an **empty** transaction store, which discards the traces of deleted reco
 
 ## Destroy Stores
 
-Deletes a transaction store's records **and history** on this device only, so that you can start over from sync or from a [Backup](/help/backup). It works also when the store is not empty. It deletes nothing on other devices or in remote storage. Live Peer Sync is disconnected, and every other Cashier tab or window has to be closed first.
+Deletes a transaction store's records **and history** on this device only, so that you can start over from sync or from a [Backup](/help/backup). It works also when the store is not empty. The [Backup](/help/backup) page offers the same when you restore a file. It deletes nothing on other devices or in remote storage. Live Peer Sync is disconnected, and every other Cashier tab or window has to be closed first.
 
 **Only data in a backup or another copy can be recovered.** Without sync and without a backup, the data is permanently lost. The dialog offers a backup of the store first. Check that the file was saved: the app cannot tell.
 

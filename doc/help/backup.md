@@ -24,10 +24,10 @@ The file also records a format version, so a newer backup is never half-restored
 
 ## Restore Backup
 
-Click the file chooser, select a previously-created backup file, then choose which of the sections it holds to restore and confirm.
+Click the file chooser, select a previously-created backup file, then choose which of the sections it holds to restore and click **Restore**.
 
-- **Settings** replace what is already on the device.
-- **Transactions** and **scheduled transactions** are merged with what is there. Merging does not undo what you deleted or edited after the backup was made, so an older backup of this device may change nothing. To return to the backup's state, first destroy the store (see [Settings](/help/settings)). A backup that holds changes made on another device can change or delete records here.
+- **Settings** replace what is already on the device. An empty settings list is not restored, as it would erase your settings.
+- **Transactions** and **scheduled transactions** are merged with what is there. Before you restore, the page shows how many records of each would be added, changed and deleted.
 - **Trusted devices** are added. Nothing is overwritten, and a device you evicted is not brought back.
 - If the file has credentials, enter its passphrase. Leave it empty, or enter a wrong one, and everything else is still restored; restore the file again to get the credentials.
 
@@ -41,15 +41,25 @@ After restoring on a new device:
 - Re-run a sync or import to bring in the latest journal data — see [Sync OPFS ↔ Filesystem](/help/opfs-sync) or [Ledger Import](/help/ledger-import).
 - **Pair the device again.** A restored device is a new device with a key of its own, so the others do not trust it yet. Add it from one of them (see [Peer Sync](/help/peer-sync)); that device then introduces it to the rest, which each ask you to approve it.
 
+### Merging and starting over
+
+Merging adds what this device has not seen. It does **not** undo what you deleted or edited after the backup was made, so an older backup of this device may change nothing. A backup that holds changes made on another device can change or delete records here. A backup made before a store was reset is ignored.
+
+To return to the backup's state, destroy the store first, then restore. For each selected store that holds data or history, the page has a **Destroy** button in a box with a red border. It asks for its own confirmation (see [Settings](/help/settings) for what destroying does), and the chosen file stays selected.
+
+If a restore adds nothing to a store, the page says so and keeps the file selected.
+
 ### The old device
 
-The backup remembers which device it was made on. After a restore on a different device, this device reads what the old one uploaded to S3 or WebDAV as its own, so none of its changes are missed. A notice (here and on Trusted Devices) asks what became of the old device:
+The backup remembers which device it was made on. After a restore on a different device that has never synced, this device reads what the old one uploaded to S3 or WebDAV as its own, so none of its changes are missed. A notice (here and on Trusted Devices) asks what became of the old device:
 
 - **It is lost** — at the next sync its files are merged here and removed from the bucket.
 - **It is still in use** — nothing is removed, and the old device is paired and trusted like any other.
+
+On a device that has already synced, the backup's device is not taken over: it stays a device of its own.
 
 ## Older backup files
 
 Files made before the format version existed (settings and scheduled transactions only) can still be restored.
 
-Files of backup format 1 and 2 hold the scheduled transactions as a list, without their history. Restoring them **replaces** the scheduled transactions on this device. After that, a sync can bring back deleted entries, or let old versions replace newer edits, also on other devices. If sync has your current scheduled transactions, leave them out of the restore and sync instead.
+Files of backup format 1 and 2 hold the scheduled transactions as a list, without their history. Restoring them **adds** the entries this device does not have; existing ones stay as they are and nothing is deleted. Without history, sync cannot tell that the restored entries are older. After a sync, deleted entries can come back, or old versions can replace newer edits, also on other devices. This applies even if you destroyed the store first. If sync has your current scheduled transactions, leave them out of the restore and sync instead.

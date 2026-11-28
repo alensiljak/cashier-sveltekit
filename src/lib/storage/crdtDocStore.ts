@@ -340,10 +340,19 @@ export abstract class CrdtDocStore<R> {
 				const local = readMeta(doc);
 				const remote = readUpdateMeta(update);
 				if (remote.resetId > local.resetId) {
-					// The sender reset its document: ours would be replaced by theirs.
+					// The sender reset its document: ours would be replaced by theirs, keeping what
+					// the sender had not seen (see `adopt()`).
+					const records = doc.getMap<R>(this.recordsKey);
+					const unseen = this.recordsBeyond(
+						doc,
+						toVector(remote.retired),
+						new Map(records.entries())
+					);
 					const next = new Y.Doc();
 					Y.applyUpdate(next, update);
-					result.push(diffRecords(doc.getMap<R>(this.recordsKey), next.getMap<R>(this.recordsKey)));
+					const nextRecords = next.getMap<R>(this.recordsKey);
+					for (const [id, record] of unseen) nextRecords.set(id, record);
+					result.push(diffRecords(records, nextRecords));
 					doc.destroy();
 					doc = next;
 				} else if (hasRetiredOps(update, local.retired)) {
@@ -356,6 +365,16 @@ export abstract class CrdtDocStore<R> {
 		} finally {
 			doc.destroy();
 		}
+	}
+
+	/**
+	 * Whether `importState` would ignore `update` altogether, because it was made before this
+	 * document was reset.
+	 */
+	async wouldIgnore(update: Uint8Array): Promise<boolean> {
+		await this.ready();
+		const local = readMeta(this._doc);
+		return readUpdateMeta(update).resetId <= local.resetId && hasRetiredOps(update, local.retired);
 	}
 
 	/**
@@ -383,6 +402,12 @@ export abstract class CrdtDocStore<R> {
 	async recordCount(): Promise<number> {
 		await this.ready();
 		return this._records.size;
+	}
+
+	/** Whether the document has ever held anything. False when new or just destroyed. */
+	async hasHistory(): Promise<boolean> {
+		await this.ready();
+		return Y.decodeStateVector(Y.encodeStateVector(this._doc)).size > 0;
 	}
 
 	/** State vector, describing which updates this document already has. */
@@ -544,7 +569,7 @@ export abstract class CrdtDocStore<R> {
 		origin: unknown
 	): Promise<RecordChange<R>[]> {
 		const before = new Map(this._records.entries());
-		const unseen = this.recordsBeyond(toVector(remote.retired), before);
+		const unseen = this.recordsBeyond(this._doc, toVector(remote.retired), before);
 
 		// Records here that the other device deleted are dropped. That is harmless when everything
 		// here was synced, but changes not uploaded yet (an edit to such a record) are lost with
@@ -590,18 +615,23 @@ export abstract class CrdtDocStore<R> {
 		return changes;
 	}
 
-	/** The live records in `live` whose creating operation lies beyond the state vector `seen`. */
-	private recordsBeyond(seen: Map<number, number>, live: Map<string, R>): Map<string, R> {
-		const scratch = new Y.Doc();
-		try {
-			// Only the operations beyond `seen` are in the update. A record that was merely edited
-			// refers to an operation outside it, so it can't be integrated and stays out.
-			Y.applyUpdate(scratch, Y.encodeStateAsUpdate(this._doc, Y.encodeStateVector(seen)));
-			const beyond = scratch.getMap<R>(this.recordsKey);
-			return new Map([...beyond.entries()].filter(([id]) => live.has(id)));
-		} finally {
-			scratch.destroy();
-		}
+	/** The records in `live`, those of `doc`, whose creating operation lies beyond the state vector `seen`. */
+	private recordsBeyond(
+		doc: Y.Doc,
+		seen: Map<number, number>,
+		live: Map<string, R>
+	): Map<string, R> {
+		const items = doc.getMap<R>(this.recordsKey)._map;
+		return new Map(
+			[...live].filter(([id]) => {
+				let item = items.get(id);
+				if (!item) return false;
+				// To the left of a key's current value are its earlier ones; the first is the one
+				// that created the record. So a record that was merely edited counts as seen.
+				while (item.left) item = item.left;
+				return item.id.clock >= (seen.get(item.id.client) ?? 0);
+			})
+		);
 	}
 
 	/**

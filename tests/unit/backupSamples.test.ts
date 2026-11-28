@@ -74,7 +74,12 @@ describe('version 1 sample', () => {
 	it('restores', async () => {
 		const result = await restoreBackup(sample('v1'));
 
-		expect(result).toEqual({ restored: ['settings', 'scx'], secrets: 'none', missing: [] });
+		expect(result).toEqual({
+			restored: ['settings', 'scx'],
+			secrets: 'none',
+			missing: [],
+			stores: { scx: { added: 2, changed: 0, deleted: 0 } }
+		});
 		expect(await stored(db.settings)).toEqual(shared(''));
 		expect(await payees()).toEqual(['Sample Rent', 'Sample Gym']);
 		// Only the (empty) list of fields to fill in.
@@ -116,7 +121,8 @@ describe('version 2 sample', () => {
 	async function expectOtherData() {
 		expect(await payees()).toEqual(['Sample Rent', 'Sample Gym']);
 		expect((await xactStore.list()).map((s) => s.xact.payee)).toEqual(['Sample Grocer']);
-		expect(await db.peers.toArray()).toEqual(JSON.parse(sample('v2')).peers.peers);
+		const [{ fileSyncInitializedAt: _, ...peer }] = JSON.parse(sample('v2')).peers.peers;
+		expect(await db.peers.toArray()).toEqual([peer]);
 		expect(await db.revocations.toArray()).toEqual(JSON.parse(sample('v2')).peers.revocations);
 	}
 
@@ -137,6 +143,10 @@ describe('version 2 sample', () => {
 			restored: ['settings', 'scx', 'workingSet', 'device', 'peers'],
 			secrets: 'restored',
 			missing: [],
+			stores: {
+				scx: { added: 2, changed: 0, deleted: 0 },
+				workingSet: { added: 1, changed: 0, deleted: 0 }
+			},
 			predecessor: 'sample-old-device'
 		});
 		expect(await stored(db.settings)).toEqual(shared('sample-dav-password'));

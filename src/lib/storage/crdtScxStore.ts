@@ -15,6 +15,21 @@ const DB_NAME = 'cashier-scx';
 const RECORDS_KEY = 'scx';
 const newId = monotonicFactory();
 
+/** `value` with the keys of every object sorted, so that their order does not matter. */
+function sortKeys(value: unknown): unknown {
+	if (Array.isArray(value)) return value.map(sortKeys);
+	if (!value || typeof value !== 'object') return value;
+	return Object.fromEntries(
+		Object.entries(value)
+			.sort(([a], [b]) => a.localeCompare(b))
+			.map(([k, v]) => [k, sortKeys(v)])
+	);
+}
+
+/** What a scheduled transaction says, apart from its ID, as comparable text. */
+const contentOf = (scx: Omit<ScheduledTransaction, 'id'>): string =>
+	JSON.stringify(sortKeys(toRecord(scx, '')));
+
 /**
  * The scheduled transactions, kept in their own Yjs document (separate from
  * the working set, which is cleared once its transactions are archived) and
@@ -124,6 +139,30 @@ export class CrdtScxStore extends CrdtDocStore<ScxRecord> {
 		scheduleBackup(this.kind);
 		await this.flush();
 		return ids;
+	}
+
+	/**
+	 * The entries of a list without history (an older backup file) that this store does not hold:
+	 * those whose ID is not here. An entry without a store ID (a legacy numeric one) is given a new
+	 * ID when added, so it counts as held when a record has the same content.
+	 */
+	async missingFrom(list: ScheduledTransaction[]): Promise<ScheduledTransaction[]> {
+		await this.ready();
+		const contents = new Set([...this.records.values()].map(contentOf));
+		const ids = new Set(this.records.keys());
+		return list.filter((scx: { id?: unknown }) => {
+			if (typeof scx.id !== 'string' || !scx.id) {
+				return !contents.has(contentOf(scx as ScheduledTransaction));
+			}
+			if (ids.has(scx.id)) return false;
+			ids.add(scx.id);
+			return true;
+		});
+	}
+
+	/** Adds what `missingFrom` finds; existing records stay as they are. Returns the new IDs. */
+	async addMissing(list: ScheduledTransaction[]): Promise<CrdtScxId[]> {
+		return this.addMany(await this.missingFrom(list));
 	}
 
 	async remove(id: CrdtScxId): Promise<void> {

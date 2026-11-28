@@ -11,10 +11,44 @@
  * first is still in use is possible, and must not delete what the first one keeps writing.
  * Until then `previousDeviceHeld` stops the retiring.
  */
+import db from '#lib/data/db';
+import type { TrustedPeer } from '#lib/data/model';
 import { deviceSettings, DeviceSettingKeys } from '#lib/settings';
+import type { DeltaState } from '#lib/sync/deltaSync';
 
 export interface RestoredDevice {
 	id: string;
+}
+
+const holdsSomething = (value: unknown): boolean =>
+	!!value && Object.values(value).some((v) => !!v);
+
+/**
+ * Whether this device has ever synced, by what only a sync leaves behind (none of it is in a
+ * backup). What the transaction stores hold says nothing: they may have been restored.
+ */
+export async function hasEverSynced(): Promise<boolean> {
+	if (await deviceSettings.get<string>(DeviceSettingKeys.s3LastSync)) return true;
+	for (const key of [
+		DeviceSettingKeys.syncChannelLastSync,
+		DeviceSettingKeys.webdavLastSyncTs,
+		DeviceSettingKeys.s3SyncBase
+	]) {
+		if (holdsSomething(await deviceSettings.get<object>(key))) return true;
+	}
+
+	// Delta-sync progress is also saved before the first sync, to keep the changes waiting for it.
+	const prefix = `${DeviceSettingKeys.deltaSyncState}:`;
+	for (const { key, value } of await deviceSettings.getAllWithSecrets()) {
+		if (!key.startsWith(prefix)) continue;
+		const state = JSON.parse(value) as DeltaState;
+		if (state.nextSeq > 1 || state.snapId || state.acked) return true;
+		if (holdsSomething(state.applied) || holdsSomething(state.legacy)) return true;
+	}
+
+	// Peer Sync: the file-sync baseline, set up at pairing.
+	if ((await db.peerSyncBaseline.count()) > 0) return true;
+	return (await db.peers.toArray()).some((p: TrustedPeer) => !!p.fileSyncInitializedAt);
 }
 
 /** The device this one was restored from, while a person has not said what became of it. */

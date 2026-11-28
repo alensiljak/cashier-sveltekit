@@ -4,6 +4,7 @@
  * A change here must leave the released formats readable: their sample files are in the tests.
  */
 import * as Y from 'yjs';
+import type { ScheduledTransaction } from '#lib/data/model';
 import { fromBase64 } from '#lib/services/s3Crypto';
 import type {
 	BackupData,
@@ -32,6 +33,31 @@ export function readList<T>(value: unknown, what: string): T[] | undefined {
 	if (value === undefined) return undefined;
 	if (!Array.isArray(value)) throw damaged(what);
 	return value as T[];
+}
+
+/** Checks every entry of a list of settings and that no key is there twice. An empty list passes. */
+export function checkSettingsList(value: unknown): StoredSetting[] {
+	if (!Array.isArray(value)) throw new Error('The settings data is not a list of settings');
+	const keys = new Set<string>();
+	return value.map((entry: unknown) => {
+		const { key, value } = (entry ?? {}) as Partial<StoredSetting>;
+		if (typeof key !== 'string' || key === '' || typeof value !== 'string') {
+			throw new Error('The settings data has an invalid entry');
+		}
+		if (keys.has(key)) throw new Error(`The settings data has "${key}" more than once`);
+		keys.add(key);
+		return { key, value };
+	});
+}
+
+export const readSettings = (value: unknown): StoredSetting[] | undefined =>
+	value === undefined ? undefined : checkSettingsList(value);
+
+/** Scheduled transactions as a list, as formats 1 and 2 hold them. */
+export function readScxList(value: unknown): ScheduledTransaction[] | undefined {
+	const list = readList<unknown>(value, 'scheduled transactions');
+	if (list && !list.every(isObject)) throw damaged('scheduled transactions');
+	return list as ScheduledTransaction[] | undefined;
 }
 
 /** A store's Yjs state, base64. Tried out here, so that a damaged one stops the restore early. */

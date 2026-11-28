@@ -12,13 +12,13 @@
  * The keys below are what files of this format hold. They are spelled out, so that renaming or
  * removing a setting in the app does not change how an old file is read.
  */
-import type { ScheduledTransaction } from '#lib/data/model';
-import type { BackupData, StoredSetting } from '../model';
+import type { BackupData } from '../model';
 import {
 	readDevice,
-	readList,
 	readPeers,
+	readScxList,
 	readSecrets,
+	readSettings,
 	readState,
 	readWithheld,
 	type SecretSetting
@@ -52,10 +52,10 @@ const SECRET_SETTINGS: SecretSetting[] = [
 ];
 
 export function readV2(file: Record<string, unknown>): BackupData {
-	const scx = readList<ScheduledTransaction>(file.scx, 'scheduled transactions');
+	const scx = readScxList(file.scx);
 	return {
 		version: 2,
-		settings: readList<StoredSetting>(file.settings, 'settings'),
+		settings: readSettings(file.settings),
 		scx: scx && { list: scx },
 		workingSet: readState(file.workingSet, 'the working set'),
 		device: readDevice(file.device, DEVICE_KEYS),

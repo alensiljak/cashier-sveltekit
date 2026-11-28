@@ -123,7 +123,8 @@ The screen stays uncluttered. Explanations go to the help page, opened with the 
 - Compression is detected from the content (gzip magic bytes), not the file name. Plain JSON is accepted.
 - The page shows the format version, whether the file is compressed, and whether it has encrypted credentials.
 - All groups are always listed. A group the file does not contain is greyed out. For older files this includes everything their format cannot hold.
-- The whole file is validated before anything is written or destroyed.
+- The whole file is validated before anything is written or destroyed. This includes every settings entry; a key that is there twice is an error.
+- An empty settings list is not restored, as it would erase the settings. The rest of such a file can be restored.
 - The passphrase is only needed for Credentials. With a missing or wrong passphrase, the other groups can still be restored, and the result says so.
 
 ### What restore does
@@ -141,7 +142,7 @@ Each group has its own toggle. Shared settings is on and locked when the file ha
 
 `fileSyncInitializedAt` is removed because the file-sync baseline it refers to is not restored. With it, pairing would never create the baseline again.
 
-The source device ID is recorded as the previous device only if this device has never synced. A restored transaction store does not count against that, so the order of manual steps does not matter.
+The source device ID is recorded as the previous device only if this device has never synced. A restored transaction store does not count against that, so the order of manual steps does not matter. What counts is what only a sync leaves behind: a last-sync time, S3 hashes, delta-sync progress beyond waiting changes, or a Peer Sync file baseline.
 
 ### Transaction scenarios
 
@@ -167,7 +168,7 @@ Before restoring, the page shows how many records would be added, changed and de
 
 ### Lists without history
 
-Version 1 and 2 files hold scheduled transactions as a list. Merging such a list adds the missing IDs, keeps existing records and deletes nothing.
+Version 1 and 2 files hold scheduled transactions as a list. Merging such a list adds the missing IDs, keeps existing records and deletes nothing. An entry without a store ID (a legacy numeric one) gets a new ID when added, so it counts as present when a record has the same content.
 
 Without history, sync cannot tell that the restored entries are older. Even into an empty store, a later sync can bring back deleted entries, or let the old versions replace newer edits, also on other devices. The page warns about this. If current data is available through sync, the old list is better left out.
 

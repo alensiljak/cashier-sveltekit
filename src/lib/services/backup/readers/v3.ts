@@ -11,12 +11,12 @@
  *
  * The keys below are what files of this format hold.
  */
-import type { BackupData, StoredSetting } from '../model';
+import type { BackupData } from '../model';
 import {
 	readDevice,
-	readList,
 	readPeers,
 	readSecrets,
+	readSettings,
 	readState,
 	readWithheld,
 	type SecretSetting
@@ -53,7 +53,7 @@ export function readV3(file: Record<string, unknown>): BackupData {
 	const scx = readState(file.scx, 'the scheduled transactions');
 	return {
 		version: 3,
-		settings: readList<StoredSetting>(file.settings, 'settings'),
+		settings: readSettings(file.settings),
 		scx: scx && { state: scx },
 		workingSet: readState(file.workingSet, 'the working set'),
 		device: readDevice(file.device, DEVICE_KEYS),

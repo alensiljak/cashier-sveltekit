@@ -150,6 +150,25 @@ describe('reset propagation', () => {
 		expect(await payees(a)).toEqual(['Offline entry']);
 	});
 
+	// Both records are written by one Yjs client, unlike above, where the unseen one is the only
+	// thing its device wrote.
+	it('keeps an unseen record of a client whose earlier records were seen, not an edited one', async () => {
+		const a = newStore('A');
+		const b = newStore('B');
+		await b.append(xact('2025-01-01', 'Archived'));
+		await b.append(xact('2025-01-02', 'Archived, then edited'));
+		await sync(a, b);
+		const edited = (await b.list()).find((x) => x.xact.payee === 'Archived, then edited')!;
+		await b.update(edited.id, xact('2025-01-02', 'Edited'));
+		await b.append(xact('2025-01-05', 'Offline entry'));
+
+		await emptied(a);
+		await a.reset();
+		await b.importState(await a.exportState());
+
+		expect(await payees(b)).toEqual(['Offline entry']);
+	});
+
 	it('survives a second reset', async () => {
 		const a = newStore('A');
 		const b = newStore('B');

@@ -56,13 +56,22 @@ async function chooseFile(page: Page, content: string) {
 	});
 }
 
-/** Selects a file on /backup and confirms the restore dialog. */
+const selection = (page: Page) => page.getByRole('group', { name: 'Restore selection' });
+
+/** The Restore button of the chosen file. */
+const restoreButton = (page: Page) =>
+	selection(page).getByRole('button', { name: 'Restore', exact: true });
+
+/** Selects a file on /backup and restores it. */
 async function restore(page: Page, content: string) {
 	await chooseFile(page, content);
-	await page.getByRole('dialog').getByRole('button', { name: 'Restore' }).click();
+	await restoreButton(page).click();
 }
 
-/** A copy of `backup` as an older file, whose list of scheduled transactions replaces what is there. */
+/** What the page reports after the list of `withScxList(…, [rent])` was added. */
+const RENT_ADDED = 'Scheduled transactions: 1 added, 0 changed, 0 deleted.';
+
+/** A copy of `backup` as an older file, which holds the scheduled transactions as a list. */
 const withScxList = (backup: BackupFile, list: unknown[]) =>
 	JSON.stringify({ ...backup, version: 2, scx: list });
 
@@ -88,28 +97,54 @@ test('restoring a backup brings its data back, and the next backup contains it',
 	expect(payees(original)).not.toContain('E2E Rent');
 
 	await restore(page, withScxList(original, [rent]));
-	await expect(page.getByText('Backup restored')).toBeVisible();
+	await expect(page.getByText(RENT_ADDED)).toBeVisible();
 
 	await page.goto('/scheduled-xacts');
 	await expect(page.getByText('E2E Rent').first()).toBeVisible();
 
+	// A list only adds: what was there is still there.
 	const after = await downloadBackup(page);
-	expect(payees(after)).toEqual(['E2E Rent']);
+	expect(payees(after).sort()).toEqual([...payees(original), 'E2E Rent'].sort());
 	expect(after.settings).toEqual(original.settings);
+});
+
+test('destroying a store on the restore page, then restoring, returns to the backup', async ({
+	demoPage: page
+}) => {
+	const original = await downloadBackup(page);
+	await restore(page, withScxList(original, [rent]));
+	await expect(page.getByText(RENT_ADDED)).toBeVisible();
+
+	await chooseFile(page, JSON.stringify(original));
+	await selection(page)
+		.getByRole('button', { name: /Destroy local scheduled transactions/ })
+		.click();
+	const dialog = page.getByRole('alertdialog');
+	await dialog.getByLabel('I accept permanent loss').check();
+	await dialog.getByRole('button', { name: 'Destroy', exact: true }).click();
+	await expect(dialog).toBeHidden();
+
+	// The file stays chosen.
+	await expect(selection(page).getByText(/merged: would add [1-9]/)).toBeVisible();
+	await restoreButton(page).click();
+	await expect(page.getByText(/Scheduled transactions: \d+ added/)).toBeVisible();
+
+	const after = await downloadBackup(page);
+	expect(payees(after).sort()).toEqual(payees(original).sort());
 });
 
 test('an invalid backup is rejected and existing data is kept', async ({ demoPage: page }) => {
 	const original = await downloadBackup(page);
 	await restore(page, withScxList(original, [rent]));
-	await expect(page.getByText('Backup restored')).toBeVisible();
+	await expect(page.getByText(RENT_ADDED)).toBeVisible();
 
-	// A file that is not a backup is rejected when chosen, before any restore dialog,
+	// A file that is not a backup is rejected when chosen, before anything can be restored,
 	// and must not wipe what was just restored.
 	await chooseFile(page, JSON.stringify({ hello: 'world' }));
 	await expect(page.getByText(/Cannot restore, existing data was kept/)).toBeVisible();
-	await expect(page.getByRole('dialog')).toBeHidden();
+	await expect(selection(page)).toBeHidden();
 
 	const after = await downloadBackup(page);
-	expect(payees(after)).toEqual(['E2E Rent']);
+	expect(payees(after).sort()).toEqual([...payees(original), 'E2E Rent'].sort());
 	expect(after.settings).toEqual(original.settings);
 });

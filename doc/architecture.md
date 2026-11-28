@@ -147,7 +147,8 @@ safely. Transaction origins keep updates from echoing: `remote` (from a peer,
   scheduled transactions and the working set (both as Yjs state), portable device settings,
   and trusted devices. Secrets (WebDAV password, S3 keys, passphrases) are left
   out or sealed in an encrypted block. A restore creates a new device identity;
-  the backed-up device's ID becomes `previousDeviceId`. Design:
+  on a device that has never synced, the backed-up device's ID becomes
+  `previousDeviceId`. The transaction stores are only ever merged into. Design:
   `doc/backup.md`; each format version has its own reader in `backup/readers/`.
 
 ### How the working set reaches the WASM engine

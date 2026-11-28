@@ -6,6 +6,7 @@
 import { settings } from '#lib/settings';
 import { replaceSettings } from './apply';
 import type { StoredSetting } from './model';
+import { checkSettingsList } from './readers/common';
 import { stripSecrets } from './secrets';
 
 const byKey = (list: StoredSetting[]) => list.sort((a, b) => a.key.localeCompare(b.key));
@@ -18,17 +19,7 @@ function parseSettingsList(content: string): StoredSetting[] {
 	} catch {
 		throw new Error('The settings data is not valid JSON');
 	}
-	if (!Array.isArray(parsed)) throw new Error('The settings data is not a list of settings');
-	const keys = new Set<string>();
-	return parsed.map((entry: unknown) => {
-		const { key, value } = (entry ?? {}) as Partial<StoredSetting>;
-		if (typeof key !== 'string' || key === '' || typeof value !== 'string') {
-			throw new Error('The settings data has an invalid entry');
-		}
-		if (keys.has(key)) throw new Error(`The settings data has "${key}" more than once`);
-		keys.add(key);
-		return { key, value };
-	});
+	return checkSettingsList(parsed);
 }
 
 /** The shared settings as JSON, without credentials. Sorted, so equal settings give equal text. */

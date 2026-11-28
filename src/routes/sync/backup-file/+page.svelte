@@ -1,5 +1,9 @@
 <script lang="ts">
 	import Toolbar from '#lib/components/Toolbar.svelte';
+	import DestroyStoreDialog from '#lib/components/DestroyStoreDialog.svelte';
+	import { getReadyScxStore } from '#lib/services/scxService';
+	import { getXactStore } from '#lib/storage/xactStoreRegistry';
+	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
 	import RestoredDeviceNotice from '#lib/components/RestoredDeviceNotice.svelte';
 	import HelpButton from '#lib/help/HelpButton.svelte';
 	import * as BackupService from '#lib/services/backup';
@@ -39,9 +43,25 @@
 	let restoreInfo = $state<BackupService.BackupInfo>();
 	let restoreSelected = $state<BackupService.BackupSection[]>([]);
 	let restorePassphrase = $state('');
-	let isRestoreConfirmationOpen = $state(false);
 	let notice = $state<{ refresh: () => Promise<void> }>();
 	let restoreMessages = $state<string[]>([]);
+	/** What the restore would do to the transaction stores; undefined while that is worked out. */
+	let preview = $state<BackupService.StoreOutcomes>();
+	/** The stores that have something to destroy. */
+	let withHistory = $state<BackupService.StoreSection[]>([]);
+	let destroyTarget = $state<'xacts' | 'scx' | null>(null);
+
+	const STORE_SECTIONS: BackupService.StoreSection[] = ['scx', 'workingSet'];
+	const STORE_LABELS: Record<BackupService.StoreSection, string> = {
+		scx: 'Scheduled transactions',
+		workingSet: 'Transactions'
+	};
+	const DESTROY_TARGETS = { scx: 'scx', workingSet: 'xacts' } as const;
+
+	/** The selected stores of the file that can be destroyed. */
+	const destroyable = $derived(
+		STORE_SECTIONS.filter((s) => restoreSelected.includes(s) && withHistory.includes(s))
+	);
 
 	Notifier.init();
 
@@ -49,8 +69,57 @@
 		_filename = BackupService.getBackupFilename();
 	});
 
-	function closeModal() {
-		isRestoreConfirmationOpen = false;
+	function closeRestore() {
+		restoreContent = restoreInfo = preview = undefined;
+		restorePassphrase = '';
+	}
+
+	async function storesWithHistory(): Promise<BackupService.StoreSection[]> {
+		const stores = { scx: await getReadyScxStore(), workingSet: await getXactStore() };
+		const has = await Promise.all(STORE_SECTIONS.map((s) => stores[s].hasHistory()));
+		return STORE_SECTIONS.filter((_, i) => has[i]);
+	}
+
+	/** Compares the chosen file with the stores as they are now. */
+	async function refreshPreview() {
+		const content = restoreContent;
+		preview = undefined;
+		if (!content) return;
+		try {
+			const [changes, history] = await Promise.all([
+				BackupService.previewRestore(content),
+				storesWithHistory()
+			]);
+			// Another file may have been chosen meanwhile.
+			if (content !== restoreContent) return;
+			preview = changes;
+			withHistory = history;
+		} catch (error) {
+			console.error('Restore preview failed:', error);
+			Notifier.error(
+				`Could not compare the backup with this device: ${error instanceof Error ? error.message : error}`
+			);
+		}
+	}
+
+	async function onDestroyClosed() {
+		const target = destroyTarget;
+		destroyTarget = null;
+		const before = withHistory;
+		await refreshPreview();
+		// What the last restore reported no longer applies to a destroyed store.
+		const section = target === 'xacts' ? 'workingSet' : 'scx';
+		if (before.includes(section) && !withHistory.includes(section)) restoreMessages = [];
+	}
+
+	function describePreview(outcome: BackupService.StoreOutcome | undefined): string {
+		if (!outcome) return '';
+		if (outcome.ignored) {
+			return 'would be ignored: made before this store was reset. Destroy the store to use it';
+		}
+		const { added, changed, deleted } = outcome;
+		if (added + changed + deleted === 0) return 'merged: would change nothing';
+		return `merged: would add ${added}, change ${changed}, delete ${deleted} record(s)`;
 	}
 
 	/** Options for the backup, or undefined (with a message) when they are not usable. */
@@ -122,24 +191,27 @@
 
 	async function onFileChosen(file: File | undefined) {
 		if (!file) return;
+		closeRestore();
+		restoreMessages = [];
 		try {
 			const content = await file.text();
-			restoreInfo = BackupService.inspectBackup(content);
+			const info = BackupService.inspectBackup(content);
+			restoreInfo = info;
 			restoreContent = content;
 			restoreName = file.name;
-			restoreSelected = [...restoreInfo.sections];
-			restorePassphrase = '';
-			isRestoreConfirmationOpen = true;
+			restoreSelected = info.sections.filter((s) => s !== 'settings' || info.counts.settings > 0);
 		} catch (error) {
 			Notifier.error(
 				`Cannot restore, existing data was kept: ${error instanceof Error ? error.message : error}`
 			);
+			return;
 		}
+		await refreshPreview();
 	}
 
-	async function onRestoreConfirmed() {
+	async function onRestoreClick() {
 		if (!restoreContent) return;
-		closeModal();
+		restoreMessages = [];
 		busy = true;
 		try {
 			const result = await BackupService.restoreBackup(restoreContent, {
@@ -147,7 +219,17 @@
 				secretsPassphrase: restorePassphrase || undefined
 			});
 			restoreMessages = describe(result);
-			Notifier.success('Backup restored');
+			const nothingAdded = STORE_SECTIONS.filter((s) => result.stores[s]?.added === 0);
+			if (nothingAdded.length === 0) {
+				Notifier.success('Backup restored');
+				closeRestore();
+			} else {
+				// The file stays chosen, with Destroy at hand.
+				Notifier.info(
+					`Restore finished, but nothing was added to: ${nothingAdded.map((s) => STORE_LABELS[s].toLowerCase()).join(', ')}`
+				);
+				await refreshPreview();
+			}
 			await notice?.refresh();
 		} catch (error) {
 			console.error('Restore failed:', error);
@@ -167,8 +249,27 @@
 		'webdavEncryption.passphrase': 'WebDAV encryption passphrase'
 	};
 
+	function describeOutcome(outcome: BackupService.StoreOutcome): string {
+		const toDestroy = "To return to the backup's state, destroy the store, then restore.";
+		if (outcome.ignored) {
+			return `ignored, as the backup was made before this store was reset. ${toDestroy}`;
+		}
+		if (outcome.postponed) {
+			return 'not restored: you chose to wait with the reset the backup holds.';
+		}
+		const { added, changed, deleted } = outcome;
+		if (added + changed + deleted === 0) {
+			return `nothing changed. Merging does not undo later deletions or edits. ${toDestroy}`;
+		}
+		return `${added} added, ${changed} changed, ${deleted} deleted.`;
+	}
+
 	function describe(result: BackupService.RestoreResult): string[] {
 		const out: string[] = [];
+		for (const section of STORE_SECTIONS) {
+			const outcome = result.stores[section];
+			if (outcome) out.push(`${STORE_LABELS[section]}: ${describeOutcome(outcome)}`);
+		}
 		if (result.secrets === 'wrong-passphrase') {
 			out.push(
 				'The credentials were not restored: the passphrase did not fit. Everything else was restored. Restore the file again with the right passphrase to get them.'
@@ -330,9 +431,120 @@
 			</div>
 			<p class="mt-2 text-sm opacity-70">
 				Settings replace what is on this device. Both kinds of transactions are merged with it, and
-				trusted devices are added. Scheduled transactions from an older backup file replace the ones
-				on this device.
+				trusted devices are added.
 			</p>
+
+			{#if restoreInfo}
+				<div
+					class="card border-base-300 mt-3 border p-3"
+					role="group"
+					aria-label="Restore selection"
+				>
+					<p class="pb-2 opacity-60">
+						Restore from {restoreName} (backup format {restoreInfo.version})
+					</p>
+					<ul class="space-y-1">
+						{#each restoreInfo.sections as section (section)}
+							{@const emptySettings = section === 'settings' && restoreInfo.counts.settings === 0}
+							<li>
+								<label class="flex cursor-pointer items-start gap-2">
+									<input
+										type="checkbox"
+										class="checkbox checkbox-sm mt-1"
+										value={section}
+										disabled={busy || emptySettings}
+										bind:group={restoreSelected}
+									/>
+									<span>
+										{SECTION_LABELS[section].title}
+										{#if emptySettings}
+											<span class="block text-xs opacity-60">the list in this file is empty</span>
+										{:else if section === 'settings'}
+											<span class="block text-xs opacity-60">replaces what is on this device</span>
+										{:else if section === 'peers'}
+											<span class="block text-xs opacity-60">
+												{restoreInfo.counts.peers} device(s), added; only restore a file you trust
+											</span>
+										{:else if section === 'scx' || section === 'workingSet'}
+											<span class="block text-xs opacity-60">
+												{preview ? describePreview(preview[section]) : 'comparing…'}
+											</span>
+										{/if}
+										{#if section === 'scx' && restoreInfo.scxIsList}
+											<span class="text-warning block text-xs">
+												This older file has no history. After a sync, deleted entries can return and
+												old versions can replace newer edits, also on other devices. If sync has
+												your current data, leave this out.
+											</span>
+										{/if}
+									</span>
+								</label>
+							</li>
+						{/each}
+					</ul>
+					{#if restoreInfo.hasSecrets}
+						<div class="mt-3">
+							<label class="label" for="restore-passphrase">
+								<span class="label-text">Passphrase for the credentials in this file</span>
+							</label>
+							<input
+								id="restore-passphrase"
+								type="password"
+								autocomplete="off"
+								class="input input-bordered w-full font-mono"
+								bind:value={restorePassphrase}
+							/>
+							<p class="mt-1 text-xs opacity-60">
+								Leave it empty to restore without the credentials.
+							</p>
+						</div>
+					{/if}
+					{#if restoreInfo.version < 2}
+						<p class="mt-3 text-xs opacity-60">
+							This is an old backup file: it holds only settings and scheduled transactions.
+						</p>
+					{/if}
+
+					{#if destroyable.length > 0}
+						<div class="border-error rounded-box mt-3 space-y-2 border-2 p-3">
+							<p class="flex items-start gap-2 text-sm">
+								<TriangleAlert size={18} class="text-error shrink-0" />
+								<span>
+									Merging does not undo later changes. To return to the backup's state, destroy
+									first, then restore.
+								</span>
+							</p>
+							<div class="flex flex-wrap gap-2">
+								{#each destroyable as section (section)}
+									<button
+										type="button"
+										class="btn btn-error btn-outline btn-sm"
+										disabled={busy}
+										onclick={() => (destroyTarget = DESTROY_TARGETS[section])}
+									>
+										<TriangleAlert size={16} />
+										Destroy local {STORE_LABELS[section].toLowerCase()}…
+									</button>
+								{/each}
+							</div>
+						</div>
+					{/if}
+
+					<div class="mt-4 flex justify-end gap-4">
+						<button type="button" class="btn btn-ghost" disabled={busy} onclick={closeRestore}>
+							Cancel
+						</button>
+						<button
+							type="button"
+							class="btn btn-primary text-primary-content"
+							disabled={busy || !preview || restoreSelected.length === 0}
+							onclick={onRestoreClick}
+						>
+							Restore
+						</button>
+					</div>
+				</div>
+			{/if}
 
 			{#if restoreMessages.length > 0}
 				<div class="alert alert-info mt-3 flex flex-col items-start text-sm">
@@ -356,87 +568,6 @@
 	</div>
 </main>
 
-<!-- "Restore" dialog -->
-<input
-	type="checkbox"
-	id="restore-confirmation-modal"
-	class="modal-toggle"
-	bind:checked={isRestoreConfirmationOpen}
-/>
-<dialog class="modal">
-	<div class="modal-box">
-		<header class="flex justify-between">
-			<h2 class="text-lg font-bold">Confirm Restore</h2>
-		</header>
-		<article>
-			<p class="py-2 opacity-60">
-				Restore from {restoreName}
-				{#if restoreInfo}(backup format {restoreInfo.version}){/if}?
-			</p>
-			{#if restoreInfo}
-				<ul class="space-y-1">
-					{#each restoreInfo.sections as section (section)}
-						<li>
-							<label class="flex cursor-pointer items-start gap-2">
-								<input
-									type="checkbox"
-									class="checkbox checkbox-sm mt-1"
-									value={section}
-									bind:group={restoreSelected}
-								/>
-								<span>
-									{SECTION_LABELS[section].title}
-									{#if section === 'settings' || (section === 'scx' && restoreInfo.scxIsList)}
-										<span class="block text-xs opacity-60">replaces what is on this device</span>
-									{:else if section === 'scx'}
-										<span class="block text-xs opacity-60"
-											>merged with this device's scheduled transactions</span
-										>
-									{:else if section === 'peers'}
-										<span class="block text-xs opacity-60">
-											{restoreInfo.counts.peers} device(s), added; only restore a file you trust
-										</span>
-									{:else if section === 'workingSet'}
-										<span class="block text-xs opacity-60">added to this device's transactions</span
-										>
-									{/if}
-								</span>
-							</label>
-						</li>
-					{/each}
-				</ul>
-				{#if restoreInfo.hasSecrets}
-					<div class="mt-3">
-						<label class="label" for="restore-passphrase">
-							<span class="label-text">Passphrase for the credentials in this file</span>
-						</label>
-						<input
-							id="restore-passphrase"
-							type="password"
-							autocomplete="off"
-							class="input input-bordered w-full font-mono"
-							bind:value={restorePassphrase}
-						/>
-						<p class="mt-1 text-xs opacity-60">
-							Leave it empty to restore without the credentials.
-						</p>
-					</div>
-				{/if}
-				{#if restoreInfo.version < 2}
-					<p class="mt-3 text-xs opacity-60">
-						This is an old backup file: it holds only settings and scheduled transactions.
-					</p>
-				{/if}
-			{/if}
-		</article>
-		<footer class="mt-4 flex justify-end gap-4">
-			<button type="button" class="btn btn-ghost" onclick={closeModal}>Cancel</button>
-			<button
-				type="button"
-				class="btn btn-primary text-primary-content"
-				disabled={restoreSelected.length === 0}
-				onclick={onRestoreConfirmed}>Restore</button
-			>
-		</footer>
-	</div>
-</dialog>
+{#if destroyTarget}
+	<DestroyStoreDialog target={destroyTarget} onclose={onDestroyClosed} />
+{/if}

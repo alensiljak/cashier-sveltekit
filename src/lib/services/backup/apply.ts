@@ -4,11 +4,12 @@
  * evicted) apply to every version.
  */
 import db from '#lib/data/db';
-import { recordRestoredDevice } from '#lib/services/restoredDevice';
+import { hasEverSynced, recordRestoredDevice } from '#lib/services/restoredDevice';
 import { setRestoreMissing } from '#lib/services/restoreMissing';
 import { WrongPassphraseError } from '#lib/services/s3Crypto';
-import { getReadyScxStore, replaceAllScx } from '#lib/services/scxService';
+import { getReadyScxStore } from '#lib/services/scxService';
 import { deviceSettings, settings } from '#lib/settings';
+import { AdoptDeclinedError } from '#lib/storage/crdtDocStore';
 import { getXactStore } from '#lib/storage/xactStoreRegistry';
 import { getDeviceId } from '#lib/sync/ydocDevices';
 import {
@@ -42,14 +43,76 @@ export interface RestoreResult {
 	secrets: 'none' | 'restored' | 'skipped' | 'wrong-passphrase';
 	/** Fields left empty that the pages ask for ('s3.secretAccessKey'). */
 	missing: string[];
-	/** The ID of the device the backup was made on, when it is not this one. */
+	/** What the merge did to each transaction store that was restored. */
+	stores: StoreOutcomes;
+	/**
+	 * The ID of the device the backup was made on, when it was recorded as the one this device
+	 * replaces: it is another device, and this one had never synced.
+	 */
 	predecessor?: string;
+}
+
+/** What merging the backup into a transaction store does, in records. */
+export interface StoreOutcome {
+	added: number;
+	changed: number;
+	deleted: number;
+	/** The backup was made before the store was reset, so nothing of it is taken. */
+	ignored?: boolean;
+	/** The user chose to wait before adopting a reset the backup holds: nothing was changed. */
+	postponed?: boolean;
+}
+
+export type StoreSection = Extract<BackupSection, 'scx' | 'workingSet'>;
+
+export type StoreOutcomes = Partial<Record<StoreSection, StoreOutcome>>;
+
+const NOTHING: StoreOutcome = { added: 0, changed: 0, deleted: 0 };
+
+function countChanges(changes: { action: 'add' | 'update' | 'delete' }[]): StoreOutcome {
+	const count = (action: string) => changes.filter((c) => c.action === action).length;
+	return { added: count('add'), changed: count('update'), deleted: count('delete') };
+}
+
+const getStore = (section: StoreSection) =>
+	section === 'scx' ? getReadyScxStore() : getXactStore();
+
+/** What restoring the transaction stores of `data` would do now. Nothing is written to them. */
+export async function previewStores(data: BackupData): Promise<StoreOutcomes> {
+	const result: StoreOutcomes = {};
+	if (data.scx && 'list' in data.scx) {
+		const missing = await (await getReadyScxStore()).missingFrom(data.scx.list);
+		result.scx = { ...NOTHING, added: missing.length };
+	}
+	const states: [StoreSection, Uint8Array | undefined][] = [
+		['scx', data.scx && 'state' in data.scx ? data.scx.state : undefined],
+		['workingSet', data.workingSet]
+	];
+	for (const [section, state] of states) {
+		if (!state) continue;
+		const store = await getStore(section);
+		if (await store.wouldIgnore(state)) result[section] = { ...NOTHING, ignored: true };
+		else result[section] = countChanges((await store.previewImport([state]))[0]);
+	}
+	return result;
+}
+
+/** Merges a saved state into a store, and says what that did. */
+async function mergeState(section: StoreSection, state: Uint8Array): Promise<StoreOutcome> {
+	const store = await getStore(section);
+	if (await store.wouldIgnore(state)) return { ...NOTHING, ignored: true };
+	try {
+		return countChanges(await store.importState(state));
+	} catch (e) {
+		if (!(e instanceof AdoptDeclinedError)) throw e;
+		return { ...NOTHING, postponed: true };
+	}
 }
 
 /**
  * Restores the backup. The settings replace what is there; the transaction stores and the trusted
- * devices are merged into it. A list of scheduled transactions (older files) replaces the list.
- * `data` comes from a reader, so the file is validated before anything is written here.
+ * devices are merged into it. A list of scheduled transactions (older files) adds the entries that
+ * are missing. `data` comes from a reader, so the file is validated before anything is written here.
  */
 export async function applyBackup(
 	data: BackupData,
@@ -57,6 +120,14 @@ export async function applyBackup(
 ): Promise<RestoreResult> {
 	const wanted = new Set(options.sections ?? ALL_SECTIONS);
 	const sections = ALL_SECTIONS.filter((s) => data[s] !== undefined && wanted.has(s));
+	// An empty list would erase the settings of this device.
+	if (sections.includes('settings') && data.settings!.length === 0) {
+		throw new Error(
+			'The settings list in the backup is empty. Leave the settings out to restore the rest.'
+		);
+	}
+	// Looked at before this restore writes anything.
+	const synced = sections.includes('device') && (await hasEverSynced());
 
 	// Decrypt before writing anything.
 	let secrets: FieldSecrets[] = [];
@@ -75,12 +146,20 @@ export async function applyBackup(
 	}
 
 	if (sections.includes('settings')) await replaceSettings(data.settings!, secrets);
-	if (sections.includes('scx')) await restoreScx(data.scx!);
+	const stores: StoreOutcomes = {};
+	if (sections.includes('scx')) stores.scx = await restoreScx(data.scx!);
 	if (sections.includes('workingSet')) {
-		await (await getXactStore()).importState(data.workingSet!);
+		stores.workingSet = await mergeState('workingSet', data.workingSet!);
 	}
-	const result: RestoreResult = { restored: sections, secrets: secretsResult, missing: [] };
-	if (sections.includes('device')) result.predecessor = await restoreDevice(data.device!, secrets);
+	const result: RestoreResult = {
+		restored: sections,
+		secrets: secretsResult,
+		missing: [],
+		stores
+	};
+	if (sections.includes('device')) {
+		result.predecessor = await restoreDevice(data.device!, secrets, !synced);
+	}
 	if (sections.includes('peers')) await restorePeers(data.peers!);
 
 	// What the backup withheld and this device still has not got, for the pages to ask for.
@@ -91,9 +170,10 @@ export async function applyBackup(
 	return result;
 }
 
-async function restoreScx(scx: ScxData) {
-	if ('list' in scx) await replaceAllScx(scx.list);
-	else await (await getReadyScxStore()).importState(scx.state);
+async function restoreScx(scx: ScxData): Promise<StoreOutcome> {
+	if (!('list' in scx)) return mergeState('scx', scx.state);
+	const added = await (await getReadyScxStore()).addMissing(scx.list);
+	return { ...NOTHING, added: added.length };
 }
 
 async function missingSecrets(
@@ -162,11 +242,13 @@ export async function replaceSettings(restored: StoredSetting[], secrets: FieldS
 
 /**
  * Writes the portable device settings; the others (the ID, sync progress, ...) are left as they are.
- * Returns the old device's ID when the backup was made on another device than this one.
+ * With `mayReplace`, a backup made on another device records that one as the device this one
+ * replaces, and returns its ID.
  */
 async function restoreDevice(
 	device: DeviceData,
-	secrets: FieldSecrets[]
+	secrets: FieldSecrets[],
+	mayReplace: boolean
 ): Promise<string | undefined> {
 	const incoming = withSecrets(
 		device.settings.filter((s) => PORTABLE_DEVICE_KEYS.includes(s.key)),
@@ -183,7 +265,7 @@ async function restoreDevice(
 	});
 
 	const mine = await getDeviceId();
-	if (!device.id || device.id === mine) return undefined;
+	if (!mayReplace || !device.id || device.id === mine) return undefined;
 	await recordRestoredDevice(device.id);
 	const { resetDeltaSyncRegistry } = await import('#lib/sync/deltaSyncRegistry');
 	resetDeltaSyncRegistry();
@@ -206,7 +288,9 @@ async function restorePeers(section: PeersData) {
 		for (const peer of section.peers) {
 			if (evicted.has(peer.id) || peer.legacyIds?.some((id) => evicted.has(id))) continue;
 			if (await db.peers.get(peer.id)) continue;
-			await db.peers.add(peer);
+			// The file-sync baseline it speaks of is not restored: pairing has to create it again.
+			const { fileSyncInitializedAt: _, ...added } = peer;
+			await db.peers.add(added);
 		}
 	});
 }
