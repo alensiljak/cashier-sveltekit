@@ -96,7 +96,7 @@ services/backup/
   index.ts       decompress, detect the version, choose the reader
   model.ts       the data a restore works with
   secrets.ts     secret fields, and the encrypted credentials block
-  readers/       one module per format version: validate and convert
+  readers/       one module per format version: validate and convert (shared checks in common.ts)
   write.ts       writes the latest version only
   apply.ts       restore logic for all versions
 ```

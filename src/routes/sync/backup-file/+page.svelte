@@ -335,7 +335,7 @@
 			</p>
 
 			{#if restoreMessages.length > 0}
-				<div class="alert alert-info mt-3 flex-col items-start text-sm">
+				<div class="alert alert-info mt-3 flex flex-col items-start text-sm">
 					{#each restoreMessages as message}
 						<p>{message}</p>
 					{/each}

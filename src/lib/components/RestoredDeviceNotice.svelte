@@ -52,7 +52,8 @@
 </script>
 
 {#if restored}
-	<div class="alert alert-warning my-2 flex-col items-start text-sm" role="alert">
+	<!-- `flex` is required: `.alert` is a grid that otherwise puts every child in its own column. -->
+	<div class="alert alert-warning my-2 flex flex-col items-start text-sm" role="alert">
 		<p class="font-semibold">This device was restored from a backup of another device</p>
 		<p>
 			What that device uploaded to S3 or WebDAV is read here as this device's own, so nothing it
@@ -68,7 +69,7 @@
 				any other device.
 			</li>
 		</ul>
-		<div class="flex gap-2">
+		<div class="flex w-full flex-col gap-2 sm:flex-row">
 			<button type="button" class="btn btn-sm btn-primary" disabled={busy} onclick={lost}>
 				It is lost
 			</button>
