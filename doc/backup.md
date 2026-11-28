@@ -1,8 +1,8 @@
-# Backup, Restore and Destroy
+# Backup, Restore, Destroy and Sync
 
-Status: Step 1 of the [implementation order](#implementation-order) is implemented, and Destroy in Settings. The rest is design.
+How Cashier handles its data in these operations: what happens to which data, and why.
 
-This replaces parts of the [version 2 design](completed-projects/2026-11-12_backup-restore.md). The user-facing explanation is in [help/backup.md](help/backup.md), which is updated when the changes ship.
+This is the intended design. Not all of it is built yet: the [project plan](projects/2026-11-28_backup-consolidation.md) has the tasks and the progress. The user-facing explanation is in the [help pages](help/backup.md). The format that preceded this design is described in [Backup and Restore of a Whole Device](completed-projects/2026-11-12_backup-restore.md).
 
 ## Principles
 
@@ -10,17 +10,6 @@ This replaces parts of the [version 2 design](completed-projects/2026-11-12_back
 - Each group of data has its own toggle. Nothing optional is packed or restored automatically.
 - Destroying and restoring act on this device only. They send no reset or deletion marker to other devices. A later sync shares whatever this device holds that the others have not seen.
 - Sync brings a device up to date with the changes still available from other devices or remote storage. A mistake that has already been synced is part of that history and comes back. Rolling it back on all devices is out of scope.
-
-## Problems in the current implementation
-
-- The proxy URL and key are not backed up, with or without credentials. Neither are the other API keys, the importer tokens, the Enable Banking data, the speech settings or the stale-sync setting.
-- WebDAV upload and Peer Sync send `settings.getAll()`, which includes the WebDAV password. Backup and S3 sync blank it.
-- `importSettingsJson` only checks that its input is a list. An empty list erases the shared settings.
-- Restoring scheduled transactions replaces the list. The deletions can then sync to other devices.
-- Restored trusted devices keep `fileSyncInitializedAt`, but the file-sync baseline is not restored, so pairing never seeds it again.
-- A restore records the backup's device as the previous device even on a device that has been in use.
-- Folder names are restored although folder access is not.
-- Notifications can be restored as enabled without browser permission.
 
 ## Backup contents
 
@@ -33,9 +22,9 @@ This replaces parts of the [version 2 design](completed-projects/2026-11-12_back
 
 ### This device
 
-Add to the current portable settings: speech engine, speech language, voice mode, Mistral model and stale-sync days. The proxy URL is part of the proxy connection (see below).
+The portable device settings include the home cards, device name, notifications, sync options, speech engine, speech language, voice mode, Mistral model and stale-sync days.
 
-Remove `importBookDirectory` and `exportBookDirectory`. A folder has to be picked again, so showing its old name is misleading. The readers for older versions ignore these names too.
+Folder names are not included. A folder has to be picked again, so showing its old name would be misleading. This also applies when an older file holds them.
 
 Notifications are restored as enabled only if the browser permission is already granted. The reminder time is always restored.
 
@@ -51,18 +40,14 @@ Notifications are restored as enabled only if the browser permission is already 
 - Scalable Capital tokens
 - Enable Banking application ID, private key and sessions
 
-An old token or an expired bank session can still require signing in again.
+Credentials are never synced. They leave the device only in this encrypted group. An old token or an expired bank session can still require signing in again.
 
 **A connection is kept as one unit.** The Credentials group holds the whole connection, URL and secrets together, encrypted. The plain group (This device, or Shared settings for WebDAV) holds the same connection with its secrets blanked.
 
 - Restoring Credentials overwrites each connection in the file as a whole, so a secret cannot be paired with another URL. This also works when Credentials is the only group restored.
 - Restoring without Credentials fills in the plain fields, and keeps a local secret only when the connection details match.
 
-`proxy.url` and `proxy.key` become one `{ url, key }` setting, with a migration for existing values.
-
-The Mistral and Aware keys are plain strings. `splitSecrets` only handles fields of objects and lists, so it needs whole-value secrets first. Without that, adding these keys to the lists would write them unencrypted.
-
-Older comments in `settings.ts` and the importers say that these credentials are never exported. They change to: never synced; exported only in the encrypted Credentials group.
+The proxy URL and key are one `{ url, key }` setting. Secrets that are plain strings, such as the proxy, Mistral and Aware keys, are encrypted as whole values.
 
 ### Not backed up
 
@@ -88,44 +73,43 @@ A restored new device still has to be paired: the others do not trust its key. A
 ## Preventing omissions
 
 1. **Every key has a backup rule**: plain, whole-value secret, secret fields, or excluded. Both backup lists are generated from the rules. The rules are typed against all declared keys, so `npm run check` fails when a key has none.
-2. **Only declared keys can be written.** `set()` accepts the declared key types, plus `importer.${string}` for shared settings. `userBookFilename` is added to `SettingKeys`.
-3. **Unsafe reads are obvious.** `getAll()` is renamed to `getAllWithSecrets()`, with a comment: do not use it unless the secrets are needed. Backup and sync use the safe export.
+2. **Only declared keys can be written.** `set()` accepts the declared key types, plus `importer.${string}` for shared settings.
+3. **Unsafe reads are obvious.** The read that returns everything is named `getAllWithSecrets()`: it is not used unless the secrets are needed. Backup and sync use the safe export.
 
 The types cannot detect a new secret inside an existing object. The importer configs need a comment and tests.
 
-## File format (version 3)
+## File format
 
-- The whole file is gzipped with `CompressionStream` (`.json.gz`). The size reduction has not been measured.
-- Only the Credentials block is encrypted (as now: PBKDF2 and AES-GCM). It is encrypted before the file is compressed. Everything else can be read without a passphrase.
+- The whole file is gzipped with `CompressionStream` (`.json.gz`).
+- Only the Credentials block is encrypted (PBKDF2 and AES-GCM). It is encrypted before the file is compressed. Everything else can be read without a passphrase.
 - Both transaction stores are saved as Yjs state, which includes their history.
 - The file lists its contents without encryption, including which credentials the block holds, so they can be shown before a passphrase is entered.
-- Some browsers may not share gzip files. If so, Share sends plain JSON. To be tested on a phone.
+- Where a browser cannot share gzip files, Share sends plain JSON.
+- The file records its format version. A file from a newer app is refused.
 
 ### Version modules
 
-Only reading is separated by version. Writing and applying exist once.
+Each format version is read by its own module, which keeps the history visible and avoids version checks spread through the code. Writing and applying exist once.
 
 ```text
 services/backup/
   index.ts       decompress, detect the version, choose the reader
   model.ts       the data a restore works with
-  readers/v1.ts  validate and convert v1
-  readers/v2.ts  validate and convert v2
-  readers/v3.ts  validate and convert v3
+  readers/       one module per format version: validate and convert
   write.ts       writes the latest version only
   apply.ts       restore logic for all versions
 ```
 
 - A reader keeps its own definition of its format and does not depend on the current key lists.
-- The model holds both v2's individual secret fields and v3's whole connections. v2 secrets keep the connection-matching rule.
+- The model holds both the individual secret fields of version 2 and whole connections. Version 2 secrets keep the connection-matching rule.
 - Current safety rules apply to all versions.
-- Each version has a fixed sample file in the tests. The v1 and v2 samples are made before the refactoring.
+- Each version has a fixed sample file in the tests.
 
-## Restore page
+## Restore
 
 ### Screen text
 
-The screen stays uncluttered. Explanations go to the help page, opened with the existing `?` button. The screen shows only:
+The screen stays uncluttered. Explanations go to the help page, opened with the `?` button. The screen shows only:
 
 - short reasons next to disabled options
 - the result of the restore
@@ -134,7 +118,7 @@ The screen stays uncluttered. Explanations go to the help page, opened with the 
 ### Reading the file
 
 - Compression is detected from the content (gzip magic bytes), not the file name. Plain JSON is accepted.
-- The dialog shows the format version, whether the file is compressed, and whether it has encrypted credentials.
+- The page shows the format version, whether the file is compressed, and whether it has encrypted credentials.
 - All groups are always listed. A group the file does not contain is greyed out. For older files this includes everything their format cannot hold.
 - The whole file is validated before anything is written or destroyed.
 - The passphrase is only needed for Credentials. With a missing or wrong passphrase, the other groups can still be restored, and the result says so.
@@ -151,6 +135,8 @@ Each group has its own toggle. Shared settings is on and locked when the file ha
 | Trusted and evicted devices         | missing entries are added; evictions apply; `fileSyncInitializedAt` is removed from added devices |
 | Working set, scheduled transactions | **merged** into the store; restore never replaces or clears a store                               |
 | Identity and signing key            | unchanged                                                                                         |
+
+`fileSyncInitializedAt` is removed because the file-sync baseline it refers to is not restored. With it, pairing would never create the baseline again.
 
 The source device ID is recorded as the previous device only if this device has never synced. A restored transaction store does not count against that, so the order of manual steps does not matter.
 
@@ -174,81 +160,79 @@ The user chooses per store, so one store can be destroyed and the other merged.
 - A backup made before a store reset is ignored.
 - A backup made after a reset on another device replaces the local document. Records the resetting device had not seen are kept.
 
-Before restoring, the dialog shows how many records would be added, changed and deleted in each store (`previewImport`). If a backup is ignored, the result says so and points to Destroy. It must never report such a restore as successful without saying that nothing was added.
+Before restoring, the page shows how many records would be added, changed and deleted in each store (`previewImport`). If a backup is ignored, the result says so and points to Destroy. A restore that added nothing is never reported as a plain success.
 
-### Scheduled transactions from v1 and v2
+### Lists without history
 
-These files hold a list without history. Merge adds the missing IDs, keeps existing records and deletes nothing.
+Version 1 and 2 files hold scheduled transactions as a list. Merging such a list adds the missing IDs, keeps existing records and deletes nothing.
 
-Even into an empty store, a later sync can bring back deleted entries, or let the old versions replace newer edits, also on other devices. The dialog warns about this. If current data is available through sync, the old list is better left out.
+Without history, sync cannot tell that the restored entries are older. Even into an empty store, a later sync can bring back deleted entries, or let the old versions replace newer edits, also on other devices. The page warns about this. If current data is available through sync, the old list is better left out.
+
+Saved state does not have this problem, which is why the transaction stores are backed up as state.
 
 ### Other warnings
 
-- Restore trusted devices only from a file you trust. The dialog shows how many would be added.
+- Restore trusted devices only from a file you trust. The page shows how many would be added.
 - An old backup can trust a device that was evicted later. A new device does not know until it receives the eviction.
 
 ### Onboarding
 
-A new device lands on `/onboarding`, which has no restore option. Add **Restore from backup**: it initializes empty stores, as **Start empty** does, and opens the restore page.
+A new device can restore from onboarding. **Restore from backup** initializes empty stores, as **Start empty** does, and opens the restore page.
 
 Demo data gives the stores a history. Destroy them before restoring over it.
 
 ## Destroy a transaction store
 
-Destroy deletes one store's local data **and history**, and leaves an empty, initialized store.
+Destroy deletes one store's local data **and history**, and leaves an empty, initialized store. It exists because merge cannot return a store to an earlier state.
 
-| Existing reset                            | Destroy                  |
+It is not a reset:
+
+| Reset                                     | Destroy                  |
 | ----------------------------------------- | ------------------------ |
 | needs an empty store                      | works on any store       |
 | writes a reset marker                     | writes no marker         |
 | other devices adopt it                    | affects this device only |
 | publishes a snapshot, removes old objects | touches nothing remote   |
 
-### In the UI
+### Where it is offered
 
-- The restore page offers it for the **selected** stores that have a history, in a box with a red border and warning icons.
-- It is its own button with its own confirmation, separate from Restore. It is never a side effect of restoring.
-- The confirmation shows the record counts, and offers a backup of the current data first. Whatever exists only in the destroyed store is lost without one, including changes that were never synced.
-- The chosen file and selections stay in place afterwards.
-- It is a reusable component, also offered next to Reset in Settings, for starting over from sync without a backup file.
+- In Settings, for starting over from sync without a backup file.
+- On the restore page, for the **selected** stores that have a history, in a box with a red border and warning icons.
 
-### The confirmation dialog
+It is its own button with its own confirmation, separate from Restore. It is never a side effect of restoring. On the restore page, the chosen file and selections stay in place afterwards.
 
-Implemented in `DestroyStoreDialog.svelte`, opened from **Destroy Stores** in Settings. The restore page will use the same dialog.
+### The confirmation
 
-- It says what is deleted, that only this device is affected, and that only data in a backup or another copy can be recovered.
+- It says what is deleted, with the record count, that only this device is affected, and that only data in a backup or another copy can be recovered.
 - It says what is set up to recover from: S3 or WebDAV, Peer Sync only, or nothing. With nothing, it says that the data is permanently lost without a backup. A configured sync is never presented as a guarantee.
 - It offers a backup of the store. The app cannot tell whether the file was saved.
 - Destroy stays disabled until the user picks **I have checked that I have a usable backup** or **I accept permanent loss**.
 - It does not require a working sync, so a store can be destroyed offline.
-- For scheduled transactions it warns about restoring and then syncing (see below).
-
-### Restored data and sync
-
-| After destroy                                       | Result after sync                                                             |
-| --------------------------------------------------- | ----------------------------------------------------------------------------- |
-| sync only                                           | what the source still holds                                                   |
-| restore of saved state (the working set), then sync | current                                                                       |
-| restore of a scheduled-transaction list, then sync  | **not reliable**: old versions can replace newer ones, deleted entries return |
-
-In a temporary test of the last row, 22 of 40 runs ended with the old version and the deleted entry. With saved state, all 40 ended current. Backup files hold scheduled transactions as a list until version 3 (step 5).
 
 ### Safety
 
-- Disconnect live Peer Sync. No sync may start as a side effect of destroying.
-- No other app tab may be open, as it could write the old data back.
+- Live Peer Sync is disconnected. No sync starts as a side effect of destroying.
+- No other app tab may be open, as it could write the old data back. Open tabs are detected with the Web Locks API (`utils/appTabs.ts`). A tab opened while a destroy is running is not blocked.
 - Destroy does not schedule an automatic backup.
-- Swap the document in place, moving subscribers over. If that proves unsafe, reload instead, and the file has to be chosen again.
+- The document is swapped in place, without a reload.
 
-## Delta sync fix
+### Getting data back
 
-Destroy keeps the device ID, so delta sync needs changes. Without them:
+| After destroy                                | Result after sync                                                             |
+| -------------------------------------------- | ----------------------------------------------------------------------------- |
+| sync only                                    | what the source still holds                                                   |
+| restore of saved state, then sync            | current                                                                       |
+| restore of a list without history, then sync | **not reliable**: old versions can replace newer ones, deleted entries return |
 
-- the saved progress says updates were already applied, and they are skipped
-- downloads skip this device's own uploads, so its later changes are not recovered, and changes by other devices that depend on them may not apply
-- the unsent queue can still upload the data that was destroyed
+Without sync and without a backup, destroyed data cannot be recovered. With Peer Sync only, another device can send back just what it has, when it is online.
 
-### Implementation
+## Delta sync after destroy
+
+A destroyed store keeps the device ID. Without special handling:
+
+- the saved progress would say updates were already applied, and they would be skipped
+- downloads would skip this device's own uploads, so its later changes would not be recovered, and changes by other devices that depend on them might not apply
+- the unsent queue could still upload the data that was destroyed
 
 The entry point is `destroyLocalStore(kind, store)` in `sync/deltaSyncRegistry.ts`. It uses `CrdtDocStore.destroy()`, which must not be called on its own while the store may be synced.
 
@@ -263,22 +247,20 @@ The entry point is `destroyLocalStore(kind, store)` in `sync/deltaSyncRegistry.t
 7. The rebuild ends after a download with no errors, no gaps and no postponement. It raises no warning about unsent changes.
 8. Destroy reports its own replace reason, `destroy`. With `reset`, delta sync would publish it and remove this device's remote deltas and older snapshots.
 
-Peer Sync compares the documents themselves, so it needs no change.
+Peer Sync compares the documents themselves, so it needs no special handling.
 
-A rebuild cannot recover data that no source holds any more. Stopping live Peer Sync and handling other open tabs is left to the UI (step 4).
+A rebuild cannot recover data that no source holds any more.
 
-The tests are in `tests/unit/destroyStore.test.ts`. They use the in-memory remote store. S3 and WebDAV share this delta sync code and differ in the transport, so a check by hand against a real bucket and folder is still to be done.
+## Shared settings in sync
 
-## Sync safety and S3 settings
+- S3, WebDAV and Peer Sync use the safe settings export and import, including their merge, preview and comparison views. The import keeps the local WebDAV password for the same server.
+- An empty settings list is not uploaded.
+- Before an import changes anything, it rejects an empty list, invalid entries and duplicate keys. On failure, the local settings stay and an error is shown.
+- In S3, `data/settings.json` holds the whole shared table, with the WebDAV password blanked, so no shared keys are missing. Device settings are not part of it.
 
-- WebDAV and Peer Sync use `exportSettingsJson` and `importSettingsJson`, including their merge, preview and comparison views. The import keeps the local WebDAV password for the same server.
-- Before upload: do not upload an empty settings list.
-- Before an import changes anything: reject an empty list, invalid entries and duplicate keys. On failure, keep the local settings and show an error.
-- The format of `data/settings.json` does not change. It holds the whole shared table, with the WebDAV password blanked, so no shared keys are missing. Device settings are not part of it.
+## Backup and sync
 
-## Aligning sync with backup
-
-To be done after backup is consolidated. The goal is that the two look and behave the same wherever they do the same thing, so that nobody has to learn two sets of options.
+The two look and behave the same wherever they do the same thing, so that nobody has to learn two sets of options.
 
 ### Two questions, not one
 
@@ -287,7 +269,7 @@ To be done after backup is consolidated. The goal is that the two look and behav
 
 Storage does not decide the second. A backup file kept in S3 would still be a backup, and a synced bucket is not a backup: mistakes and deletions spread through it, and clean-up removes old history. Backup and sync therefore stay two clearly named actions. Another device is also not storage: it has to be online.
 
-### What to align
+### What they share
 
 - The same names, grouping and order for the data options: Shared settings, Working set, Scheduled transactions, This device, Credentials, Beancount files.
 - The same presentation: every option is listed, and one that does not apply is greyed out with a short reason.
@@ -303,26 +285,5 @@ Storage does not decide the second. A backup file kept in S3 would still be a ba
 | Both transaction stores     | yes                     | yes                                                                 |
 | Beancount files             | no (they come from Git) | S3 and Peer Sync                                                    |
 | This device                 | yes                     | proposed: no, so that one device does not overwrite another's setup |
-| Credentials                 | yes, encrypted          | proposed: no, so that secrets are not spread                        |
+| Credentials                 | yes, encrypted          | no, so that secrets are not spread                                  |
 | Trusted and evicted devices | yes, with This device   | have their own exchange (introductions, evictions)                  |
-
-### To start with
-
-A review of what each channel offers today and where it differs in wording, options and behaviour. The WebDAV sync page, for example, offers settings and the two transaction stores, and no Beancount files were found there. The review also settles the two proposals in the table.
-
-## Implementation order
-
-Each step includes its tests.
-
-1. Destroy operation and delta sync fix, without UI. **Implemented.**
-2. WebDAV password leak, settings import checks, key rules.
-3. Version modules, with sample files and no change in behaviour.
-4. Restore fixes for v1 and v2: merge only, destroy on the restore page and in Settings, preview counts, trusted-device markers, previous device.
-5. Version 3: the groups, whole connections, missing settings, folder and notification rules, compression, file recognition.
-6. Onboarding option, help page and project documentation.
-7. Align sync with backup, starting with the review (see [Aligning sync with backup](#aligning-sync-with-backup)).
-
-## To settle during implementation
-
-- How to detect or exclude other open tabs during destroy.
-- Whether the document can be swapped in place while all its users are running.
