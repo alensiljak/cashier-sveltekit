@@ -43,8 +43,11 @@ interface ResetMeta {
 
 type UpdateHandler = (update: Uint8Array, origin: unknown) => void;
 
-/** Why the document was replaced: `reset` on this device, or `adopt` of another device's reset. */
-export type ReplaceReason = 'reset' | 'adopt';
+/**
+ * Why the document was replaced: `reset` on this device, `adopt` of another device's reset, or
+ * `destroy` of this device's copy (which, unlike a reset, concerns no other device).
+ */
+export type ReplaceReason = 'reset' | 'adopt' | 'destroy';
 
 /** What adopting another device's reset would do to this device's records. */
 export interface AdoptInfo {
@@ -509,6 +512,23 @@ export abstract class CrdtDocStore<R> {
 			});
 			this.notifyReplaced('reset');
 			scheduleBackup(this.kind);
+		});
+	}
+
+	/**
+	 * Deletes this device's copy: the records and the whole history, leaving an empty store that
+	 * has never held anything. Unlike `reset()` it works while records remain, leaves no reset
+	 * marker, and says nothing to other devices.
+	 *
+	 * Don't call this directly while the store may be synced: use `destroyLocalStore()` in
+	 * `sync/deltaSyncRegistry.ts`, or the saved sync progress would make later syncs skip what
+	 * this store no longer has.
+	 */
+	async destroy(): Promise<void> {
+		await this.ready();
+		await this.serial(async () => {
+			await this.replaceDoc(new Y.Doc(), () => {});
+			this.notifyReplaced('destroy');
 		});
 	}
 

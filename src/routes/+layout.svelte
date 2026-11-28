@@ -12,6 +12,7 @@
 	import { ensureInitialized, finishInitialization } from '#lib/data/initializer';
 	import { goto } from '$app/navigation';
 	import { navigating } from '$app/state';
+	import { announceTab } from '#lib/utils/appTabs';
 
 	let { children } = $props();
 
@@ -26,6 +27,9 @@
 	});
 
 	onMount(() => {
+		// Lets other tabs know this one is open (see utils/appTabs.ts).
+		announceTab();
+
 		// Surface otherwise-silent failures (e.g. the sync/beancount redirect bug)
 		// loudly in the console instead of letting them fail invisibly.
 		window.addEventListener('error', (event) => {
@@ -144,7 +148,6 @@
 		</div>
 	</div>
 </div>
-
 
 {#await import('#lib/components/ReloadPrompt.svelte') then { default: ReloadPrompt }}
 	<ReloadPrompt />

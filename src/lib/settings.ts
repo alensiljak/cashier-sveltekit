@@ -202,6 +202,9 @@ export const DeviceSettingKeys = {
 	// Delta sync progress per store and bucket, key prefix: `<this>:<kind>:<bucket id>`.
 	// Shape: DeltaState (see sync/deltaSync.ts). Device-only: it says what this device has applied.
 	deltaSyncState: 'delta-sync-state',
+	// Set when a local CRDT store is destroyed, key `<this>:<kind>`: delta-sync progress saved
+	// before it no longer counts (see sync/deltaStateStorage.ts). Shape: ULID string.
+	deltaSyncEpoch: 'delta-sync-epoch',
 	// When this device last completed an S3 upload or download. Shape: ISO string
 	s3LastSync: 's3-last-sync',
 	// Auto-upload the working set (Yjs state) to the S3 bucket after each write. Shape: boolean

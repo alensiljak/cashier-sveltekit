@@ -51,6 +51,15 @@ export interface DeltaState {
 	owner?: string;
 	/** Legacy IDs of this device whose objects were removed from the bucket (see `retire`). */
 	retired?: string[];
+	/**
+	 * This device destroyed its copy of the document and has not got it back from this bucket yet
+	 * (see `stateAfterDestroy`). Until a download applies everything without a problem, this
+	 * device's own objects are applied like any other, every download starts from the beginning,
+	 * and nothing is removed from the bucket or published about what this device holds.
+	 */
+	rebuilding?: boolean;
+	/** Which destroy of the local store this progress was started after. */
+	epoch?: string;
 }
 
 /** What this device tells the others it has applied, so they can compact. Own deltas not included. */
@@ -217,6 +226,22 @@ const emptyState = (): DeltaState => ({
 	outbox: null
 });
 
+/**
+ * The progress to continue with after the local store was destroyed: nothing counts as applied
+ * and nothing waits to be uploaded. The numbering of this device's deltas goes on where it was,
+ * as the other devices skip numbers they have applied.
+ */
+export function stateAfterDestroy(previous: DeltaState | null, epoch: string): DeltaState {
+	return {
+		...emptyState(),
+		nextSeq: previous?.nextSeq ?? 1,
+		owner: previous?.owner,
+		retired: previous?.retired,
+		rebuilding: true,
+		epoch
+	};
+}
+
 /** True when the object an adapter returned is missing, e.g. compacted since it was listed. */
 class Vanished extends Error {}
 
@@ -333,6 +358,10 @@ export class DeltaSync {
 	private detachReplaced?: () => void;
 	private detachAdoptCheck?: () => void;
 	private queue: Promise<unknown> = Promise.resolve();
+	/** `close` was called: no new work is taken on. */
+	private closing = false;
+	/** `close` has finished: the saved progress belongs to someone else now. */
+	private closed = false;
 	/** Objects fetched for a review, by key. They never change; dropped once applied. */
 	private fetched = new Map<string, Uint8Array>();
 
@@ -346,7 +375,7 @@ export class DeltaSync {
 	 */
 	async attach(): Promise<void> {
 		await this.load();
-		if (this.detach) return;
+		if (this.detach || this.closing) return;
 		this.detach = this.o.doc.onUpdate((update, origin) => {
 			// Local edits have no origin; a peer merge carries REMOTE_ORIGIN. The bucket's own
 			// updates, and the load from IndexedDB, are not ours to upload.
@@ -356,7 +385,23 @@ export class DeltaSync {
 			void this.serial(() => this.persist());
 		});
 		this.detachReplaced = this.o.doc.onReplaced?.((reason) => this.replaced(reason));
-		this.detachAdoptCheck = this.o.doc.onAdoptCheck?.(() => this.hasUnsent());
+		// While rebuilding, what the document holds came from the bucket or a backup: adopting a
+		// reset on top of it needs no question.
+		this.detachAdoptCheck = this.o.doc.onAdoptCheck?.(async () =>
+			this.state.rebuilding ? false : this.hasUnsent()
+		);
+	}
+
+	/**
+	 * Ends this sync for good: waits for the work under way, then refuses more and never saves
+	 * progress again, so that a caller still holding it cannot overwrite what comes after.
+	 */
+	async close(): Promise<void> {
+		this.dispose();
+		this.closing = true;
+		await this.loaded?.catch(() => undefined);
+		await this.queue;
+		this.closed = true;
 	}
 
 	dispose(): void {
@@ -404,12 +449,16 @@ export class DeltaSync {
 	}
 
 	private serial<T>(task: () => Promise<T>): Promise<T> {
+		if (this.closing) {
+			return Promise.reject(new Error('The local store was destroyed meanwhile. Sync again.'));
+		}
 		const run = this.queue.then(task);
 		this.queue = run.catch(() => undefined);
 		return run;
 	}
 
 	private async persist(): Promise<void> {
+		if (this.closed) return;
 		this.state.outbox = this.pending.length ? toBase64(Y.mergeUpdates(this.pending)) : null;
 		await this.o.storage.save(this.state);
 	}
@@ -433,6 +482,7 @@ export class DeltaSync {
 	async publishAck(): Promise<boolean> {
 		await this.load();
 		return this.serial(async () => {
+			if (this.state.rebuilding) return false;
 			const applied = { ...this.state.applied };
 			delete applied[this.o.deviceId];
 			const ack: DeltaAck = { snapId: this.state.snapId, applied };
@@ -499,6 +549,8 @@ export class DeltaSync {
 	async cleanLegacy(): Promise<number> {
 		await this.load();
 		return this.serial(async () => {
+			// This device's own legacy file may be what it still has to get back.
+			if (this.state.rebuilding) return 0;
 			const coverage = this.coverageNow();
 			let deleted = 0;
 			for (const o of await this.objects()) {
@@ -531,7 +583,7 @@ export class DeltaSync {
 				return { reset: false, reason: 'Nothing worth clearing' };
 			}
 			const down = await this.downloadRetry();
-			if (down.errors.length || down.gaps.length) {
+			if (down.errors.length || down.gaps.length || this.state.rebuilding) {
 				return { reset: false, reason: 'Not everything in the bucket could be merged' };
 			}
 			// What was just merged may have brought records back.
@@ -660,7 +712,7 @@ export class DeltaSync {
 	): { device: string; seqs: number[]; gap?: DeltaGap }[] {
 		const runs: { device: string; seqs: number[]; gap?: DeltaGap }[] = [];
 		for (const [device, seqs] of deltas) {
-			if (device === this.o.deviceId || this.o.ignore?.(device)) continue;
+			if (device === this.o.deviceId ? !this.state.rebuilding : this.o.ignore?.(device)) continue;
 			let next = (this.state.applied[device] ?? 0) + 1;
 			const run: number[] = [];
 			let gap: DeltaGap | undefined;
@@ -704,7 +756,8 @@ export class DeltaSync {
 	}
 
 	private async uploadLocked(): Promise<{ seq: number | null; bytes: number }> {
-		if (this.state.pendingSnapshot) await this.publishReset();
+		// Publishing a reset removes objects, which waits for a rebuild to finish.
+		if (this.state.pendingSnapshot && !this.state.rebuilding) await this.publishReset();
 		await this.learnBucket().catch(() => undefined);
 		await this.healOutbox();
 		const sent = this.outgoing();
@@ -729,6 +782,9 @@ export class DeltaSync {
 					seq = Math.max(seq, parsed.seq + 1);
 				}
 			}
+			// While rebuilding, the saved number may be new (a bucket without saved progress), and
+			// this device's deltas may all be compacted: the snapshot says how far they went.
+			if (this.state.rebuilding) seq = Math.max(seq, (await this.ownSeqInSnapshot()) + 1);
 			// An object under this number already holds something else: take the next number.
 			for (let attempt = 0; ; attempt++) {
 				if (await remote.put(deltaKey(kind, deviceId, seq), sent, { onlyIfAbsent: true })) break;
@@ -745,6 +801,15 @@ export class DeltaSync {
 			await this.persist();
 			throw e;
 		}
+	}
+
+	/** The last of this device's own deltas that the newest snapshot covers; 0 without one. */
+	private async ownSeqInSnapshot(): Promise<number> {
+		const { snapshotId } = this.scan(await this.objects());
+		if (!snapshotId) return 0;
+		const raw = await this.fetchObject(snapshotKey(this.o.kind, snapshotId));
+		if (!raw) throw new Error('Could not read the newest snapshot. Download first.');
+		return decodeSnapshot(raw).coverage[this.o.deviceId] ?? 0;
 	}
 
 	// --- snapshots and compaction ---
@@ -809,7 +874,7 @@ export class DeltaSync {
 		return this.serial(async () => {
 			const { kind, remote } = this.o;
 			const down = await this.downloadRetry();
-			if (down.errors.length || down.gaps.length) {
+			if (down.errors.length || down.gaps.length || this.state.rebuilding) {
 				return {
 					snapshot: null,
 					deleted: 0,
@@ -851,6 +916,11 @@ export class DeltaSync {
 			const down = await this.downloadRetry();
 			if (down.errors.length) {
 				throw new Error(`Could not merge everything first: ${down.errors[0].message}`);
+			}
+			if (this.state.rebuilding) {
+				throw new Error(
+					'This device has not got back everything from the bucket yet. Download first.'
+				);
 			}
 			await this.uploadLocked();
 			await this.writeSnapshot(this.coverageNow());
@@ -928,7 +998,20 @@ export class DeltaSync {
 		const objects = await this.objects();
 		const { snapshotId, deltas, legacy } = this.scan(objects);
 		const state = this.state;
-		result.foreign = objects.filter((o) => o.type !== 'ack' && o.deviceId !== deviceId).length;
+		const rebuilding = !!state.rebuilding;
+		if (rebuilding) {
+			// Start over each time. Yjs keeps an update that waits for another one in memory only, so
+			// what an unfinished run counted as applied may be gone after a restart.
+			state.snapId = null;
+			state.applied = {};
+			state.legacy = {};
+		}
+		/** Whether the objects of `device` are left alone as this device's own. */
+		const isOwn = (device: string) => !rebuilding && device === deviceId;
+		const ignoreReason = (device: string) => (device === deviceId ? null : this.o.ignore?.(device));
+		result.foreign = objects.filter(
+			(o) => o.type !== 'ack' && !(o.deviceId && isOwn(o.deviceId))
+		).length;
 		const sizes = new Map(objects.map((o) => [o.key, o.size]));
 
 		if (snapshotId && (!state.snapId || snapshotId > state.snapId)) {
@@ -957,6 +1040,7 @@ export class DeltaSync {
 					for (const [device, seq] of Object.entries(coverage)) {
 						state.applied[device] = Math.max(state.applied[device] ?? 0, seq);
 					}
+					this.keepNumbering(coverage[deviceId]);
 					raise(state.bucketSV, vectorOf(update));
 					result.snapshot = true;
 				} catch (e) {
@@ -971,8 +1055,8 @@ export class DeltaSync {
 		}
 
 		for (const [device, seqs] of deltas) {
-			if (device === deviceId) continue;
-			const reason = this.o.ignore?.(device);
+			if (isOwn(device)) continue;
+			const reason = ignoreReason(device);
 			if (reason) {
 				result.skipped.push({ deviceId: device, reason });
 				continue;
@@ -1017,6 +1101,7 @@ export class DeltaSync {
 					break;
 				}
 				state.applied[device] = seq;
+				if (device === deviceId) this.keepNumbering(seq);
 				raise(state.bucketSV, vectorOf(raw));
 				result.deltas++;
 			}
@@ -1027,8 +1112,8 @@ export class DeltaSync {
 		const stamps = (state.legacy ??= {});
 		for (const file of legacy) {
 			const device = file.deviceId!;
-			if (device === deviceId) continue;
-			const reason = this.o.ignore?.(device);
+			if (isOwn(device)) continue;
+			const reason = ignoreReason(device);
 			if (reason) {
 				if (!result.skipped.some((s) => s.deviceId === device)) {
 					result.skipped.push({ deviceId: device, reason });
@@ -1061,8 +1146,14 @@ export class DeltaSync {
 			result.legacy++;
 		}
 
+		if (rebuilding && !result.errors.length && !result.gaps.length) state.rebuilding = false;
 		await this.persist();
 		return result;
+	}
+
+	/** Makes the next delta of this device follow `seq`, one of its own that exists already. */
+	private keepNumbering(seq: number | undefined): void {
+		if (seq !== undefined) this.state.nextSeq = Math.max(this.state.nextSeq, seq + 1);
 	}
 
 	/** Adds what an import changed to the result, and checks the records it brought in. */
@@ -1156,7 +1247,8 @@ export class DeltaSync {
 			if (!includeIgnored && o.deviceId && o.deviceId !== deviceId && this.o.ignore?.(o.deviceId)) {
 				continue;
 			}
-			if (!unappliedOnly) {
+			// A rebuild applies everything again.
+			if (!unappliedOnly || this.state.rebuilding) {
 				wanted.push(o);
 				continue;
 			}
@@ -1201,7 +1293,11 @@ export class DeltaSync {
 	 */
 	async status(): Promise<{ upload: boolean; download: boolean; gaps: DeltaGap[] }> {
 		await this.load();
-		const { snapshotId, deltas, legacy } = this.scan(await this.objects());
+		const objects = await this.objects();
+		if (this.state.rebuilding) {
+			return { upload: await this.hasUpload(), download: holdsData(objects), gaps: [] };
+		}
+		const { snapshotId, deltas, legacy } = this.scan(objects);
 		let download = !!snapshotId && (!this.state.snapId || snapshotId > this.state.snapId);
 		const gaps: DeltaGap[] = [];
 		// Like a download, count deltas only up to the first missing one: what lies beyond a gap
@@ -1240,6 +1336,12 @@ export class DeltaSync {
 			const snapshotNew = () =>
 				!!snapshotId && (!this.state.snapId || snapshotId > this.state.snapId);
 			let settled = 0;
+
+			// Nothing is settled while rebuilding: only a complete download counts.
+			if (this.state.rebuilding) {
+				const upload = await this.hasUnsent();
+				return { download: holdsData(objects), upload, gaps: [], settled };
+			}
 
 			if (snapshotNew()) {
 				if (await this.settleSnapshot(snapshotId!).catch(() => false)) settled++;
@@ -1318,6 +1420,9 @@ export class DeltaSync {
 }
 
 const importOpts = { backup: false, origin: BUCKET_ORIGIN };
+
+/** Whether the bucket holds anything of the store besides acknowledgements. */
+const holdsData = (objects: BucketObject[]) => objects.some((o) => o.type !== 'ack');
 
 /** A message when an object is larger than anything the app writes, which is a sign of damage or abuse. */
 function oversize(bytes: number | undefined): string | null {

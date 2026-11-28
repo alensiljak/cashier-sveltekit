@@ -9,7 +9,7 @@ import { setAdoptConfirm } from '#lib/storage/crdtDocStore';
 import { validateRecord as validateXact } from '#lib/storage/crdtXactRecord';
 import { validateRecord as validateScx } from '#lib/storage/crdtScxRecord';
 import { DeltaSync, type DeltaDoc } from './deltaSync';
-import { deviceSettingsStateStorage } from './deltaStateStorage';
+import { deviceSettingsStateStorage, markStoreDestroyed } from './deltaStateStorage';
 import { noteBucketActivity } from './lastSeen';
 import type { RemoteObjectInfo, RemoteStore } from './remoteStore';
 import { getDeviceId, type DocKind } from './ydocDevices';
@@ -74,6 +74,8 @@ export const s3RemoteId = (cfg: { endpoint: string; bucket: string; prefix: stri
 export const webDavRemoteId = (url: string) => `webdav|${url.endsWith('/') ? url : url + '/'}`;
 
 const registry = new Map<string, { store: object; deviceId: string; sync: DeltaSync }>();
+/** Per kind, while its local store is being destroyed. */
+const destroying = new Map<DocKind, Promise<void>>();
 
 export interface DeltaSyncTarget {
 	kind: DocKind;
@@ -92,6 +94,8 @@ export async function getDeltaSync(target: DeltaSyncTarget): Promise<DeltaSync> 
 	const { kind, deviceId, store, remote, remoteId } = target;
 	const id = `${kind}|${remoteId}`;
 	const ignore = await loadIgnoreReasons();
+	// A sync set up now would start from the progress of the store that is going away.
+	while (destroying.has(kind)) await destroying.get(kind);
 
 	let entry = registry.get(id);
 	// Another store, or the device switched to another ID since: start over.
@@ -121,6 +125,42 @@ export async function getDeltaSync(target: DeltaSyncTarget): Promise<DeltaSync> 
 	}
 	await entry.sync.attach();
 	return entry.sync;
+}
+
+/**
+ * Destroys this device's copy of a CRDT store: records and history (see
+ * `CrdtDocStore.destroy()`). It affects this device only; nothing is sent or removed anywhere.
+ * What was not synced and is not in a backup is lost.
+ *
+ * Waits for syncs under way, then makes every later sync get the data back from the bucket or
+ * folder, this device's own uploads included, and drops the changes waiting to be uploaded. The
+ * progress is marked first: if the app stops in between, the store is still whole, and the next
+ * sync merely applies everything again.
+ *
+ * Only this tab is taken care of. Live Peer Sync and other open tabs are for the caller to stop.
+ */
+export async function destroyLocalStore(
+	kind: DocKind,
+	store: DeltaDoc & { destroy(): Promise<void> }
+): Promise<void> {
+	while (destroying.has(kind)) await destroying.get(kind);
+	const run = (async () => {
+		const open = [...registry].filter(([id]) => id.startsWith(`${kind}|`));
+		for (const [id] of open) registry.delete(id);
+		await Promise.all(open.map(([, entry]) => entry.sync.close()));
+		await markStoreDestroyed(kind);
+		await store.destroy();
+	})();
+	destroying.set(
+		kind,
+		run.catch(() => undefined)
+	);
+	try {
+		await run;
+	} finally {
+		destroying.delete(kind);
+	}
+	await attachConfiguredRemotes(kind, store);
 }
 
 /** Forgets every delta sync, so the next `getDeltaSync` is built with the device's current ID (after it switched). */

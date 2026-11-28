@@ -45,6 +45,8 @@
 	} from '#lib/constants';
 	import { saveFile, fileExists } from '#lib/utils/opfslib';
 	import HelpButton from '#lib/help/HelpButton.svelte';
+	import DestroyStoreDialog from '#lib/components/DestroyStoreDialog.svelte';
+	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
 	import demoDataService from '#lib/services/demoDataService';
 	import { getXactStore } from '#lib/storage/xactStoreRegistry';
 	import { getScxStore } from '#lib/storage/scxStoreRegistry';
@@ -99,6 +101,12 @@
 	let demoBusy = $state(false);
 	let resetTarget = $state<'xacts' | 'scx' | null>(null);
 	let resetBusy = $state(false);
+	let destroyTarget = $state<'xacts' | 'scx' | null>(null);
+
+	const STORE_ROWS = [
+		{ target: 'xacts', label: 'Device transactions' },
+		{ target: 'scx', label: 'Scheduled transactions' }
+	] as const;
 
 	const RESET_LABELS = { xacts: 'transaction', scx: 'scheduled transaction' } as const;
 
@@ -745,9 +753,9 @@
 	<div id="backup-sync" class="scroll-mt-16"></div>
 	<CashierCardTemplate heading="Backup & Sync" Icon={CloudUploadIcon} bodyClass="space-y-3 px-3">
 		{#snippet description()}
-			Enable only the options you use. Enabled options appear on the <a class="link" href="/sync"
-				>Sync page</a
-			>. Stored on this device.
+			Enable only the options you use. Enabled options appear on the <a class="link" href="/sync">
+				Sync page
+			</a>. Stored on this device.
 		{/snippet}
 
 		{#each syncOptionRows as row (row.option)}
@@ -817,7 +825,7 @@
 			time they sync; records they created in the meantime are kept.
 		{/snippet}
 
-		{#each [{ target: 'xacts', label: 'Device transactions' }, { target: 'scx', label: 'Scheduled transactions' }] as const as row (row.target)}
+		{#each STORE_ROWS as row (row.target)}
 			<div class="flex items-center gap-3">
 				<div class="min-w-0 flex-1">
 					<p class="text-sm font-medium">{row.label}</p>
@@ -842,7 +850,36 @@
 		{/each}
 	</CashierCardTemplate>
 
+	<!-- ── Destroy stores ──────────────────────────────────── -->
+	<div class="border-error rounded-box border-2">
+		<CashierCardTemplate heading="Destroy Stores" Icon={TriangleAlert} bodyClass="space-y-3 px-3">
+			{#snippet description()}
+				Deletes a store's records and history <strong>on this device only</strong>, to start over
+				from sync or a backup.
+			{/snippet}
+
+			{#each STORE_ROWS as row (row.target)}
+				<div class="flex items-center gap-3">
+					<p class="min-w-0 flex-1 text-sm font-medium">{row.label}</p>
+					<button
+						class="btn btn-error btn-xs shrink-0 rounded"
+						type="button"
+						aria-label="Destroy {row.label.toLowerCase()}"
+						disabled={!storeStats[row.target]}
+						onclick={() => (destroyTarget = row.target)}
+					>
+						<TriangleAlert size={14} /> Destroy
+					</button>
+				</div>
+			{/each}
+		</CashierCardTemplate>
+	</div>
+
 	<Fab Icon={Check} onclick={saveSettings} />
+
+	{#if destroyTarget}
+		<DestroyStoreDialog target={destroyTarget} onclose={() => (destroyTarget = null)} />
+	{/if}
 
 	<!-- Reset Store Confirmation Modal -->
 	{#if resetTarget}

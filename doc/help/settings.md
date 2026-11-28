@@ -29,6 +29,26 @@ These apply only to this device and aren't included in exports or in the setting
 
 - **HTTP Proxy** — the endpoint used for outgoing requests to sources that block CORS (some [price providers](/help/price-download), the Mistral transcription API in [Voice mode](/help/voice-entry)). Leave the **Proxy URL** empty to use the app's own same-origin `/api/proxy` endpoint; set a full URL (e.g. `https://your-worker.workers.dev/api/proxy`) to use your own deployment. The **API key** is sent as the `X-Proxy-Key` header and is only needed when the proxy is protected. Both values are stored on this device only and are never exported or synced.
 
+## Reset Stores
+
+Resets an **empty** transaction store, which discards the traces of deleted records. This is shared: your other devices follow the next time they sync.
+
+## Destroy Stores
+
+Deletes a transaction store's records **and history** on this device only, so that you can start over from sync or from a [Backup](/help/backup). It works also when the store is not empty. It deletes nothing on other devices or in remote storage. Live Peer Sync is disconnected, and every other Cashier tab or window has to be closed first.
+
+**Only data in a backup or another copy can be recovered.** Without sync and without a backup, the data is permanently lost. The dialog offers a backup of the store first. Check that the file was saved: the app cannot tell.
+
+What you can get back:
+
+- **S3 or WebDAV** — the next sync downloads what the storage still holds, including this device's own uploads. Changes that were never uploaded are not there.
+- **Peer Sync** — another device can send back what it has, when it is online.
+- **A backup** — what was in it when it was made. If you then sync, anything in the backup that was never synced reaches your other devices too.
+
+A mistake that was already synced comes back with the next sync, because it is part of the shared history.
+
+**Scheduled transactions:** a backup file holds them as a list, without their history. After restoring such a list, a sync can bring back deleted entries, or let old versions replace newer edits, also on other devices. If sync has your current data, don't restore them; sync instead.
+
 ## Toolbar menu
 
 - **OPFS Storage** — opens [File Storage](/help/opfs-file-storage) to browse the app's private storage directly.
