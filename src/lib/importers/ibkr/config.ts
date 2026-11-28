@@ -5,6 +5,8 @@ import type { SymbolEntry } from './symbols';
  *
  * Account templates may contain `{currency}` and `{symbol}` (the book symbol, with `.` and `_`
  * written as `-`).
+ *
+ * Shared and exported as plain text: never add a secret here (see importers/config.ts).
  */
 export interface IbkrConfig {
 	/** Cash in one currency, e.g. `Assets:Investments:IB:Cash-{currency}`. */

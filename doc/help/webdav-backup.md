@@ -20,6 +20,8 @@ The uploaded changes pile up in the folder. **Compact now** (next to the refresh
 
 ## Encryption
 
+**Settings and credentials:** the shared settings are sent without the WebDAV password, and comparison and preview views do not show it. A password in a copy that an older version uploaded is ignored. Taking settings from elsewhere keeps the password on this device, as long as the server URL and user name are the same; otherwise enter it again in **WebDAV Config**. An empty settings list is not uploaded, and a list that is empty or damaged is not applied: your settings stay as they are, and an error is shown.
+
 In **WebDAV Config** you can switch on **Encrypt synced transactions**. The files of the working set and the scheduled transactions are then encrypted with a passphrase before they leave the device (the settings backup is not). Use the same passphrase on every device; it is kept on the device only.
 
 If the folder already holds files when you switch encryption on, or is encrypted when you switch it off, Cashier offers to convert every file in the folder. Do this on one device while the others are not syncing; afterwards set the same on the others. A device whose setting does not match the folder refuses to sync and says so. Starting a conversion again after an interruption is safe.

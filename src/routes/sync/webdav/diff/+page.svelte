@@ -2,6 +2,7 @@
     import { onMount } from 'svelte';
     import { page } from '$app/state';
     import Toolbar from '#lib/components/Toolbar.svelte';
+    import { exportSettingsJson, readableSettingsJson } from '#lib/services/backup';
     import { settings, SettingKeys } from '#lib/settings';
     import { WebDavClient } from '#lib/utils/webdav';
     import { buildDiffLines, type DiffSection } from '#lib/utils/diffText';
@@ -20,11 +21,11 @@
 
         try {
             if (files.includes('settings')) {
-                const allSettings = await settings.getAll();
-                const localContent = JSON.stringify(allSettings, null, 2);
+                const localContent = readableSettingsJson(await exportSettingsJson());
                 const res = await dav.getJson('settings.json');
                 if (res.ok) {
-                    const remoteContent = await res.text();
+                    // Blanked here too: a file uploaded by an older version holds the password.
+                    const remoteContent = readableSettingsJson(await res.text());
                     const lines = buildDiffLines(remoteContent, localContent);
                     result.push({ filename: 'settings.json', lines, identical: lines.every(l => l.type === 'context') });
                 } else {

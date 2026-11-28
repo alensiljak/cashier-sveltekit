@@ -3,13 +3,15 @@
  *
  * A secret is a field of a stored setting (the WebDAV password, the S3 secret key), not a whole
  * setting: the rest of the setting (URL, bucket, user) is plain and goes into the backup as it is.
- * `splitSecrets` takes the secret fields out, `mergeSecrets` puts them back.
+ * Which fields these are is said by the backup rules (rules.ts). `splitSecrets` takes them out,
+ * `mergeSecrets` puts them back.
  *
  * The block is optional. It is encrypted with a key derived from a passphrase the person enters
  * (the same PBKDF2 + AES-GCM as the S3 sync, see s3Crypto.ts), so the file alone does not give
  * the credentials away.
  */
-import { SettingKeys, DeviceSettingKeys } from '#lib/settings';
+import type { StoredSetting } from './model';
+import { SECRET_SPECS, type SecretSpec } from './rules';
 import {
 	createKeyParams,
 	decrypt,
@@ -22,58 +24,6 @@ import {
 
 /** Shortest passphrase accepted for the secrets block. A typo or a short one is not recoverable. */
 export const MIN_BACKUP_PASSPHRASE_LENGTH = 12;
-
-export interface SecretSpec {
-	/** The table the setting is stored in. */
-	store: 'settings' | 'device';
-	key: string;
-	/** Secret fields of the stored object; of each element, when the stored value is an array. */
-	fields: string[];
-	/**
-	 * Plain fields that say what the secrets belong to. A secret already on this device is kept
-	 * through a restore only when these are the same, so it is never paired with another server.
-	 */
-	identity: string[];
-	/** Prefix of the field ids in `restoreMissing`, e.g. 'webdav' for 'webdav.password'. */
-	label: string;
-	/** Whether the pages mark an empty field of this setting as required after a restore. */
-	track: boolean;
-}
-
-export const SECRET_SPECS: SecretSpec[] = [
-	{
-		store: 'settings',
-		key: SettingKeys.webdavSettings,
-		fields: ['password'],
-		identity: ['url', 'username'],
-		label: 'webdav',
-		track: true
-	},
-	{
-		store: 'device',
-		key: DeviceSettingKeys.s3Settings,
-		fields: ['accessKeyId', 'secretAccessKey', 'passphrase'],
-		identity: ['endpoint', 'bucket', 'prefix'],
-		label: 's3',
-		track: true
-	},
-	{
-		store: 'device',
-		key: DeviceSettingKeys.webdavEncryption,
-		fields: ['passphrase'],
-		identity: [],
-		label: 'webdavEncryption',
-		track: true
-	},
-	{
-		store: 'device',
-		key: DeviceSettingKeys.peerIceServers,
-		fields: ['username', 'credential'],
-		identity: ['urls'],
-		label: 'ice',
-		track: false
-	}
-];
 
 export const specFor = (store: SecretSpec['store'], key: string) =>
 	SECRET_SPECS.find((s) => s.store === store && s.key === key);
@@ -114,7 +64,7 @@ export function splitSecrets(value: unknown, spec: SecretSpec): SplitResult {
 	let any = false;
 	for (const e of entries) {
 		if (!isObj(e)) continue;
-		for (const f of spec.fields) {
+		for (const f of spec.secretFields) {
 			if (filled(e[f])) {
 				any = true;
 				if (spec.track) withheld.add(`${spec.label}.${f}`);
@@ -123,13 +73,13 @@ export function splitSecrets(value: unknown, spec: SecretSpec): SplitResult {
 	}
 	const plain = mapEntries(value, (e) => {
 		const copy = { ...e };
-		for (const f of spec.fields) if (f in copy) copy[f] = '';
+		for (const f of spec.secretFields) if (f in copy) copy[f] = '';
 		return copy;
 	});
 	if (plain === undefined) return { plain: value, withheld: [] };
 	const secrets = any
 		? mapEntries(value, (e) =>
-				Object.fromEntries(spec.fields.filter((f) => filled(e[f])).map((f) => [f, e[f]]))
+				Object.fromEntries(spec.secretFields.filter((f) => filled(e[f])).map((f) => [f, e[f]]))
 			)
 		: undefined;
 	return { plain, secrets, withheld: [...withheld] };
@@ -159,7 +109,9 @@ export function keepExistingSecrets(
 		return restored;
 	}
 	const out = { ...restored };
-	for (const f of spec.fields) if (!filled(out[f]) && filled(existing[f])) out[f] = existing[f];
+	for (const f of spec.secretFields) {
+		if (!filled(out[f]) && filled(existing[f])) out[f] = existing[f];
+	}
 	return out;
 }
 
@@ -167,6 +119,27 @@ export function keepExistingSecrets(
 export function stillMissing(id: string, value: unknown): boolean {
 	const field = id.slice(id.indexOf('.') + 1);
 	return isObj(value) && !filled(value[field]);
+}
+
+/**
+ * Blanks the secret fields of the settings that have them. Adds to `into` the secrets that were
+ * taken out, keyed by `secretId`, and the ids of the fields that had a value.
+ */
+export function stripSecrets(
+	list: StoredSetting[],
+	store: SecretSpec['store'],
+	into: { secrets: Record<string, unknown>; withheld: string[] } = { secrets: {}, withheld: [] }
+): StoredSetting[] {
+	return list.map((setting) => {
+		const spec = specFor(store, setting.key);
+		if (!spec) return setting;
+		const value = parseJson(setting.value);
+		if (value === undefined) return setting;
+		const { plain, secrets, withheld } = splitSecrets(value, spec);
+		if (secrets !== undefined) into.secrets[secretId(spec)] = secrets;
+		into.withheld.push(...withheld);
+		return { ...setting, value: JSON.stringify(plain) };
+	});
 }
 
 export interface SecretsBlock {

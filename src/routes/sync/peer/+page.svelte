@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { onMount, untrack } from 'svelte';
 	import JsonMergeViewer from '#lib/components/JsonMergeViewer.svelte';
-	import db from '#lib/data/db';
 	import { summarizeScxReport, type ScxMergeReport } from '#lib/services/scxMergeReport';
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
@@ -9,7 +8,8 @@
 	import LinkIcon from '@lucide/svelte/icons/link';
 	import DeviceLabel from '#lib/components/DeviceLabel.svelte';
 	import HelpButton from '#lib/help/HelpButton.svelte';
-	import { Setting } from '#lib/data/model';
+	import type { Setting } from '#lib/data/model';
+	import { importSettingsJson, readableSettingsJson } from '#lib/services/backup';
 	import Notifier from '#lib/utils/notifier';
 	import GitCompareArrowsIcon from '@lucide/svelte/icons/git-compare-arrows';
 	import DownloadIcon from '@lucide/svelte/icons/download';
@@ -463,7 +463,8 @@
 					filename: 'settings.json',
 					kind: 'settings',
 					local: JSON.parse(local.settings) as Setting[],
-					remote: JSON.parse(remote.settings) as Setting[]
+					// Blanked here too: the peer may run a version that sends passwords.
+					remote: JSON.parse(readableSettingsJson(remote.settings)) as Setting[]
 				});
 			}
 			diffSections = sections;
@@ -483,9 +484,7 @@
 		try {
 			const remote = await fetchRemoteData([item]);
 			if (item === 'settings' && remote.settings !== null) {
-				const entries: Setting[] = JSON.parse(remote.settings);
-				await db.settings.clear();
-				await db.settings.bulkPut(entries.map((e) => new Setting(e.key, e.value)));
+				await importSettingsJson(remote.settings);
 				Notifier.success('Settings updated');
 			}
 			refreshHashesIfSelected();
@@ -502,8 +501,7 @@
 	async function applySettingsMerge(merged: Setting[]) {
 		applyingSettingsMerge = true;
 		try {
-			await db.settings.clear();
-			await db.settings.bulkPut(merged.map((s) => new Setting(s.key, s.value)));
+			await importSettingsJson(JSON.stringify(merged));
 			Notifier.success('Settings: merge applied.');
 			showDiff = false;
 			refreshHashesIfSelected();

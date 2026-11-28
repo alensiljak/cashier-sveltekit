@@ -8,7 +8,11 @@ const HEADER_START = '"Booking Date","Value Date","Partner Name"';
 const ISIN_RE = /\bISIN\s+([A-Z]{2}[A-Z0-9]{9}\d)\b/;
 const DIVIDEND_RE = /cash dividend/i;
 
-/** JSON-serializable, so it can live in Settings or OPFS. */
+/**
+ * JSON-serializable, so it can live in Settings or OPFS.
+ *
+ * Shared and exported as plain text: never add a secret here (see importers/config.ts).
+ */
 export interface N26Config extends RuleConfig {
 	/** The N26 asset account. */
 	account: string;

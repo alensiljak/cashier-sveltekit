@@ -138,6 +138,10 @@ safely. Transaction origins keep updates from echoing: `remote` (from a peer,
   `doc/completed-projects/2026-10-16_delta-sync.md`.
 - **WebDAV backup** (`services/webdavAutoBackupService.ts`, `webdavDelta.ts`)
   uploads after each write, debounced, using delta sync.
+- **Shared settings in sync** (`services/backup/sharedSettings.ts`): S3, WebDAV
+  and Peer Sync send, show and import settings only through it, so secrets stay
+  on the device. What a backup does with each setting is declared in
+  `services/backup/rules.ts`.
 - **Backup file** (`services/backup/`,
   `restoredDevice.ts`) is a versioned JSON file with optional sections: settings,
   scheduled transactions and the working set (both as Yjs state), portable device settings,

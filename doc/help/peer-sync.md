@@ -49,6 +49,8 @@ The same list is used by WebDAV and S3 sync: they merge transactions only from t
 4. Use **Preview** to see the raw remote content, or **Diff** to compare it against your local copy, before committing to anything.
 5. Tap **Pull** and confirm — this overwrites your local data with the peer's version and cannot be undone.
 
+**Settings and credentials:** the shared settings are sent without the WebDAV password, and comparison and preview views do not show it. A password in a copy that an older version uploaded is ignored. Taking settings from elsewhere keeps the password on this device, as long as the server URL and user name are the same; otherwise enter it again in **WebDAV Config**. An empty settings list is not uploaded, and a list that is empty or damaged is not applied: your settings stay as they are, and an error is shown.
+
 **Local Transactions** — the transactions entered on your devices — are merged, not overwritten: **Pull & merge** combines both devices' transactions, so nothing entered on either side is lost. While both devices are connected, new transactions are also sent to trusted peers as you enter them.
 
 Need to sync the rest of your Beancount book (all its files)? Use the **Open Beancount Sync** link below the sync options instead — it compares your full local ledger against the peer's and lets you pull individual files.

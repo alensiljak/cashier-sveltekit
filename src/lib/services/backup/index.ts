@@ -13,13 +13,18 @@ import { readV2 } from './readers/v2';
 import { readV3 } from './readers/v3';
 import { BACKUP_VERSION } from './write';
 
-export { importSettingsJson, type RestoreOptions, type RestoreResult } from './apply';
+export type { RestoreOptions, RestoreResult } from './apply';
 export { ALL_SECTIONS, type BackupSection } from './model';
+export {
+	exportSettingsJson,
+	importSettingsJson,
+	isEmptySettingsJson,
+	readableSettingsJson
+} from './sharedSettings';
 export {
 	BACKUP_VERSION,
 	createBackup,
 	createBackupFile,
-	exportSettingsJson,
 	getBackupFilename,
 	type BackupOptions
 } from './write';

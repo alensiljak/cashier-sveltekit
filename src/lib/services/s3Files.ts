@@ -3,7 +3,7 @@
  * items, and settling conflicts and confirmed deletions. The CRDT stores are in s3CrdtSync.ts.
  */
 import { CASHIER_DATA_DIR } from '#lib/constants';
-import { exportSettingsJson, importSettingsJson } from '#lib/services/backup';
+import { exportSettingsJson, importSettingsJson, isEmptySettingsJson } from '#lib/services/backup';
 import { normalizeEol } from '#lib/sync/SyncSource';
 import { collectExportableFiles } from '#lib/utils/opfsExport';
 import { deleteFile, saveBinaryFile } from '#lib/utils/opfslib';
@@ -40,6 +40,8 @@ export interface SharedFile {
 	read(): Promise<Uint8Array<ArrayBuffer> | null>;
 	/** Returns the bytes actually stored, which may be a canonicalized form of `bytes`. */
 	write(bytes: Uint8Array<ArrayBuffer>): Promise<Uint8Array>;
+	/** Throws when this content must not be uploaded. */
+	checkUpload?(bytes: Uint8Array): void;
 	/** Deletes the local file. Absent for files that are never deleted (settings). */
 	remove?(): Promise<void>;
 }
@@ -59,6 +61,11 @@ export const settingsFile = (): SharedFile => ({
 	item: 'settings',
 	path: SETTINGS_PATH,
 	read: async () => TEXT.encode(await exportSettingsJson()),
+	checkUpload: (bytes) => {
+		if (isEmptySettingsJson(new TextDecoder().decode(bytes))) {
+			throw new Error('The settings list is empty, so it is not uploaded');
+		}
+	},
 	write: async (bytes) => {
 		await importSettingsJson(new TextDecoder().decode(bytes));
 		return bytes;
@@ -98,6 +105,7 @@ async function removeLocal(s: S3Session, file: SharedFile): Promise<void> {
 }
 
 async function putShared(s: S3Session, file: SharedFile, bytes: Uint8Array<ArrayBuffer>) {
+	file.checkUpload?.(bytes);
 	await putObject(s.cfg, dataKey(file.path), await encrypt(s.key, bytes));
 	const hash = await sha256Hex(bytes);
 	s.own.files[file.path] = nextEntry(s.manifests, file.path, hash);

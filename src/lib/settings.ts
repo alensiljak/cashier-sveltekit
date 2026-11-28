@@ -1,6 +1,7 @@
 /*
     Various configuration-related things
 */
+import { USER_BOOK_FILENAME } from '#lib/constants';
 import db from '#lib/data/db';
 import { Setting } from '#lib/data/model';
 
@@ -59,7 +60,10 @@ export interface BudgetCategory {
 	since?: string;
 }
 
-/** Settings shared across all devices (exported/importable). */
+/**
+ * Settings shared across all devices (exported/importable). Every key declared here or in
+ * `DeviceSettingKeys` needs a backup rule (services/backup/rules.ts).
+ */
 export const SettingKeys = {
 	// asset allocation settings
 	assetAllocationDefinition: 'aa.definition',
@@ -92,6 +96,8 @@ export const SettingKeys = {
 	shortDateFormat: 'shortDateFormat',
 	// import book file spec (same across all devices)
 	importBookFileSpec: 'importBookFileSpec',
+	// the book's main file in OPFS
+	userBookFilename: USER_BOOK_FILENAME,
 	// Expenses report filter
 	expensesHiddenAccounts: 'expenses.hiddenAccounts',
 	// Expense Trend report filter (separate from the Expenses one)
@@ -132,7 +138,7 @@ export const SettingKeys = {
 	// skippedProviders: string[] — providers unticked on the Price Download page. They stay
 	// enabled and mapped, but are left out of the next download. Default: none (all included).
 	priceSkippedProviders: 'prices.skippedProviders'
-};
+} as const;
 
 /** Settings specific to this device (not exported). */
 export const DeviceSettingKeys = {
@@ -262,7 +268,28 @@ export const DeviceSettingKeys = {
 	// fetched account balances. Device-only, like the sessions they belong to.
 	enableBankingPendingAuth: 'importer.enablebanking.pendingAuth',
 	enableBankingBalances: 'importer.enablebanking.balances'
-};
+} as const;
+
+/** The keys a shared setting can be written under. The importer configs have one each. */
+export type SettingKey = (typeof SettingKeys)[keyof typeof SettingKeys] | `importer.${string}`;
+
+/**
+ * `K`, unless it is a declared device setting. Some of those start with `importer.` too and would
+ * pass as an importer config, yet they hold credentials, which must not become shared settings.
+ */
+type NotDeviceKey<K> = K extends (typeof DeviceSettingKeys)[keyof typeof DeviceSettingKeys]
+	? never
+	: K;
+
+/** Whether `key` is declared as a shared setting; for keys that come from outside the code. */
+export const isSharedSettingKey = (key: string): key is SettingKey =>
+	(Object.values(SettingKeys) as string[]).includes(key) ||
+	(key.startsWith('importer.') && !(Object.values(DeviceSettingKeys) as string[]).includes(key));
+
+/** The keys a device setting can be written under. Some have one entry per store or bucket. */
+export type DeviceSettingKey =
+	| (typeof DeviceSettingKeys)[keyof typeof DeviceSettingKeys]
+	| `${typeof DeviceSettingKeys.deltaSyncState | typeof DeviceSettingKeys.deltaSyncEpoch}:${string}`;
 
 class UserSettings {
 	async get<T>(key: unknown): Promise<T | null> {
@@ -280,12 +307,14 @@ class UserSettings {
 		return value;
 	}
 
-	async getAll() {
+	/** Every setting as stored, passwords included. To back up or sync, use `exportSettingsJson()`. */
+	async getAllWithSecrets() {
 		return db.settings.toArray();
 	}
 
-	async set(key: string, value: unknown) {
-		const jsonValue = JSON.stringify(value);
+	async set<K extends SettingKey>(key: NotDeviceKey<K>, value: unknown) {
+		// `undefined` has no JSON form; stored as `null`, which reads the same.
+		const jsonValue = JSON.stringify(value ?? null);
 		const setting = new Setting(key, jsonValue);
 
 		await db.settings.put(setting);
@@ -312,11 +341,12 @@ class DeviceSettings {
 		return value;
 	}
 
-	async getAll() {
+	/** Every device setting as stored, credentials included. */
+	async getAllWithSecrets() {
 		return db.deviceSettings.toArray();
 	}
 
-	async set(key: string, value: unknown) {
+	async set(key: DeviceSettingKey, value: unknown) {
 		const jsonValue = JSON.stringify(value);
 		const setting = new Setting(key, jsonValue);
 

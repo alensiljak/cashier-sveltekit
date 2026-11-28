@@ -73,7 +73,7 @@ A restored new device still has to be paired: the others do not trust its key. A
 ## Preventing omissions
 
 1. **Every key has a backup rule**: plain, whole-value secret, secret fields, or excluded. Both backup lists are generated from the rules. The rules are typed against all declared keys, so `npm run check` fails when a key has none.
-2. **Only declared keys can be written.** `set()` accepts the declared key types, plus `importer.${string}` for shared settings.
+2. **Only declared keys can be written.** `set()` accepts the declared key types, plus `importer.${string}` for shared settings. Shared `set()` refuses declared device keys, as some of those also start with `importer.` and hold credentials.
 3. **Unsafe reads are obvious.** The read that returns everything is named `getAllWithSecrets()`: it is not used unless the secrets are needed. Backup and sync use the safe export.
 
 The types cannot detect a new secret inside an existing object. The importer configs need a comment and tests.
@@ -97,8 +97,10 @@ services/backup/
   model.ts       the data a restore works with
   secrets.ts     secret fields, and the encrypted credentials block
   readers/       one module per format version: validate and convert (shared checks in common.ts)
+  rules.ts       what a backup does with each setting
   write.ts       writes the latest version only
   apply.ts       restore logic for all versions
+  sharedSettings.ts  the safe export and checked import that sync uses
 ```
 
 - A reader keeps its own definition of its format and does not depend on the current key lists.
@@ -256,6 +258,7 @@ A rebuild cannot recover data that no source holds any more.
 
 - S3, WebDAV and Peer Sync use the safe settings export and import, including their merge, preview and comparison views. The import keeps the local WebDAV password for the same server.
 - An empty settings list is not uploaded.
+- Credentials in an incoming list are ignored. An older version may have sent them.
 - Before an import changes anything, it rejects an empty list, invalid entries and duplicate keys. On failure, the local settings stay and an error is shown.
 - In S3, `data/settings.json` holds the whole shared table, with the WebDAV password blanked, so no shared keys are missing. Device settings are not part of it.
 

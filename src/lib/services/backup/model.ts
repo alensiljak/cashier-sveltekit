@@ -3,40 +3,11 @@
  * (readers/) produce it and apply.ts restores it.
  */
 import type { Revocation, ScheduledTransaction, TrustedPeer } from '#lib/data/model';
-import { DeviceSettingKeys } from '#lib/settings';
-import type { SecretSpec } from './secrets';
+import type { SecretSpec } from './rules';
 
 export type BackupSection = 'settings' | 'scx' | 'workingSet' | 'device' | 'peers';
 
 export const ALL_SECTIONS: BackupSection[] = ['settings', 'scx', 'workingSet', 'device', 'peers'];
-
-/**
- * The device settings that travel in a backup. Everything else is tied to this device or to what it
- * has synced so far (its ID and key, sync progress, hashes of the files last seen) and is left out.
- * The sync group secret is left out too: an invite hands it out again.
- *
- * It is what gets written, and also the limit of what a restore writes, whatever a file holds.
- * The readers have their own lists, for what their format holds.
- */
-export const PORTABLE_DEVICE_KEYS: string[] = [
-	DeviceSettingKeys.visibleCards,
-	DeviceSettingKeys.peerName,
-	DeviceSettingKeys.peerAutoReload,
-	DeviceSettingKeys.peerIceServers,
-	DeviceSettingKeys.importBookDirectory,
-	DeviceSettingKeys.importAutoReload,
-	DeviceSettingKeys.exportBookDirectory,
-	DeviceSettingKeys.ledgerCacheEnabled,
-	DeviceSettingKeys.notificationsEnabled,
-	DeviceSettingKeys.notificationTime,
-	DeviceSettingKeys.webdavAutoBackup,
-	DeviceSettingKeys.webdavEncryption,
-	DeviceSettingKeys.s3Settings,
-	DeviceSettingKeys.s3AutoBackup,
-	DeviceSettingKeys.syncWebdavEnabled,
-	DeviceSettingKeys.syncS3Enabled,
-	DeviceSettingKeys.syncPeerEnabled
-];
 
 export interface StoredSetting {
 	key: string;

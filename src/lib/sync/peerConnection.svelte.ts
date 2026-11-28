@@ -20,7 +20,8 @@
 	singleton instead of owning their own `PeerPresence`, so switching pages
 	never drops the room or re-triggers the `hello` handshake.
 */
-import { settings, deviceSettings, DeviceSettingKeys } from '#lib/settings';
+import { exportSettingsJson, readableSettingsJson } from '#lib/services/backup';
+import { deviceSettings, DeviceSettingKeys } from '#lib/settings';
 import { getReadyScxStore } from '#lib/services/scxService';
 import { describeScxChanges, type ScxMergeReport } from '#lib/services/scxMergeReport';
 import { PeerPresence, type RelayStrategy } from './peerPresence.svelte';
@@ -75,7 +76,7 @@ async function hashText(content: string): Promise<string> {
 
 export async function getLocalData(files: string[]): Promise<RemoteData> {
 	return {
-		settings: files.includes('settings') ? JSON.stringify(await settings.getAll(), null, 2) : null
+		settings: files.includes('settings') ? readableSettingsJson(await exportSettingsJson()) : null
 	};
 }
 

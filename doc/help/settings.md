@@ -52,7 +52,7 @@ A mistake that was already synced comes back with the next sync, because it is p
 ## Toolbar menu
 
 - **OPFS Storage** — opens [File Storage](/help/opfs-file-storage) to browse the app's private storage directly.
-- **JSON Editor** — edits the raw settings as JSON, for advanced or bulk changes.
+- **JSON Editor** — edits the raw settings as JSON, for advanced or bulk changes. It shows the stored values, **the WebDAV password included**. It does not save a setting the app does not know, unless it was already stored, so that a mistyped name is noticed.
 - **Speech Settings** — opens the [speech configuration](/help/voice-entry) used by Quick Entry's Voice mode: the transcription engine (built-in browser recognition or Mistral Voxtral), the language, and the Mistral API key.
 - **WebDAV Config** — sets the WebDAV folder URL and credentials used by [WebDAV Backup](/help/webdav-backup).
 

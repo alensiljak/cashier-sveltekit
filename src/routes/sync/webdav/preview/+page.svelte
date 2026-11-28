@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import Toolbar from '#lib/components/Toolbar.svelte';
+	import { exportSettingsJson, readableSettingsJson } from '#lib/services/backup';
 	import { settings, SettingKeys } from '#lib/settings';
 	import { WebDavClient } from '#lib/utils/webdav';
 	import CheckIcon from '@lucide/svelte/icons/check';
@@ -46,11 +47,13 @@
 			if (files.includes('settings')) {
 				let content: string;
 				if (source === 'local') {
-					const allSettings = await settings.getAll();
-					content = JSON.stringify(allSettings, null, 2);
+					content = readableSettingsJson(await exportSettingsJson());
 				} else {
 					const res = await dav!.getJson('settings.json');
-					content = res.ok ? await res.text() : `Error ${res.status}: ${res.statusText}`;
+					// Blanked here too: a file uploaded by an older version holds the password.
+					content = res.ok
+						? readableSettingsJson(await res.text())
+						: `Error ${res.status}: ${res.statusText}`;
 				}
 				result.push({ filename: 'settings.json', content });
 			}

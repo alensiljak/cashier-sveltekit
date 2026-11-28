@@ -14,7 +14,10 @@ export interface Rule {
 	disabled?: boolean;
 }
 
-/** Config fields shared by importers that use rules. The two tuple lists are the older format. */
+/**
+ * Config fields shared by importers that use rules. The two tuple lists are the older format.
+ * Part of importer configs, which are shared and exported as plain text.
+ */
 export interface RuleConfig {
 	rules?: Rule[];
 	/** @deprecated Read as rules; replaced on the next rule save. */

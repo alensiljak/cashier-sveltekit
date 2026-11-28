@@ -2,11 +2,17 @@
 	Which backup/sync options the user has enabled on this device.
 	Drives the menu entries and the Backup & Sync card in Settings.
 */
-import { DeviceSettingKeys, SettingKeys, deviceSettings, settings } from '#lib/settings';
+import {
+	DeviceSettingKeys,
+	SettingKeys,
+	deviceSettings,
+	settings,
+	type DeviceSettingKey
+} from '#lib/settings';
 
 export type SyncOption = 'webdav' | 's3' | 'peer';
 
-const enabledKeys: Record<SyncOption, string> = {
+const enabledKeys: Record<SyncOption, DeviceSettingKey> = {
 	webdav: DeviceSettingKeys.syncWebdavEnabled,
 	s3: DeviceSettingKeys.syncS3Enabled,
 	peer: DeviceSettingKeys.syncPeerEnabled

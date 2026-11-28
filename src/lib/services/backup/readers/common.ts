@@ -13,7 +13,8 @@ import type {
 	StoredSetting,
 	WithheldField
 } from '../model';
-import { isSecretsBlock, openSecrets, type SecretSpec } from '../secrets';
+import type { SecretSpec } from '../rules';
+import { isSecretsBlock, openSecrets } from '../secrets';
 
 /** A setting with secrets, as a format names it: `label` is its prefix in `withheld`. */
 export interface SecretSetting {

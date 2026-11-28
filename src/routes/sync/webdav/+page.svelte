@@ -3,8 +3,12 @@
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import HelpButton from '#lib/help/HelpButton.svelte';
 	import { settings, deviceSettings, SettingKeys, DeviceSettingKeys } from '#lib/settings';
-	import { Setting } from '#lib/data/model';
-	import db from '#lib/data/db';
+	import {
+		exportSettingsJson,
+		importSettingsJson,
+		isEmptySettingsJson,
+		readableSettingsJson
+	} from '#lib/services/backup';
 	import { getReadyScxStore } from '#lib/services/scxService';
 	import { uploadCrdtState, webDavModified } from '#lib/services/webdavDelta';
 	import Notifier from '#lib/utils/notifier';
@@ -123,14 +127,17 @@
 		const uploaded = { settings: false };
 		try {
 			if (includeSettings) {
-				const allSettings = await settings.getAll();
-				const json = JSON.stringify(allSettings, null, 2);
-				const res = await dav.putJsonGz('settings.json', json);
-				if (res.ok) {
-					Notifier.success('Settings uploaded');
-					uploaded.settings = true;
-				} else
-					Notifier.error(`Upload failed for settings.json.gz: ${res.status} ${res.statusText}`);
+				const json = await exportSettingsJson();
+				if (isEmptySettingsJson(json)) {
+					Notifier.error('The settings list is empty, so it was not uploaded');
+				} else {
+					const res = await dav.putJsonGz('settings.json', readableSettingsJson(json));
+					if (res.ok) {
+						Notifier.success('Settings uploaded');
+						uploaded.settings = true;
+					} else
+						Notifier.error(`Upload failed for settings.json.gz: ${res.status} ${res.statusText}`);
+				}
 			}
 			if (includeXacts) {
 				const errors = await uploadCrdtState(dav, ['xacts']);
@@ -193,9 +200,7 @@
 			if (includeSettings) {
 				const res = await dav.getJson('settings.json');
 				if (res.ok) {
-					const entries: Setting[] = JSON.parse(await res.text());
-					await db.settings.clear();
-					await db.settings.bulkPut(entries.map((e) => new Setting(e.key, e.value)));
+					await importSettingsJson(await res.text());
 					Notifier.success('Settings restored');
 					downloaded.settings = true;
 				} else {

@@ -12,21 +12,13 @@ import { getDeviceId } from '#lib/sync/ydocDevices';
 import { formatDate } from '#lib/utils/dates';
 import {
 	ALL_SECTIONS,
-	PORTABLE_DEVICE_KEYS,
 	type BackupSection,
 	type DeviceData,
 	type PeersData,
 	type StoredSetting
 } from './model';
-import {
-	parseJson,
-	sealSecrets,
-	secretId,
-	specFor,
-	splitSecrets,
-	type SecretSpec,
-	type SecretsBlock
-} from './secrets';
+import { PORTABLE_DEVICE_KEYS } from './rules';
+import { sealSecrets, stripSecrets, type SecretsBlock } from './secrets';
 
 export const BACKUP_VERSION = 3;
 
@@ -39,27 +31,6 @@ interface BackupFile {
 	withheld?: string[];
 	peers?: PeersData;
 	secrets?: SecretsBlock;
-}
-
-/**
- * Blanks the secret fields of the settings that have them. Returns the secrets that were taken
- * out, keyed by `secretId`, and the ids of the fields that had a value.
- */
-function stripSecrets(
-	list: StoredSetting[],
-	store: SecretSpec['store'],
-	into: { secrets: Record<string, unknown>; withheld: string[] }
-): StoredSetting[] {
-	return list.map((setting) => {
-		const spec = specFor(store, setting.key);
-		if (!spec) return setting;
-		const value = parseJson(setting.value);
-		if (value === undefined) return setting;
-		const { plain, secrets, withheld } = splitSecrets(value, spec);
-		if (secrets !== undefined) into.secrets[secretId(spec)] = secrets;
-		into.withheld.push(...withheld);
-		return { ...setting, value: JSON.stringify(plain) };
-	});
 }
 
 const byKey = (list: StoredSetting[]) => list.sort((a, b) => a.key.localeCompare(b.key));
@@ -103,7 +74,7 @@ export async function createBackup(options: BackupOptions = {}) {
 	const backup: BackupFile = { version: BACKUP_VERSION };
 
 	if (sections.has('settings')) {
-		backup.settings = byKey(stripSecrets(await settings.getAll(), 'settings', stripped));
+		backup.settings = byKey(stripSecrets(await settings.getAllWithSecrets(), 'settings', stripped));
 	}
 	if (sections.has('scx')) {
 		backup.scx = toBase64(await (await getReadyScxStore()).exportState());
@@ -112,7 +83,7 @@ export async function createBackup(options: BackupOptions = {}) {
 		backup.workingSet = toBase64(await (await getXactStore()).exportState());
 	}
 	if (sections.has('device')) {
-		const all = (await deviceSettings.getAll()) as StoredSetting[];
+		const all = (await deviceSettings.getAllWithSecrets()) as StoredSetting[];
 		const portable = all.filter((s) => PORTABLE_DEVICE_KEYS.includes(s.key));
 		backup.device = {
 			id: await getDeviceId(),
@@ -150,10 +121,4 @@ function downloadTextFile(content: string, fileName: string) {
 	setTimeout(() => {
 		URL.revokeObjectURL(url);
 	}, 1500);
-}
-
-/** The shared settings as JSON, without credentials. Sorted, so equal settings give equal text. */
-export async function exportSettingsJson(): Promise<string> {
-	const stripped = stripSecrets(await settings.getAll(), 'settings', { secrets: {}, withheld: [] });
-	return JSON.stringify(byKey(stripped));
 }

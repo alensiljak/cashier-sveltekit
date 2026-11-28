@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import Fab from '#lib/components/FAB.svelte';
-	import { settings } from '#lib/settings';
+	import { isSharedSettingKey, settings, type SettingKey } from '#lib/settings';
 	import Notifier from '#lib/utils/notifier';
 	import Check from '@lucide/svelte/icons/check';
 	import CircleAlert from '@lucide/svelte/icons/circle-alert';
@@ -24,7 +24,8 @@
 	}
 
 	onMount(async () => {
-		const rows = await settings.getAll();
+		// Passwords included: this is where the stored settings are edited.
+		const rows = await settings.getAllWithSecrets();
 		const obj: Record<string, unknown> = {};
 		for (const row of rows) {
 			try {
@@ -39,8 +40,15 @@
 	async function save() {
 		if (!isValid) return;
 		const obj = JSON.parse(jsonText) as Record<string, unknown>;
+		// A key that is already stored can be edited, also when this version does not declare it.
+		const stored = new Set((await settings.getAllWithSecrets()).map((row) => row.key));
+		const unknown = Object.keys(obj).filter((key) => !stored.has(key) && !isSharedSettingKey(key));
+		if (unknown.length > 0) {
+			Notifier.error(`Nothing was saved. Unknown setting: ${unknown.join(', ')}`);
+			return;
+		}
 		for (const [key, value] of Object.entries(obj)) {
-			await settings.set(key, value);
+			await settings.set(key as SettingKey, value);
 		}
 		Notifier.success('Settings saved');
 	}

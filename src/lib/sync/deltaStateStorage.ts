@@ -3,7 +3,7 @@ import { deviceSettings, DeviceSettingKeys } from '#lib/settings';
 import { stateAfterDestroy, type DeltaState, type DeltaStateStorage } from './deltaSync';
 import type { DocKind } from './ydocDevices';
 
-const epochKey = (kind: DocKind) => `${DeviceSettingKeys.deltaSyncEpoch}:${kind}`;
+const epochKey = (kind: DocKind) => `${DeviceSettingKeys.deltaSyncEpoch}:${kind}` as const;
 
 /**
  * Records that the local store of `kind` is being destroyed. From now on, progress saved before
@@ -19,7 +19,7 @@ export async function markStoreDestroyed(kind: DocKind): Promise<void> {
  * what was applied from one bucket says nothing about another.
  */
 export function deviceSettingsStateStorage(kind: DocKind, bucketId: string): DeltaStateStorage {
-	const key = `${DeviceSettingKeys.deltaSyncState}:${kind}:${bucketId}`;
+	const key = `${DeviceSettingKeys.deltaSyncState}:${kind}:${bucketId}` as const;
 	return {
 		load: async () => {
 			const saved = await deviceSettings.get<DeltaState>(key);

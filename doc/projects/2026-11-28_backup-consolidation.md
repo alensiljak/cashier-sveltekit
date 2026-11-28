@@ -18,8 +18,6 @@ Each is removed from this list when its step is done.
 
 | Problem                                                                                                                               | Step |
 | ------------------------------------------------------------------------------------------------------------------------------------- | ---- |
-| WebDAV upload and Peer Sync send `settings.getAll()`, which includes the WebDAV password                                              | 4    |
-| `importSettingsJson` only checks that its input is a list. An empty list erases the shared settings                                   | 4    |
 | Restoring scheduled transactions replaces the list. The deletions can then sync to other devices                                      | 5    |
 | Restored trusted devices keep `fileSyncInitializedAt` without the file-sync baseline                                                  | 5    |
 | A restore records the backup's device as the previous device even on a device that has been in use                                    | 5    |
@@ -60,11 +58,14 @@ Restoring the current list and then syncing can put wrong data on other devices.
 
 ## Step 4: safety fixes
 
-- [ ] WebDAV and Peer Sync use the safe settings export and import, also in the merge, preview and comparison views
-- [ ] Checks before a settings upload and import
-- [ ] A backup rule for every key, declared key types for `set()`, `userBookFilename` added to `SettingKeys`
-- [ ] Rename `getAll()` to `getAllWithSecrets()`
-- [ ] Comments on the importer configs about secrets
+Done.
+
+- [x] WebDAV and Peer Sync use the safe settings export and import, also in the merge, preview and comparison views
+- [x] Checks before a settings upload and import
+- [x] A backup rule for every key, declared key types for `set()`, `userBookFilename` added to `SettingKeys`. The rules say what is backed up now; step 6 changes them
+- [x] Rename `getAll()` to `getAllWithSecrets()`
+- [x] Comments on the importer configs about secrets, with tests (`tests/unit/importerConfigSecrets.test.ts`)
+- [ ] By hand: upload, diff, preview and download settings over WebDAV, and pull and merge them over Peer Sync
 
 ## Step 5: restore fixes
 
@@ -81,6 +82,7 @@ For older files too.
 - [ ] The four groups, with Credentials independent of the others
 - [ ] Whole connections; whole-value secrets; the proxy becomes one setting, with a migration
 - [ ] The missing settings and credentials
+- [ ] The whole-value secret rule, and the rules of the keys that start to be backed up
 - [ ] No folder names; notification permission rule
 - [ ] Update the older comments that say credentials are never exported
 - [ ] Compression, and measure what it saves

@@ -13,7 +13,6 @@ import { getXactStore } from '#lib/storage/xactStoreRegistry';
 import { getDeviceId } from '#lib/sync/ydocDevices';
 import {
 	ALL_SECTIONS,
-	PORTABLE_DEVICE_KEYS,
 	type BackupData,
 	type BackupSection,
 	type DeviceData,
@@ -23,14 +22,8 @@ import {
 	type StoredSetting,
 	type WithheldField
 } from './model';
-import {
-	keepExistingSecrets,
-	mergeSecrets,
-	parseJson,
-	specFor,
-	stillMissing,
-	type SecretSpec
-} from './secrets';
+import { PORTABLE_DEVICE_KEYS, type SecretSpec } from './rules';
+import { keepExistingSecrets, mergeSecrets, parseJson, specFor, stillMissing } from './secrets';
 
 export interface RestoreOptions {
 	/** Sections to restore. Every section the file holds when left out. */
@@ -151,7 +144,11 @@ function keepExisting(
 	});
 }
 
-async function replaceSettings(restored: StoredSetting[], secrets: FieldSecrets[] = []) {
+/**
+ * Replaces the shared settings with `restored`, in one transaction. A secret this device already
+ * has for the same server is kept where `restored` has none.
+ */
+export async function replaceSettings(restored: StoredSetting[], secrets: FieldSecrets[] = []) {
 	await db.transaction('rw', db.settings, async () => {
 		const merged = keepExisting(
 			withSecrets(restored, 'settings', secrets),
@@ -212,16 +209,4 @@ async function restorePeers(section: PeersData) {
 			await db.peers.add(peer);
 		}
 	});
-}
-
-/** Replaces the shared settings with those from `exportSettingsJson`. Validated before any write. */
-export async function importSettingsJson(content: string) {
-	let parsed: unknown;
-	try {
-		parsed = JSON.parse(content);
-	} catch {
-		throw new Error('The settings data is not valid JSON');
-	}
-	if (!Array.isArray(parsed)) throw new Error('The settings data is not a list of settings');
-	await replaceSettings(parsed as StoredSetting[]);
 }
