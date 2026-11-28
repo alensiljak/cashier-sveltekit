@@ -14,23 +14,31 @@
 	import { onMount } from 'svelte';
 
 	const SECTION_LABELS: Record<BackupService.BackupSection, { title: string; hint: string }> = {
-		settings: { title: 'Settings', hint: 'accounts, groups, budget, formats, forecast and so on' },
+		settings: { title: 'Shared settings', hint: 'always included' },
+		workingSet: { title: 'Working set', hint: 'the new transactions' },
 		scx: { title: 'Scheduled transactions', hint: '' },
-		workingSet: { title: 'Transactions', hint: 'the working set of new transactions' },
-		device: {
-			title: 'Device settings and sync configuration',
-			hint: 'home cards, notifications, WebDAV / S3 / peer-sync options, folder names'
-		},
-		peers: {
-			title: 'Trusted devices',
-			hint: 'the peer-sync links, so you do not have to pair every device again'
-		}
+		device: { title: 'This device', hint: 'device settings, sync setup, trusted devices' },
+		credentials: { title: 'Credentials', hint: 'passwords, keys and tokens, encrypted' }
 	};
+	/** What can be chosen for a backup besides the shared settings and the credentials. */
+	const OPTIONAL_SECTIONS = ['workingSet', 'scx', 'device'] as const;
 
+	const CREDENTIAL_NAMES: Record<string, string> = {
+		webdav: 'WebDAV',
+		s3: 'S3',
+		webdavEncryption: 'WebDAV encryption',
+		ice: 'TURN servers',
+		proxy: 'HTTP proxy',
+		mistral: 'Mistral',
+		aware: 'Aware Super',
+		scalable: 'Scalable Capital',
+		enableBanking: 'Enable Banking',
+		enableBankingSessions: 'Enable Banking sessions'
+	};
 	let _filename = $state<string>();
 
 	// Backup options
-	let selected = $state<BackupService.BackupSection[]>([...BackupService.ALL_SECTIONS]);
+	let selected = $state<(typeof OPTIONAL_SECTIONS)[number][]>([...OPTIONAL_SECTIONS]);
 	let includeSecrets = $state(false);
 	let passphrase = $state('');
 	let passphraseAgain = $state('');
@@ -40,6 +48,7 @@
 	// Restore state
 	let restoreContent = $state<string>();
 	let restoreName = $state('');
+	let restoreCompressed = $state(false);
 	let restoreInfo = $state<BackupService.BackupInfo>();
 	let restoreSelected = $state<BackupService.BackupSection[]>([]);
 	let restorePassphrase = $state('');
@@ -51,10 +60,10 @@
 	let withHistory = $state<BackupService.StoreSection[]>([]);
 	let destroyTarget = $state<'xacts' | 'scx' | null>(null);
 
-	const STORE_SECTIONS: BackupService.StoreSection[] = ['scx', 'workingSet'];
+	const STORE_SECTIONS: BackupService.StoreSection[] = ['workingSet', 'scx'];
 	const STORE_LABELS: Record<BackupService.StoreSection, string> = {
-		scx: 'Scheduled transactions',
-		workingSet: 'Transactions'
+		workingSet: 'Working set',
+		scx: 'Scheduled transactions'
 	};
 	const DESTROY_TARGETS = { scx: 'scx', workingSet: 'xacts' } as const;
 
@@ -124,11 +133,8 @@
 
 	/** Options for the backup, or undefined (with a message) when they are not usable. */
 	function backupOptions(): BackupService.BackupOptions | undefined {
-		if (selected.length === 0) {
-			Notifier.info('Select what to back up');
-			return undefined;
-		}
-		if (!includeSecrets) return { sections: selected };
+		const sections: BackupService.BackupOptions['sections'] = ['settings', ...selected];
+		if (!includeSecrets) return { sections };
 		if (passphrase !== passphraseAgain) {
 			Notifier.error('The two passphrases are different');
 			return undefined;
@@ -139,7 +145,7 @@
 			Notifier.error((e as Error).message);
 			return undefined;
 		}
-		return { sections: selected, secretsPassphrase: passphrase };
+		return { sections, secretsPassphrase: passphrase };
 	}
 
 	async function onBackupClick() {
@@ -165,7 +171,14 @@
 		busy = true;
 		try {
 			const output = await BackupService.createBackup(options);
-			const file = new File([output], _filename as string, { type: 'application/json' });
+			const name = _filename as string;
+			const compressed = new File([await BackupService.compressBackup(output)], name, {
+				type: 'application/gzip'
+			});
+			// Not every browser can share a gzip file: plain JSON then.
+			const file = navigator.canShare?.({ files: [compressed] })
+				? compressed
+				: new File([output], name.replace(/\.gz$/, ''), { type: 'application/json' });
 			if (navigator.canShare?.({ files: [file] })) {
 				await navigator.share({ title: 'Cashier Backup', files: [file] });
 			} else {
@@ -194,8 +207,11 @@
 		closeRestore();
 		restoreMessages = [];
 		try {
-			const content = await file.text();
+			const { content, compressed } = await BackupService.decodeBackup(
+				new Uint8Array(await file.arrayBuffer())
+			);
 			const info = BackupService.inspectBackup(content);
+			restoreCompressed = compressed;
 			restoreInfo = info;
 			restoreContent = content;
 			restoreName = file.name;
@@ -220,7 +236,10 @@
 			});
 			restoreMessages = describe(result);
 			const nothingAdded = STORE_SECTIONS.filter((s) => result.stores[s]?.added === 0);
-			if (nothingAdded.length === 0) {
+			if (result.restored.length === 0) {
+				// Only the credentials were asked for, and the passphrase was missing or wrong.
+				Notifier.error('Nothing was restored');
+			} else if (nothingAdded.length === 0) {
 				Notifier.success('Backup restored');
 				closeRestore();
 			} else {
@@ -240,7 +259,6 @@
 			busy = false;
 		}
 	}
-
 	const FIELD_NAMES: Record<string, string> = {
 		'webdav.password': 'WebDAV password',
 		's3.accessKeyId': 'S3 access key ID',
@@ -270,10 +288,20 @@
 			const outcome = result.stores[section];
 			if (outcome) out.push(`${STORE_LABELS[section]}: ${describeOutcome(outcome)}`);
 		}
-		if (result.secrets === 'wrong-passphrase') {
+		if (result.secrets === 'wrong-passphrase' || result.secrets === 'skipped') {
+			const why =
+				result.secrets === 'skipped' ? 'no passphrase was entered' : 'the passphrase did not fit';
 			out.push(
-				'The credentials were not restored: the passphrase did not fit. Everything else was restored. Restore the file again with the right passphrase to get them.'
+				`The credentials were not restored: ${why}. Restore the file again with the right passphrase to get them.`
 			);
+		}
+		if (result.unmatched) {
+			out.push(
+				'Some credentials of this older file were not restored, as they belong to connections this device does not have. Restore This device with them.'
+			);
+		}
+		if (result.notificationsOff) {
+			out.push('Notifications stay off until you allow them: turn them on in Settings.');
 		}
 		if (result.missing.length > 0) {
 			out.push(
@@ -282,7 +310,7 @@
 					'.'
 			);
 		}
-		if (result.restored.includes('peers')) {
+		if (result.restored.includes('device') && restoreInfo?.counts.peers) {
 			out.push(
 				'Trusted devices were restored, but the others do not know this device yet: pair it with one of them (Peer Sync → invite) and the rest are asked to approve it.'
 			);
@@ -310,7 +338,16 @@
 
 			<p>Choose what to back up:</p>
 			<ul class="mx-2 mt-1 space-y-1">
-				{#each BackupService.ALL_SECTIONS as section (section)}
+				<li>
+					<label class="flex items-start gap-2">
+						<input type="checkbox" class="checkbox checkbox-sm mt-1" checked disabled />
+						<span>
+							{SECTION_LABELS.settings.title}
+							<span class="block text-xs opacity-60">{SECTION_LABELS.settings.hint}</span>
+						</span>
+					</label>
+				</li>
+				{#each OPTIONAL_SECTIONS as section (section)}
 					<li>
 						<label class="flex cursor-pointer items-start gap-2">
 							<input
@@ -329,7 +366,6 @@
 					</li>
 				{/each}
 			</ul>
-
 			<div class="mx-2 mt-4">
 				<label class="flex cursor-pointer items-start gap-2">
 					<input
@@ -338,12 +374,8 @@
 						bind:checked={includeSecrets}
 					/>
 					<span>
-						Include credentials, encrypted
-						<span class="block text-xs opacity-60">
-							WebDAV password, S3 keys, encryption passphrases, TURN credentials. Leave this off to
-							keep them in a password manager: the file then holds everything else, and the pages
-							ask for the missing ones after a restore.
-						</span>
+						{SECTION_LABELS.credentials.title}
+						<span class="block text-xs opacity-60">{SECTION_LABELS.credentials.hint}</span>
 					</span>
 				</label>
 
@@ -417,7 +449,7 @@
 					id="backupFile"
 					type="file"
 					name="files"
-					accept=".json"
+					accept=".json,.gz,application/json,application/gzip"
 					class="file-input file-input-secondary rounded"
 					onchange={(e) => {
 						const target = e.target as HTMLInputElement;
@@ -430,8 +462,8 @@
 				</label>
 			</div>
 			<p class="mt-2 text-sm opacity-70">
-				Settings replace what is on this device. Both kinds of transactions are merged with it, and
-				trusted devices are added.
+				Shared settings replace what is on this device. Both kinds of transactions are merged with
+				it, and trusted devices are added.
 			</p>
 
 			{#if restoreInfo}
@@ -441,36 +473,46 @@
 					aria-label="Restore selection"
 				>
 					<p class="pb-2 opacity-60">
-						Restore from {restoreName} (backup format {restoreInfo.version})
+						Restore from {restoreName} (backup format {restoreInfo.version},
+						{restoreCompressed ? 'compressed' : 'not compressed'},
+						{restoreInfo.hasSecrets ? 'with encrypted credentials' : 'without credentials'})
 					</p>
 					<ul class="space-y-1">
-						{#each restoreInfo.sections as section (section)}
+						{#each BackupService.ALL_SECTIONS as section (section)}
+							{@const present = restoreInfo.sections.includes(section)}
 							{@const emptySettings = section === 'settings' && restoreInfo.counts.settings === 0}
 							<li>
-								<label class="flex cursor-pointer items-start gap-2">
+								<label class="flex cursor-pointer items-start gap-2" class:opacity-50={!present}>
 									<input
 										type="checkbox"
 										class="checkbox checkbox-sm mt-1"
 										value={section}
-										disabled={busy || emptySettings}
+										disabled={busy || !present || section === 'settings'}
 										bind:group={restoreSelected}
 									/>
 									<span>
 										{SECTION_LABELS[section].title}
-										{#if emptySettings}
+										{#if !present}
+											<span class="block text-xs">not in this file</span>
+										{:else if emptySettings}
 											<span class="block text-xs opacity-60">the list in this file is empty</span>
 										{:else if section === 'settings'}
 											<span class="block text-xs opacity-60">replaces what is on this device</span>
-										{:else if section === 'peers'}
+										{:else if section === 'device' && restoreInfo.counts.peers > 0}
 											<span class="block text-xs opacity-60">
-												{restoreInfo.counts.peers} device(s), added; only restore a file you trust
+												with {restoreInfo.counts.peers} trusted device(s), added; only restore a file
+												you trust
 											</span>
 										{:else if section === 'scx' || section === 'workingSet'}
 											<span class="block text-xs opacity-60">
 												{preview ? describePreview(preview[section]) : 'comparing…'}
 											</span>
+										{:else if section === 'credentials' && restoreInfo.credentials.length > 0}
+											<span class="block text-xs opacity-60">
+												{restoreInfo.credentials.map((id) => CREDENTIAL_NAMES[id] ?? id).join(', ')}
+											</span>
 										{/if}
-										{#if section === 'scx' && restoreInfo.scxIsList}
+										{#if section === 'scx' && present && restoreInfo.scxIsList}
 											<span class="text-warning block text-xs">
 												This older file has no history. After a sync, deleted entries can return and
 												old versions can replace newer edits, also on other devices. If sync has
@@ -482,7 +524,7 @@
 							</li>
 						{/each}
 					</ul>
-					{#if restoreInfo.hasSecrets}
+					{#if restoreSelected.includes('credentials')}
 						<div class="mt-3">
 							<label class="label" for="restore-passphrase">
 								<span class="label-text">Passphrase for the credentials in this file</span>

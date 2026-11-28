@@ -113,7 +113,7 @@
 			<span class="opacity-50 text-xs">
 				a PWA cannot complete Scalable's OAuth login by itself — run the Python script on your
 				computer (localhost) and paste the JSON it prints below; tokens are stored on this device
-				only — never synced or exported
+				only. They are never synced, and a backup holds them only encrypted
 			</span>
 		</span>
 		{#if !connected}
@@ -131,11 +131,10 @@
 						class="textarea textarea-bordered w-full font-mono text-xs h-48"
 						readonly
 						bind:this={scriptArea}
-						value={SCALABLE_TOKEN_SCRIPT}
-					></textarea>
+						value={SCALABLE_TOKEN_SCRIPT}></textarea>
 					<p class="text-xs opacity-70">
-						Save it as <code class="font-mono">{SCALABLE_TOKEN_SCRIPT_NAME}</code> and run it on your
-						computer: <code class="font-mono">python3 {SCALABLE_TOKEN_SCRIPT_NAME}</code> (or
+						Save it as <code class="font-mono">{SCALABLE_TOKEN_SCRIPT_NAME}</code> and run it on
+						your computer: <code class="font-mono">python3 {SCALABLE_TOKEN_SCRIPT_NAME}</code> (or
 						<code class="font-mono">uv run {SCALABLE_TOKEN_SCRIPT_NAME}</code>). It opens Scalable's
 						login in your browser and prints the tokens as JSON.
 					</p>
@@ -144,8 +143,7 @@
 					class="textarea textarea-bordered w-full font-mono text-xs h-28"
 					placeholder={'{\n  "client_id": "…",\n  "access_token": "…",\n  "refresh_token": "…",\n  "expires_in": 3600\n}'}
 					spellcheck="false"
-					bind:value={tokenJson}
-				></textarea>
+					bind:value={tokenJson}></textarea>
 				<div class="flex gap-2 flex-wrap">
 					<button
 						class="btn btn-primary btn-sm"
@@ -158,9 +156,7 @@
 			</div>
 		{:else}
 			<div class="flex gap-2 flex-wrap">
-				<button class="btn btn-ghost btn-sm text-error" onclick={disconnect}>
-					Disconnect
-				</button>
+				<button class="btn btn-ghost btn-sm text-error" onclick={disconnect}> Disconnect </button>
 				<button class="btn btn-sm" disabled={checking} onclick={verify}>
 					{checking ? 'Checking…' : 'Re-check'}
 				</button>
@@ -177,8 +173,8 @@
 				({portfolios.length}
 				{portfolios.length === 1 ? 'portfolio' : 'portfolios'}).
 				{#if expiresAt}
-					Access token expires {new Date(expiresAt).toLocaleString('en-GB')} — refreshed
-					automatically while the refresh token is valid.
+					Access token expires {new Date(expiresAt).toLocaleString('en-GB')} — refreshed automatically
+					while the refresh token is valid.
 				{/if}
 			</span>
 		</div>

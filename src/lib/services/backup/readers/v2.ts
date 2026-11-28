@@ -61,6 +61,10 @@ export function readV2(file: Record<string, unknown>): BackupData {
 		device: readDevice(file.device, DEVICE_KEYS),
 		peers: readPeers(file.peers),
 		withheld: readWithheld(file.withheld, SECRET_SETTINGS),
-		openSecrets: readSecrets(file.secrets, SECRET_SETTINGS)
+		openSecrets: readSecrets(file.secrets, SECRET_SETTINGS, ({ store, key }, fields) => ({
+			store,
+			key,
+			fields
+		}))
 	};
 }

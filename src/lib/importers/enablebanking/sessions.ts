@@ -5,7 +5,7 @@ import type { EbSession, EbSessionAccount } from './api';
  * Sessions (bank consents) created on this device. A session is the Enable
  * Banking reference that unlocks account data; it is only usable together
  * with this device's app credentials, so it lives in device-only settings
- * too — never exported or synced.
+ * too. Never synced; a backup holds them only encrypted, with the credentials.
  */
 export interface StoredSession {
 	sessionId: string;

@@ -244,9 +244,9 @@
 			<span class="opacity-50 text-xs">
 				from Enable Banking Control Panel → API applications (sandbox or production — the app ID
 				decides). The private key signs every API request in this browser and is stored on this
-				device only — never synced or exported. Enable Banking advises keeping keys out of client
-				apps; for your own app on your own device this is the same trust level as the other
-				credentials stored here.
+				device. It is never synced, and a backup holds it only encrypted. Enable Banking advises
+				keeping keys out of client apps; for your own app on your own device this is the same trust
+				level as the other credentials stored here.
 			</span>
 		</span>
 		{#if !credentials}

@@ -8,8 +8,8 @@ import type { ScheduledTransaction } from '#lib/data/model';
 import { fromBase64 } from '#lib/services/s3Crypto';
 import type {
 	BackupData,
+	Credential,
 	DeviceData,
-	FieldSecrets,
 	PeersData,
 	StoredSetting,
 	WithheldField
@@ -108,18 +108,22 @@ export function readWithheld(value: unknown, secretSettings: SecretSetting[]): W
 	});
 }
 
-/** The encrypted block (see ../secrets.ts), holding the secrets by '<store>:<setting key>'. */
+/**
+ * The encrypted block (see ../secrets.ts), holding entries by '<store>:<setting key>'. `convert`
+ * says what an entry is in the format; settings that are not listed are left out.
+ */
 export function readSecrets(
 	value: unknown,
-	secretSettings: SecretSetting[]
+	secretSettings: SecretSetting[],
+	convert: (setting: SecretSetting, entry: unknown) => Credential
 ): BackupData['openSecrets'] {
 	if (value === undefined) return undefined;
 	if (!isSecretsBlock(value)) throw damaged('the credentials');
 	return async (passphrase) => {
 		const block = await openSecrets(value, passphrase);
-		return secretSettings.flatMap(({ store, key }): FieldSecrets[] => {
-			const secrets = block[`${store}:${key}`];
-			return secrets === undefined ? [] : [{ store, key, secrets }];
+		return secretSettings.flatMap((setting): Credential[] => {
+			const entry = block[`${setting.store}:${setting.key}`];
+			return entry === undefined ? [] : [convert(setting, entry)];
 		});
 	};
 }

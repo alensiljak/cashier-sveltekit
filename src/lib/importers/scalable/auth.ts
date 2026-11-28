@@ -6,8 +6,8 @@ import { refreshTokens, TokenError, type TokenResponse } from './token';
  * Scalable Capital credentials. A PWA cannot complete the OAuth login itself
  * (no localhost redirect), so the user runs `scripts/scalable_token.py` on
  * their computer and pastes the JSON it prints into the importer form. The
- * tokens are stored in device-only settings — a credential is never exported
- * with backups or synced.
+ * tokens are stored in device-only settings: a credential is never synced,
+ * and a backup holds it only in its encrypted credentials group.
  */
 export interface StoredAuth {
 	/** Public OAuth client the localhost script registered (needed to refresh). */

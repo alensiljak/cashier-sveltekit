@@ -7,9 +7,10 @@ import { EB_JWT_DEFAULT_TTL_SECONDS, isPkcs1Pem, isPkcs8Pem, signEnableBankingJw
  * Banking Control Panel. Every API call needs a JWT signed with that key, so
  * the PWA signs them itself with WebCrypto (jwt.ts).
  *
- * The credentials are stored in device-only settings — a private key is never
- * exported with backups or synced between devices (same pattern as the
- * Scalable tokens and the Mistral API key). Enable Banking's docs advise
+ * The credentials are stored in device-only settings: a private key is never
+ * synced between devices, and a backup holds it only in its encrypted
+ * credentials group (same as the Scalable tokens and the Mistral API key).
+ * Enable Banking's docs advise
  * keeping the key out of client apps; for a personal app on the user's own
  * device, device-only storage is the same trust level as the other
  * credentials, and the form says so.

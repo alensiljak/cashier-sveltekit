@@ -5,6 +5,11 @@
  * Actual notification display can happen from any async context.
  */
 
+/** Whether the browser already lets the app show notifications. Asks nothing. */
+export function hasNotificationPermission(): boolean {
+	return typeof Notification !== 'undefined' && Notification.permission === 'granted';
+}
+
 /**
  * Request notification permission from the user.
  * MUST be called inside a user-gesture handler (click, etc.).

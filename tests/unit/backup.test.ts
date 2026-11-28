@@ -21,8 +21,10 @@ import { setScxStore } from '#lib/storage/scxStoreRegistry';
 import { setXactStore } from '#lib/storage/xactStoreRegistry';
 import {
 	BACKUP_VERSION,
+	compressBackup,
 	createBackup,
 	createBackupFile,
+	decodeBackup,
 	getBackupFilename,
 	inspectBackup,
 	previewRestore,
@@ -32,10 +34,11 @@ import {
 import { fromBase64, toBase64 } from '#lib/services/s3Crypto';
 import { loadImporterConfig, resetImporterConfig, saveImporterConfig } from '#lib/importers/config';
 import { getRestoreMissing } from '#lib/services/restoreMissing';
+import { sealSecrets } from '#lib/services/backup/secrets';
 import { getRestoredDevice } from '#lib/services/restoredDevice';
 
 /** The part of a backup the tests below inspect in isolation: no working set, no device. */
-const basic: BackupOptions = { sections: ['settings', 'scx'] };
+const basic = { sections: ['settings', 'scx'] } satisfies BackupOptions;
 
 const scx = (payee: string, nextDate = '2026-01-01') => ({
 	nextDate,
@@ -91,7 +94,7 @@ describe('getBackupFilename', () => {
 		vi.useFakeTimers();
 		vi.setSystemTime(new Date(2026, 7, 15, 9, 5, 7));
 
-		expect(getBackupFilename()).toBe('cashier-backup_2026-08-15_090507.json');
+		expect(getBackupFilename()).toBe('cashier-backup_2026-08-15_090507.json.gz');
 
 		vi.useRealTimers();
 	});
@@ -402,7 +405,9 @@ describe('createBackupFile', () => {
 
 		expect(clicked).toEqual([{ href: 'blob:fake', download: 'my-backup.json' }]);
 		const blob = (createObjectURL.mock.calls[0] as unknown as [Blob])[0];
-		expect(JSON.parse(await blob.text()).settings).toHaveLength(2);
+		const file = await decodeBackup(new Uint8Array(await blob.arrayBuffer()));
+		expect(file.compressed).toBe(true);
+		expect(JSON.parse(file.content).settings).toHaveLength(2);
 		expect(document.querySelector('a[download]')).toBeNull();
 		vi.unstubAllGlobals();
 	});
@@ -715,7 +720,7 @@ describe('trusted devices', () => {
 
 	it('are added on restore, and what is there is not overwritten', async () => {
 		await db.peers.bulkAdd([peer('a'), peer('b')] as never);
-		const text = await createBackup({ sections: ['peers'] });
+		const text = await createBackup({ sections: ['device'] });
 		await db.peers.clear();
 		await db.peers.add(peer('a', { name: 'Renamed here', readOnly: true }) as never);
 
@@ -727,7 +732,7 @@ describe('trusted devices', () => {
 
 	it('are added without the mark of a file-sync baseline, which is not restored', async () => {
 		await db.peers.add(peer('a', { fileSyncInitializedAt: '2026-01-02' }) as never);
-		const text = await createBackup({ sections: ['peers'] });
+		const text = await createBackup({ sections: ['device'] });
 		await db.peers.clear();
 
 		await restoreBackup(text);
@@ -738,7 +743,7 @@ describe('trusted devices', () => {
 	it('do not bring back a device that was evicted, here or in the backup', async () => {
 		await db.peers.bulkAdd([peer('a'), peer('b'), peer('c', { legacyIds: ['c-old'] })] as never);
 		await db.revocations.add(eviction('b') as never);
-		const text = await createBackup({ sections: ['peers'] });
+		const text = await createBackup({ sections: ['device'] });
 		await db.peers.clear();
 		await db.revocations.clear();
 		await db.revocations.add(eviction('c-old') as never);
@@ -753,7 +758,7 @@ describe('trusted devices', () => {
 	it('a device that was re-admitted since is not blocked', async () => {
 		await db.peers.add(peer('a') as never);
 		await db.revocations.add(eviction('a', 'readmitted') as never);
-		const text = await createBackup({ sections: ['peers'] });
+		const text = await createBackup({ sections: ['device'] });
 		await db.peers.clear();
 
 		await restoreBackup(text);
@@ -784,6 +789,8 @@ describe('working set', () => {
 
 describe('inspectBackup', () => {
 	it('reports the version, the sections and the credentials block', async () => {
+		await db.deviceSettings.clear();
+		await deviceSettings.set(DeviceSettingKeys.mistralApiKey, 'mistral-key');
 		const text = await createBackup({
 			sections: ['settings', 'scx'],
 			secretsPassphrase: PASSPHRASE
@@ -791,8 +798,9 @@ describe('inspectBackup', () => {
 
 		expect(inspectBackup(text)).toEqual({
 			version: BACKUP_VERSION,
-			sections: ['settings', 'scx'],
+			sections: ['settings', 'scx', 'credentials'],
 			hasSecrets: true,
+			credentials: ['mistral'],
 			scxIsList: false,
 			counts: { settings: 2, peers: 0 }
 		});
@@ -806,5 +814,242 @@ describe('inspectBackup', () => {
 
 	it('throws for a file that cannot be restored', () => {
 		expect(() => inspectBackup('nope')).toThrow('not valid JSON');
+	});
+});
+
+describe('every credential', () => {
+	const whole = [
+		[DeviceSettingKeys.mistralApiKey, 'mistral-key'],
+		[DeviceSettingKeys.awareApiKey, 'aware-key'],
+		[DeviceSettingKeys.scalableTokens, { clientId: 'c', accessToken: 'scalable-token' }],
+		[DeviceSettingKeys.enableBankingCredentials, { appId: 'a', privateKeyPem: 'private-pem' }],
+		[DeviceSettingKeys.enableBankingSessions, [{ sessionId: 'bank-session' }]]
+	] as const;
+	const proxy = { url: 'https://proxy.example.com/api/proxy', key: 'proxy-key' };
+
+	beforeEach(async () => {
+		await wipe();
+		await seedCredentials();
+		for (const [key, value] of whole) await deviceSettings.set(key, value);
+		await deviceSettings.set(DeviceSettingKeys.proxy, proxy);
+	});
+
+	/** A file with the credentials and nothing else. */
+	const credentialsOnly = () => createBackup({ sections: [], secretsPassphrase: PASSPHRASE });
+	const restoreCredentials = (text: string) =>
+		restoreBackup(text, { sections: ['credentials'], secretsPassphrase: PASSPHRASE });
+
+	it('is in the credentials, whichever other sections are chosen, and listed', async () => {
+		const text = await credentialsOnly();
+
+		expect(inspectBackup(text)).toMatchObject({
+			sections: ['credentials'],
+			credentials: [
+				'webdav',
+				's3',
+				'webdavEncryption',
+				'proxy',
+				'mistral',
+				'aware',
+				'scalable',
+				'enableBanking',
+				'enableBankingSessions'
+			]
+		});
+		await wipe();
+		expect((await restoreCredentials(text)).restored).toEqual(['credentials']);
+		for (const [key, value] of whole) expect(await deviceSettings.get(key)).toEqual(value);
+		expect(await deviceSettings.get(DeviceSettingKeys.proxy)).toEqual(proxy);
+		expect(await s3Stored()).toEqual(s3);
+		expect(await settings_get(SettingKeys.webdavSettings)).toMatchObject({ password: 'dav-pass' });
+		// Nothing but the credentials.
+		expect(await deviceSettings.get(DeviceSettingKeys.peerName)).toBeNull();
+	});
+
+	it('is never readable in the file', async () => {
+		const text = await createBackup({ secretsPassphrase: PASSPHRASE });
+		const plain = await createBackup();
+
+		for (const secret of [
+			'mistral-key',
+			'aware-key',
+			'scalable-token',
+			'private-pem',
+			'bank-session',
+			'proxy-key'
+		]) {
+			expect(text).not.toContain(secret);
+			expect(plain).not.toContain(secret);
+		}
+		expect(plain).toContain(proxy.url);
+	});
+
+	it('replaces a connection as a whole, so a secret keeps its URL', async () => {
+		const text = await credentialsOnly();
+		await deviceSettings.set(DeviceSettingKeys.proxy, { url: 'https://other.test', key: 'other' });
+		await deviceSettings.set(DeviceSettingKeys.s3Settings, { ...s3, bucket: 'other' });
+
+		await restoreCredentials(text);
+
+		expect(await deviceSettings.get(DeviceSettingKeys.proxy)).toEqual(proxy);
+		expect(await s3Stored()).toEqual(s3);
+	});
+
+	it('leaves alone what the file does not have', async () => {
+		await deviceSettings.delete(DeviceSettingKeys.mistralApiKey);
+		await deviceSettings.set(DeviceSettingKeys.awareApiKey, '');
+		const text = await credentialsOnly();
+		await deviceSettings.set(DeviceSettingKeys.mistralApiKey, 'local-mistral');
+		await deviceSettings.set(DeviceSettingKeys.awareApiKey, 'local-aware');
+
+		await restoreCredentials(text);
+
+		expect(await deviceSettings.get(DeviceSettingKeys.mistralApiKey)).toBe('local-mistral');
+		expect(await deviceSettings.get(DeviceSettingKeys.awareApiKey)).toBe('local-aware');
+	});
+
+	it('keeps a local proxy key for the same URL only, without the credentials', async () => {
+		const text = await createBackup({ sections: ['device'] });
+
+		await restoreBackup(text);
+		expect(await deviceSettings.get(DeviceSettingKeys.proxy)).toEqual(proxy);
+
+		await deviceSettings.set(DeviceSettingKeys.proxy, { url: 'https://other.test', key: 'other' });
+		await restoreBackup(text);
+		expect(await deviceSettings.get(DeviceSettingKeys.proxy)).toEqual({ url: proxy.url, key: '' });
+	});
+
+	it('keeps the local TURN credentials of the same servers', async () => {
+		const servers = [
+			{ urls: 'stun:stun.example.com' },
+			{ urls: 'turn:turn.example.com', username: 'turn-user', credential: 'turn-secret' }
+		];
+		await deviceSettings.set(DeviceSettingKeys.peerIceServers, servers);
+		const text = await createBackup({ sections: ['device'] });
+
+		await restoreBackup(text);
+
+		expect(await deviceSettings.get(DeviceSettingKeys.peerIceServers)).toEqual(servers);
+	});
+
+	it('takes the fields it fills in off the list of missing ones', async () => {
+		const plain = await createBackup({ sections: ['device'] });
+		const text = await credentialsOnly();
+		await wipe();
+		await restoreBackup(plain);
+		expect(await getRestoreMissing()).toContain('s3.passphrase');
+
+		await restoreCredentials(text);
+
+		expect(await getRestoreMissing()).toEqual([]);
+	});
+
+	it('is not written for a setting that is no credential, whatever the block holds', async () => {
+		const file = JSON.parse(await credentialsOnly());
+		file.secrets = await sealSecrets(
+			{ 'device:peerId': '"intruder"', 'device:speech.mistral.api-key': '"new-key"' },
+			PASSPHRASE
+		);
+
+		await restoreCredentials(JSON.stringify(file));
+
+		expect(await deviceSettings.get(DeviceSettingKeys.peerId)).toBeNull();
+		expect(await deviceSettings.get(DeviceSettingKeys.mistralApiKey)).toBe('new-key');
+	});
+});
+
+describe('credentials of a format 2 file', () => {
+	const local = { ...s3, accessKeyId: '', secretAccessKey: '', passphrase: '' };
+	const file = async () =>
+		JSON.stringify({
+			version: 2,
+			device: {
+				id: 'this-device',
+				settings: [{ key: DeviceSettingKeys.s3Settings, value: JSON.stringify(local) }]
+			},
+			secrets: await sealSecrets(
+				{ [`device:${DeviceSettingKeys.s3Settings}`]: { secretAccessKey: 'from-file' } },
+				PASSPHRASE
+			)
+		});
+	const alone = async () =>
+		restoreBackup(await file(), { sections: ['credentials'], secretsPassphrase: PASSPHRASE });
+
+	beforeEach(() => db.deviceSettings.clear());
+
+	it('are added to a local connection that matches the one in the file', async () => {
+		await deviceSettings.set(DeviceSettingKeys.s3Settings, local);
+
+		expect((await alone()).unmatched).toBeUndefined();
+
+		expect(await s3Stored()).toEqual({ ...local, secretAccessKey: 'from-file' });
+	});
+
+	it('are left out, and reported, for another connection', async () => {
+		await deviceSettings.set(DeviceSettingKeys.s3Settings, { ...local, bucket: 'other' });
+
+		expect((await alone()).unmatched).toEqual([DeviceSettingKeys.s3Settings]);
+
+		expect(await s3Stored()).toEqual({ ...local, bucket: 'other' });
+	});
+});
+
+describe('This device', () => {
+	beforeEach(() => db.deviceSettings.clear());
+	afterEach(() => vi.unstubAllGlobals());
+
+	it('has no folder names, also from an older file', async () => {
+		const folders = [DeviceSettingKeys.importBookDirectory, DeviceSettingKeys.exportBookDirectory];
+		for (const key of folders) await deviceSettings.set(key, 'books');
+		expect(await createBackup({ sections: ['device'] })).not.toContain('books');
+		await db.deviceSettings.clear();
+
+		await restoreBackup(
+			JSON.stringify({
+				version: 2,
+				device: { id: 'this-device', settings: folders.map((key) => ({ key, value: '"books"' })) }
+			})
+		);
+
+		for (const key of folders) expect(await deviceSettings.get(key)).toBeNull();
+	});
+
+	it.each([
+		['granted', true],
+		['default', false],
+		['denied', false]
+	])('with the permission %s, restores notifications as on: %s', async (permission, on) => {
+		await deviceSettings.set(DeviceSettingKeys.notificationsEnabled, true);
+		await deviceSettings.set(DeviceSettingKeys.notificationTime, '07:15');
+		const text = await createBackup({ sections: ['device'] });
+		await db.deviceSettings.clear();
+		vi.stubGlobal('Notification', { permission });
+
+		const result = await restoreBackup(text);
+
+		expect(await deviceSettings.get(DeviceSettingKeys.notificationsEnabled)).toBe(on);
+		expect(await deviceSettings.get(DeviceSettingKeys.notificationTime)).toBe('07:15');
+		expect(result.notificationsOff).toBe(on ? undefined : true);
+	});
+});
+
+describe('decodeBackup', () => {
+	it('reads a compressed file and plain JSON, whatever their names', async () => {
+		const text = await createBackup(basic);
+
+		expect(await decodeBackup(await compressBackup(text))).toEqual({
+			content: text,
+			compressed: true
+		});
+		expect(await decodeBackup(new TextEncoder().encode(text))).toEqual({
+			content: text,
+			compressed: false
+		});
+	});
+
+	it('rejects a damaged compressed file', async () => {
+		const bytes = await compressBackup(await createBackup(basic));
+
+		await expect(decodeBackup(bytes.slice(0, 20))).rejects.toThrow('damaged');
 	});
 });

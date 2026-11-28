@@ -8,7 +8,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('#lib/settings', () => ({
 	deviceSettings: { get: vi.fn(async () => null), set: vi.fn() },
-	DeviceSettingKeys: { proxyKey: 'proxy.key' }
+	DeviceSettingKeys: { proxy: 'proxy' }
 }));
 
 import {

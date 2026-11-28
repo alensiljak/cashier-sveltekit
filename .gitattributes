@@ -18,3 +18,4 @@
 *.pdf   binary
 #*.svg   binary
 *.ico   binary
+*.gz    binary

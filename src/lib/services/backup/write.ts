@@ -17,8 +17,15 @@ import {
 	type PeersData,
 	type StoredSetting
 } from './model';
-import { PORTABLE_DEVICE_KEYS } from './rules';
-import { sealSecrets, stripSecrets, type SecretsBlock } from './secrets';
+import { CREDENTIAL_SETTINGS, PORTABLE_DEVICE_KEYS, type SettingStore } from './rules';
+import {
+	checkPassphrase,
+	holdsSecret,
+	sealSecrets,
+	secretId,
+	stripSecrets,
+	type SecretsBlock
+} from './secrets';
 
 export const BACKUP_VERSION = 3;
 
@@ -30,6 +37,7 @@ interface BackupFile {
 	device?: DeviceData;
 	withheld?: string[];
 	peers?: PeersData;
+	credentials?: string[];
 	secrets?: SecretsBlock;
 }
 
@@ -40,37 +48,66 @@ export function getBackupFilename(): string {
 	const now = new Date();
 	const date = formatDate(now, ISODATEFORMAT);
 	const time = formatDate(now, LONGTIMEFORMAT);
-	const filename = `cashier-backup_${date}_${time}.json`;
+	const filename = `cashier-backup_${date}_${time}.json.gz`;
 
 	return filename;
 }
 
 export interface BackupOptions {
-	/** What goes into the file. All sections when left out. */
-	sections?: BackupSection[];
-	/** Set to include the credentials, encrypted with this passphrase. Without it, the file has none. */
+	/** What goes into the file, apart from the credentials. Everything when left out. */
+	sections?: Exclude<BackupSection, 'credentials'>[];
+	/**
+	 * Set to include the credentials, encrypted with this passphrase: all of them, whatever the
+	 * sections. Without it, the file has none.
+	 */
 	secretsPassphrase?: string;
+}
+
+/** Gzips a backup, which is how it is saved. */
+export async function compressBackup(content: string): Promise<Uint8Array<ArrayBuffer>> {
+	const stream = new Response(content).body!.pipeThrough(new CompressionStream('gzip'));
+	return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
 /**
  * Generates backup file and sends it via download.
  */
 export async function createBackupFile(filename: string, options?: BackupOptions) {
-	const output: string = await createBackup(options);
+	const output = await compressBackup(await createBackup(options));
 
-	downloadTextFile(output, filename);
+	downloadFile(new Blob([output], { type: 'application/gzip' }), filename);
+}
+
+/** Every setting that holds a secret, whole and as stored, by `secretId`. */
+async function collectCredentials() {
+	const tables: Record<SettingStore, StoredSetting[]> = {
+		settings: (await settings.getAllWithSecrets()) as StoredSetting[],
+		device: (await deviceSettings.getAllWithSecrets()) as StoredSetting[]
+	};
+	const secrets: Record<string, string> = {};
+	const labels: string[] = [];
+	for (const setting of CREDENTIAL_SETTINGS) {
+		const stored = tables[setting.store].find((s) => s.key === setting.key);
+		if (!stored || !holdsSecret(stored.value, setting)) continue;
+		secrets[secretId(setting)] = stored.value;
+		labels.push(setting.label);
+	}
+	return { secrets, labels };
 }
 
 /**
- * Create backup content as text.
+ * Create backup content as text, not compressed yet.
  *
  * The device's own signing key is never in the file: it is not extractable by design, so a
  * restored device is a new device (see restoredDevice.ts).
  * @returns Text containing the backup content.
  */
 export async function createBackup(options: BackupOptions = {}) {
-	const sections = new Set(options.sections ?? ALL_SECTIONS);
-	const stripped = { secrets: {} as Record<string, unknown>, withheld: [] as string[] };
+	const sections = new Set<BackupSection>(options.sections ?? ALL_SECTIONS);
+	// Checked first, and even when there is nothing to seal.
+	if (options.secretsPassphrase !== undefined) checkPassphrase(options.secretsPassphrase);
+	const withheld: string[] = [];
+	const stripped = { secrets: {}, withheld };
 	const backup: BackupFile = { version: BACKUP_VERSION };
 
 	if (sections.has('settings')) {
@@ -89,26 +126,25 @@ export async function createBackup(options: BackupOptions = {}) {
 			id: await getDeviceId(),
 			settings: byKey(stripSecrets(portable, 'device', stripped))
 		};
-	}
-	if (stripped.withheld.length > 0) backup.withheld = stripped.withheld;
-	if (sections.has('peers')) {
 		backup.peers = {
 			peers: await db.peers.toArray(),
 			revocations: await db.revocations.toArray()
 		};
 	}
+	if (withheld.length > 0) backup.withheld = withheld;
 	if (options.secretsPassphrase !== undefined) {
-		// Checked even when there is nothing to seal, so a short passphrase is not silently accepted.
-		backup.secrets = await sealSecrets(stripped.secrets, options.secretsPassphrase);
+		const { secrets, labels } = await collectCredentials();
+		if (labels.length > 0) {
+			backup.credentials = labels;
+			backup.secrets = await sealSecrets(secrets, options.secretsPassphrase);
+		}
 	}
 
 	return JSON.stringify(backup);
 }
 
-function downloadTextFile(content: string, fileName: string) {
-	const blob = new Blob([content], { type: 'text/plain' });
+function downloadFile(blob: Blob, fileName: string) {
 	const url = URL.createObjectURL(blob);
-
 	const a = document.createElement('a');
 	a.href = url;
 	a.download = fileName;

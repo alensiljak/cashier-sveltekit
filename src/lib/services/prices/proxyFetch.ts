@@ -2,11 +2,11 @@
  * Fetch an upstream API through a CORS proxy (`worker/proxy.ts`,
  * doc/completed-projects/2026-11-16_CORS-proxy.md).
  *
- * The proxy's base URL comes from this device's `proxy.url` setting; when it
- * is empty, the app's own same-origin `/api/proxy` endpoint is used. Only
- * hosts in the proxy's `ALLOWED_HOSTS` are accepted. The deployment's shared
- * `PROXY_KEY` is read from this device's `proxy.key` setting and sent as
- * `X-Proxy-Key`; it is never bundled into the app or exported with settings.
+ * The proxy's base URL and key come from this device's `proxy` setting; when
+ * the URL is empty, the app's own same-origin `/api/proxy` endpoint is used.
+ * Only hosts in the proxy's `ALLOWED_HOSTS` are accepted. The key is the
+ * deployment's shared `PROXY_KEY`, sent as `X-Proxy-Key`. It is never bundled
+ * into the app or synced, and a backup holds it only encrypted.
  * Providers whose source sends CORS headers (ECB via Frankfurter) keep calling
  * `fetch` directly; this helper is for the closed-off sources.
  *
@@ -28,13 +28,28 @@ import {
 	UPSTREAM_SESSION_HEADER
 } from './proxyProtocol';
 
+export interface ProxySettings {
+	url: string;
+	key: string;
+}
+
+/** This device's proxy connection; both fields are empty when not set. */
+export async function loadProxySettings(): Promise<ProxySettings> {
+	const saved = await deviceSettings.get<Partial<ProxySettings>>(DeviceSettingKeys.proxy);
+	return { url: (saved?.url ?? '').trim(), key: (saved?.key ?? '').trim() };
+}
+
+export async function saveProxySettings({ url, key }: ProxySettings): Promise<void> {
+	await deviceSettings.set(DeviceSettingKeys.proxy, { url, key });
+}
+
 /**
- * The proxy endpoint to call: the device's configured `proxy.url`, or the
+ * The proxy endpoint to call: the device's configured proxy URL, or the
  * same-origin `PROXY_PATH` when none is set. A configured value must be an
  * absolute http(s) URL; anything else fails with an actionable error.
  */
 export async function proxyBase(): Promise<string> {
-	const configured = ((await deviceSettings.get<string>(DeviceSettingKeys.proxyUrl)) ?? '').trim();
+	const configured = (await loadProxySettings()).url;
 	if (!configured) return PROXY_PATH;
 	let url: URL;
 	try {
@@ -79,10 +94,7 @@ async function errorText(response: Response): Promise<unknown> {
 export async function proxyFetch(target: string, init: ProxyFetchOptions = {}): Promise<Response> {
 	const { upstreamKey, upstreamBearer, upstreamSessionId, upstreamPsuHeaders, ...requestInit } =
 		init;
-	const [key, url] = await Promise.all([
-		deviceSettings.get<string>(DeviceSettingKeys.proxyKey),
-		proxyUrl(target)
-	]);
+	const [{ key }, url] = await Promise.all([loadProxySettings(), proxyUrl(target)]);
 	const headers = new Headers(requestInit.headers);
 	if (key) headers.set(PROXY_KEY_HEADER, key);
 	if (upstreamKey) headers.set(UPSTREAM_KEY_HEADER, upstreamKey);

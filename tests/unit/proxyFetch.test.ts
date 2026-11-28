@@ -10,11 +10,11 @@ const state = vi.hoisted(() => ({ key: null as string | null, url: null as strin
 vi.mock('#lib/settings', () => ({
 	deviceSettings: {
 		get: vi.fn(async (key: string) =>
-			key === 'proxy.key' ? state.key : key === 'proxy.url' ? state.url : null
+			key === 'proxy' ? { url: state.url ?? '', key: state.key ?? '' } : null
 		),
 		set: vi.fn()
 	},
-	DeviceSettingKeys: { proxyKey: 'proxy.key', proxyUrl: 'proxy.url' }
+	DeviceSettingKeys: { proxy: 'proxy' }
 }));
 
 import { proxyFetch, proxyUrl } from '#lib/services/prices/proxyFetch';

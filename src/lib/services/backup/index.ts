@@ -13,7 +13,7 @@ import {
 	type RestoreResult,
 	type StoreOutcomes
 } from './apply';
-import { ALL_SECTIONS, type BackupData, type BackupSection } from './model';
+import { sectionsOf, type BackupData, type BackupSection } from './model';
 import { readV1 } from './readers/v1';
 import { readV2 } from './readers/v2';
 import { readV3 } from './readers/v3';
@@ -35,11 +35,30 @@ export {
 } from './sharedSettings';
 export {
 	BACKUP_VERSION,
+	compressBackup,
 	createBackup,
 	createBackupFile,
 	getBackupFilename,
 	type BackupOptions
 } from './write';
+
+export interface BackupContent {
+	/** The file's JSON, which the functions below work with. */
+	content: string;
+	compressed: boolean;
+}
+
+/** The text of a backup file, gzipped or plain; which it is, is seen from its first bytes. */
+export async function decodeBackup(bytes: Uint8Array<ArrayBuffer>): Promise<BackupContent> {
+	const compressed = bytes[0] === 0x1f && bytes[1] === 0x8b;
+	if (!compressed) return { content: new TextDecoder().decode(bytes), compressed };
+	try {
+		const stream = new Response(bytes).body!.pipeThrough(new DecompressionStream('gzip'));
+		return { content: await new Response(stream).text(), compressed };
+	} catch {
+		throw new Error('The backup file is damaged: it cannot be decompressed');
+	}
+}
 
 /** The readers of the versions the file states. Version 1 files state none. */
 const READERS: Record<number, (file: Record<string, unknown>) => BackupData> = {
@@ -71,7 +90,7 @@ function readBackup(content: string): BackupData {
 	if (!read) throw new Error('Not a Cashier backup file: unknown version');
 
 	const data = read(file);
-	if (!ALL_SECTIONS.some((s) => data[s] !== undefined)) {
+	if (sectionsOf(data).length === 0) {
 		throw new Error('The backup file holds nothing to restore');
 	}
 	return data;
@@ -82,6 +101,8 @@ export interface BackupInfo {
 	/** Sections the file holds. */
 	sections: BackupSection[];
 	hasSecrets: boolean;
+	/** Which credentials the file says it has. Format 2 does not say: the list is empty. */
+	credentials: string[];
 	/** The scheduled transactions are a list without history, as in older files. */
 	scxIsList: boolean;
 	counts: { settings: number; peers: number };
@@ -92,8 +113,9 @@ export function inspectBackup(content: string): BackupInfo {
 	const data = readBackup(content);
 	return {
 		version: data.version,
-		sections: ALL_SECTIONS.filter((s) => data[s] !== undefined),
+		sections: sectionsOf(data),
 		hasSecrets: data.openSecrets !== undefined,
+		credentials: data.openSecrets ? (data.credentials ?? []) : [],
 		scxIsList: !!data.scx && 'list' in data.scx,
 		counts: {
 			settings: data.settings?.length ?? 0,

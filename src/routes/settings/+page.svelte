@@ -55,6 +55,7 @@
 		scheduleNotificationCheck
 	} from '#lib/services/notificationService';
 	import { requestNotificationPermission } from '#lib/utils/webNotification';
+	import { loadProxySettings, saveProxySettings } from '#lib/services/prices/proxyFetch';
 
 	Notifier.init();
 
@@ -294,8 +295,7 @@
 			(await deviceSettings.get<string>(DeviceSettingKeys.notificationTime)) ??
 			NOTIFICATION_TIME_DEFAULT;
 
-		savedProxyUrl = (await deviceSettings.get<string>(DeviceSettingKeys.proxyUrl)) ?? '';
-		savedProxyKey = (await deviceSettings.get<string>(DeviceSettingKeys.proxyKey)) ?? '';
+		({ url: savedProxyUrl, key: savedProxyKey } = await loadProxySettings());
 		proxyUrl = savedProxyUrl;
 		proxyKey = savedProxyKey;
 
@@ -403,8 +403,7 @@
 		proxyKey = proxyKey.trim();
 		savedProxyUrl = proxyUrl;
 		savedProxyKey = proxyKey;
-		await deviceSettings.set(DeviceSettingKeys.proxyUrl, proxyUrl);
-		await deviceSettings.set(DeviceSettingKeys.proxyKey, proxyKey);
+		await saveProxySettings({ url: proxyUrl, key: proxyKey });
 		ShortDateFormatStore.set(shortDateFormat);
 		DateFormatStore.set(dateFormat);
 
@@ -638,7 +637,7 @@
 	<!-- ══ Device Settings (this device only) ═══════════════════ -->
 	<section id="device-settings" class="scroll-mt-16 px-1 pt-4">
 		<h2 class="text-lg font-bold">Device Settings</h2>
-		<p class="text-xs opacity-60">Apply only to this device. Not exported or synced.</p>
+		<p class="text-xs opacity-60">Apply only to this device. Not synced.</p>
 	</section>
 
 	<!-- ── Notifications ───────────────────────────────────── -->
@@ -745,7 +744,7 @@
 			</div>
 		</div>
 		<p class="text-xs opacity-60">
-			The key is sent as the <code>X-Proxy-Key</code> header and is never exported or synced.
+			The key is sent as the <code>X-Proxy-Key</code> header. It is never synced.
 		</p>
 	</CashierCardTemplate>
 

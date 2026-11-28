@@ -83,7 +83,9 @@ The types cannot detect a new secret inside an existing object. The importer con
 - The whole file is gzipped with `CompressionStream` (`.json.gz`).
 - Only the Credentials block is encrypted (PBKDF2 and AES-GCM). It is encrypted before the file is compressed. Everything else can be read without a passphrase.
 - Both transaction stores are saved as Yjs state, which includes their history.
-- The file lists its contents without encryption, including which credentials the block holds, so they can be shown before a passphrase is entered.
+- The file lists its contents without encryption, including which credentials the block holds, so they can be shown before a passphrase is entered. A file with no secrets to hold has no block.
+- A store backup offered when destroying holds that store only. The Backup page always includes the shared settings.
+- This device is two parts of the file, `device` and `peers`.
 - Where a browser cannot share gzip files, Share sends plain JSON.
 - The file records its format version. A file from a newer app is refused.
 
@@ -104,7 +106,8 @@ services/backup/
 ```
 
 - A reader keeps its own definition of its format and does not depend on the current key lists.
-- The model holds both the individual secret fields of version 2 and whole connections. Version 2 secrets keep the connection-matching rule.
+- The model holds both the individual secret fields of version 2 and whole connections. Version 2 secrets keep the connection-matching rule: they go into the plain settings being restored or, when those are left out, into a local connection that matches the one in the file. The result reports those that fit nowhere.
+- Only settings that are credentials by the current rules are written from the block.
 - Current safety rules apply to all versions.
 - Each version has a fixed sample file in the tests (`tests/data/backup/`). A sample is never edited or regenerated.
 

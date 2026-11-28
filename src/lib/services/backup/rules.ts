@@ -25,8 +25,14 @@ export interface SecretFieldsRule {
 	track: boolean;
 }
 
+/** The whole value is a secret: it is only in the encrypted credentials group. */
+export interface WholeSecretRule {
+	/** What the file and the restore page know the credential by. */
+	wholeSecret: string;
+}
+
 /** `plain`: backed up as it is. `excluded`: never in a backup. */
-export type BackupRule = 'plain' | 'excluded' | SecretFieldsRule;
+export type BackupRule = 'plain' | 'excluded' | WholeSecretRule | SecretFieldsRule;
 
 type ValueOf<T> = T[keyof T];
 
@@ -35,7 +41,7 @@ type ValueOf<T> = T[keyof T];
  * these keys it holds the importer configs (`importer.<id>`), which are plain: they must not
  * contain secrets (see importers/config.ts).
  */
-export const SHARED_RULES: Record<ValueOf<typeof SettingKeys>, Exclude<BackupRule, 'excluded'>> = {
+export const SHARED_RULES: Record<ValueOf<typeof SettingKeys>, 'plain' | SecretFieldsRule> = {
 	[SettingKeys.assetAllocationDefinition]: 'plain',
 	[SettingKeys.rootInvestmentAccount]: 'plain',
 	[SettingKeys.currency]: 'plain',
@@ -77,9 +83,9 @@ export const SHARED_RULES: Record<ValueOf<typeof SettingKeys>, Exclude<BackupRul
 };
 
 /**
- * Device settings. What is excluded is mostly tied to this device or to what it has synced so far
- * (its ID, sync progress, hashes of the files last seen), or is a cache. Some credentials are
- * excluded too: they stay on this device.
+ * Device settings. What is excluded is tied to this device or to what it has synced so far (its
+ * ID, sync progress, hashes of the files last seen), is a cache, or would mislead on another
+ * device (the name of a folder the app has no access to there).
  */
 export const DEVICE_RULES: Record<ValueOf<typeof DeviceSettingKeys>, BackupRule> = {
 	[DeviceSettingKeys.priceCatalogues]: 'excluded',
@@ -99,9 +105,9 @@ export const DEVICE_RULES: Record<ValueOf<typeof DeviceSettingKeys>, BackupRule>
 		label: 'ice',
 		track: false
 	},
-	[DeviceSettingKeys.importBookDirectory]: 'plain',
+	[DeviceSettingKeys.importBookDirectory]: 'excluded',
 	[DeviceSettingKeys.importAutoReload]: 'plain',
-	[DeviceSettingKeys.exportBookDirectory]: 'plain',
+	[DeviceSettingKeys.exportBookDirectory]: 'excluded',
 	[DeviceSettingKeys.ledgerCacheEnabled]: 'plain',
 	[DeviceSettingKeys.demoXactIds]: 'excluded',
 	[DeviceSettingKeys.demoScxIds]: 'excluded',
@@ -133,44 +139,69 @@ export const DEVICE_RULES: Record<ValueOf<typeof DeviceSettingKeys>, BackupRule>
 	[DeviceSettingKeys.syncS3Enabled]: 'plain',
 	[DeviceSettingKeys.syncPeerEnabled]: 'plain',
 	[DeviceSettingKeys.syncChannelLastSync]: 'excluded',
-	[DeviceSettingKeys.syncStaleDays]: 'excluded',
-	[DeviceSettingKeys.proxyUrl]: 'excluded',
-	[DeviceSettingKeys.proxyKey]: 'excluded',
-	[DeviceSettingKeys.awareApiKey]: 'excluded',
+	[DeviceSettingKeys.syncStaleDays]: 'plain',
+	[DeviceSettingKeys.proxy]: {
+		secretFields: ['key'],
+		identity: ['url'],
+		label: 'proxy',
+		track: false
+	},
+	[DeviceSettingKeys.awareApiKey]: { wholeSecret: 'aware' },
 	[DeviceSettingKeys.priceDownloadStatus]: 'excluded',
-	[DeviceSettingKeys.speechEngine]: 'excluded',
-	[DeviceSettingKeys.speechLanguage]: 'excluded',
-	[DeviceSettingKeys.speechVoiceMode]: 'excluded',
-	[DeviceSettingKeys.mistralApiKey]: 'excluded',
-	[DeviceSettingKeys.mistralTranscriptionModel]: 'excluded',
-	[DeviceSettingKeys.scalableTokens]: 'excluded',
-	[DeviceSettingKeys.enableBankingCredentials]: 'excluded',
-	[DeviceSettingKeys.enableBankingSessions]: 'excluded',
+	[DeviceSettingKeys.speechEngine]: 'plain',
+	[DeviceSettingKeys.speechLanguage]: 'plain',
+	[DeviceSettingKeys.speechVoiceMode]: 'plain',
+	[DeviceSettingKeys.mistralApiKey]: { wholeSecret: 'mistral' },
+	[DeviceSettingKeys.mistralTranscriptionModel]: 'plain',
+	[DeviceSettingKeys.scalableTokens]: { wholeSecret: 'scalable' },
+	[DeviceSettingKeys.enableBankingCredentials]: { wholeSecret: 'enableBanking' },
+	[DeviceSettingKeys.enableBankingSessions]: { wholeSecret: 'enableBankingSessions' },
 	[DeviceSettingKeys.enableBankingPendingAuth]: 'excluded',
 	[DeviceSettingKeys.enableBankingBalances]: 'excluded'
 };
-
 /**
- * The device settings that travel in a backup. It is what gets written, and also the limit of what
- * a restore writes, whatever a file holds.
+ * The device settings that travel in a backup outside the credentials group, with their secret
+ * fields blanked. It is what gets written, and also the limit of what a restore of This device
+ * writes, whatever a file holds.
  */
 export const PORTABLE_DEVICE_KEYS: string[] = Object.entries(DEVICE_RULES)
-	.filter(([, rule]) => rule !== 'excluded')
+	.filter(([, rule]) => rule === 'plain' || (typeof rule === 'object' && 'secretFields' in rule))
 	.map(([key]) => key);
 
+/** The table a setting is stored in. */
+export type SettingStore = 'settings' | 'device';
+
 export interface SecretSpec extends SecretFieldsRule {
-	/** The table the setting is stored in. */
-	store: 'settings' | 'device';
+	store: SettingStore;
 	key: string;
 }
 
-const specsOf = (store: SecretSpec['store'], rules: Record<string, BackupRule>): SecretSpec[] =>
+/** A setting the credentials group carries, as a whole. */
+export interface CredentialSetting {
+	store: SettingStore;
+	key: string;
+	label: string;
+	/** The secret fields of the setting; absent when the whole value is the secret. */
+	secretFields?: string[];
+}
+
+const specsOf = (store: SettingStore, rules: Record<string, BackupRule>): SecretSpec[] =>
 	Object.entries(rules).flatMap(([key, rule]) =>
-		typeof rule === 'object' ? [{ store, key, ...rule }] : []
+		typeof rule === 'object' && 'secretFields' in rule ? [{ store, key, ...rule }] : []
 	);
 
 /** The settings with secret fields. */
 export const SECRET_SPECS: SecretSpec[] = [
 	...specsOf('settings', SHARED_RULES),
 	...specsOf('device', DEVICE_RULES)
+];
+
+/** Every setting that holds a secret. A restore writes no other setting from the credentials. */
+export const CREDENTIAL_SETTINGS: CredentialSetting[] = [
+	...SECRET_SPECS,
+	...Object.entries(DEVICE_RULES).flatMap(([key, rule]): CredentialSetting[] =>
+		typeof rule === 'object' && 'wholeSecret' in rule
+			? [{ store: 'device', key, label: rule.wholeSecret }]
+			: []
+	)
 ];

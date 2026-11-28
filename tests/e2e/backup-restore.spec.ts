@@ -7,6 +7,7 @@
     the existing data.
 */
 import { readFileSync } from 'node:fs';
+import { gunzipSync } from 'node:zlib';
 import type { Page } from '@playwright/test';
 import * as Y from 'yjs';
 import { expect, test } from './fixtures';
@@ -42,8 +43,8 @@ async function downloadBackup(page: Page): Promise<BackupFile> {
 		page.waitForEvent('download'),
 		page.getByRole('button', { name: 'Backup', exact: true }).click()
 	]);
-	expect(download.suggestedFilename()).toMatch(/^cashier-backup_\d{4}-\d\d-\d\d_\d{6}\.json$/);
-	return JSON.parse(readFileSync((await download.path())!, 'utf8'));
+	expect(download.suggestedFilename()).toMatch(/^cashier-backup_\d{4}-\d\d-\d\d_\d{6}\.json\.gz$/);
+	return JSON.parse(gunzipSync(readFileSync((await download.path())!)).toString('utf8'));
 }
 
 /** Selects a file on /backup. */

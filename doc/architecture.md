@@ -143,10 +143,11 @@ safely. Transaction origins keep updates from echoing: `remote` (from a peer,
   on the device. What a backup does with each setting is declared in
   `services/backup/rules.ts`.
 - **Backup file** (`services/backup/`,
-  `restoredDevice.ts`) is a versioned JSON file with optional sections: settings,
-  scheduled transactions and the working set (both as Yjs state), portable device settings,
-  and trusted devices. Secrets (WebDAV password, S3 keys, passphrases) are left
-  out or sealed in an encrypted block. A restore creates a new device identity;
+  `restoredDevice.ts`) is versioned, gzipped JSON in four groups: shared settings,
+  transactions (working set and scheduled transactions, both as Yjs state), this
+  device (portable device settings and trusted devices) and credentials. Secrets
+  are blanked in the plain groups; the credentials group holds each connection
+  whole, encrypted. A restore creates a new device identity;
   on a device that has never synced, the backed-up device's ID becomes
   `previousDeviceId`. The transaction stores are only ever merged into. Design:
   `doc/backup.md`; each format version has its own reader in `backup/readers/`.
@@ -203,6 +204,6 @@ same-origin with the app (`run_worker_first: ["/api/*"]` in `wrangler.jsonc`). I
 only fetches hosts in the static `ALLOWED_HOSTS` allowlist (add a provider's host
 there) and requires the `PROXY_KEY` secret. Client side:
 `src/lib/services/prices/proxyFetch.ts` — the proxy base URL and key come from
-the device-only `proxy.url` / `proxy.key` settings (Settings → Device Settings →
+the device-only `proxy` setting, `{ url, key }` (Settings → Device Settings →
 HTTP Proxy); an empty URL falls back to the same-origin `/api/proxy`. Design:
 `doc/completed-projects/2026-11-16_CORS-proxy.md`.

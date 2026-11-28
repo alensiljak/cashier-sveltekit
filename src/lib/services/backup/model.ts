@@ -3,11 +3,33 @@
  * (readers/) produce it and apply.ts restores it.
  */
 import type { Revocation, ScheduledTransaction, TrustedPeer } from '#lib/data/model';
-import type { SecretSpec } from './rules';
+import type { SecretSpec, SettingStore } from './rules';
 
-export type BackupSection = 'settings' | 'scx' | 'workingSet' | 'device' | 'peers';
+/**
+ * What can be backed up and restored by itself. `device` is "This device": the portable device
+ * settings and the trusted devices.
+ */
+export type BackupSection = 'settings' | 'workingSet' | 'scx' | 'device' | 'credentials';
 
-export const ALL_SECTIONS: BackupSection[] = ['settings', 'scx', 'workingSet', 'device', 'peers'];
+export const ALL_SECTIONS: BackupSection[] = [
+	'settings',
+	'workingSet',
+	'scx',
+	'device',
+	'credentials'
+];
+
+/** The sections a backup holds. */
+export function sectionsOf(data: BackupData): BackupSection[] {
+	const held: Record<BackupSection, unknown> = {
+		settings: data.settings,
+		workingSet: data.workingSet,
+		scx: data.scx,
+		device: data.device ?? data.peers,
+		credentials: data.openSecrets
+	};
+	return ALL_SECTIONS.filter((s) => held[s] !== undefined);
+}
 
 export interface StoredSetting {
 	key: string;
@@ -31,13 +53,15 @@ export interface PeersData {
 	revocations: Revocation[];
 }
 
-/** The secret fields of one setting, to be put back into its blanked value. */
-export interface FieldSecrets {
-	store: SecretSpec['store'];
-	key: string;
+/**
+ * One entry of the credentials: a whole setting as it was stored, or, in format 2, only the
+ * secret fields of one, to be put back into its blanked value.
+ */
+export type Credential = { store: SettingStore; key: string } & (
+	| { value: string }
 	/** Shaped like the setting's value: an object, or a list of objects. */
-	secrets: unknown;
-}
+	| { fields: unknown }
+);
 
 /** A secret field that had a value and is blank in the file's settings. */
 export interface WithheldField {
@@ -62,5 +86,7 @@ export interface BackupData {
 	 * Present when the file has encrypted credentials.
 	 * Throws `WrongPassphraseError` when the passphrase does not match.
 	 */
-	openSecrets?: (passphrase: string) => Promise<FieldSecrets[]>;
+	openSecrets?: (passphrase: string) => Promise<Credential[]>;
+	/** Which credentials the block holds, when the file says so (labels, see rules.ts). */
+	credentials?: string[];
 }

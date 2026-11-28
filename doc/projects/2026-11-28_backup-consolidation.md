@@ -16,11 +16,7 @@ Nothing is deployed until the project is done. So there is **one new format, ver
 
 Each is removed from this list when its step is done.
 
-| Problem                                                                                                                               | Step |
-| ------------------------------------------------------------------------------------------------------------------------------------- | ---- |
-| The proxy URL and key, other API keys, importer tokens, Enable Banking data, speech settings and stale-sync setting are not backed up | 6    |
-| Folder names are restored although folder access is not                                                                               | 6    |
-| Notifications can be restored as enabled without browser permission                                                                   | 6    |
+None at the moment.
 
 ## Step 1: destroy and the delta sync fix
 
@@ -64,7 +60,7 @@ Done.
 - [x] Comments on the importer configs about secrets, with tests (`tests/unit/importerConfigSecrets.test.ts`)
 - [ ] By hand: upload, diff, preview and download settings over WebDAV, and pull and merge them over Peer Sync
 
-## Step 5: restore fixes
+## Step 5: ✅ restore fixes
 
 Done. For older files too.
 
@@ -81,16 +77,18 @@ Done. For older files too.
 
 ## Step 6: consolidated format
 
-- [ ] The four groups, with Credentials independent of the others
-- [ ] Whole connections; whole-value secrets; the proxy becomes one setting, with a migration
-- [ ] The missing settings and credentials
-- [ ] The whole-value secret rule, and the rules of the keys that start to be backed up
-- [ ] No folder names; notification permission rule
-- [ ] Update the older comments that say credentials are never exported
-- [ ] Compression, and measure what it saves
-- [ ] Test sharing a compressed file on a phone
-- [ ] Recognize compression, encrypted credentials and contents; grey out what a file lacks
-- [ ] A sample file of version 3, once the format is final
+Done, except for the test on a phone.
+
+- [x] The four groups, with Credentials independent of the others
+- [x] Whole connections; whole-value secrets; the proxy becomes one setting, with a migration
+- [x] The missing settings and credentials
+- [x] The whole-value secret rule, and the rules of the keys that start to be backed up
+- [x] No folder names; notification permission rule
+- [x] Update the older comments that say credentials are never exported
+- [x] Compression, and measure what it saves: a nearly empty backup went from 2.7 KB to 1.4 KB (52%); with 300 made-up, repetitive transactions, from 125 KB to 16 KB (13%). Real data will likely compress less than the latter
+- [ ] By hand: test sharing a compressed file on a phone
+- [x] Recognize compression, encrypted credentials and contents; grey out what a file lacks
+- [x] A sample file of version 3, once the format is final
 
 ## Step 7: onboarding and documentation
 

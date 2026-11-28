@@ -150,6 +150,35 @@ db.version(10).stores({
 	revocations: 'id'
 });
 
+// The proxy URL and key became one setting (`DeviceSettingKeys.proxy`).
+db.version(11)
+	.stores({
+		scheduled: null,
+		settings: 'key',
+		deviceSettings: 'key',
+		peers: 'id',
+		peerSyncBaseline: '[endpointId+path]',
+		deviceKeys: 'id',
+		introductions: 'id',
+		revocations: 'id'
+	})
+	.upgrade(async (tx) => {
+		const table = tx.table('deviceSettings');
+		const read = async (key: string): Promise<string> => {
+			const record = await table.get(key);
+			try {
+				const value: unknown = record && JSON.parse(record.value);
+				return typeof value === 'string' ? value : '';
+			} catch {
+				return '';
+			}
+		};
+		const url = await read('proxy.url');
+		const key = await read('proxy.key');
+		if (url || key) await table.put({ key: 'proxy', value: JSON.stringify({ url, key }) });
+		await table.bulkDelete(['proxy.url', 'proxy.key']);
+	});
+
 // Mappings
 
 db.settings.mapToClass(Setting);

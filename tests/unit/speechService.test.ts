@@ -22,8 +22,7 @@ vi.mock('#lib/settings', () => ({
 		speechEngine: 'speech.engine',
 		speechLanguage: 'speech.language',
 		mistralApiKey: 'speech.mistral.api-key',
-		mistralTranscriptionModel: 'speech.mistral.model',
-		proxyKey: 'proxy.key'
+		mistralTranscriptionModel: 'speech.mistral.model'
 	}
 }));
 

@@ -140,7 +140,10 @@ export const SettingKeys = {
 	priceSkippedProviders: 'prices.skippedProviders'
 } as const;
 
-/** Settings specific to this device (not exported). */
+/**
+ * Settings specific to this device. They are never synced. What a backup holds of them is said
+ * by the backup rules; credentials leave the device only in its encrypted credentials group.
+ */
 export const DeviceSettingKeys = {
 	// Downloaded provider catalogues: Record<providerId, { fetchedAt: ISO, products: CatalogueProduct[] }>.
 	// A cache for browsing the catalogue; refreshed only by an explicit button press.
@@ -225,15 +228,11 @@ export const DeviceSettingKeys = {
 	syncChannelLastSync: 'sync.channel.last-sync',
 	// Days without a completed sync before the Sync page warns. Number; default 7.
 	syncStaleDays: 'sync.stale-days',
-	// Base URL of the CORS proxy (worker/proxy.ts), e.g.
-	// 'https://your-worker.workers.dev/api/proxy'. Empty: the app's own
-	// same-origin '/api/proxy'. Device-only, not exported or synced.
-	proxyUrl: 'proxy.url',
-	// Shared key for the CORS proxy (worker/proxy.ts). Device-only: it is a
-	// credential and is not exported or synced.
-	proxyKey: 'proxy.key',
-	// Aware Super's site API key (sent as X-API-KEY via the proxy). Device-only
-	// credential, never exported or synced.
+	// The CORS proxy (worker/proxy.ts), one connection so that its key stays with its URL.
+	// Shape: { url, key }. url: e.g. 'https://your-worker.workers.dev/api/proxy'; empty: the
+	// app's own same-origin '/api/proxy'. key: a credential.
+	proxy: 'proxy',
+	// Aware Super's site API key (sent as X-API-KEY via the proxy). A credential.
 	awareApiKey: 'prices.aware.api-key',
 	// Price download bookkeeping for this device. Shape: PriceDownloadStatus
 	// (see services/prices/priceDownloadService.ts): lastRun, fixingDate,
@@ -247,22 +246,19 @@ export const DeviceSettingKeys = {
 	speechLanguage: 'speech.language',
 	// Whether Quick Entry shows the microphone button (Voice mode). Boolean; default off.
 	speechVoiceMode: 'speech.voice-mode',
-	// Mistral API key for Voxtral transcription. Device-only: it is a credential
-	// and is never exported or synced.
+	// Mistral API key for Voxtral transcription. A credential.
 	mistralApiKey: 'speech.mistral.api-key',
 	// Voxtral model id used for transcription. Default: MISTRAL_TRANSCRIPTION_MODEL.
 	mistralTranscriptionModel: 'speech.mistral.model',
 	// Scalable Capital tokens pasted from scripts/scalable_token.py (Scalable
-	// importer, src/lib/importers/scalable/auth.ts). Device-only: credentials
-	// are never exported or synced.
+	// importer, src/lib/importers/scalable/auth.ts). Credentials.
 	scalableTokens: 'importer.scalable.tokens',
 	// Enable Banking app credentials (application ID + private key PEM, Enable
-	// Banking importer, src/lib/importers/enablebanking/auth.ts). Device-only:
-	// the private key is a credential and is never exported or synced.
+	// Banking importer, src/lib/importers/enablebanking/auth.ts). Credentials.
 	enableBankingCredentials: 'importer.enablebanking.credentials',
 	// Enable Banking sessions created on this device (consent references +
-	// account lists, src/lib/importers/enablebanking/sessions.ts). Device-only:
-	// they are only usable together with this device's private key.
+	// account lists, src/lib/importers/enablebanking/sessions.ts). Credentials: only usable
+	// together with the private key above.
 	enableBankingSessions: 'importer.enablebanking.sessions',
 	// Bank authorizations in progress (keyed by `state`, expiring), and the last
 	// fetched account balances. Device-only, like the sessions they belong to.

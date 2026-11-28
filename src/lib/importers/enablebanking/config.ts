@@ -5,7 +5,7 @@
  *
  * Credentials (application ID + private key) and sessions are deliberately
  * NOT part of this config: they live in device-only settings (auth.ts,
- * sessions.ts) and are never exported or synced.
+ * sessions.ts) and are never synced; a backup holds them only encrypted.
  *
  * Shared and exported as plain text: never add a secret here (see importers/config.ts).
  */

@@ -24,7 +24,7 @@
 		type SpeechEngine,
 		type SpeechRecognitionLike
 	} from '#lib/services/speechService';
-	import { deviceSettings, DeviceSettingKeys } from '#lib/settings';
+	import { loadProxySettings } from '#lib/services/prices/proxyFetch';
 
 	type Props = {
 		onTranscript: (text: string) => void;
@@ -66,7 +66,7 @@
 			// key when the server protects the proxy.
 			const missing: string[] = [];
 			if (!(await getMistralApiKey())) missing.push('a Mistral API key (Speech Settings)');
-			if (!((await deviceSettings.get<string>(DeviceSettingKeys.proxyKey)) ?? '').trim())
+			if (!(await loadProxySettings()).key)
 				missing.push('a proxy key (Settings → Device Settings)');
 			setupNotice = missing.length
 				? `Voxtral needs ${missing.join(' and ')}${missing.some((m) => m.startsWith('a proxy key')) ? ' — the proxy key is only needed when the proxy is protected' : ''}.`

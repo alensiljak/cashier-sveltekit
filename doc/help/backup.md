@@ -4,39 +4,49 @@ The Backup screen saves your data and configuration to a file, and restores it l
 
 ## Create Backup
 
-Tick what the backup should include (everything is ticked at first):
+Tick what the backup should include:
 
-- **Settings** — accounts, groups, budget, formats, forecast and the other shared settings.
-- **Scheduled transactions**
-- **Transactions** — the working set of transactions you entered on this device.
-- **Device settings and sync configuration** — home cards, notifications, the WebDAV, S3 and Peer Sync options, the names of the import and export folders. The device's own identity and sync progress are not included.
-- **Trusted devices** — the Peer Sync links, so you do not have to pair every device again.
+- **Shared settings** — accounts, groups, budget, formats, forecast and the other settings your devices share. Always included.
+- **Working set** — the new transactions you entered. On at first.
+- **Scheduled transactions** — on at first.
+- **This device** — the device settings (home cards, device name, notifications, the WebDAV, S3 and Peer Sync options, HTTP proxy, speech settings, the stale-sync warning) and the trusted Peer Sync devices, so you do not have to pair every device again. On at first. The device's own signing key and sync progress are not included, and neither are the names of the import and export folders.
+- **Credentials** — off at first, see below.
 
-Click **Backup** to download a file named with the current date and time, or **Share** to send it directly via your device's share sheet (where supported by the browser).
+Click **Backup** to download a compressed file (`.json.gz`) named with the current date and time, or **Share** to send it via your device's share sheet (where supported by the browser). Where the browser cannot share a compressed file, Share sends it as plain JSON, which can be restored the same way.
 
 ### Credentials
 
-By default the file contains **no credentials**: the WebDAV password, the S3 access key and secret key, the S3 and WebDAV encryption passphrases and the TURN server credentials are left out. Everything else of those settings (server URL, bucket, user name, on/off switches) is in the file, so after a restore you only fill in the blanks, for instance by copying the values from your password manager. The pages mark the missing fields as **required**.
+Without **Credentials**, the file contains none: no passwords, keys or tokens. The rest of a connection (server URL, bucket, user name, proxy URL) is in **Shared settings** (WebDAV) or **This device**, so after a restore you only fill in the blanks, for instance by copying the values from your password manager. The pages mark the missing WebDAV and S3 fields as **required**.
 
-To put the credentials in the file as well, switch on **Include credentials, encrypted** and enter a passphrase. Use a long random one (the **Generate** button makes one) and keep it in your password manager. The passphrase is not stored anywhere: without it the credentials in the file cannot be recovered, though the rest of the file can still be restored.
+With **Credentials** switched on, the file also holds all of these, whatever else you ticked:
 
-The file also records a format version, so a newer backup is never half-restored by an older app.
+- the WebDAV and S3 connections, with the S3 and WebDAV encryption passphrases
+- the TURN servers and the HTTP proxy
+- the Mistral and Aware Super API keys
+- the Scalable Capital tokens
+- the Enable Banking application ID, private key and bank sessions
 
+Each connection is stored whole, so its secret stays with its address. They are encrypted with a passphrase you enter. Use a long random one (the **Generate a random one** button makes one) and keep it in your password manager. The passphrase is not stored anywhere: without it the credentials cannot be recovered, though the rest of the file can still be restored. Which credentials the file holds can be seen without the passphrase.
+
+An old token or an expired bank session can still require you to sign in again.
+
+Credentials are never synced between devices. This group is the only way they leave the device.
 ## Restore Backup
 
-Click the file chooser, select a previously-created backup file, then choose which of the sections it holds to restore and click **Restore**.
+Click the file chooser and select a backup file, compressed or not. The page shows its format version, whether it is compressed and whether it has encrypted credentials. Groups the file does not have are greyed out. Choose what to restore and click **Restore**.
 
-- **Settings** replace what is already on the device. An empty settings list is not restored, as it would erase your settings.
-- **Transactions** and **scheduled transactions** are merged with what is there. Before you restore, the page shows how many records of each would be added, changed and deleted.
-- **Trusted devices** are added. Nothing is overwritten, and a device you evicted is not brought back.
-- If the file has credentials, enter its passphrase. Leave it empty, or enter a wrong one, and everything else is still restored; restore the file again to get the credentials.
+- **Shared settings** replace what is already on the device, and are always restored when the file has them. An empty settings list is not restored, as it would erase your settings.
+- **Working set** and **scheduled transactions** are merged with what is there. Before you restore, the page shows how many records of each would be added, changed and deleted.
+- **This device** overwrites the device settings the file has; others stay. **Trusted devices** are added: none is overwritten, and a device you evicted is not brought back. Notifications are turned on only if the browser already allows them here. Otherwise turn them on in [Settings](/help/settings). The reminder time is always restored.
+- **Credentials** need the file's passphrase. Each connection and key in the file replaces the local one as a whole; the others stay. Leave the passphrase empty, or enter a wrong one, and everything else is still restored; restore the file again to get the credentials. Without credentials, a secret already on this device is kept only if it belongs to the same connection.
 
+Files of backup format 2 hold only the secret fields, not whole connections. If you restore their credentials without **This device**, a secret is added only to a local connection with the same address.
 An invalid file is rejected before anything is changed.
 
 After restoring on a new device:
 
 - Fill in the fields marked **required** on the WebDAV and S3 configuration pages.
-- Pick the import and export folders again (the browser does not keep access to a folder across devices); their pages mark them as required.
+- Pick the import and export folders again on their pages (the browser does not keep access to a folder across devices).
 - Reload the Asset Allocation definition file, if you use one (it's stored separately in OPFS and isn't included in the backup) — see [File Storage](/help/opfs-file-storage).
 - Re-run a sync or import to bring in the latest journal data — see [Sync OPFS ↔ Filesystem](/help/opfs-sync) or [Ledger Import](/help/ledger-import).
 - **Pair the device again.** A restored device is a new device with a key of its own, so the others do not trust it yet. Add it from one of them (see [Peer Sync](/help/peer-sync)); that device then introduces it to the rest, which each ask you to approve it.

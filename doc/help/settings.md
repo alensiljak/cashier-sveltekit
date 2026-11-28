@@ -23,11 +23,11 @@ Tap **Forecast Settings** to configure the separate forecasting options.
 
 ## Device Settings
 
-These apply only to this device and aren't included in exports or in the settings shared between devices. The [Backup](/help/backup) file can carry them (and, if you choose, the credentials, encrypted).
+These apply only to this device and aren't included in exports or in the settings shared between devices. A [Backup](/help/backup) file can carry them under **This device** and, if you choose, the credentials, encrypted.
 
 - **Enable ledger cache** — keeps a local cache of parsed ledger data for faster loading. Turn it off if you suspect the cache is causing stale data to show.
 
-- **HTTP Proxy** — the endpoint used for outgoing requests to sources that block CORS (some [price providers](/help/price-download), the Mistral transcription API in [Voice mode](/help/voice-entry)). Leave the **Proxy URL** empty to use the app's own same-origin `/api/proxy` endpoint; set a full URL (e.g. `https://your-worker.workers.dev/api/proxy`) to use your own deployment. The **API key** is sent as the `X-Proxy-Key` header and is only needed when the proxy is protected. Both values are stored on this device only and are never exported or synced.
+- **HTTP Proxy** — the endpoint used for outgoing requests to sources that block CORS (some [price providers](/help/price-download), the Mistral transcription API in [Voice mode](/help/voice-entry)). Leave the **Proxy URL** empty to use the app's own same-origin `/api/proxy` endpoint; set a full URL (e.g. `https://your-worker.workers.dev/api/proxy`) to use your own deployment. The **API key** is sent as the `X-Proxy-Key` header and is only needed when the proxy is protected. Both values belong to this device and are never synced. A [Backup](/help/backup) can carry them, the key only in its encrypted credentials.
 
 ## Reset Stores
 

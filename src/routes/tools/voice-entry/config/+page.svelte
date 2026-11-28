@@ -258,9 +258,11 @@
 				<p class="text-sm opacity-70">
 					The language you speak. Both engines use it; leave it on the default if unsure.
 					{#if engine === 'mistral'}
-						All languages the selected Voxtral model supports are listed. <strong>Auto-detect</strong>
-						leaves the language to the model — try it for languages not on the list (e.g. Bosnian),
-						but a pinned language is more reliable on short recordings.
+						All languages the selected Voxtral model supports are listed. <strong>
+							Auto-detect
+						</strong>
+						leaves the language to the model — try it for languages not on the list (e.g. Bosnian), but
+						a pinned language is more reliable on short recordings.
 					{/if}
 				</p>
 				<select class="select select-bordered w-full" bind:value={language}>
@@ -289,7 +291,7 @@
 						bind:value={apiKey}
 					/>
 					<p class="text-xs opacity-60">
-						Stored on this device only and never exported or synced. Create one in the
+						Never synced; a backup holds it only encrypted. Create one in the
 						<a
 							class="link link-primary"
 							href="https://console.mistral.ai/api-keys"
@@ -324,8 +326,8 @@
 							The language list is only known for the models above; a manual id uses the default
 							model's list.
 						{:else}
-							Only file-transcription models work here — the TTS and realtime models answer on
-							other endpoints.
+							Only file-transcription models work here — the TTS and realtime models answer on other
+							endpoints.
 						{/if}
 					</p>
 					<label class="label cursor-pointer justify-start gap-2 py-0">
@@ -344,9 +346,9 @@
 				<p class="text-xs opacity-60">
 					The request to Mistral goes through the app's HTTP proxy (Mistral sends no CORS headers).
 					Set the proxy URL and its key in
-					<a class="link link-primary" href="/settings#device-settings"
-						>Settings → Device Settings → HTTP Proxy</a
-					>. The same settings are used by
+					<a class="link link-primary" href="/settings#device-settings">
+						Settings → Device Settings → HTTP Proxy
+					</a>. The same settings are used by
 					<a class="link link-primary" href="/prices/download">Price Download</a>.
 				</p>
 
