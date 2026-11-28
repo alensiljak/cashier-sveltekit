@@ -1,12 +1,16 @@
 /*
-	Pure decisions behind the "import ledger" page (/opfs/import-ledger): how a scanned source
-	file compares to what was imported before, which files a sync copies or deletes, and how the
-	import manifest is reconciled with what is actually in OPFS. No I/O, so it is unit-testable.
+	Pure decisions about files copied between a source folder and OPFS, used by the "import ledger"
+	and OPFS sync pages: how each file compares on both sides, and which files an import copies or
+	deletes. File access is passed in, so it is unit-testable.
+
+	OPFS can change without an import (edits in the app, peer sync), so both sides are compared:
+	the source against the manifest entry of the last import, and OPFS against its `importedAt`.
+	Times are only a hint, so contents decide whether there is a difference at all.
 */
-import { matchesAny } from './fsScan';
 import type { ImportedFileMeta } from './importManifest';
 
-export type FileStatus = 'new' | 'modified' | 'identical' | 'deleted';
+/** `local`: only the OPFS copy changed. `conflict`: both sides did, or there is no history. */
+export type FileStatus = 'new' | 'modified' | 'local' | 'conflict' | 'identical' | 'deleted';
 
 export type ScannedFile = {
 	path: string;
@@ -14,36 +18,80 @@ export type ScannedFile = {
 	lastModified: number;
 	getFile?: () => Promise<File>;
 	status: FileStatus;
+	/** The source file is gone; applying this row deletes the OPFS file. */
+	sourceMissing?: boolean;
+	/** The user chose to replace (or delete) an OPFS file with changes of its own. */
+	overwrite?: boolean;
 };
 
 export type ImportMode = 'all' | 'modified';
 
 export type ScanStats = Record<FileStatus, number>;
 
-/** Status of a source file against the manifest entry of its last import (size and mtime). */
-export function classifyFile(
-	prev: Pick<ImportedFileMeta, 'size' | 'lastModified'> | undefined,
-	file: { size: number; lastModified: number }
-): Exclude<FileStatus, 'deleted'> {
-	if (!prev) return 'new';
-	return prev.size === file.size && prev.lastModified === file.lastModified
-		? 'identical'
-		: 'modified';
+/** What is known of an OPFS file; the time may be unavailable. */
+export type OpfsFileInfo = { lastModified?: number };
+
+/** Rows that would lose changes made in OPFS, so they are applied only when asked for. */
+export const hasLocalChanges = (f: Pick<ScannedFile, 'status'>) =>
+	f.status === 'local' || f.status === 'conflict';
+
+/** An unknown modification time counts as changed, so the contents get compared. */
+function changedSinceImport(opfs: OpfsFileInfo, meta: Pick<ImportedFileMeta, 'importedAt'>) {
+	return opfs.lastModified === undefined || opfs.lastModified > meta.importedAt;
 }
 
-/** Manifest entries whose source file is gone, as `deleted` rows. */
+/** Ignores the differences OPFS writes introduce: line endings and the final newline. */
+export function isSameContent(a: string, b: string): boolean {
+	const canonical = (s: string) => {
+		const lf = s.replace(/\r\n?/g, '\n');
+		return lf === '' || lf.endsWith('\n') ? lf : `${lf}\n`;
+	};
+	return canonical(a) === canonical(b);
+}
+
+/**
+ * Status of a source file. `record` means both sides turned out to hold the same content after
+ * one of them changed, so the manifest entry should be refreshed. `readBoth` is only called
+ * when the times cannot tell.
+ */
+export async function classifyFile(
+	source: { size: number; lastModified: number },
+	meta: ImportedFileMeta | undefined,
+	opfs: OpfsFileInfo | undefined,
+	readBoth: () => Promise<[source: string, opfs: string]>
+): Promise<{ status: Exclude<FileStatus, 'deleted'>; record: boolean }> {
+	if (!opfs) return { status: 'new', record: false };
+
+	const sourceChanged =
+		!meta || meta.size !== source.size || meta.lastModified !== source.lastModified;
+	const opfsChanged = !meta || changedSinceImport(opfs, meta);
+	if (!sourceChanged && !opfsChanged) return { status: 'identical', record: false };
+
+	if (isSameContent(...(await readBoth()))) return { status: 'identical', record: true };
+
+	if (sourceChanged && opfsChanged) return { status: 'conflict', record: false };
+	return { status: sourceChanged ? 'modified' : 'local', record: false };
+}
+
+/**
+ * Rows for manifest entries whose source file is gone: `deleted`, or `conflict` when the OPFS
+ * file has changed since the import.
+ */
 export function findDeleted(
-	manifest: Map<string, Pick<ImportedFileMeta, 'size' | 'lastModified'>>,
-	seen: Set<string>
+	manifest: Map<string, ImportedFileMeta>,
+	seen: Set<string>,
+	opfsFiles: Map<string, OpfsFileInfo>
 ): ScannedFile[] {
 	const deleted: ScannedFile[] = [];
 	for (const [path, meta] of manifest) {
 		if (!seen.has(path)) {
+			const opfs = opfsFiles.get(path);
 			deleted.push({
 				path,
 				size: meta.size,
 				lastModified: meta.lastModified,
-				status: 'deleted'
+				status: opfs && changedSinceImport(opfs, meta) ? 'conflict' : 'deleted',
+				sourceMissing: true
 			});
 		}
 	}
@@ -51,72 +99,38 @@ export function findDeleted(
 }
 
 export function countStatuses(files: Pick<ScannedFile, 'status'>[]): ScanStats {
-	const stats: ScanStats = { new: 0, modified: 0, identical: 0, deleted: 0 };
+	const stats: ScanStats = {
+		new: 0,
+		modified: 0,
+		local: 0,
+		conflict: 0,
+		identical: 0,
+		deleted: 0
+	};
 	for (const f of files) stats[f.status]++;
 	return stats;
 }
 
-/** Files a sync writes to OPFS: only changed ones, or every file still in the source. */
+/**
+ * Files an import writes to OPFS: the source changes plus the overwrites asked for, or, in
+ * "all" mode, every file still in the source.
+ */
 export function filesToCopy(files: ScannedFile[], mode: ImportMode): ScannedFile[] {
-	return mode === 'modified'
-		? files.filter((f) => f.status === 'new' || f.status === 'modified')
-		: files.filter((f) => f.status !== 'deleted');
+	return files.filter(
+		(f) =>
+			!f.sourceMissing &&
+			(mode === 'all' ||
+				f.status === 'new' ||
+				f.status === 'modified' ||
+				(hasLocalChanges(f) && !!f.overwrite))
+	);
 }
 
 export function filesToDelete(files: ScannedFile[]): ScannedFile[] {
-	return files.filter((f) => f.status === 'deleted');
+	return files.filter((f) => f.sourceMissing && (f.status === 'deleted' || !!f.overwrite));
 }
 
-/** How many files the next sync will touch (copies only, as deletions are always applied). */
+/** How many files the next import will touch. */
 export function importCount(files: ScannedFile[], mode: ImportMode): number {
-	return mode === 'modified' ? files.filter((f) => f.status !== 'identical').length : files.length;
-}
-
-/** Line endings are ignored when comparing the source with what is in OPFS. */
-export const normalizeLineEndings = (s: string) => s.replace(/\r\n/g, '\n');
-
-/** An OPFS tree entry, as listed by `listFileTree`. */
-export interface TreeFile {
-	kind: string;
-	path: string;
-	name: string;
-	size?: number;
-	lastModified?: number;
-}
-
-/**
- * Reconciles the manifest with what is in OPFS now: entries to add or update for files that exist
- * (keeping `importedAt` for those already known), and paths to drop for files that do not.
- * Files under `excludePrefix` (Cashier-internal data) and files not matching `patterns` are skipped.
- */
-export function planManifestRebuild(
-	manifest: Map<string, ImportedFileMeta>,
-	tree: TreeFile[],
-	patterns: RegExp[],
-	excludePrefix: string,
-	now: number
-): { upserts: ImportedFileMeta[]; stale: string[] } {
-	const actualPaths = new Set<string>();
-	const upserts: ImportedFileMeta[] = [];
-
-	for (const entry of tree) {
-		if (entry.kind !== 'file') continue;
-		if (entry.path.startsWith(excludePrefix)) continue;
-		if (patterns.length > 0 && !matchesAny(entry.name, patterns)) continue;
-		if (entry.size === undefined || entry.lastModified === undefined) continue;
-
-		actualPaths.add(entry.path);
-		const prev = manifest.get(entry.path);
-		if (prev && prev.size === entry.size && prev.lastModified === entry.lastModified) {
-			continue; // unchanged, no need to rewrite
-		}
-		upserts.push({
-			path: entry.path,
-			size: entry.size,
-			lastModified: entry.lastModified,
-			importedAt: prev?.importedAt ?? now
-		});
-	}
-
-	return { upserts, stale: [...manifest.keys()].filter((path) => !actualPaths.has(path)) };
+	return filesToCopy(files, mode).length + filesToDelete(files).length;
 }

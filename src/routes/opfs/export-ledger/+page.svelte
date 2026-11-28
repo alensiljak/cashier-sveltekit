@@ -6,9 +6,11 @@
 	import RefreshCcwIcon from '@lucide/svelte/icons/refresh-ccw';
 	import DownloadIcon from '@lucide/svelte/icons/download';
 	import { deviceSettings, DeviceSettingKeys } from '#lib/settings';
+	import FolderApiNotice from '#lib/components/FolderApiNotice.svelte';
 	import {
 		loadPersistedHandle,
 		persistHandle,
+		hasPermission,
 		requestWritePermission
 	} from '#lib/utils/fsHandleStore';
 	import {
@@ -71,9 +73,9 @@
 		hasDirectoryPicker = 'showDirectoryPicker' in window;
 		if (hasDirectoryPicker) {
 			dirName = (await deviceSettings.get<string>(DeviceSettingKeys.exportBookDirectory)) ?? '';
-			const stored = await loadPersistedHandle(HANDLE_KEY);
-			if (stored && (await requestWritePermission(stored))) {
-				dirHandle = stored;
+			storedHandle = await loadPersistedHandle(HANDLE_KEY);
+			if (storedHandle && (await hasPermission(storedHandle, 'readwrite'))) {
+				dirHandle = storedHandle;
 			}
 		}
 		handleChecked = true;
@@ -83,6 +85,19 @@
 	// A folder name is known (e.g. restored from a backup) but the browser holds no access to it.
 	let handleChecked = $state(false);
 	const handleMissing = $derived(handleChecked && hasDirectoryPicker && !!dirName && !dirHandle);
+
+	// The folder picked on an earlier visit; access to it may need to be granted again.
+	let storedHandle = $state.raw<FileSystemDirectoryHandle | null>(null);
+
+	async function reconnect() {
+		if (!storedHandle) return;
+		errorMsg = '';
+		if (await requestWritePermission(storedHandle)) {
+			dirHandle = storedHandle;
+		} else {
+			errorMsg = 'Access was not granted. Try again or select the folder.';
+		}
+	}
 
 	async function pickDirectory() {
 		try {
@@ -174,6 +189,13 @@
 	</Toolbar>
 
 	<div class="flex-1 overflow-y-auto touch-pan-y p-4 flex flex-col gap-4">
+		{#if handleChecked}
+			<FolderApiNotice
+				supported={hasDirectoryPicker}
+				fallbackText="Cashier will pack everything into a ZIP file and download it instead. Where the file lands depends on your browser's download settings."
+			/>
+		{/if}
+
 		{#if hasDirectoryPicker}
 			<!-- Destination picker -->
 			<section class="flex flex-col gap-2">
@@ -189,6 +211,9 @@
 							: 'text-base-content/40'} {handleMissing ? 'outline outline-error' : ''}"
 						>{dirName ? dirName + '/' : 'Not selected'}</span
 					>
+					{#if storedHandle && !dirHandle}
+						<button class="btn btn-warning" onclick={reconnect}>Reconnect</button>
+					{/if}
 					<button id="directoryPicker" class="btn btn-primary gap-2" onclick={pickDirectory}>
 						<FolderOutputIcon class="w-5 h-5" />
 						{dirName ? 'Change' : 'Select Destination'}
@@ -199,14 +224,6 @@
 					deleted — this is a one-way copy, not a mirror.
 				</p>
 			</section>
-		{:else}
-			<div class="alert alert-info text-sm">
-				<span>
-					This browser (e.g. Firefox) doesn't support picking a folder to write to directly. Cashier
-					will pack everything into a ZIP file and download it instead — where the file lands
-					depends on your browser's own download settings.
-				</span>
-			</div>
 		{/if}
 
 		<!-- Scan results -->

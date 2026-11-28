@@ -6,24 +6,28 @@
 	import RefreshCcwIcon from '@lucide/svelte/icons/refresh-ccw';
 	import ChevronUpIcon from '@lucide/svelte/icons/chevron-up';
 	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
-	import EraserIcon from '@lucide/svelte/icons/eraser';
-	import CopyCheckIcon from '@lucide/svelte/icons/copy-check';
 	import { settings, SettingKeys, deviceSettings, DeviceSettingKeys } from '#lib/settings';
 	import fullLedgerService from '#lib/services/ledgerWorkerClient';
-	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
+	import FolderApiNotice from '#lib/components/FolderApiNotice.svelte';
 	import {
 		loadPersistedHandle,
 		persistHandle,
+		hasPermission,
 		requestReadPermission
 	} from '#lib/utils/fsHandleStore';
 	import {
-		getManifest,
+		getReconciledManifest,
 		putManifestEntries,
 		deleteManifestEntries,
 		type ImportedFileMeta
 	} from '#lib/utils/importManifest';
 	import { processWithConcurrencyLimit } from '#lib/utils/concurrency';
-	import { parseSpecs, matchesAny, collectFsFileHandles } from '#lib/utils/fsScan';
+	import {
+		parseSpecs,
+		matchesAny,
+		isInHiddenDirectory,
+		collectFsFileHandles
+	} from '#lib/utils/fsScan';
 	import {
 		readFile,
 		writeFileObject,
@@ -32,22 +36,28 @@
 	} from '#lib/utils/opfslib';
 	import { reloadLedgerFromOpfs } from '#lib/services/ledgerReload';
 	import { buildDiffLines, type DiffLine } from '#lib/utils/diffText';
-	import { CASHIER_DATA_DIR } from '#lib/constants';
 	import {
 		classifyFile,
 		countStatuses,
 		filesToCopy,
 		filesToDelete,
 		findDeleted,
+		hasLocalChanges,
 		importCount,
-		normalizeLineEndings,
-		planManifestRebuild,
+		type FileStatus,
 		type ImportMode,
 		type ScanStats,
 		type ScannedFile
 	} from '#lib/utils/importScan';
 
-	const CACHE_DIR_PREFIX = `${CASHIER_DATA_DIR}/`;
+	const STATUS_BADGES: Record<FileStatus, string> = {
+		new: 'badge-success',
+		modified: 'badge-warning',
+		local: 'badge-info',
+		conflict: 'badge-error',
+		identical: 'badge-ghost',
+		deleted: 'badge-error'
+	};
 
 	const HANDLE_KEY = 'importLedgerDirectoryHandle';
 	const CONCURRENCY = 4;
@@ -99,6 +109,13 @@
 	}
 
 	let filesToImportCount = $derived(importCount(scannedFiles, importMode));
+	let localChangeFiles = $derived(scannedFiles.filter(hasLocalChanges));
+	// Of those, how many an import will replace or delete, and how many it will leave alone.
+	let overwriteCount = $derived(
+		[...filesToCopy(scannedFiles, importMode), ...filesToDelete(scannedFiles)].filter(
+			hasLocalChanges
+		).length
+	);
 
 	$effect(() => {
 		let timer: ReturnType<typeof setInterval> | null = null;
@@ -130,9 +147,9 @@
 		fileSpec = (await settings.get<string>(SettingKeys.importBookFileSpec)) ?? fileSpec;
 		autoReload = (await deviceSettings.get<boolean>(DeviceSettingKeys.importAutoReload)) ?? true;
 		if (hasDirectoryPicker) {
-			const stored = await loadPersistedHandle(HANDLE_KEY);
-			if (stored && (await requestReadPermission(stored))) {
-				dirHandle = stored;
+			storedHandle = await loadPersistedHandle(HANDLE_KEY);
+			if (storedHandle && (await hasPermission(storedHandle, 'read'))) {
+				dirHandle = storedHandle;
 			}
 		}
 		handleChecked = true;
@@ -140,9 +157,20 @@
 
 	// A folder name is known (e.g. restored from a backup) but the browser holds no access to it.
 	let handleChecked = $state(false);
-	const handleMissing = $derived(
-		handleChecked && hasDirectoryPicker && !!dirName && !dirHandle && !fallbackFiles
-	);
+	const handleMissing = $derived(handleChecked && !!dirName && !dirHandle && !fallbackFiles);
+
+	// The folder picked on an earlier visit; access to it may need to be granted again.
+	let storedHandle = $state.raw<FileSystemDirectoryHandle | null>(null);
+
+	async function reconnect() {
+		if (!storedHandle) return;
+		errorMsg = '';
+		if (await requestReadPermission(storedHandle)) {
+			dirHandle = storedHandle;
+		} else {
+			errorMsg = 'Access was not granted. Try again or select the folder.';
+		}
+	}
 
 	function handleFallbackInput(event: Event) {
 		const input = event.target as HTMLInputElement;
@@ -182,7 +210,7 @@
 		}
 	}
 
-	// ── Scan & compare (metadata-based) ───────────────────────────────────────────
+	// ── Scan & compare (times first, contents where times cannot tell) ────────────
 	async function scanAndCompare() {
 		if (!dirHandle && !fallbackFiles) return;
 
@@ -196,9 +224,37 @@
 			const patterns = parseSpecs(fileSpec);
 			if (patterns.length === 0) throw new Error('No valid file specs provided.');
 
-			const manifest = await getManifest();
+			const tree = await listFileTree();
+			const opfsFiles = new Map(tree.filter((e) => e.kind === 'file').map((e) => [e.path, e]));
+			const manifest = await getReconciledManifest(opfsFiles.keys());
 			const seen = new Set<string>();
 			const result: ScannedFile[] = [];
+			// Files found to match on both sides after a change; recorded as imported.
+			const matched: ImportedFileMeta[] = [];
+
+			const compare = async (path: string, file: File): Promise<ScannedFile> => {
+				const { status, record } = await classifyFile(
+					file,
+					manifest.get(path),
+					opfsFiles.get(path),
+					async () => [await file.text(), (await readFile(path)) ?? '']
+				);
+				if (record) {
+					matched.push({
+						path,
+						size: file.size,
+						lastModified: file.lastModified,
+						importedAt: Date.now()
+					});
+				}
+				return {
+					path,
+					size: file.size,
+					lastModified: file.lastModified,
+					getFile: () => Promise.resolve(file),
+					status
+				};
+			};
 
 			if (dirHandle) {
 				// Pipeline: fire getFile() for each file as it is discovered during
@@ -211,14 +267,8 @@
 					scanProgress.total++;
 
 					metadataPromises.push(
-						handle.getFile().then((file) => {
-							result[idx] = {
-								path,
-								size: file.size,
-								lastModified: file.lastModified,
-								getFile: () => Promise.resolve(file),
-								status: classifyFile(manifest.get(path), file)
-							};
+						handle.getFile().then(async (file) => {
+							result[idx] = await compare(path, file);
 							seen.add(path);
 							scanProgress.done++;
 						})
@@ -227,26 +277,22 @@
 
 				await Promise.all(metadataPromises);
 			} else if (fallbackFiles) {
-				// Fallback: metadata already on the File objects, no async reads needed.
+				// Fallback: metadata already on the File objects.
 				for (const f of fallbackFiles) {
 					const parts = f.webkitRelativePath.split('/');
 					const path = parts.slice(1).join('/');
-					if (!path || !matchesAny(parts[parts.length - 1], patterns)) continue;
-					const captured = f;
-					result.push({
-						path,
-						size: f.size,
-						lastModified: f.lastModified,
-						getFile: async () => captured,
-						status: classifyFile(manifest.get(path), f)
-					});
+					if (!path || isInHiddenDirectory(path)) continue;
+					if (!matchesAny(parts[parts.length - 1], patterns)) continue;
+					result.push(await compare(path, f));
 					seen.add(path);
 				}
 				scanProgress = { done: result.length, total: result.length };
 			}
 
 			// Detect deletions: manifest entries that no longer exist in source
-			result.push(...findDeleted(manifest, seen));
+			result.push(...findDeleted(manifest, seen, opfsFiles));
+
+			await putManifestEntries(matched);
 
 			scannedFiles = result;
 			scanStats = countStatuses(result);
@@ -370,111 +416,24 @@
 		autoReload = !autoReload;
 		await deviceSettings.set(DeviceSettingKeys.importAutoReload, autoReload);
 	}
-
-	// ── Drop identical files (compare new/modified entries by content) ───────────
-	// Files that arrived in OPFS by other means (e.g. peer sync) show up as "new"
-	// because the manifest has no record of them. Compare content (ignoring line
-	// endings, like the diff view) and, for matches, record them in the manifest
-	// so they are treated as identical from now on.
-	let comparing = $state(false);
-
-	async function removeIdenticalFiles() {
-		comparing = true;
-		errorMsg = '';
-		try {
-			const norm = normalizeLineEndings;
-			const candidates = scannedFiles.filter(
-				(f) => (f.status === 'new' || f.status === 'modified') && f.getFile
-			);
-			const identicalPaths = new Set<string>();
-			const entries: ImportedFileMeta[] = [];
-
-			await processWithConcurrencyLimit(candidates, CONCURRENCY, async (entry) => {
-				const [local, file] = await Promise.all([readFile(entry.path), entry.getFile!()]);
-				if (local == null) return;
-				if (norm(local) !== norm(await file.text())) return;
-				identicalPaths.add(entry.path);
-				entries.push({
-					path: entry.path,
-					size: file.size,
-					lastModified: file.lastModified,
-					importedAt: Date.now()
-				});
-			});
-
-			await putManifestEntries(entries);
-
-			if (diffPath && identicalPaths.has(diffPath)) {
-				diffPath = null;
-				diffLines = [];
-			}
-			scannedFiles = scannedFiles.map((f) =>
-				identicalPaths.has(f.path) ? { ...f, status: 'identical' as const } : f
-			);
-			scanStats = countStatuses(scannedFiles);
-		} catch (e) {
-			const err = e as { message?: string };
-			errorMsg = err?.message ?? String(e);
-		} finally {
-			comparing = false;
-		}
-	}
-
-	// ── Re-read files (rebuild manifest from actual OPFS contents) ───────────────
-	// The manifest can drift from reality — e.g. files removed directly on the
-	// OPFS page rather than through this import flow. Reconcile it against what
-	// is actually in OPFS right now: add/update entries for files that exist,
-	// drop entries for files that don't, and leave everything else untouched
-	// (importedAt is preserved for files still present). .cashier/ is
-	// Cashier-internal and never part of the imported source book, so it's
-	// skipped here too — same as OpfsSource.listTree() does
-	// for peer sync.
-	async function rebuildManifestAndRescan() {
-		const [manifest, tree] = await Promise.all([getManifest(), listFileTree()]);
-		const { upserts, stale } = planManifestRebuild(
-			manifest,
-			tree,
-			parseSpecs(fileSpec),
-			CACHE_DIR_PREFIX,
-			Date.now()
-		);
-
-		await putManifestEntries(upserts);
-		await deleteManifestEntries(stale);
-
-		diffPath = null;
-		diffLines = [];
-		scanStats = null;
-		scannedFiles = [];
-		if (dirHandle || fallbackFiles) {
-			await scanAndCompare();
-		}
-	}
 </script>
 
-{#snippet menuItems()}
-	<ToolbarMenuItem
-		text="Remove Identical Files"
-		Icon={CopyCheckIcon}
-		disabled={phase === 'scanning' || phase === 'copying' || comparing || scanStats === null}
-		onclick={removeIdenticalFiles}
-	/>
-	<ToolbarMenuItem
-		text="Re-read Files"
-		Icon={EraserIcon}
-		disabled={phase === 'scanning' || phase === 'copying'}
-		onclick={rebuildManifestAndRescan}
-	/>
-{/snippet}
-
 <main class="h-screen flex flex-col overflow-hidden">
-	<Toolbar title="Import Ledger to OPFS" {menuItems}>
+	<Toolbar title="Import Ledger to OPFS">
 		{#snippet actions()}
 			<HelpButton topic="ledger-import" />
 		{/snippet}
 	</Toolbar>
 
 	<div class="flex-1 overflow-y-auto touch-pan-y p-4 flex flex-col gap-4 mx-auto max-w-2xl w-full">
+		<!-- Folder access API in use; known only after mount -->
+		{#if handleChecked}
+			<FolderApiNotice
+				supported={hasDirectoryPicker}
+				fallbackText="Using file upload instead: select the folder again on each visit. Your browser may call this an upload, but the files stay on this device. It may count every file in the folder; only those matching File Spec are imported."
+			/>
+		{/if}
+
 		<!-- Directory picker -->
 		<section class="flex flex-col gap-2">
 			<label for="directoryPicker" class="label font-semibold"
@@ -487,6 +446,9 @@
 						: 'text-base-content/40'} {handleMissing ? 'outline outline-error' : ''}"
 					>{dirName ? dirName + '/' : 'Not selected'}</span
 				>
+				{#if storedHandle && !dirHandle}
+					<button class="btn btn-warning" onclick={reconnect}>Reconnect</button>
+				{/if}
 				{#if hasDirectoryPicker}
 					<button id="directoryPicker" class="btn btn-primary gap-2" onclick={pickDirectory}>
 						<FolderOpenIcon class="w-5 h-5" />
@@ -552,11 +514,21 @@
 
 		<!-- Scan results -->
 		{#if scanStats !== null}
+			{@const preview =
+				importMode === 'modified'
+					? scannedFiles.filter((f) => f.status !== 'identical')
+					: scannedFiles}
 			<section class="flex flex-col gap-3">
 				<div class="flex items-center gap-2 flex-wrap">
 					<span class="text-sm font-semibold text-base-content/70">Scan results:</span>
 					<span class="badge badge-success">{scanStats.new} new</span>
 					<span class="badge badge-warning">{scanStats.modified} modified</span>
+					{#if scanStats.local > 0}
+						<span class="badge badge-info">{scanStats.local} local</span>
+					{/if}
+					{#if scanStats.conflict > 0}
+						<span class="badge badge-error">{scanStats.conflict} conflict</span>
+					{/if}
 					<span class="badge badge-ghost">{scanStats.identical} identical</span>
 					{#if scanStats.deleted > 0}
 						<span class="badge badge-error">{scanStats.deleted} deleted</span>
@@ -587,12 +559,23 @@
 					</label>
 				</div>
 
+				{#if localChangeFiles.length > 0}
+					<p class="text-xs text-base-content/70">
+						<strong>local</strong> files have changes only in Cashier (for example from peer sync);
+						<strong>conflict</strong> files differ and may have changes on both sides. They are kept
+						unless you tick <strong>overwrite</strong>. Check the diff first.
+					</p>
+					{#if overwriteCount > 0}
+						<div class="alert alert-warning text-sm">
+							<span>
+								Import will replace or delete {overwriteCount} file(s) that differ in Cashier.
+							</span>
+						</div>
+					{/if}
+				{/if}
+
 				<!-- File preview list -->
 				{#if scannedFiles.length > 0}
-					{@const preview =
-						importMode === 'modified'
-							? scannedFiles.filter((f) => f.status !== 'identical')
-							: scannedFiles}
 					{#if preview.length > 0}
 						<div
 							class="overflow-y-auto border border-base-300 rounded font-mono text-xs"
@@ -600,16 +583,23 @@
 						>
 							{#each preview as file}
 								<div class="flex items-center gap-2 px-2 py-0.5 hover:bg-base-200">
-									<span
-										class="badge badge-xs shrink-0 {file.status === 'new'
-											? 'badge-success'
-											: file.status === 'modified'
-												? 'badge-warning'
-												: file.status === 'deleted'
-													? 'badge-error'
-													: 'badge-ghost'}">{file.status}</span
+									<span class="badge badge-xs shrink-0 {STATUS_BADGES[file.status]}"
+										>{file.status}</span
 									>
-									<span class="truncate flex-1">{file.path}</span>
+									<span class="truncate flex-1"
+										>{file.path}{#if file.sourceMissing && file.status === 'conflict'}
+											(not in source){/if}</span
+									>
+									{#if hasLocalChanges(file) && (importMode === 'modified' || file.sourceMissing)}
+										<label class="flex items-center gap-1 shrink-0 cursor-pointer">
+											<input
+												type="checkbox"
+												class="checkbox checkbox-xs"
+												bind:checked={file.overwrite}
+											/>
+											{file.sourceMissing ? 'delete' : 'overwrite'}
+										</label>
+									{/if}
 									{#if file.status !== 'identical'}
 										<button
 											class="link link-hover text-primary shrink-0"

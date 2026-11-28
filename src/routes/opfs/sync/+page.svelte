@@ -10,19 +10,21 @@
 	import MinusIcon from '@lucide/svelte/icons/minus';
 	import { settings, SettingKeys, deviceSettings, DeviceSettingKeys } from '#lib/settings';
 	import fullLedgerService from '#lib/services/ledgerWorkerClient';
+	import FolderApiNotice from '#lib/components/FolderApiNotice.svelte';
 	import {
 		loadPersistedHandle,
 		persistHandle,
-		requestReadPermission,
+		hasPermission,
 		requestWritePermission
 	} from '#lib/utils/fsHandleStore';
 	import {
-		getManifest,
+		getReconciledManifest,
 		putManifestEntries,
 		type ImportedFileMeta
 	} from '#lib/utils/importManifest';
 	import * as OpfsLib from '#lib/utils/opfslib.js';
 	import { parseSpecs, collectFsFileHandles } from '#lib/utils/fsScan';
+	import { classifyFile, type FileStatus } from '#lib/utils/importScan';
 	import { reloadLedgerFromOpfs } from '#lib/services/ledgerReload';
 
 	let scannedFsHandles = $state(new Map<string, FileSystemFileHandle>());
@@ -42,12 +44,20 @@
 		action: SyncAction;
 	};
 
+	const DEFAULT_ACTIONS: Record<Exclude<FileStatus, 'identical' | 'deleted'>, SyncAction> = {
+		new: 'fs-to-opfs',
+		modified: 'fs-to-opfs',
+		local: 'opfs-to-fs',
+		conflict: 'conflict'
+	};
+
 	// ── FS write helper ───────────────────────────────────────────────────────────
+	/** Returns the file as written. */
 	async function writeFsFile(
 		rootHandle: FileSystemDirectoryHandle,
 		path: string,
 		content: string
-	): Promise<void> {
+	): Promise<File> {
 		const parts = path.split('/');
 		const fileName = parts.pop()!;
 		let dir = rootHandle;
@@ -58,6 +68,7 @@
 		const writable = await fh.createWritable();
 		await writable.write(new TextEncoder().encode(content));
 		await writable.close();
+		return fh.getFile();
 	}
 
 	// ── State ─────────────────────────────────────────────────────────────────────
@@ -109,10 +120,10 @@
 		dirName = (await deviceSettings.get<string>(DeviceSettingKeys.importBookDirectory)) ?? '';
 		fileSpec = (await settings.get<string>(SettingKeys.importBookFileSpec)) ?? fileSpec;
 		if (hasDirectoryPicker) {
-			const stored = await loadPersistedHandle(HANDLE_KEY);
-			if (stored && (await requestReadPermission(stored))) {
-				dirHandle = stored;
-				hasWritePermission = await requestWritePermission(stored);
+			storedHandle = await loadPersistedHandle(HANDLE_KEY);
+			if (storedHandle && (await hasPermission(storedHandle, 'read'))) {
+				hasWritePermission = await hasPermission(storedHandle, 'readwrite');
+				dirHandle = storedHandle;
 			}
 		}
 		handleChecked = true;
@@ -121,6 +132,21 @@
 	// A folder name is known (e.g. restored from a backup) but the browser holds no access to it.
 	let handleChecked = $state(false);
 	const handleMissing = $derived(handleChecked && hasDirectoryPicker && !!dirName && !dirHandle);
+
+	// The folder picked on an earlier visit; access to it may need to be granted again.
+	let storedHandle = $state.raw<FileSystemDirectoryHandle | null>(null);
+
+	// Asking for write access covers reading too.
+	async function reconnect() {
+		if (!storedHandle) return;
+		errorMsg = '';
+		if (await requestWritePermission(storedHandle)) {
+			dirHandle = storedHandle;
+			hasWritePermission = true;
+		} else {
+			errorMsg = 'Write access was not granted. Try again or select the folder.';
+		}
+	}
 
 	async function pickDirectory() {
 		try {
@@ -162,67 +188,43 @@
 			});
 			scannedFsHandles = new Map(fsHandles.map(({ path, handle }) => [path, handle]));
 
-			const [manifest, fsMetaList] = await Promise.all([
-				getManifest(),
-				Promise.all(
-					fsHandles.map(async ({ path, handle }) => {
-						const file = await handle.getFile();
-						return { path, lastModified: file.lastModified, size: file.size };
-					})
-				)
-			]);
+			const tree = await OpfsLib.listFileTree();
+			const opfsFiles = new Map(tree.filter((e) => e.kind === 'file').map((e) => [e.path, e]));
+			const manifest = await getReconciledManifest(opfsFiles.keys());
 
-			const fsFiles = new Map(fsMetaList.map((f) => [f.path, f]));
 			const result: SyncEntry[] = [];
-
-			const scanResults = await Promise.all(
-				Array.from(fsFiles.entries()).map(async ([path, fsEntry]) => {
-					const meta = manifest.get(path);
-					const opfsMeta = await OpfsLib.getFileMetadata(path);
-					return { path, fsEntry, meta, opfsMeta };
-				})
-			);
-
 			const identical: ImportedFileMeta[] = [];
 
-			for (const { path, fsEntry, meta, opfsMeta } of scanResults) {
-				const fsChanged =
-					!meta || fsEntry.lastModified !== meta.lastModified || fsEntry.size !== meta.size;
-				const opfsChanged = opfsMeta && meta ? opfsMeta.lastModified > meta.importedAt : false;
-
-				if (!fsChanged && !opfsChanged) continue;
-
-				// Timestamps are only a hint: a copy or an editor can touch a file without changing
-				// it. Identical content on both sides is no difference; record it as synced.
-				if (opfsMeta && opfsMeta.size === fsEntry.size) {
-					const [fsText, opfsText] = await Promise.all([
-						scannedFsHandles
-							.get(path)!
-							.getFile()
-							.then((f) => f.text()),
-						OpfsLib.readFile(path)
-					]);
-					if (fsText === opfsText) {
+			await Promise.all(
+				fsHandles.map(async ({ path, handle }) => {
+					const file = await handle.getFile();
+					const opfs = opfsFiles.get(path);
+					const { status, record } = await classifyFile(
+						file,
+						manifest.get(path),
+						opfs,
+						async () => [await file.text(), (await OpfsLib.readFile(path)) ?? '']
+					);
+					if (record) {
 						identical.push({
 							path,
-							size: fsEntry.size,
-							lastModified: fsEntry.lastModified,
+							size: file.size,
+							lastModified: file.lastModified,
 							importedAt: Date.now()
 						});
-						continue;
 					}
-				}
+					if (status === 'identical') return;
 
-				const defaultAction: SyncAction =
-					fsChanged && opfsChanged ? 'conflict' : fsChanged ? 'fs-to-opfs' : 'opfs-to-fs';
-				result.push({
-					path,
-					opfsLastModified: opfsMeta?.lastModified,
-					fsLastModified: fsEntry.lastModified,
-					defaultAction,
-					action: defaultAction
-				});
-			}
+					const defaultAction = DEFAULT_ACTIONS[status];
+					result.push({
+						path,
+						opfsLastModified: opfs?.lastModified,
+						fsLastModified: file.lastModified,
+						defaultAction,
+						action: defaultAction
+					});
+				})
+			);
 
 			if (identical.length) await putManifestEntries(identical);
 			result.sort((a, b) => a.path.localeCompare(b.path));
@@ -269,16 +271,13 @@
 				} else if (entry.action === 'opfs-to-fs') {
 					const content = await OpfsLib.readFile(entry.path);
 					if (content === undefined) return;
-					await writeFsFile(dirHandle!, entry.path, content);
-					const meta = await OpfsLib.getFileMetadata(entry.path);
-					if (meta) {
-						manifestEntries.push({
-							path: entry.path,
-							size: meta.size,
-							lastModified: meta.lastModified,
-							importedAt: Date.now()
-						} satisfies ImportedFileMeta);
-					}
+					const written = await writeFsFile(dirHandle!, entry.path, content);
+					manifestEntries.push({
+						path: entry.path,
+						size: written.size,
+						lastModified: written.lastModified,
+						importedAt: Date.now()
+					} satisfies ImportedFileMeta);
 					logLines = [...logLines, `→ ${entry.path}`];
 				}
 				progress.done++;
@@ -321,6 +320,19 @@
 	</Toolbar>
 
 	<div class="flex-1 overflow-y-auto touch-pan-y p-4 flex flex-col gap-4">
+		{#if handleChecked}
+			<FolderApiNotice
+				supported={hasDirectoryPicker}
+				fallbackText="This page cannot work without it. Use Ledger Import and Ledger Export instead."
+			/>
+			{#if !hasDirectoryPicker}
+				<div class="flex justify-center gap-4">
+					<a href="/opfs/import-ledger" class="link">Ledger Import</a>
+					<a href="/opfs/export-ledger" class="link">Ledger Export</a>
+				</div>
+			{/if}
+		{/if}
+
 		<!-- Directory picker -->
 		<section class="flex flex-col gap-2">
 			<span class="label font-semibold"
@@ -334,6 +346,9 @@
 							: ''}">{dirName}/</span
 					>
 				{/if}
+				{#if storedHandle && (!dirHandle || (dirHandle === storedHandle && !hasWritePermission))}
+					<button class="btn btn-warning" onclick={reconnect}>Reconnect</button>
+				{/if}
 				{#if hasDirectoryPicker}
 					<button class="btn btn-primary gap-2" onclick={pickDirectory}>
 						<FolderOpenIcon class="w-5 h-5" />
@@ -343,8 +358,8 @@
 			</div>
 			{#if dirHandle && !hasWritePermission}
 				<p class="text-xs text-warning">
-					Write permission not granted — OPFS → FS sync is disabled. Re-pick the directory to enable
-					it.
+					Write permission not granted — OPFS → FS sync is disabled. Reconnect or re-pick the
+					directory to enable it.
 				</p>
 			{/if}
 		</section>

@@ -1,7 +1,7 @@
 <!--
-* Synchronization of the OPFS ledger storage with a directory on the
-* current device. This requires File System API access, provided by
-* Chromium-based browsers.
+* Browses a directory on the current device, such as a Git repository holding
+* the ledger. Meant to grow into syncing it with OPFS. This requires the File
+* System Access API, provided by Chromium-based browsers.
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
@@ -11,15 +11,14 @@
 	import FolderOpenIcon from '@lucide/svelte/icons/folder-open';
 	import FileIcon from '@lucide/svelte/icons/file';
 	import FolderIcon from '@lucide/svelte/icons/folder';
-	import BookOpenIcon from '@lucide/svelte/icons/book-open';
 	import XIcon from '@lucide/svelte/icons/x';
-	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
 	import Notifier from '#lib/utils/notifier';
-	import { settings, SettingKeys } from '#lib/settings';
 	import Fab from '#lib/components/FAB.svelte';
+	import FolderApiNotice from '#lib/components/FolderApiNotice.svelte';
 	import {
 		loadPersistedHandle,
 		persistHandle,
+		hasPermission,
 		requestReadPermission
 	} from '#lib/utils/fsHandleStore';
 
@@ -46,17 +45,34 @@
 	let isPreviewLoading = $state(false);
 	let fileMeta = $state<Record<string, string>>({});
 	let showPreviewPanel = $state(false);
-	let bookRootFileName = $state(''); // full path as stored in settings, e.g. "dirname/sub/file.beancount"
-	let aaDefinitionFileName = $state(''); // same
+	// undefined until checked on mount
+	let hasDirectoryPicker = $state<boolean>();
+	// The folder picked on an earlier visit; access to it may need to be granted again.
+	let storedHandle = $state.raw<FileSystemDirectoryHandle | null>(null);
 
 	onMount(async () => {
-		const stored = await loadPersistedHandle(HANDLE_KEY);
-		if (stored && (await requestReadPermission(stored))) {
-			dirHandle = stored;
-			dirName = stored.name;
-			await loadEntries();
+		hasDirectoryPicker = 'showDirectoryPicker' in window;
+		if (!hasDirectoryPicker) return;
+		storedHandle = await loadPersistedHandle(HANDLE_KEY);
+		if (storedHandle && (await hasPermission(storedHandle, 'read'))) {
+			await openDirectory(storedHandle);
 		}
 	});
+
+	async function openDirectory(handle: FileSystemDirectoryHandle) {
+		dirHandle = handle;
+		dirName = handle.name;
+		await loadEntries();
+	}
+
+	async function reconnect() {
+		if (!storedHandle) return;
+		if (await requestReadPermission(storedHandle)) {
+			await openDirectory(storedHandle);
+		} else {
+			Notifier.error('Access was not granted. Try again or open the directory.');
+		}
+	}
 
 	async function pickDirectory() {
 		try {
@@ -288,23 +304,20 @@
 		}
 	}
 
-	async function selectBookFile() {
-		Notifier.warning('Not implemented!');
-	}
-
-	async function selectAssetAllocationFile() {
-		Notifier.warning('Not implemented!');
-	}
-
 	function onFab() {
 		history.back();
 	}
 </script>
 
 <main>
-	<Toolbar title="File System Synchronization">
+	<Toolbar title="Local Folder">
 		{#snippet menuItems()}
-			<ToolbarMenuItem text="Open Directory" Icon={FolderOpenIcon} onclick={pickDirectory} />
+			<ToolbarMenuItem
+				text="Open Directory"
+				Icon={FolderOpenIcon}
+				disabled={!hasDirectoryPicker}
+				onclick={pickDirectory}
+			/>
 			{#if dirHandle}
 				<ToolbarMenuItem
 					text="Refresh"
@@ -313,21 +326,29 @@
 					disabled={isLoading}
 					onclick={loadEntries}
 				/>
-				<ToolbarMenuItem
-					text="Set book file"
-					Icon={BookOpenIcon}
-					disabled={!selectedEntry || selectedEntry.kind !== 'file'}
-					onclick={selectBookFile}
-				/>
 			{/if}
 		{/snippet}
 	</Toolbar>
 
 	<section class="p-4">
-		{#if !dirHandle}
+		{#if hasDirectoryPicker !== undefined}
+			<FolderApiNotice
+				supported={hasDirectoryPicker}
+				fallbackText="This page cannot browse folders without it."
+			/>
+		{/if}
+
+		{#if !hasDirectoryPicker}
+			<!-- nothing to browse -->
+		{:else if !dirHandle}
 			<div class="flex flex-col items-center justify-center gap-4 p-12">
 				<FolderOpenIcon class="w-16 h-16 opacity-30" />
 				<p class="text-lg opacity-60">Select a directory to browse its contents.</p>
+				{#if storedHandle}
+					<button class="btn btn-warning" onclick={reconnect}>
+						Reconnect to {storedHandle.name}/
+					</button>
+				{/if}
 				<button class="btn btn-primary gap-2" onclick={pickDirectory}>
 					<FolderOpenIcon class="w-5 h-5" />
 					Open Directory
@@ -362,8 +383,6 @@
 							<tr
 								class="cursor-pointer hover"
 								class:bg-secondary={selectedEntry?.path === entry.path}
-								class:book-root-row={`${dirName}/${entry.path}` === bookRootFileName &&
-									selectedEntry?.path !== entry.path}
 								onclick={() => onEntryClick(entry)}
 							>
 								<td class="font-mono text-sm">
@@ -390,82 +409,6 @@
 					</tbody>
 				</table>
 			</div>
-
-			{#if !bookRootFileName || !aaDefinitionFileName}
-				<div class="flex flex-col gap-2 mt-4">
-					{#if !bookRootFileName}
-						<div role="alert" class="alert alert-warning">
-							<TriangleAlertIcon class="w-5 h-5 shrink-0" />
-							<span>Book not selected. Please select the book file from the list above.</span>
-							<button
-								class="btn btn-sm btn-warning"
-								onclick={selectBookFile}
-								disabled={!selectedEntry || selectedEntry.kind !== 'file'}
-							>
-								Set Book
-							</button>
-						</div>
-					{/if}
-					{#if !aaDefinitionFileName}
-						<div role="alert" class="alert alert-warning">
-							<TriangleAlertIcon class="w-5 h-5 shrink-0" />
-							<span
-								>Asset Allocation not set. Please select the Asset Allocation definition file from
-								the list above.</span
-							>
-							<button
-								class="btn btn-sm btn-warning"
-								onclick={selectAssetAllocationFile}
-								disabled={!selectedEntry || selectedEntry.kind !== 'file'}
-							>
-								Set Asset Allocation
-							</button>
-						</div>
-					{/if}
-				</div>
-			{/if}
-			{#if bookRootFileName || aaDefinitionFileName}
-				<div class="flex flex-col gap-2 mt-4">
-					{#if bookRootFileName}
-						<div role="alert" class="alert alert-success">
-							<input
-								type="checkbox"
-								class="checkbox checkbox-sm checkbox-success"
-								checked
-								disabled
-							/>
-							<span>Book set: {bookRootFileName}</span>
-							<button
-								class="btn btn-xs btn-ghost border border-warning"
-								onclick={() => {
-									bookRootFileName = '';
-								}}
-							>
-								<XIcon class="w-4 h-4" /> Unset
-							</button>
-						</div>
-					{/if}
-					{#if aaDefinitionFileName}
-						<div role="alert" class="alert alert-success">
-							<input
-								type="checkbox"
-								class="checkbox checkbox-sm checkbox-success"
-								checked
-								disabled
-							/>
-							<span>Asset Allocation set: {aaDefinitionFileName}</span>
-							<button
-								class="btn btn-xs btn-ghost border border-warning"
-								onclick={() => {
-									aaDefinitionFileName = '';
-								}}
-							>
-								<XIcon class="w-4 h-4" /> Unset
-							</button>
-						</div>
-					{/if}
-				</div>
-			{/if}
 
 			{#if selectedEntry && showPreviewPanel}
 				<div class="mt-6 border border-base-300 rounded-lg">
@@ -518,9 +461,3 @@
 
 	<Fab onclick={onFab} />
 </main>
-
-<style>
-	.book-root-row {
-		background-color: color-mix(in oklch, var(--color-primary) 25%, transparent);
-	}
-</style>

@@ -23,6 +23,14 @@ export function matchesAny(name: string, patterns: RegExp[]): boolean {
 	return patterns.some((p) => p.test(name));
 }
 
+/** Directories starting with a dot (.git, .cashier, …) are never scanned. */
+const isHiddenDirectory = (name: string) => name.startsWith('.');
+
+/** Whether any directory in a relative file path is hidden. A dot file itself does not count. */
+export function isInHiddenDirectory(path: string): boolean {
+	return path.split('/').slice(0, -1).some(isHiddenDirectory);
+}
+
 /**
  * Traverses a File System Access API directory tree and invokes onFile for each
  * matching file as it is discovered, allowing callers to pipeline work (e.g.
@@ -39,7 +47,7 @@ export async function collectFsFileHandles(
 		const path = prefix ? `${prefix}/${name}` : name;
 		if (handle.kind === 'file' && matchesAny(name, patterns)) {
 			onFile(path, handle as FileSystemFileHandle);
-		} else if (handle.kind === 'directory' && !name.startsWith('.')) {
+		} else if (handle.kind === 'directory' && !isHiddenDirectory(name)) {
 			subdirPromises.push(
 				collectFsFileHandles(handle as FileSystemDirectoryHandle, path, patterns, onFile)
 			);

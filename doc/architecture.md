@@ -77,7 +77,7 @@ the Full Journal and reverted as inconsistent with the device journal.
 
   ```svelte
   {#snippet menuItems()}
-    <ToolbarMenuItem text="Re-read Files" Icon={EraserIcon} onclick={rebuildManifestAndRescan} />
+    <ToolbarMenuItem text="Refresh" Icon={RefreshCcwIcon} onclick={loadEntries} />
   {/snippet}
 
   <main>
@@ -88,7 +88,7 @@ the Full Journal and reverted as inconsistent with the device journal.
   `ToolbarMenuItem` supports `text`, `Icon`, `disabled`, `onclick`, and
   `targetNav` (navigates via `goto` before calling `onclick`). Examples:
   `src/routes/sync/beancount/+page.svelte`,
-  `src/routes/opfs/import-ledger/+page.svelte`.
+  `src/routes/sync/filesystem/+page.svelte`.
 
 ## Working Set Store
 

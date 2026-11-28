@@ -45,6 +45,22 @@ export async function getManifest(): Promise<Map<string, ImportedFileMeta>> {
 	});
 }
 
+/**
+ * The manifest limited to files that are still in OPFS. Files can be removed without going through
+ * the import (OPFS page, peer sync, etc.), so entries for missing files are dropped here; otherwise
+ * a scan would report their unchanged sources as identical and never copy them again.
+ */
+export async function getReconciledManifest(
+	opfsPaths: Iterable<string>
+): Promise<Map<string, ImportedFileMeta>> {
+	const manifest = await getManifest();
+	const existing = new Set(opfsPaths);
+	const stale = [...manifest.keys()].filter((path) => !existing.has(path));
+	await deleteManifestEntries(stale);
+	for (const path of stale) manifest.delete(path);
+	return manifest;
+}
+
 export async function putManifestEntry(meta: ImportedFileMeta): Promise<void> {
 	const db = await openDb();
 	return new Promise((resolve, reject) => {

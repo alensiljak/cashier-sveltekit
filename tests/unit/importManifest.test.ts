@@ -7,6 +7,7 @@ import {
 	deleteManifestEntries,
 	deleteManifestEntry,
 	getManifest,
+	getReconciledManifest,
 	putManifestEntries,
 	putManifestEntry,
 	type ImportedFileMeta
@@ -24,6 +25,13 @@ beforeEach(async () => {
 });
 
 describe('importManifest', () => {
+	it('reconciling drops, and persists dropping, entries whose OPFS file is gone', async () => {
+		await putManifestEntries([meta('a'), meta('b')]);
+		const manifest = await getReconciledManifest(['a', 'untracked']);
+		expect([...manifest.keys()]).toEqual(['a']);
+		expect([...(await getManifest()).keys()]).toEqual(['a']);
+	});
+
 	it('starts empty', async () => {
 		expect((await getManifest()).size).toBe(0);
 	});

@@ -5,6 +5,7 @@
 	import DatabaseIcon from '@lucide/svelte/icons/database';
 	import UsersIcon from '@lucide/svelte/icons/users';
 	import FileDownIcon from '@lucide/svelte/icons/file-down';
+	import FolderOpenIcon from '@lucide/svelte/icons/folder-open';
 	import RotateCwIcon from '@lucide/svelte/icons/rotate-cw';
 	import ArrowLeftRightIcon from '@lucide/svelte/icons/arrow-left-right';
 	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
@@ -262,6 +263,18 @@
 						<span class="block text-base font-semibold">Backup file</span>
 						<span class="block text-xs opacity-70">
 							Export or restore everything as a file, with no sync service.
+						</span>
+					</span>
+					<ChevronRightIcon size={16} />
+				</a>
+			</li>
+			<li>
+				<a class="rounded-box bg-base-200 flex items-center gap-3 p-3" href="/sync/filesystem">
+					<FolderOpenIcon size={20} />
+					<span class="min-w-0 flex-1">
+						<span class="block text-base font-semibold">Local folder</span>
+						<span class="block text-xs opacity-70">
+							Browse a folder on this device, such as a Git repository.
 						</span>
 					</span>
 					<ChevronRightIcon size={16} />

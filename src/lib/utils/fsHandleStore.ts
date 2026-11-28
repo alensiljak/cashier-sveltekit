@@ -54,6 +54,26 @@ export async function loadPersistedHandle(key: string): Promise<FileSystemDirect
 	}
 }
 
+/**
+ * Whether access is already granted. Never prompts, so it is safe on page load; the request
+ * functions below need a user gesture, so call those from a click handler.
+ */
+export async function hasPermission(
+	handle: FileSystemDirectoryHandle,
+	mode: 'read' | 'readwrite'
+): Promise<boolean> {
+	try {
+		const permission = await (
+			handle as unknown as {
+				queryPermission: (opts: { mode: 'read' | 'readwrite' }) => Promise<PermissionState>;
+			}
+		).queryPermission({ mode });
+		return permission === 'granted';
+	} catch {
+		return false;
+	}
+}
+
 export async function requestReadPermission(handle: FileSystemDirectoryHandle): Promise<boolean> {
 	try {
 		const permission = await (
