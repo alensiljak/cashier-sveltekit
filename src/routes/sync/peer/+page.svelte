@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import JsonMergeViewer from '#lib/components/JsonMergeViewer.svelte';
 	import db from '#lib/data/db';
 	import { summarizeScxReport, type ScxMergeReport } from '#lib/services/scxMergeReport';
@@ -147,19 +147,31 @@
 	// Merged automatically (no diff view), so it's a status plus one Sync action.
 	let ydocStatus = $state<HashStatus | null>(null);
 	let syncingYdoc = $state(false);
+	/** Number of the latest check; an earlier one that finishes later is discarded. */
+	let ydocCheck = 0;
 
-	async function checkYdocHash(targetId: string) {
-		ydocStatus = 'checking';
+	/** `quiet` keeps the current badge until the new result is in. */
+	async function checkYdocHash(targetId: string, quiet = false) {
+		const check = ++ydocCheck;
+		if (!quiet) ydocStatus = 'checking';
 		try {
 			const local = await peerConnection.getLocalYdocHash();
 			const remote = await peerConnection.fetchRemoteYdocHash(targetId);
-			if (targetId !== syncTargetId) return;
+			if (check !== ydocCheck || targetId !== syncTargetId) return;
 			ydocStatus = itemHashStatus(local, remote);
 		} catch {
-			if (targetId !== syncTargetId) return;
+			if (check !== ydocCheck || targetId !== syncTargetId) return;
 			ydocStatus = 'error';
 		}
 	}
+
+	// Either side's store changed, e.g. the peer synced with us: compare again.
+	$effect(() => {
+		void peerConnection.storeRevision.ydoc;
+		untrack(() => {
+			if (syncTargetId) void checkYdocHash(syncTargetId, true);
+		});
+	});
 
 	async function syncLocalTransactions() {
 		if (!syncTargetId || syncingYdoc) return;
@@ -185,18 +197,28 @@
 	let syncingScx = $state(false);
 	let scxReport = $state<ScxMergeReport | null>(null);
 
-	async function checkScxHash(targetId: string) {
-		scxStatus = 'checking';
+	let scxCheck = 0;
+
+	async function checkScxHash(targetId: string, quiet = false) {
+		const check = ++scxCheck;
+		if (!quiet) scxStatus = 'checking';
 		try {
 			const local = await peerConnection.getLocalScxHash();
 			const remote = await peerConnection.fetchRemoteScxHash(targetId);
-			if (targetId !== syncTargetId) return;
+			if (check !== scxCheck || targetId !== syncTargetId) return;
 			scxStatus = itemHashStatus(local, remote);
 		} catch {
-			if (targetId !== syncTargetId) return;
+			if (check !== scxCheck || targetId !== syncTargetId) return;
 			scxStatus = 'error';
 		}
 	}
+
+	$effect(() => {
+		void peerConnection.storeRevision.scx;
+		untrack(() => {
+			if (syncTargetId) void checkScxHash(syncTargetId, true);
+		});
+	});
 
 	async function syncScheduledTransactions() {
 		if (!syncTargetId || syncingScx) return;

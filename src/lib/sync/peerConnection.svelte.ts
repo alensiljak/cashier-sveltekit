@@ -35,6 +35,10 @@ import type { MessageAction, RequestAction } from '@trystero-p2p/core';
 
 const REQUEST_TIMEOUT_MS = 30_000;
 const HASH_TIMEOUT_MS = 10_000;
+/** Groups a burst of store updates into one "store changed" notice. */
+const CHANGE_NOTICE_DELAY_MS = 300;
+
+type StoreKind = 'ydoc' | 'scx';
 
 export interface RemoteData {
 	settings: string | null;
@@ -96,8 +100,14 @@ async function existingScxStore(): Promise<CrdtScxStore | null> {
 class PeerConnection {
 	readonly presence = new PeerPresence();
 	protocol = $state<PeerProtocol | null>(null);
+	/**
+	 * Bumped when a CRDT store changed on this device or on a trusted peer, i.e.
+	 * whenever an earlier comparison of the two may be stale.
+	 */
+	storeRevision = $state<Record<StoreKind, number>>({ ydoc: 0, scx: 0 });
 
 	private initialized = false;
+	private storeChangedAction: MessageAction<StoreKind> | null = null;
 	private syncRequestAction: MessageAction<SyncRequestMsg> | null = null;
 	private syncResponseAction: MessageAction<SyncResponseMsg> | null = null;
 	private hashAction: RequestAction<string[], RemoteHashes> | null = null;
@@ -218,6 +228,12 @@ class PeerConnection {
 			if (this.presence.isReadOnly(fromId)) return;
 			await (await existingScxStore())?.importState(update);
 		});
+		// A peer's store changed; nothing is transferred, we only re-compare.
+		this.storeChangedAction = this.presence.makeAction<StoreKind>('store-changed');
+		this.storeChangedAction.onMessage((kind, { peerId: fromId }) => {
+			if (!this.presence.peersMap[fromId]?.isTrusted) return;
+			if (kind === 'ydoc' || kind === 'scx') this.storeRevision[kind]++;
+		});
 		void this.startLiveSync();
 
 		// Resolve pending fetchRemoteData() promises.
@@ -258,8 +274,37 @@ class PeerConnection {
 			this.pushLocalUpdates(xactStore, () => this.ydocUpdateAction),
 			// Listening on a store that isn't open yet is harmless: nothing is
 			// written to it until it exists.
-			this.pushLocalUpdates(scxStore, () => this.scxUpdateAction)
+			this.pushLocalUpdates(scxStore, () => this.scxUpdateAction),
+			this.announceChanges(xactStore, 'ydoc'),
+			this.announceChanges(scxStore, 'scx')
 		];
+	}
+
+	/**
+	 * After any update to `store`, merges included, tells online trusted peers
+	 * that it changed. A syncing peer applies our reply only after we have merged
+	 * its state, so its notice is what tells us both sides have settled.
+	 * Returns the unsubscribe function.
+	 */
+	private announceChanges(
+		store: Pick<CrdtDocStore<unknown>, 'onUpdate'>,
+		kind: StoreKind
+	): () => void {
+		let timer: ReturnType<typeof setTimeout> | undefined;
+		const unsubscribe = store.onUpdate(() => {
+			clearTimeout(timer);
+			timer = setTimeout(() => {
+				this.storeRevision[kind]++;
+				for (const peer of this.presence.activePeerList) {
+					if (!peer.isTrusted) continue;
+					void this.storeChangedAction?.send(kind, { target: peer.trysteroId });
+				}
+			}, CHANGE_NOTICE_DELAY_MS);
+		});
+		return () => {
+			clearTimeout(timer);
+			unsubscribe();
+		};
 	}
 
 	/** Sends `doc`'s local (non-remote) updates to every online trusted peer. Returns the unsubscribe function. */
@@ -289,6 +334,7 @@ class PeerConnection {
 		this.scxUpdateAction = null;
 		this.scxHashAction = null;
 		this.scxSyncAction = null;
+		this.storeChangedAction = null;
 		await this.presence.leave();
 		this.syncRequestAction = null;
 		this.syncResponseAction = null;
