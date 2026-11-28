@@ -18,7 +18,7 @@ import {
 	openKey,
 	toBase64,
 	type KeyParams
-} from './s3Crypto';
+} from '#lib/services/s3Crypto';
 
 /** Shortest passphrase accepted for the secrets block. A typo or a short one is not recoverable. */
 export const MIN_BACKUP_PASSPHRASE_LENGTH = 12;
@@ -80,6 +80,15 @@ export const specFor = (store: SecretSpec['store'], key: string) =>
 
 /** Key of a spec's entry in the secrets block. */
 export const secretId = (spec: SecretSpec) => `${spec.store}:${spec.key}`;
+
+/** A stored setting's value, or undefined when it is not JSON. */
+export const parseJson = (text: string): unknown => {
+	try {
+		return JSON.parse(text);
+	} catch {
+		return undefined;
+	}
+};
 
 type Obj = Record<string, unknown>;
 const isObj = (v: unknown): v is Obj => !!v && typeof v === 'object' && !Array.isArray(v);

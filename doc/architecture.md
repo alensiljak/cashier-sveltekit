@@ -138,13 +138,13 @@ safely. Transaction origins keep updates from echoing: `remote` (from a peer,
   `doc/completed-projects/2026-10-16_delta-sync.md`.
 - **WebDAV backup** (`services/webdavAutoBackupService.ts`, `webdavDelta.ts`)
   uploads after each write, debounced, using delta sync.
-- **Backup file** (`services/backupService.ts`, `backupSecrets.ts`,
+- **Backup file** (`services/backup/`,
   `restoredDevice.ts`) is a versioned JSON file with optional sections: settings,
   scheduled transactions, the working set (Yjs state), portable device settings,
   and trusted devices. Secrets (WebDAV password, S3 keys, passphrases) are left
   out or sealed in an encrypted block. A restore creates a new device identity;
   the backed-up device's ID becomes `previousDeviceId`. Design:
-  `doc/completed-projects/2026-11-12_backup-restore.md`.
+  `doc/backup.md`; each format version has its own reader in `backup/readers/`.
 
 ### How the working set reaches the WASM engine
 

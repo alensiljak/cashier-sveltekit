@@ -95,6 +95,7 @@ Each format version is read by its own module, which keeps the history visible a
 services/backup/
   index.ts       decompress, detect the version, choose the reader
   model.ts       the data a restore works with
+  secrets.ts     secret fields, and the encrypted credentials block
   readers/       one module per format version: validate and convert
   write.ts       writes the latest version only
   apply.ts       restore logic for all versions
@@ -103,7 +104,7 @@ services/backup/
 - A reader keeps its own definition of its format and does not depend on the current key lists.
 - The model holds both the individual secret fields of version 2 and whole connections. Version 2 secrets keep the connection-matching rule.
 - Current safety rules apply to all versions.
-- Each version has a fixed sample file in the tests.
+- Each version has a fixed sample file in the tests (`tests/data/backup/`). A sample is never edited or regenerated.
 
 ## Restore
 

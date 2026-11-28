@@ -2,8 +2,8 @@
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import RestoredDeviceNotice from '#lib/components/RestoredDeviceNotice.svelte';
 	import HelpButton from '#lib/help/HelpButton.svelte';
-	import * as BackupService from '#lib/services/backupService';
-	import { MIN_BACKUP_PASSPHRASE_LENGTH, checkPassphrase } from '#lib/services/backupSecrets';
+	import * as BackupService from '#lib/services/backup';
+	import { MIN_BACKUP_PASSPHRASE_LENGTH, checkPassphrase } from '#lib/services/backup/secrets';
 	import Notifier from '#lib/utils/notifier';
 	import FileDownIcon from '@lucide/svelte/icons/file-down';
 	import Share2Icon from '@lucide/svelte/icons/share-2';

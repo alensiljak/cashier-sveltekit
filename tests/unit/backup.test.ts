@@ -26,7 +26,7 @@ import {
 	inspectBackup,
 	restoreBackup,
 	type BackupOptions
-} from '#lib/services/backupService';
+} from '#lib/services/backup';
 import { loadImporterConfig, resetImporterConfig, saveImporterConfig } from '#lib/importers/config';
 import { getRestoreMissing } from '#lib/services/restoreMissing';
 import { getRestoredDevice } from '#lib/services/restoredDevice';

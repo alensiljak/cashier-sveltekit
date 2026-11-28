@@ -6,7 +6,7 @@
 	import { onMount } from 'svelte';
 	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
 	import FileDownIcon from '@lucide/svelte/icons/file-down';
-	import { createBackupFile, getBackupFilename } from '#lib/services/backupService';
+	import { createBackupFile, getBackupFilename } from '#lib/services/backup';
 	import { reloadLedgerFromOpfs } from '#lib/services/ledgerReload';
 	import { syncOptions } from '#lib/services/syncOptions.svelte';
 	import { getXactStore } from '#lib/storage/xactStoreRegistry';

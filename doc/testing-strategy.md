@@ -22,7 +22,7 @@ Unit/Service (Vitest)  →  Component (targeted)  →  E2E (Playwright, demo boo
 
 Pure functions (parsers, formatters, price providers, sync/merge, importers,
 reports) are tested directly. Services that orchestrate storage (`appService`,
-`backupService`, `cloudBackupService`, WebDAV/S3 sync, CRDT stores, …) are
+`backup`, `cloudBackupService`, WebDAV/S3 sync, CRDT stores, …) are
 tested against fakes at existing seams:
 
 - `tests/helpers/memoryBackend.ts` — in-memory `storageBackend` instead of OPFS.

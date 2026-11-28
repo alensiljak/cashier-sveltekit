@@ -40,10 +40,10 @@ Done, committed in `c820bef2`.
 
 ## Step 2: version modules
 
-Next. No change in behaviour. It comes before the later format changes, so that they are not made in code that is about to be split.
+Done. No change in behaviour. It comes before the later format changes, so that they are not made in code that is about to be split.
 
-- [ ] Sample files of versions 1 and 2, made before the refactoring
-- [ ] Split reading by version, with one writer and one apply
+- [x] Sample files of versions 1 and 2, made before the refactoring (`tests/data/backup/`, checked by `tests/unit/backupSamples.test.ts`)
+- [x] Split reading by version, with one writer and one apply (`src/lib/services/backup/`)
 
 ## Step 3: scheduled-transaction history in backups
 

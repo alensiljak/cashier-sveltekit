@@ -1,5 +1,5 @@
 /**
- * Fields a backup restore left empty because they are secrets (see backupSecrets.ts). The pages
+ * Fields a backup restore left empty because they are secrets (see backup/secrets.ts). The pages
  * that hold them mark them as required until they are filled in.
  *
  * Field ids are `<setting label>.<field>`: 'webdav.password', 's3.secretAccessKey', ...

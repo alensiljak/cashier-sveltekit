@@ -3,7 +3,7 @@
  * items, and settling conflicts and confirmed deletions. The CRDT stores are in s3CrdtSync.ts.
  */
 import { CASHIER_DATA_DIR } from '#lib/constants';
-import { exportSettingsJson, importSettingsJson } from '#lib/services/backupService';
+import { exportSettingsJson, importSettingsJson } from '#lib/services/backup';
 import { normalizeEol } from '#lib/sync/SyncSource';
 import { collectExportableFiles } from '#lib/utils/opfsExport';
 import { deleteFile, saveBinaryFile } from '#lib/utils/opfslib';

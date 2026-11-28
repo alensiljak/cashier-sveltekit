@@ -1,0 +1,106 @@
+{
+	"version": 2,
+	"settings": [
+		{ "key": "currency", "value": "\"EUR\"" },
+		{ "key": "importer.ibkr", "value": "{\"cashAccount\":\"Assets:IB:Cash-{currency}\"}" },
+		{
+			"key": "webdav-settings",
+			"value": "{\"url\":\"https://dav.example.com\",\"username\":\"alice\",\"password\":\"\"}"
+		}
+	],
+	"scx": [
+		{
+			"id": "01M8H8TGA5280TBTZE51AMTNQ2",
+			"nextDate": "2026-01-01",
+			"transaction": {
+				"date": "2026-01-01",
+				"payee": "Sample Rent",
+				"flag": "*",
+				"postings": [],
+				"meta": {}
+			},
+			"period": "months",
+			"count": 1,
+			"endDate": null
+		},
+		{
+			"id": "01M8H8TGA5280TBTZE51AMTNQ3",
+			"nextDate": "2026-02-01",
+			"transaction": {
+				"date": "2026-02-01",
+				"payee": "Sample Gym",
+				"flag": "*",
+				"postings": [],
+				"meta": {}
+			},
+			"period": "months",
+			"count": 1,
+			"endDate": null
+		}
+	],
+	"workingSet": "AQHBp6sNACgBBXhhY3RzGjAxTThIOFRHQktUMTk1MUhHRVNFNFdZTjNSAXYJBGRhdGV3CjIwMjYtMDEtMTUFcGF5ZWV3DVNhbXBsZSBHcm9jZXIEbm90ZXcEZm9vZARmbGFndwEqCHBvc3RpbmdzdQJ2AwdhY2NvdW50dw1FeHBlbnNlczpGb29kBmFtb3VudHxBSAAACGN1cnJlbmN5dwNFVVJ2AwdhY2NvdW50dwtBc3NldHM6Q2FzaAZhbW91bnR8wUgAAAhjdXJyZW5jeXcDRVVSBG1ldGF2AAJpZHcaMDFNOEg4VEdCS1QxOTUxSEdFU0U0V1lOM1INc2NoZW1hVmVyc2lvbn0BBm9yaWdpbncRc2FtcGxlLW9sZC1kZXZpY2UA",
+	"device": {
+		"id": "sample-old-device",
+		"settings": [
+			{ "key": "homeCardNames", "value": "[\"favourites\",\"forecast\"]" },
+			{ "key": "importBookDirectory", "value": "\"sample-books\"" },
+			{ "key": "notifications.time", "value": "\"08:30\"" },
+			{
+				"key": "peerIceServers",
+				"value": "[{\"urls\":\"stun:stun.example.com\"},{\"urls\":\"turn:turn.example.com\",\"username\":\"\",\"credential\":\"\"}]"
+			},
+			{ "key": "peerName", "value": "\"Sample phone\"" },
+			{
+				"key": "s3-settings",
+				"value": "{\"endpoint\":\"https://s3.example.com\",\"region\":\"auto\",\"bucket\":\"sample-bucket\",\"prefix\":\"cashier\",\"accessKeyId\":\"\",\"secretAccessKey\":\"\",\"passphrase\":\"\"}"
+			},
+			{ "key": "webdav-encryption", "value": "{\"enabled\":true,\"passphrase\":\"\"}" }
+		]
+	},
+	"withheld": [
+		"webdav.password",
+		"s3.accessKeyId",
+		"s3.secretAccessKey",
+		"s3.passphrase",
+		"webdavEncryption.passphrase"
+	],
+	"peers": {
+		"peers": [
+			{
+				"id": "sample-peer",
+				"name": "Sample laptop",
+				"trustedAt": "2026-01-01T00:00:00.000Z",
+				"publicKey": "sample-public-key",
+				"fileSyncInitializedAt": "2026-01-02T00:00:00.000Z"
+			}
+		],
+		"revocations": [
+			{
+				"id": "sample-evicted",
+				"status": "evicted",
+				"record": {
+					"v": 1,
+					"revoked": "sample-evicted",
+					"by": "sample-peer",
+					"at": 1,
+					"sig": "sample"
+				},
+				"name": "Sample tablet",
+				"fingerprint": "",
+				"byName": "Sample laptop",
+				"receivedAt": "2026-01-03T00:00:00.000Z",
+				"seen": true
+			}
+		]
+	},
+	"secrets": {
+		"v": 1,
+		"params": {
+			"version": 1,
+			"salt": "IiiAp1Fbm9EMAW5llpzL4A==",
+			"iterations": 250000,
+			"check": "AZTlyTbrVnCuD3g1fZMtKEzjmsdJ/ympNxSw3MMQugFEU/5kKx7ldVXUaSQ="
+		},
+		"data": "AXPH7uYQTa9xUAt6ElRWVH5GYzrsLHV93VBhA/FmwYPitJrowDxZeadaaUXdkGv6QWsAPb2ZmeLQeOOjbLvMzl9qCFdJ17m5tNrxQoqHwjz8ylJUuejKRDU2OD+12kDzJZ6R7ypsXoc3dT0/r2LFjtvSpNbBooJtp5p4OSnDoft+ExQE+2onA4+yhPJnoFEshEOd2CmGudv6aClKLuuO0WV63IvOJ9uDx1CoVXAoSrTGUqUYYMzbOu7XO4FfyU3VtGoGthwA/PNADAaQGN8x9R+sefRZzjg9dLv5Js1a9Bn6dl4JD4bESM21P2dUuAAVg40bpdDgwxq4JPjgIOQPMZemmp6f2hRz5mSvaTslJhflfdXdoVqu0Ga96fPeLfK5hPkSw9UdEHIkmpkTPqGES544KdLdWTBngt707SN2K3vJSi3heFFFFijNr+MnQUaMFGxw0ssWyIfLtSuJgreKY1aGZW+ABsbRmyuyutOBNBJrGSZ82EZ6Vg+C"
+	}
+}

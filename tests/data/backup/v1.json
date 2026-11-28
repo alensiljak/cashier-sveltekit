@@ -1,0 +1,40 @@
+{
+	"settings": [
+		{ "key": "currency", "value": "\"EUR\"" },
+		{ "key": "importer.ibkr", "value": "{\"cashAccount\":\"Assets:IB:Cash-{currency}\"}" },
+		{
+			"key": "webdav-settings",
+			"value": "{\"url\":\"https://dav.example.com\",\"username\":\"alice\",\"password\":\"\"}"
+		}
+	],
+	"scx": [
+		{
+			"id": "01M8H8TGA5280TBTZE51AMTNQ2",
+			"nextDate": "2026-01-01",
+			"transaction": {
+				"date": "2026-01-01",
+				"payee": "Sample Rent",
+				"flag": "*",
+				"postings": [],
+				"meta": {}
+			},
+			"period": "months",
+			"count": 1,
+			"endDate": null
+		},
+		{
+			"id": "01M8H8TGA5280TBTZE51AMTNQ3",
+			"nextDate": "2026-02-01",
+			"transaction": {
+				"date": "2026-02-01",
+				"payee": "Sample Gym",
+				"flag": "*",
+				"postings": [],
+				"meta": {}
+			},
+			"period": "months",
+			"count": 1,
+			"endDate": null
+		}
+	]
+}
