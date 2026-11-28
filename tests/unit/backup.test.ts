@@ -5,6 +5,7 @@
 */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as Y from 'yjs';
+import { get } from 'svelte/store';
 
 vi.mock('#lib/services/webdavAutoBackupService', () => ({ scheduleBackup: vi.fn() }));
 vi.mock('#lib/sync/ydocDevices', async (orig) => ({
@@ -13,9 +14,9 @@ vi.mock('#lib/sync/ydocDevices', async (orig) => ({
 }));
 
 import db from '#lib/data/db';
+import { DateFormatStore, DefaultCurrencyStore, ShortDateFormatStore } from '#lib/data/mainStore';
 import { Setting } from '#lib/data/model';
 import { DeviceSettingKeys, deviceSettings, SettingKeys } from '#lib/settings';
-import appService from '#lib/services/appService';
 import { CrdtScxStore } from '#lib/storage/crdtScxStore';
 import { setScxStore } from '#lib/storage/scxStoreRegistry';
 import { setXactStore } from '#lib/storage/xactStoreRegistry';
@@ -28,6 +29,7 @@ import {
 	getBackupFilename,
 	inspectBackup,
 	previewRestore,
+	previewRestoredPeers,
 	restoreBackup,
 	type BackupOptions
 } from '#lib/services/backup';
@@ -86,6 +88,24 @@ describe('importer configs', () => {
 		expect(await loadImporterConfig('ibkr')).toBeNull();
 		await restoreBackup(backup, basic);
 		expect(await loadImporterConfig('ibkr')).toEqual(config);
+	});
+});
+
+describe('display settings', () => {
+	it('apply right after a restore, without a reload', async () => {
+		await db.settings.bulkPut([
+			new Setting(SettingKeys.dateFormat, '"D.M.YYYY"'),
+			new Setting(SettingKeys.shortDateFormat, '"D.M."')
+		]);
+		const backup = await createBackup(basic);
+		await db.settings.clear();
+		DefaultCurrencyStore.set('USD');
+
+		await restoreBackup(backup, basic);
+
+		expect(get(DateFormatStore)).toBe('D.M.YYYY');
+		expect(get(ShortDateFormatStore)).toBe('D.M.');
+		expect(get(DefaultCurrencyStore)).toBe('EUR');
 	});
 });
 
@@ -413,22 +433,6 @@ describe('createBackupFile', () => {
 	});
 });
 
-describe('appService.importScheduledTransactions', () => {
-	it('replaces the scheduled transactions', async () => {
-		await appService.importScheduledTransactions(JSON.stringify([scx('Imported')]));
-
-		expect(await payees()).toEqual(['Imported']);
-	});
-
-	it('requires content and a JSON array, keeping existing data otherwise', async () => {
-		await expect(appService.importScheduledTransactions('')).rejects.toThrow('required');
-		await expect(appService.importScheduledTransactions('{"a":1}')).rejects.toThrow('array');
-		await expect(appService.importScheduledTransactions('nope')).rejects.toThrow();
-
-		expect(await payees()).toEqual(['Rent', 'Gym']);
-	});
-});
-
 const PASSPHRASE = 'correct horse battery staple';
 const sync = ['settings', 'device'] as const;
 
@@ -753,6 +757,20 @@ describe('trusted devices', () => {
 		expect((await db.peers.toArray()).map((p) => p.id)).toEqual(['a']);
 		// The tombstone from the backup is kept too, so the device cannot return through an introduction.
 		expect((await db.revocations.toArray()).map((r) => r.id).sort()).toEqual(['b', 'c-old']);
+	});
+
+	it('are counted before a restore: those not here and not evicted', async () => {
+		await db.peers.bulkAdd([peer('a'), peer('b'), peer('c')] as never);
+		await db.revocations.add(eviction('c') as never);
+		const text = await createBackup({ sections: ['device'] });
+		await db.peers.clear();
+		await db.revocations.clear();
+		await db.peers.add(peer('a') as never);
+
+		expect(await previewRestoredPeers(text)).toBe(1);
+		// Counting writes nothing.
+		expect(await db.peers.count()).toBe(1);
+		expect(await db.revocations.count()).toBe(0);
 	});
 
 	it('a device that was re-admitted since is not blocked', async () => {

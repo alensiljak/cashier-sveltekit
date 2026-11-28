@@ -301,9 +301,10 @@
 				<div class="card-body p-4">
 					<label class="flex items-center gap-3 cursor-pointer">
 						<span class="flex-1">
-							<span class="font-medium">Auto-backup local transactions</span>
+							<span class="font-medium">Upload changes automatically</span>
 							<span class="block text-xs text-base-content/50">
-								Upload to WebDAV automatically after each change
+								Send changes to the working set and the scheduled transactions to WebDAV as you
+								make them
 							</span>
 						</span>
 						<input
@@ -317,7 +318,7 @@
 					{#if $lastBackupTime}
 						<p class="text-xs text-base-content/50 flex items-center gap-1">
 							<CloudIcon size={12} />
-							Last auto-backup: {$lastBackupTime.toLocaleString()}
+							Last automatic upload:{$lastBackupTime.toLocaleString()}
 						</p>
 					{/if}
 				</div>
@@ -331,7 +332,7 @@
 							<span class="font-medium">Encrypt synced transactions</span>
 							<span class="block text-xs text-base-content/50">
 								The files of the working set and the scheduled transactions are encrypted with a
-								passphrase before they are uploaded. The settings backup is not.
+								passphrase before they are uploaded. Shared settings are not.
 							</span>
 						</span>
 						<input

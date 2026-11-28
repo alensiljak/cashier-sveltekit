@@ -16,6 +16,5 @@ The search bar below the toolbar filters the list by payee and remarks as you ty
 
 Use the toolbar menu (⋮) for:
 
-- **Backup** — export your scheduled transactions to a JSON file (copy, share, or download).
-- **Restore** — import scheduled transactions from a previously exported JSON file (asks for confirmation first).
+- **Backup / Restore** — opens the [Backup](/help/backup) screen, which saves and restores scheduled transactions along with your other data.
 - **Calendar** — open the [Calendar](/help/scheduled-calendar) view of scheduled transactions.

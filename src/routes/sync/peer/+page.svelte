@@ -181,7 +181,7 @@
 			const changed = await peerConnection.syncYdoc(targetId);
 			if (changed) await reloadLedgerFromOpfs();
 			Notifier.success(
-				changed ? 'Local Transactions merged' : 'Local Transactions already in sync'
+				changed ? 'Working set merged' : 'Working set already in sync'
 			);
 			await checkYdocHash(targetId);
 		} catch (e) {
@@ -229,8 +229,8 @@
 			if (changed) scxReport = report;
 			Notifier.success(
 				changed
-					? `Scheduled Transactions merged: ${summarizeScxReport(report)}`
-					: 'Scheduled Transactions already in sync'
+					? `Scheduled transactions merged: ${summarizeScxReport(report)}`
+					: 'Scheduled transactions already in sync'
 			);
 			await checkScxHash(targetId);
 		} catch (e) {
@@ -326,7 +326,7 @@
 	let pullConfirmItem = $state<SyncItem | null>(null);
 
 	const ITEM_LABELS: Record<SyncItem, string> = {
-		settings: 'Settings'
+		settings: 'Shared settings'
 	};
 
 	// ─── Modal state ─────────────────────────────────────────────────────────────
@@ -485,7 +485,7 @@
 			const remote = await fetchRemoteData([item]);
 			if (item === 'settings' && remote.settings !== null) {
 				await importSettingsJson(remote.settings);
-				Notifier.success('Settings updated');
+				Notifier.success('Shared settings updated');
 			}
 			refreshHashesIfSelected();
 		} catch (e) {
@@ -502,7 +502,7 @@
 		applyingSettingsMerge = true;
 		try {
 			await importSettingsJson(JSON.stringify(merged));
-			Notifier.success('Settings: merge applied.');
+			Notifier.success('Shared settings: merge applied.');
 			showDiff = false;
 			refreshHashesIfSelected();
 		} catch (e) {
@@ -807,12 +807,12 @@
 						{/each}
 
 						<div class="flex items-center gap-2 py-1">
-							<span class="flex-1 text-sm">Local Transactions</span>
+							<span class="flex-1 text-sm">Working set</span>
 							{@render hashBadge(ydocStatus)}
 							<!-- Merged automatically (CRDT), so no Diff — Sync pulls and merges. -->
 							<button
 								class="btn btn-sm btn-square btn-primary"
-								aria-label="Sync Local Transactions"
+								aria-label="Sync working set"
 								title="Pull &amp; merge"
 								disabled={syncingYdoc || ydocStatus !== 'different'}
 								onclick={syncLocalTransactions}
@@ -823,12 +823,12 @@
 						</div>
 
 						<div class="flex items-center gap-2 py-1">
-							<span class="flex-1 text-sm">Scheduled Transactions</span>
+							<span class="flex-1 text-sm">Scheduled transactions</span>
 							{@render hashBadge(scxStatus)}
 							<!-- Merged automatically (CRDT), so no Diff — Sync pulls and merges. -->
 							<button
 								class="btn btn-sm btn-square btn-primary"
-								aria-label="Sync Scheduled Transactions"
+								aria-label="Sync scheduled transactions"
 								title="Pull &amp; merge"
 								disabled={syncingScx || scxStatus !== 'different'}
 								onclick={syncScheduledTransactions}
@@ -848,7 +848,7 @@
 						>
 							<span class="flex items-center gap-2">
 								<FolderSyncIcon size={14} />
-								Journal files
+								Beancount files
 							</span>
 							<span class="flex items-center gap-1">
 								{#if filesState?.status === 'checking'}
@@ -874,7 +874,7 @@
 						</a>
 						<button
 							class="btn btn-sm btn-square btn-primary"
-							aria-label="Pull newer journal files"
+							aria-label="Pull newer Beancount files"
 							title="Pull all newer files"
 							disabled={pullingFiles || filesPullable.length === 0}
 							onclick={pullNewerFiles}
@@ -920,7 +920,7 @@
 {#if scxReport}
 	<div class="modal modal-open">
 		<div class="modal-box">
-			<h3 class="font-bold text-lg">Scheduled Transactions merged</h3>
+			<h3 class="font-bold text-lg">Scheduled transactions merged</h3>
 			<p class="pt-2 text-sm opacity-70">{summarizeScxReport(scxReport)}</p>
 			<ul class="my-3 max-h-64 space-y-1 overflow-y-auto text-sm">
 				{#each scxReport.lines as line, i (i)}

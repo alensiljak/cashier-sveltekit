@@ -20,24 +20,13 @@
 		}
 	}
 
-	async function chooseImport() {
+	/** Initializes empty stores, then opens `target`. */
+	async function startEmpty(target: string) {
 		busy = true;
 		try {
 			await appService.initializeXactStore();
 			await finishInitialization();
-			await goto('/opfs/import-ledger');
-		} catch (err) {
-			Notifier.error('Failed to initialize: ' + err);
-			busy = false;
-		}
-	}
-
-	async function chooseEmpty() {
-		busy = true;
-		try {
-			await appService.initializeXactStore();
-			await finishInitialization();
-			await goto('/');
+			await goto(target);
 		} catch (err) {
 			Notifier.error('Failed to initialize: ' + err);
 			busy = false;
@@ -58,12 +47,29 @@
 			already set up.
 		</p>
 
-		<button class="btn btn-outline mt-2" onclick={chooseImport} disabled={busy}>
+		<button
+			class="btn btn-outline mt-2"
+			onclick={() => startEmpty('/opfs/import-ledger')}
+			disabled={busy}
+		>
 			Import my ledger
 		</button>
 		<p class="px-1 text-xs opacity-60">Bring in your own Beancount files.</p>
 
-		<button class="btn btn-ghost mt-2" onclick={chooseEmpty} disabled={busy}> Start empty </button>
+		<button
+			class="btn btn-outline mt-2"
+			onclick={() => startEmpty('/sync/backup-file')}
+			disabled={busy}
+		>
+			Restore from backup
+		</button>
+		<p class="px-1 text-xs opacity-60">
+			Bring back your data and settings from a Cashier backup file.
+		</p>
+
+		<button class="btn btn-ghost mt-2" onclick={() => startEmpty('/')} disabled={busy}>
+			Start empty
+		</button>
 		<p class="px-1 text-xs opacity-60">Begin with a blank book and add your own accounts.</p>
 	</div>
 </main>

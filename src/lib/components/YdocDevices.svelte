@@ -261,7 +261,7 @@
 				</p>
 			{:else}
 				<p class="py-2 text-sm">
-					Records from this device will be merged into your local transactions.
+					Records from this device will be merged into your working set.
 				</p>
 			{/if}
 			<p class="pb-2 text-sm">

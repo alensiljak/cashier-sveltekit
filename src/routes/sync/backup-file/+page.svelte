@@ -10,18 +10,19 @@
 	import { MIN_BACKUP_PASSPHRASE_LENGTH, checkPassphrase } from '#lib/services/backup/secrets';
 	import Notifier from '#lib/utils/notifier';
 	import FileDownIcon from '@lucide/svelte/icons/file-down';
+	import FileUpIcon from '@lucide/svelte/icons/file-up';
 	import Share2Icon from '@lucide/svelte/icons/share-2';
 	import { onMount } from 'svelte';
 
 	const SECTION_LABELS: Record<BackupService.BackupSection, { title: string; hint: string }> = {
-		settings: { title: 'Shared settings', hint: 'always included' },
+		settings: { title: 'Shared settings', hint: 'the settings your devices share' },
 		workingSet: { title: 'Working set', hint: 'the new transactions' },
 		scx: { title: 'Scheduled transactions', hint: '' },
 		device: { title: 'This device', hint: 'device settings, sync setup, trusted devices' },
 		credentials: { title: 'Credentials', hint: 'passwords, keys and tokens, encrypted' }
 	};
-	/** What can be chosen for a backup besides the shared settings and the credentials. */
-	const OPTIONAL_SECTIONS = ['workingSet', 'scx', 'device'] as const;
+	/** What can be chosen for a backup besides the credentials, which have a switch of their own. */
+	const PLAIN_SECTIONS = ['settings', 'workingSet', 'scx', 'device'] as const;
 
 	const CREDENTIAL_NAMES: Record<string, string> = {
 		webdav: 'WebDAV',
@@ -38,14 +39,16 @@
 	let _filename = $state<string>();
 
 	// Backup options
-	let selected = $state<(typeof OPTIONAL_SECTIONS)[number][]>([...OPTIONAL_SECTIONS]);
+	let selected = $state<(typeof PLAIN_SECTIONS)[number][]>([...PLAIN_SECTIONS]);
 	let includeSecrets = $state(false);
+	const nothingToBackUp = $derived(selected.length === 0 && !includeSecrets);
 	let passphrase = $state('');
 	let passphraseAgain = $state('');
 	let showPassphrase = $state(false);
 	let busy = $state(false);
 
 	// Restore state
+	let fileInput = $state<HTMLInputElement>();
 	let restoreContent = $state<string>();
 	let restoreName = $state('');
 	let restoreCompressed = $state(false);
@@ -56,6 +59,8 @@
 	let restoreMessages = $state<string[]>([]);
 	/** What the restore would do to the transaction stores; undefined while that is worked out. */
 	let preview = $state<BackupService.StoreOutcomes>();
+	/** How many of the file's trusted devices a restore would add; worked out with `preview`. */
+	let peersToAdd = $state<number>();
 	/** The stores that have something to destroy. */
 	let withHistory = $state<BackupService.StoreSection[]>([]);
 	let destroyTarget = $state<'xacts' | 'scx' | null>(null);
@@ -89,19 +94,21 @@
 		return STORE_SECTIONS.filter((_, i) => has[i]);
 	}
 
-	/** Compares the chosen file with the stores as they are now. */
+	/** Compares the chosen file with what is on this device now. */
 	async function refreshPreview() {
 		const content = restoreContent;
-		preview = undefined;
+		preview = peersToAdd = undefined;
 		if (!content) return;
 		try {
-			const [changes, history] = await Promise.all([
+			const [changes, peers, history] = await Promise.all([
 				BackupService.previewRestore(content),
+				BackupService.previewRestoredPeers(content),
 				storesWithHistory()
 			]);
 			// Another file may have been chosen meanwhile.
 			if (content !== restoreContent) return;
 			preview = changes;
+			peersToAdd = peers;
 			withHistory = history;
 		} catch (error) {
 			console.error('Restore preview failed:', error);
@@ -133,7 +140,7 @@
 
 	/** Options for the backup, or undefined (with a message) when they are not usable. */
 	function backupOptions(): BackupService.BackupOptions | undefined {
-		const sections: BackupService.BackupOptions['sections'] = ['settings', ...selected];
+		const sections: BackupService.BackupOptions['sections'] = [...selected];
 		if (!includeSecrets) return { sections };
 		if (passphrase !== passphraseAgain) {
 			Notifier.error('The two passphrases are different');
@@ -234,7 +241,11 @@
 				sections: restoreSelected,
 				secretsPassphrase: restorePassphrase || undefined
 			});
-			restoreMessages = describe(result);
+			// The card with the file name may close, so the report names the file too.
+			restoreMessages =
+				result.restored.length > 0
+					? [`Restored from ${restoreName}.`, ...describe(result)]
+					: describe(result);
 			const nothingAdded = STORE_SECTIONS.filter((s) => result.stores[s]?.added === 0);
 			if (result.restored.length === 0) {
 				// Only the credentials were asked for, and the passphrase was missing or wrong.
@@ -277,7 +288,7 @@
 		}
 		const { added, changed, deleted } = outcome;
 		if (added + changed + deleted === 0) {
-			return `nothing changed. Merging does not undo later deletions or edits. ${toDestroy}`;
+			return `nothing changed, as this device has already seen everything in the backup. Records you deleted or edited since stay that way. ${toDestroy}`;
 		}
 		return `${added} added, ${changed} changed, ${deleted} deleted.`;
 	}
@@ -297,7 +308,7 @@
 		}
 		if (result.unmatched) {
 			out.push(
-				'Some credentials of this older file were not restored, as they belong to connections this device does not have. Restore This device with them.'
+				'Some credentials of this older file were not restored, as they belong to connections this device does not have. Restore Shared settings and This device with them.'
 			);
 		}
 		if (result.notificationsOff) {
@@ -338,16 +349,7 @@
 
 			<p>Choose what to back up:</p>
 			<ul class="mx-2 mt-1 space-y-1">
-				<li>
-					<label class="flex items-start gap-2">
-						<input type="checkbox" class="checkbox checkbox-sm mt-1" checked disabled />
-						<span>
-							{SECTION_LABELS.settings.title}
-							<span class="block text-xs opacity-60">{SECTION_LABELS.settings.hint}</span>
-						</span>
-					</label>
-				</li>
-				{#each OPTIONAL_SECTIONS as section (section)}
+				{#each PLAIN_SECTIONS as section (section)}
 					<li>
 						<label class="flex cursor-pointer items-start gap-2">
 							<input
@@ -413,17 +415,22 @@
 				{/if}
 			</div>
 
-			<p class="mt-4">into</p>
-
-			<div class="flex flex-row">
-				<input type="text" class="input" bind:value={_filename} readonly />
+			<div class="mx-2 mt-4">
+				<label for="backup-filename">into</label>
+				<input
+					id="backup-filename"
+					type="text"
+					class="input input-bordered mt-1 w-full text-sm"
+					bind:value={_filename}
+					readonly
+				/>
 			</div>
 
 			<center class="pt-4">
 				<button
 					type="button"
 					class="btn btn-primary rounded"
-					disabled={busy}
+					disabled={busy || nothingToBackUp}
 					onclick={onBackupClick}
 				>
 					<FileDownIcon />
@@ -432,7 +439,7 @@
 				<button
 					type="button"
 					class="btn btn-primary rounded"
-					disabled={busy}
+					disabled={busy || nothingToBackUp}
 					onclick={onShareClick}
 				>
 					<Share2Icon />
@@ -443,40 +450,62 @@
 		<hr class="my-8" />
 		<section class="p-1">
 			<h3 class="text-3xl font-semibold">Restore Backup</h3>
-			<div class="flex flex-row items-center space-x-4">
-				<p>To restore:</p>
-				<input
-					id="backupFile"
-					type="file"
-					name="files"
-					accept=".json,.gz,application/json,application/gzip"
-					class="file-input file-input-secondary rounded"
-					onchange={(e) => {
-						const target = e.target as HTMLInputElement;
-						void onFileChosen(target.files?.[0]);
-						target.value = '';
-					}}
-				/>
-				<label class="label" for="backupFile">
-					<span>Click to choose the backup file</span>
-				</label>
-			</div>
+			<!-- Hidden: the native control cannot show the choice, as it is cleared after each one,
+			     so that choosing the same file again is noticed. -->
+			<input
+				id="backupFile"
+				bind:this={fileInput}
+				type="file"
+				name="files"
+				accept=".json,.gz,application/json,application/gzip"
+				class="hidden"
+				onchange={(e) => {
+					const target = e.target as HTMLInputElement;
+					void onFileChosen(target.files?.[0]);
+					target.value = '';
+				}}
+			/>
 			<p class="mt-2 text-sm opacity-70">
 				Shared settings replace what is on this device. Both kinds of transactions are merged with
 				it, and trusted devices are added.
 			</p>
 
-			{#if restoreInfo}
+			{#if !restoreInfo}
+				<center class="pt-4">
+					<button
+						type="button"
+						class="btn btn-secondary rounded"
+						disabled={busy}
+						onclick={() => fileInput?.click()}
+					>
+						<FileUpIcon />
+						<span>Choose backup file…</span>
+					</button>
+				</center>
+			{:else}
 				<div
 					class="card border-base-300 mt-3 border p-3"
 					role="group"
 					aria-label="Restore selection"
 				>
-					<p class="pb-2 opacity-60">
-						Restore from {restoreName} (backup format {restoreInfo.version},
-						{restoreCompressed ? 'compressed' : 'not compressed'},
-						{restoreInfo.hasSecrets ? 'with encrypted credentials' : 'without credentials'})
-					</p>
+					<div class="border-base-300 mb-3 flex items-start gap-2 border-b pb-3">
+						<div class="min-w-0 flex-1">
+							<p class="font-semibold break-all">{restoreName}</p>
+							<p class="text-xs opacity-60">
+								Backup format {restoreInfo.version},
+								{restoreCompressed ? 'compressed' : 'not compressed'},
+								{restoreInfo.hasSecrets ? 'with encrypted credentials' : 'without credentials'}
+							</p>
+						</div>
+						<button
+							type="button"
+							class="btn btn-sm shrink-0"
+							disabled={busy}
+							onclick={() => fileInput?.click()}
+						>
+							Change file
+						</button>
+					</div>
 					<ul class="space-y-1">
 						{#each BackupService.ALL_SECTIONS as section (section)}
 							{@const present = restoreInfo.sections.includes(section)}
@@ -487,7 +516,7 @@
 										type="checkbox"
 										class="checkbox checkbox-sm mt-1"
 										value={section}
-										disabled={busy || !present || section === 'settings'}
+										disabled={busy || !present || emptySettings}
 										bind:group={restoreSelected}
 									/>
 									<span>
@@ -500,8 +529,8 @@
 											<span class="block text-xs opacity-60">replaces what is on this device</span>
 										{:else if section === 'device' && restoreInfo.counts.peers > 0}
 											<span class="block text-xs opacity-60">
-												with {restoreInfo.counts.peers} trusted device(s), added; only restore a file
-												you trust
+												trusted devices: {restoreInfo.counts.peers} in this file, {peersToAdd ??
+													'…'} to add. Only restore a file you trust
 											</span>
 										{:else if section === 'scx' || section === 'workingSet'}
 											<span class="block text-xs opacity-60">
@@ -552,8 +581,8 @@
 							<p class="flex items-start gap-2 text-sm">
 								<TriangleAlert size={18} class="text-error shrink-0" />
 								<span>
-									Merging does not undo later changes. To return to the backup's state, destroy
-									first, then restore.
+									Records you deleted or edited after the backup was made stay that way. To get them
+									back as they are in the backup, destroy first, then restore.
 								</span>
 							</p>
 							<div class="flex flex-wrap gap-2">
@@ -595,17 +624,6 @@
 					{/each}
 				</div>
 			{/if}
-
-			<div class="mt-3">
-				<p>After restoring a backup, you should</p>
-				<ul class="list-disc pl-6">
-					<li>
-						load the Asset Allocation definition file (it is then stored in OPFS, which is not
-						backed up)
-					</li>
-					<li>perform a Cashier Sync to populate the latest financial data</li>
-				</ul>
-			</div>
 		</section>
 	</div>
 </main>

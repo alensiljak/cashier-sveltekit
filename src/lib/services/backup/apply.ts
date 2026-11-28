@@ -4,6 +4,8 @@
  * evicted) apply to every version.
  */
 import db from '#lib/data/db';
+import type { TrustedPeer } from '#lib/data/model';
+import { loadDisplaySettings } from '#lib/services/displaySettings';
 import { hasEverSynced, recordRestoredDevice } from '#lib/services/restoredDevice';
 import { getRestoreMissing, setRestoreMissing } from '#lib/services/restoreMissing';
 import { WrongPassphraseError } from '#lib/services/s3Crypto';
@@ -346,6 +348,7 @@ async function writeSettings(
 			await table.bulkPut([...next.values()]);
 		}
 	});
+	if (store === 'settings') await loadDisplaySettings();
 	return unmatched;
 }
 
@@ -370,24 +373,38 @@ async function recordPredecessor(id: string, mayReplace: boolean): Promise<strin
 	return id;
 }
 /**
- * Adds the trusted devices of the backup that this device does not have yet. Existing records are
- * not overwritten, and no device that was evicted (here or in the backup) is brought back.
+ * The trusted devices of the backup that a restore adds now: those this device does not have,
+ * except any that was evicted (here or in the backup).
  */
+async function peersToAdd(section: PeersData): Promise<TrustedPeer[]> {
+	const evicted = new Set(
+		[...(await db.revocations.toArray()), ...section.revocations]
+			.filter((r) => r.status === 'evicted')
+			.map((r) => r.id)
+	);
+	const present = new Set((await db.peers.toArray()).map((p) => p.id));
+	return section.peers.filter((peer) => {
+		if (evicted.has(peer.id) || peer.legacyIds?.some((id) => evicted.has(id))) return false;
+		if (present.has(peer.id)) return false;
+		present.add(peer.id);
+		return true;
+	});
+}
+
+/** How many trusted devices restoring `data` would add now. */
+export async function previewPeers(data: BackupData): Promise<number> {
+	return data.peers ? (await peersToAdd(data.peers)).length : 0;
+}
+
+/** Adds what `peersToAdd` finds, and the tombstones. Existing records are not overwritten. */
 async function restorePeers(section: PeersData) {
 	await db.transaction('rw', db.peers, db.revocations, async () => {
-		const local = await db.revocations.toArray();
-		const evicted = new Set(
-			[...local, ...section.revocations].filter((r) => r.status === 'evicted').map((r) => r.id)
-		);
-		const known = new Set(local.map((r) => r.id));
+		const added = await peersToAdd(section);
+
+		const known = new Set((await db.revocations.toArray()).map((r) => r.id));
 		await db.revocations.bulkAdd(section.revocations.filter((r) => !known.has(r.id)));
 
-		for (const peer of section.peers) {
-			if (evicted.has(peer.id) || peer.legacyIds?.some((id) => evicted.has(id))) continue;
-			if (await db.peers.get(peer.id)) continue;
-			// The file-sync baseline it speaks of is not restored: pairing has to create it again.
-			const { fileSyncInitializedAt: _, ...added } = peer;
-			await db.peers.add(added);
-		}
+		// The file-sync baseline they speak of is not restored: pairing has to create it again.
+		await db.peers.bulkAdd(added.map(({ fileSyncInitializedAt: _, ...peer }) => peer));
 	});
 }

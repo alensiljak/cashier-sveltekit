@@ -45,7 +45,6 @@
 		"toml": "^5.0.0",
 		"typescript": "^6.0.0",
 		"ulid": "^3.0.2",
-		"webdav": "^5.7.1",
 		"workbox-precaching": "^7.4.1",
 		"workbox-routing": "^7.4.1",
 		"y-indexeddb": "^9.0.12",

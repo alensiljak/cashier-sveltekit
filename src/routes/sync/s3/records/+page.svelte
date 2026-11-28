@@ -19,8 +19,8 @@
 
 	type Item = 'xacts' | 'scheduled';
 	const items: { key: Item; label: string }[] = [
-		{ key: 'xacts', label: 'Local Transactions' },
-		{ key: 'scheduled', label: 'Scheduled Transactions' }
+		{ key: 'xacts', label: 'Working set' },
+		{ key: 'scheduled', label: 'Scheduled transactions' }
 	];
 
 	let cfg = $state<S3Config | null>(null);

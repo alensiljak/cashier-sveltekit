@@ -44,13 +44,13 @@ The same list is used by WebDAV and S3 sync: they merge transactions only from t
 ## Syncing from a trusted peer
 
 1. Tap **Sync from** on a trusted peer to open the sync panel.
-2. As soon as the peer is selected, the page exchanges content hashes for **Settings**, **Scheduled Transactions**, and **Local Transactions** and marks each one **Same** or **Different** — a quick way to see what's actually changed before pulling anything. A spinner shows while a check is in progress; a **?** means the comparison couldn't complete (peer offline or the request timed out). Tap the refresh icon in the panel header to re-check at any time; it also re-checks automatically after a **Pull** or merge.
-3. Check which items to pull: **Settings** and/or **Scheduled Transactions**.
-4. Use **Preview** to see the raw remote content, or **Diff** to compare it against your local copy, before committing to anything.
-5. Tap **Pull** and confirm — this overwrites your local data with the peer's version and cannot be undone.
+2. As soon as the peer is selected, the page exchanges content hashes for **Shared settings**, the **Working set** and the **Scheduled transactions** and marks each one **Same** or **Different** — a quick way to see what's actually changed before pulling anything. A spinner shows while a check is in progress; a **?** means the comparison couldn't complete (peer offline or the request timed out). Tap the refresh icon in the panel header to re-check at any time; it also re-checks automatically after a **Pull** or merge.
+3. For **Shared settings**, use **Diff** to compare the peer's copy with yours. From there you can merge them entry by entry.
+4. Tap **Pull** next to **Shared settings** and confirm to replace yours with the peer's. This cannot be undone.
+5. Tap **Pull & merge** next to the **Working set** or the **Scheduled transactions** to merge them.
 
 **Settings and credentials:** the shared settings are sent without the WebDAV password, and comparison and preview views do not show it. A password in a copy that an older version uploaded is ignored. Taking settings from elsewhere keeps the password on this device, as long as the server URL and user name are the same; otherwise enter it again in **WebDAV Config**. An empty settings list is not uploaded, and a list that is empty or damaged is not applied: your settings stay as they are, and an error is shown.
 
-**Local Transactions** — the transactions entered on your devices — are merged, not overwritten: **Pull & merge** combines both devices' transactions, so nothing entered on either side is lost. While both devices are connected, new transactions are also sent to trusted peers as you enter them.
+The **working set** — the new transactions entered on your devices — and the **scheduled transactions** are merged, not overwritten: **Pull & merge** combines both devices' transactions, so nothing entered on either side is lost. While both devices are connected, new transactions are also sent to trusted peers as you enter them.
 
 Need to sync the rest of your Beancount book (all its files)? Use the **Open Beancount Sync** link below the sync options instead — it compares your full local ledger against the peer's and lets you pull individual files.

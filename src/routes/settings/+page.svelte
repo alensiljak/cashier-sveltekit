@@ -105,7 +105,7 @@
 	let destroyTarget = $state<'xacts' | 'scx' | null>(null);
 
 	const STORE_ROWS = [
-		{ target: 'xacts', label: 'Device transactions' },
+		{ target: 'xacts', label: 'Working set' },
 		{ target: 'scx', label: 'Scheduled transactions' }
 	] as const;
 
@@ -158,7 +158,7 @@
 		if ((await store.list()).length > 0) {
 			Notifier.error(
 				target === 'xacts'
-					? 'Delete all local transactions first (Journal → Delete All).'
+					? 'Empty the working set first (Journal → Delete All).'
 					: 'Delete all scheduled transactions first.'
 			);
 			return;
@@ -748,9 +748,9 @@
 		</p>
 	</CashierCardTemplate>
 
-	<!-- ── Backup & Sync ───────────────────────────────────── -->
-	<div id="backup-sync" class="scroll-mt-16"></div>
-	<CashierCardTemplate heading="Backup & Sync" Icon={CloudUploadIcon} bodyClass="space-y-3 px-3">
+	<!-- ── Sync ────────────────────────────────────────────── -->
+	<div id="sync-options" class="scroll-mt-16"></div>
+	<CashierCardTemplate heading="Sync" Icon={CloudUploadIcon} bodyClass="space-y-3 px-3">
 		{#snippet description()}
 			Enable only the options you use. Enabled options appear on the <a class="link" href="/sync">
 				Sync page

@@ -3,8 +3,8 @@
 	import Toolbar from '#lib/components/Toolbar.svelte';
 	import ToolbarMenuItem from '#lib/components/ToolbarMenuItem.svelte';
 	import appService from '#lib/services/appService';
-	import { getFilenameForBackup } from '#lib/services/cloudBackupService';
-	import { listScx } from '#lib/services/scxService';
+	import { ISODATEFORMAT, LONGTIMEFORMAT } from '#lib/constants';
+	import { formatDate } from '#lib/utils/dates';
 	import Notifier from '#lib/utils/notifier';
 	import ArrowDownNarrowWideIcon from '@lucide/svelte/icons/arrow-down-narrow-wide';
 	import CopyIcon from '@lucide/svelte/icons/copy';
@@ -44,14 +44,7 @@
 	}
 
 	async function loadData() {
-		switch (dataType) {
-			case 'journal':
-				output = await appService.getWorkingSetSource();
-				break;
-			case 'scheduled':
-				output = await loadScheduledTransactions();
-				break;
-		}
+		output = await appService.getWorkingSetSource();
 	}
 
 	async function onSortByDateClick() {
@@ -60,12 +53,6 @@
 			return;
 		}
 		output = await appService.sortTransactionsByDate(output);
-	}
-
-	async function loadScheduledTransactions() {
-		const collection = await listScx();
-		const output = JSON.stringify(collection);
-		return output;
 	}
 
 	async function onCopyClick() {
@@ -80,7 +67,8 @@
 	}
 
 	async function onDownloadClick() {
-		let fileName = getFilenameForBackup(dataType as string);
+		const now = new Date();
+		const fileName = `${dataType}_${formatDate(now, ISODATEFORMAT)}_${formatDate(now, LONGTIMEFORMAT)}.ledger`;
 
 		// Save file
 		const blob = new Blob([output], { type: 'text/plain' });
@@ -101,7 +89,6 @@
 			return;
 		}
 
-		// let fileName = getFilenameForBackup(dataType as string);
 		// const file = new File([output], fileName, { type: 'text/plain' });
 
 		if (!window.isSecureContext) {
@@ -168,7 +155,7 @@
 	</Toolbar>
 
 	<main class="flex flex-col p-1 grow">
-		<p>Note: Journal is exported in ledger format, Scheduled Transactions in JSON.</p>
+		<p>Note: Journal is exported in ledger format.</p>
 
 		<textarea
 			class="textarea mt-3 overflow-auto p-2 whitespace-nowrap w-full"

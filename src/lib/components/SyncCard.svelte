@@ -164,14 +164,14 @@
 		Sync
 	{/snippet}
 	{#snippet menu()}
-		<a href="/settings#backup-sync" aria-label="Sync settings" title="Sync settings">
+		<a href="/settings#sync-options"aria-label="Sync settings" title="Sync settings">
 			<Settings2Icon />
 		</a>
 	{/snippet}
 	{#snippet content()}
 		{#if noOptions}
 			<p class="text-sm opacity-60">
-				No sync options selected. Choose them in Settings → Backup &amp; Sync.
+				No sync options selected. Choose them in Settings → Sync.
 			</p>
 		{:else}
 			<div class="space-y-3 px-2">

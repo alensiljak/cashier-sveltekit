@@ -140,6 +140,9 @@ export async function createBackup(options: BackupOptions = {}) {
 		}
 	}
 
+	// Such a file would be refused on restore: only the credentials were chosen, and there are none.
+	if (Object.keys(backup).length === 1) throw new Error('There is nothing to back up');
+
 	return JSON.stringify(backup);
 }
 

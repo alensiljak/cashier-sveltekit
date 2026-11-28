@@ -126,21 +126,6 @@ export class CrdtScxStore extends CrdtDocStore<ScxRecord> {
 		return ids;
 	}
 
-	/** Replaces all records with `list` (IDs as for `save`), in one Yjs transaction. Returns their IDs. */
-	async replaceAll(
-		list: (Omit<ScheduledTransaction, 'id'> & { id?: unknown })[]
-	): Promise<CrdtScxId[]> {
-		await this.ready();
-		const ids: CrdtScxId[] = [];
-		this.doc.transact(() => {
-			this.records.clear();
-			for (const scx of list) ids.push(this.put(scx, this.idFor(scx)));
-		});
-		scheduleBackup(this.kind);
-		await this.flush();
-		return ids;
-	}
-
 	/**
 	 * The entries of a list without history (an older backup file) that this store does not hold:
 	 * those whose ID is not here. An entry without a store ID (a legacy numeric one) is given a new

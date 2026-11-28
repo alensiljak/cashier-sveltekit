@@ -8,6 +8,7 @@
 */
 import {
 	applyBackup,
+	previewPeers,
 	previewStores,
 	type RestoreOptions,
 	type RestoreResult,
@@ -127,6 +128,11 @@ export function inspectBackup(content: string): BackupInfo {
 /** What restoring a backup file would do to each transaction store it holds. */
 export async function previewRestore(content: string): Promise<StoreOutcomes> {
 	return previewStores(readBackup(content));
+}
+
+/** How many trusted devices restoring a backup file would add. */
+export async function previewRestoredPeers(content: string): Promise<number> {
+	return previewPeers(readBackup(content));
 }
 
 /**

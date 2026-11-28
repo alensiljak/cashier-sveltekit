@@ -220,7 +220,7 @@ describe('upload', () => {
 		expect(get(lastBackupTime)).toBeNull();
 		expect(mocks.notify).not.toHaveBeenCalled();
 		expect(mocks.notifyFailure).toHaveBeenCalledWith(
-			expect.stringMatching(/^WebDAV backup failed: .*507/)
+			expect.stringMatching(/^Upload to WebDAV failed: .*507/)
 		);
 	});
 
@@ -243,6 +243,6 @@ describe('upload', () => {
 				expect.arrayContaining(['export failed'])
 			)
 		);
-		expect(mocks.notifyFailure).toHaveBeenCalledWith('WebDAV backup failed: export failed');
+		expect(mocks.notifyFailure).toHaveBeenCalledWith('Upload to WebDAV failed: export failed');
 	});
 });

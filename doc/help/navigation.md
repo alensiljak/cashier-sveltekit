@@ -24,11 +24,12 @@ Open the navigation drawer from the menu icon (☰) in the toolbar, or swipe rig
 ## Data
 
 - [Ledger Import](/help/ledger-import)
-- Sync — [File System Sync](/help/opfs-sync).
-- [Backup](/help/backup)
-- [WebDAV Backup](/help/webdav-backup)
-- File Storage — browse [OPFS files directly](/help/opfs-file-storage).
-- [Peer Sync](/help/peer-sync)
+- File Storage — browse [OPFS files directly](/help/opfs-file-storage). See also [File System Sync](/help/opfs-sync).
+
+## Backup & Sync
+
+- [Sync](/help/sync) — exchanging changes with other devices, through [WebDAV](/help/webdav-sync), S3 or [Peer Sync](/help/peer-sync).
+- [Backup](/help/backup) — saving a copy of your data to a file, and restoring it.
 
 ## Utilities
 

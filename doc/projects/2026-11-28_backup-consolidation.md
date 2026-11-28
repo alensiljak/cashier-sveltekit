@@ -92,14 +92,21 @@ Done, except for the test on a phone.
 
 ## Step 7: onboarding and documentation
 
-- [ ] **Restore from backup** in onboarding
-- [ ] Restore warnings and explanations in the help pages
-- [ ] Review the design document against what was built
+Done, except for the test on a phone.
+
+- [x] **Restore from backup** in onboarding, with an e2e test
+- [x] Restore warnings and explanations in the help pages
+- [x] Review the design document against what was built
+- [x] Remove the separate backup and restore of scheduled transactions (a JSON list, whose restore replaced the whole store). Its menu now opens the Backup page
+- [x] Shared settings can be left out of a backup and of a restore, like the other groups
+- [ ] By hand: restore from onboarding on a phone
 
 ## Step 8: align sync with backup
 
 After backup is consolidated.
 
+- [x] Wording: backup and sync are told apart, and the data has the same names everywhere, with a help page for Sync. The order of the options is not aligned yet
+- [ ] Define the distinction in more detail
 - [ ] Review what each channel offers and where wording, options and behaviour differ. The WebDAV sync page, for example, offers settings and the two transaction stores, and no Beancount files were found there
 - [ ] Settle whether This device is synced
 - [ ] Plan the changes from the review

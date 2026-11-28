@@ -70,10 +70,10 @@
 	}
 
 	const statusRows: { label: string; key: keyof RemoteOverview }[] = [
-		{ label: 'Settings', key: 'settings' },
-		{ label: 'Scheduled Transactions', key: 'scheduled' },
-		{ label: 'Local Transactions', key: 'xacts' },
-		{ label: 'Beancount Files', key: 'beancount' }
+		{ label: 'Shared settings', key: 'settings' },
+		{ label: 'Scheduled transactions', key: 'scheduled' },
+		{ label: 'Working set', key: 'xacts' },
+		{ label: 'Beancount files', key: 'beancount' }
 	];
 
 	/** Reads the server-side modification times. A listing only, so it works without a passphrase. */
@@ -548,7 +548,7 @@
 					</p>
 				{:else}
 					<p class="py-2 text-sm">
-						Records from this device will be merged into your local transactions.
+						Records from this device will be merged into your working set.
 					</p>
 				{/if}
 				<p class="pb-2 text-sm">

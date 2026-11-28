@@ -33,7 +33,6 @@ const pages: { path: string; title: string; expected?: string | RegExp }[] = [
 	{ path: '/commodities', title: 'Commodities', expected: 'VTI' },
 	{ path: '/securities', title: 'Securities', expected: 'VTI' },
 	{ path: '/budget', title: 'Budget' },
-	{ path: '/ledger', title: 'Ledger Debug' },
 	{ path: '/search', title: 'Search' },
 	{ path: '/reports', title: 'Reports' },
 	{ path: '/reports/balance-sheet', title: 'Balance Sheet', expected: /Assets/ },

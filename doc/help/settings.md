@@ -29,6 +29,10 @@ These apply only to this device and aren't included in exports or in the setting
 
 - **HTTP Proxy** — the endpoint used for outgoing requests to sources that block CORS (some [price providers](/help/price-download), the Mistral transcription API in [Voice mode](/help/voice-entry)). Leave the **Proxy URL** empty to use the app's own same-origin `/api/proxy` endpoint; set a full URL (e.g. `https://your-worker.workers.dev/api/proxy`) to use your own deployment. The **API key** is sent as the `X-Proxy-Key` header and is only needed when the proxy is protected. Both values belong to this device and are never synced. A [Backup](/help/backup) can carry them, the key only in its encrypted credentials.
 
+## Sync
+
+Switch on the [sync](/help/sync) channels you use. Each has a **Configure** link.
+
 ## Reset Stores
 
 Resets an **empty** transaction store, which discards the traces of deleted records. This is shared: your other devices follow the next time they sync.
@@ -54,7 +58,7 @@ A mistake that was already synced comes back with the next sync, because it is p
 - **OPFS Storage** — opens [File Storage](/help/opfs-file-storage) to browse the app's private storage directly.
 - **JSON Editor** — edits the raw settings as JSON, for advanced or bulk changes. It shows the stored values, **the WebDAV password included**. It does not save a setting the app does not know, unless it was already stored, so that a mistyped name is noticed.
 - **Speech Settings** — opens the [speech configuration](/help/voice-entry) used by Quick Entry's Voice mode: the transcription engine (built-in browser recognition or Mistral Voxtral), the language, and the Mistral API key.
-- **WebDAV Config** — sets the WebDAV folder URL and credentials used by [WebDAV Backup](/help/webdav-backup).
+- **WebDAV Config** — sets the WebDAV folder URL and credentials used by [WebDAV Sync](/help/webdav-sync).
 
 Tap the checkmark button to save your changes.
 

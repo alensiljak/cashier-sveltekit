@@ -68,11 +68,10 @@ describe('durability', () => {
 		const name = 'durable-scx';
 		const writer = newStore(name);
 		await writer.addMany([scx('Rent')]);
-		await writer.replaceAll([scx('Replaced')]);
 
 		const reader = newStore(name);
 
-		expect((await reader.list()).map((s) => s.transaction?.payee)).toEqual(['Replaced']);
+		expect((await reader.list()).map((s) => s.transaction?.payee)).toEqual(['Rent']);
 	});
 });
 
@@ -162,15 +161,6 @@ describe('bulk operations', () => {
 		expect(kept).toBe('my-ulid');
 		expect(replaced).not.toBe(7);
 		expect(typeof replaced).toBe('string');
-	});
-
-	it('replaces everything', async () => {
-		const store = newStore();
-		await store.addMany([scx('A'), scx('B')]);
-
-		await store.replaceAll([scx('C')]);
-
-		expect((await store.list()).map((s) => s.transaction?.payee)).toEqual(['C']);
 	});
 
 	it('removes by id', async () => {

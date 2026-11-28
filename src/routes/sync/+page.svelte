@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, type Component } from 'svelte';
 	import Toolbar from '#lib/components/Toolbar.svelte';
+	import HelpButton from '#lib/help/HelpButton.svelte';
 	import CloudIcon from '@lucide/svelte/icons/cloud';
 	import DatabaseIcon from '@lucide/svelte/icons/database';
 	import UsersIcon from '@lucide/svelte/icons/users';
@@ -60,7 +61,11 @@
 </script>
 
 <main class="flex h-full flex-col">
-	<Toolbar title="Sync" />
+	<Toolbar title="Sync">
+		{#snippet actions()}
+			<HelpButton topic="sync" />
+		{/snippet}
+	</Toolbar>
 
 	<section class="mx-auto w-full max-w-2xl flex-1 touch-pan-y space-y-4 overflow-y-auto p-4">
 		<!-- Overall state -->
@@ -68,7 +73,7 @@
 			<div class="alert alert-info text-sm" role="status">
 				<span>
 					No sync options selected. Choose them in
-					<a class="link" href="/settings#backup-sync">Settings → Backup &amp; Sync</a>.
+					<a class="link" href="/settings#sync-options">Settings → Sync</a>.
 				</span>
 			</div>
 		{:else if overall === 'error'}
@@ -262,7 +267,7 @@
 					<span class="min-w-0 flex-1">
 						<span class="block text-base font-semibold">Backup file</span>
 						<span class="block text-xs opacity-70">
-							Export or restore everything as a file, with no sync service.
+							Not sync: save a copy of your data as it is now, or restore one.
 						</span>
 					</span>
 					<ChevronRightIcon size={16} />
@@ -281,7 +286,7 @@
 				</a>
 			</li>
 			<li>
-				<a class="rounded-box bg-base-200 flex items-center gap-3 p-3" href="/settings#backup-sync">
+				<a class="rounded-box bg-base-200 flex items-center gap-3 p-3" href="/settings#sync-options">
 					<Settings2Icon size={20} />
 					<span class="min-w-0 flex-1">
 						<span class="block text-base font-semibold">Sync options</span>

@@ -596,8 +596,9 @@ export abstract class CrdtDocStore<R> {
 		});
 		this.notifyReplaced('adopt');
 		if (unseen.size > 0) {
+			const what = this.kind === 'xacts' ? 'working set was' : 'scheduled transactions were';
 			notifier.warning(
-				`The working set was reset on another device. ${unseen.size} record(s) on this device that it had not seen were kept.`
+				`The ${what} reset on another device. ${unseen.size} record(s) on this device that it had not seen were kept.`
 			);
 		}
 		scheduleBackup(this.kind);

@@ -15,7 +15,6 @@
 	import CalendarIcon from '@lucide/svelte/icons/calendar';
 	import CircleQuestionMarkIcon from '@lucide/svelte/icons/circle-question-mark';
 	import PackageIcon from '@lucide/svelte/icons/package';
-	import PackageOpenIcon from '@lucide/svelte/icons/package-open';
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import SearchIcon from '@lucide/svelte/icons/search';
 	import { slide } from 'svelte/transition';
@@ -91,8 +90,7 @@
 <main class="flex h-screen flex-col">
 	<Toolbar title="Scheduled Transactions">
 		{#snippet menuItems()}
-			<ToolbarMenuItem Icon={PackageIcon} text="Backup" targetNav="/export/scheduled" />
-			<ToolbarMenuItem Icon={PackageOpenIcon} text="Restore" targetNav="/restore/scheduled" />
+			<ToolbarMenuItem Icon={PackageIcon} text="Backup / Restore" targetNav="/sync/backup-file" />
 			<ToolbarMenuItem Icon={CalendarIcon} text="Calendar" targetNav="/scheduled-xacts/calendar" />
 			<ToolbarMenuItem
 				Icon={CircleQuestionMarkIcon}

@@ -68,8 +68,3 @@ export async function addScx(list: ScheduledTransaction[]): Promise<ScxId[]> {
 export async function removeScx(ids: ScxId | ScxId[]): Promise<void> {
 	await (await store()).removeMany(Array.isArray(ids) ? ids : [ids]);
 }
-
-/** Replaces all records with `list` (as new records), in one update. */
-export async function replaceAllScx(list: ScheduledTransaction[]): Promise<void> {
-	await (await store()).replaceAll(list);
-}

@@ -23,7 +23,7 @@
 
 	let { target, onclose }: Props = $props();
 
-	const label = $derived(target === 'xacts' ? 'device transactions' : 'scheduled transactions');
+	const label = $derived(target === 'xacts' ? 'working set' : 'scheduled transactions');
 	const getStore = () => (target === 'xacts' ? getXactStore() : getScxStore());
 
 	let records = $state<number>();
@@ -71,7 +71,7 @@
 			busy = false;
 		}
 
-		Notifier.success(`The local ${label} were destroyed.`);
+		Notifier.success(`Destroyed on this device: ${label}.`);
 		onclose();
 		if (target === 'xacts') {
 			try {

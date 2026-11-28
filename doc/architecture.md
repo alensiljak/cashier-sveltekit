@@ -136,7 +136,7 @@ safely. Transaction origins keep updates from echoing: `remote` (from a peer,
   drop its history. S3 is always encrypted; WebDAV optionally
   (`services/webdavEncryption.ts`). Only trusted devices are merged. Design:
   `doc/completed-projects/2026-10-16_delta-sync.md`.
-- **WebDAV backup** (`services/webdavAutoBackupService.ts`, `webdavDelta.ts`)
+- **WebDAV sync** (`services/webdavAutoBackupService.ts`, which is the automatic upload, and `webdavDelta.ts`)
   uploads after each write, debounced, using delta sync.
 - **Shared settings in sync** (`services/backup/sharedSettings.ts`): S3, WebDAV
   and Peer Sync send, show and import settings only through it, so secrets stay

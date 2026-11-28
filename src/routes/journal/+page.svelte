@@ -79,7 +79,7 @@
 		// cache and the "modified" change indicator in sync (same pattern as
 		// every other working-set mutation; see doc/architecture.md).
 		void reloadLedgerFromOpfs();
-		Notifier.success('All local transactions deleted.');
+		Notifier.success('All transactions in the working set deleted.');
 	}
 
 	async function onExportClick() {

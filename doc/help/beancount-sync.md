@@ -31,6 +31,6 @@ Use the toolbar menu's **Show differences only** to collapse the tree down to fi
 
 Tap **Pull N files** to download every file currently marked **Pull**. This overwrites the local copy (or removes it, if the peer deleted the file) and cannot be undone. Files marked **Skip** or **Conflict** are left alone.
 
-Your device's own quick-entry transactions (Local Transactions) are not files, so they don't appear here. They are merged between devices from the [Peer Sync](/help/peer-sync) page instead.
+Your device's own quick-entry transactions (the working set) are not files, so they don't appear here. They are merged between devices from the [Peer Sync](/help/peer-sync) page instead.
 
 If the peer goes offline mid-session, the page keeps showing your local files but can't classify their status until the peer reconnects.

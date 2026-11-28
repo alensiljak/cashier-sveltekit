@@ -11,16 +11,11 @@
     `/onboarding` first, where the user's choice (demo data / import / empty)
     decides how the store gets initialized.
 */
-import {
-	DATE_FORMAT_DEFAULT,
-	DEMO_DIR,
-	SHORT_DATE_FORMAT_DEFAULT,
-	USER_BOOK_FILENAME
-} from '#lib/constants';
-import { SettingKeys, settings } from '#lib/settings';
+import { DEMO_DIR, USER_BOOK_FILENAME } from '#lib/constants';
+import { settings } from '#lib/settings';
 import appService from '#lib/services/appService';
 import fullLedgerService from '#lib/services/ledgerWorkerClient';
-import { DateFormatStore, ShortDateFormatStore } from '#lib/data/mainStore';
+import { loadDisplaySettings } from '#lib/services/displaySettings';
 import * as OpfsLib from '#lib/utils/opfslib';
 import { getXactStore } from '#lib/storage/xactStoreRegistry';
 
@@ -63,11 +58,6 @@ async function isCleanSlate(): Promise<boolean> {
  * after the onboarding flow has initialized it).
  */
 export async function finishInitialization(): Promise<void> {
-	const savedShortDateFormat = await settings.get<string>(SettingKeys.shortDateFormat);
-	ShortDateFormatStore.set(savedShortDateFormat ?? SHORT_DATE_FORMAT_DEFAULT);
-
-	const savedDateFormat = await settings.get<string>(SettingKeys.dateFormat);
-	DateFormatStore.set(savedDateFormat ?? DATE_FORMAT_DEFAULT);
-
+	await loadDisplaySettings();
 	await fullLedgerService.ensureLoaded();
 }

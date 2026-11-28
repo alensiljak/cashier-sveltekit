@@ -1,11 +1,12 @@
 /**
- * Automatic backup of the working set and the scheduled transactions (the CRDT stores' Yjs
- * state, one file each) to WebDAV and, when the S3 option is enabled, to the S3 bucket.
+ * Automatic upload, which is sync and not a backup (see doc/backup.md; the names here predate that
+ * distinction). It sends the changes in the working set and the scheduled transactions to WebDAV
+ * and, when the S3 option is enabled, to the S3 bucket.
  *
  * Call `scheduleBackup()` after any write to the store. The upload is
- * debounced so rapid successive writes (e.g. sort + save) coalesce into one
- * PUT. The backup runs in the background and reports the result with an app message. The /sync/webdav/ page shows the last-backup
- * timestamp via the exported `lastBackupTime` store.
+ * debounced so rapid successive writes (e.g. sort + save) coalesce into one.
+ * It runs in the background and reports the result with an app message. The WebDAV and S3
+ * configuration pages show the time of the last one, from the `lastBackupTime` store.
  */
 
 import { WebDavClient } from '#lib/utils/webdav';
@@ -62,10 +63,10 @@ async function doS3Backup(kinds: DocKind[]): Promise<void> {
 		const failed = await backupCrdtStores(cfg, kinds);
 		if (failed.length) throw new Error(failed.map((l) => l.message).join('; '));
 		lastBackupTime.set(new Date());
-		Notifier.success(`${kindsLabel(kinds)} backed up to S3`);
+		Notifier.success(`${kindsLabel(kinds)} uploaded to S3`);
 	} catch (err) {
 		console.warn('[s3-auto-backup] error:', err);
-		Notifier.error(`S3 backup failed: ${err instanceof Error ? err.message : String(err)}`);
+		Notifier.error(`Upload to S3 failed: ${err instanceof Error ? err.message : String(err)}`);
 	}
 }
 
@@ -110,9 +111,9 @@ async function doWebDavBackup(kinds: DocKind[]): Promise<void> {
 	const errors = await uploadCrdtState(client, kinds);
 	if (errors.length) {
 		console.warn('[webdav-auto-backup] upload failed:', errors);
-		Notifier.error(`WebDAV backup failed: ${errors.join('; ')}`);
+		Notifier.error(`Upload to WebDAV failed: ${errors.join('; ')}`);
 	} else {
-		Notifier.success(`${kindsLabel(kinds)} backed up to WebDAV`);
+		Notifier.success(`${kindsLabel(kinds)} uploaded to WebDAV`);
 	}
 }
 

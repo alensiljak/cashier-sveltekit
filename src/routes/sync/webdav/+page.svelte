@@ -133,7 +133,7 @@
 				} else {
 					const res = await dav.putJsonGz('settings.json', readableSettingsJson(json));
 					if (res.ok) {
-						Notifier.success('Settings uploaded');
+						Notifier.success('Shared settings uploaded');
 						uploaded.settings = true;
 					} else
 						Notifier.error(`Upload failed for settings.json.gz: ${res.status} ${res.statusText}`);
@@ -142,8 +142,8 @@
 			if (includeXacts) {
 				const errors = await uploadCrdtState(dav, ['xacts']);
 				if (errors.length)
-					Notifier.error(`Upload failed for local transactions: ${errors.join('; ')}`);
-				else Notifier.success('Local transactions uploaded');
+					Notifier.error(`Upload failed for the working set: ${errors.join('; ')}`);
+				else Notifier.success('Working set uploaded');
 			}
 			if (includeScheduled) {
 				// Set up (and, on a first launch, migrate) the scheduled transactions first: the upload skips them otherwise.
@@ -201,7 +201,7 @@
 				const res = await dav.getJson('settings.json');
 				if (res.ok) {
 					await importSettingsJson(await res.text());
-					Notifier.success('Settings restored');
+					Notifier.success('Shared settings downloaded');
 					downloaded.settings = true;
 				} else {
 					Notifier.error(`Download failed for settings.json: ${res.status} ${res.statusText}`);
@@ -237,11 +237,11 @@
 		goto(`/sync/webdav/preview?source=${source}&${fileParams()}`);
 	}
 
-	const overwrittenLabels = $derived(includeSettings ? ['Settings'] : []);
+	const overwrittenLabels = $derived(includeSettings ? ['Shared settings'] : []);
 </script>
 
 {#snippet menuItems()}
-	<HelpButton topic="webdav-backup" variant="menu-item" />
+	<HelpButton topic="webdav-sync" variant="menu-item" />
 {/snippet}
 
 {#snippet actions()}
@@ -290,14 +290,14 @@
 	{/if}
 {/snippet}
 
-<Toolbar title="WebDAV Backup" {menuItems} {actions} />
+<Toolbar title="WebDAV Sync" {menuItems} {actions} />
 
 <main class="p-4 flex flex-col gap-6 mx-auto max-w-2xl w-full">
 	{#if !webdavUrl}
 		<section>
 			<p>
 				Make sure that you <a href="/settings/webdav-cfg" class="link link-primary">configure</a> your
-				WebDAV connection before backup operations.
+				WebDAV connection before you sync.
 			</p>
 		</section>
 	{/if}
@@ -330,19 +330,19 @@
 			<div class="divider my-0"></div>
 			<label class="flex items-center gap-3 cursor-pointer">
 				<input type="checkbox" class="checkbox checkbox-primary" bind:checked={includeSettings} />
-				<span class="flex-1">Settings</span>
+				<span class="flex-1">Shared settings</span>
 				{@render syncBadge(settingsLastModified, settingsDirection)}
 			</label>
 			<label class="flex items-center gap-3 cursor-pointer">
 				<input type="checkbox" class="checkbox checkbox-primary" bind:checked={includeScheduled} />
-				<span class="flex-1">Scheduled Transactions</span>
+				<span class="flex-1">Scheduled transactions</span>
 				<!-- Merged, so there is no newer/older or conflict to flag. -->
 				{@render syncBadge(scheduledLastModified, null)}
 			</label>
 			<div class="flex items-center gap-3">
 				<label class="flex flex-1 items-center gap-3 cursor-pointer">
 					<input type="checkbox" class="checkbox checkbox-primary" bind:checked={includeXacts} />
-					<span class="flex-1">Local Transactions</span>
+					<span class="flex-1">Working set</span>
 					<!-- Merged, so there is no newer/older or conflict to flag. -->
 					{@render syncBadge(xactsLastModified, null)}
 				</label>

@@ -3,7 +3,7 @@
 */
 import db from '#lib/data/db';
 import { ScheduledTransaction, Xact, type ScxId } from '#lib/data/model';
-import { getScx, listScx, replaceAllScx } from '#lib/services/scxService';
+import { getScx } from '#lib/services/scxService';
 import { applyRepaymentAmounts } from '#lib/services/repaymentService';
 import { settings, SettingKeys, deviceSettings, DeviceSettingKeys } from '#lib/settings';
 import { HomeCardNames } from '#lib/enums';
@@ -254,16 +254,6 @@ class AppService {
 	}
 
 	/**
-	 *
-	 * @returns All Scheduled Xacts, serialized to JSON.
-	 */
-	async getScheduledXactsForExport(): Promise<string> {
-		const records: ScheduledTransaction[] = await listScx();
-		const output = this.serialize(records);
-		return output;
-	}
-
-	/**
 	 * Imports the accounts list with their balances.
 	 * Populates the Account balances. Reads the balances from a Ledger report.
 	 * 10,000 AUD  Assets:Bank Account
@@ -371,20 +361,6 @@ class AppService {
 	 * Imports Scheduled Transactions from a JSON String backup (from the export file).
 	 * @param {String} jsonList
 	 */
-	async importScheduledTransactions(jsonList: string) {
-		if (!jsonList) {
-			throw new Error('The transactions list is required!');
-		}
-
-		const parsed = JSON.parse(jsonList);
-		if (!Array.isArray(parsed)) {
-			throw new Error('The transactions list must be a JSON array!');
-		}
-
-		// Replace all existing records, all-or-nothing.
-		await replaceAllScx(parsed);
-	}
-
 	// async loadAccount(name: string) {
 	// 	return db.accounts.get(name);
 	// }
@@ -462,10 +438,6 @@ class AppService {
 	// saveAccount(account: Account) {
 	// 	return db.accounts.put(account);
 	// }
-
-	serialize(content: unknown) {
-		return JSON.stringify(content);
-	}
 
 	/** Sets the (empty) transaction store up on this device. */
 	async initializeXactStore(): Promise<void> {

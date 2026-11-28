@@ -2,7 +2,7 @@
 
 How Cashier handles its data in these operations: what happens to which data, and why.
 
-This is the intended design. Not all of it is built yet: the [project plan](projects/2026-11-28_backup-consolidation.md) has the tasks and the progress. The user-facing explanation is in the [help pages](help/backup.md). The format that preceded this design is described in [Backup and Restore of a Whole Device](completed-projects/2026-11-12_backup-restore.md).
+This is the intended design. It is built, except for aligning sync with backup ([Backup and sync](#backup-and-sync)): the [project plan](projects/2026-11-28_backup-consolidation.md) has the tasks and the progress. The user-facing explanation is in the [help pages](help/backup.md). The format that preceded this design is described in [Backup and Restore of a Whole Device](completed-projects/2026-11-12_backup-restore.md).
 
 ## Principles
 
@@ -15,7 +15,7 @@ This is the intended design. Not all of it is built yet: the [project plan](proj
 
 | Group           | Contents                                                                            | Control                          |
 | --------------- | ----------------------------------------------------------------------------------- | -------------------------------- |
-| Shared settings | the shared settings table                                                           | always included                  |
+| Shared settings | the shared settings table                                                           | on by default                    |
 | Transactions    | working set; scheduled transactions                                                 | one toggle each, on by default   |
 | This device     | portable device settings, sync setup, trusted and evicted devices, source device ID | on by default                    |
 | Credentials     | every secret, whichever other groups are chosen                                     | off by default, always encrypted |
@@ -84,7 +84,7 @@ The types cannot detect a new secret inside an existing object. The importer con
 - Only the Credentials block is encrypted (PBKDF2 and AES-GCM). It is encrypted before the file is compressed. Everything else can be read without a passphrase.
 - Both transaction stores are saved as Yjs state, which includes their history.
 - The file lists its contents without encryption, including which credentials the block holds, so they can be shown before a passphrase is entered. A file with no secrets to hold has no block.
-- A store backup offered when destroying holds that store only. The Backup page always includes the shared settings.
+- A store backup offered when destroying holds that store only. A file with nothing in it is not made.
 - This device is two parts of the file, `device` and `peers`.
 - Where a browser cannot share gzip files, Share sends plain JSON.
 - The file records its format version. A file from a newer app is refused.
@@ -132,7 +132,7 @@ The screen stays uncluttered. Explanations go to the help page, opened with the 
 
 ### What restore does
 
-Each group has its own toggle. Shared settings is on and locked when the file has it.
+Each group has its own toggle, so the user restores only what they want. Every group the file holds is selected at first.
 
 | Data                                | Effect                                                                                            |
 | ----------------------------------- | ------------------------------------------------------------------------------------------------- |
@@ -142,6 +142,8 @@ Each group has its own toggle. Shared settings is on and locked when the file ha
 | Trusted and evicted devices         | missing entries are added; evictions apply; `fileSyncInitializedAt` is removed from added devices |
 | Working set, scheduled transactions | **merged** into the store; restore never replaces or clears a store                               |
 | Identity and signing key            | unchanged                                                                                         |
+
+A restore of Shared settings or This device records which tracked secret fields the backup had and the device still lacks. The WebDAV and S3 pages mark them as required, and the result lists them.
 
 `fileSyncInitializedAt` is removed because the file-sync baseline it refers to is not restored. With it, pairing would never create the baseline again.
 
@@ -165,7 +167,7 @@ The user chooses per store, so one store can be destroyed and the other merged.
 - It does **not** undo later deletions or edits. Merging an older backup of this same device may change nothing. To return to the backup's state, destroy first.
 - It can change or delete local records, if the backup holds changes made elsewhere. Concurrent edits of one record are not resolved by time.
 - A backup made before a store reset is ignored.
-- A backup made after a reset on another device replaces the local document. Records the resetting device had not seen are kept.
+- A backup made after a reset on another device replaces the local document. Records the resetting device had not seen are kept. If that would drop records while changes are waiting to be uploaded, the user is asked first. Waiting leaves the store unchanged, and the result says so.
 
 Before restoring, the page shows how many records would be added, changed and deleted in each store (`previewImport`). If a backup is ignored, the result says so and points to Destroy. A restore that added nothing is never reported as a plain success.
 
@@ -179,12 +181,12 @@ Saved state does not have this problem, which is why the transaction stores are 
 
 ### Other warnings
 
-- Restore trusted devices only from a file you trust. The page shows how many would be added.
+- Restore trusted devices only from a file you trust. The page shows how many the file holds and how many would be added.
 - An old backup can trust a device that was evicted later. A new device does not know until it receives the eviction.
 
 ### Onboarding
 
-A new device can restore from onboarding. **Restore from backup** initializes empty stores, as **Start empty** does, and opens the restore page.
+A new device can restore from onboarding. **Restore from backup** initializes empty stores, as **Start empty** does, and opens the Backup page, which holds the restore.
 
 Demo data gives the stores a history. Destroy them before restoring over it.
 
@@ -276,6 +278,13 @@ The two look and behave the same wherever they do the same thing, so that nobody
 - **What happens** to it: a backup is a copy from one point in time; sync is an ongoing exchange of changes.
 
 Storage does not decide the second. A backup file kept in S3 would still be a backup, and a synced bucket is not a backup: mistakes and deletions spread through it, and clean-up removes old history. Backup and sync therefore stay two clearly named actions. Another device is also not storage: it has to be online.
+
+### Wording
+
+- **Backup** and **restore** are used only for the file. Sync **uploads**, **downloads**, **pulls** and **merges**; what it sends automatically is an "automatic upload", never a backup.
+- The data is called the same everywhere: **Shared settings**, **Working set**, **Scheduled transactions**, **Beancount files**.
+- The help pages explain the difference: `help/sync.md` and `help/backup.md`.
+- Some names in the code predate this (`webdavAutoBackupService`, `scheduleBackup`). The stored keys `webdav-auto-backup` and `s3-auto-backup` are part of the backup file formats and stay.
 
 ### What they share
 

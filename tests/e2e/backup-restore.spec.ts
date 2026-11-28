@@ -134,6 +134,50 @@ test('destroying a store on the restore page, then restoring, returns to the bac
 	expect(payees(after).sort()).toEqual(payees(original).sort());
 });
 
+test('a new device can restore a backup from onboarding', async ({ page }) => {
+	await page.goto('/onboarding');
+	await page.getByRole('button', { name: 'Restore from backup' }).click();
+	await expect(page).toHaveURL('/sync/backup-file');
+
+	await page.locator('#backupFile').setInputFiles({
+		name: 'backup.json',
+		mimeType: 'application/json',
+		buffer: Buffer.from(
+			JSON.stringify({ version: 2, settings: [{ key: 'currency', value: '"EUR"' }], scx: [rent] })
+		)
+	});
+	// The stores are new: there is nothing to destroy.
+	await expect(selection(page).getByText(/merged: would add 1,/)).toBeVisible();
+	await expect(selection(page).getByRole('button', { name: /Destroy local/ })).toBeHidden();
+	await restoreButton(page).click();
+	await expect(page.getByText(RENT_ADDED)).toBeVisible();
+
+	// Onboarding is done: the app does not go back to it.
+	await page.goto('/scheduled-xacts');
+	await expect(page.getByText('E2E Rent').first()).toBeVisible();
+	await expect(page).toHaveURL('/scheduled-xacts');
+});
+
+test('shared settings can be left out of a backup and of a restore', async ({ demoPage: page }) => {
+	const original = await downloadBackup(page);
+
+	const changed = original.settings.filter((s) => s.key !== original.settings[0].key);
+	await chooseFile(page, JSON.stringify({ ...original, settings: changed }));
+	await selection(page).getByLabel('Shared settings').uncheck();
+	await restoreButton(page).click();
+	await expect(page.getByText('Restored from backup.json.')).toBeVisible();
+	expect((await downloadBackup(page)).settings).toEqual(original.settings);
+
+	await page.getByLabel('Shared settings').uncheck();
+	const [download] = await Promise.all([
+		page.waitForEvent('download'),
+		page.getByRole('button', { name: 'Backup', exact: true }).click()
+	]);
+	const without = JSON.parse(gunzipSync(readFileSync((await download.path())!)).toString('utf8'));
+	expect(without.settings).toBeUndefined();
+	expect(without.scx).toBeDefined();
+});
+
 test('an invalid backup is rejected and existing data is kept', async ({ demoPage: page }) => {
 	const original = await downloadBackup(page);
 	await restore(page, withScxList(original, [rent]));

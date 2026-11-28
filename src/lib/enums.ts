@@ -1,8 +1,3 @@
-export const BackupType = {
-	JOURNAL: 'journal',
-	SCHEDULEDXACTS: 'scheduled'
-};
-
 export const HomeCardNames = {
 	FAVOURITES: 'FavouritesCard',
 	FORECAST: 'ForecastCard',
