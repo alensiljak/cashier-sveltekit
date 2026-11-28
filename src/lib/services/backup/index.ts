@@ -10,6 +10,7 @@ import { applyBackup, type RestoreOptions, type RestoreResult } from './apply';
 import { ALL_SECTIONS, type BackupData, type BackupSection } from './model';
 import { readV1 } from './readers/v1';
 import { readV2 } from './readers/v2';
+import { readV3 } from './readers/v3';
 import { BACKUP_VERSION } from './write';
 
 export { importSettingsJson, type RestoreOptions, type RestoreResult } from './apply';
@@ -25,7 +26,8 @@ export {
 
 /** The readers of the versions the file states. Version 1 files state none. */
 const READERS: Record<number, (file: Record<string, unknown>) => BackupData> = {
-	2: readV2
+	2: readV2,
+	3: readV3
 };
 
 /** Parses and checks the backup file, so nothing is deleted for a file that can't be restored. */
@@ -63,7 +65,9 @@ export interface BackupInfo {
 	/** Sections the file holds. */
 	sections: BackupSection[];
 	hasSecrets: boolean;
-	counts: { settings: number; scx: number; peers: number };
+	/** The scheduled transactions are a list without history, as in older files. */
+	scxIsList: boolean;
+	counts: { settings: number; peers: number };
 }
 
 /** What a backup file holds, for the restore dialog. Throws for a file that can't be restored. */
@@ -73,9 +77,9 @@ export function inspectBackup(content: string): BackupInfo {
 		version: data.version,
 		sections: ALL_SECTIONS.filter((s) => data[s] !== undefined),
 		hasSecrets: data.openSecrets !== undefined,
+		scxIsList: !!data.scx && 'list' in data.scx,
 		counts: {
 			settings: data.settings?.length ?? 0,
-			scx: data.scx?.length ?? 0,
 			peers: data.peers?.peers.length ?? 0
 		}
 	};

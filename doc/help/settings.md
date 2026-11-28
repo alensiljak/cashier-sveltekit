@@ -47,7 +47,7 @@ What you can get back:
 
 A mistake that was already synced comes back with the next sync, because it is part of the shared history.
 
-**Scheduled transactions:** a backup file holds them as a list, without their history. After restoring such a list, a sync can bring back deleted entries, or let old versions replace newer edits, also on other devices. If sync has your current data, don't restore them; sync instead.
+**Scheduled transactions in older backup files:** these files (backup format 1 or 2, shown when you choose the file) hold them as a list, without their history. After restoring such a list, a sync can bring back deleted entries, or let old versions replace newer edits, also on other devices. If sync has your current data, don't restore them from such a file; sync instead. Newer backup files keep the history and do not have this problem.
 
 ## Toolbar menu
 

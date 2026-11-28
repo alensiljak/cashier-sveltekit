@@ -4,6 +4,7 @@
     and a bad file never destroys existing data.
 */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import * as Y from 'yjs';
 
 vi.mock('#lib/services/webdavAutoBackupService', () => ({ scheduleBackup: vi.fn() }));
 vi.mock('#lib/sync/ydocDevices', async (orig) => ({
@@ -27,6 +28,7 @@ import {
 	restoreBackup,
 	type BackupOptions
 } from '#lib/services/backup';
+import { fromBase64 } from '#lib/services/s3Crypto';
 import { loadImporterConfig, resetImporterConfig, saveImporterConfig } from '#lib/importers/config';
 import { getRestoreMissing } from '#lib/services/restoreMissing';
 import { getRestoredDevice } from '#lib/services/restoredDevice';
@@ -55,6 +57,13 @@ async function seed() {
 }
 
 const payees = async () => (await scxStore.list()).map((s) => s.transaction?.payee);
+
+/** The payees of the scheduled transactions in a backup file, which holds the store's state. */
+async function backedUpPayees(file: { scx: string }): Promise<unknown[]> {
+	const store = new CrdtScxStore(`backup-test-read-${scxCounter++}`);
+	await store.importState(fromBase64(file.scx));
+	return (await store.list()).map((s) => s.transaction?.payee);
+}
 
 beforeEach(seed);
 afterEach(() => vi.restoreAllMocks());
@@ -96,10 +105,7 @@ describe('createBackup', () => {
 			{ key: 'currency', value: '"EUR"' },
 			{ key: 'theme', value: '"dark"' }
 		]);
-		expect(backup.scx.map((s: { transaction: { payee: string } }) => s.transaction.payee)).toEqual([
-			'Rent',
-			'Gym'
-		]);
+		expect(await backedUpPayees(backup)).toEqual(['Rent', 'Gym']);
 	});
 
 	it('produces an empty but valid backup for an empty database', async () => {
@@ -109,7 +115,7 @@ describe('createBackup', () => {
 		expect(JSON.parse(await createBackup(basic))).toEqual({
 			version: BACKUP_VERSION,
 			settings: [],
-			scx: []
+			scx: expect.any(String)
 		});
 	});
 
@@ -124,7 +130,7 @@ describe('restoreBackup', () => {
 	it('round-trips: restoring a backup brings back exactly what it saved', async () => {
 		const backup = await createBackup(basic);
 		await db.settings.clear();
-		await scxStore.clear();
+		await scxStore.destroy();
 		await db.settings.put(new Setting('other', '"x"'));
 
 		await restoreBackup(backup);
@@ -146,7 +152,7 @@ describe('restoreBackup', () => {
 	it('restores only the sections asked for', async () => {
 		const backup = await createBackup(basic);
 		await db.settings.clear();
-		await scxStore.clear();
+		await scxStore.destroy();
 
 		await restoreBackup(backup, { sections: ['scx'] });
 
@@ -154,7 +160,22 @@ describe('restoreBackup', () => {
 		expect(await payees()).toEqual(['Rent', 'Gym']);
 	});
 
-	it('replaces existing records rather than merging', async () => {
+	it('merges scheduled transactions, keeping later changes', async () => {
+		const backup = await createBackup(basic);
+		const [rent, gym] = await scxStore.list();
+		await scxStore.save({ ...rent, nextDate: '2026-03-01' });
+		await scxStore.remove(gym.id);
+		await scxStore.addMany([scx('Phone', '2026-04-01')]);
+
+		await restoreBackup(backup, { sections: ['scx'] });
+
+		expect((await scxStore.list()).map((s) => [s.transaction?.payee, s.nextDate])).toEqual([
+			['Rent', '2026-03-01'],
+			['Phone', '2026-04-01']
+		]);
+	});
+
+	it('replaces existing records with those of an older file, which has a list', async () => {
 		await restoreBackup(JSON.stringify({ settings: [new Setting('a', '1')], scx: [scx('Only')] }));
 
 		expect((await db.settings.toArray()).map((s: Setting) => s.key)).toEqual(['a']);
@@ -171,6 +192,9 @@ describe('restoreBackup', () => {
 		['a newer format', JSON.stringify({ version: BACKUP_VERSION + 1, settings: [] })],
 		['version 2 without sections', JSON.stringify({ version: 2 })],
 		['a damaged section', JSON.stringify({ version: 2, peers: { peers: 'x', revocations: [] } })],
+		['a list where saved state belongs', JSON.stringify({ version: 3, settings: [], scx: [] })],
+		['a damaged state', JSON.stringify({ version: 3, settings: [], scx: 'AQIDBA==' })],
+		['a state that is not base64', JSON.stringify({ version: 3, settings: [], scx: '%%%' })],
 		['a damaged credentials block', JSON.stringify({ version: 2, settings: [], secrets: { v: 1 } })]
 	])('rejects %s and keeps the existing data', async (_name, content) => {
 		await expect(restoreBackup(content)).rejects.toThrow();
@@ -594,7 +618,9 @@ describe('trusted devices', () => {
 
 describe('working set', () => {
 	it('is exported from the store and merged into it on restore', async () => {
-		const state = new Uint8Array([1, 2, 3, 250]);
+		const doc = new Y.Doc();
+		doc.getMap('xacts').set('a', { id: 'a' });
+		const state = Y.encodeStateAsUpdate(doc);
 		const importState = vi.fn(async () => []);
 		setXactStore({ exportState: async () => state, importState } as never);
 
@@ -603,9 +629,9 @@ describe('working set', () => {
 
 		expect(result.restored).toEqual(['workingSet']);
 		expect(importState).toHaveBeenCalledOnce();
-		expect(Array.from((importState.mock.calls[0] as unknown as [Uint8Array])[0])).toEqual([
-			1, 2, 3, 250
-		]);
+		expect(Array.from((importState.mock.calls[0] as unknown as [Uint8Array])[0])).toEqual(
+			Array.from(state)
+		);
 	});
 });
 
@@ -620,7 +646,8 @@ describe('inspectBackup', () => {
 			version: BACKUP_VERSION,
 			sections: ['settings', 'scx'],
 			hasSecrets: true,
-			counts: { settings: 2, scx: 2, peers: 0 }
+			scxIsList: false,
+			counts: { settings: 2, peers: 0 }
 		});
 	});
 

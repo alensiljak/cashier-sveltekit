@@ -122,9 +122,9 @@
 			</li>
 			{#if target === 'scx'}
 				<li class="text-error">
-					Restoring scheduled transactions from a backup and then syncing can bring back deleted
-					entries or replace newer edits, also on other devices. If sync has your current data,
-					don't restore them.
+					Older backup files hold scheduled transactions without their history. Restoring them from
+					such a file and then syncing can bring back deleted entries or replace newer edits, also on
+					other devices. If sync has your current data, don't restore them from an older file.
 				</li>
 			{/if}
 		</ul>

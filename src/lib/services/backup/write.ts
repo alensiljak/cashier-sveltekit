@@ -1,12 +1,11 @@
 /**
  * Writes backup files, in the latest format only. What the format holds is described by its
- * reader (readers/v2.ts).
+ * reader (readers/v3.ts).
  */
 import { ISODATEFORMAT, LONGTIMEFORMAT } from '#lib/constants';
 import db from '#lib/data/db';
-import type { ScheduledTransaction } from '#lib/data/model';
-import { listScx } from '#lib/services/scxService';
 import { toBase64 } from '#lib/services/s3Crypto';
+import { getReadyScxStore } from '#lib/services/scxService';
 import { deviceSettings, settings } from '#lib/settings';
 import { getXactStore } from '#lib/storage/xactStoreRegistry';
 import { getDeviceId } from '#lib/sync/ydocDevices';
@@ -29,12 +28,12 @@ import {
 	type SecretsBlock
 } from './secrets';
 
-export const BACKUP_VERSION = 2;
+export const BACKUP_VERSION = 3;
 
 interface BackupFile {
 	version: number;
 	settings?: StoredSetting[];
-	scx?: ScheduledTransaction[];
+	scx?: string;
 	workingSet?: string;
 	device?: DeviceData;
 	withheld?: string[];
@@ -106,7 +105,9 @@ export async function createBackup(options: BackupOptions = {}) {
 	if (sections.has('settings')) {
 		backup.settings = byKey(stripSecrets(await settings.getAll(), 'settings', stripped));
 	}
-	if (sections.has('scx')) backup.scx = await listScx();
+	if (sections.has('scx')) {
+		backup.scx = toBase64(await (await getReadyScxStore()).exportState());
+	}
 	if (sections.has('workingSet')) {
 		backup.workingSet = toBase64(await (await getXactStore()).exportState());
 	}

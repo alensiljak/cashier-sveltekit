@@ -7,7 +7,7 @@ import db from '#lib/data/db';
 import { recordRestoredDevice } from '#lib/services/restoredDevice';
 import { setRestoreMissing } from '#lib/services/restoreMissing';
 import { WrongPassphraseError } from '#lib/services/s3Crypto';
-import { replaceAllScx } from '#lib/services/scxService';
+import { getReadyScxStore, replaceAllScx } from '#lib/services/scxService';
 import { deviceSettings, settings } from '#lib/settings';
 import { getXactStore } from '#lib/storage/xactStoreRegistry';
 import { getDeviceId } from '#lib/sync/ydocDevices';
@@ -19,6 +19,7 @@ import {
 	type DeviceData,
 	type FieldSecrets,
 	type PeersData,
+	type ScxData,
 	type StoredSetting,
 	type WithheldField
 } from './model';
@@ -53,8 +54,8 @@ export interface RestoreResult {
 }
 
 /**
- * Restores the backup. The settings and the scheduled transactions replace what is there; the
- * working set and the trusted devices are merged into it.
+ * Restores the backup. The settings replace what is there; the transaction stores and the trusted
+ * devices are merged into it. A list of scheduled transactions (older files) replaces the list.
  * `data` comes from a reader, so the file is validated before anything is written here.
  */
 export async function applyBackup(
@@ -81,7 +82,7 @@ export async function applyBackup(
 	}
 
 	if (sections.includes('settings')) await replaceSettings(data.settings!, secrets);
-	if (sections.includes('scx')) await replaceAllScx(data.scx!);
+	if (sections.includes('scx')) await restoreScx(data.scx!);
 	if (sections.includes('workingSet')) {
 		await (await getXactStore()).importState(data.workingSet!);
 	}
@@ -95,6 +96,11 @@ export async function applyBackup(
 		await setRestoreMissing(result.missing);
 	}
 	return result;
+}
+
+async function restoreScx(scx: ScxData) {
+	if ('list' in scx) await replaceAllScx(scx.list);
+	else await (await getReadyScxStore()).importState(scx.state);
 }
 
 async function missingSecrets(

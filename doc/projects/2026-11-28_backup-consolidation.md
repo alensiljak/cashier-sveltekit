@@ -18,7 +18,6 @@ Each is removed from this list when its step is done.
 
 | Problem                                                                                                                               | Step |
 | ------------------------------------------------------------------------------------------------------------------------------------- | ---- |
-| Restoring scheduled transactions and then syncing can bring back deleted entries and old versions                                     | 3    |
 | WebDAV upload and Peer Sync send `settings.getAll()`, which includes the WebDAV password                                              | 4    |
 | `importSettingsJson` only checks that its input is a list. An empty list erases the shared settings                                   | 4    |
 | Restoring scheduled transactions replaces the list. The deletions can then sync to other devices                                      | 5    |
@@ -47,14 +46,17 @@ Done. No change in behaviour. It comes before the later format changes, so that 
 
 ## Step 3: scheduled-transaction history in backups
 
+Done.
+
 Restoring the current list and then syncing can put wrong data on other devices. In a temporary test of restoring a list and then syncing, 22 of 40 runs ended with an old version and a deleted entry. With saved state, all 40 ended current.
 
-- [ ] Set the backup version to 3 (see above), with its reader
-- [ ] A backup saves the scheduled transactions as Yjs state, as it does the working set
-- [ ] Restoring saved state merges it (`importState`)
-- [ ] Files that hold only a list can still be restored. Their merge-only behaviour comes in step 5
-- [ ] Keep the warning for lists only: update the Destroy dialog and the Settings help, which now apply it to every backup
-- [ ] Tests: back up, destroy, restore, sync, with later edits and deletions
+- [x] Set the backup version to 3 (see above), with its reader
+- [x] A backup saves the scheduled transactions as Yjs state, as it does the working set
+- [x] Restoring saved state merges it (`importState`)
+- [x] Files that hold only a list can still be restored. Their merge-only behaviour comes in step 5
+- [x] Keep the warning for lists only: update the Destroy dialog and the Settings help, which now apply it to every backup
+- [x] Tests: back up, destroy, restore, sync, with later edits and deletions
+- [x] A damaged saved state is rejected when the file is read, before anything is written
 
 ## Step 4: safety fixes
 
@@ -84,6 +86,7 @@ For older files too.
 - [ ] Compression, and measure what it saves
 - [ ] Test sharing a compressed file on a phone
 - [ ] Recognize compression, encrypted credentials and contents; grey out what a file lacks
+- [ ] A sample file of version 3, once the format is final
 
 ## Step 7: onboarding and documentation
 

@@ -13,7 +13,9 @@ vi.mock('#lib/services/syncOptions.svelte', () => ({ isSyncOptionEnabled: async 
 
 import db from '#lib/data/db';
 import { TrustedPeer, type ScheduledTransaction } from '#lib/data/model';
+import { createBackup, restoreBackup } from '#lib/services/backup';
 import { CrdtScxStore } from '#lib/storage/crdtScxStore';
+import { setScxStore } from '#lib/storage/scxStoreRegistry';
 import { scheduleBackup } from '#lib/services/webdavAutoBackupService';
 import { setAdoptConfirm } from '#lib/storage/crdtDocStore';
 import { CrdtXactStore } from '#lib/storage/crdtXactStore';
@@ -318,6 +320,50 @@ describe('sync after destroy', () => {
 		await (await sync()).download();
 
 		expect((await store.list()).map((s) => s.remarks)).toEqual(['new']);
+	});
+
+	it('ends up current when a backup file is restored between destroy and sync', async () => {
+		const remote = new MemoryRemoteStore();
+		const remoteId = newBucket();
+		const store = new CrdtScxStore(`test-destroy-scx-${++counter}`);
+		await store.initialize();
+		setScxStore(store);
+		const sync = () => getDeltaSync({ kind: 'scx', deviceId: 'A', store, remote, remoteId });
+		const scx = (remarks: string, id?: string) =>
+			({ id, nextDate: '2025-01-01', remarks }) as ScheduledTransaction & { id?: string };
+		const edited = await store.save(scx('before the edit'));
+		const deleted = await store.save(scx('deleted later'));
+		await (await sync()).upload();
+		const file = await createBackup({ sections: ['scx'] });
+		await store.save(scx('edited', edited));
+		await store.remove(deleted);
+		await store.save(scx('added later'));
+		await (await sync()).upload();
+
+		await destroyLocalStore('scx', store);
+		await restoreBackup(file);
+		expect((await store.list()).map((s) => s.remarks).sort()).toEqual([
+			'before the edit',
+			'deleted later'
+		]);
+		await (await sync()).download();
+
+		const current = ['added later', 'edited'];
+		expect((await store.list()).map((s) => s.remarks).sort()).toEqual(current);
+		// What the restore leaves to upload must not change what the other devices get.
+		await (await sync()).upload();
+		const other = new CrdtScxStore(`test-destroy-scx-${++counter}`);
+		await other.initialize();
+		await (
+			await getDeltaSync({
+				kind: 'scx',
+				deviceId: 'B',
+				store: other,
+				remote,
+				remoteId: `${remoteId}|B`
+			})
+		).download();
+		expect((await other.list()).map((s) => s.remarks).sort()).toEqual(current);
 	});
 
 	it('follows a reset made elsewhere, without asking about unsent changes', async () => {

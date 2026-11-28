@@ -66,7 +66,8 @@ describe('version 1 sample', () => {
 			version: 1,
 			sections: ['settings', 'scx'],
 			hasSecrets: false,
-			counts: { settings: 3, scx: 2, peers: 0 }
+			scxIsList: true,
+			counts: { settings: 3, peers: 0 }
 		});
 	});
 
@@ -124,7 +125,8 @@ describe('version 2 sample', () => {
 			version: 2,
 			sections: ['settings', 'scx', 'workingSet', 'device', 'peers'],
 			hasSecrets: true,
-			counts: { settings: 3, scx: 2, peers: 1 }
+			scxIsList: true,
+			counts: { settings: 3, peers: 1 }
 		});
 	});
 

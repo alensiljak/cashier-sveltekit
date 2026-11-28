@@ -16,7 +16,7 @@ export function readV1(file: Record<string, unknown>): BackupData {
 	return {
 		version: 1,
 		settings: file.settings as StoredSetting[],
-		scx: file.scx as ScheduledTransaction[],
+		scx: { list: file.scx as ScheduledTransaction[] },
 		withheld: []
 	};
 }

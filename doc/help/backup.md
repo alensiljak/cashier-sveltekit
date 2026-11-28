@@ -26,8 +26,9 @@ The file also records a format version, so a newer backup is never half-restored
 
 Click the file chooser, select a previously-created backup file, then choose which of the sections it holds to restore and confirm.
 
-- **Settings** and **scheduled transactions** replace what is already on the device.
-- **Transactions** and **trusted devices** are added to what is there. Nothing is overwritten, and a device you evicted is not brought back.
+- **Settings** replace what is already on the device.
+- **Transactions** and **scheduled transactions** are merged with what is there. Merging does not undo what you deleted or edited after the backup was made, so an older backup of this device may change nothing. To return to the backup's state, first destroy the store (see [Settings](/help/settings)). A backup that holds changes made on another device can change or delete records here.
+- **Trusted devices** are added. Nothing is overwritten, and a device you evicted is not brought back.
 - If the file has credentials, enter its passphrase. Leave it empty, or enter a wrong one, and everything else is still restored; restore the file again to get the credentials.
 
 An invalid file is rejected before anything is changed.
@@ -50,3 +51,5 @@ The backup remembers which device it was made on. After a restore on a different
 ## Older backup files
 
 Files made before the format version existed (settings and scheduled transactions only) can still be restored.
+
+Files of backup format 1 and 2 hold the scheduled transactions as a list, without their history. Restoring them **replaces** the scheduled transactions on this device. After that, a sync can bring back deleted entries, or let old versions replace newer edits, also on other devices. If sync has your current scheduled transactions, leave them out of the restore and sync instead.

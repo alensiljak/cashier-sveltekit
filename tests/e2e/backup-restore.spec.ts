@@ -8,11 +8,14 @@
 */
 import { readFileSync } from 'node:fs';
 import type { Page } from '@playwright/test';
+import * as Y from 'yjs';
 import { expect, test } from './fixtures';
 
 interface BackupFile {
+	version: number;
 	settings: { key: string; value: string }[];
-	scx: { transaction?: { payee?: string } }[];
+	/** The scheduled transactions' Yjs state, base64. */
+	scx: string;
 }
 
 const rent = {
@@ -59,14 +62,23 @@ async function restore(page: Page, content: string) {
 	await page.getByRole('dialog').getByRole('button', { name: 'Restore' }).click();
 }
 
-const payees = (backup: BackupFile) => backup.scx.map((s) => s.transaction?.payee);
+/** A copy of `backup` as an older file, whose list of scheduled transactions replaces what is there. */
+const withScxList = (backup: BackupFile, list: unknown[]) =>
+	JSON.stringify({ ...backup, version: 2, scx: list });
+
+function payees(backup: BackupFile) {
+	const doc = new Y.Doc();
+	Y.applyUpdate(doc, Buffer.from(backup.scx, 'base64'));
+	const records = [...doc.getMap<{ transaction?: { payee?: string } }>('scx').values()];
+	return records.map((s) => s.transaction?.payee);
+}
 
 test('a downloaded backup contains the demo settings', async ({ demoPage: page }) => {
 	const backup = await downloadBackup(page);
 
 	expect(backup.settings.length).toBeGreaterThan(0);
 	expect(backup.settings.every((s) => typeof s.key === 'string')).toBe(true);
-	expect(Array.isArray(backup.scx)).toBe(true);
+	expect(payees(backup).length).toBeGreaterThan(0);
 });
 
 test('restoring a backup brings its data back, and the next backup contains it', async ({
@@ -75,7 +87,7 @@ test('restoring a backup brings its data back, and the next backup contains it',
 	const original = await downloadBackup(page);
 	expect(payees(original)).not.toContain('E2E Rent');
 
-	await restore(page, JSON.stringify({ ...original, scx: [rent] }));
+	await restore(page, withScxList(original, [rent]));
 	await expect(page.getByText('Backup restored')).toBeVisible();
 
 	await page.goto('/scheduled-xacts');
@@ -88,7 +100,7 @@ test('restoring a backup brings its data back, and the next backup contains it',
 
 test('an invalid backup is rejected and existing data is kept', async ({ demoPage: page }) => {
 	const original = await downloadBackup(page);
-	await restore(page, JSON.stringify({ ...original, scx: [rent] }));
+	await restore(page, withScxList(original, [rent]));
 	await expect(page.getByText('Backup restored')).toBeVisible();
 
 	// A file that is not a backup is rejected when chosen, before any restore dialog,

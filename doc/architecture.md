@@ -140,7 +140,7 @@ safely. Transaction origins keep updates from echoing: `remote` (from a peer,
   uploads after each write, debounced, using delta sync.
 - **Backup file** (`services/backup/`,
   `restoredDevice.ts`) is a versioned JSON file with optional sections: settings,
-  scheduled transactions, the working set (Yjs state), portable device settings,
+  scheduled transactions and the working set (both as Yjs state), portable device settings,
   and trusted devices. Secrets (WebDAV password, S3 keys, passphrases) are left
   out or sealed in an encrypted block. A restore creates a new device identity;
   the backed-up device's ID becomes `previousDeviceId`. Design:

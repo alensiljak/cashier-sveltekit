@@ -329,8 +329,9 @@
 				</label>
 			</div>
 			<p class="mt-2 text-sm opacity-70">
-				Settings and scheduled transactions replace what is on this device. The transactions and the
-				trusted devices are added to it.
+				Settings replace what is on this device. Both kinds of transactions are merged with it, and
+				trusted devices are added. Scheduled transactions from an older backup file replace the ones
+				on this device.
 			</p>
 
 			{#if restoreMessages.length > 0}
@@ -385,8 +386,12 @@
 								/>
 								<span>
 									{SECTION_LABELS[section].title}
-									{#if section === 'settings' || section === 'scx'}
+									{#if section === 'settings' || (section === 'scx' && restoreInfo.scxIsList)}
 										<span class="block text-xs opacity-60">replaces what is on this device</span>
+									{:else if section === 'scx'}
+										<span class="block text-xs opacity-60"
+											>merged with this device's scheduled transactions</span
+										>
 									{:else if section === 'peers'}
 										<span class="block text-xs opacity-60">
 											{restoreInfo.counts.peers} device(s), added; only restore a file you trust

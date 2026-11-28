@@ -49,6 +49,12 @@ export interface DeviceData {
 	settings: StoredSetting[];
 }
 
+/**
+ * The scheduled transactions: the store's Yjs state, with its history. Files of formats 1 and 2
+ * hold only a list.
+ */
+export type ScxData = { state: Uint8Array } | { list: ScheduledTransaction[] };
+
 export interface PeersData {
 	peers: TrustedPeer[];
 	revocations: Revocation[];
@@ -75,7 +81,7 @@ export interface BackupData {
 	/** The format version of the file. */
 	version: number;
 	settings?: StoredSetting[];
-	scx?: ScheduledTransaction[];
+	scx?: ScxData;
 	/** The working set's Yjs state. */
 	workingSet?: Uint8Array;
 	device?: DeviceData;
